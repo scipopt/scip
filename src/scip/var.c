@@ -8814,16 +8814,18 @@ SCIP_RETCODE SCIPvarAddObjExact(
 
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
-         /** @todo exip: do we need an exact variant here? */
+         RatMult(tmpobj, var->exactdata->locdom.lb, addobj);
+         SCIPprobAddObjoffsetExact(transprob, tmpobj);
          SCIPprobAddObjoffset(transprob, var->locdom.lb * addobjreal);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
-         /** @todo exip: do we need an exact variant here? */
+         RatMult(tmpobj, var->exactdata->aggregate.constant, addobj);
+         SCIPprobAddObjoffsetExact(transprob, tmpobj);
          SCIPprobAddObjoffset(transprob, var->data.aggregate.constant * addobjreal);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
 
          RatMult(tmpobj, var->exactdata->aggregate.scalar, addobj);
 
@@ -8836,9 +8838,11 @@ SCIP_RETCODE SCIPvarAddObjExact(
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIP_CALL( RatCreateBuffer(set->buffer, &multaggrobj) );
 
-         /** @todo exip: exact offset? */
+         RatMult(tmpobj, var->exactdata->multaggr.constant, addobj);
+         SCIPprobAddObjoffsetExact(transprob, tmpobj);
          SCIPprobAddObjoffset(transprob, var->data.multaggr.constant * addobjreal);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
             RatMult(multaggrobj, addobj, var->exactdata->multaggr.scalars[i]);
@@ -8853,9 +8857,12 @@ SCIP_RETCODE SCIPvarAddObjExact(
          assert(var->negatedvar != NULL);
          assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(var->negatedvar->negatedvar == var);
-         /** @todo exip: do we need an exact variant here? */
+
+         RatMultReal(tmpobj, addobj, var->data.negate.constant);
+         SCIPprobAddObjoffsetExact(transprob, tmpobj);
          SCIPprobAddObjoffset(transprob, var->data.negate.constant * addobjreal);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+
          RatNegate(tmpobj, addobj);
          SCIP_CALL( SCIPvarAddObjExact(var->negatedvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
                eventfilter, eventqueue, tmpobj) );

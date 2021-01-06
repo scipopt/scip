@@ -315,6 +315,41 @@ SCIP_RETCODE primalSetCutoffbound(
 }
 
 /** sets the cutoff bound in primal data and in LP solver */
+static
+SCIP_RETCODE primalSetCutoffboundExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Rational*        cutoffbound         /**< new cutoff bound */
+   )
+{
+   assert(primal != NULL);
+   assert(RatIsLEReal(cutoffbound, SCIPsetInfinity(set)));
+   assert(!SCIPtreeInRepropagation(tree));
+   assert(set->exact_enabled);
+
+   RatDebugMessage("changing exact cutoff bound from %q to %q\n", primal->cutoffboundexact, cutoffbound);
+
+   RatMIN(primal->cutoffboundexact, cutoffbound, primal->upperboundexact); /* get rid of numerical issues */
+   primal->cutoffbound = RatRoundReal(primal->cutoffboundexact, SCIP_ROUND_UPWARDS);
+
+   /* set cut off value in LP solver */
+   SCIP_CALL( SCIPlpSetCutoffbound(lp, set, prob, primal->cutoffbound) );
+
+   /* cut off leaves of the tree */
+   SCIP_CALL( SCIPtreeCutoff(tree, reopt, blkmem, set, stat, eventfilter, eventqueue, lp, primal->cutoffbound) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the cutoff bound in primal data and in LP solver */
 SCIP_RETCODE SCIPprimalSetCutoffbound(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -419,6 +454,66 @@ SCIP_RETCODE primalSetUpperbound(
    {
       SCIPvisualUpperbound(stat->visual, set, stat, primal->upperbound);
    }
+
+   return SCIP_OKAY;
+}
+
+/** sets upper bound in primal data and in LP solver */
+static
+SCIP_RETCODE primalSetUpperboundExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Rational*        upperbound          /**< new upper bound */
+   )
+{
+   SCIP_Rational* cutoffbound;
+
+   assert(primal != NULL);
+   assert(stat != NULL);
+   assert(set->exact_enabled);
+   assert(RatIsLEReal(upperbound, SCIPsetInfinity(set)));
+   assert(RatIsLEReal(upperbound, primal->upperbound) || stat->nnodes == 0);
+
+   RatDebugMessage("changing upper bound from %q to %q\n", primal->upperboundexact, upperbound);
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &cutoffbound) );
+   RatSet(primal->upperboundexact, upperbound);
+   primal->upperbound = RatRoundReal(primal->upperboundexact, SCIP_ROUND_UPWARDS);
+
+   /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
+   if( SCIPprobIsObjIntegral(prob) && !RatIsInfinity(upperbound) )
+   {
+      SCIP_Real delta;
+
+      delta = SCIPsetCutoffbounddelta(set);
+
+      RatRound(cutoffbound, primal->upperboundexact, SCIP_ROUND_DOWNWARDS);
+      RatAddReal(cutoffbound, cutoffbound, delta);
+   }
+   else
+      RatSet(cutoffbound, upperbound);
+
+   /* update cutoff bound */
+   if( RatIsLT(cutoffbound, primal->cutoffboundexact) )
+   {
+      SCIP_CALL( primalSetCutoffboundExact(primal, blkmem, set, stat, prob, eventfilter, eventqueue, tree, reopt, lp, cutoffbound) );
+   }
+
+   /* update upper bound in visualization output */
+   if( SCIPtreeGetCurrentDepth(tree) >= 0 )
+   {
+      SCIPvisualUpperbound(stat->visual, set, stat, primal->upperbound);
+   }
+
+   RatFreeBuffer(set->buffer, &cutoffbound);
 
    return SCIP_OKAY;
 }
@@ -547,6 +642,76 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
    SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, upperbound) );
+
+   return SCIP_OKAY;
+}
+
+/** recalculates upper bound and cutoff bound in primal data after a change of the problem's objective offset */
+SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   SCIP_Rational* upperbound;
+   SCIP_Rational* tmp;
+   SCIP_Rational* inf;
+
+   assert(primal != NULL);
+   assert(SCIPsetGetStage(set) <= SCIP_STAGE_PRESOLVED);
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &upperbound) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &inf) );
+
+   /* recalculate internal objective limit */
+   /** @todo exip: do we need probgetobjlim in exact variant? */
+   RatSetReal(tmp, SCIPprobGetObjlim(origprob, set));
+   RatSetString(inf, "inf");
+   SCIPprobInternObjvalExact(transprob, origprob, set, tmp, upperbound);
+
+   /* resort current primal solutions */
+   sortPrimalSols(primal, set, origprob, transprob);
+
+   /* compare objective limit to currently best solution */
+   if( primal->nsols > 0 )
+   {
+      SCIP_Rational* obj;
+
+      assert(SCIPsolIsOriginal(primal->sols[0]));
+
+      if( !SCIPsolIsExact(primal->sols[0]) )
+         RatSetReal(obj, SCIPsolGetObj(primal->sols[0], set, transprob, origprob));
+      else
+         SCIPsolGetObjExact(primal->sols[0], set, transprob, origprob, obj);
+
+      RatMIN(upperbound, upperbound, obj);
+   }
+
+   /* invalidate old upper bound */
+   SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, inf) );
+
+   /* reset the cutoff bound
+    *
+    * @note we might need to relax the bound since in presolving the objective correction of an
+    *       aggregation is still in progress
+    */
+   SCIP_CALL( primalSetCutoffboundExact(primal, blkmem, set, stat, transprob, eventfilter, eventqueue, tree, reopt, lp, upperbound) );
+
+   /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
+   SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, upperbound) );
+
+   RatFreeBuffer(set->buffer, &inf);
+   RatFreeBuffer(set->buffer, &upperbound);
+   RatFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
