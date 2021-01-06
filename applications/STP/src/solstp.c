@@ -1342,7 +1342,7 @@ SCIP_RETCODE solstp_prune(
    const int nedges = graph_get_nEdges(g);
 
    assert(scip && result && connected);
-   assert(g->stp_type != STP_DHCSTP);
+   assert(g->stp_type != STP_DCSTP);
 
    for( int e = 0; e < nedges; e++ )
       result[e] = UNKNOWN;
