@@ -18,7 +18,6 @@
  * @author Leon Eifler
  *
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #ifndef __SCIP_BOUNDING_EXACT_C__
 #define __SCIP_BOUNDING_EXACT_C__
@@ -1716,6 +1715,11 @@ SCIP_RETCODE projectShift(
    }
    for( i = 0; i < nrows; i++ )
    {
+      if( !RatIsZero(dualsol[i]) )
+      {
+         RatDebugMessage("row %s has multiplier %q: ", lpexact->rows[i]->fprow->name, dualsol[i]);
+         SCIPdebug(SCIProwExactPrint(lpexact->rows[i], messagehdlr, NULL));
+      }
       for( j = 0; j < lpexact->rows[i]->len; j++ )
       {
          currentrow = lpexact->rows[i]->cols_index[j];
@@ -1725,7 +1729,12 @@ SCIP_RETCODE projectShift(
    }
    for( i = 0; i < ncols; i++ )
    {
-         RatDiff(violation[i], violation[i], dualsol[i + nrows]);
+      if( !RatIsZero(lpexact->cols[i]->farkascoef) )
+      {
+         RatDebugMessage("variable %q <= %s <= %q has farkas coefficient %q \n", lpexact->cols[i]->lb,
+            SCIPvarGetName(lpexact->cols[i]->var), lpexact->cols[i]->ub, lpexact->cols[i]->farkascoef);
+      }
+      RatDiff(violation[i], violation[i], dualsol[i + nrows]);
    }
 
    for( i = 0; i < ncols && rval == 0; i++ )
@@ -1756,6 +1765,14 @@ SCIP_RETCODE projectShift(
          RatSet(tmp, val);
       RatMult(tmp, dualsol[i], tmp);
       RatAdd(dualbound, dualbound, tmp);
+   }
+
+   if( usefarkas )
+   {
+      for( i = nrows; i < ncols + nrows; i++ )
+      {
+         RatNegate(dualsol[i], dualsol[i]);
+      }
    }
 
    computedbound = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
