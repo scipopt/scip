@@ -65,6 +65,7 @@ SCIP_RETCODE computeSteinerTree(
    SCIP_Real obj;
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
+   SCIP_Real hoplimit = -1.0;
 
    SCIPdebugMessage("compute Steiner tree \n");
 
@@ -100,7 +101,7 @@ SCIP_RETCODE computeSteinerTree(
    }
 
    SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
-      graph, starts, NULL, result, runs, graph->source, cost, costrev, &obj, NULL, success));
+      graph, starts, NULL, result, runs, graph->source, cost, costrev, &hoplimit, NULL, success));
 
    if( pcmw )
    {

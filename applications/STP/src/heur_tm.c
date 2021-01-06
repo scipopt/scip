@@ -33,6 +33,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 #include "heur_tm.h"
@@ -566,6 +567,11 @@ void updateBestSol(
 
       if( SCIPisLT(scip, obj, tmbase->best_obj) && (graph->stp_type != STP_DCSTP || solfound) )
       {
+#ifdef SCIP_DEBUG
+         if( graph->stp_type == STP_DHCSTP )
+            SCIPdebugMessage("edges vs hop-limit: %d, %d \n", solstp_getNedges(graph, result), graph->hoplimit);
+
+#endif
          if( graph->stp_type != STP_DHCSTP || solstp_getNedges(graph, result) <= graph->hoplimit )
          {
             SCIPdebugMessage("improved obj=%.12e\n", obj);
@@ -1280,7 +1286,7 @@ SCIP_RETCODE computeSteinerTree(
 
    assert(0 <= start && start < nnodes);
 
-   SCIPdebugMessage("Heuristic: Start=%5d \n", start);
+   SCIPdebugMessage("TM heuristic Start=%d \n", start);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cluster, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
@@ -1351,9 +1357,6 @@ SCIP_RETCODE computeSteinerTree(
       assert(g->term[newval] == 0);
       assert(!connected[newval]);
       assert(connected[old]);
-
-      SCIPdebug(fputc('R', stdout));
-      SCIPdebug(fflush(stdout));
 
       /* start from current tree */
       k = old;
@@ -2216,6 +2219,7 @@ SCIP_RETCODE dhcstpWarmUp(
    const int nedges = graph_get_nEdges(graph);
    const int root = graph->source;
    const int nnodes = graph_get_nNodes(graph);
+   const int maxnrounds = 10;
 
    assert(hopfactor && success);
    assert(*success == FALSE);
@@ -2240,7 +2244,7 @@ SCIP_RETCODE dhcstpWarmUp(
    BMScopyMemoryArray(orgcost, cost, nedges);
 
    /* do a warm-up run */
-   for( int r = 0; r < 10; r++ )
+   for( int r = 0; r < maxnrounds; r++ )
    {
       const SCIP_Real* const gcost = graph->cost;
       SCIP_Real obj = 0.0;
@@ -2248,6 +2252,8 @@ SCIP_RETCODE dhcstpWarmUp(
       SCIP_Bool lsuccess = FALSE;
 
       assert(GT(hopfactor_local, 0.0));
+
+      SCIPdebugMessage("warm-up run %d with hopfactor=%f \n", r, hopfactor_local);
 
       for( int e = 0; e < nedges; e++ )
       {
@@ -2268,6 +2274,8 @@ SCIP_RETCODE dhcstpWarmUp(
          }
       }
 
+      SCIPdebugMessage("edgecount=%d graph->hoplimit=%d \n", edgecount, graph->hoplimit);
+
       if( SCIPisLT(scip, obj, tmbase->best_obj) && edgecount <= graph->hoplimit )
       {
          tmbase->best_obj = obj;
@@ -2284,13 +2292,17 @@ SCIP_RETCODE dhcstpWarmUp(
       {
          if( !lsuccess )
          {
+            const SCIP_Real gap_relative = fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit;
             if( (*success) )
             {
-               hopfactor_local = hopfactor_local * (1.0 + fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
+               assert(LE(gap_relative, 0.0));
+
+               hopfactor_local *= (1.0 + gap_relative);
             }
             else
             {
-               hopfactor_local = hopfactor_local * (1.0 + 3 * fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
+               assert(GE(gap_relative, 0.0));
+               hopfactor_local *= (1.0 + 3.0 * gap_relative);
                hopfactor_best = hopfactor_local;
             }
          }
@@ -3352,7 +3364,8 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    tmBaseFree(scip, graph, &tmbase);
 
-   SCIPdebugMessage("final objective: %f \n", solstp_getObj(graph, tmbase.best_result, 0.0));
+   if( *success )
+      SCIPdebugMessage("final objective: %f \n", solstp_getObj(graph, tmbase.best_result, 0.0));
 
 #if 0
    {

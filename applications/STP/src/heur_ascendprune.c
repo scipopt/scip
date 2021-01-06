@@ -368,8 +368,9 @@ SCIP_RETCODE redcostGraphBuild(
    /* initialize new graph */
    SCIP_CALL( graph_init(scip, &(redcostgraph->newgraph), nnewnodes, 2 * nnewedges, 1) );
    newgraph = redcostgraph->newgraph;
+   newgraph->hoplimit = g->hoplimit;
 
-   if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
+   if( graph_typeIsSpgLike(g) )
       newgraph->stp_type = STP_SPG;
    else
       newgraph->stp_type = probtype;
@@ -443,6 +444,31 @@ SCIP_RETCODE redcostGraphBuild(
 
          graph_edge_addSubgraph(scip, g, nodeOrg2NewMap, e, newgraph);
       }
+   }
+
+   if( probtype == STP_DCSTP )
+   {
+      assert(g->maxdeg && !newgraph->maxdeg);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(newgraph->maxdeg), nnewnodes ) );
+#ifndef NDEBUG
+      for( int k = 0; k < nnewnodes; k++ )
+         newgraph->maxdeg[k] = -1;
+#endif
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         const int subnode = nodeOrg2NewMap[k];
+         if( subnode >= 0 )
+         {
+            assert(graph_knot_isInRange(newgraph, subnode));
+            newgraph->maxdeg[subnode] = g->maxdeg[k];
+         }
+      }
+
+#ifndef NDEBUG
+      for( int k = 0; k < nnewnodes; k++ )
+         assert(newgraph->maxdeg[k] >= 1);
+#endif
    }
 
    newgraph->norgmodeledges = newgraph->edges;
@@ -558,7 +584,8 @@ SCIP_RETCODE redcostGraphComputeSteinerTreeDirected(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
    RCGRAPH*              redcostgraph,
-   int*                  result
+   int*                  result,
+   SCIP_Bool*            solfound           /**< has a solution been found?  */
    )
 {
    GRAPH* const subgraph = redcostgraph->newgraph;
@@ -570,8 +597,10 @@ SCIP_RETCODE redcostGraphComputeSteinerTreeDirected(
    const int nedges = graph_get_nEdges(g);
    const int nsubnodes = graph_get_nNodes(subgraph);
    const int nsubedges = graph_get_nEdges(subgraph);
-   int runstm = 10;
-   SCIP_Bool success;
+   int runstm = 50;
+   SCIP_Real hopfactor = 10.0;
+
+   assert(TRUE == *solfound);
 
    SCIP_CALL( graph_path_init(scip, subgraph) );
    SCIP_CALL( reduce_unconnectedForDirected(scip, subgraph) );
@@ -592,26 +621,32 @@ SCIP_RETCODE redcostGraphComputeSteinerTreeDirected(
       assert(startstm[0] == subgraph->source);
    }
 
-
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsubedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsubedges) );
 
    graph_getEdgeCosts(subgraph, cost, costrev);
 
    SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
-      subgraph, startstm, NULL, subresult, runstm, subgraph->source, cost, costrev, NULL, NULL, &success) );
-   assert(success);
+      subgraph, startstm, NULL, subresult, runstm, subgraph->source, cost, costrev, &hopfactor, NULL, solfound) );
 
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArrayNull(scip, &startstm);
 
-   // todo for HCDSTP solution might not be valid...also need hop-constant!
-
-   SCIPdebugMessage("su-obj after TM %f \n", solstp_getObj(subgraph, subresult, 0.0));
-   assert(success && solstp_isValid(scip, subgraph, subresult));
-
    graph_path_exit(scip, subgraph);
+
+   if( FALSE == *solfound )
+   {
+      assert(subgraph->stp_type == STP_DHCSTP);
+      SCIPdebugMessage("ascend-and-prune did not find a feasible solution, aborting... \n");
+
+      SCIPfreeBufferArray(scip, &subresult);
+      return SCIP_OKAY;
+   }
+
+
+   SCIPdebugMessage("sub-obj after TM %f \n", solstp_getObj(subgraph, subresult, 0.0));
+   assert(solstp_isValid(scip, subgraph, subresult));
 
    /* transfer solution */
 
@@ -811,7 +846,6 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 {
    RCGRAPH redcostgraph = { .newgraph = NULL, .redcosts = redcosts, .edgelist = NULL, .nodeOrg2NewMap = NULL, .edgeNew2OrgMap = NULL,
          .nnodes = -1, . nedges_half = -1, .root = root  };
-   const int nnodes = graph_get_nNodes(g);
 
    assert(scip && redcosts && result && solfound);
    assert(!graph_pc_isPcMw(g) || g->extended);
@@ -844,24 +878,24 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    }
    else
    {
-      SCIP_CALL( redcostGraphComputeSteinerTreeDirected(scip, g, &redcostgraph, result) );
+      SCIP_CALL( redcostGraphComputeSteinerTreeDirected(scip, g, &redcostgraph, result, solfound) );
    }
 
-   assert(solstp_isValid(scip, g, result));
+   assert(!(*solfound) || solstp_isValid(scip, g, result));
 
 #ifdef SCIP_DEBUG
-   graph_printInfo(g);
-   printf("ascend-prune obj=%f \n", solstp_getObj(g, result, 0.0));
+   if( *solfound )
+   {
+      graph_printInfo(g);
+      printf("ascend-prune obj=%f \n", solstp_getObj(g, result, 0.0));
+   }
 #endif
 
-   if( addsol )
+   if( *solfound && addsol )
    {
       SCIP_CALL( solpool_addSolToScip(scip, heur, g, result, solfound) );
       SCIPdebugMessage("Ascend-and-prune adding solution....success=%d \n", *solfound);
    }
-
-   for( int k = 0; k < nnodes; k++ )
-      g->mark[k] = (g->grad[k] > 0);
 
    redcostGraphFree(scip, &redcostgraph);
 
