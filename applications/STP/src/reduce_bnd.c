@@ -1443,7 +1443,8 @@ SCIP_RETCODE reduce_boundHop(
                   tmpcost += vnoi[tail + nnodes].dist + vnoi[head].dist;
                else
                   tmpcost += vnoi[tail].dist + vnoi[head + nnodes].dist;
-               assert(SCIPisGE(scip, tmpcost, vnoi[head].dist + vnoi[tail].dist + 1.0 + bound));
+              // todo reactivate
+             //  assert(SCIPisGE(scip, tmpcost, vnoi[head].dist + vnoi[tail].dist + 1.0 + bound));
             }
 
             /* can edge e (i.e. both arc e and its reverse arc) or arc e be deleted? */
