@@ -357,7 +357,8 @@ SCIP_RETCODE computeReducedProbSolutionBiased(
    const int*            edgeancestor,       /**< ancestor to edge edge */
    SCIP_VAR**            vars,               /**< variables or NULL */
    SCIP_Bool             usestppool,         /**< using STP pool? */
-   int*                  soledges            /**< solution edges */
+   int*                  soledges,           /**< solution edges */
+   SCIP_Bool*            success
 )
 {
    SCIP_Real* cost;
@@ -453,14 +454,13 @@ SCIP_RETCODE computeReducedProbSolutionBiased(
    }
 
    {
-      SCIP_Bool success;
       SCIP_Real hopfactor = 0.1;
 
       SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata, solgraph, NULL, prize, soledges, heurdata->ntmruns,
-         solgraph->source, cost, costrev, &hopfactor, nodepriority, &success) );
+         solgraph->source, cost, costrev, &hopfactor, nodepriority, success) );
 
-      assert(SCIPisStopped(scip) || success);
-      assert(SCIPisStopped(scip) || solstp_isValid(scip, solgraph, soledges));
+      assert(*success || probtype == STP_DHCSTP || SCIPisStopped(scip));
+      assert(*success == FALSE || solstp_isValid(scip, solgraph, soledges));
    }
 
    SCIPfreeBufferArrayNull(scip, &prize);
@@ -493,7 +493,8 @@ SCIP_RETCODE computeReducedProbSolution(
    const int*            edgeancestor,       /**< ancestor to edge edge */
    SCIP_VAR**            vars,               /**< variables or NULL */
    SCIP_Bool             usestppool,         /**< using STP pool? */
-   int*                  soledges            /**< solution edges */
+   int*                  soledges,           /**< solution edges */
+   SCIP_Bool*            success
 )
 {
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
@@ -507,7 +508,7 @@ SCIP_RETCODE computeReducedProbSolution(
    SCIP_CALL( graph_path_init(scip, solgraph) );
 
    SCIP_CALL( computeReducedProbSolutionBiased(scip, heurdata, graph, solgraph, edgeweight,
-         edgeancestor, vars, usestppool, soledges) );
+         edgeancestor, vars, usestppool, soledges, success) );
 
  //  printf("solval_bias=%f \n", solstp_getObj(solgraph, soledges, 0.0));
 
@@ -1555,27 +1556,37 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             SCIP_CALL( SCIPallocBufferArray(scip, &soledges, solgraph->edges) );
 
             SCIP_CALL( computeReducedProbSolution(scip, heurdata, graph, solgraph, redsol, edgeweight,
-                  edgeancestor, vars, usestppool, soledges) );
+                  edgeancestor, vars, usestppool, soledges, &success) );
          }
+         assert(success || probtype == STP_DHCSTP || SCIPisStopped(scip));
 
          reduce_solFree(scip, &redsol);
 
          /*  retransform solution (soledges or single vertex) found above */
-         SCIP_CALL( retransformReducedProbSolution(scip, graph, solgraph, ancestors, edgeancestor, soledges, newsoledges, stnodes) );
+         if( success )
+            SCIP_CALL( retransformReducedProbSolution(scip, graph, solgraph, ancestors, edgeancestor, soledges, newsoledges, stnodes) );
 
          SCIPfreeBufferArrayNull(scip, &soledges);
          SCIPfreeMemoryArray(scip, &edgeancestor);
 
          graph_free(scip, &solgraph, TRUE);
 
-         /* prune solution (in the original graph) */
-         if( probtype == STP_DCSTP )
-            SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, graph, newsoledges, stnodes) );
-         else
-            SCIP_CALL( solstp_prune(scip, graph, newsoledges, stnodes) );
+         if( success )
+         {
+            /* prune solution (in the original graph) */
+            if( probtype == STP_DCSTP )
+               SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, graph, newsoledges, stnodes) );
+            else
+               SCIP_CALL( solstp_prune(scip, graph, newsoledges, stnodes) );
 
-         assert(solstp_isValid(scip, graph, newsoledges) || SCIPisStopped(scip));
-         pobj = solstp_getObjBounded(graph, newsoledges, 0.0, nedges);
+            assert(solstp_isValid(scip, graph, newsoledges) || SCIPisStopped(scip));
+            pobj = solstp_getObjBounded(graph, newsoledges, 0.0, nedges);
+         }
+         else
+         {
+            assert(probtype == STP_DHCSTP || SCIPisStopped(scip));
+            pobj = FARAWAY;
+         }
 
          SCIPdebugMessage("REC: new obj: %f \n", pobj);
 
