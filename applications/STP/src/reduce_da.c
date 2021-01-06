@@ -172,13 +172,13 @@ SCIP_RETCODE computeSteinerTreeTM(
 {
    SCIP_Real* cost = NULL;
    SCIP_Real* costrev = NULL;
-   SCIP_Real obj;
    int* startstm = NULL;
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
    SCIP_Bool success = FALSE;
    const SCIP_Bool directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
    int runstm;
+   SCIP_Real hopfactor = -1.0; /* automatic set to default */
 
    if( directed )
    {
@@ -204,13 +204,22 @@ SCIP_RETCODE computeSteinerTreeTM(
    SCIPStpHeurTMCompStarts(graph, startstm, &runstm);
 
    SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
-      graph, startstm, NULL, result, runstm, graph->source, cost, costrev, NULL, NULL, &success) );
-   assert(success);
+      graph, startstm, NULL, result, runstm, graph->source, cost, costrev, &hopfactor, NULL, &success) );
 
-   obj = getSolObj(scip, graph, result);
+   if( success )
+   {
+      const SCIP_Real obj = getSolObj(scip, graph, result);
 
-   if( obj < *bestobjval )
-      *bestobjval = obj;
+      SCIPdebugMessage("TM successful, obj=%f \n", obj);
+
+      if( obj < *bestobjval )
+         *bestobjval = obj;
+   }
+   else
+   {
+      assert(graph->stp_type == STP_DHCSTP);
+      SCIPdebugMessage("TM failed \n");
+   }
 
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
@@ -351,13 +360,13 @@ SCIP_RETCODE computeSteinerTreeRedCostsDirected(
    assert(graph_typeIsDirected(graph));
 
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, redcosts, result, daroot, &success, FALSE));
-   objval = solstp_getObj(graph, result, 0.0);
 
-   SCIPdebugMessage("old obj=%f ascend-prune obj=%f \n", *bestobjval, objval);
    if( !success )
    {
       assert(graph->stp_type == STP_DHCSTP);
       *havebestsol = FALSE;
+
+      SCIPdebugMessage("ascend-prune failed \n");
 
       if( GE(*bestobjval, FARAWAY) )
       {
@@ -366,6 +375,9 @@ SCIP_RETCODE computeSteinerTreeRedCostsDirected(
       }
       return SCIP_OKAY;
    }
+
+   objval = solstp_getObj(graph, result, 0.0);
+   SCIPdebugMessage("old obj=%f ascend-prune obj=%f \n", *bestobjval, objval);
 
    assert(success && solstp_isValid(scip, graph, result));
 
