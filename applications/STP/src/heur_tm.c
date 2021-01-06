@@ -2246,6 +2246,7 @@ SCIP_RETCODE dhcstpWarmUp(
    /* do a warm-up run */
    for( int r = 0; r < maxnrounds; r++ )
    {
+      SCIP_Real gap_relative;
       const SCIP_Real* const gcost = graph->cost;
       SCIP_Real obj = 0.0;
       int edgecount = 0;
@@ -2288,27 +2289,27 @@ SCIP_RETCODE dhcstpWarmUp(
          hopfactor_best = hopfactor_local;
       }
 
-      if( !lsuccess || SCIPisGT(scip, fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit, 0.05) )
+      gap_relative = fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit;
+      assert(GE(gap_relative, 0.0));
+
+      if( !lsuccess || gap_relative > 0.05 )
       {
          if( !lsuccess )
          {
-            const SCIP_Real gap_relative = fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit;
+
             if( (*success) )
             {
-               assert(LE(gap_relative, 0.0));
-
                hopfactor_local *= (1.0 + gap_relative);
             }
             else
             {
-               assert(GE(gap_relative, 0.0));
                hopfactor_local *= (1.0 + 3.0 * gap_relative);
                hopfactor_best = hopfactor_local;
             }
          }
          else
          {
-            hopfactor_local = hopfactor_local / (1.0 + fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
+            hopfactor_local /= (1.0 + gap_relative);
          }
 
          assert(SCIPisGT(scip, hopfactor_local, 0.0));
