@@ -28,11 +28,6 @@
 
 #include "scip/sepa_minor.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_expr_var.h"
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_product.h"
-#include "scip/cons_expr_iterator.h"
-#include "scip/cons_expr_rowprep.h"
 #include "nlpi/nlpi_ipopt.h"
 
 #define SEPA_NAME              "minor"
@@ -163,11 +158,10 @@ SCIP_RETCODE sepadataClear(
 static
 SCIP_Bool isPackingCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONS*            cons                /**< expression constraint */
+   SCIP_CONS*            cons                /**< nonlinear constraint */
    )
 {
-   SCIP_CONSEXPR_EXPR* root;
+   SCIP_EXPR* root;
    SCIP_VAR* quadvars[4] = {NULL, NULL, NULL, NULL};
    SCIP_VAR* bilinvars[4] = {NULL, NULL, NULL, NULL};
    int nbilinvars = 0;
@@ -176,35 +170,29 @@ SCIP_Bool isPackingCons(
    int i;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
    assert(cons != NULL);
 
-   root = SCIPgetExprConsExpr(scip, cons);
+   root = SCIPgetExprConsNonlinear(cons);
    assert(root != NULL);
-   nchildren = SCIPgetConsExprExprNChildren(root);
+   nchildren = SCIPexprGetNChildren(root);
 
    /* non-overlapping constraint has 6 terms (2 bilinear + 4 quadratic) */
-   if( nchildren != 6 || SCIPgetConsExprExprHdlr(root) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+   if( nchildren != 6 || !SCIPisExprSum(scip, root) )
       return FALSE;
 
    for( i = 0; i < nchildren && (nbilinvars <= 4 && nquadvars <= 4); ++i )
    {
-      SCIP_CONSEXPR_EXPR* expr;
-      SCIP_CONSEXPR_EXPR** children;
-      SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+      SCIP_EXPR* expr;
+      SCIP_EXPR** children;
 
       /* get child */
-      expr = SCIPgetConsExprExprChildren(root)[i];
+      expr = SCIPexprGetChildren(root)[i];
       assert(expr != NULL);
-      children = SCIPgetConsExprExprChildren(expr);
-
-      /* get expression handler */
-      exprhdlr = SCIPgetConsExprExprHdlr(expr);
-      assert(exprhdlr != NULL);
+      children = SCIPexprGetChildren(expr);
 
       /* case: expr = x^2; x is no auxiliary variable */
-      if( exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr) && SCIPgetConsExprExprPowExponent(expr) == 2.0
-         && SCIPisConsExprExprVar(children[0]) )
+      if( SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) == 2.0
+         && SCIPisExprVar(scip, children[0]) )
       {
          SCIP_VAR* x;
 
@@ -212,14 +200,14 @@ SCIP_Bool isPackingCons(
          if( nquadvars == 4 )
             return FALSE;
 
-         x = SCIPgetConsExprExprVarVar(children[0]);
+         x = SCIPgetVarExprVar(children[0]);
          assert(x != NULL);
 
          quadvars[nquadvars++] = x;
       }
       /* case: expr = x * y; x and y are no auxiliary variables */
-      else if( exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr) && SCIPgetConsExprExprNChildren(expr) == 2
-         && SCIPisConsExprExprVar(children[0]) && SCIPisConsExprExprVar(children[1]) )
+      else if( SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) == 2
+         && SCIPisExprVar(scip, children[0]) && SCIPisExprVar(scip, children[1]) )
       {
          SCIP_VAR* x;
          SCIP_VAR* y;
@@ -228,9 +216,9 @@ SCIP_Bool isPackingCons(
          if( nbilinvars == 4 )
             return FALSE;
 
-         x = SCIPgetConsExprExprVarVar(children[0]);
+         x = SCIPgetVarExprVar(children[0]);
          assert(x != NULL);
-         y = SCIPgetConsExprExprVarVar(children[1]);
+         y = SCIPgetVarExprVar(children[1]);
          assert(y != NULL);
          assert(x != y);
 
@@ -301,7 +289,7 @@ SCIP_RETCODE detectMinors(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_EXPRITER* it;
    SCIP_HASHMAP* quadmap;
    SCIP_VAR** xs;
    SCIP_VAR** ys;
@@ -326,78 +314,75 @@ SCIP_RETCODE detectMinors(
    assert(sepadata->minors == NULL);
    assert(sepadata->nminors == 0);
 
-   /* we assume that the auxiliary variables in the expression constraint handler have been already generated */
+   /* we assume that the auxiliary variables in the nonlinear constraint handler have been already generated */
    sepadata->detectedminors = TRUE;
 
-   /* check whether there are expression constraints available */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* check whether there are nonlinear constraints available */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    if( conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0 )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "call detectMinors()\n");
 
    /* allocate memory */
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
    SCIP_CALL( SCIPhashmapCreate(&quadmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ys, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxvars, SCIPgetNVars(scip)) );
 
    /* initialize iterator */
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
 
    for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
    {
       SCIP_CONS* cons;
-      SCIP_CONSEXPR_EXPR* expr;
-      SCIP_CONSEXPR_EXPR* root;
+      SCIP_EXPR* expr;
+      SCIP_EXPR* root;
 
       cons = SCIPconshdlrGetConss(conshdlr)[c];
       assert(cons != NULL);
-      root = SCIPgetExprConsExpr(scip, cons);
+      root = SCIPgetExprConsNonlinear(cons);
       assert(root != NULL);
 
       /* ignore circle packing constraints; the motivation for this is that in circle packing instance not only the SDP
        * relaxation is weak (see "Packing circles in a square: a theoretical comparison of various convexification
        * techniques", http://www.optimization-online.org/DB_HTML/2017/03/5911.html), but it also hurts performance
        */
-      if( sepadata->ignorepackingconss && isPackingCons(scip, conshdlr, cons) )
+      if( sepadata->ignorepackingconss && isPackingCons(scip, cons) )
       {
          SCIPdebugMsg(scip, "ignore packing constraints %s\n", SCIPconsGetName(cons));
          continue;
       }
 
-      for( expr = SCIPexpriteratorRestartDFS(it, root); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, root); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
-         SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-         SCIP_CONSEXPR_EXPR** children;
+         SCIP_EXPR** children;
          SCIP_VAR* auxvar;
 
          SCIPdebugMsg(scip, "visit expression %p in constraint %s\n", (void*)expr, SCIPconsGetName(cons));
 
          /* check whether the expression has an auxiliary variable */
-         auxvar = SCIPgetConsExprExprAuxVar(expr);
+         auxvar = SCIPgetExprAuxVarNonlinear(expr);
          if( auxvar == NULL )
          {
             SCIPdebugMsg(scip, "expression has no auxiliary variable -> skip\n");
             continue;
          }
 
-         exprhdlr = SCIPgetConsExprExprHdlr(expr);
-         assert(exprhdlr != NULL);
-         children = SCIPgetConsExprExprChildren(expr);
+         children = SCIPexprGetChildren(expr);
 
          /* check for expr = (x)^2 */
-         if( SCIPgetConsExprExprNChildren(expr) == 1 && exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr)
-            && SCIPgetConsExprExprPowExponent(expr) == 2.0
-            && SCIPgetConsExprExprAuxVar(children[0]) != NULL )
+         if( SCIPexprGetNChildren(expr) == 1 && SCIPisExprPower(scip, expr)
+            && SCIPgetExponentExprPow(expr) == 2.0
+            && SCIPgetExprAuxVarNonlinear(children[0]) != NULL )
          {
             SCIP_VAR* quadvar;
 
             assert(children[0] != NULL);
 
-            quadvar = SCIPgetConsExprExprAuxVar(children[0]);
+            quadvar = SCIPgetExprAuxVarNonlinear(children[0]);
             assert(quadvar != NULL);
             assert(!SCIPhashmapExists(quadmap, (void*)quadvar));
             SCIPdebugMsg(scip, "found %s = (%s)^2\n", SCIPvarGetName(auxvar), SCIPvarGetName(quadvar));
@@ -407,8 +392,8 @@ SCIP_RETCODE detectMinors(
             ++nquadterms;
          }
          /* check for expr = x * y */
-         else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr)
-            && SCIPgetConsExprExprAuxVar(children[0]) != NULL && SCIPgetConsExprExprAuxVar(children[1]) != NULL )
+         else if( SCIPexprGetNChildren(expr) == 2 && SCIPisExprProduct(scip, expr)
+            && SCIPgetExprAuxVarNonlinear(children[0]) != NULL && SCIPgetExprAuxVarNonlinear(children[1]) != NULL )
          {
             SCIP_VAR* x;
             SCIP_VAR* y;
@@ -416,14 +401,14 @@ SCIP_RETCODE detectMinors(
             assert(children[0] != NULL);
             assert(children[1] != NULL);
 
-            x = SCIPgetConsExprExprAuxVar(children[0]);
-            y = SCIPgetConsExprExprAuxVar(children[1]);
+            x = SCIPgetExprAuxVarNonlinear(children[0]);
+            y = SCIPgetExprAuxVarNonlinear(children[1]);
 
             /* ignore binary variables */
             if( !SCIPvarIsBinary(x) && !SCIPvarIsBinary(y) )
             {
-               xs[nbilinterms] = SCIPgetConsExprExprAuxVar(children[0]);
-               ys[nbilinterms] = SCIPgetConsExprExprAuxVar(children[1]);
+               xs[nbilinterms] = SCIPgetExprAuxVarNonlinear(children[0]);
+               ys[nbilinterms] = SCIPgetExprAuxVarNonlinear(children[1]);
                auxvars[nbilinterms] = auxvar;
                SCIPdebugMsg(scip, "found %s = %s * %s\n", SCIPvarGetName(auxvar), SCIPvarGetName(xs[nbilinterms]), SCIPvarGetName(ys[nbilinterms]));
                ++nbilinterms;
@@ -501,7 +486,7 @@ SCIP_RETCODE detectMinors(
    SCIPfreeBufferArray(scip, &ys);
    SCIPfreeBufferArray(scip, &xs);
    SCIPhashmapFree(&quadmap);
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
 #ifdef SCIP_STATISTIC
    totaltime += SCIPgetTotalTime(scip);
@@ -606,12 +591,12 @@ SCIP_RETCODE addCut(
    /* create rowprep */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, FALSE) );
    SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, 5, vars, coefs) );
-   SCIPaddRowprepConstant(rowprep, constant);
+   SCIProwprepAddConstant(rowprep, constant);
    SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
    SCIPdebugMsg(scip, "cut violation %g mincutviol = %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviol);
 
    /* cleanup coefficient and side, esp treat epsilon to integral values; don't consider scaling up here */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, 0.0, NULL, &success) );
 
    /* check cut violation */
    if( success && SCIPgetRowprepViolation(scip, rowprep, sol, NULL) > mincutviol )
@@ -620,7 +605,7 @@ SCIP_RETCODE addCut(
       SCIP_Bool infeasible;
 
       /* set name of rowprep */
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "minor_%s_%s_%s_%lld", SCIPvarGetName(xx), SCIPvarGetName(yy),
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "minor_%s_%s_%s_%lld", SCIPvarGetName(xx), SCIPvarGetName(yy),
          SCIPvarGetName(xy), SCIPgetNLPs(scip));
 
       /* create, add, and release row */
