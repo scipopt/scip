@@ -1767,6 +1767,7 @@ SCIP_RETCODE projectShift(
       RatAdd(dualbound, dualbound, tmp);
    }
 
+   /* since we negate the farkas-coef for the project-shift representation, it has to be negated again here for saving */
    if( usefarkas )
    {
       for( i = nrows; i < ncols + nrows; i++ )
@@ -1779,7 +1780,8 @@ SCIP_RETCODE projectShift(
 
    if( !usefarkas )
    {
-      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
+          && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
          stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
          *safebound = computedbound;
