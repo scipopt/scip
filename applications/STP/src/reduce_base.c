@@ -1357,7 +1357,7 @@ SCIP_RETCODE reduceSap(
    int     redbound;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
-   STP_Bool da = dualascent && (g->stp_type != STP_NWPTSPG);
+   STP_Bool da = dualascent; // && (g->stp_type != STP_NWPTSPG);
    STP_Bool sd = TRUE;
    STP_Bool rpt = TRUE;
    SCIP_RANDNUMGEN* randnumgen;
