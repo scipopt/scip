@@ -607,6 +607,7 @@ SCIP_RETCODE daExec(
    int root = daparams->root;
    const SCIP_Bool addcuts = daparams->addcuts;
    const SCIP_Bool is_pseudoroot = daparams->is_pseudoroot;
+   const SCIP_Bool probIsDirected = graph_typeIsDirected(g);
 
    assert(rescap);
    assert(addconss || !addcuts);  /* should currently not  be activated */
@@ -921,10 +922,13 @@ SCIP_RETCODE daExec(
                {
                   assert(vars != NULL);
 
-                  if( addconss )
-                     SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[edgearr[a]], 1.0) );
-                  else
-                     SCIP_CALL( SCIPaddVarToRow(scip, row, vars[edgearr[a]], 1.0) );
+                  if( !probIsDirected || LT(g->cost[edgearr[a]], FARAWAY) )
+                  {
+                     if( addconss )
+                        SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[edgearr[a]], 1.0) );
+                     else
+                        SCIP_CALL( SCIPaddVarToRow(scip, row, vars[edgearr[a]], 1.0) );
+                  }
                }
                rescap[a] -= min;
 
