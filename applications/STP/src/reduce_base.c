@@ -1308,14 +1308,13 @@ SCIP_RETCODE reduceHc(
             dahop = FALSE;
       }
 
-/*
+
       if( da && nrounds == 0 )
       {
          rbred = TRUE;
          hbred = TRUE;
          rcbred = TRUE;
       }
-*/
 
       nrounds++;
    }
