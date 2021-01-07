@@ -98,7 +98,15 @@ SCIP_RETCODE computeDualSolutionGuided(
    if( !solstp_isValid(scip, graph, result) )
    {
       SCIPdebugMessage("solution not valid; run normal dual-ascent \n");
-      SCIP_CALL(dualascent_exec(scip, graph, NULL, &daparams, redcost, &dualobjval));
+
+      if( graph->stp_type == STP_DCSTP )
+      {
+         SCIP_CALL( dualascent_execDegCons(scip, graph, NULL, &daparams, redcost, &dualobjval) );
+      }
+      else
+      {
+         SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, redcost, &dualobjval) );
+      }
    }
    else
    {
@@ -113,7 +121,14 @@ SCIP_RETCODE computeDualSolutionGuided(
          SCIPdebugMessage("run guided dual-ascent \n");
       }
 
-      SCIP_CALL(dualascent_exec(scip, graph, result, &daparams, redcost, &dualobjval));
+      if( graph->stp_type == STP_DCSTP )
+      {
+         SCIP_CALL( dualascent_execDegCons(scip, graph, result, &daparams, redcost, &dualobjval));
+      }
+      else
+      {
+         SCIP_CALL( dualascent_exec(scip, graph, result, &daparams, redcost, &dualobjval) );
+      }
    }
 
    if( STP_RPCSPG == graph->stp_type )
@@ -146,7 +161,15 @@ SCIP_RETCODE computeDualSolution(
 
    SCIPdebugMessage("no rerooting, run normal dual-ascent \n");
 
-   SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, redcost, &dualobjval) );
+   if( graph->stp_type == STP_DCSTP )
+   {
+      SCIP_CALL( dualascent_execDegCons(scip, graph, NULL, &daparams, redcost, &dualobjval) );
+   }
+   else
+   {
+      SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, redcost, &dualobjval) );
+
+   }
 
    if( STP_RPCSPG == graph->stp_type )
    {
