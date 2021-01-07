@@ -66,7 +66,7 @@ void setup(void)
 
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include cons_expr: this adds the operator handlers and nonlinear handlers; get quadratic handler and conshdlr */
+   /* include cons_nonlinear: this adds the nonlinear handlers; get quadratic handler and conshdlr */
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
 
    /* include some expr handlers */
