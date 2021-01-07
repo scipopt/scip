@@ -357,13 +357,14 @@ SCIP_RETCODE computeSteinerTreeRedCostsDirected(
    SCIP_Bool success;
    SCIP_Real objval;
 
-   assert(graph_typeIsDirected(graph));
+   assert(graph_typeIsDirected(graph) || graph->stp_type == STP_DCSTP);
+   assert(daroot == graph->source || graph->stp_type == STP_DCSTP);
 
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, redcosts, result, daroot, &success, FALSE));
 
    if( !success )
    {
-      assert(graph->stp_type == STP_DHCSTP);
+      assert(graph->stp_type == STP_DHCSTP || graph->stp_type == STP_DCSTP);
       *havebestsol = FALSE;
 
       SCIPdebugMessage("ascend-prune failed \n");
@@ -1712,7 +1713,7 @@ SCIP_RETCODE daOrderRoots(
    assert(terms != NULL);
    assert(nterms > 0);
 
-   if( !graph_typeIsUndirected(graph) )
+   if( graph_typeIsDirected(graph) )
    {
       for( int i = 0; i < nterms; i++ )
          terms[i] = graph->source;
@@ -2614,7 +2615,7 @@ SCIP_RETCODE reduce_da(
    SCIP_Real upperbound;
    const SCIP_Bool isRpc = (graph->stp_type == STP_RPCSPG);
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
-   const SCIP_Bool isDirected = !graph_typeIsUndirected(graph);
+   const SCIP_Bool isDirected = graph_typeIsDirected(graph) || (graph->stp_type == STP_DCSTP);
    int* terms;
    int* result;
    int* bestresult;

@@ -54,7 +54,7 @@ extern int       solstp_getNedgesBounded(const GRAPH*, const int*, int);
 extern void      solstp_getTrivialSol(const GRAPH*, int*);
 extern void      solstp_convertCsrToGraph(SCIP*, const GRAPH*, const CSR*, const int*, STP_Bool* RESTRICT, int* RESTRICT);
 extern SCIP_RETCODE   solstp_getOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);
-extern SCIP_RETCODE   solstp_reroot(SCIP*, GRAPH*, int*, int);
+extern SCIP_RETCODE   solstp_reroot(SCIP*, const GRAPH*, int*, int);
 extern SCIP_RETCODE   solstp_rerootInfeas(SCIP*, GRAPH*, int*, int, SCIP_Bool*);
 SCIP_RETCODE       solstp_prune(SCIP*, const GRAPH*, int*, STP_Bool*);
 SCIP_RETCODE       solstp_pruneFromTmHeur(SCIP*, const GRAPH*, const SCIP_Real*, int* RESTRICT, STP_Bool* RESTRICT);

@@ -42,7 +42,7 @@
 static
 SCIP_RETCODE reroot(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< the graph */
+   const GRAPH*          g,                  /**< the graph */
    int*                  result,             /**< solution array (CONNECT/UNKNOWN) */
    int                   newroot,            /**< the new root */
    SCIP_Bool*            isInfeasible        /**< infeasible? */
@@ -167,10 +167,11 @@ SCIP_RETCODE reroot(
 #ifndef NDEBUG
    if( *isInfeasible == FALSE )
    {
+      GRAPH* g_hacky = (GRAPH*) g;
       const int realroot = g->source;
-      g->source = newroot;
-      assert(solstp_isValid(scip, g, result));
-      g->source = realroot;
+      g_hacky->source = newroot;
+      assert(solstp_isValid(scip, g_hacky, result));
+      g_hacky->source = realroot;
 
       for( int k = 0; k < nnodes; k++ )
       {
@@ -1527,7 +1528,7 @@ SCIP_RETCODE solstp_pruneFromTmHeur_csr(
 /** changes solution according to given root */
 SCIP_RETCODE solstp_reroot(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< the graph */
+   const GRAPH*          g,                  /**< the graph */
    int*                  result,             /**< solution array (CONNECT/UNKNOWN) */
    int                   newroot             /**< the new root */
    )
@@ -1536,7 +1537,6 @@ SCIP_RETCODE solstp_reroot(
    assert(scip && g && result);
 
    SCIP_CALL( reroot(scip, g, result, newroot, &isInfeasible) );
-
 
    assert(!isInfeasible);
 
@@ -1736,7 +1736,6 @@ SCIP_Bool solstp_isValid(
             }
          }
       }
-
       solstp_print(graph, result);
    }
 #endif

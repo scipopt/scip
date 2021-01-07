@@ -1202,6 +1202,7 @@ SCIP_RETCODE dualascent_execDegCons(
    SCIP_Real* RESTRICT rescap;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
+   const int root = daparams->root;
 
    assert(scip && g && daparams && objval);
    assert(g->stp_type == STP_DCSTP);
@@ -1213,6 +1214,9 @@ SCIP_RETCODE dualascent_execDegCons(
       return SCIP_OKAY;
    }
 
+   assert(root == g->source || !daparams->addcuts);
+   assert(graph_knot_isInRange(g, root) && Is_term(g->term[root]));
+
    SCIP_CALL( SCIPallocBufferArray(scip, &orgcosts, nedges) );
    BMScopyMemoryArray(orgcosts, g->cost, nedges);
 
@@ -1221,7 +1225,7 @@ SCIP_RETCODE dualascent_execDegCons(
       if( g->maxdeg[k] != 1 )
          continue;
 
-      if( !Is_term(g->term[k]) || k == g->source )
+      if( !Is_term(g->term[k]) || k == root )
          continue;
 
       for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )

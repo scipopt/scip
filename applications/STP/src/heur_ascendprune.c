@@ -365,6 +365,11 @@ SCIP_RETCODE redcostGraphBuild(
    redcostgraph->edgeNew2OrgMap = edgeNew2OrgMap;
    redcostgraph->nodeOrg2NewMap = nodeOrg2NewMap;
 
+#ifndef NDEBUG
+   for( int e = 0; e < 2 * nnewedges; e++ )
+      edgeNew2OrgMap[e] = UNKNOWN;
+#endif
+
    /* initialize new graph */
    SCIP_CALL( graph_init(scip, &(redcostgraph->newgraph), nnewnodes, 2 * nnewedges, 1) );
    newgraph = redcostgraph->newgraph;
@@ -461,6 +466,8 @@ SCIP_RETCODE redcostGraphBuild(
          if( subnode >= 0 )
          {
             assert(graph_knot_isInRange(newgraph, subnode));
+            assert(newgraph->maxdeg[subnode] == -1);
+
             newgraph->maxdeg[subnode] = g->maxdeg[k];
          }
       }
@@ -511,17 +518,16 @@ SCIP_RETCODE redcostGraphSolRetransform(
    int*                  result              /**< solution for original graph; for STP like also keeps sub-solution */
    )
 {
-   GRAPH* newgraph = redcostgraph->newgraph;
+   const GRAPH* newgraph = redcostgraph->newgraph;
    const int* const edgeNew2OrgMap = redcostgraph->edgeNew2OrgMap;
    const int nnewedges = graph_get_nEdges(newgraph);
-
-   assert(solstp_isValid(scip, newgraph, result));
 
    if( g->stp_type == STP_DCSTP || graph_typeIsDirected(g) )
    {
       const int nedges = graph_get_nEdges(g);
 
       assert(subresult);
+      assert(solstp_isValid(scip, newgraph, subresult));
 
       for( int e = 0; e < nedges; e++ )
          result[e] = UNKNOWN;
@@ -532,10 +538,16 @@ SCIP_RETCODE redcostGraphSolRetransform(
          {
             const int eorg = edgeNew2OrgMap[e];
             assert(graph_edge_isInRange(g, eorg));
-
             result[eorg] = CONNECT;
          }
       }
+
+      if( redcostgraph->root != g->source )
+      {
+         assert(g->stp_type == STP_DCSTP);
+         solstp_reroot(scip, g, result, g->source);
+      }
+
       assert(solstp_isValid(scip, g, result));
    }
    else
@@ -544,6 +556,7 @@ SCIP_RETCODE redcostGraphSolRetransform(
       const int nnodes = graph_get_nNodes(g);
 
       assert(!subresult);
+      assert(solstp_isValid(scip, newgraph, result));
 
       /* NOTE: here  we also prune solution in original graph */
       SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes ) );

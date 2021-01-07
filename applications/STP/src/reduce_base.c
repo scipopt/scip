@@ -1505,6 +1505,45 @@ SCIP_RETCODE reduceNw(
    return SCIP_OKAY;
 }
 
+
+
+/** reduce degree constrained Steiner tree problem */
+SCIP_RETCODE reduceDc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            fixed,              /**< pointer to store the offset value */
+   int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   )
+{
+   SCIP_RANDNUMGEN* randnumgen;
+   SCIP_Real timelimit;
+   const int nnodes = graph_get_nNodes(g);
+   const int redbound = MAX(nnodes / 1000, minelims);
+   STP_Bool da = TRUE;
+
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   while( (da) && !SCIPisStopped(scip) )
+   {
+      int danelims = 0;
+      const RPDA paramsda = { .prevrounds = 0, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &danelims, randnumgen) );
+
+      if( danelims <= 2 * redbound )
+         da = FALSE;
+   }
+
+   SCIPfreeRandom(scip, &randnumgen);
+
+   return SCIP_OKAY;
+}
+
 /** MWCS loop */
 SCIP_RETCODE redLoopMw(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2048,7 +2087,7 @@ SCIP_RETCODE reduce(
    SCIP_CALL( reduce_unconnected(scip, graph) );
 
    /* if no reduction methods available for given problem, return */
-   if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_BRMWCSP )
+   if( graph->stp_type == STP_BRMWCSP )
    {
       graph_path_exit(scip, graph);
       return SCIP_OKAY;
@@ -2075,6 +2114,10 @@ SCIP_RETCODE reduce(
       else if( stp_type == STP_NWSPG )
       {
          SCIP_CALL( reduceNw(scip, graph, offset, minelims) );
+      }
+      else if( stp_type == STP_DCSTP )
+      {
+         SCIP_CALL( reduceDc(scip, graph, offset, minelims) );
       }
       else
       {
@@ -2104,6 +2147,10 @@ SCIP_RETCODE reduce(
       else if( stp_type == STP_NWSPG )
       {
          SCIP_CALL( reduceNw(scip, graph, offset, minelims) );
+      }
+      else if( stp_type == STP_DCSTP )
+      {
+         SCIP_CALL( reduceDc(scip, graph, offset, minelims) );
       }
       else
       {
