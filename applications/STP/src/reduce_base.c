@@ -1515,6 +1515,7 @@ SCIP_RETCODE reduceDc(
    int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
 {
+   REDSOLLOCAL* redsollocal;
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real timelimit;
    const int nnodes = graph_get_nNodes(g);
@@ -1522,6 +1523,7 @@ SCIP_RETCODE reduceDc(
    STP_Bool da = TRUE;
 
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
+   SCIP_CALL( reduce_sollocalInit(scip, g, &redsollocal) );
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1533,12 +1535,13 @@ SCIP_RETCODE reduceDc(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &danelims, randnumgen) );
+      SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, fixed, &danelims, randnumgen) );
 
       if( danelims <= 2 * redbound )
          da = FALSE;
    }
 
+   reduce_sollocalFree(scip, &redsollocal);
    SCIPfreeRandom(scip, &randnumgen);
 
    return SCIP_OKAY;
