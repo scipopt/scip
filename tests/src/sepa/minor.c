@@ -39,11 +39,8 @@ void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* this includes expression handlers and nonlinear constraint handler */
+   /* this includes minor separator, expression handlers and nonlinear constraint handler */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
-   /* include minor separator */
-   SCIP_CALL( SCIPincludeSepaMinor(scip) );
 
    /* get nonlinear conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
