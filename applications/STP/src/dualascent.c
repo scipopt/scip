@@ -607,7 +607,7 @@ SCIP_RETCODE daExec(
    int root = daparams->root;
    const SCIP_Bool addcuts = daparams->addcuts;
    const SCIP_Bool is_pseudoroot = daparams->is_pseudoroot;
-   const SCIP_Bool probIsDirected = graph_typeIsDirected(g);
+   const SCIP_Bool withInfinityArcs = graph_typeIsDirected(g) || g->stp_type == STP_DCSTP;
 
    assert(rescap);
    assert(addconss || !addcuts);  /* should currently not  be activated */
@@ -922,7 +922,7 @@ SCIP_RETCODE daExec(
                {
                   assert(vars != NULL);
 
-                  if( !probIsDirected || LT(g->cost[edgearr[a]], FARAWAY) )
+                  if( !withInfinityArcs || LT(g->cost[edgearr[a]], FARAWAY) )
                   {
                      if( addconss )
                         SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[edgearr[a]], 1.0) );
@@ -1138,7 +1138,10 @@ SCIP_RETCODE dualascent_exec(
    assert(scip && g && daparams && objval);
 
    if( g->knots == 1 )
+   {
+      *objval = 0.0;
       return SCIP_OKAY;
+   }
 
    if( redcost == NULL )
       SCIP_CALL( SCIPallocBufferArray(scip, &rescap, g->edges) );
@@ -1179,6 +1182,66 @@ SCIP_RETCODE dualascent_update(
    printf("dual bound after %f \n", *objval);
 
    assert(dualascent_allTermsReachable(scip, g, daparams->root, redcost));
+
+   return SCIP_OKAY;
+}
+
+
+
+/** dual ascent heuristic for degree constrained problem */
+SCIP_RETCODE dualascent_execDegCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            result,             /**< solution array or NULL */
+   const DAPARAMS*       daparams,           /**< parameter */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real*            objval              /**< pointer to store objective value */
+)
+{
+   SCIP_Real* orgcosts;
+   SCIP_Real* RESTRICT rescap;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+
+   assert(scip && g && daparams && objval);
+   assert(g->stp_type == STP_DCSTP);
+   assert(g->maxdeg);
+
+   if( nnodes == 1 )
+   {
+      *objval = 0.0;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &orgcosts, nedges) );
+   BMScopyMemoryArray(orgcosts, g->cost, nedges);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( g->maxdeg[k] != 1 )
+         continue;
+
+      if( !Is_term(g->term[k]) || k == g->source )
+         continue;
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         g->cost[e] = FARAWAY;
+      }
+   }
+
+   if( redcost == NULL )
+      SCIP_CALL( SCIPallocBufferArray(scip, &rescap, nedges) );
+   else
+      rescap = redcost;
+
+   SCIP_CALL( daExec(scip, g, result, daparams, FALSE, rescap, objval) );
+
+   if( redcost == NULL )
+      SCIPfreeBufferArray(scip, &rescap);
+
+   BMScopyMemoryArray(g->cost, orgcosts, nedges);
+   SCIPfreeBufferArray(scip, &orgcosts);
 
    return SCIP_OKAY;
 }
@@ -1243,8 +1306,12 @@ SCIP_RETCODE dualascent_execPcMw(
    assert(nruns >= 0);
    assert(objval != NULL);
 
+
    if( g->knots == 1 )
+   {
+      *objval = 0.0;
       return SCIP_OKAY;
+   }
 
    if( addcuts )
    {

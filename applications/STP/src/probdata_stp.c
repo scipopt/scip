@@ -1821,7 +1821,14 @@ SCIP_RETCODE createInitialCuts(
          SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lpobjval) );
       }
 #endif
-      SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lpobjval) );
+      if( graph->stp_type == STP_DCSTP )
+      {
+         SCIP_CALL( dualascent_execDegCons(scip, graph, NULL, &daparams, NULL, &lpobjval) );
+      }
+      else
+      {
+         SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lpobjval) );
+      }
    }
 
    return SCIP_OKAY;

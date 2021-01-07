@@ -52,6 +52,17 @@ SCIP_RETCODE dualascent_exec(
    );
 
 
+/** dual-ascent for reduced costs */
+SCIP_RETCODE dualascent_execDegCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            result,             /**< solution array or NULL */
+   const DAPARAMS*       daparams,           /**< parameter */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real*            objval
+   );
+
+
 /** updates reduced costs with dual ascent heuristic */
 SCIP_RETCODE dualascent_update(
    SCIP*                 scip,               /**< SCIP data structure */

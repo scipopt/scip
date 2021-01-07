@@ -1393,7 +1393,9 @@ void graph_csr_build(
             if( pcmw && graph_pc_knotIsDummyTerm(g, ehead)  )
                continue;
 
-            assert(!graph_typeIsUndirected(g) || (edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY));
+            /* NOTE: STP_DCSTP might happen, because we change the edge weight during dual-ascent */
+            assert(graph_typeIsDirected(g) || g->stp_type == STP_DCSTP
+                  || (edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY));
 
             head_csr[pos] = ehead;
             if( hasEdgeId )
