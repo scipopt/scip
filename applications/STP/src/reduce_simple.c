@@ -876,7 +876,7 @@ SCIP_RETCODE reduce_rpt(
    assert(fixed != NULL);
    assert(count != NULL);
    assert(!graph_typeIsUndirected(g));
-   assert(g->stp_type != STP_NWPTSPG || !graph_knotIsNWLeaf(g, g->source));
+   assert(g->stp_type != STP_NWPTSPG || !graph_knotIsNWLeaf(g, g->source) || g->terms == 1);
 
    *count = 0;
 
