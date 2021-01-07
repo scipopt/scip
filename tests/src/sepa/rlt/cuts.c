@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   rlt.c
- * @brief  tests rlt functionalities
+/**@file   cuts.c
+ * @brief  tests rlt cut functionalities
  * @author Fabian Wegscheider
  */
 
@@ -37,7 +37,6 @@ static SCIP_VAR* z;
 static SCIP_VAR* xx;
 static SCIP_VAR* xy;
 static SCIP_VAR* xz;
-static SCIP_VAR* sumvar;
 static SCIP_VAR* prodvar;
 static SCIP_VAR* absvar;
 static SCIP_VAR* powvar;
@@ -106,7 +105,7 @@ void setup(void)
    sepadata->conshdlr = conshdlr;
    sepadata->maxusedvars = 3;
    sepadata->maxunknownterms = 1;
-   sepadata->onlyinitial = FALSE;
+   sepadata->onlyoriginal = FALSE;
    sepadata->onlycontrows = TRUE;
    sepadata->onlyeqrows = FALSE;
 
@@ -123,7 +122,6 @@ void setup(void)
 
    /* collect auxvars */
    expr = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[0])->expr;
-   sumvar = SCIPgetConsExprExprAuxVar(expr);
    xx = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
    xy = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[1]);
    expr = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[1])->expr;
@@ -147,7 +145,7 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-TestSuite(rlt, .init = setup, .fini = teardown);
+TestSuite(cuts, .init = setup, .fini = teardown);
 
 static
 void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_Real lhs, SCIP_Real rhs)
@@ -183,7 +181,8 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    }
 }
 
-Test(rlt, collect)
+/* checks the correspondence between variables and expressions */
+Test(cuts, collect)
 {
    /* check original variables */
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, x)->aux.var, xx);
@@ -210,7 +209,8 @@ Test(rlt, collect)
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, powvar, logvar), NULL);
 }
 
-Test(rlt, separation)
+/* computes and checks cuts */
+Test(cuts, separation)
 {
    SCIP_ROW* row1;
    SCIP_ROW* cutlhs;

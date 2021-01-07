@@ -435,10 +435,6 @@ SCIP_ROW* SCIPconsGetRow(
    {
       return SCIPgetRowVarbound(scip, cons);
    }
-   else
-   {
-      SCIPwarningMessage(scip, "Cannot return row for constraint of type <%s>\n", conshdlrname);
-   }
 
    return NULL;
 }
