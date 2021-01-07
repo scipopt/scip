@@ -501,6 +501,81 @@ void redcostGraphFree(
 }
 
 
+/** retransforms solution on subgraph */
+static
+SCIP_RETCODE redcostGraphSolRetransform(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   const RCGRAPH*        redcostgraph,
+   const int*            subresult,          /**< solution for new graph, can also be NULL */
+   int*                  result              /**< solution for original graph; for STP like also keeps sub-solution */
+   )
+{
+   GRAPH* newgraph = redcostgraph->newgraph;
+   const int* const edgeNew2OrgMap = redcostgraph->edgeNew2OrgMap;
+   const int nnewedges = graph_get_nEdges(newgraph);
+
+   assert(solstp_isValid(scip, newgraph, result));
+
+   if( g->stp_type == STP_DCSTP || graph_typeIsDirected(g) )
+   {
+      const int nedges = graph_get_nEdges(g);
+
+      assert(subresult);
+
+      for( int e = 0; e < nedges; e++ )
+         result[e] = UNKNOWN;
+
+      for( int e = 0; e < nnewedges; e++ )
+      {
+         if( subresult[e] == CONNECT )
+         {
+            const int eorg = edgeNew2OrgMap[e];
+            assert(graph_edge_isInRange(g, eorg));
+
+            result[eorg] = CONNECT;
+         }
+      }
+      assert(solstp_isValid(scip, g, result));
+   }
+   else
+   {
+      STP_Bool* RESTRICT nodearrchar;
+      const int nnodes = graph_get_nNodes(g);
+
+      assert(!subresult);
+
+      /* NOTE: here  we also prune solution in original graph */
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes ) );
+      BMSclearMemoryArray(nodearrchar, nnodes);
+
+      for( int e = 0; e < nnewedges; e++ )
+      {
+         if( result[e] == CONNECT )
+         {
+            const int eorg = edgeNew2OrgMap[e];
+            assert(graph_edge_isInRange(g, eorg));
+
+            nodearrchar[g->tail[eorg]] = TRUE;
+            nodearrchar[g->head[eorg]] = TRUE;
+         }
+      }
+
+      if( newgraph->knots == 1 )
+         nodearrchar[g->source] = TRUE;
+
+      SCIP_CALL( solstp_prune(scip, g, result, nodearrchar) );
+
+      SCIPfreeBufferArray(scip, &nodearrchar);
+   }
+
+   SCIPdebugMessage("obj after retransformation %f \n", solstp_getObj(g, result, 0.0));
+
+   assert(solstp_isValid(scip, g, result));
+
+   return SCIP_OKAY;
+}
+
 
 /** builds Steiner tree on subgraph */
 static
@@ -512,10 +587,6 @@ SCIP_RETCODE redcostGraphComputeSteinerTree(
    )
 {
    GRAPH* newgraph = redcostgraph->newgraph;
-   STP_Bool* RESTRICT nodearrchar;
-   const int* const edgeNew2OrgMap = redcostgraph->edgeNew2OrgMap;
-   const int nnodes = graph_get_nNodes(g);
-   const int nnewedges = graph_get_nEdges(newgraph);
    SCIP_Bool success;
 
    SCIP_CALL( graph_path_init(scip, newgraph) );
@@ -548,31 +619,7 @@ SCIP_RETCODE redcostGraphComputeSteinerTree(
    assert(solstp_isValid(scip, newgraph, result));
    graph_path_exit(scip, newgraph);
 
-    /*
-    * prune solution (in the original graph)
-    */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes ) );
-   BMSclearMemoryArray(nodearrchar, nnodes);
-
-   for( int e = 0; e < nnewedges; e++ )
-   {
-      if( result[e] == CONNECT )
-      {
-         const int eorg = edgeNew2OrgMap[e];
-         assert(graph_edge_isInRange(g, eorg));
-
-         nodearrchar[g->tail[eorg]] = TRUE;
-         nodearrchar[g->head[eorg]] = TRUE;
-      }
-   }
-
-   if( newgraph->knots == 1 )
-      nodearrchar[g->source] = TRUE;
-
-   SCIP_CALL( solstp_prune(scip, g, result, nodearrchar) );
-
-   assert(solstp_isValid(scip, g, result));
-   SCIPfreeBufferArray(scip, &nodearrchar);
+   SCIP_CALL( redcostGraphSolRetransform(scip, g, redcostgraph, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -593,8 +640,6 @@ SCIP_RETCODE redcostGraphComputeSteinerTreeDirected(
    int* subresult;
    SCIP_Real* cost;
    SCIP_Real* costrev;
-   const int* const edgeNew2OrgMap = redcostgraph->edgeNew2OrgMap;
-   const int nedges = graph_get_nEdges(g);
    const int nsubnodes = graph_get_nNodes(subgraph);
    const int nsubedges = graph_get_nEdges(subgraph);
    int runstm = 50;
@@ -644,27 +689,73 @@ SCIP_RETCODE redcostGraphComputeSteinerTreeDirected(
       return SCIP_OKAY;
    }
 
+   SCIPdebugMessage("sub-obj after TM %f \n", solstp_getObj(subgraph, subresult, 0.0));
+   assert(solstp_isValid(scip, subgraph, subresult));
+
+   SCIP_CALL( redcostGraphSolRetransform(scip, g, redcostgraph, subresult, result) );
+
+   SCIPfreeBufferArray(scip, &subresult);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** builds Steiner tree for DCSTP */
+static
+SCIP_RETCODE redcostGraphComputeSteinerTreeDegCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   RCGRAPH*              redcostgraph,
+   int*                  result,
+   SCIP_Bool*            solfound            /**< has a solution been found?  */
+   )
+{
+   GRAPH* const subgraph = redcostgraph->newgraph;
+   int* subresult;
+   SCIP_Real* cost;
+   SCIP_Real* costrev;
+   const int nsubedges = graph_get_nEdges(subgraph);
+   int runstm = 100;
+
+   assert(TRUE == *solfound);
+   assert(g->stp_type == STP_DCSTP);
+
+   SCIP_CALL( graph_path_init(scip, subgraph) );
+   SCIP_CALL( reduce_unconnected(scip, subgraph) );
+   assert(graph_valid(scip, subgraph));
+
+#ifdef DEBUG_ASCENDPRUNE
+   SCIP_CALL( checkRedCostGraph(g, redcostgraph) );
+#endif
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subresult, nsubedges ) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsubedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsubedges) );
+
+   graph_getEdgeCosts(subgraph, cost, costrev);
+
+   /* build solution on new graph */
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
+      subgraph, NULL, NULL, subresult, runstm, subgraph->source, cost, costrev, NULL, NULL, solfound) );
+
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
+
+   graph_path_exit(scip, subgraph);
+
+   if( FALSE == *solfound )
+   {
+      SCIPdebugMessage("ascend-and-prune did not find a feasible solution, aborting... \n");
+
+      SCIPfreeBufferArray(scip, &subresult);
+      return SCIP_OKAY;
+   }
 
    SCIPdebugMessage("sub-obj after TM %f \n", solstp_getObj(subgraph, subresult, 0.0));
    assert(solstp_isValid(scip, subgraph, subresult));
 
-   /* transfer solution */
-
-   for( int e = 0; e < nedges; e++ )
-      result[e] = UNKNOWN;
-
-   for( int e = 0; e < nsubedges; e++ )
-   {
-      if( subresult[e] == CONNECT )
-      {
-         const int eorg = edgeNew2OrgMap[e];
-         assert(graph_edge_isInRange(g, eorg));
-
-         result[eorg] = CONNECT;
-      }
-   }
-   assert(solstp_isValid(scip, g, result));
-   SCIPdebugMessage("obj after retransformation %f \n", solstp_getObj(g, result, 0.0));
+   SCIP_CALL( redcostGraphSolRetransform(scip, g, redcostgraph, subresult, result) );
 
    SCIPfreeBufferArray(scip, &subresult);
 
@@ -872,7 +963,11 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    SCIP_CALL( redcostGraphBuild(scip, g, &redcostgraph) );
 
-   if( graph_typeIsUndirected(g) )
+   if( g->stp_type == STP_DCSTP )
+   {
+      SCIP_CALL( redcostGraphComputeSteinerTreeDegCons(scip, g, &redcostgraph, result, solfound) );
+   }
+   else if( graph_typeIsUndirected(g) )
    {
       SCIP_CALL( redcostGraphComputeSteinerTree(scip, g, &redcostgraph, result) );
    }

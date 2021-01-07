@@ -1795,8 +1795,8 @@ SCIP_RETCODE createInitialCuts(
    }
    else if( graph->stp_type != STP_BRMWCSP )
    {
-      const SCIP_Bool doAscendPrune =
-            (graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph) || !graph_typeIsUndirected(graph));
+      const SCIP_Bool doAscendPrune = (graph->stp_type == STP_DCSTP ||
+            graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph) || graph_typeIsDirected(graph));
       DAPARAMS daparams = { .addcuts = TRUE, .ascendandprune = doAscendPrune, .root = graph->source,
                    .is_pseudoroot = FALSE, .damaxdeviation = 0.1 };
 

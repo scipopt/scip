@@ -1467,7 +1467,7 @@ SCIP_RETCODE computeDegConsTree(
    mindegsum = 2;
    maxdegs = g->maxdeg;
 
-   SCIPdebugMessage("Heuristic: Start=%5d ", start);
+   SCIPdebugMessage("Heuristic: Start=%d \n ", start);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &degs, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cluster, nnodes) );
@@ -1611,9 +1611,6 @@ SCIP_RETCODE computeDegConsTree(
       assert(!connected[newval]);
       assert(connected[old]);
 
-      SCIPdebug(fputc('R', stdout));
-      SCIPdebug(fflush(stdout));
-
       /* mark new tree nodes/edges */
       k = old;
       if( Is_term(g->term[newval]) )
@@ -1648,6 +1645,7 @@ SCIP_RETCODE computeDegConsTree(
       if( Is_term(g->term[i]) && !connected[i] )
       {
          *solfound = FALSE;
+         SCIPdebugMessage("invalid solution, not connected: %d \n", i);
          break;
       }
    }
@@ -1658,8 +1656,14 @@ SCIP_RETCODE computeDegConsTree(
       SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, g, result, connected) );
 
       for( t = 0; t < nnodes; t++ )
+      {
          if( degs[t] > maxdegs[t] )
+         {
             *solfound = FALSE;
+            SCIPdebugMessage("invalid solution, wrong degree: %d \n", i);
+            break;
+         }
+      }
    }
    SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &cluster);
