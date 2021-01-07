@@ -98,6 +98,7 @@ struct SCIP_PropData
    int                   nfixededges_all;    /**< total number of arcs fixed by 'fixedgevar' method of this propagator */
    int                   nfixededges_bipost; /**< total number of arcs fixed by 'fixedgevar' method of this propagator after the last reductions */
    int                   maxnwaitrounds;     /**< maximum number of rounds to wait until propagating again */
+   SCIP_Bool             isInitialized;      /**< already initialized? */
    SCIP_Bool             aggressive;         /**< be aggressive? */
 };
 
@@ -1927,6 +1928,8 @@ SCIP_RETCODE initPropAtFirstCall(
       /* first call? */
       if( !propdata->propgraph )
       {
+         assert(!propdata->isInitialized);
+
          SCIP_CALL( initPropgraph(scip, graph, propdata) );
 
          if( useRedcostdata(graph) )
@@ -1937,6 +1940,33 @@ SCIP_RETCODE initPropAtFirstCall(
          assert(propdata->propgraph);
       }
    }
+
+   if( !propdata->isInitialized && graph->stp_type == STP_DCSTP )
+   {
+      const int nnodes = graph_get_nNodes(graph);
+
+      assert(graph->maxdeg);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( graph->maxdeg[k] != 1 )
+            continue;
+
+         if( !Is_term(graph->term[k]) || k == graph->source )
+            continue;
+
+         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            if( SCIPvarGetUbLocal(vars[e]) > 0.5 )
+            {
+               assert(SCIPvarGetLbLocal(vars[e]) < 0.5);
+               SCIP_CALL( SCIPchgVarUb(scip, vars[e], 0.0) );
+            }
+         }
+      }
+   }
+
+   propdata->isInitialized = TRUE;
 
    return SCIP_OKAY;
 }
@@ -2114,6 +2144,7 @@ SCIP_DECL_PROPINITSOL(propInitsolStp)
    propdata->propgraphnodenumber = -1;
    propdata->lpobjval = -1.0;
    propdata->lpobjval_last = -1.0;
+   propdata->isInitialized = FALSE;
 
    return SCIP_OKAY;
 }
