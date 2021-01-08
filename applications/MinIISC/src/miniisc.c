@@ -28,7 +28,7 @@
 /* default parameters */
 #define DEFAULT_SOLVEMASTERAPPROX      FALSE      /**< Solve master problem approximately? */
 #define DEFAULT_MASTERGAPLIMIT         0.1        /**< gap bound for approximately solving the master problem */
-#define DEFAULT_REOPTIMIZATION         FALSE      /**< Use reoptimization to solve master problem? */
+#define DEFAULT_REOPTIMIZATION         TRUE       /**< Use reoptimization to solve master problem? */
 #define DEFAULT_MASTERSTALLNODES       5000L      /**< stall nodes for the master problem */
 
 /** data needed for cut generation */
