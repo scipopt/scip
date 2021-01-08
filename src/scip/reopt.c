@@ -2216,14 +2216,14 @@ SCIP_RETCODE saveConsLinear(
    /* get all variables, values, and sides */
    if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 )
    {
-      vars = SCIPgetVarsLinear(NULL, cons);
-      vals = SCIPgetValsLinear(NULL, cons);
-      reoptconsdata->lhs = SCIPgetLhsLinear(NULL, cons);
-      reoptconsdata->rhs = SCIPgetRhsLinear(NULL, cons);
+      vars = SCIPgetVarsLinear(set->scip, cons);
+      vals = SCIPgetValsLinear(set->scip, cons);
+      reoptconsdata->lhs = SCIPgetLhsLinear(set->scip, cons);
+      reoptconsdata->rhs = SCIPgetRhsLinear(set->scip, cons);
    }
    else if( strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0 )
    {
-      vars = SCIPgetVarsLogicor(NULL, cons);
+      vars = SCIPgetVarsLogicor(set->scip, cons);
 
       /* initialize values to 1.0 */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &vals, reoptconsdata->nvars) );
@@ -2237,7 +2237,7 @@ SCIP_RETCODE saveConsLinear(
    }
    else if( strcmp(SCIPconshdlrGetName(conshdlr), "setppc") == 0 )
    {
-      vars = SCIPgetVarsSetppc(NULL, cons);
+      vars = SCIPgetVarsSetppc(set->scip, cons);
 
       /* initialize values to 1.0 */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &vals, reoptconsdata->nvars) );
@@ -2246,7 +2246,7 @@ SCIP_RETCODE saveConsLinear(
       for( v = 0; v < reoptconsdata->nvars; v++ )
          vals[v] = 1.0;
 
-      switch( SCIPgetTypeSetppc(NULL, cons) ) {
+      switch( SCIPgetTypeSetppc(set->scip, cons) ) {
       case SCIP_SETPPCTYPE_PARTITIONING:
          reoptconsdata->lhs = 1.0;
          reoptconsdata->rhs = 1.0;
