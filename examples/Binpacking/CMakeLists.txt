@@ -8,7 +8,7 @@ message("SCIP_BINARY_DIR: ${SCIP_BINARY_DIR}")
 
 if(TARGET SCIP::SCIP)
   message("Found SCIP")
-  // find package by SCIP PATH
+  # find package by SCIP PATH
   list(APPEND CMAKE_MODULE_PATH "${SCIP_BINARY_DIR}" )
   find_package(SCIP REQUIRED)
 else()
