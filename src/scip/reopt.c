@@ -4307,6 +4307,9 @@ void resetStats(
    reopt->reopttree->ninfnodes = 0;
    reopt->reopttree->nprunednodes = 0;
    reopt->reopttree->ncutoffreoptnodes = 0;
+
+   if( reopt->dualreds != NULL )
+      reopt->dualreds->nvars = 0;
 }
 
 /** check the stored bound changes of all child nodes for redundancy and infeasibility
