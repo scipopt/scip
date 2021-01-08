@@ -5147,6 +5147,7 @@ SCIP_RETCODE SCIPreoptReleaseData(
 
       BMSfreeBlockMemoryArray(blkmem, &reopt->addedconss, reopt->addedconsssize);
       reopt->naddedconss = 0;
+      reopt->addedconsssize = 0;
    }
 
    SCIP_CALL( cleanActiveConss(reopt, set, blkmem) );
