@@ -21,7 +21,7 @@ else()
 endif()
 
 
-if(SCIP::SCIP)
+if(TARGET SCIP::SCIP)
   message("Found SCIP")
 else()
   message("Couldn't find scip, searching")
