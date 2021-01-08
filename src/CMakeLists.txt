@@ -987,7 +987,7 @@ else()
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
-add_executable(SCIP::libscip ALIAS libscip)
+add_library(SCIP::libscip ALIAS libscip)
 
 if(SCIP::SCIP)
   message("SCIP::SCIP is now defined")
