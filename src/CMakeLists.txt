@@ -990,7 +990,21 @@ add_executable(SCIP::SCIP ALIAS scip)
 add_library(SCIP::libscip ALIAS libscip)
 
 if(SCIP::SCIP)
-  message("SCIP::SCIP is now defined")
+  message("SCIP::SCIP is defined")
+else()
+  message("SCIP::SCIP is NOT defined")
+endif()
+
+if(TARGET scip)
+  message("scip is defined")
+else()
+  message("scip is NOT defined")
+endif()
+
+if(TARGET SCIP::SCIP)
+  message("TARGET SCIP::SCIP is defined")
+else()
+  message("TARGET SCIP::SCIP is NOT defined")
 endif()
 
 include(GenerateExportHeader)

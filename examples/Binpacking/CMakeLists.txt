@@ -2,6 +2,24 @@ cmake_minimum_required(VERSION 3.3)
 
 project(Binpacking)
 
+if(SCIP::SCIP)
+  message("SCIP::SCIP is defined")
+else()
+  message("SCIP::SCIP is NOT defined")
+endif()
+
+if(TARGET scip)
+  message("scip is defined")
+else()
+  message("scip is NOT defined")
+endif()
+
+if(TARGET SCIP::SCIP)
+  message("TARGET SCIP::SCIP is defined")
+else()
+  message("TARGET SCIP::SCIP is NOT defined")
+endif()
+
 
 if(SCIP::SCIP)
   message("Found SCIP")
