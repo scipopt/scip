@@ -486,7 +486,7 @@ SCIP_Bool isTMSpType(
 {
    const int type = graph->stp_type;
 
-   return (type == STP_DHCSTP || type == STP_DCSTP  || type == STP_SAP || type == STP_NWPTSPG);
+   return (type == STP_DHCSTP || type == STP_DCSTP);
 }
 
 /** returns mode */
@@ -544,9 +544,11 @@ void updateBestSol(
       /* compute objective value w.r.t. original costs! */
       const SCIP_Real obj = solstp_getObjCsr(graph, tmbase->csr_orgcosts, result_csr, connected);
 
+      SCIPdebugMessage("new obj=%f (start=%d)\n ", obj, startnode);
+
       if( LT(obj, tmbase->best_obj) )
       {
-         SCIPdebugMessage("\n improved obj=%f ", obj);
+         SCIPdebugMessage("\n improved obj=%f \n ", obj);
 
          tmbase->best_obj = obj;
          tmbase->best_start = startnode;
@@ -1051,7 +1053,9 @@ SCIP_RETCODE computeSteinerTreeCsr(
 
    assert(g->stp_type != STP_DHCSTP);
 
-   if( tmbase->sdprofit1st )
+   if( graph_typeIsDirected(g) )
+      shortestpath_computeSteinerTreeDirected(scip, g, startnode, &spaths);
+   else if( tmbase->sdprofit1st )
       shortestpath_computeSteinerTreeBiased(g, tmbase->sdprofit1st, startnode, &spaths);
    else
       shortestpath_computeSteinerTree(g, startnode, &spaths);
@@ -1259,15 +1263,14 @@ SCIP_RETCODE computeSteinerTree(
    int* cluster = NULL;
    int    k;
    int    e;
-   int    i;
    int    j;
-   int    l;
    int    z;
    int    old;
    int    root;
    int    csize;
    int    newval;
    int    nnodes;
+   int nterms;
    SCIP_Real** pathdist = tmallsp->pathdist;
    int** pathedge = tmallsp->pathedge;
 
@@ -1289,23 +1292,27 @@ SCIP_RETCODE computeSteinerTree(
    SCIPdebugMessage("TM heuristic Start=%d \n", start);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cluster, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, g->terms) );
 
    cluster[csize++] = start;
 
    for( e = 0; e < g->edges; e++ )
       result[e] = UNKNOWN;
 
-   for( i = 0; i < nnodes; i++ )
+   nterms = 0;
+   for( int i = 0; i < nnodes; i++ )
    {
       g->mark[i]   = (g->grad[i] > 0);
       connected[i] = FALSE;
-      perm[i] = i;
+      if( Is_term(g->term[i]) )
+         perm[nterms++] = i;
    }
+
+   assert(nterms == g->terms);
 
    connected[start] = TRUE;
 
-   SCIPrandomPermuteIntArray(randnumgen, perm, 0, nnodes - 1);
+   SCIPrandomPermuteIntArray(randnumgen, perm, 0, g->terms - 1);
 
    assert(graph_valid(scip, g));
 
@@ -1321,25 +1328,27 @@ SCIP_RETCODE computeSteinerTree(
       if( SCIPisStopped(scip) )
          break;
 
+      z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
+
       /* find shortest path from current tree to unconnected terminal */
-      for( l = nnodes - 1; l >= 0; --l )
+      for( int q = nterms - 1; q >= 0; --q )
       {
-         i = perm[l];
-         if( !Is_term(g->term[i]) || connected[i] || !g->mark[i] || (directed && !connected[root] && i != root) )
+         const int term = perm[q];
+         if( connected[term] || !g->mark[term] || (directed && !connected[root] && term != root) )
             continue;
 
-         z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
+         assert(Is_term(g->term[term]));
 
          for( k = csize - 1; k >= 0; k-- )
          {
             j = cluster[(k + z) % csize];
-            assert(i != j);
+            assert(term != j);
             assert(connected[j]);
 
-            if( SCIPisLT(scip, pathdist[i][j], min) )
+            if( LT(pathdist[term][j], min) )
             {
-               min = pathdist[i][j];
-               newval = i;
+               min = pathdist[term][j];
+               newval = term;
                old = j;
             }
          }
@@ -1371,6 +1380,12 @@ SCIP_RETCODE computeSteinerTree(
             cluster[csize++] = k;
          }
       }
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) )
+         assert(connected[i]);
    }
 
    /* prune the tree */
@@ -3327,6 +3342,11 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("executing TM for graph (reduced info) \n");
+   graph_printInfoReduced(graph);
+#endif
 
    if( graph_pc_isPcMw(graph) )
       graph_pc_2transcheck(scip, graph);

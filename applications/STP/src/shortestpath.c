@@ -22,9 +22,11 @@
  *
  */
 
+//#define SCIP_DEBUG
 #include "reduce.h"
 #include "shortestpath.h"
 #include "portab.h"
+#include "stpvector.h"
 
 
 #ifndef NDEBUG
@@ -163,7 +165,7 @@ void computeSteinerTree_connectTerminal(
    for( int node = nodes_pred[k]; !connected[node]; node = nodes_pred[node] )
    {
       assert(node >= 0 && node < g->knots);
-      assert(!Is_term(g->term[node]) && !Is_pseudoTerm(g->term[node]));
+      assert((!Is_term(g->term[node]) && !Is_pseudoTerm(g->term[node])));
 
       SCIPdebugMessage("connect path node %d \n", node);
 
@@ -171,6 +173,49 @@ void computeSteinerTree_connectTerminal(
       nodes_dist[node] = 0.0;
       graph_heap_correct(node, 0.0, dheap);
    }
+}
+
+
+
+/** connects node to current tree */
+static inline
+void computeSteinerTree_connectNode(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   k,                  /**< vertex to connect */
+   const int*            nodes_pred,         /**< predecessor array (on vertices) */
+   SCIP_Real* RESTRICT   nodes_dist,         /**< distance array (on vertices) */
+   DHEAP*                dheap,              /**< Dijkstra heap */
+   int*                  termscount,
+   STP_Bool* RESTRICT    connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+)
+{
+   assert(k >= 0 && k < g->knots);
+   assert(!connected[k]);
+
+   SCIPdebugMessage("connect terminal %d (dist=%f) \n", k, nodes_dist[k]);
+
+   connected[k] = TRUE;
+   nodes_dist[k] = 0.0;
+
+   if( Is_term(g->term[k]) )
+      (*termscount)++;
+
+   /* connect k to current solution */
+   for( int node = nodes_pred[k]; !connected[node]; node = nodes_pred[node] )
+   {
+      assert(node >= 0 && node < g->knots);
+
+      SCIPdebugMessage("connect path node %d \n", node);
+
+      if( Is_term(g->term[node]) )
+         (*termscount)++;
+
+      connected[node] = TRUE;
+      nodes_dist[node] = 0.0;
+      graph_heap_correct(node, 0.0, dheap);
+   }
+
+   assert(*termscount <= g->terms);
 }
 
 
@@ -249,6 +294,113 @@ void computeSteinerTree_exec(
       }
    }
 }
+
+
+
+
+/** Executes directed Steiner tree computation.
+ *  Here we always start from the root, but connect the 'startnode' vertex first */
+static inline
+void computeSteinerTree_execDirected(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   startnode,          /**< start vertex */
+   SPATHS*               spaths              /**< shortest paths data */
+)
+{
+   STP_Vectype(int) lostterms = NULL;
+   const CSR* const csr = spaths->csr;
+   DHEAP* const dheap = spaths->dheap;
+   SCIP_Real* RESTRICT nodes_dist = spaths->nodes_dist;
+   int* RESTRICT nodes_pred = spaths->nodes_pred;
+   STP_Bool* RESTRICT connected = spaths->nodes_isConnected;
+   int* const state = dheap->position;
+   const SCIP_Real* const cost_csr = csr->cost;
+   const int* const head_csr = csr->head;
+   const int* const start_csr = csr->start;
+   int termscount = 1;
+
+   assert(dheap->size == 1);
+   assert(graph_typeIsDirected(g));
+   assert(connected[g->source]);
+
+   /* main loop */
+   while( dheap->size > 0 )
+   {
+      /* get nearest labelled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = start_csr[k];
+      const int k_end = start_csr[k + 1];
+      register SCIP_Real k_dist;
+
+      SCIPdebugMessage("take node %d from queue \n", k);
+
+      assert(state[k] == CONNECT);
+      /* NOTE: needs to be set for invariant of heap */
+      state[k] = UNKNOWN;
+
+      if( (Is_term(g->term[k]) || k == startnode) && !connected[k] )
+      {
+         assert(k != g->source);
+
+         /* NOTE: we don't want to connect terminals until the startnode has been added */
+         if( connected[startnode] || k == startnode )
+         {
+            assert(termscount < g->terms);
+            computeSteinerTree_connectNode(g, k, nodes_pred, nodes_dist, dheap, &termscount, connected);
+
+            if( termscount == g->terms )
+            {
+               break;
+            }
+         }
+         else if( k != startnode )
+         {
+            assert(Is_term(g->term[k]));
+            assert(!connected[k]);
+
+            StpVecPushBack(scip, lostterms, k);
+         }
+      }
+
+      k_dist = nodes_dist[k];
+
+      for( int e = k_start; e != k_end; e++ )
+      {
+         const int m = head_csr[e];
+
+         if( !connected[m] )
+         {
+            const SCIP_Real distnew = k_dist + cost_csr[e];
+
+            /* closer to k than to current predecessor? */
+            if( LT(distnew, nodes_dist[m]) )
+            {
+               nodes_pred[m] = k;
+               nodes_dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
+            }
+         }
+      }
+   }
+
+   for( int i = 0; i < StpVecGetSize(lostterms); i++ )
+   {
+      const int term = lostterms[i];
+      assert(Is_term(g->term[term]));
+
+      if( !connected[term] )
+      {
+         assert(termscount < g->terms);
+         computeSteinerTree_connectNode(g, term, nodes_pred, nodes_dist, dheap, &termscount, connected);
+      }
+   }
+
+   assert(termscount == g->terms);
+
+   StpVecFree(scip, lostterms);
+}
+
 
 
 /** executes */
@@ -894,6 +1046,32 @@ void shortestpath_computeSteinerTree(
       return;
 
    computeSteinerTree_exec(g, startnode, spaths);
+
+   assert(computeSteinerTree_allTermsAreReached(g, spaths->nodes_isConnected));
+}
+
+
+/** shortest path based heuristic for computing a Steiner tree  */
+void shortestpath_computeSteinerTreeDirected(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   startnode,          /**< start vertex */
+   SPATHS*               spaths              /**< shortest paths data */
+)
+{
+   assert(g && spaths);
+   assert(spaths->csr && spaths->nodes_dist && spaths->nodes_pred && spaths->dheap && spaths->nodes_isConnected);
+   assert(graph_typeIsDirected(g));
+
+   /* NOTE: here we treat g->source as the start */
+   computeSteinerTree_init(g, g->source, spaths);
+
+   if( g->knots == 1 )
+      return;
+
+   SCIPdebugMessage("startnode=%d \n", startnode);
+
+   computeSteinerTree_execDirected(scip, g, startnode, spaths);
 
    assert(computeSteinerTree_allTermsAreReached(g, spaths->nodes_isConnected));
 }
