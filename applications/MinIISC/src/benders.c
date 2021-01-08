@@ -330,7 +330,14 @@ SCIP_RETCODE runBenders(
       }
 
       /* free solving data in order to add constraints */
-      SCIP_CALL( SCIPfreeTransform(masterscip) );
+      if ( usereopt )
+      {
+         SCIP_CALL( SCIPfreeReoptSolve(masterscip) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPfreeTransform(masterscip) );
+      }
 
       /* check for Benders cuts */
       SCIP_CALL( SCIPstartClock(masterscip, oracletimeclock) );
