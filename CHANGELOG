@@ -56,6 +56,10 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- To avoid performance variablity during reoptimization, the active constraints are now stored in the same order as in the
+  original problem.
+
+
 Known bugs
 ----------
 
