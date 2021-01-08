@@ -3,9 +3,13 @@ cmake_minimum_required(VERSION 3.3)
 project(Binpacking)
 
 
-if(NOT TARGET SCIP::SCIP)
+if(SCIP::SCIP)
+  message("Found SCIP")
+else()
+  message("Couldn't find scip, searching")
   find_package(SCIP REQUIRED)
 endif()
+
 include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(binpacking

@@ -986,6 +986,13 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
+add_executable(SCIP::SCIP ALIAS scip)
+add_executable(SCIP::libscip ALIAS libscip)
+
+if(SCIP::SCIP)
+  message("SCIP::SCIP is now defined")
+endif()
+
 include(GenerateExportHeader)
 generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/scip/scip_export.h)
 target_compile_definitions(scip PRIVATE SCIP_STATIC_DEFINE)
