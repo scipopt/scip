@@ -980,7 +980,7 @@ SCIP_RETCODE SCIPcertificateSaveFinalbound(
    if( certificate->transfile == NULL)
       return SCIP_OKAY;
 
-   SCIPgetDualboundExact(scip, certificate->finalbound);
+   SCIPgetLowerboundExact(scip, certificate->finalbound);
 
    return SCIP_OKAY;
 }

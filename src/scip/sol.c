@@ -2698,7 +2698,7 @@ SCIP_RETCODE SCIPsolMakeExact(
       solSetArrayValExact(sol, set, prob->vars[v], tmp);
    }
 
-   SCIPsolRecomputeObjExact(sol, set, stat, prob);
+   SCIPsolRecomputeInternObjExact(sol, set, stat, prob);
 
    RatFreeBuffer(set->buffer, &tmp);
 
@@ -3018,14 +3018,12 @@ void SCIPsolRecomputeObj(
       sol->obj = -SCIPsetInfinity(set);
 }
 
-/** recomputes the objective value of an original solution, e.g., when transferring solutions
- *  from the solution pool (objective coefficients might have changed in the meantime)
- */
-void SCIPsolRecomputeObjExact(
+/** recomputes the objective value of an exact solution, e.g., when initialized from an fp solution */
+void SCIPsolRecomputeInternObjExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob                /**< problem */
+   SCIP_PROB*            prob                /**< scip problem */
    )
 {
    SCIP_VAR** vars;
@@ -3042,7 +3040,6 @@ void SCIPsolRecomputeObjExact(
    RatCreateBuffer(set->buffer, &solval);
 
    /* recompute the objective value */
-   RatSetReal(sol->valsexact->obj, SCIPprobGetObjoffset(prob));
    for( v = 0; v < nvars; ++v )
    {
       SCIPsolGetValExact(solval, sol, set, stat, vars[v]);

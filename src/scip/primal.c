@@ -686,6 +686,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    {
       SCIP_Rational* obj;
 
+      SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
+
       assert(SCIPsolIsOriginal(primal->sols[0]));
 
       if( !SCIPsolIsExact(primal->sols[0]) )
@@ -694,6 +696,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
          SCIPsolGetObjExact(primal->sols[0], set, transprob, origprob, obj);
 
       RatMIN(upperbound, upperbound, obj);
+
+      RatFreeBuffer(set->buffer, &obj);
    }
 
    /* invalidate old upper bound */
