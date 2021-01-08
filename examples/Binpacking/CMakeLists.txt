@@ -15,11 +15,8 @@ if(TARGET SCIP::SCIP)
     message("Somethings wrong...")
   endif()
   
-  set(CMAKE_MODULE_PATH_BACKUP "${CMAKE_MODULE_PATH}")
-  set(CMAKE_MODULE_PATH "${SCIP_BINARY_DIR}" )
-  find_package(SCIP REQUIRED)
+  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
 
-  set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH_BACKUP}")
 else()
   message("Couldn't find scip, searching")
   find_package(SCIP REQUIRED)
