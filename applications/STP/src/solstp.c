@@ -1623,6 +1623,7 @@ SCIP_Bool solstp_isValid(
    const int*            result              /**< solution array, indicating whether an edge is in the solution */
    )
 {
+   SCIP_Bool isValid;
    int* queue = NULL;
    STP_Bool* reached = NULL;
    int size;
@@ -1710,8 +1711,10 @@ SCIP_Bool solstp_isValid(
       }
    }
 
+   isValid = (termcount == nterms);
+
 #ifdef SCIP_DEBUG
-   if( termcount != nterms )
+   if( !isValid )
    {
       printf("termcount %d graph->terms %d \n", termcount, nterms);
       printf("root %d \n", root);
@@ -1740,10 +1743,34 @@ SCIP_Bool solstp_isValid(
    }
 #endif
 
+   if( isValid && graph->stp_type == STP_DCSTP )
+   {
+      assert(graph->maxdeg);
+      for( int i = 0; i < nnodes; i++ )
+      {
+         int deg = 0;
+         for( int e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            if( result[e] == CONNECT || result[flipedge(e)] == CONNECT )
+               deg++;
+         }
+
+         if( deg > graph->maxdeg[i] )
+         {
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("maximum degree violated (%d > %d) for ", deg, graph->maxdeg[i]);
+            graph_knot_printInfo(graph, i);
+#endif
+            isValid = FALSE;
+            break;
+         }
+      }
+   }
+
    SCIPfreeBufferArray(scip, &queue);
    SCIPfreeBufferArray(scip, &reached);
 
-   return (termcount == nterms);
+   return isValid;
 }
 
 
