@@ -2,7 +2,14 @@ cmake_minimum_required(VERSION 3.3)
 
 project(Queens)
 
-find_package(SCIP REQUIRED)
+if(TARGET SCIP::SCIP)
+  message("Found SCIP")
+  # find package by SCIP PATH
+  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+else()
+  find_package(SCIP REQUIRED)
+endif()
+
 include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(queens

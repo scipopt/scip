@@ -2,23 +2,11 @@ cmake_minimum_required(VERSION 3.3)
 
 project(Binpacking)
 
-message("CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
-message("SCIP_BINARY_DIR: ${SCIP_BINARY_DIR}")
-
-
 if(TARGET SCIP::SCIP)
   message("Found SCIP")
   # find package by SCIP PATH
-  if (EXISTS "${SCIP_BINARY_DIR}/scip-config.cmake")
-    message("File found")
-  else()
-    message("Somethings wrong...")
-  endif()
-  
   find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
-
 else()
-  message("Couldn't find scip, searching")
   find_package(SCIP REQUIRED)
 endif()
 
