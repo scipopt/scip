@@ -705,13 +705,13 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_minor.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
+			scip/sepa_rlt.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
 #			scip/prop_obbt.o \
 #			scip/sepa_convexproj.o \
 #			scip/sepa_eccuts.o \
-#			scip/sepa_rlt.o \
 #			scip/sepa_gauge.o \
 #			scip/heur_multistart.o \
 #			scip/heur_undercover.o \
