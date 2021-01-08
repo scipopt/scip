@@ -2,27 +2,15 @@ cmake_minimum_required(VERSION 3.3)
 
 project(Binpacking)
 
-if(SCIP::SCIP)
-  message("SCIP::SCIP is defined")
-else()
-  message("SCIP::SCIP is NOT defined")
-endif()
-
-if(TARGET scip)
-  message("scip is defined")
-else()
-  message("scip is NOT defined")
-endif()
-
-if(TARGET SCIP::SCIP)
-  message("TARGET SCIP::SCIP is defined")
-else()
-  message("TARGET SCIP::SCIP is NOT defined")
-endif()
+message("CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
+message("SCIP_BINARY_DIR: ${SCIP_BINARY_DIR}")
 
 
 if(TARGET SCIP::SCIP)
   message("Found SCIP")
+  // find package by SCIP PATH
+  list(APPEND CMAKE_MODULE_PATH "${SCIP_BINARY_DIR}" )
+  find_package(SCIP REQUIRED)
 else()
   message("Couldn't find scip, searching")
   find_package(SCIP REQUIRED)
