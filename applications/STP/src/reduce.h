@@ -166,6 +166,7 @@ extern int             reduce_extendedEdge(SCIP*, GRAPH*, const PATH*, const SCI
  */
 extern void            reduce_nodesDeg1(SCIP*, GRAPH*);
 extern SCIP_RETCODE    reduce_simple(SCIP*, GRAPH*, SCIP_Real*, int*, int*, int*);
+extern void    reduce_simple_dc(SCIP*, GRAPH*);
 extern SCIP_RETCODE    reduce_simple_hc(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_deleteMultiedges(SCIP*, GRAPH*);

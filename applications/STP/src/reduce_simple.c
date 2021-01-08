@@ -599,6 +599,42 @@ SCIP_RETCODE reduce_simple_sap(
 }
 
 
+/** basic reduction tests for the DCSTP...call only once! */
+void reduce_simple_dc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int* const maxdeg = g->maxdeg;
+
+   assert(g->stp_type == STP_DCSTP);
+   assert(scip);
+   assert(g->maxdeg);
+
+   if( g->terms <= 2 )
+      return;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      int enext;
+
+      if( maxdeg[i] != 1 )
+         continue;
+
+      for( int e = g->outbeg[i]; e != EAT_LAST; e = enext )
+      {
+         const int head = g->head[e];
+         enext = g->oeat[e];
+         if( maxdeg[head] == 1 )
+         {
+            graph_edge_del(scip, g, e, TRUE);
+         }
+      }
+   }
+}
+
+
 /** basic reduction tests for the HCDSTP */
 SCIP_RETCODE reduce_simple_hc(
    SCIP*                 scip,               /**< SCIP data structure */

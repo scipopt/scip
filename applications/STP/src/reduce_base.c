@@ -1527,6 +1527,8 @@ SCIP_RETCODE reduceDc(
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
+   reduce_simple_dc(scip, g);
+
    while( (da) && !SCIPisStopped(scip) )
    {
       int danelims = 0;
