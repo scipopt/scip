@@ -9,8 +9,17 @@ message("SCIP_BINARY_DIR: ${SCIP_BINARY_DIR}")
 if(TARGET SCIP::SCIP)
   message("Found SCIP")
   # find package by SCIP PATH
-  list(APPEND CMAKE_MODULE_PATH "${SCIP_BINARY_DIR}" )
+  if (EXISTS "${SCIP_BINARY_DIR}/scip-config.cmake")
+    message("File found")
+  else()
+    message("Somethings wrong...")
+  endif()
+  
+  set(CMAKE_MODULE_PATH_BACKUP "${CMAKE_MODULE_PATH}")
+  set(CMAKE_MODULE_PATH "${SCIP_BINARY_DIR}" )
   find_package(SCIP REQUIRED)
+
+  set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH_BACKUP}")
 else()
   message("Couldn't find scip, searching")
   find_package(SCIP REQUIRED)
