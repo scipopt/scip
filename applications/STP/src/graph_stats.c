@@ -375,6 +375,8 @@ void graph_printInfoReduced(
 
    graph_get_nVET(g, &nnodes, &nedges, &nterms);
 
+   printf("reduced graph stats: ");
+
    if( graph_pc_isPcMw(g) )
    {
       printf("nodes=%d, edges=%d, terminals=%d, root=%d, type=%d, isExtended=%d \n",
