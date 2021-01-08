@@ -147,7 +147,7 @@ SCIP_RETCODE trail(
    int*                  visitcount          /**< marks which node has been visited */
    )
 {
-   int* stackarr;
+   int* RESTRICT stackarr;
    int stacksize;
    const int nnodes = g->knots;
 
@@ -173,7 +173,7 @@ SCIP_RETCODE trail(
       /* traverse outgoing arcs */
       for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
       {
-         if( (xval[a] + EPSILON > 1.0) )
+         if( (xval[a] > 1.0 - EPSILON) )
          {
             const int head = g->head[a];
 

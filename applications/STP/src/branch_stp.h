@@ -74,6 +74,12 @@ SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether branching-rule is compatible with given graph problem type */
+SCIP_EXPORT
+SCIP_Bool SCIPStpBranchruleProbIsCompatible(
+   const GRAPH*          graph               /**< graph */
+);
+
 #ifdef __cplusplus
 }
 #endif

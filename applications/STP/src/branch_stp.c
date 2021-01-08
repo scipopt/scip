@@ -75,12 +75,23 @@ struct SCIP_BranchruleData
 
 /** check whether branching-rule is compatible with given problem type */
 static inline
-SCIP_Bool isProbCompatible(
+SCIP_Bool probIsCompatible(
    const GRAPH*          graph               /**< graph */
 )
 {
-   return (graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP));
+   return TRUE;
 }
+
+
+/** check whether given problem type allows for solution based branching */
+static inline
+SCIP_Bool probAllowsSolBranching(
+   const GRAPH*          graph               /**< graph */
+)
+{
+   return (graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP));;
+}
+
 
 
 /** gets vertex with highest degree in solution */
@@ -312,6 +323,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
    assert(scip && vertex);
    assert(!pcmw || graph->extended);
    assert(graph_valid(scip, graph));
+   assert(probAllowsSolBranching(graph));
 
    *vertex = UNKNOWN;
 
@@ -374,8 +386,10 @@ SCIP_RETCODE selectBranchingVertexBySol(
 
    /* restore the graph */
    for( int k = 0; k < nnodes; k++ )
+   {
       if( graph->term[k] != termorg[k] )
          graph_knot_chg(graph, k, termorg[k]);
+   }
 
    BMScopyMemoryArray(graph->cost, costorg, nedges);
 
@@ -692,7 +706,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    g = SCIPprobdataGetGraph(probdata);
    assert(g != NULL);
 
-   if( !isProbCompatible(g) )
+   if( !probIsCompatible(g) )
    {
       branchruledata->active = FALSE;
 
@@ -704,6 +718,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    }
 
    branchruletype = branchruledata->branchtype;
+
+   // todo at least add a warning
+   if( !probAllowsSolBranching(g) )
+   {
+      branchruletype = BRANCH_STP_ON_LP;
+   }
 
    if( graph_pc_isPcMw(g) && (branchruletype == BRANCH_STP_ON_LP || branchruletype == BRANCH_STP_ON_LP2) )
    {
@@ -776,7 +796,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
    g = SCIPprobdataGetGraph(probdata);
    assert(g != NULL);
 
-   if( !isProbCompatible(g) )
+   if( !probIsCompatible(g) )
    {
       branchruledata->active = FALSE;
 
@@ -786,9 +806,10 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
 
       return SCIP_OKAY;
    }
+
    branchvertex = UNKNOWN;
 
-   if( branchruledata->branchtype != BRANCH_STP_ON_DEGREE )
+   if( probAllowsSolBranching(g) && branchruledata->branchtype != BRANCH_STP_ON_DEGREE )
       SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
 
    /* fall-back strategy */
@@ -913,10 +934,8 @@ SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
 
    if( !(branchruledata->active) )
    {
-      printf("STP branchrule not active! \n");
-      assert(0);
-
-      return SCIP_OKAY;
+      SCIPerrorMessage("STP branchrule not active! \n");
+      return SCIP_ERROR;
    }
 
    assert(SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) == 1);
@@ -968,6 +987,17 @@ SCIP_Bool SCIPStpBranchruleIsActive(
    return branchruledata->active;
 }
 
+
+
+/** returns whether branching-rule is compatible with given graph problem type */
+SCIP_Bool SCIPStpBranchruleProbIsCompatible(
+   const GRAPH*          graph               /**< graph */
+)
+{
+   assert(graph);
+
+   return probIsCompatible(graph);
+}
 
 /** creates the stp branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleStp(

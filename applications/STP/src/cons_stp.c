@@ -759,9 +759,15 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    nterms = g->terms;
 #endif
 
+   /* vertex branching possible? */
+   if( SCIPStpBranchruleProbIsCompatible(g) )
    {
-      const SCIP_Bool graphTypeIsValid = graph_typeIsSpgLike(g) || graph_pc_isPcMw(g);
-      chgterms = (!atrootnode && graphTypeIsValid && SCIPStpBranchruleIsActive(scip));
+      chgterms = (!atrootnode && SCIPStpBranchruleIsActive(scip));
+
+      if( chgterms )
+      {
+         SCIPdebugMessage("adapting branched on vertices for separation \n");
+      }
    }
 
    SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
@@ -858,6 +864,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpStp)
    SCIP_Bool feasible;
    SCIP_CONSDATA* consdata;
 
+   // todo
+   assert(nconss == 1);
+
    for( int i = 0; i < nconss; i++ )
    {
       consdata = SCIPconsGetData(conss[i]);
@@ -882,6 +891,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsStp)
 {  /*lint --e{715}*/
    SCIP_Bool feasible;
 
+   // todo
    assert(nconss == 1);
 
    for( int i = 0; i < nconss; i++ )
