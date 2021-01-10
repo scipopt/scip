@@ -199,11 +199,10 @@ SCIP_RETCODE computeSteinerTreeTM(
    int* startstm = NULL;
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
-   const SCIP_Bool directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
    int runstm;
    SCIP_Real hopfactor = -1.0; /* automatic set to default */
 
-   if( directed )
+   if( graph_typeIsDirected(graph) || graph->stp_type == STP_DCSTP )
    {
       runstm = BND_TMHEUR_NRUNS;
    }
