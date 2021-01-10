@@ -79,7 +79,7 @@ SCIP_Bool probIsCompatible(
    const GRAPH*          graph               /**< graph */
 )
 {
-   return TRUE;
+   return (graph->stp_type != STP_DCSTP);
 }
 
 
@@ -89,9 +89,8 @@ SCIP_Bool probAllowsSolBranching(
    const GRAPH*          graph               /**< graph */
 )
 {
-   return (graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP));;
+   return (graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP));
 }
-
 
 
 /** gets vertex with highest degree in solution */
