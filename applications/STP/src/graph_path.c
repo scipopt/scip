@@ -23,7 +23,7 @@
  * Dijkstra's algorithm.
  *
  */
-
+//#define SCIP_DEBUG
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -32,6 +32,7 @@
 #include "graph.h"
 #include "graphheaps.h"
 #include "shortestpath.h"
+#include "solstp.h"
 
 
 
@@ -270,6 +271,167 @@ void stRpcmwInit(
    if( nrealterms )
       *nrealterms = nrterms;
 }
+
+
+/** For DCSTP can terminal be connected to current tree?  */
+static inline
+SCIP_Bool stDcTermIsConnectable(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   term,               /**< terminal to be checked */
+   const int*            deg_free,           /**< free degree of each node */
+   const int*            pathedge,           /**< predecessor edge array (on vertices) */
+   const STP_Bool*       connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+)
+{
+   int node;
+
+   assert(!connected[term]);
+   assert(g->stp_type == STP_DCSTP);
+   assert(deg_free[term] >= 0);
+
+   if( deg_free[term] == 0 )
+   {
+      SCIPdebugMessage("failed to add %d-path because free degree 0 end \n", term);
+      return FALSE;
+   }
+
+   /* NOTE: intermediary path vertices need to be of degree at least 2 */
+   for( node = g->tail[pathedge[term]]; !connected[node]; node = g->tail[pathedge[node]] )
+   {
+      assert(pathedge[node] != -1);
+      assert(!Is_term(g->term[node]));
+      assert(deg_free[node] >= 0);
+
+      if( deg_free[node] <= 1 )
+      {
+         SCIPdebugMessage("failed to add %d-path due to node %d (free degree: %d) \n", term, node, deg_free[node]);
+         return FALSE;
+      }
+   }
+
+   assert(connected[node]);
+
+   if( deg_free[node] == 0 )
+   {
+      SCIPdebugMessage("failed to add %d-path because free degree 0 start \n", node);
+      return FALSE;
+   }
+
+   return TRUE;
+}
+
+
+
+/** For DCSTP: extends (implicitly) given tree */
+static
+void sdDcExtendTree(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edgecosts */
+   int*                  heapsize,
+   int*                  pathdeg_free,
+   int*                  nodedeg_free,
+   SCIP_Real*            pathdist,           /**< distance array (on vertices) */
+   int*                  pathedge,           /**< predecessor edge array (on vertices) */
+   STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
+   int*                  result,
+   int*                  soldegfree,
+   int*                  nsolterms
+   )
+{
+   int* RESTRICT heap = g->path_heap;
+   int* RESTRICT state = g->path_state;
+
+   assert(*heapsize > 0);
+   assert(*soldegfree > 0);
+
+   /* repeat until heap is empty */
+   while( *heapsize > 0 )
+   {
+      const int k = nearestX(heap, state, heapsize, pathdist);
+      state[k] = UNKNOWN;
+
+      /* k is terminal and not connected yet? */
+      if( Is_term(g->term[k]) && !connected[k] )
+      {
+         /* no degree problem? */
+         if( stDcTermIsConnectable(g, k, nodedeg_free, pathedge, connected) )
+         {
+            int node;
+            assert(pathedge[k] >= 0);
+            assert(nodedeg_free[k] >= 1);
+
+            nodedeg_free[k] -= 1;
+            result[pathedge[k]] = CONNECT;
+            connected[k] = TRUE;
+            pathdist[k] = 0.0;
+            pathdeg_free[k] = 0;
+            SCIPdebugMessage("connecting terminal %d \n", k);
+
+            /* connect k to current solution */
+            for( node = g->tail[pathedge[k]]; !connected[node]; node = g->tail[pathedge[node]] )
+            {
+               assert(pathedge[node] != -1);
+               assert(!Is_term(g->term[node]));
+               assert(nodedeg_free[node] >= 2);
+
+               SCIPdebugMessage("...adding path node %d \n", node);
+
+               pathdeg_free[node] = 0;
+               nodedeg_free[node] -= 2;
+               connected[node] = TRUE;
+               result[pathedge[node]] = CONNECT;
+               resetX(pathdist, heap, state, heapsize, node, 0.0);
+            }
+
+            assert(nodedeg_free[node] >= 1);
+            nodedeg_free[node] -= 1;
+
+            /* have all terminals been reached? */
+            if( ++(*nsolterms) == g->terms )
+               break;
+         }
+      }
+
+      assert((*nsolterms) < g->terms);
+
+      if( !connected[k]  )
+      {
+         /* NOTE: if k is not in tree yet, adding it as a non-leaf reduces its free degree by two */
+         if( nodedeg_free[k] <= 1 )
+            continue;
+
+         /* NOTE: if path to terminal could not be connect now, it can also not be used as sub-path later */
+         if( Is_term(g->term[k]) )
+            continue;
+      }
+      else if( nodedeg_free[k] == 0 )
+      {
+         continue;
+      }
+
+      /* update adjacent vertices */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int m = g->head[e];
+
+         if( connected[m] )
+            continue;
+
+         assert(state[m]);
+
+         if( GT(pathdist[m], (pathdist[k] + cost[e]))
+            || (EQ(pathdist[m], (pathdist[k] + cost[e])) && (pathdeg_free[k] + nodedeg_free[m] - 2 > pathdeg_free[m]) )
+         )
+         {
+            assert(nodedeg_free[m] > 0);
+            correctX(heap, state, heapsize, pathdist, pathedge, m, k, e, cost[e]);
+
+            pathdeg_free[m] = pathdeg_free[k] + nodedeg_free[m] - 2;
+         }
+      }
+   }
+}
+
 
 
 /*
@@ -1129,6 +1291,134 @@ void graph_path_st(
    }
 }
 
+
+
+
+/** For DCSTP: Find a directed tree rooted in node 'start' and spanning all terminals, while respecting degree constraints */
+SCIP_RETCODE graph_path_st_dc(
+   SCIP*                 scip,
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edgecosts */
+   SCIP_Real*            pathdist,           /**< distance array (on vertices) */
+   int*                  pathedge,           /**< predecessor edge array (on vertices) */
+   int                   start,              /**< start vertex */
+   STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
+   int*                  result,
+   STP_Bool*             solFound
+   )
+{
+   const int nedges = graph_get_nEdges(g);
+   const int nnodes = graph_get_nNodes(g);
+   int* RESTRICT heap = g->path_heap;
+   int* RESTRICT state = g->path_state;
+   int* nodedeg_free;
+   int* pathdeg_free;
+
+   assert(cost && pathdist && pathedge && connected && result && solFound);
+   assert(heap && state);
+   assert(graph_knot_isInRange(g, start));
+   assert(g->stp_type == STP_DCSTP);
+   assert(g->maxdeg);
+
+   *solFound = TRUE;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodedeg_free, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathdeg_free, nnodes) );
+
+   BMScopyMemoryArray(nodedeg_free, g->maxdeg, nnodes);
+
+   for( int e = 0; e < nedges; e++ )
+      result[e] = UNKNOWN;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      pathdeg_free[k] = -1;
+      state[k] = UNKNOWN;
+      pathdist[k] = FARAWAY;
+      pathedge[k] = -1;
+      connected[k] = FALSE;
+   }
+
+   pathdist[start] = 0.0;
+   connected[start] = TRUE;
+
+   if( nnodes > 1 )
+   {
+      int heapsize;
+      int nsolterms = 0;
+      int nsolterms_old;
+      int soldegfree;
+
+      if( Is_term(g->term[start]) )
+         nsolterms++;
+
+#ifdef SCIP_DEBUG
+      printf("TM start=%d \n", start);
+      graph_knot_printInfo(g, start);
+#endif
+
+      soldegfree = nodedeg_free[start];
+
+      /* add start vertex to heap */
+      heapsize = 1;
+      heap[heapsize] = start;
+      state[start] = heapsize;
+      pathdeg_free[start] = 0;
+
+      /* repeat as long as the tree can be extended */
+      do
+      {
+         SCIPdebugMessage("extension loop with nsolterms=%d  \n", nsolterms);
+
+
+         nsolterms_old = nsolterms;
+         sdDcExtendTree(g, cost, &heapsize, pathdeg_free, nodedeg_free, pathdist, pathedge, connected, result, &soldegfree, &nsolterms);
+
+         assert(nsolterms <= g->terms);
+         assert(nsolterms >= nsolterms_old);
+
+         /* will we continue? */
+         if( nsolterms_old != nsolterms && nsolterms != g->terms && soldegfree > 0 )
+         {
+            heapsize = 0;
+
+            for( int k = 0; k < nnodes; k++ )
+            {
+               if( connected[k] )
+               {
+                  heap[++heapsize] = k;
+                  state[k] = heapsize;
+                  assert(pathdeg_free[k] == 0);
+               }
+               else
+               {
+                  pathdeg_free[k] = 0;
+                  state[k] = UNKNOWN;
+                  pathdist[k] = FARAWAY;
+                  pathedge[k] = -1;
+               }
+            }
+
+            assert(heapsize > 0);
+         }
+
+         /* finished? */
+         if( nsolterms == g->terms )
+            break;
+
+      } while( nsolterms_old != nsolterms  && soldegfree > 0 );
+
+
+      *solFound = (g->terms == nsolterms);
+
+      SCIPdebugMessage("g->terms == nterms? %d==%d \n", g->terms, nsolterms);
+   }
+
+   SCIPfreeBufferArray(scip, &pathdeg_free);
+   SCIPfreeBufferArray(scip, &nodedeg_free);
+
+   return SCIP_OKAY;
+}
 
 
 /** !!!LEGACY CODE!!!
