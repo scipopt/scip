@@ -2190,6 +2190,96 @@ SCIP_RETCODE saveAncestorBranchings(
    return SCIP_OKAY;
 }
 
+/** remove redundant bounds from a disjunctive set
+ *
+ *  This implementation performs a pairwise comparison. One could also sort the variables and boundtypes and then loop through the array once.
+ */
+static
+SCIP_RETCODE removeRedundantDisjunctiveBounds(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int*                  nbounds,            /**< number of variable/bound pairs in the set */
+   SCIP_VAR**            vars,               /**< variables in the set */
+   SCIP_Real*            bounds,             /**< bound values */
+   SCIP_BOUNDTYPE*       boundtypes          /**< bound types */
+   )
+{
+   int cnt = 0;
+   int i;
+
+   assert(set != NULL);
+   assert(nbounds != NULL);
+   assert(vars != NULL);
+   assert(bounds != NULL);
+   assert(boundtypes != NULL);
+
+   for( i = 0; i < *nbounds; ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real bound;
+      SCIP_BOUNDTYPE boundtype;
+      int j;
+
+      var = vars[i];
+
+      /* if the variable is NULL it should be removed (we eliminate dominated bounds setting to NULL) */
+      if( var == NULL )
+         continue;
+
+      boundtype = boundtypes[i];
+      bound = bounds[i];
+
+      /* check whether variable appears later */
+      for( j = i + 1; j < *nbounds; ++j )
+      {
+         /* if variables are different or vars[j] is NULL */
+         if( vars[j] != var )
+            continue;
+         assert(vars[j] != NULL);
+
+         /* if both variables have the same bound type */
+         if( boundtypes[j] == boundtype )
+         {
+            if( boundtype == SCIP_BOUNDTYPE_LOWER )
+            {
+               /* check whether current bound is as strong */
+               if( SCIPsetIsLE(set, bound, bounds[j]) )
+                  vars[j] = NULL;  /* remove later bound */
+               else if ( SCIPsetIsGT(set, bound, bounds[j]) )
+                  break;   /* skip current bound */
+            }
+            else
+            {
+               assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+               /* check whether current bound is as strong */
+               if( SCIPsetIsGE(set, bound, bounds[j]) )
+                  vars[j] = NULL;  /* remove later bound */
+               else if ( SCIPsetIsLT(set, bound, bounds[j]) )
+                  break;   /* skip current bound */
+            }
+         }
+         assert(vars[j] != var || boundtypes[j] != boundtype);
+      }
+
+      if( j >= *nbounds )
+      {
+         /* at this point the current item can stay in the array */
+         if( cnt < i )
+         {
+            vars[cnt] = var;
+            boundtypes[cnt] = boundtype;
+            bounds[cnt] = bound;
+         }
+         ++cnt;
+      }
+   }
+   assert( cnt <= *nbounds );
+   *nbounds = cnt;
+
+   return SCIP_OKAY;
+}
+
+
 /** transform a constraint with linear representation into reoptimization constraint data */
 static
 SCIP_RETCODE saveConsLinear(
@@ -2337,6 +2427,7 @@ SCIP_RETCODE saveConsBounddisjuction(
    SCIP_CONSHDLR* conshdlr;
    SCIP_BOUNDTYPE* boundtypes;
    SCIP_Real* bounds;
+   int nconsvars;
    int v;
 
    assert(reoptconsdata != NULL);
@@ -2388,6 +2479,18 @@ SCIP_RETCODE saveConsBounddisjuction(
       /* due to multipling with a negative scalar the relation need to be changed */
       if( SCIPsetIsNegative(set, scalar) )
          reoptconsdata->boundtypes[v] = (SCIP_BOUNDTYPE)(SCIP_BOUNDTYPE_UPPER - reoptconsdata->boundtypes[v]); /*lint !e656*/
+   }
+
+   /* make sure that disjunctive list is non-redundant */
+   nconsvars = reoptconsdata->nvars;
+   SCIP_CALL( removeRedundantDisjunctiveBounds(set, &nconsvars, reoptconsdata->vars, reoptconsdata->vals, reoptconsdata->boundtypes) );
+   if( nconsvars < reoptconsdata->nvars )
+   {
+      /* reallocate and reduce size */
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->vars, reoptconsdata->nvars, nconsvars) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->vals, reoptconsdata->nvars, nconsvars) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reoptconsdata->boundtypes, reoptconsdata->nvars, nconsvars) );
+      reoptconsdata->nvars = nconsvars;
    }
 
    return SCIP_OKAY;
@@ -2544,6 +2647,9 @@ SCIP_RETCODE collectDualInformation(
 
          assert(SCIPvarIsOriginal(reopt->dualreds->vars[v]));
       }
+
+      /* make sure that disjunctive list is non-redundant */
+      SCIP_CALL( removeRedundantDisjunctiveBounds(set, &reopt->dualreds->nvars, reopt->dualreds->vars, reopt->dualreds->vals, reopt->dualreds->boundtypes) );
    }
 
    assert(nbndchgs > 0);
@@ -3746,6 +3852,7 @@ SCIP_RETCODE changeAncestorBranchings(
    return SCIP_OKAY;
 }
 
+
 /** add a constraint to ensure that at least one variable bound gets different */
 static
 SCIP_RETCODE addSplitcons(
@@ -3876,7 +3983,8 @@ SCIP_RETCODE addSplitcons(
       /* count number of binary, integer, and continuous variables */
       for( v = 0; v < reoptconsdata->nvars; v++ )
       {
-         switch ( SCIPvarGetType(reoptconsdata->vars[v]) ) {
+         switch ( SCIPvarGetType(reoptconsdata->vars[v]) )
+         {
          case SCIP_VARTYPE_BINARY:
             ++nbinvars;
             break;
@@ -3906,7 +4014,7 @@ SCIP_RETCODE addSplitcons(
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "reopt_dual");
       }
 
-      /* case 1: all variables are binary. we use a logic-or constraint. */
+      /* case 1: all variables are binary, we use a logic-or constraint. */
       if( reoptconsdata->nvars == nbinvars )
       {
          for( v = 0; v < reoptconsdata->nvars; v++ )
@@ -3935,6 +4043,7 @@ SCIP_RETCODE addSplitcons(
       {
          SCIP_Real* consvals;
          SCIP_BOUNDTYPE* consboundtypes;
+         int nconsvars;
 
          assert(nintvars > 0 || ncontvars > 0);
 
@@ -3942,7 +4051,7 @@ SCIP_RETCODE addSplitcons(
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, reoptconsdata->nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &consboundtypes, reoptconsdata->nvars) );
 
-         /* iterate over all variable and transform them */
+         /* iterate over all variables and transform them */
          for( v = 0; v < reoptconsdata->nvars; v++ )
          {
             consvars[v] = reoptconsdata->vars[v];
@@ -3979,8 +4088,13 @@ SCIP_RETCODE addSplitcons(
             assert(SCIPvarGetStatus(consvars[v]) != SCIP_VARSTATUS_MULTAGGR);
          }
 
+         /* make sure that disjunctive list is non-redundant (because of (multi-)aggregation some of the
+          * variable/boundtypes pairs might appear twice) */
+         nconsvars = reoptconsdata->nvars;
+         SCIP_CALL( removeRedundantDisjunctiveBounds(set, &nconsvars, consvars, consvals, consboundtypes) );
+
          /* create the constraints and add them to the corresponding nodes */
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, reoptconsdata->nvars, consvars, consboundtypes,
+         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, nconsvars, consvars, consboundtypes,
                consvals, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
          /* free buffer memory */
