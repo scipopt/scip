@@ -52,6 +52,7 @@ Fixed bugs
 
 - Fixed numerical bug by creating and checking the empty solution when problem vanishes in presolving.
 - Fixed several bugs in reoptimization.
+- Fixed bug in cons_bounddisjunction in which a constraint leads to a cutoff.
 
 Miscellaneous
 -------------

@@ -1441,6 +1441,7 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< bound disjunction constraint which variables should be registered for branching */
    SCIP_SOL*             sol,                /**< solution (NULL for LP solution) */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the constraint cannot be made feasible by branching */
    SCIP_Bool*            neednarybranch      /**< pointer to store TRUE, if n-ary branching is necessary to enforce this constraint */
    )
 {
@@ -1457,6 +1458,7 @@ SCIP_RETCODE registerBranchingCandidates(
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(cutoff != NULL);
    assert(neednarybranch != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -1469,6 +1471,7 @@ SCIP_RETCODE registerBranchingCandidates(
    assert(nvars == 0 || boundtypes != NULL);
    assert(nvars == 0 || bounds != NULL);
 
+   *cutoff = TRUE;
    *neednarybranch = TRUE;
 
    for( v = 0; v < nvars; ++v )
@@ -1513,6 +1516,7 @@ SCIP_RETCODE registerBranchingCandidates(
          SCIP_CALL( SCIPaddExternBranchCand(scip, var, REALABS(violation), bounds[v]) );
          *neednarybranch = FALSE;
       }
+      *cutoff = FALSE;
    }
 
    return SCIP_OKAY;
@@ -1561,7 +1565,7 @@ SCIP_RETCODE enforceCurrentSol(
          *infeasible = TRUE;
 
          /* register branching candidates */
-         SCIP_CALL( registerBranchingCandidates(scip, cons, sol, &neednarybranch) );
+         SCIP_CALL( registerBranchingCandidates(scip, cons, sol, cutoff, &neednarybranch) );
 
          if( !neednarybranch )
             *registeredbrcand = TRUE;
