@@ -21,6 +21,9 @@ Interface changes
 
 ### New API functions
 
+- New function SCIPcreateConsBounddisjunctionRedundant() and SCIPcreateConsBasicBounddisjunctionRedundant() that allow
+  the input to contain redundant literals.
+
 ### Command line interface
 
 ### Interfaces to external software
