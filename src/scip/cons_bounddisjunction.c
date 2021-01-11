@@ -496,6 +496,7 @@ SCIP_RETCODE consdataCreateRedundant(
                      varsbuffer[v] = NULL;  /* skip current bound */
                }
             }
+            ++w;
          }
          if( varsbuffer[v] != NULL )
             varsbuffer[nvarsbuffer++] = varsbuffer[v];
