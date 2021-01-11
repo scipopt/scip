@@ -505,12 +505,12 @@ SCIP_RETCODE consdataCreateRedundant(
       /* check that the literals are not redundant */
       {
          int v1;
-         for( v1 = 0; v1 < nvars; v1++ )
+         for( v1 = 0; v1 < nvarsbuffer; v1++ )
          {
             int v2;
             assert(varsbuffer[v1] != NULL);
-            for( v2 = v1+1; v2 < nvars; v2++ )
-               assert(varsbuffer[v1] != varsbuffer[v2] || SCIPboundtypeOpposite(boundtypesbuffer[v1]) == boundtypesbuffer[v2]);
+            for( v2 = v1+1; v2 < nvarsbuffer; v2++ )
+               assert(varsbuffer[v1] != varsbuffer[v2] || boundtypesbuffer[v1] != boundtypesbuffer[v2]);
          }
       }
 #endif
