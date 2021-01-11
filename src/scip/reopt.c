@@ -3983,7 +3983,7 @@ SCIP_RETCODE addSplitcons(
          }
 
          /* create the constraints and add them to the corresponding nodes */
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, reoptconsdata->nvars, consvars, consboundtypes,
+         SCIP_CALL( SCIPcreateConsBounddisjunctionRedundant(scip, &cons, name, reoptconsdata->nvars, consvars, consboundtypes,
                consvals, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
          /* free buffer memory */
@@ -4298,7 +4298,7 @@ SCIP_RETCODE addLocalConss(
       else
       {
          assert(reoptconsdata->boundtypes != NULL);
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, reoptconsdata->nvars, reoptconsdata->vars, reoptconsdata->boundtypes,
+         SCIP_CALL( SCIPcreateConsBounddisjunctionRedundant(scip, &cons, name, reoptconsdata->nvars, reoptconsdata->vars, reoptconsdata->boundtypes,
             reoptconsdata->vals, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
       }
 #ifdef SCIP_DEBUG_CONSS
