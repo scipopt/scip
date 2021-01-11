@@ -4,7 +4,6 @@ set(PROJECT_NAME PolySCIP)
 project(${PROJECT_NAME})
 
 if(TARGET SCIP::SCIP)
-  message("Found SCIP")
   # find package by SCIP PATH
   find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
 else()
