@@ -3310,6 +3310,7 @@ SCIP_RETCODE reduce_sdspSap(
                   (*nelims)++;
 
                g->cost[e] = FARAWAY;
+               costrev[flipedge(e)] = FARAWAY;
             }
          }
 
