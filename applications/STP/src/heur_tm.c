@@ -2794,6 +2794,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          runs = heurdata->rootruns;
       else
          runs = heurdata->leafruns;
+
+      if( graph->stp_type == STP_DCSTP )
+         runs = 0;
    }
 
    /* increase counter for number of (TM) calls */
@@ -2801,6 +2804,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    if( runs == 0 )
       return SCIP_OKAY;
+
+   if( graph->stp_type == STP_DCSTP )
+      runs = 1;
 
    heurdata->nexecs++;
 
@@ -3296,6 +3302,102 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
       }
    }
    while( count > 0 );
+
+   // todo extra method!
+   if( 0 )
+   {
+      const int* const maxdeg = g->maxdeg;
+      int* deg1inedge;
+      SCIP_Bool hasDeg1 = FALSE;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &deg1inedge, nnodes) );
+
+      for( i = 0; i < nnodes; i++ )
+      {
+         if( maxdeg[i] == 1 && connected[i] && i != g->source )
+         {
+            int e;
+
+            assert(Is_term(g->term[i]));
+
+            for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+            {
+               if( result[e] == CONNECT )
+                  break;
+            }
+            assert(e != EAT_LAST);
+
+            deg1inedge[i] = e;
+            hasDeg1 = TRUE;
+         }
+         else
+         {
+            deg1inedge[i] = -1;
+         }
+      }
+
+      if( !hasDeg1 )
+      {
+         SCIPfreeBufferArray(scip, &deg1inedge);
+         return SCIP_OKAY;
+      }
+
+      for( i = 0; i < nnodes; i++ )
+      {
+         if( connected[i] && maxdeg[i] > 1 )
+         {
+            int soldegree = 0;
+
+            if( i != g->source )
+               soldegree++;
+
+            for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+            {
+               if( result[e] == CONNECT )
+                  soldegree++;
+            }
+
+#ifndef NDEBUG
+            {
+               int degree_dbg = 0;
+               for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+               {
+                  if( result[e] == CONNECT || result[flipedge(e)] == CONNECT )
+                     degree_dbg++;
+               }
+               assert(degree_dbg == soldegree);
+            }
+#endif
+            assert(soldegree <= maxdeg[i]);
+
+            if( soldegree < maxdeg[i] )
+            {
+               for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+               {
+                  const int head = g->head[e];
+                  const int deg1edge = deg1inedge[head];
+
+                  if( deg1edge == -1 )
+                     continue;
+
+                  if( LT(g->cost[e], g->cost[deg1edge] )  )
+                  {
+                     assert(result[e] == UNKNOWN);
+                     assert(result[deg1edge] == CONNECT);
+
+                   //  printf("switching! %f vs %f \n", g->cost[e], g->cost[deg1edge]);
+                     result[e] = CONNECT;
+                     result[deg1edge] = UNKNOWN;
+                     deg1inedge[head] = e;
+                     break;
+                  }
+               }
+            }
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &deg1inedge);
+   }
 
    return SCIP_OKAY;
 }
