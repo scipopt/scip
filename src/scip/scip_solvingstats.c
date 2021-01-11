@@ -3935,8 +3935,14 @@ SCIP_RETCODE SCIPprintReoptStatistics(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintReoptStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert(scip != NULL);
+
    /* skip if reoptimization is disabled */
    if( !scip->set->reopt_enable )
+      return SCIP_OKAY;
+
+   /* skip if not problem yet */
+   if( scip->stat == NULL )
       return SCIP_OKAY;
 
    solving = SCIPclockGetTime(scip->stat->solvingtimeoverall);
