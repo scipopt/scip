@@ -459,7 +459,7 @@ SCIP_RETCODE computeReducedProbSolutionBiased(
       SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata, solgraph, NULL, prize, soledges, heurdata->ntmruns,
          solgraph->source, cost, costrev, &hopfactor, nodepriority, success) );
 
-      assert(*success || probtype == STP_DHCSTP || SCIPisStopped(scip));
+      assert(*success || probtype == STP_DHCSTP || probtype == STP_DCSTP || SCIPisStopped(scip));
       assert(*success == FALSE || solstp_isValid(scip, solgraph, soledges));
    }
 
@@ -1558,7 +1558,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             SCIP_CALL( computeReducedProbSolution(scip, heurdata, graph, solgraph, redsol, edgeweight,
                   edgeancestor, vars, usestppool, soledges, &success) );
          }
-         assert(success || probtype == STP_DHCSTP || SCIPisStopped(scip));
+         assert(success || probtype == STP_DHCSTP || probtype == STP_DCSTP || SCIPisStopped(scip));
 
          reduce_solFree(scip, &redsol);
 
@@ -1584,7 +1584,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          }
          else
          {
-            assert(probtype == STP_DHCSTP || SCIPisStopped(scip));
+            assert(probtype == STP_DHCSTP || SCIPisStopped(scip) || probtype == STP_DCSTP);
             pobj = FARAWAY;
          }
 
