@@ -735,7 +735,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    int maxcuts;
    int ncuts = 0;
    const SCIP_Bool atrootnode = (SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0);
-   SCIP_Bool chgterms;
+   SCIP_Bool chgterms = FALSE;
 #ifndef NDEBUG
    int nterms;
 #endif
