@@ -454,10 +454,12 @@ SCIP_RETCODE consdataCreateRedundant(
 
    if( nvars > 0 )
    {
-      SCIP_VAR** varsbuffer;
       SCIP_BOUNDTYPE* boundtypesbuffer;
       SCIP_Real* boundsbuffer;
+      SCIP_VAR** varsbuffer;
+      SCIP_VAR* var;
       int nvarsbuffer = 0;
+      int nviolated = 0;
       int v;
 
       SCIP_CALL( SCIPduplicateBufferArray(scip, &varsbuffer, vars, nvars) );
@@ -468,9 +470,38 @@ SCIP_RETCODE consdataCreateRedundant(
       SCIPsortPtrRealInt((void*)varsbuffer, boundsbuffer, (int*) boundtypesbuffer, SCIPvarComp, nvars);
 
       /* filter out redundant literals */
-      for( v = 0; v < nvars-1; ++v )
+      for( v = 0; v < nvars; ++v )
       {
          int w;
+
+         /* if we should compress fixed variables */
+         if( SCIPisConsCompressionEnabled(scip) && varsbuffer[v] != NULL )
+         {
+            var = varsbuffer[v];
+
+            /* if the variable is fixed */
+            if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+            {
+               /* If the literal is feasible for the fixed variable, then the whole constraint is feasible. In this
+                * case, we reduce the constraint to only this literal. */
+               if( (boundtypesbuffer[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPvarGetLbLocal(var), boundsbuffer[v]))
+                || (boundtypesbuffer[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPvarGetUbLocal(var), boundsbuffer[v])) )
+               {
+                  /* save this feasible assignment at the first position */
+                  varsbuffer[0] = var;
+                  boundtypesbuffer[0] = boundtypesbuffer[v];
+                  boundsbuffer[0] = boundsbuffer[v];
+                  nvarsbuffer = 1;
+                  break;
+               }
+               else
+               {
+                  /* otherwise the literal is violated - we skip the literal */
+                  ++nviolated;
+                  continue;
+               }
+            }
+         }
 
          w = v + 1;
          while( w < nvars && varsbuffer[v] == varsbuffer[w] )
@@ -499,79 +530,43 @@ SCIP_RETCODE consdataCreateRedundant(
             ++w;
          }
          if( varsbuffer[v] != NULL )
-            varsbuffer[nvarsbuffer++] = varsbuffer[v];
+         {
+            varsbuffer[nvarsbuffer] = varsbuffer[v];
+            boundtypesbuffer[nvarsbuffer] = boundtypesbuffer[v];
+            boundsbuffer[nvarsbuffer] = boundsbuffer[v];
+            ++nvarsbuffer;
+         }
       }
+      assert( nvarsbuffer > 0 || SCIPisConsCompressionEnabled(scip) ); /* no variables can only happen if compression is enabled */
 
 #ifndef NDEBUG
-      /* check that the literals are not redundant */
+      /* if there are no variables left, this is because all literals are infeasible */
+      if( nvarsbuffer == 0 )
       {
-         int v1;
-         for( v1 = 0; v1 < nvarsbuffer; v1++ )
+         for( v = 0; v < nvars; v++ )
+         {
+            var = vars[v];
+            assert( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) );
+            assert( (boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasLT(scip, var, SCIPvarGetLbLocal(var), bounds[v]))
+               ||   (boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasGT(scip, var, SCIPvarGetUbLocal(var), bounds[v])) );
+         }
+      }
+      else
+      {
+         /* check that the literals are not redundant */
+         for( v = 0; v < nvarsbuffer; v++ )
          {
             int v2;
-            assert(varsbuffer[v1] != NULL);
-            for( v2 = v1+1; v2 < nvarsbuffer; v2++ )
-               assert(varsbuffer[v1] != varsbuffer[v2] || boundtypesbuffer[v1] != boundtypesbuffer[v2]);
+            assert(varsbuffer[v] != NULL);
+            for( v2 = v+1; v2 < nvarsbuffer; v2++ )
+               assert(varsbuffer[v] != varsbuffer[v2] || boundtypesbuffer[v] != boundtypesbuffer[v2]);
          }
       }
 #endif
 
-      if( SCIPisConsCompressionEnabled(scip) )
-      {
-         SCIP_Bool redundant = FALSE;
-         int nviolations = 0;
-         int k = 0;
-
-         /* loop over variables, compare fixed ones against its bound disjunction */
-         for( v = 0; v < nvarsbuffer && !redundant; ++v )
-         {
-            SCIP_BOUNDTYPE boundtype;
-            SCIP_Real bound;
-            SCIP_VAR* var;
-
-            var = varsbuffer[v];
-            boundtype = boundtypesbuffer[v];
-            bound = boundsbuffer[v];
-
-            /* is the variable fixed? */
-            if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
-            {
-               if( (boundtype == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPvarGetLbLocal(var), bound))
-                || (boundtype == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPvarGetUbLocal(var), bound)) )
-               {
-                  /* save this feasible assignment at the first position */
-                  varsbuffer[0] = var;
-                  boundtypesbuffer[0] = boundtype;
-                  boundsbuffer[0] = bound;
-                  k = 1;
-                  redundant = TRUE;
-               }
-               else
-                  ++nviolations;
-            }
-            else
-            {
-               /* append unfixed variable to buffer */
-               varsbuffer[k] = var;
-               boundtypesbuffer[k] = boundtype;
-               boundsbuffer[k] = bound;
-               ++k;
-            }
-         }
-
-         /* we duplicate a single, infeasible assignment, wlog the first one */
-         if( k == 0 )
-         {
-            assert(nviolations == nvars);
-            nvarsbuffer = 1;
-         }
-         else
-         {
-            /* if the bound disjunction is already trivially satisfied, we keep only a single feasible assignment */
-            assert(!redundant || k == 1);
-            nvarsbuffer = k;
-         }
-      }
+      /* if all literals are infeaisble, we keep the first */
+      if( SCIPisConsCompressionEnabled(scip) && nviolated > 0 && nvarsbuffer == 0 )
+         nvarsbuffer = 1;
 
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, nvarsbuffer) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->boundtypes, boundtypesbuffer, nvarsbuffer) );
