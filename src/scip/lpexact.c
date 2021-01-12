@@ -6052,6 +6052,58 @@ SCIP_RETCODE SCIPlexGetNRows(
    return lp->nrows;
 }
 
+static
+SCIP_RETCODE lpexactComputeDualValidity(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational**       dualsol,            /**< row dual multipliers */
+   SCIP_Rational**       redcost             /**< column reduced costs */
+   )
+{
+   int r,c;
+   SCIP_Rational** obj;
+   SCIP_Rational* objval;
+
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &obj, lp->ncols) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &objval) );
+
+   for( c = 0; c < lp->nlpicols; c++ )
+   {
+      RatSet(obj[c], lp->cols[c]->obj);
+      RatDiff(obj[c], obj[c], redcost[c]);
+
+      if( RatIsPositive(redcost[c]) )
+         RatDiffProd(objval, redcost[c], lp->cols[c]->lb);
+      else if( RatIsNegative(redcost[c]) )
+         RatAddProd(objval, redcost[c], lp->cols[c]->ub);
+   }
+
+   for( r = 0; r < lp->nlpirows; r++ )
+   {
+      SCIP_ROWEXACT* row = lp->lpirows[r];
+
+      if( RatIsPositive(dualsol[r]) )
+         RatDiffProd(objval, dualsol[r], row->lhs);
+      else if( RatIsNegative(dualsol[r]) )
+         RatAddProd(objval, dualsol[r], row->rhs);
+
+      for( c = 0; c < row->len; c++ )
+      {
+         int idx = row->cols_index[c];
+         RatDiffProd(obj[idx], row->vals[c], dualsol[r]);
+      }
+   }
+
+   for( c = 0; c < lp->ncols; c++ )
+   {
+      assert(RatIsZero(obj[c]));
+   }
+
+   RatFreeBuffer(set->buffer, &objval);
+   RatFreeBufferArray(set->buffer, &obj, lp->ncols);
+   return SCIP_OKAY;
+}
+
 /** stores the LP solution in the columns and rows */
 SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -6147,6 +6199,8 @@ SCIP_RETCODE SCIPlpExactGetSol(
 
    RatSetReal(primalbound, 0.0);
    RatSetReal(dualbound, 0.0);
+
+   SCIPdebug(SCIP_CALL( lpexactComputeDualValidity(lp, set, dualsol, redcost) ));
 
    /* copy primal solution and reduced costs into columns */
    for( c = 0; c < nlpicols; ++c )

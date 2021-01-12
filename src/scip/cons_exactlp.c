@@ -15576,7 +15576,7 @@ SCIP_RETCODE printCertificateConsLinear(
       /* in case the row is a bound change (i.e. a row with only one variable), we add the bound change to the variable
        * hashtable
        */
-      if( !SCIProwExactIsModifiable(row) && SCIProwExactGetNNonz(row) == 1)
+      if( !SCIProwExactIsModifiable(row) && SCIProwExactGetNNonz(row) == 1 && RatIsEqualReal(SCIProwExactGetVals(row)[0], 1.0) )
       {
          var = SCIPcolExactGetVar(SCIProwExactGetCols(row)[0]);
          vals = SCIProwExactGetVals(row);
