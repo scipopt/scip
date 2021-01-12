@@ -624,6 +624,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_trustregion.o \
 			scip/heur_trysol.o \
 			scip/heur_twoopt.o \
+			scip/heur_undercover.o \
 			scip/heur_vbounds.o \
 			scip/heur_veclendiving.o \
 			scip/heur_zeroobj.o \
@@ -714,7 +715,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 #			scip/sepa_eccuts.o \
 #			scip/sepa_gauge.o \
 #			scip/heur_multistart.o \
-#			scip/heur_undercover.o \
 
 
 SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o

@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurTrustregion(scip) );
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
    SCIP_CALL( SCIPincludeHeurTwoopt(scip) );
-//   SCIP_CALL( SCIPincludeHeurUndercover(scip) );
+   SCIP_CALL( SCIPincludeHeurUndercover(scip) );
    SCIP_CALL( SCIPincludeHeurVbounds(scip) );
    SCIP_CALL( SCIPincludeHeurVeclendiving(scip) );
    SCIP_CALL( SCIPincludeHeurZirounding(scip) );
