@@ -15578,14 +15578,28 @@ SCIP_RETCODE printCertificateConsLinear(
        */
       if( !SCIProwExactIsModifiable(row) && SCIProwExactGetNNonz(row) == 1)
       {
-         var = consdata->vars[0];
-         vals = consdata->vals;
+         var = SCIPcolExactGetVar(SCIProwExactGetCols(row)[0]);
+         vals = SCIProwExactGetVals(row);
          assert(vals != NULL);
          assert(!RatIsZero(vals[0]));
+
          lhs = consdata->lhs;
          rhs = consdata->rhs;
 
          SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &quotient) );
+
+         /* if the variable is fixed/aggregated anyway we do not need to consider this singleton, print a dummy row instead so the
+            counts in the certificate match*/
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE )
+         {
+            if( !RatIsAbsInfinity(lhs) && !RatIsAbsInfinity(rhs) && !RatIsEqual(lhs, rhs) )
+               SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', quotient, 0, NULL, NULL);
+            SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', quotient, 0, NULL, NULL);
+
+            RatFreeBuffer(SCIPbuffer(scip), &quotient);
+
+            return SCIP_OKAY;
+         }
 
          /* coefficient is positive -> lhs corresponds to lower bound, if negative to upper bound */
          if( !RatIsAbsInfinity(lhs) )

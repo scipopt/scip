@@ -91,6 +91,39 @@ void updateFilesize(
    certificate->filesize += nchars/1048576.0;
 }
 
+static
+int getVarBoundFileIndex(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_COLEXACT*        col,                /**< exact column */
+   SCIP_Rational*        multiplier          /**< dual multiplier (farkascoef or redcost) */
+   )
+{
+   void* image;
+
+   if( RatIsNegative(multiplier) )
+   {
+      certificate->workbound->isupper = TRUE;
+      RatSet(certificate->workbound->boundval, SCIPcolExactGetUb(col));
+   }
+   else
+   {
+      certificate->workbound->isupper = FALSE;
+      RatSet(certificate->workbound->boundval, SCIPcolExactGetLb(col));
+   }
+   certificate->workbound->varindex = SCIPvarGetCertificateIndex(SCIPcolGetVar(col->fpcol));
+
+   image = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
+
+   if( image == NULL )
+   {
+      SCIPerrorMessage("col not in varbound-table \n");
+      SCIPABORT();
+      return -1;
+   }
+
+   return ((SCIP_CERTIFICATEBOUND*)image)->fileindex;
+}
+
 /** checks whether node is a left node or not */
 static
 SCIP_Bool certificateIsLeftNode(
@@ -682,6 +715,8 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
       cons = conss[j];
       conshdlr = SCIPconsGetHdlr(cons);
 
+      SCIPdebug(SCIPprintCons(scip, conss[j], NULL));
+
       if( strcmp(SCIPconshdlrGetName(conshdlr), "linear-exact") == 0 )
       {
          lb = SCIPgetLhsExactLinear(scip, cons);
@@ -689,6 +724,8 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
          /* if the constraint a singleton we count it as a bound constraint in the certificate */
          if( SCIPgetNVarsExactLinear(scip, cons) == 1 )
          {
+            SCIPdebugMessage("constraint counts as bound constraint \n");
+
             if( !RatIsAbsInfinity(lb) )
                nboundconss++;
             if( !RatIsAbsInfinity(ub) )
@@ -696,9 +733,15 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
          }
          /* else we check if it is a ranged row with 2 sides (then we count it twice). otherwise one line gets printed */
          else if( !RatIsEqual(lb, ub) && !RatIsAbsInfinity(lb) && !RatIsAbsInfinity(ub) )
+         {
+            SCIPdebugMessage("constraint is a ranged constraint \n");
             ncertcons += 2;
+         }
          else
+         {
+            SCIPdebugMessage("constraint only has one side \n");
             ncertcons += 1;
+         }
       }
       else
       {
@@ -1547,28 +1590,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          else
             RatSet(vals[len], val);
 
-         if( RatIsNegative(vals[len]) )
-         {
-            certificate->workbound->isupper = TRUE;
-            RatSet(certificate->workbound->boundval, SCIPcolExactGetUb(col));
-         }
-         else
-         {
-            certificate->workbound->isupper = FALSE;
-            RatSet(certificate->workbound->boundval, SCIPcolExactGetLb(col));
-         }
-         certificate->workbound->varindex = SCIPvarGetCertificateIndex(SCIPcolGetVar(col->fpcol));
-
-         image = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
-
-         if( image == NULL )
-         {
-            SCIPerrorMessage("col not in varbound-table \n");
-            SCIPABORT();
-            return SCIP_ERROR;
-         }
-
-         ind[len] = ((SCIP_CERTIFICATEBOUND*)image)->fileindex;
+         ind[len] = getVarBoundFileIndex(certificate, col, vals[len]);
 
          RatDebugMessage("Column %d for var %s has index %l and farkas coef %q \n", col->index, col->var->name, ind[len], val);
 
@@ -1599,6 +1621,13 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
             SCIPABORT();
             return SCIP_ERROR;
          }
+
+         if( key == 0 && SCIProwExactGetNNonz(row) == 1 )
+         {
+            key = getVarBoundFileIndex(certificate, SCIProwExactGetCols(row)[0], val);
+         }
+
+         assert(key != 0);
 
          ind[len] = key;
          /* if we have a ranged row, and the dual corresponds to the upper bound,

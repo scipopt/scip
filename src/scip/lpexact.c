@@ -4457,6 +4457,10 @@ void SCIPcolExactCalcFarkasRedcostCoef(
 
       assert(!RatIsInfinity(val));
 
+      /* we don't want to save the redcost/farkascoef in singletons */
+      if( SCIProwExactGetNNonz(row) == 1 )
+         RatSetReal(val, 0.0);
+
       RatMult(tmp, col->vals[i], val);
       if( usefarkas )
          RatAdd(result, result, tmp);
