@@ -193,7 +193,8 @@
 #include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
 #include "lpi/type_lpi.h"
-#include "scip/type_expr.h"
+#include "scip/expr_var.h"
+#include "scip/expr_product.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
@@ -5283,25 +5284,24 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
        */
       if ( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
       {
-#if !1 //FIXME
-         SCIP_NLROW* nlrow;
-         SCIP_VAR* quadvars[2];
-         SCIP_QUADELEM quadelem;
-
          /* create nonlinear row binary variable * slack variable = 0 */
-         quadvars[0] = consdata->binvar;
-         quadvars[1] = consdata->slackvar;
-         quadelem.idx1 = 0;
-         quadelem.idx2 = 1;
-         quadelem.coef = 1.0;
+         SCIP_NLROW* nlrow;
+         SCIP_EXPR* quadexpr;
+         SCIP_EXPR* varexprs[2];
 
-         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, 2, quadvars, 1,
-               &quadelem, NULL, 0.0, 0.0, SCIP_EXPRCURV_UNKNOWN) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[0], consdata->binvar, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[1], consdata->slackvar, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprProduct(scip, &quadexpr, 2, varexprs, 1.0, NULL, NULL) );
+
+         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, quadexpr, 0.0, 0.0, SCIP_EXPRCURV_UNKNOWN) );
+
+         SCIP_CALL( SCIPreleaseExpr(scip, &quadexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[1]) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[0]) );
 
          /* add row to NLP and forget about it */
          SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
          SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
-#endif
       }
    }
 
