@@ -481,9 +481,9 @@ SCIP_RETCODE consdataCreateRedundant(
                {
                   /* check whether current bound is as strong */
                   if( SCIPisLE(scip, boundsbuffer[v], boundsbuffer[w]) )
-                     varsbuffer[w] = NULL;  /* remove later bound */
-                  else if ( SCIPisGT(scip, boundsbuffer[v], bounds[w]) )
                      varsbuffer[v] = NULL;  /* skip current bound */
+                  else if ( SCIPisGT(scip, boundsbuffer[v], bounds[w]) )
+                     varsbuffer[w] = NULL;  /* remove later bound */
                }
                else
                {
@@ -491,9 +491,9 @@ SCIP_RETCODE consdataCreateRedundant(
 
                   /* check whether current bound is as strong */
                   if( SCIPisGE(scip, boundsbuffer[v], boundsbuffer[w]) )
-                     varsbuffer[w] = NULL;  /* remove later bound */
-                  else if ( SCIPisLT(scip, boundsbuffer[v], boundsbuffer[w]) )
                      varsbuffer[v] = NULL;  /* skip current bound */
+                  else if ( SCIPisLT(scip, boundsbuffer[v], boundsbuffer[w]) )
+                     varsbuffer[w] = NULL;  /* remove later bound */
                }
             }
             ++w;
