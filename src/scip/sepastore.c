@@ -948,7 +948,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          SCIP_Bool applied = FALSE;
 
          /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
-         if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
+         if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 && !set->exact_enabled )
          {
             SCIPsetDebugMsg(set, " -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
             SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
