@@ -118,7 +118,6 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
    SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
    SCIP_HASHMAP*         var2idx,            /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */

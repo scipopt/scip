@@ -335,7 +335,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    }
 
    /* getting the solution from the NLPI problem */
-   SCIP_CALL( SCIPnlpiGetSolution(masterprob, benderscutdata->nlpi, benderscutdata->nlpiprob, &primalvals, &consdualvals,
+   SCIP_CALL( SCIPnlpiGetSolution(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, &primalvals, &consdualvals,
          &varlbdualvals, &varubdualvals, &obj) );
 
 #ifdef SCIP_EVENMOREDEBUG

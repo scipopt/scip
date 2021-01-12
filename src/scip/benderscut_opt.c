@@ -486,9 +486,6 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
 
    dirderiv = 0.0;
 
-#if !1 // FIXME
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(subproblem), &exprinterpreter) );
-
    /* looping over all NLP rows and setting the corresponding coefficients of the cut */
    nrows = SCIPgetNNLPNlRows(subproblem);
    for( i = 0; i < nrows; i++ )
@@ -511,12 +508,10 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
       if( SCIPisZero(subproblem, dualsol) )
          continue;
 
-      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow, exprinterpreter,
+      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow,
             -dualsol, primalvals, var2idx, &dirderiv, vars, vals, nvars, varssize) );
    }
 
-   SCIP_CALL( SCIPexprintFree(&exprinterpreter) );
-#endif
    /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
    for( i = 0; i < nsubvars; i++ )
    {
@@ -1029,7 +1024,6 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
    SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
    SCIP_HASHMAP*         var2idx,            /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */
@@ -1050,7 +1044,6 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    assert(subproblem != NULL);
    assert(benders != NULL);
    assert(nlrow != NULL);
-   assert(exprint != NULL);
    assert((primalvals == NULL && var2idx == NULL) || (primalvals != NULL && var2idx != NULL));
    assert(mult != 0.0);
    assert(dirderiv != NULL);
@@ -1080,30 +1073,44 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    expr = SCIPnlrowGetExpr(nlrow);
    if( expr != NULL )
    {
-#if !1 //FIXME
-      SCIP_Real* exprgrad;
-      SCIP_Real* x;
-      SCIP_Real val;
+      SCIP_SOL* primalsol;
+      SCIP_EXPRITER* it;
 
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &x, SCIPexprtreeGetNVars(expr)) );
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &exprgrad, SCIPexprtreeGetNVars(expr)) );
-
-      /* compile expression, if not done before */
-      if( SCIPexprtreeGetInterpreterData(tree) == NULL )
+      /* create primalsol, either from primalvals, or pointing to NLP solution */
+      if( primalvals != NULL )
       {
-         SCIP_CALL( SCIPexprintCompile(exprint, expr) );
+         SCIP_CALL( SCIPcreateSol(subproblem, &primalsol, NULL) );
+
+         /* TODO would be better to change primalvals to a SCIP_SOL and do this once for the whole NLP instead of repeating it for each expr */
+         for( i = 0; i < SCIPhashmapGetNEntries(var2idx); ++i )
+         {
+            SCIP_HASHMAPENTRY* entry;
+            entry = SCIPhashmapGetEntry(var2idx, i);
+            if( entry == NULL )
+               continue;
+            SCIP_CALL( SCIPsetSolVal(subproblem, primalsol, (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry), primalvals[SCIPhashmapEntryGetImageInt(entry)]) );
+         }
+      }
+      else
+      {
+         SCIP_CALL( SCIPcreateNLPSol(subproblem, &primalsol, NULL) );
       }
 
-      /* sets the solution value */
-      for( i = 0; i < SCIPexprtreeGetNVars(expr); ++i )
-         x[i] = getNlpVarSol(SCIPexprtreeGetVars(expr)[i], primalvals, var2idx);
+      /* eval gradient */
+      SCIP_CALL( SCIPevalExprGradient(subproblem, expr, primalsol, 0) );
 
-      SCIP_CALL( SCIPexprintGrad(exprint, expr, x, TRUE, &val, exprgrad) );
+      assert(SCIPexprGetDerivative(expr) != SCIP_INVALID);  /* TODO this should be a proper check&abort */
+
+      SCIP_CALL( SCIPfreeSol(subproblem, &primalsol) );
 
       /* update corresponding gradient entry */
-      for( i = 0; i < SCIPexprtreeGetNVars(expr); ++i )
+      SCIP_CALL( SCIPcreateExpriter(subproblem, &it) );
+      for( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
       {
-         var = SCIPexprtreeGetVars(expr)[i];
+         if( !SCIPisExprVar(subproblem, expr) )
+            continue;
+
+         var = SCIPgetVarExprVar(expr);
          assert(var != NULL);
 
          /* retrieving the master problem variable for the given subproblem variable. */
@@ -1111,17 +1118,15 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
          if( mastervar == NULL )
             continue;
 
-         coef = mult * exprgrad[i];
+         assert(SCIPexprGetDerivative(expr) != SCIP_INVALID);
+         coef = mult * SCIPexprGetDerivative(expr);
 
          /* adding the variable to the storage */
          SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
 
          *dirderiv += coef * getNlpVarSol(var, primalvals, var2idx);
       }
-
-      SCIPfreeBufferArray(subproblem, &exprgrad);
-      SCIPfreeBufferArray(subproblem, &x);
-#endif
+      SCIPfreeExpriter(&it);
    }
 
    return SCIP_OKAY;
