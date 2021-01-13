@@ -215,7 +215,7 @@ Miscellaneous
 Known bugs
 ----------
 
-@section RN000 SCIP 7.0.2
+@section RN702 SCIP 7.0.2
 *************************
 
 Features
@@ -296,6 +296,9 @@ Fixed bugs
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
+- Fixed issues with scip statistics
+- Fixed issue with multi-aggregated variables
+- Fixed issue in with buffer memory in cons_cumulative
 
 Miscellaneous
 -------------
