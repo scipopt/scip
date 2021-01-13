@@ -4192,7 +4192,7 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
          continue;
 
       SCIP_CALL( SCIPexpriterInit(it, nlrow->expr, SCIP_EXPRITER_DFS, FALSE) );
-      for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+      for( expr = nlrow->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
       {
          if( !SCIPexprIsVar(set, expr) )
             continue;

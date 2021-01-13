@@ -663,6 +663,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_nlobbt.o \
+			scip/prop_obbt.o \
 			scip/prop_probing.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_redcost.o \
@@ -710,7 +711,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
-#			scip/prop_obbt.o \
 #			scip/sepa_convexproj.o \
 #			scip/sepa_eccuts.o \
 #			scip/sepa_gauge.o \
