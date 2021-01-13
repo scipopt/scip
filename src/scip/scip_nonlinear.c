@@ -37,6 +37,7 @@
 
 #include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
+#include "nlpi/expr_varidx.h"
 #include "scip/intervalarith.h"
 #include "scip/scip_expr.h"
 #include "scip/pub_expr.h"
@@ -1154,6 +1155,41 @@ void SCIPaddLogLinearization(
    *linconstant += constant;
 }
 
+/** create varidx expression for var expression
+ *
+ * called when expr is duplicated for addition to NLPI
+ */
+static
+SCIP_DECL_EXPR_MAPEXPR(mapvar2varidx)
+{
+   SCIP_HASHMAP* var2idx;
+   int varidx;
+
+   assert(sourcescip != NULL);
+   assert(sourcescip == targetscip);
+   assert(sourceexpr != NULL);
+   assert(targetexpr != NULL);
+   assert(mapexprdata != NULL);
+
+   var2idx = (SCIP_HASHMAP*)mapexprdata;
+
+   /* do not provide map if not variable */
+   if( !SCIPisExprVar(sourcescip, sourceexpr) )
+   {
+      *targetexpr = NULL;
+      return SCIP_OKAY;
+   }
+
+   assert(SCIPvarIsActive(SCIPgetVarExprVar(sourceexpr)));
+
+   assert(SCIPhashmapExists(var2idx, SCIPgetVarExprVar(sourceexpr)));
+   varidx = SCIPhashmapGetImageInt(var2idx, SCIPgetVarExprVar(sourceexpr));
+
+   SCIP_CALL( SCIPcreateExprVaridx(targetscip, targetexpr, varidx, ownercreate, ownercreatedata) );
+
+   return SCIP_OKAY;
+}
+
 /** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
  *  number of non-linearly occurrences and stores it in the nlscore array
  *
@@ -1360,35 +1396,34 @@ SCIP_RETCODE SCIPcreateNlpiProb(
          }
       }
 
-      /* note that we don't need to copy the expression here since only the mapping between variables in the
-       * expression and the corresponding indices change; this mapping is not created anymore
-       */
-      exprs[nconss] = SCIPnlrowGetExpr(nlrow);
+      if( SCIPnlrowGetExpr(nlrow) != NULL )
+      {
+         /* create copy of expr that uses varidx expressions corresponding to variables indices in NLPI */
+         SCIP_CALL( SCIPduplicateExpr(scip, SCIPnlrowGetExpr(nlrow), &exprs[nconss], mapvar2varidx, var2idx, NULL, NULL) );
+      }
+      else
+      {
+         exprs[nconss] = NULL;
+      }
 
       /* update nlscore */
       if( nlscore != NULL && exprs[nconss] != NULL )
       {
          SCIP_EXPR* expr;
-         SCIP_VAR* var;
          int varidx;
 
          SCIP_CALL( SCIPexpriterInit(it, exprs[nconss], SCIP_EXPRITER_DFS, FALSE) );
-         for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         for( expr = exprs[nconss]; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
          {
-            if( !SCIPisExprVar(scip, expr) )
+            if( !SCIPisExprVaridx(scip, expr) )
                continue;
 
-            var = SCIPgetVarExprVar(expr);
-            assert(var != NULL);
-            assert(SCIPhashmapExists(var2idx, (void*)var));
-
-            varidx = SCIPhashmapGetImageInt(var2idx, (void*)var);
+            varidx = SCIPgetIndexExprVaridx(expr);
             assert(varidx >= 0);
             assert(varidx < nvars);
 
             /* update nlscore */
-            if( nlscore != NULL )
-               ++nlscore[varidx];
+            nlscore[varidx] += 1.0;
          }
       }
 
@@ -1420,6 +1455,10 @@ SCIP_RETCODE SCIPcreateNlpiProb(
          assert(lininds[i] != NULL);
          SCIPfreeBufferArray(scip, &linvals[i]);
          SCIPfreeBufferArray(scip, &lininds[i]);
+      }
+      if( exprs[i] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseExpr(scip, &exprs[i]) );
       }
    }
    /* free row for cutoff bound even if objective is 0 */
