@@ -529,6 +529,18 @@ void RatSetInt(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
+/* find substring, ignore case */
+static
+std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
+{
+  auto it = std::search(
+    str.begin(), str.end(),
+    substr.begin(),   substr.end(),
+    [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
+  );
+  return it;
+}
+
 /** set a rational to the value described by a string */
 void RatSetString(
    SCIP_Rational*        res,                /**< the result */
@@ -559,6 +571,15 @@ void RatSetString(
       /* case 2: string is given as base-10 decimal number */
       else
       {
+         std::string::const_iterator it = findSubStringIC("e", s);
+         int exponent = 1;
+         int mult = 0;
+         if( it != s.end() )
+         {
+            int exponentidx = it - s.begin();
+            mult = std::stoi(s.substr(exponentidx + 1, s.length()));
+            s = s.substr(0, exponentidx);
+         }
          // std::cout << s << std::endl;
          if( s[0] == '.' )
             s.insert(0, "0");
@@ -573,10 +594,12 @@ void RatSetString(
          s.append("/");
          s.append(den);
          res->val = Rational(s);
+         res->val *= pow(10, mult);
          res->isinf = FALSE;
          // RatPrint(res);
       }
    }
+
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
