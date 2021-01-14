@@ -700,6 +700,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_closecuts.o \
 			scip/sepa_aggregation.o \
 			scip/sepa_disjunctive.o \
+			scip/sepa_eccuts.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
@@ -712,7 +713,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
 #			scip/sepa_convexproj.o \
-#			scip/sepa_eccuts.o \
 #			scip/sepa_gauge.o \
 #			scip/heur_multistart.o \
 
