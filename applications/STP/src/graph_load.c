@@ -36,6 +36,7 @@
 #include <errno.h>         /* errno */
 #include <assert.h>
 #include <stdarg.h>        /* message: va_list etc */
+#include "reduce.h"
 
 #if defined(_MSC_VER)
 #include  <io.h>
@@ -326,6 +327,50 @@ char* strlower(
    return t;
 }
 
+
+/** checks input graph and return possible read error */
+static
+SCIP_RETCODE check_inputgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nterms,
+   GRAPH*                graph               /**< graph */
+)
+{
+   if( graph_typeIsSpgLike(graph) )
+   {
+      SCIP_Bool isInfeas;
+
+      if( nterms != graph->terms )
+      {
+         SCIPerrorMessage("wrong number of terminals specified %d vs %d \n\n", graph->terms, nterms);
+         return SCIP_READERROR;
+      }
+
+      // todo do that properly
+      SCIP_CALL( reduce_unconnectedInfeas(scip, TRUE, graph, &isInfeas) );
+
+      if( isInfeas )
+      {
+         SCIPerrorMessage("unconnected terminal node found \n\n");
+         return SCIP_READERROR;
+      }
+   }
+
+   if( !graph_validInput(scip, graph) )
+   {
+      return SCIP_READERROR;
+   }
+
+   if( graph_hasMultiEdges(scip, graph, TRUE) )
+   {
+      return SCIP_READERROR;
+   }
+
+
+   return SCIP_OKAY;
+}
+
+
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Print Message                                            ---*/
 /*--- Function : Prints a message on stderr.                              ---*/
@@ -498,7 +543,7 @@ static int get_arguments(
          break;
       }
       if (missmatch)
-         message(MSG_ERROR, curf, err_missmatch_v);
+         message(MSG_WARN, curf, err_missmatch_v);
       else
       {
          para++;
@@ -871,7 +916,7 @@ SCIP_RETCODE graph_load(
    char         basename[MAX_PATH_LEN];
    char         keyword [MAX_KEYWORD_LEN];
    int          stop_input = FALSE;
-   int          ret        = FAILURE;
+   int          ret        = SUCCESS;
    char*        s;
    char*        t;
    struct key*  p;
@@ -888,6 +933,7 @@ SCIP_RETCODE graph_load(
    int          degcount = 0;
    int          hoplimit = UNKNOWN;
    int          stp_type = -1;
+   int          edgecount = 0;
    int          termcount = 0;
    int          nobstacles = -1;
    int          scale_order = 1;
@@ -895,6 +941,13 @@ SCIP_RETCODE graph_load(
    int**        scaled_coordinates = NULL;
    int**        obstacle_coords = NULL;
    int          transformed = 0;
+   SCIP_Bool    checkInput = FALSE;
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "stp/checkinput", &checkInput) );
+
+   if( checkInput )
+      printf("input checker is active \n\n");
+
 
    assert(file != NULL);
 
@@ -1055,7 +1108,10 @@ SCIP_RETCODE graph_load(
                   break;
                case KEY_TREE_S : /* fall through */
                case KEY_EOF : /* EOF found */
-                  ret        = SUCCESS;
+                  if( !checkInput )
+                  {
+                     ret = SUCCESS;
+                  }
                   stop_input = TRUE;
 
                   /* Test if all required section were found.
@@ -1157,6 +1213,17 @@ SCIP_RETCODE graph_load(
                      {
                         assert(hoplimit != UNKNOWN);
                         g->hoplimit = hoplimit;
+                     }
+                  }
+
+                  if( checkInput )
+                  {
+                     edgecount++;
+
+                     if( edgecount > edges )
+                     {
+                        SCIPerrorMessage("too many edges (should be at most %d) \n\n", edges);
+                        return SCIP_READERROR;
                      }
                   }
 
@@ -1615,8 +1682,13 @@ SCIP_RETCODE graph_load(
          g->knots, g->edges, g->terms, g->source);
 #endif
 
+      if( checkInput )
+      {
+         SCIP_CALL( check_inputgraph(scip, terms, g) );
+      }
+
       assert(graph_valid(scip, g));
-      assert(!graph_hasMultiEdges(scip, g));
+      assert(!graph_hasMultiEdges(scip, g, FALSE));
       return SCIP_OKAY;
    }
    else
@@ -1627,6 +1699,8 @@ SCIP_RETCODE graph_load(
             SCIPfreeBufferArrayNull(scip, &(obstacle_coords[i]));
          SCIPfreeBufferArrayNull(scip, &(obstacle_coords));
       }
+
+      SCIPerrorMessage("errors in input found \n\n");
 
       return SCIP_READERROR;
    }

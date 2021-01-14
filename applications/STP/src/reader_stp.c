@@ -45,6 +45,7 @@
 
 #define   DEFAULT_COMPCENTRAL  STP_CENTER_DEG             /**< selection type for the root (for undirected STPs) */
 #define   DEFAULT_EMITGRAPH    FALSE                      /**< emit graph? */
+#define   DEFAULT_CHECKINPUT   FALSE                      /**< check input data? */
 #define   DEFAULT_COUNTPRESOLTIME  TRUE                   /**< count presolving time as part of overall solution time? */
 #define   DEFAULT_REDUCTION    STP_REDUCTION_ADVANCED     /**< reduction mode to apply */
 #define   DEFAULT_SYMCONS      STP_CONS_AUTOMATIC         /**< symmetry constraints */
@@ -202,6 +203,11 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "stp/printGraph",
          "print the graph before and after the presolving", NULL, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "stp/checkinput",
+         "checks input data for errors",
+         NULL, FALSE, DEFAULT_CHECKINPUT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip,
     "stp/mode",

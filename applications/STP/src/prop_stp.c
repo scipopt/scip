@@ -1147,7 +1147,7 @@ SCIP_RETCODE propgraphPruneUnconnected(
    if( graph_pc_isRootedPcMw(propgraph) )
       SCIP_CALL( reduce_unconnectedRpcRmwInfeas(scip, propgraph, offset, probisinfeas) );
    else
-      SCIP_CALL( reduce_unconnectedInfeas(scip, propgraph, probisinfeas) );
+      SCIP_CALL( reduce_unconnectedInfeas(scip, FALSE, propgraph, probisinfeas) );
 
    return SCIP_OKAY;
 }

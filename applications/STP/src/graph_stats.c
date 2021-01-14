@@ -184,7 +184,8 @@ void graph_knot_printInfo(
 /** graph with multi-edges? */
 SCIP_Bool graph_hasMultiEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g                   /**< graph data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Bool             verbose
 )
 {
    const int nnodes = graph_get_nNodes(g);
@@ -207,6 +208,12 @@ SCIP_Bool graph_hasMultiEdges(
          if( count[head] > 0 )
          {
             SCIPdebugMessage("problem for edge %d->%d \n", k, head);
+
+            if( verbose )
+            {
+               SCIPerrorMessage("parallel edge %d->%d found \n", k + 1, head + 1);
+            }
+
             hasMultiEdges = TRUE;
          }
 

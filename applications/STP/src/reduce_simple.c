@@ -1148,11 +1148,12 @@ SCIP_RETCODE reduce_unconnectedForDirected(
 /** remove unconnected vertices and checks whether problem is infeasible  */
 SCIP_RETCODE reduce_unconnectedInfeas(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             beVerbose,
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Bool*            infeas              /**< is problem infeasible? */
 )
 {
-   const int nnodes = g->knots;
+   const int nnodes = graph_get_nNodes(g);
    SCIP_Bool* nodevisited;
 
    assert(scip && g && infeas);
@@ -1168,6 +1169,11 @@ SCIP_RETCODE reduce_unconnectedInfeas(
       {
          assert(k != g->source);
          *infeas = TRUE;
+         if( beVerbose )
+         {
+            printf("terminal node %d (original index %d) lies in separate connected component \n", k, k + 1);
+         }
+
          break;
       }
 

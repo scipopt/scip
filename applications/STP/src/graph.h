@@ -189,6 +189,7 @@ extern SCIP_Bool      graph_isMarked(const GRAPH*);
 extern SCIP_Bool      graph_isSetUp(const GRAPH*);
 extern SCIP_RETCODE   graph_buildCompleteGraph(SCIP*, GRAPH**, int);
 extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
+extern SCIP_Bool graph_validInput(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_knotIsNWLeaf(const GRAPH*, int);
 
 /* graph_sub.c
@@ -252,7 +253,7 @@ extern void   graph_edge_printInfo(const GRAPH*, int);
 extern SCIP_Bool graph_edge_isBlocked(const GRAPH*, int);
 extern SCIP_Bool graph_edge_isDeleted(const GRAPH*, int);
 extern SCIP_Bool graph_edge_isInRange(const GRAPH*, int);
-extern SCIP_Bool graph_hasMultiEdges(SCIP*, const GRAPH*);
+extern SCIP_Bool graph_hasMultiEdges(SCIP*, const GRAPH*, SCIP_Bool);
 extern SCIP_Bool graph_isAlmostUniform(const GRAPH*);
 extern void   graph_knot_printInfo(const GRAPH*, int);
 extern void   graph_printInfo(const GRAPH*);

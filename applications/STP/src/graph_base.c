@@ -1582,3 +1582,114 @@ SCIP_Bool graph_valid(
    SCIPfreeBufferArrayNull(scip, &nodevisited);
    return isValid;
 }
+
+
+
+/** is the given input graph valid? */
+SCIP_Bool graph_validInput(
+   SCIP*                 scip,               /**< scip struct */
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   int nterms = g->terms;
+   SCIP_Bool isValid = TRUE;
+   SCIP_Bool* nodevisited = NULL;
+
+   assert(scip && g);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int e;
+
+      if( Is_term(g->term[k]) )
+         nterms--;
+
+      for( e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+         if( g->head[e] != k )
+            break;
+
+      if( e != EAT_LAST )
+      {
+         isValid = FALSE;
+         SCIPerrorMessage("Input graph invalid: Head invalid, node %d, edge %d->%d \n",
+               k, g->tail[e] + 1, g->head[e] + 1);
+
+         goto EXIT;
+      }
+
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         if( g->tail[e] != k )
+            break;
+
+      if( e != EAT_LAST )
+      {
+         isValid = FALSE;
+         SCIPerrorMessage("Input graph invalid: Tail invalid, node %d, edge %d->%d \n",
+               k, g->tail[e] + 1, g->head[e] + 1);
+
+         goto EXIT;
+      }
+   }
+
+   if( nterms != 0 )
+   {
+      isValid = FALSE;
+      SCIPerrorMessage("Input graph invalid: Wrong number of terminals, count is %d, should be %d\n",
+            g->terms, g->terms - nterms);
+
+      goto EXIT;
+   }
+
+   if( (g->source < 0 ) || (g->source >= g->knots) || (g->term[g->source] != 0) )
+   {
+      isValid = FALSE;
+      SCIPerrorMessage("Input graph invalid: Root invalid, root %d, terminal state %d\n",
+            g->source + 1, g->term[g->source]);
+
+      goto EXIT;
+   }
+
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
+   SCIP_CALL_ABORT( graph_trail_arr(scip, g, g->source, nodevisited) );
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( (g->grad[k] == 0) && ((g->inpbeg[k] != EAT_LAST) || (g->outbeg[k] != EAT_LAST)) )
+      {
+         isValid = FALSE;
+         SCIPerrorMessage("Input graph invalid: Node %d of degree 0 has edges \n", k + 1);
+
+         goto EXIT;
+      }
+
+      if( !nodevisited[k] && ((g->grad[k] > 0) || (Is_term(g->term[k]))) )
+      {
+         if( graph_pc_isPcMw(g) && !graph_pc_knotIsFixedTerm(g, k) )
+         {
+            continue;
+         }
+
+         isValid = FALSE;
+         SCIPerrorMessage("Input graph invalid: Node %d not connected to terminal node %d \n", k + 1, g->source + 1);
+
+         goto EXIT;
+      }
+   }
+
+   if( isValid && graph_pc_isPcMw(g) )
+   {
+      isValid = graphisValidPcMw(scip, g, nodevisited);
+
+      if( !isValid )
+      {
+         SCIPerrorMessage("Input graph invalid (non-standard Steiner tree specific error) \n");
+      }
+   }
+
+
+   EXIT:
+
+   SCIPfreeBufferArrayNull(scip, &nodevisited);
+   return isValid;
+}
