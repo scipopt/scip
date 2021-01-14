@@ -193,8 +193,6 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCertificate", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
    return scip->stat->certificate;
 }
 
