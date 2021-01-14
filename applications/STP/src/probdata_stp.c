@@ -2689,7 +2689,7 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-
+   const char* lpsolvername = SCIPlpiGetSolverName();
    SCIP_CALL( SCIPsetSubscipsOff(scip, TRUE) );
 
    /* set STP-specific default parameters */
@@ -2703,10 +2703,22 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcutsroot", 100000) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcuts", 1000) );   // todo tune
 
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.4) ); // todo tune > 0.4
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune > 0.4 best soplex: 0.8
-   SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.01) ); // todo tune < 0.1
+   if( strncmp(lpsolvername, "SoPlex", 6) == 0 )
+   {
+      printf("\n using SoPlex specific parameters (use of commercial LP solver is recommended!) \n\n");
+
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) );
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.4) ); // todo tune > 0.4  best soplex: 0.8
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune > 0.4 best soplex: 0.8
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.01) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.4) ); // todo tune > 0.4
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune > 0.4 best soplex: 0.8
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.01) ); // todo tune < 0.1
+   }
 
    SCIP_CALL( SCIPsetRealParam(scip, "separating/intsupportfac", 0.0) );
    SCIP_CALL( SCIPsetIntParam(scip, "branching/relpscost/maxproprounds", 0) );
