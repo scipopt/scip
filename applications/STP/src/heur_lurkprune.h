@@ -36,13 +36,13 @@ extern "C" {
 #endif
 
 /** creates the lurk prune primal heuristic and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpIncludeHeurLurkPrune(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** execute lurk-and-prune heuristic on given graph */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurLurkPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */

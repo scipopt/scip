@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -408,7 +408,7 @@ SCIP_RETCODE tmVnoiInit(
       SCIP_CALL( SCIPallocBufferArray(scip, &(tmvnoi->node_edge[k]), nterms) ); /*lint !e866*/
    }
 
-   SCIP_CALL( SCIPpqueueCreate( &(tmvnoi->pqueue), nnodes, 2.0, GNODECmpByDist) );
+   SCIP_CALL( SCIPpqueueCreate( &(tmvnoi->pqueue), nnodes, 2.0, GNODECmpByDist, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2157,7 +2157,6 @@ void initCostsAndPrioLP(
          }
       }
    } /* graph->stp_type != STP_DHCSTP */
-
 
    if( graph_pc_isPcMw(graph) && prize )
    {

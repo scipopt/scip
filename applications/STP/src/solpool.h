@@ -50,21 +50,21 @@ typedef struct stp_solution_pool
 
 
 /** is given solution in pool? */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool solpool_isContained(
    const int*            soledges,           /**< edge array of solution to be checked */
    const STPSOLPOOL*     pool                /**< the pool */
 );
 
 /** get solution from index */
-EXTERN
+SCIP_EXPORT
 STPSOL* solpool_solFromIndex(
    STPSOLPOOL*           pool,               /**< the pool */
    const int             soindex             /**< the index */
     );
 
 /** initializes STPSOL pool */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE solpool_init(
    SCIP*                 scip,               /**< SCIP data structure */
    STPSOLPOOL**          pool,               /**< the pool */
@@ -73,7 +73,7 @@ SCIP_RETCODE solpool_init(
    );
 
 /** tries to add STPSOL to pool */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE solpool_addSol(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real       obj,                /**< objective of solution to be added */
@@ -83,7 +83,7 @@ SCIP_RETCODE solpool_addSol(
    );
 
 /** tries to add sol to SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE solpool_addSolToScip(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
@@ -93,7 +93,7 @@ SCIP_RETCODE solpool_addSolToScip(
    );
 
 /** frees STPSOL pool */
-EXTERN
+SCIP_EXPORT
 void solpool_free(
    SCIP*                 scip,               /**< SCIP data structure */
    STPSOLPOOL**          pool                /**< the pool */

@@ -1,8 +1,8 @@
 #!groovy
 
-node ('nightly'){
+node ('ubuntu18'){
     catchError {
-        timeout(1) {
+        timeout(3) {
             stage('Clean') {
                  cleanWs() // clean workspace
             }

@@ -52,49 +52,49 @@ typedef struct reduced_costs_parameters
 
 
 /** returns number of nodes for which reduced costs are stored */
-EXTERN
+SCIP_EXPORT
 int redcosts_getNnodes(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
 
 /** returns number of edges for which reduced costs are stored */
-EXTERN
+SCIP_EXPORT
 int redcosts_getNedges(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
 
 /** returns reduced costs */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* redcosts_getEdgeCosts(
    const REDCOST*        redcostdata,        /**< reduced costs data */
    int                   level               /**< level to get reduced costs for */
    );
 
 /** returns top level reduced costs */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* redcosts_getEdgeCostsTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
 
 /** returns root to node distances */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* redcosts_getRootToNodeDist(
    const REDCOST*        redcostdata,        /**< reduced costs data */
    int                   level               /**< level to get distances for */
    );
 
 /** returns root to node distances for top level */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* redcosts_getRootToNodeDistTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
 
 /** returns paths from nodes to closes terms */
-EXTERN
+SCIP_EXPORT
 PATH* redcosts_getNodeToTermsPaths(
    const REDCOST*        redcostdata,        /**< reduced costs data */
    int                   level               /**< level to get reduced costs for */
@@ -102,7 +102,7 @@ PATH* redcosts_getNodeToTermsPaths(
 
 
 /** returns paths from nodes to closes terms for top level */
-EXTERN
+SCIP_EXPORT
 PATH* redcosts_getNodeToTermsPathsTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
@@ -116,14 +116,14 @@ int* redcosts_getNodeToTermsBases(
 
 
 /** returns closest terms to nodes for top level */
-EXTERN
+SCIP_EXPORT
 int* redcosts_getNodeToTermsBasesTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
 
 /** returns cutoff */
-EXTERN
+SCIP_EXPORT
 SCIP_Real redcosts_getCutoff(
    const REDCOST*        redcostdata,        /**< reduced costs data */
    int                   level               /**< level to get cutoff for */
@@ -131,21 +131,21 @@ SCIP_Real redcosts_getCutoff(
 
 
 /** returns cutoff for top level */
-EXTERN
+SCIP_EXPORT
 SCIP_Real redcosts_getCutoffTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
 
 /** returns dual-bound */
-EXTERN
+SCIP_EXPORT
 SCIP_Real redcosts_getDualBound(
    int                   level,              /**< level */
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
 /** returns dual-bound for top level*/
-EXTERN
+SCIP_EXPORT
 SCIP_Real redcosts_getDualBoundTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
@@ -159,14 +159,14 @@ int redcosts_getRoot(
 
 
 /** returns root used for reduced cost computation for top level */
-EXTERN
+SCIP_EXPORT
 int redcosts_getRootTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
 
 /** returns current (top) level; 0-indexed */
-EXTERN
+SCIP_EXPORT
 int redcosts_getLevel(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
@@ -178,7 +178,7 @@ int redcosts_getNlevels(
    );
 
 /** sets cutoff */
-EXTERN
+SCIP_EXPORT
 void redcosts_setCutoff(
    SCIP_Real           cutoff,             /**< the value */
    int                 level,               /**< level to set cutoff for */
@@ -187,7 +187,7 @@ void redcosts_setCutoff(
 
 
 /** sets cutoff for top level */
-EXTERN
+SCIP_EXPORT
 void redcosts_setCutoffTop(
    SCIP_Real           cutoff,             /**< the value */
    REDCOST*            redcostdata         /**< reduced costs data */
@@ -196,7 +196,7 @@ void redcosts_setCutoffTop(
 
 
 /** sets dual-bound */
-EXTERN
+SCIP_EXPORT
 void redcosts_setDualBound(
    SCIP_Real           dualbound,          /**< the value */
    int                 level,              /**< level to set dual bound for */
@@ -205,7 +205,7 @@ void redcosts_setDualBound(
 
 
 /** sets dual-bound for top level */
-EXTERN
+SCIP_EXPORT
 void redcosts_setDualBoundTop(
    SCIP_Real           dualbound,          /**< the value */
    REDCOST*            redcostdata         /**< reduced costs data */
@@ -213,7 +213,7 @@ void redcosts_setDualBoundTop(
 
 
 /** sets root used for reduced cost computation */
-EXTERN
+SCIP_EXPORT
 void redcosts_setRoot(
    int                   root,               /**< the root */
    int                   level,              /**< level to set dual bound for */
@@ -222,7 +222,7 @@ void redcosts_setRoot(
 
 
 /** sets root used for reduced cost computation for top level */
-EXTERN
+SCIP_EXPORT
 void redcosts_setRootTop(
    int                   root,               /**< the root */
    REDCOST*              redcostdata         /**< reduced costs data */
@@ -230,14 +230,14 @@ void redcosts_setRootTop(
 
 
 /** adds a new level */
-EXTERN
+SCIP_EXPORT
 void redcosts_addLevel(
    REDCOST*              redcostdata         /**< reduced costs data */
    );
 
 
 /** initializes reduced costs data structure from given parameter struct */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE redcosts_initFromParams(
    SCIP*                 scip,               /**< SCIP */
    const RCPARAMS*       parameters,         /**< parameters for initialization */
@@ -246,7 +246,7 @@ SCIP_RETCODE redcosts_initFromParams(
 
 /** initializes reduced costs data structure.
  *  DEPRECATED! Use redcosts_initFromParams */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE redcosts_init(
    SCIP*                 scip,               /**< SCIP */
    int                   nnodes,             /**< number of nodes */
@@ -258,7 +258,7 @@ SCIP_RETCODE redcosts_init(
 
 
 /** frees */
-EXTERN
+SCIP_EXPORT
 void redcosts_free(
    SCIP*                 scip,               /**< SCIP */
    REDCOST**             redcostdata         /**< data to free */
@@ -266,7 +266,7 @@ void redcosts_free(
 
 
 /** sets cutoff for top level */
-EXTERN
+SCIP_EXPORT
 void redcosts_setAndReturnCutoffFromBoundTop(
   SCIP_Real             upperbound,         /**< bound */
   REDCOST*              redcostdata,        /**< reduced cost data */
@@ -275,7 +275,7 @@ void redcosts_setAndReturnCutoffFromBoundTop(
 
 
 /** sets cutoff */
-EXTERN
+SCIP_EXPORT
 void redcosts_setCutoffFromBound(
   SCIP_Real             upperbound,         /**< bound */
   int                   level,              /**< level */
@@ -284,7 +284,7 @@ void redcosts_setCutoffFromBound(
 
 
 /** sets cutoff for top level */
-EXTERN
+SCIP_EXPORT
 void redcosts_setCutoffFromBoundTop(
   SCIP_Real             upperbound,         /**< bound */
   REDCOST*              redcostdata         /**< reduced cost data */
@@ -293,7 +293,7 @@ void redcosts_setCutoffFromBoundTop(
 
 
 /** increases reduced cost for deleted arcs */
-EXTERN
+SCIP_EXPORT
 void redcosts_increaseOnDeletedArcs(
    const GRAPH*          graph,              /**< graph */
    const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
@@ -303,7 +303,7 @@ void redcosts_increaseOnDeletedArcs(
 
 
 /** unifies costs */
-EXTERN
+SCIP_EXPORT
 void redcosts_unifyBlockedEdgeCosts(
    const GRAPH*          graph,              /**< graph */
    int                   level,              /**< the level */
@@ -312,7 +312,7 @@ void redcosts_unifyBlockedEdgeCosts(
 
 
 /** increases reduced cost for deleted arcs for top level */
-EXTERN
+SCIP_EXPORT
 void redcosts_increaseOnDeletedArcsTop(
    const GRAPH*          graph,              /**< graph */
    const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
@@ -321,7 +321,7 @@ void redcosts_increaseOnDeletedArcsTop(
 
 
 /* initialize distances from reduced costs */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE redcosts_initializeDistances(
    SCIP*                 scip,               /**< SCIP */
    int                   level,              /**< level to inizialize for*/
@@ -331,7 +331,7 @@ SCIP_RETCODE redcosts_initializeDistances(
 
 
 /* initialize top distances from reduced costs */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE redcosts_initializeDistancesTop(
    SCIP*                 scip,               /**< SCIP */
    GRAPH*                g,                  /**< graph data structure */
@@ -340,13 +340,13 @@ SCIP_RETCODE redcosts_initializeDistancesTop(
 
 
 /** reduced costs available? */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool redcosts_forLPareAvailable(
    SCIP*                 scip                /**< SCIP structure */
    );
 
 /** initialize reduced costs */
-EXTERN
+SCIP_EXPORT
 void redcosts_forLPget(
    SCIP*                 scip,               /**< SCIP structure */
    SCIP_VAR**            vars,               /**< variables */

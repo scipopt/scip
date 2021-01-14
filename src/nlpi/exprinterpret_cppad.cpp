@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -133,9 +133,13 @@ size_t thread_num(void)
 /** sets up CppAD's datastructures for running in multithreading mode
  *
  *  It must be called once before multithreading is started.
+ *  For GCC-compatible compilers, this will happen automatically.
  */
-static
-char init_parallel(void)
+extern "C" SCIP_EXPORT char SCIPexprintCppADInitParallel(void);
+#ifdef __GNUC__
+__attribute__((constructor))
+#endif
+char SCIPexprintCppADInitParallel(void)
 {
    CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
@@ -144,18 +148,17 @@ char init_parallel(void)
    return 0;
 }
 
+#if !defined(__GNUC__)
 /** a dummy variable that is initialized to the result of init_parallel
  *
  *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
-#if !defined(_MSC_VER)
-__attribute__ ((unused))
+static char init_parallel_return = SCIPexprintCppADInitParallel();
 #endif
-static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
 
-/** definition of CondExpOp for SCIPInterval (required by CppAD) */
+/** definition of CondExpOp for SCIPInterval (required by CppAD) */ /*lint -e715*/
 inline
 SCIPInterval CondExpOp(
    enum CppAD::CompareOp cop,
@@ -172,7 +175,7 @@ SCIPInterval CondExpOp(
    return SCIPInterval();
 }
 
-/** another function required by CppAD */
+/** another function required by CppAD */ /*lint -e715*/
 inline
 bool IdenticalPar(
    const SCIPInterval&   x                   /**< operand */
@@ -209,7 +212,7 @@ bool IdenticalEqualPar(
    return (x == y);
 }
 
-/** greater than zero not defined for intervals */
+/** greater than zero not defined for intervals */ /*lint -e715*/
 inline
 bool GreaterThanZero(
    const SCIPInterval&   x                   /**< operand */
@@ -223,7 +226,7 @@ bool GreaterThanZero(
    return false;
 }
 
-/** greater than or equal zero not defined for intervals */
+/** greater than or equal zero not defined for intervals */ /*lint -e715*/
 inline
 bool GreaterThanOrZero(
    const SCIPInterval&   x                   /**< operand */
@@ -237,7 +240,7 @@ bool GreaterThanOrZero(
    return false;
 }
 
-/** less than not defined for intervals */
+/** less than not defined for intervals */ /*lint -e715*/
 inline
 bool LessThanZero(
    const SCIPInterval&   x                   /**< operand */
@@ -251,7 +254,7 @@ bool LessThanZero(
    return false;
 }
 
-/** less than or equal not defined for intervals */
+/** less than or equal not defined for intervals */ /*lint -e715*/
 inline
 bool LessThanOrZero(
    const SCIPInterval&   x                   /**< operand */
@@ -265,7 +268,7 @@ bool LessThanOrZero(
    return false;
 }
 
-/** conversion to integers not defined for intervals */
+/** conversion to integers not defined for intervals */ /*lint -e715*/
 inline
 int Integer(
    const SCIPInterval&   x                   /**< operand */
@@ -392,7 +395,7 @@ bool univariate_rev_sparse_jac(
  *
  *  Assume V(x) = (g(f(x)))'' R  with f(x) = x^p for a function g:R->R and a matrix R.
  *  we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
- */
+ */ /*lint -e715*/
 static
 bool univariate_rev_sparse_hes(
    const CppAD::vector<bool>& vx,            /**< indicates whether argument is a variable, or empty vector */
@@ -558,7 +561,7 @@ private:
     *       = py[0] * (\partial x^p / \partial x')    + py[1] * (\partial (p * x^(p-1) x') / \partial x')
     *       = py[0] * 0                               + py[1] * p * tx[0]^(p-1)
     * \f$
-    */
+    */ /*lint -e715*/
    bool reverse(
       size_t                     p,          /**< highest order Taylor coefficient that we are evaluating */
       const CppAD::vector<Type>& tx,         /**< values for taylor coefficients of x */
@@ -1614,7 +1617,7 @@ void evalUser(
  *
  *  Only implemented for real numbers, thus gives error by default.
  *  @todo implement own userad function
- */
+ */ /*lint -e715*/
 template<class Type>
 static
 void evalMin(
@@ -1644,7 +1647,7 @@ void evalMin(
  *
  *  Only implemented for real numbers, thus gives error by default.
  *  @todo implement own userad function
- */
+ */ /*lint -e715*/
 template<class Type>
 static
 void evalMax(
@@ -2565,7 +2568,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    {
       SCIP_Real val;
       SCIP_CALL( SCIPexprintEval(exprint, tree, varvals, &val) );
-   }
+   }  /*lint !e438*/
 
    SCIPdebugMessage("calling ForSparseJac\n");
 
@@ -2580,7 +2583,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    vector<bool> sparsehes(data->f.RevSparseHes(n, s));
 
    for( int i = 0; i < nn; ++i )
-      sparsity[i] = sparsehes[i];
+      sparsity[i] = (SCIP_Bool)sparsehes[i];
 
 /* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,6 +31,7 @@
 #include "scip/type_result.h"
 #include "scip/type_set.h"
 #include "scip/type_benderscut.h"
+#include "scip/type_benders.h"
 #include "scip/pub_benderscut.h"
 
 #ifdef __cplusplus
@@ -146,17 +147,6 @@ void SCIPbenderscutSetInitsol(
 void SCIPbenderscutSetExitsol(
    SCIP_BENDERSCUT*      benderscut,         /**< the Benders' decomposition cut */
    SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol))/**< solving process deinitialization callback of the Benders' decomposition cut */
-   );
-
-/** adds the data for the generated cuts to the Benders' cut storage */
-SCIP_RETCODE SCIPbenderscutStoreCut(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR**            vars,               /**< the variables that have non-zero coefficients in the cut */
-   SCIP_Real*            vals,               /**< the coefficients of the variables in the cut */
-   SCIP_Real             lhs,                /**< the left hand side of the cut */
-   SCIP_Real             rhs,                /**< the right hand side of the cut */
-   int                   nvars               /**< the number of variables with non-zero coefficients in the cut */
    );
 
 #ifdef __cplusplus

@@ -1,0 +1,5 @@
+# SCIP version 6.0.2
+
+# Force restart if absolute gap is 1 or enough binary variables have been fixed?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/forcerestart = TRUE

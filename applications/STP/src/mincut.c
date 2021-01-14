@@ -1814,7 +1814,7 @@ SCIP_RETCODE lpcutAdd(
 
    (*success) = FALSE;
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), local, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), local, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
    assert(nodes_inRootComp[g->source]);

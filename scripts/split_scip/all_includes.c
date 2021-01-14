@@ -1,4 +1,3 @@
-
 #include <ctype.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -163,4 +162,3 @@
 #ifndef NDEBUG
 #include "scip/struct_scip.h"
 #endif
-

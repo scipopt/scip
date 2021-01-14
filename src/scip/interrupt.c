@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   interrupt.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for catching the user CTRL-C interrupt
  * @author Tobias Achterberg
  */
@@ -62,7 +63,9 @@ static
 void interruptHandler(
    int                   signum              /**< interrupt signal number */
    )
-{ /*lint --e{715}*/
+{
+   SCIP_UNUSED(signum);
+
    ninterrupts++;
    if( ninterrupts >= 5 )
    {
@@ -163,7 +166,10 @@ SCIP_Bool SCIPterminated(
    return (nterms > 0);
 }
 
-/** send a termination signal to the process so that SCIP tries to terminate as soon as possible */
+/** sends a termination signal to all SCIP processes so that they try to terminate as soon as possible
+ *
+ *  @note For terminating a specific SCIP process use SCIPinterruptSolve().
+ */
 void SCIPtryTerminate(
    void
    )

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -198,7 +198,7 @@ SCIP_RETCODE sep_deg2(
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "deg2", -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE));
+         SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "deg2", -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE));
 
          SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
@@ -270,7 +270,7 @@ SCIP_RETCODE sep_flowIn(
       SCIP_ROW* row = NULL;
       SCIP_Bool infeasible;
 
-      SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "inflow", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
+      SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "inflow", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
       SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
       for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
@@ -326,7 +326,7 @@ SCIP_RETCODE sep_flowTermIn(
       SCIP_ROW* row = NULL;
       SCIP_Bool infeasible;
 
-      SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "term", 1.0, 1.0, FALSE, FALSE, TRUE));
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "term", 1.0, 1.0, FALSE, FALSE, TRUE) );
 
       SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
@@ -391,7 +391,7 @@ SCIP_RETCODE sep_flowBalance(
    {
       SCIP_Bool infeasible;
 
-      SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "flowbalance", 0.0, (g->terms == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE));
+      SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "flowbalance", 0.0, (g->terms == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE));
       SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
       for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
@@ -455,7 +455,7 @@ SCIP_RETCODE sep_flowEdgeOut(
          SCIP_Bool infeasible;
          SCIP_ROW* row = NULL;
 
-         SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "edgeflow", 0.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
+         SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "edgeflow", 0.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
          SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
          SCIP_CALL(SCIPaddVarToRow(scip, row, vars[ijedge], -1.0));
@@ -997,7 +997,9 @@ SCIP_DECL_CONSLOCK(consLockStp)
    nvars = SCIPprobdataGetNVars(scip);
 
    for( v = 0; v < nvars; ++v )
-      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, 1, 1) );
+   {
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], locktype, nlockspos, nlocksneg) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1170,7 +1172,7 @@ SCIP_RETCODE SCIPStpAddContractionCut(
    assert(conshdlr != NULL);
    assert(SCIPconshdlrGetNConss(conshdlr) > 0);
 
-   SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "contraction", 1.0, SCIPinfinity(scip), localcut, FALSE, TRUE));
+   SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "contraction", 1.0, SCIPinfinity(scip), localcut, FALSE, TRUE));
    SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
    SCIP_CALL(SCIPaddVarToRow(scip, row, edge, 1.0));

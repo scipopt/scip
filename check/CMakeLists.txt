@@ -18,6 +18,9 @@ endif()
 
 add_dependencies(check scip_check)
 
+# copy data files to binary directory, so that they can be accessed with relative paths
+# in settings files
+file(COPY coverage/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/coverage)
 #
 # define the instance sets
 #
@@ -50,6 +53,8 @@ set(settings_MIP
     "separating_aggressive"
     "presolving_aggressive"
     "heuristics_aggressive"
+    "emphasis_numerics"
+
     #constraints
     "indicatorlogicorsepa"
     "indicatoralterlp"
@@ -57,17 +62,24 @@ set(settings_MIP
     #presolving and branching
     "convertinttobin_mostinf"
     "setppclifting_leastinf"
-    #branching and propagation
 
+    #branching and propagation
     "pscost_proporbitope"
+
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
+    "treemodel_ratio"
+    "treemodel_sampling"
+    "treemodel_svts_filter"
+    "treemodel_svts_nofilter"
 
     #separation and heuristics
     "oddcycleliftheur_feaspump20"
+
+    #heuristics and branching
     "heurlprows"
-    "lns_epsgreedy"
+    "lns_epsgreedy_vanilla"
     "lns_exp3"
 #    "dynamic"
     "intobj"
@@ -79,24 +91,33 @@ set(settings_MIP
     "conflictdiving"
 )
 #
+# settings for the componentshandler test
+#
+set(settings_compHandlerTest
+    "components_during_solve"
+    )
+#
 # settings to run a reduced MIP test
 #
 set(settings_fastMIP
-    "vbcvisualization"
-    "bakvisualization"
-    "alldisp"
-    "fullstrongbfs"
-    "allfull"
     "all_aggressive"
+    "alldisp"
+    "allfull"
+    "bakvisualization"
+    "fullstrongbfs"
     "cgmip"
     "cgmipstrong"
     "cgmipviol"
-    "presolving_off"
-    "separating_off"
     "lookahead-abbrev-bincons"
     "lookahead-addclique-scaledcutoffscore"
+    "presolving_off"
+    "separating_off"
+    "vbcvisualization"
+    "enable_treeprofile_regression_forest"
+    "../../../scripts/trainEstimation/periodic_report"
   )
 set(settings_MINLP
+#    "emphasis_numerics"
     "minlp"
     "undercover1"
     "undercover2"
@@ -124,6 +145,7 @@ set(settings_Symmetry
     "orbitalfixing-timing2"
     "orbitopes-timing0"
     "orbitopes-timing2"
+    "orbitopes-timing2-static"
     "packingorbitopes-timing0"
     "packingorbitopes-timing2"
     "symresacks-timing0"
@@ -136,7 +158,36 @@ set(settings_sparsify
 
 set(settings_Benders
     "usebenders"
+    "usebenders-tr"
+    "usebenders-cutstrengthen"
    )
+
+set(settings_BendersLB
+    "usebenders"
+   )
+
+set(settings_BendersQP
+    "benders-qp"
+   )
+
+set(settings_Indicator
+    "default"
+    "indicatorrestart"
+    "indicatorperspective"
+    "indicatorlogicorsepa"
+    "indicatorcoupling"
+    "indicatorconflict"
+    "indicatoralterlp"
+    "indicatorupgrade"
+   )
+
+set(settings_reopt
+    "reopt-test-settings-usesplitcons-TRUE"
+    "reopt-test-settings-varorderinterdiction-d"
+    "reopt-test-settings-varorderinterdiction-i"
+    "reopt-test-settings-varorderinterdiction-r"
+    )
+
 
 #
 # Indicator instances
@@ -150,6 +201,12 @@ set(settings_Cardinality
     "default"
 #    "upgdcardinality"
 )
+
+set(settings_Or
+    "default"
+    "presolving_separating_heuristics_off_randombranching"
+)
+
 
 set(instances_Readertest
     "instances/MIP/bell5.mps\;8966406.49"
@@ -189,7 +246,13 @@ set(instances_MIP
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/MIP/vpm2.fzn\;13.75"
     )
-
+#
+# Instances for component handler test
+#
+set(instances_compHandlerTest
+    "instances/MIP/lseu_dcmulti.cip\;189302"
+    "instances/MIP/4sHB.cip\;67"
+    )
 #
 # Reduced set of MIP instances for more expensive settings
 #
@@ -331,6 +394,20 @@ set(instances_Benders
     "instances/Stochastic/sslp_5_25_50.smps\;-121.6"
    )
 
+set(instances_BendersLB
+    "instances/Stochastic/sslp_5_25_50_LB.smps\;-121.6"
+   )
+
+set(instances_BendersQP
+    "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec.gz\;-8.22960761981176e-02"
+    "instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
+    "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.34740783553289e-02"
+   )
+
+set(instances_Or
+    "instances/Or/or_constraint.cip\;18"
+    )
+
 #
 # available reader file extensions for SCIP readers
 #
@@ -376,6 +453,13 @@ macro(split_instance instance)
     get_filename_component(basename ${path} NAME)
 endmacro(split_instance)
 
+macro(split_decompinstance instance)
+    list(GET instance 0 instpath)
+    list(GET instance 1 decpath)
+    list(GET instance 2 optval)
+    get_filename_component(basename ${instpath} NAME)
+endmacro(split_decompinstance)
+
 macro(add_instancetests instances settings prefix)
 #
 # loop over the instances
@@ -395,17 +479,51 @@ macro(add_instancetests instances settings prefix)
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
-                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
         endforeach(setting)
     endforeach(instance)
 endmacro(add_instancetests)
 
+macro(add_decompinstancetests instances settings prefix)
+#
+# loop over the instances
+#
+if(DEFINED IPOPT_FOUND AND IPOPT_FOUND)
+   set(TEST_BENDERSQP TRUE)
+else()
+   set(TEST_BENDERSQP FALSE)
+endif()
+if(${TEST_BENDERSQP} AND ((NOT ${LPS} STREQUAL "msk" )))
+    foreach(instance ${${instances}})
+        split_decompinstance(instance)
+        #
+        # loop over all settings
+        #
+        foreach(setting ${${settings}})
+            #
+            # treat the instance as a tuple (list) of two values
+            #
+            add_test(NAME ${prefix}-${setting}-${basename}
+               COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set read ${PROJECT_SOURCE_DIR}/check/${instpath} read ${PROJECT_SOURCE_DIR}/check/${decpath} opt validatesol ${optval} ${optval} q"
+                    )
+            set_tests_properties(${prefix}-${setting}-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    DEPENDS scip-build
+                                )
+        endforeach(setting)
+    endforeach(instance)
+endif()
+endmacro(add_decompinstancetests)
+
 add_instancetests(instances_CP settings_default "CP")
-add_instancetests(instances_Indicator settings_default "Indicator")
+add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
@@ -420,6 +538,9 @@ add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
+add_instancetests(instances_Or settings_Or "Or")
+add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
+add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
 
 #
 # test writing and reading solutions
@@ -441,6 +562,22 @@ foreach(instance ${instances_MINLP})
 endforeach(instance)
 
 #
+# test reading .cip files for indicator instances
+#
+foreach(instance ${instances_Indicator})
+    split_instance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/solvecip.bat.in interactiveshell/solvecip-${basename}.bat)
+    add_test(NAME Indicator-solvecip-${basename}
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
+            )
+    set_tests_properties(Indicator-solvecip-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+endforeach(instance)
+
+
+#
 # the following instances are not pure binary and hence cannot be written out in opb format
 #
 set(basenames_opb_wrongformat
@@ -453,9 +590,18 @@ set(basenames_opb_wrongformat
     misc03.mps
     rgn.mps
     vpm2.fzn
+    lseu_dcmulti.cip
+    lseu_dcmulti_sHB.cip
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
+#
+# the following instances use variable or equations names that are not supported in pip format
+#
+set(basenames_pip_wrongformat
+    rgn.mps
+    )
+set(message_format_pip "PIP might be corrupted")
 
 
 #
@@ -572,6 +718,31 @@ set_tests_properties(write_and_read_settings
                         FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
+
+#
+# reopt test.
+# We substitute first path placeholders in the .in file, which creates a new file under the binary directory
+# Then run SCIP to execute the list of commands defined there.
+#
+
+set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
+file(MAKE_DIRECTORY ${shell_tmp_dir})
+
+# disabled reopt on FullIns_3 until #2758 is dealt with
+# foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
+foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
+    foreach(setting ${settings_reopt})
+        configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
+        add_test(NAME ${testname}-${setting}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/${testname}-${setting}.bat
+                )
+        set_tests_properties(${testname}-${setting} PROPERTIES
+                                            PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                            DEPENDS scip-build)
+        endforeach()
+
+endforeach()
+
 
 #
 # define sets of linear classification results

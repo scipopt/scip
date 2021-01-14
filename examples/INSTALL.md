@@ -28,6 +28,7 @@ can be one of the following:
 - `relaxator` from example `Relaxator`
 - `scflp` from example `SCFLP`
 - `sciptsp` from example `TSP`
+- `sudoku` from example `Sudoku`
 - `vrp` from example `VRP`
 
 The example can be compiled within the same build directory
@@ -65,7 +66,7 @@ If SCIP has been compiled into a build-directory as opposed to an installation d
 `SCIP_DIR` or `CMAKE_PREFIX_PATH` to this build directory.
 Finally, this specification should be used to give a local installation precedence over a systemwide installation of SCIP.
 
-Please refer to the [online documentation of SCIP](http://scip.zib.de/doc/html/CMAKE.php)
+Please refer to the [online documentation of SCIP](http://scipopt.org/doc/html/CMAKE.php)
 for a list of available configuration options and available tests.
 
 
@@ -112,6 +113,7 @@ Let `scip_example_binary` be one of the following inside its respective `SCIPExa
 - `scip` from example `Relaxator`
 - `scflp` from example `SCFLP`
 - `sciptsp` from example `TSP`
+- `sudoku` from example `Sudoku`
 - `vrp` from example `VRP`
 
 For example, if you want to install SCIP on a Linux system with a x86 processor

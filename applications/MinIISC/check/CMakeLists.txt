@@ -31,6 +31,8 @@ set_tests_properties(applications-miniisc-build
 foreach(instance ${instances})
     list(GET instance 0 basename)
     list(GET instance 1 optval)
+    math(EXPR optvalminusone "${optval} - 1")
+
     #
     # call the Binpacking binary and validate the solve with the given objective value
     #
@@ -39,7 +41,7 @@ foreach(instance ${instances})
             )
     set_tests_properties("applications-miniisc-${basename}"
                         PROPERTIES
-                            PASS_REGULAR_EXPRESSION "Primal Bound       : \\+${optval}"
+                            PASS_REGULAR_EXPRESSION "Primal Bound       : \\+(${optval}\\.000000*|${optvalminusone}\\.999999*)e\\+00"
                             DEPENDS applications-miniisc-build
                         )
 endforeach()

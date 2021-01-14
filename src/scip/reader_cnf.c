@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cnf.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  CNF file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
@@ -61,6 +62,7 @@ void readError(
    const char*           errormsg            /**< error message */
    )
 {
+   assert( scip != NULL );
    SCIPerrorMessage("read error in line <%d>: %s\n", linecount, errormsg);
 }
 
@@ -402,7 +404,13 @@ SCIP_DECL_READERREAD(readerReadCnf)
    }
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   retcode = SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPerrorMessage("Error creating problem for filename <%s>\n", filename);
+      SCIPfclose(f);
+      return retcode;
+   }
 
    /* read cnf file */
    retcode = readCnf(scip, f);

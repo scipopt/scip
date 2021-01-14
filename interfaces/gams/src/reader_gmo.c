@@ -440,6 +440,7 @@ SCIP_RETCODE makeExprtree(
    int           address;
    int           varidx;
    int           nargs;
+   int           rc;
 
    assert(scip != NULL);
    assert(opcodes != NULL);
@@ -463,6 +464,7 @@ SCIP_RETCODE makeExprtree(
    SCIP_CALL( SCIPhashmapCreate(&var2idx, blkmem, SCIPgetNVars(scip)) );
 
    nargs = -1;
+   rc = SCIP_OKAY;
 
    for( pos = 0; pos < codelen; ++pos )
    {
@@ -647,7 +649,7 @@ SCIP_RETCODE makeExprtree(
 
          case nlMul: /* multiply */
          {
-            SCIPdebugPrintf("subtract\n");
+            SCIPdebugPrintf("multiply\n");
 
             assert(stackpos >= 2);
             term1 = stack[stackpos-1];
@@ -864,12 +866,19 @@ SCIP_RETCODE makeExprtree(
          case nlFuncArgN:
          {
             SCIPdebugPrintf("set number of arguments = %d\n", address);
-            nargs = address;
+            nargs = address + 1;  /* undo shift by one */
             break;
          }
 
          case nlCallArg1:
+            nargs = 1;
+            /*lint -fallthrough*/
+
          case nlCallArg2:
+            if( opcode == nlCallArg2 )
+               nargs = 2;
+               /*lint -fallthrough*/
+
          case nlCallArgN:
          {
             GamsFuncCode func;
@@ -945,8 +954,6 @@ SCIP_RETCODE makeExprtree(
                }
 
                case fnlog10:
-               case fnsllog10:
-               case fnsqlog10:
                {
                   SCIPdebugPrintf("log10 = ln * 1/ln(10)\n");
 
@@ -1081,7 +1088,8 @@ SCIP_RETCODE makeExprtree(
                   else
                   {
                      SCIPerrorMessage("signpower with non-constant exponent not supported.\n");
-                     return SCIP_ERROR;
+                     rc = SCIP_READERROR;
+                     goto TERMINATE;
                   }
 
                   break;
@@ -1096,7 +1104,6 @@ SCIP_RETCODE makeExprtree(
                }
 
                case fndiv:
-               case fndiv0:
                {
                   SCIPdebugPrintf("divide\n");
 
@@ -1106,20 +1113,6 @@ SCIP_RETCODE makeExprtree(
                   term2 = stack[stackpos-1];
                   --stackpos;
 
-                  SCIP_CALL( SCIPexprCreate(blkmem, &e, SCIP_EXPR_DIV, term2, term1) );
-                  break;
-               }
-
-               case fnslrec:
-               case fnsqrec: /* 1/x */
-               {
-                  SCIPdebugPrintf("reciprocal\n");
-
-                  assert(stackpos >= 1);
-                  term1 = stack[stackpos-1];
-                  --stackpos;
-
-                  SCIP_CALL( SCIPexprCreate(blkmem, &term2, SCIP_EXPR_CONST, 1.0) );
                   SCIP_CALL( SCIPexprCreate(blkmem, &e, SCIP_EXPR_DIV, term2, term1) );
                   break;
                }
@@ -1138,7 +1131,7 @@ SCIP_RETCODE makeExprtree(
 
                case fnpoly: /* univariate polynomial */
                {
-                  SCIPdebugPrintf("univariate polynomial of degree %d\n", nargs-1);
+                  SCIPdebugPrintf("univariate polynomial of degree %d\n", nargs-2);
                   assert(nargs >= 0);
                   switch( nargs )
                   {
@@ -1172,22 +1165,22 @@ SCIP_RETCODE makeExprtree(
                         int nmonomials;
                         int zero;
 
-                        nmonomials = nargs-1;
-                        SCIP_CALL( SCIPallocBufferArray(scip, &monomials, nargs-1) );
+                        nmonomials = nargs-2;
+                        SCIP_CALL( SCIPallocBufferArray(scip, &monomials, nargs-2) );
 
                         zero = 0;
                         constant = 0.0;
-                        for( ; nargs > 0; --nargs )
+                        for( ; nargs > 1; --nargs )
                         {
                            assert(stackpos > 0);
 
                            term1 = stack[stackpos-1];
                            assert(SCIPexprGetOperator(term1) == SCIP_EXPR_CONST);
 
-                           if( nargs > 1 )
+                           if( nargs > 2 )
                            {
-                              exponent = (SCIP_Real)(nargs-1);
-                              SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomials[nargs-2], SCIPexprGetOpReal(term1), 1, &zero, &exponent) );
+                              exponent = (SCIP_Real)(nargs-2);
+                              SCIP_CALL( SCIPexprCreateMonomial(blkmem, &monomials[nargs-3], SCIPexprGetOpReal(term1), 1, &zero, &exponent) );
                            }
                            else
                               constant = SCIPexprGetOpReal(term1);
@@ -1238,7 +1231,8 @@ SCIP_RETCODE makeExprtree(
                {
                   SCIPdebugPrintf("nr. %d - unsupported. Error.\n", (int)func);
                   SCIPinfoMessage(scip, NULL, "Error: GAMS function %s not supported.\n", GamsFuncCodeName[func]);
-                  return SCIP_READERROR;
+                  rc = SCIP_READERROR;
+                  goto TERMINATE;
                }
             } /*lint !e788*/
             break;
@@ -1248,7 +1242,8 @@ SCIP_RETCODE makeExprtree(
          default:
          {
             SCIPinfoMessage(scip, NULL, "Error: GAMS opcode %s not supported.\n", GamsOpCodeName[opcode]);
-            return SCIP_READERROR;
+            rc = SCIP_READERROR;
+            goto TERMINATE;
          }
       } /*lint !e788*/
 
@@ -1271,11 +1266,12 @@ SCIP_RETCODE makeExprtree(
    SCIP_CALL( SCIPexprtreeCreate(blkmem, exprtree, stack[0], nvars, 0, NULL) );
    SCIP_CALL( SCIPexprtreeSetVars(*exprtree, nvars, vars) );
 
+TERMINATE:
    SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &stack);
    SCIPhashmapFree(&var2idx);
 
-   return SCIP_OKAY;
+   return rc;
 }
 
 /** creates a SCIP problem from a GMO */
@@ -1319,7 +1315,7 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
    assert(scip != NULL);
    assert(gmo != NULL);
 
-   gev = gmoEnvironment(gmo);
+   gev = (gevHandle_t) gmoEnvironment(gmo);
    assert(gev != NULL);
 
    /* we want a real objective function, if it is linear, otherwise keep the GAMS single-variable-objective? */
@@ -1518,16 +1514,24 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
       
       bndtypes[0] = SCIP_BOUNDTYPE_UPPER;
       bndtypes[1] = SCIP_BOUNDTYPE_LOWER;
-      bnds[0] = 0;
+      bnds[0] = 0.0;
 
       for( i = 0; i < gmoN(gmo); ++i )
       {
          if( gmoGetVarTypeOne(gmo, i) != (int) gmovar_SC && gmoGetVarTypeOne(gmo, i) != (int) gmovar_SI )
             continue;
-         
+
+         bnds[1] = gmoGetVarLowerOne(gmo, i);
+         /* skip bound disjunction if lower bound is 0 (if continuous) or 1 (if integer)
+          * since this is a trivial disjunction, but would raise an assert in SCIPcreateConsBounddisjunction
+          */
+         if( gmoGetVarTypeOne(gmo, i) == (int) gmovar_SC && !SCIPisPositive(scip, bnds[1]) )
+            continue;
+         if( gmoGetVarTypeOne(gmo, i) == (int) gmovar_SI && !SCIPisPositive(scip, bnds[1]-1.0) )
+            continue;
+
          bndvars[0] = vars[i];
          bndvars[1] = vars[i];
-         bnds[1] = gmoGetVarLowerOne(gmo, i);
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "semi%s_%s", gmoGetVarTypeOne(gmo, i) == (int) gmovar_SC ? "con" : "int", SCIPvarGetName(vars[i]));
          SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, 2, bndvars, bndtypes, bnds,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -1607,7 +1611,7 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &opcodes, gmoNLCodeSizeMaxRow(gmo)+1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &fields, gmoNLCodeSizeMaxRow(gmo)+1) );
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &constants, gmoPPool(gmo), gmoNLConst(gmo)) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &constants, (double*)gmoPPool(gmo), gmoNLConst(gmo)) );
 
       /* translate special GAMS constants into SCIP variants (gmo does not seem to do this...) */
       for( i = 0; i < gmoNLConst(gmo); ++i )
@@ -2416,6 +2420,7 @@ SCIP_RETCODE writeGmoSolution(
                {
                   SCIPerrorMessage("Problems finalizing merged solution pool\n");
                }
+               SCIPfreeBufferArray(scip, &collev);
             }
             else
             {
@@ -2660,6 +2665,7 @@ SCIP_RETCODE writeGmoSolution(
          case gmoModelStat_Feasible:
          case gmoModelStat_Integer:
             gmoModelStatSet(gmo, (int) gmoModelStat_Solved);
+            gmoSetHeadnTail(gmo, gmoHobjval, 0.0);
       } /*lint !e744*/
 
    return SCIP_OKAY;
@@ -3193,9 +3199,6 @@ SCIP_RETCODE SCIPreadParamsReaderGmo(
       SCIP_CALL( SCIPsetRealParam(scip, "limits/memory", gevGetDblOpt(gev, gevWorkSpace)) );
    }
    SCIP_CALL( SCIPsetIntParam(scip, "lp/threads", gevThreads(gev)) );
-#if 0
-   SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", 2) ); /* wallclock time */
-#endif
 
    /* if log is not kept, then can also set SCIP verblevel to 0 */
    if( gevGetIntOpt(gev, gevLogOption) == 0 )

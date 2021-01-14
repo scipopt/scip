@@ -51,3 +51,16 @@
    fun:filtersqp_
    fun:nlpiSolveFilterSQP
 }
+{
+   Pthread_Stack_Leaks_Ignore
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:allocate_stack
+   fun:pthread_create@@GLIBC_2.2.5
+   fun:_ZNSt6thread15_M_start_threadESt10unique_ptrINS_6_StateESt14default_deleteIS1_EEPFvvE
+   fun:_ZNSt6threadC1IRFPvS1_EJRP18SolverThreadData_tEEEOT_DpOT0_
+   fun:main
+}

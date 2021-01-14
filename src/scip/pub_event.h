@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,6 +31,13 @@
 #include "scip/type_sol.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
+
+/* In optimized mode, some function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms. For this, we need to include struct_event.h.
+ */
+#ifdef NDEBUG
+#include "scip/struct_event.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,7 +89,7 @@ SCIP_Real SCIPeventhdlrGetTime(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
-/* @} */
+/** @} */
 
 /*
  * Event methods
@@ -127,6 +134,18 @@ SCIP_Real SCIPeventGetOldbound(
 /** gets new bound for a bound change event */
 SCIP_EXPORT
 SCIP_Real SCIPeventGetNewbound(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets old variable type for a variable type change event */
+SCIP_EXPORT
+SCIP_VARTYPE SCIPeventGetOldtype(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new variable type for a variable type change event */
+SCIP_EXPORT
+SCIP_VARTYPE SCIPeventGetNewtype(
    SCIP_EVENT*           event               /**< event */
    );
 
@@ -219,6 +238,8 @@ SCIP_Real SCIPeventGetRowNewSideVal(
 #define SCIPeventGetNewobj(event)                 ((event)->data.eventobjchg.newobj)
 #define SCIPeventGetOldbound(event)               ((event)->data.eventbdchg.oldbound)
 #define SCIPeventGetNewbound(event)               ((event)->data.eventbdchg.newbound)
+#define SCIPeventGetOldtype(event)                ((event)->data.eventtypechg.oldtype)
+#define SCIPeventGetNewtype(event)                ((event)->data.eventtypechg.newtype)
 #define SCIPeventGetNode(event)                   ((event)->data.node)
 #define SCIPeventGetSol(event)                    ((event)->data.sol)
 #define SCIPeventGetRowCol(event)                 ((event)->data.eventrowcoefchanged.col)
@@ -232,7 +253,7 @@ SCIP_Real SCIPeventGetRowNewSideVal(
 
 #endif
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

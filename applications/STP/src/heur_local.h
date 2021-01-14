@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -36,11 +36,13 @@ extern "C" {
 #endif
 
 /** creates the local primal heuristic and includes it in SCIP */
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpIncludeHeurLocal(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** perform local heuristics on a given Steiner tree */
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurLocalRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
@@ -48,7 +50,7 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    );
 
 /** Implication based local heuristic for (R)PC and MW */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMwImp(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
@@ -56,6 +58,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMwImp(
    );
 
 /** greedy extension local heuristic for (R)PC and MW */
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
@@ -65,6 +68,7 @@ SCIP_RETCODE SCIPStpHeurLocalExtendPcMw(
 );
 
 /** greedy extension local heuristic for (R)PC and MW */
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMwOut(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */

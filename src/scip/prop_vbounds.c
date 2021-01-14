@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_vbounds.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
  * @author Jens Schulz
@@ -274,7 +275,6 @@ INFERINFO getInferInfo(
    INFERINFO inferinfo;
 
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
-   assert((int)boundtype >= 0 && (int)boundtype <= 1); /*lint !e685 !e568q*/
    assert(pos >= 0);
 
    inferinfo.val.asbits.pos = (unsigned int) pos; /*lint !e732*/
@@ -294,9 +294,14 @@ int varGetLbIndex(
    SCIP_VAR*             var                 /**< variable to get the index for */
    )
 {
-   assert(SCIPhashmapExists(propdata->varhashmap, var) == (SCIPhashmapGetImageInt(propdata->varhashmap, var) > 0));
+   int i;
 
-   return getLbIndex(SCIPhashmapGetImageInt(propdata->varhashmap, var) - 1);
+   i = SCIPhashmapGetImageInt(propdata->varhashmap, var);
+
+   assert(SCIPhashmapExists(propdata->varhashmap, var) == (i != INT_MAX));
+   assert(i >= 0);
+
+   return getLbIndex(i == INT_MAX ? -1 : i);
 }
 
 /* returns the upper bound index of a variable */
@@ -306,9 +311,14 @@ int varGetUbIndex(
    SCIP_VAR*             var                 /**< variable to get the index for */
    )
 {
-   assert(SCIPhashmapExists(propdata->varhashmap, var) == (SCIPhashmapGetImageInt(propdata->varhashmap, var) > 0));
+   int i;
 
-   return getUbIndex(SCIPhashmapGetImageInt(propdata->varhashmap, var) - 1);
+   i = SCIPhashmapGetImageInt(propdata->varhashmap, var);
+
+   assert(SCIPhashmapExists(propdata->varhashmap, var) == (i != INT_MAX));
+   assert(i >= 0);
+
+   return getUbIndex(i == INT_MAX ? -1 : i);
 }
 
 /** reset propagation data */
@@ -1194,7 +1204,7 @@ SCIP_RETCODE initData(
    propdata->initialized = TRUE;
 
    /* prepare priority queue structure */
-   SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices) );
+   SCIP_CALL( SCIPpqueueCreate(&propdata->propqueue, nvars, 2.0, compVarboundIndices, NULL) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->inqueue, nbounds) );
    BMSclearMemoryArray(propdata->inqueue, nbounds);
 
@@ -1206,7 +1216,7 @@ SCIP_RETCODE initData(
 
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( SCIPhashmapInsertInt(propdata->varhashmap, propdata->vars[v], v + 1) );
+      SCIP_CALL( SCIPhashmapInsertInt(propdata->varhashmap, propdata->vars[v], v) );
    }
 
    /* allocate memory for the arrays of the propdata */
@@ -2014,7 +2024,7 @@ SCIP_RETCODE propagateVbounds(
       }
 
       /* propagate vbounds */
-      if( propdata->usevbounds )
+      if( propdata->usevbounds && ! SCIPisInfinity(scip, REALABS(startbound)) )
       {
          SCIP_VAR* boundedvar;
          SCIP_Real newbound;
@@ -2577,6 +2587,7 @@ SCIP_RETCODE tarjan(
       /* in a pure dfs, the node would now leave the stack, add it to the array of nodes in reverse topological order */
       if( topoorder != NULL && (stacksize > 0 || label > *startindex + 1) )
       {
+         assert(nordered != NULL);
          topoorder[*nordered] = curridx;
          ++(*nordered);
       }

@@ -72,7 +72,7 @@ Compare queue ${Q}: https://rubberband.zib.de/result/${LASTWEEK}?compare=${THISW
 
   # send email with cluster results
   EMAILFROM="adm_timo <timo-admin@zib.de>"
-  EMAILTO="adm_timo <timo-admin@zib.de>"
+  EMAILTO="<timo-admin@zib.de>"
 
   SUBJECT="CLUSTERBENCHMARK"
   echo -e "${MAILTEXT}" | mailx -s "${SUBJECT}" -r "${EMAILFROM}" ${EMAILTO}

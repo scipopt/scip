@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   xmldef.h
+ * @ingroup OTHER_CFILES
  * @brief  declarations for XML parsing
  * @author Thorsten Koch
  * @author Marc Pfetsch
@@ -690,7 +691,8 @@ void handleDecl(
       for(; (end >= beg) && (c != key[end].name[k]); end--)
          ;
       k++;
-   } while(beg < end);
+   }
+   while(beg < end);
 
    if ( beg != end )
    {
@@ -703,6 +705,7 @@ void handleDecl(
    {
       assert(beg == end);
       assert(beg <  (int)(sizeof(key) / sizeof(*key)));
+      assert(beg >= 0);
 
       switch(key[beg].what)
       {

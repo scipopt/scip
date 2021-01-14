@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -18,9 +18,16 @@
  * @brief  diff file reader
  * @author Jakob Witzig
  *
- * This reader allows to parse a new objective function the style of CPLEX .lp files.
+ * This reader allows to parse a new objective function in the style of CPLEX .lp files.
  *
  * The lp format is defined within the CPLEX documentation.
+ *
+ * An example of a *.diff file looks like this:
+ *
+ *  Minimize
+ *    obj: - STM6 + STM7
+ *
+ * Here is the objective sense set to minimize the function -STM6 + STM7.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -86,7 +93,7 @@ SCIP_RETCODE SCIPwriteDiff(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

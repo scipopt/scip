@@ -3,19 +3,20 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_sync.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic that adds solutions from synchronization
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  * This heuristic takes solutions during synchronization and then adds them.
  */
@@ -31,7 +32,7 @@
 
 #define HEUR_NAME             "sync"
 #define HEUR_DESC             "heuristic for synchronizing solution"
-#define HEUR_DISPCHAR         '$'
+#define HEUR_DISPCHAR         'S'
 #define HEUR_PRIORITY         -3000000     /* should process after all other heuristics */
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0

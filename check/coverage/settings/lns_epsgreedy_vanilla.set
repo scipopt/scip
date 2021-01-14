@@ -1,0 +1,33 @@
+# SCIP version 6.0.2.4
+
+# priority of branching rule <vanillafullstrong>
+# [type: int, advanced: FALSE, range: [-536870912,536870911], default: -2000]
+branching/vanillafullstrong/priority = 10000000
+
+# should integral variables in the current LP solution be considered as branching candidates?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+branching/vanillafullstrong/integralcands = TRUE
+
+# should strong branching side-effects be prevented (e.g., domain changes, stat updates etc.)?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+branching/vanillafullstrong/idempotent = TRUE
+
+# should strong branching scores be computed for all candidates, or can we early stop when a variable has infinite score?
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
+branching/vanillafullstrong/scoreall = TRUE
+
+# should strong branching scores be collected?
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
+branching/vanillafullstrong/collectscores = TRUE
+
+# frequency for calling primal heuristic <alns> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 20]
+heuristics/alns/freq = 10
+
+# the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy
+# [type: char, advanced: TRUE, range: {ueg}, default: u]
+heuristics/alns/banditalgo = g
+
+# reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward
+# [type: real, advanced: TRUE, range: [0,1], default: 0.8]
+heuristics/alns/rewardcontrol = 0

@@ -3,22 +3,23 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_nonlinear.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for nonlinear functions
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -32,102 +33,21 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
-
-
-#include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
+#include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
-#include "scip/benders.h"
-#include "scip/benderscut.h"
-#include "scip/branch.h"
-#include "scip/branch_nodereopt.h"
-#include "scip/clock.h"
-#include "scip/compr.h"
-#include "scip/concsolver.h"
-#include "scip/concurrent.h"
-#include "scip/conflict.h"
-#include "scip/conflictstore.h"
-#include "scip/cons.h"
-#include "scip/cons_linear.h"
-#include "scip/cutpool.h"
-#include "scip/cuts.h"
-#include "scip/debug.h"
-#include "scip/def.h"
-#include "scip/dialog.h"
-#include "scip/dialog_default.h"
-#include "scip/disp.h"
-#include "scip/event.h"
-#include "scip/heur.h"
-#include "scip/heur_ofins.h"
-#include "scip/heur_reoptsols.h"
-#include "scip/heur_trivialnegation.h"
-#include "scip/heuristics.h"
-#include "scip/history.h"
-#include "scip/implics.h"
-#include "scip/interrupt.h"
-#include "scip/lp.h"
-#include "scip/mem.h"
-#include "scip/message_default.h"
-#include "scip/misc.h"
-#include "scip/nlp.h"
-#include "scip/nodesel.h"
-#include "scip/paramset.h"
-#include "scip/presol.h"
-#include "scip/presolve.h"
-#include "scip/pricer.h"
-#include "scip/pricestore.h"
-#include "scip/primal.h"
-#include "scip/prob.h"
-#include "scip/prop.h"
-#include "scip/reader.h"
-#include "scip/relax.h"
-#include "scip/reopt.h"
-#include "scip/retcode.h"
-#include "scip/scipbuildflags.h"
-#include "scip/scipcoreplugins.h"
-#include "scip/scipgithash.h"
-#include "scip/sepa.h"
-#include "scip/sepastore.h"
-#include "scip/set.h"
-#include "scip/sol.h"
-#include "scip/solve.h"
-#include "scip/stat.h"
-#include "scip/syncstore.h"
-#include "scip/table.h"
-#include "scip/tree.h"
-#include "scip/var.h"
-#include "scip/visual.h"
-#include "xml/xml.h"
-
-#include "scip/scip_mem.h"
-#include "scip/scip_message.h"
-#include "scip/scip_nonlinear.h"
-#include "scip/scip_numerics.h"
-#include "scip/scip_prob.h"
-
+#include "nlpi/pub_expr.h"
+#include "nlpi/type_expr.h"
+#include "scip/dbldblarith.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_nlp.h"
 #include "scip/pub_var.h"
-
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons)
- */
-#ifndef NDEBUG
-#include "scip/struct_scip.h"
-#endif
+#include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_nonlinear.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_prob.h"
 
 /** computes coefficients of linearization of a square term in a reference point */
 void SCIPaddSquareLinearization(
@@ -801,7 +721,7 @@ void computeBilinEnvelope2(
       SCIPquadprecProdQD(constantq, constantq, -mj);
       SCIPquadprecProdQD(tmpq, ycoefq, -qj);
       SCIPquadprecSumQQ(constantq, constantq, tmpq);
-      assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3));
+      /* assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3)); */
 
       *xi = QUAD_TO_DBL(xiq);
       *yi = QUAD_TO_DBL(yiq);
@@ -871,7 +791,7 @@ void computeBilinEnvelope2(
       SCIPquadprecProdQD(constantq, constantq, -mj);
       SCIPquadprecProdQD(tmpq, ycoefq, -qj);
       SCIPquadprecSumQQ(constantq, constantq, tmpq);
-      assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3));
+      /* assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3)); */
 
       *xi = QUAD_TO_DBL(xiq);
       *yi = QUAD_TO_DBL(yiq);
@@ -1044,6 +964,8 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
    SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
                                               *   problem */
+   SCIP_HASHMAP*         nlrow2idx,          /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem, can be NULL */
    SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
                                               *   needed) */
    SCIP_Real             cutoffbound,        /**< cutoff bound */
@@ -1182,34 +1104,36 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       SCIP_Bool userhs;
       SCIP_Bool uselhs;
       int k;
+      SCIP_NLROW* nlrow;
 
-      assert(nlrows[i] != NULL);
+      nlrow = nlrows[i];
+      assert(nlrow != NULL);
 
       uselhs = FALSE;
       userhs = FALSE;
 
       /* check curvature together with constraint sides of a nonlinear row */
-      if( SCIPnlrowGetNQuadElems(nlrows[i]) == 0 && SCIPnlrowGetExprtree(nlrows[i]) == NULL )
+      if( SCIPnlrowGetNQuadElems(nlrow) == 0 && SCIPnlrowGetExprtree(nlrow) == NULL )
       {
          uselhs = TRUE;
          userhs = TRUE;
       }
       else
       {
-         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX)
-            && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) )
+         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONVEX)
+            && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)) )
             userhs = TRUE;
-         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONCAVE)
-            && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrows[i])) )
+         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONCAVE)
+            && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrow)) )
             uselhs = TRUE;
       }
 
       if( !uselhs && !userhs )
          continue;
 
-      lhss[nconss] = uselhs ? SCIPnlrowGetLhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) : -SCIPinfinity(scip);
-      rhss[nconss] = userhs ? SCIPnlrowGetRhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) :  SCIPinfinity(scip);
-      names[nconss] = SCIPnlrowGetName(nlrows[i]);
+      lhss[nconss] = uselhs ? SCIPnlrowGetLhs(nlrow) - SCIPnlrowGetConstant(nlrow) : -SCIPinfinity(scip);
+      rhss[nconss] = userhs ? SCIPnlrowGetRhs(nlrow) - SCIPnlrowGetConstant(nlrow) :  SCIPinfinity(scip);
+      names[nconss] = SCIPnlrowGetName(nlrow);
       nlininds[nconss] = 0;
       lininds[nconss] = NULL;
       linvals[nconss] = NULL;
@@ -1219,46 +1143,46 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       exprvaridxs[nconss] = NULL;
 
       /* copy linear part */
-      if( SCIPnlrowGetNLinearVars(nlrows[i]) > 0 )
+      if( SCIPnlrowGetNLinearVars(nlrow) > 0 )
       {
          SCIP_VAR* var;
 
-         nlininds[nconss] = SCIPnlrowGetNLinearVars(nlrows[i]);
+         nlininds[nconss] = SCIPnlrowGetNLinearVars(nlrow);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nlininds[nconss]) ); /*lint !e866*/
          SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nlininds[nconss]) ); /*lint !e866*/
 
          for( k = 0; k < nlininds[nconss]; ++k )
          {
-            var = SCIPnlrowGetLinearVars(nlrows[i])[k];
+            var = SCIPnlrowGetLinearVars(nlrow)[k];
             assert(var != NULL);
             assert(SCIPhashmapExists(var2idx, (void*)var));
 
             lininds[nconss][k] = SCIPhashmapGetImageInt(var2idx, (void*)var);
             assert(var == vars[lininds[nconss][k]]);
-            linvals[nconss][k] = SCIPnlrowGetLinearCoefs(nlrows[i])[k];
+            linvals[nconss][k] = SCIPnlrowGetLinearCoefs(nlrow)[k];
          }
       }
 
       /* copy quadratic part */
-      if( SCIPnlrowGetNQuadElems(nlrows[i]) > 0 )
+      if( SCIPnlrowGetNQuadElems(nlrow) > 0 )
       {
          SCIP_QUADELEM quadelem;
          SCIP_VAR* var1;
          SCIP_VAR* var2;
 
-         nquadelems[nconss] = SCIPnlrowGetNQuadElems(nlrows[i]);
+         nquadelems[nconss] = SCIPnlrowGetNQuadElems(nlrow);
          SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[nconss], nquadelems[nconss]) ); /*lint !e866*/
 
          for( k = 0; k < nquadelems[nconss]; ++k )
          {
-            quadelem = SCIPnlrowGetQuadElems(nlrows[i])[k];
+            quadelem = SCIPnlrowGetQuadElems(nlrow)[k];
 
-            var1 = SCIPnlrowGetQuadVars(nlrows[i])[quadelem.idx1];
+            var1 = SCIPnlrowGetQuadVars(nlrow)[quadelem.idx1];
             assert(var1 != NULL);
             assert(SCIPhashmapExists(var2idx, (void*)var1));
 
-            var2 = SCIPnlrowGetQuadVars(nlrows[i])[quadelem.idx2];
+            var2 = SCIPnlrowGetQuadVars(nlrow)[quadelem.idx2];
             assert(var2 != NULL);
             assert(SCIPhashmapExists(var2idx, (void*)var2));
 
@@ -1284,14 +1208,14 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       }
 
       /* copy expression tree */
-      if( SCIPnlrowGetExprtree(nlrows[i]) != NULL )
+      if( SCIPnlrowGetExprtree(nlrow) != NULL )
       {
          SCIP_VAR* var;
 
          /* note that we don't need to copy the expression tree here since only the mapping between variables in the
           * tree and the corresponding indices change; this mapping is stored in the exprvaridxs array
           */
-         exprtrees[nconss] = SCIPnlrowGetExprtree(nlrows[i]);
+         exprtrees[nconss] = SCIPnlrowGetExprtree(nlrow);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprtrees[nconss])) ); /*lint !e866*/
 
@@ -1307,6 +1231,12 @@ SCIP_RETCODE SCIPcreateNlpiProb(
             if( nlscore != NULL )
                ++nlscore[exprvaridxs[nconss][k]];
          }
+      }
+
+      /* if the row to index hash map is provided, we need to store the row index */
+      if( nlrow2idx != NULL )
+      {
+         SCIP_CALL( SCIPhashmapInsertInt(nlrow2idx, nlrow, nconss) );
       }
 
       ++nconss;

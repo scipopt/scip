@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -116,6 +116,12 @@ int SCIPcolGetIndex(
    SCIP_COL*             col                 /**< LP col */
    );
 
+/** gets probindex of corresponding variable */
+SCIP_EXPORT
+int SCIPcolGetVarProbindex(
+   SCIP_COL*             col                 /**< LP col */
+   );
+
 /** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
 SCIP_EXPORT
 SCIP_Bool SCIPcolIsIntegral(
@@ -188,6 +194,12 @@ int SCIPcolGetNStrongbranchs(
    SCIP_COL*             col                 /**< LP column */
    );
 
+/** gets the age of a column, i.e., the total number of successive times a column was in the LP and was 0.0 in the solution */
+SCIP_EXPORT
+int SCIPcolGetAge(
+   SCIP_COL*             col                 /**< LP column */
+   );
+
 /** gets opposite bound type of given bound type */
 SCIP_EXPORT
 SCIP_BOUNDTYPE SCIPboundtypeOpposite(
@@ -221,6 +233,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetVals(col)             (col)->vals
 #define SCIPcolGetStrongbranchNode(col) (col)->sbnode
 #define SCIPcolGetNStrongbranchs(col)   (col)->nsbcalls
+#define SCIPcolGetAge(col)              (col)->age
 #define SCIPboundtypeOpposite(boundtype) \
    ((boundtype) == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER)
 
@@ -422,7 +435,13 @@ SCIP_ROWORIGINTYPE SCIProwGetOrigintype(
 
 /** returns origin constraint handler that created the row (NULL if not available) */
 SCIP_EXPORT
-SCIP_CONSHDLR* SCIProwGetOriginCons(
+SCIP_CONSHDLR* SCIProwGetOriginConshdlr(
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
+/** returns origin constraint that created the row (NULL if not available) */
+SCIP_EXPORT
+SCIP_CONS* SCIProwGetOriginCons(
    SCIP_ROW*             row                 /**< LP row */
    );
 
@@ -502,7 +521,7 @@ void SCIProwChgRank(
 #define SCIProwIsModifiable(row)        (row)->modifiable
 #define SCIProwIsRemovable(row)         (row)->removable
 #define SCIProwGetOrigintype(row)       (row)->origintype
-#define SCIProwGetOriginCons(row)       ((SCIP_CONSHDLR*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS ? (row)->origin : NULL))
+#define SCIProwGetOriginCons(row)       ((SCIP_CONS*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_CONS ? (row)->origin : NULL))
 #define SCIProwGetOriginSepa(row)       ((SCIP_SEPA*) ((SCIP_ROWORIGINTYPE) row->origintype == SCIP_ROWORIGINTYPE_SEPA ? (row)->origin : NULL))
 #define SCIProwIsInGlobalCutpool(row)   (row)->inglobalcutpool
 #define SCIProwGetLPPos(row)            (row)->lppos

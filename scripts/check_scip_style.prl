@@ -73,6 +73,7 @@ my $checkoperspaces = 0; # check for spaces around operators
 my $checkoperstrict = 0; # check strict rules for operators
 
 my $checkindent = 1;     # check for correct indentation
+my $checksepdoclines = 1;# check for separate documentation lines
 my $checktabsparam = 1;  # check whether tabs in parameter lists are present
 my $checkstage = 1;      # check whether names of functions for checkstage are correct in scip.c
 my $checkdocinbody = 1;  # check whether doxygen documentation appears within code
@@ -289,6 +290,30 @@ for (my $i = 0; $i < $narg; ++$i)
       # if we are in a comment that started in previous lines, we search for the end of the comment
       if ( $incomment == 1 || $indocumentation == 1 )
       {
+         # if we want to check separate documentation lines
+	 if ( $checksepdoclines == 1 )
+	 {
+	    # if the line does not contain the start of a comment and there is nothing before
+	    if ( $documentationpos < 0 && $inenumstruct == 0 && $depth == 0 )
+	    {
+	       if ( $_ =~ /[\w\*]/ )
+	       {
+		  my $startpos = $-[0];
+		  if ( $startpos >= 45 )
+		  {
+		     if ( $_ !~ /\*/ )
+		     {
+			printf("%d: line contains separate comment without '*'\n%s\n\n", $line, $_);
+		     }
+		     elsif ( $startpos != 46 )
+		     {
+			printf("%d: line contains separate comment that does not start at position 45:\n%s\n\n", $line, $_);
+		     }
+		  }
+	       }
+	    }
+	 }
+
 	 $afterdocumentation = 0;
 	 if ( $str =~ /\*\// )
 	 {

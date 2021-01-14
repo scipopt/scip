@@ -646,7 +646,7 @@ SCIP_RETCODE daExec(
    else
       gnodearr = NULL;
 
-   SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist) );
+   SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist, NULL) );
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &active, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &edgearr, nedges) );
@@ -901,7 +901,7 @@ SCIP_RETCODE daExec(
                }
                else
                {
-                  SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0,
+                  SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "da", 1.0,
                         SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
                   SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -1379,7 +1379,7 @@ SCIP_RETCODE dualascent_execPcMw(
       SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
    }
 
-   SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist) );
+   SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist, NULL) );
 
    k = 0;
    /* mark terminals as active, add all except root to pqueue */
@@ -1559,7 +1559,7 @@ SCIP_RETCODE dualascent_execPcMw(
                }
                else
                {
-                  SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
+                  SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "da", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
                   SCIP_CALL(SCIPcacheRowExtensions(scip, row));
                }
             }

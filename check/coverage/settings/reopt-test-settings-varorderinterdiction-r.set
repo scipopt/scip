@@ -1,0 +1,13 @@
+# SCIP version 6.0.2
+
+# should reoptimization used?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+reoptimization/enable = TRUE
+
+# use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
+reoptimization/usesplitcons = FALSE
+
+# use 'd'efault, 'r'andom or a variable ordering based on 'i'nference score for interdiction branching used during reoptimization
+# [type: char, advanced: TRUE, range: {dir}, default: d]
+reoptimization/varorderinterdiction = r

@@ -33,8 +33,8 @@ sparse_pack and sparse_vecsize classes.
 This defines the CppAD vector_of_sets concept.
 */
 class sparse_list {
-	friend class sparse_list_const_iterator;
-private:
+public:
+        friend class sparse_list_const_iterator;
 	// -----------------------------------------------------------------
 	/// type used for each entry in a singly linked list.
 	struct pair_size_t {
@@ -48,6 +48,7 @@ private:
 		size_t next;
 	};
 	friend bool is_pod<pair_size_t>(void);
+private:
 	// -----------------------------------------------------------------
 	/// Possible elements in each set are 0, 1, ..., end_ - 1;
 	size_t end_;

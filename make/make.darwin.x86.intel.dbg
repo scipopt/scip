@@ -3,11 +3,11 @@ CXX		=	icc -Kc++
 LINKCC		=	icc
 LINKCXX		=	icc -Kc++
 FLAGS		+=	-DSCIP_ROUNDING_FE
-OFLAGS		+=	-O0 -fp-model extended -g -w1 -fp-stack-check -wd279,383,444,810,981 #-Xc
+OFLAGS		+=	-O0 -g -fp-model precise -w1 -fp-stack-check -wd279,383,444,810,981 #-Xc
 CFLAGS		+=      -std=c99 -D_XOPEN_SOURCE=600
 CXXFLAGS	+=	-std=c++0x
 ARFLAGS		=	crs
-LDFLAGS		+=	-lirc -lm -lstdc++ -Bstatic
+LDFLAGS		+=	-lirc -lpthread -lm -lstdc++ -Bstatic
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

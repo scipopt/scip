@@ -1,0 +1,9 @@
+# SCIP version 6.0.3
+
+# should reoptimization used?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+reoptimization/enable = TRUE
+
+# use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node
+# [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: TRUE]
+reoptimization/usesplitcons = TRUE

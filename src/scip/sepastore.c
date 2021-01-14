@@ -3,21 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepastore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing separated cuts
  * @author Tobias Achterberg
  * @author Marc Pfetsch
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,6 +39,7 @@
 #include "scip/debug.h"
 #include "scip/scip.h"
 #include "scip/cuts.h"
+#include "scip/struct_event.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
 
@@ -831,9 +833,13 @@ SCIP_RETCODE sepastoreApplyCut(
          /* increase count of applied cuts for origins of row */
          switch ( cut->origintype )
          {
-         case SCIP_ROWORIGINTYPE_CONS:
+         case SCIP_ROWORIGINTYPE_CONSHDLR:
             assert( cut->origin != NULL );
             SCIPconshdlrIncNAppliedCuts((SCIP_CONSHDLR*) cut->origin);
+            break;
+         case SCIP_ROWORIGINTYPE_CONS:
+            assert( cut->origin != NULL );
+            SCIPconshdlrIncNAppliedCuts(SCIPconsGetHdlr((SCIP_CONS*)cut->origin));
             break;
          case SCIP_ROWORIGINTYPE_SEPA:
             assert( cut->origin != NULL );

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1954,6 +1954,11 @@ SCIP_RETCODE setParams(
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
    }
 
+   if( graph_typeIsSpgLike(graph) || graph_pc_isPcMw(graph) )
+   {
+      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/simplerounding/freq", -1));
+   }
+
    probdata->usesymcons = FALSE;
    probdata->usecyclecons = FALSE;
 
@@ -2734,6 +2739,10 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
 
    // todo test properly; normal dfs?
    SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/restartdfs/stdpriority", 400000) );
+
+   SCIP_CALL( SCIPsetCharParam(scip, "estimation/restarts/restartpolicy", 'n') );
+   SCIP_CALL( SCIPsetCharParam(scip, "estimation/method", 'o') );
+
 
    return SCIP_OKAY;
 }
@@ -4141,3 +4150,4 @@ void initReceivedSubproblem(
    assert(0 && "only call me when using UG");
 #endif
 }
+/**@} */

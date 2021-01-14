@@ -209,22 +209,35 @@ void scipexamples::QueensSolver::disp(std::ostream& out)
 /* destructor */
 scipexamples::QueensSolver::~QueensSolver(void)
 {
-   // since the SCIPcreateVar captures all variables, we have to release them now
-   for( size_t i = 0; i < _n; ++i )
+   try
    {
-      for ( size_t j = 0; j < _n; ++j )
-         SCIP_CALL_EXC( SCIPreleaseVar(_scip, & _vars[i][j]) ); /*lint !e1551 !e1546*/
+      // since the SCIPcreateVar captures all variables, we have to release them now
+      for( size_t i = 0; i < _n; ++i )
+      {
+         for ( size_t j = 0; j < _n; ++j )
+            SCIP_CALL_EXC( SCIPreleaseVar(_scip, & _vars[i][j]) );
+      }
+      _vars.clear();
+
+      // the same for the constraints
+      for( vector<SCIP_CONS *>::size_type i = 0; i < _cons.size(); ++i )
+         SCIP_CALL_EXC( SCIPreleaseCons(_scip, &_cons[i]) );
+      _cons.clear();
+
+      // after releasing all vars and cons we can free the scip problem
+      // remember this has allways to be the last call to scip
+      SCIP_CALL_EXC( SCIPfree(&_scip) );
    }
-   _vars.clear(); /*lint !e1551*/
-
-   // the same for the constraints
-   for( vector<SCIP_CONS *>::size_type i = 0; i < _cons.size(); ++i ) /*lint !e1551*/
-      SCIP_CALL_EXC( SCIPreleaseCons(_scip, &_cons[i]) ); /*lint !e1551 !e1546*/
-   _cons.clear(); /*lint !e1551*/
-
-   // after releasing all vars and cons we can free the scip problem
-   // remember this has allways to be the last call to scip
-   SCIP_CALL_EXC( SCIPfree(&_scip) ); /*lint !e1551 !e1546*/
+   catch ( SCIPException const & exp )  // catch SCIP errors
+   {
+      std::cerr << "SCIP Error: " << exp.what() << std::endl;
+      abort();
+   }
+   catch (...)  // catch other errors
+   {
+      // do nothing, but abort in debug mode
+      abort();
+   }
 }
 
 /* solve the n-queens problem */

@@ -4,7 +4,7 @@
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/setppc/cliquelifting = TRUE
 
-# should we try to generate extra cliques out of all binary variables to maybe fasten redundant constraint detection 
+# should we try to generate extra cliques out of all binary variables to maybe fasten redundant constraint detection
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/setppc/addvariablesascliques = TRUE
 
@@ -12,11 +12,11 @@ constraints/setppc/addvariablesascliques = TRUE
 
 # should the real solving time be used instead of a time step counter in VBC output?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-vbc/realtime = FALSE
+visual/realtime = FALSE
 
 # should the node where solutions are found be visualized?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-vbc/dispsols = TRUE
+visual/dispsols = TRUE
 
 # shall characters '#', '*', '+', '/', and '-' in variable and constraint names be replaced by '_'?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -25,4 +25,3 @@ reading/gmsreader/replaceforbiddenchars = TRUE
 # priority of branching rule <leastinf>
 # [type: int, range: [-536870912,536870911], default: 50]
 branching/leastinf/priority = 10000000
-

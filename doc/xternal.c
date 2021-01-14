@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,7 +41,7 @@
  * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
  * - is a framework for branch-and-cut-and-price.
  *
- * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
+ * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
  *
  *
  * @section TABLEOFCONTENTS Structure of this manual
@@ -58,6 +58,7 @@
  *  - @subpage FAQ                 Frequently asked questions (FAQ)
  *  - @subpage CHG                 Release notes and changelog
  *  - @subpage AUTHORS             SCIP Authors
+ *  - @subpage EXTERNALDOC         Links to external documentation
  *
  *
  * @section QUICKSTART Quickstart
@@ -76,7 +77,7 @@
  *
  * \verbinclude output.log
  *
- * @version  6.0.2
+ * @version  7.0.3
  *
  * \image html scippy.png
  */
@@ -94,7 +95,7 @@
  * `xprs`   | FICO XPress
  * `grb`    | Gurobi (version at least 7.0.2 required)
  * `clp`    | CoinOR CLP (interface currently sometimes produces wrong results)
- * `glop`   | Google Glop (experimental, LPI is contained in Glop package/Google OR tools)
+ * `glop`   | Google Glop (contained in OR-tools)
  * `msk`    | Mosek (version at least 7.0.0 required)
  * `qsopt`  | QSopt (experimental)
  * `none`   | disables LP solving entirely (not recommended; only for technical reasons)
@@ -168,8 +169,17 @@
  * This chapter is a detailed guide to the installation procedure of SCIP.
  *
  * SCIP lets you freely choose between its own, manually maintained Makefile system
- * or the CMake cross platform build system generator. For new users, we strongly
- * recommend to use CMake, if available on their targeted platform.
+ * or the CMake cross platform build system generator.
+ *
+ * <b>For new users and on for installation of the scipoptsuite on windows, we strongly recommend to use CMake, if available on their targeted platform.</b>
+ *
+ * Which one you choose depends on you use case and your level of expertise.
+ * If you just want to use SCIP as a black box solver you should use an installer with a precompiled binary from the <a href="http://scipopt.org/#download">download section</a>.
+ * <b>This is highly recommended for new users.</b>
+ * If you are just curious about SCIP and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
+ *
+ * However if you want to develop your own plugin for scip you have to compile the SCIPOptSuite from the source code, which is available as a tarball from the <a href="http://scipopt.org/#download">website</a>.
+ * Note that you might need some level of experience to be able to do this, this is described in the following.
  *
  * Please note that there are differences between both systems, most notably, the generated
  * library libscip will not be compatible between the versions. For more information, we
@@ -221,14 +231,22 @@
  * - @subpage COUNTER "How to use SCIP to count feasible solutions"
  * - @subpage REOPT   "How to use reoptimization in SCIP"
  * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
+ * - @subpage DECOMP "How to provide a problem decomposition"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
+ * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
  */
 
 /**@page AUTHORS SCIP Authors
  *
  * A list of all current and former developers as well as contributors can
  * be found on the
- * <a class="el" href="http://scip.zib.de/#developers">Main Web Page</a>.
+ * <a class="el" href="http://scipopt.org/#developers">Main Web Page</a>.
+ *
+ */
+
+/**@page EXTERNALDOC  Links to external documentation
+ *
+ * <a class="el" href="https://www.cgudapati.com/integer-programming/2019/12/15/Getting-Started-With-SCIP-Optimization-Suite.html">Getting Started with SCIP optimization in C++: A toy example</a> by Chaitanya Gudapati.
  *
  */
 
@@ -237,6 +255,7 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
+ * - \subpage RN70         "SCIP 7.0"
  * - \subpage RN60         "SCIP 6.0"
  * - \subpage RN50         "SCIP 5.0"
  * - \subpage RN40         "SCIP 4.0"
@@ -460,7 +479,7 @@
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
  *    </td>
- *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
+ *    <td colspan="3"> see the <a href="http://polyscipopt.org/">PolySCIP web page</a></td>
  * </tr>
  * <tr>
  *    <td>Mixed-integer semidefinite program (MISDP)</td>
@@ -534,8 +553,8 @@
  * @section CODEDOC Documentation:
  *
  * - Document functions, parameters, and variables in a doxygen conformed way.
- * - Do not leave code in comments that has been commented out; put the code within defines,
- *   e.g., `SCIP_DISABLED_CODE` and/or add an explanation
+ * - Please do not leave code in comments that has been commented out, don't use `#if
+ *   0`. Instead put the code within defines `#ifdef SCIP_DISABLED_CODE` and add an explanation.
  * - Todos need double stars to be registered by doxygen.
  * - When documenting methods, the first brief description starts with lower case and is separated by semi-colons, if necessary
  *   The longer description starts capitalized and consists of complete sentences.
@@ -575,7 +594,7 @@
  *
  * ```
  * cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
- * cmake --build build
+ * cmake --build build --config Release
  * ```
  *
  * Linux/macOS Makefile-based build instructions:
@@ -629,7 +648,7 @@
  * GMP                  | on, off                        | GMP=[true, false]      | specify GMP_DIR if not found automatically |
  * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0; specify IPOPT_DIR if not found automatically |
  * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list; specify SOPLEX_DIR, CPLEX_DIR, MOSEK_DIR, ... if LP solver is not found automatically |
- * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_INCLUDE_DIR and BLISS_LIBRARY |
+ * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_DIR |
  * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked; specify WORHP_DIR if not found automatically |
  * ZIMPL                | on, off                        | ZIMPL=[true, false]    | specify ZIMPL_DIR if not found automatically |
  * READLINE             | on, off                        | READLINE=[true, false] |                                            |
@@ -647,6 +666,7 @@
  * MT                   | on, off                        |                        | use static runtime libraries for Visual Studio compiler on Windows |
  * PARASCIP             | on, off                        | PARASCIP=[true,false]  | thread safe compilation                    |
  * SANITIZE_...         | on, off                        | --                     | enable sanitizer in debug mode if available |
+ * TPI                  | tny, omp, none                 | TPI=[tny,omp,none]     | enable task processing interface required for concurrent solver |
  *
  * Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing
  * configuration.
@@ -715,6 +735,8 @@
 
 /**@page MAKE Makefiles / Installation information
  *
+ * <b>Please note, that the Makefile system is not actively maintained anymore.
+ * If possible, please use \ref CMAKE "the cmake system".</b>
  *
  * In most cases (LINUX and MAC) it is quite easy to compile and install \SCIP. Therefore, reading the section
  * \ref BRIEFINSTALL "Brief installation description" should usually be enough. If this is not the case you find a
@@ -723,8 +745,8 @@
  *
  * @section BRIEFINSTALL Brief installation description
  *
- * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL. For
- * that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
+ * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL.
+ * For that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
  * to specify any directories, the compiling process is fully automated).
  *
  * Compiling \SCIP directly can be done as follows:
@@ -843,7 +865,7 @@
  * - <code>links</code> Reconfigures the links in the "lib" directory.
  * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
- * - <code>depend</code> Creates dependencies files. This is only needed if you add files to \SCIP.
+ * - <code>depend</code> Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` or NPARASCIP in source files.
  * - <code>check</code> or <code>test</code> Runs the check script, see \ref TEST.
  * - <code>lint</code> Statically checks the code via flexelint. The call produces the file <code>lint.out</code>
  *   which contains all the detected warnings.
@@ -1044,10 +1066,6 @@
  *    .
  * - Once you have edited the makefile, you can use all the flags that can be used in \SCIP to
  *   compile your code, see \ref MAKE.
- *   Note that you need to update the dependency files before compiling your project via <code>make depend</code>.
- *
- *
- *
  *
  */
 
@@ -1124,6 +1142,14 @@
  *  <b>
  *  Branch-and-cut
  *  </b>
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage SUDOKU_MAIN "Sudoku example"
+ *  </td>
+ *  <td>
+ *  An example solving sudokus.
  *  </td>
  *  </tr>
  *  <tr>
@@ -1266,12 +1292,12 @@
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
+ * href="http://scipopt.org/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
- * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
+ * If you want to download a precompiled binary, go to the <a href="http://scipopt.org/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib2010.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
@@ -1800,6 +1826,7 @@
  * - adding an additional constraint that resolves the infeasibility (result SCIP_CONSADDED),
  * - reducing the domain of a variable (result SCIP_REDUCEDDOM),
  * - adding a cutting plane (result SCIP_SEPARATED),
+ * - tightening the LP primal feasibility tolerance and requesting to solve the LP again (result SCIP_SOLVELP),
  * - performing a branching (result SCIP_BRANCHED).
  *
  * However, the solution is not given as a SCIP_SOL* data structure.
@@ -1839,6 +1866,23 @@
  * For example, the infeasibility of a linear constraint that contains continuous variables cannot be resolved,
  * if all integer variables in the constraint are already fixed.
  * In this case, the LP has to be solved in order to get a solution that satisfies the linear constraint.
+ *
+ * @subsection CONSENFORELAX
+ *
+ * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
+ *
+ * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
+ * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
+ * solutions that satisfy all active LP-constraints.
+ *
+ * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
+ * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
+ * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
+ * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
+ *
+ * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
+ * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
+ * via user-plugins.
  *
  * @subsection CONSLOCK
  *
@@ -2054,23 +2098,6 @@
  * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
  * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
  * calling CONSSEPASOL.
- *
- * @subsection CONSENFORELAX
- *
- * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
- *
- * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
- * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
- * solutions that satisfy all active LP-constraints.
- *
- * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
- * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
- * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
- * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
- *
- * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
- * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
- * via user-plugins.
  *
  * @subsection CONSPROP
  *
@@ -2459,7 +2486,7 @@
  * To apply Farkas pricing, the pricer needs to know the Farkas values of the constraints. Like the dual solution values for
  * feasible LP solutions, the dual Farkas values for infeasible solutions can be obtained by constraint handler interface
  * methods such as the SCIPgetDualfarkasLinear() method of the linear constraint handler.
- * The Farkas values for the bounds of the variables are just the regular reduced costs and can be accessed with SCIPgetVarRedcost().
+ * The Farkas values for the bounds of the variables can be accessed with SCIPgetVarFarkasCoef().
  *
  * It is useful to note that Farkas pricing is the same as the regular pricing with a zero objective function.
  * Therefore, a typical implementation of a pricer would consist of a generic pricing algorithm that gets a dual solution and an
@@ -3883,9 +3910,11 @@
  * In the interactive shell, this character is printed in the first column of a status information row, if the primal
  * heuristic found the feasible solution belonging to the primal bound. Note that a star '*' stands for an integral
  * LP-relaxation.
- * In order to avoid confusion, display characters should be unique: no two primal heuristics should have the same display character.
- * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the
- * SCIP interactive shell.
+ * It is recommended to select a lower or upper case letter as display character. The default primal heuristics of
+ * SCIP use characters that describe the class to which the heuristic belongs. As an example all LP rounding heuristics
+ * have an 'r' and all Large Neighborhood Search heuristics use the letter 'L'.
+ * Users find commonly used display characters in type_heur.h.
+ *
  *
  * \par HEUR_PRIORITY: the priority of the primal heuristic.
  * At each of the different entry points of the primal heuristics during the solving process (see HEUR_TIMING), they are
@@ -4223,7 +4252,7 @@
  * bounds and primal solution candidates.
  * \n
  * However, the data to define a single relaxation must either be extracted by the relaxation handler itself (e.g., from
- * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
+ * the user defined problem data, the LP information, or the integrality conditions), or it must be provided by the constraint
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation.
  * \n
  *
@@ -4251,11 +4280,11 @@
  *
  * @section RELAX_PROPERTIES Properties of a Relaxation Handler
  *
- * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties.
- * These are given as compiler defines.
+ * At the top of the new file "relax_myrelaxator.c" you can find the relaxation handler properties,
+ * which are given as compiler defines.
  * In the C++ wrapper class, you have to provide the relaxation handler properties by calling the constructor
  * of the abstract base class scip::ObjRelax from within your constructor.
- * The properties you have to set have the following meaning:
+ * The properties have the following meaning:
  *
  * \par RELAX_NAME: the name of the relaxation handler.
  * This name is used in the interactive shell to address the relaxation handler.
@@ -6420,7 +6449,7 @@
  *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \mathbb{Z}\;\forall j \in \mathcal{I} \}
  * \f]
  * such that between two problems \f$P_i\f$ and \f$P_{i+1}\f$ the space of solutions gets restricted and/or the objective
- * fuction changes. To use reoptimization the user has to change the parameter <code>reoptimization/enable</code> to
+ * function changes. To use reoptimization the user has to change the parameter <code>reoptimization/enable</code> to
  * <code>TRUE</code> before the solving process of the first problem of the sequence starts, i.e., in stage
  * <code>SCIP_STAGE_INIT</code> or <code>SCIP_STAGE_PROBLEM</code>. This can be done via the interactive shell or by
  * calling SCIPenableReoptimization(). In both cases SCIP changes some parameters and fixes them:
@@ -6521,17 +6550,203 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page DECOMP How to provide a problem decomposition
+ *
+ * Most mixed-integer programs have sparse constraint matrices in the sense that most columns and rows have only very few nonzero entries,
+ * maybe except for a few outlier columns/rows with many nonzeros.
+ * A decomposition identifies subproblems (subsets of rows and columns) that are only linked to each other via a set of linking rows and/or linking
+ * columns, but are otherwise independent.
+ * The special case of completely independent subproblems (with no linking rows and columns), for example, can be solved by solving
+ * the much smaller subproblems and concatenating their optimal solutions.
+ * This case has already been integrated into SCIP as a successful presolving technique (see @ref cons_components.c).
+ * Another use of decomposition within SCIP is the @ref BENDDECF "Benders Decomposition framework".
+ *
+ * Since SCIP 7.0, it is easier to pass user decompositions to SCIP that can be used within Benders decomposition or by user algorithms.
+ * This page introduces the struct SCIP_DECOMP and gives examples how to create and use it.
+ *
+ * @section DECOMP_OVERVIEW Overview
+ *
+ * In the following, we present decompositions of mixed-integer programs. However, the generalization to Constraint Integer Programs is straightforward.
+ *
+ * Concretely, for \f$k \geq 0\f$ we call a partition \f$\mathcal{D}=(D^{\text{row}},D^{\text{col}})\f$ of the rows and columns of the constraint matrix \f$A\f$ into \f$k + 1\f$ pieces each,
+ *
+ * \f[
+ *   D^{\text{row}} = (D^{\text{row}}_{1},\dots,D^{\text{row}}_{k},L^{\text{row}}), \quad D^{\text{col}} = (D^{\text{col}}_{1},\dots,D^{\text{col}}_{k},L^{\text{col}})
+ * \f]
+ * a decomposition of \f$A\f$ if \f$D^{\text{row}}_{q} \neq \emptyset\f$, \f$D^{\text{col}}_{q} \neq \emptyset\f$ for \f$q \in \{1,\dots,k\}\f$ and if it holds for all \f$i\in D^{\text{row}}_{q_{1}}, j\in D^{\text{col}}_{q_{2}}\f$ that \f$a_{i,j} \neq 0 \Rightarrow q_{1} = q_{2}\f$.
+ * The special rows \f$L^{\text{row}}\f$ and columns \f$L^{\text{col}}\f$, which may be empty, are called linking rows and linking columns, respectively.
+ * In other words, the inequality system \f$A x \geq b\f$ can be rewritten
+ * with respect to a decomposition \f$\mathcal{D}\f$ by a suitable permutation of the rows
+ * and columns of \f$A\f$ as equivalent system
+ * \f[
+ *   \left(
+ *   \begin{matrix}
+ *     A_{[D^{\text{row}}_{1},D^{\text{col}}_{1}]} &
+ *     0 &
+ *     \cdots &
+ *     0 &
+ *     A_{[D^{\text{row}}_{1},L^{\text{col}}]}\\
+ *     0 &
+ *     A_{[D^{\text{row}}_{2},D^{\text{col}}_{2}]} &
+ *     0 &
+ *     0 &
+ *     A_{[D^{\text{row}}_{2},L^{\text{col}}]}\\
+ *     \vdots &
+ *     0 &
+ *     \ddots &
+ *     0 &
+ *     \vdots\\
+ *     0 &
+ *     \cdots &
+ *     0 &
+ *     A_{[D^{\text{row}}_{k},D^{\text{col}}_{k}]} &
+ *     A_{[D^{\text{row}}_{k},L^{\text{col}}]}\\
+ *     A_{[L^{\text{row}},D^{\text{col}}_{1}]} &
+ *     A_{[L^{\text{row}},D^{\text{col}}_{2}]} &
+ *     \cdots &
+ *     A_{[L^{\text{row}},D^{\text{col}}_{k}]} &
+ *     A_{[L^{\text{row}},L^{\text{col}}]}
+ *   \end{matrix}
+ *   \right)
+ *   \left(
+ *   \begin{matrix}
+ *     x_{[D^{\text{col}}_{1}]}\\
+ *     x_{[D^{\text{col}}_{2}]}\\
+ *     \vdots\\
+ *     x_{[D^{\text{col}}_{k}]}\\
+ *     x_{[L^{\text{col}}]}
+ *   \end{matrix}
+ *   \right)
+ *   \geq
+ *   \left(
+ *   \begin{matrix}
+ *     b_{[D^{\text{row}}_{1}]}\\
+ *     b_{[D^{\text{row}}_{2}]}\\
+ *     \vdots\\
+ *     b_{[D^{\text{row}}_{k}]}\\
+ *     b_{[L^{\text{row}}]}
+ *   \end{matrix}
+ *   \right)
+ * % A= \left(\begin{matrix}4&8&\frac{1}{2}\\\frac{3}{2}&4&1\\1&3&7\end{matrix}\right)
+ * \f]
+ * where we use the short hand syntax \f$A_{[I,J]}\f$ to denote
+ * the \f$|I|\f$-by-\f$|J|\f$ submatrix that arises from the deletion of all entries
+ * from \f$A\f$ except for rows \f$I\f$ and columns \f$J\f$,
+ * for nonempty row
+ * and column subsets \f$I\subseteq\{1,\dots,m\}\f$ and \f$J\subseteq\{1,\dots,n\}\f$.
+ *
+ *
+ * @section DECOMP_USING Using a decomposition
+ *
+ * After passing one or more decompositions, see below, one can access all available decompositions with SCIPgetDecomps().
+ * The labels can be obtained by calling SCIPdecompGetVarsLabels() and SCIPdecompGetConsLabels().
+ * If some variables/constraints are not labeled, these methods will mark them as linking variables/constraints.
+ * There are several methods to get more information about one decomposition, see @ref DecompMethods.
+ *
+ * A decomposition can be used to split the problem into several subproblems which, in general, are easier to solve.
+ * For \f$q \in \{1,\dots,k\}\f$ the system
+ * \f[
+ *   A_{[D^{\text{row}}_{q},D^{\text{col}}_{q}]}\; x_{[D^{\text{col}}_{q}]} \geq b_{[D^{\text{row}}_{q}]}
+ * \f]
+ * is part of subproblem \f$q\f$, the handling of the linking variables/constraints depends on the chosen application context.
+ * For example, in the heuristic @ref heur_padm.c several smaller subproblems are solved multiple times to get a feasible solution.
+ * Also the @ref BENDDECF "Benders' decomposition framework" was extended with release 7.0 to use user decompositions.
+ *
+ * @section DECOMP_CREATION Creation via SCIP-API
+ *
+ * There are two different ways to provide a decomposition in SCIP.
+ * It can be created with the SCIP-API or it can be read from a file.
+ *
+ * To create it with the API, the user must first create a decomposition with SCIPcreateDecomp() specifying
+ * whether the decomposition belongs to the original or transformed problem and the number of blocks.
+ * Then the variables and constraints can be assigned to one block or to the linking rows/columns by calling
+ * SCIPdecompSetVarsLabels() and SCIPdecompSetConsLabels(), respectively.
+ * To complete the decomposition or to ensure that it is internally consistent, SCIPcomputeDecompVarsLabels() or
+ * SCIPcomputeDecompConsLabels() can be called.
+ * Note that SCIPcomputeDecompVarsLabels() will ignore the existing variable labels and computes again the labels based on the constraint labels only;
+ * SCIPcomputeDecompConsLabels() works in the same way and ignores the existing constraint labels.
+ *
+ * After the decomposition has been successfully created, it can be saved for later use in the DecompStore using SCIPaddDecomp().
+ * Access to all decompositions in the DecompStore is possible with SCIPgetDecomps().
+ *
+ * @section DECOMP_READDEC Reading a decomposition from a file
+ *
+ * Alternatively, after a problem has been read, a related decomposition can be read from a dec-file.
+ * Please refer to the @ref reader_dec.h "DEC file reader" for further information about the required file format.
+ * Upon reading a valid dec-file, a decomposition structure is created, where the corresponding variable labels are inferred from the constraint labels, giving precedence to block over linking constraints.
+ *
+ * @section DECOMP_BENDERS Use for Benders
+ *
+ * If the variables should be labeled for the application of @ref BENDDECF "Benders' decomposition", the decomposition must be explicitly flagged by setting the parameter decomposition/benderslabels to TRUE.
+ * With this setting, the variable's labeling takes place giving precedence to its presence in linking constraints over its presence in named blocks.
+ *
+ * @section DECOMP_TRANS Decomposition after problem transformation
+ *
+ * As the problem's constraints are constantly changing, or possibly deleted, during presolving, the constraints' labeling must be triggered again.
+ * Therefore, SCIP automatically transforms all user decompositions at the beginning of the root node based on the variables' labels.
+ *
+ * @section DECOMP_STATS Decomposition statistics
+ *
+ * Further useful measures and statistics about the decomposition are computed within SCIPcomputeDecompStats().
+ * When the labeling process is concluded, the following measures are computed and printed:
+ * - the number of blocks;
+ * - the number of linking variables and linking constraints;
+ * - the size of the largest as well as the smallest block;
+ * - the area score:
+ * This score is also used by GCG to rank decompositions during the automatic detection procedure.
+ * For a decomposition
+ * \f$\mathcal{D}=(D^{\text{row}},D^{\text{col}})\f$,
+ * the area score is defined as
+ * \f[
+ *   \text{areascore}(\mathcal{D}) = 1 - \frac{ \sum_{q=1}^k \lvert D^{\text{row}}_{q} \rvert
+ *     \lvert D^{\text{col}}_{q} \rvert + n\lvert L^{\text{row}} \rvert + m\lvert L^{\text{col}} \rvert -
+ *     \lvert L^{\text{row}} \rvert \lvert L^{\text{col}} \rvert }{mn}
+ *   \enspace.
+ * \f]
+ * In the case of a mixed-integer program, the area score intuitively measures the coverage of the rearranged matrix by 0's.
+ * Decompositions with few linking variables and/or constraints and many small blocks \f$A_{[D^{\text{row}}_{q},D^{\text{col}}_{q}]}\f$
+ * will have an area score close to \f$1\f$, whereas coarse decompositions of a matrix have smaller area scores.
+ * The trivial decomposition with a single block has the worst possible area score of 0.
+ * - the modularity:
+ * This measure is used to assess the quality of the community structure within a decomposition.
+ * The modularity of the decomposition is computed as follows:
+ * \f[
+ * \begin{aligned}
+ * \sum_{q=1}^{k} \dfrac{e_{q}}{m} \left(1-\dfrac{e_{q}}{m}\right),
+ * \end{aligned}
+ * \f]
+ * where \f$e_{q}\f$ is the number of inner edges within block \f$q\f$ and \f$m\f$ is the total number of edges.
+ * The presence of an inner edge is identified through the presence of a variable in a constraint,
+ * both—the variable and the constraint—belonging to the same block.
+ * - the block graph statistics: A block graph is constructed with the aim of depicting the connection between the different blocks in a decomposition through the existing linking variables in the constraints.
+ * Note that the linking constraints are intentionally skipped in this computation.
+ * \f$ G = (V,E) \f$ denotes a block graph, with vertex set \f$V\f$ and edge set \f$E\f$.
+ * Each vertex in the graph represents a block in the decomposition; \f$V = \{v_{1},\dots,v_{k}\}\f$.
+ * An edge \f$e = \{ v_{s},v_{t} \}\f$ is added to \f$G\f$, if and only if there exists a column \f$\ell \in L^{\text{col}}\f$, a row \f$i \in D^{\text{row}}_{s}\f$
+ * and a row \f$j \in D^{\text{row}}_{t}\f$, such that \f$a_{i,\ell} \neq 0\f$ and \f$a_{j,\ell} \neq 0\f$.
+ * From the constructed graph, the number of edges, articulation points and connected components are computed, together with the maximum and minimum degree.
+ * Note that building the block graph can become computationally expensive with large and dense decompositions.
+ * Thus, it is possible through a user parameter <code>decomposition/maxgraphedge</code> to define a maximum edge limit.
+ * The construction process will be interrupted once this limit is reached, in which case only approximate estimations of the block graph statistics will be displayed and accompanied with a warning message.
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+
 /**@page BENDDECF How to use the Benders' decomposition framework
  *
  * Benders' decomposition is a very popular mathematical programming technique that is applied to solve structured
  * problems. Problems that display a block diagonal structure are particularly amenable to the application of Benders'
- * decomposition. Such problems are given by
+ * decomposition. In a purely mixed-integer linear setting, such problems are given by
  *
  * \f[
  *  \begin{array}[t]{rllclcl}
  *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Ax & & & = & b \\
+ *    \text{subject to} & \displaystyle & Ax & & & = & b \\
  *         & \\
  *         & \displaystyle & Tx & + & Hy & = & h \\
  *         & \\
@@ -6551,7 +6766,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & d^{T}y \\
  *         & \\
- *    subject \ to & \displaystyle & Hy  = h - T\bar{x} \\
+ *    \text{subject to} & \displaystyle & Hy  = h - T\bar{x} \\
  *         & \\
  *         & & y \in \mathbb{R}^{m} \\
  *  \end{array}
@@ -6584,7 +6799,7 @@
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle & c^{T}x + \varphi \\
  *         & \\
- *    subject \ to & \displaystyle & Ax = b \\
+ *    \text{subject to} & \displaystyle & Ax = b \\
  *         & \\
  *         & \displaystyle & \varphi \geq \lambda(h - Tx) \quad \forall \lambda \in \Omega^{r}\\
  *         & \\
@@ -6597,7 +6812,23 @@
  *
  * @section BENDERFRAMEWORK Overview
  *
- * In \SCIP 6.0 a Benders' decomposition framework has been implemented. This framework can be used in four different
+ * In \SCIP 6.0 a Benders' decomposition framework has been implemented.
+ *
+ * The current framework can be used to handle a Benders Decomposition of CIPs of the form
+ *
+ * \f[
+ *  \begin{array}[t]{rllclcl}
+ *    \min & \displaystyle & c^{T}x & + & d^{T}y \\
+ *    \text{subject to} & \displaystyle & g(x & , & y) & \in & [\ell,u] \\
+ *         & & x & & & \in & X \\
+ *         & & & & y & \in & Y \\
+ *  \end{array}
+ * \f]
+ * when either
+ * - the subproblem is convex: \f$g_i(x,y)\f$ convex on \f$X\times Y\f$ if \f$u_i<\infty\f$, \f$g_i(x,y)\f$ concave on \f$X\times Y\f$ if \f$\ell_i>-\infty\f$, and \f$Y=\mathbb{R}^m\f$, or
+ * - the first stage variables are of binary type: \f$ X \subseteq \{0,1\}^n \f$.
+ *
+ * This framework can be used in four different
  * ways: inputting an instance in the SMPS file format, using the default Benders' decomposition implementation
  * (see src/scip/benders_default.c), implementing a custom Benders' decomposition plugin (see \ref BENDER), or by using
  * the Benders' decomposition mode of GCG.
@@ -6853,18 +7084,21 @@
  *    @refsnippet{src/scip/cons_linear.c,SnippetDebugAssertions}
  *
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
- *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
- *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
+ *    function <code>consCatchEvent()</code>. This is particularly important for, e.g., array indices like
+ *    the variable <code>pos</code> in this example, where using the <code>consdata->vars[pos]</code>
  *    pointer could result in unexspected behaviour
- *    if the asserted precondition on <code>pos</code> were not matched and \<pos\> were an arbitrary index
+ *    if the asserted precondition on <code>pos</code> were not matched and <code>pos</code> were an arbitrary index
  *    outside the array range.
  *
  *  - In order to activate assertions, use the <b>Debug mode</b> by compiling SCIP via
  *   \code
+ *    cmake -DCMAKE_BUILD_TYPE=Debug
+ *   \endcode
+ *   or the Makefile equivalent
+ *   \code
  *    make OPT=dbg
- *   \endcode and run the code. See \ref MAKE for further information about compiler options for SCIP.
- *
- *  - Spending only little extra time on
+ *   \endcode and run the code. See \ref CMAKE and \ref MAKE for further information about compiler options for SCIP.
+ *     As a rule of thumb, Spending only little extra time on
  *    asserting preconditions saves most of the time spent on debugging!
  *
  *  - Turn on <b>additional debug output</b> by adding the line
@@ -6883,17 +7117,19 @@
  *  - For checking the usage of SCIP memory, you can use
  *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use,
  *    which can be useful after a <code>SCIPfree()</code> call.
- *  - If there are memory leaks for which you cannot detect the origin, you can remake your code with the option NOBLKBUFMEM=true
- *    (do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>). After that valgrind (or similar) helps
+ *  - If there are memory leaks for which you cannot detect the origin, you can recompile your code with the option <code>cmake -DNOBLKBUFMEM=on</code>
+ *    (or <code>make NOBLKBUFMEM=true</code> if you are using the Makefile system.
+ *    Also for the Makefile system, do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>)
+ *    Only with that change, valgrind (or similar) reliably helps
  *    to detect leaked memory.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
  *    you can use the debugging mechanism (see \ref EXAMPLE_2). Therefore, a given solution is read and it
  *    is checked for every reduction, whether the solution will be pruned globally.
  *
  * @section EXAMPLE_1 How to activate debug messages
- * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
- * in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
- * <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
+ * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.c, recompile SCIP
+ * in Debug mode, and run the SCIP interactive shell to solve p0033.mps from the
+ * <a href="http://miplib2010.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  *
  * \include debugexamples/example1.txt
  *
@@ -6903,7 +7139,7 @@
  * The optimal solution can now be written to a file:
  * \include debugexamples/example2_1.txt
  *
- * If we afterwards recompile SCIP with the additional compiler flag <code>DEBUGSOL=true</code>,
+ * If we afterwards recompile SCIP with the additional compiler flag <code>cmake -DDEBUGSOL=on</code> (<code>make DEBUGSOL=true</code> in the Makefile system),
  * set the parameter <code>misc/debugsol = check/p0033.sol</code>, and run SCIP again it will output:
  * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
@@ -7282,7 +7518,7 @@
  *
  */
 
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
@@ -7300,10 +7536,16 @@
  *
  * <code>SCIP&gt; count</code>
  *
- * That means SCIP will count the number of solution but does not store (enumerate) them. If you are interested in that see
- * \ref COLLECTALLFEASEBLES.
+ * @note After completing the counting process, SCIP will terminate with status <tt>infeasible</tt>.  This is intended
+ * behavior, because SCIP counts solutions by the following internal mechanism.  Each feasible solution that is found is
+ * reported as infeasible to the SCIP core. This avoids that SCIP performs reductions based on the primal bound that
+ * could cut off suboptimal feasible solutions, which would then be missing in the count.  However, as a result, the
+ * SCIP core has not found any feasible solutions during the search and reports status <tt>infeasible</tt>.
  *
- * @note Since SCIP version 2.0.0 you do not have to worry about <tt>dual</tt> reductions anymore. These are
+ * By default, SCIP only counts the number of solutions but does not store (enumerate) them. If you are interested in
+ * that see \ref COLLECTALLFEASEBLES.
+ *
+ * @note Since SCIP version 2.0.0 you do not have to worry about the impact of dual reductions anymore. These are
  * automatically turned off. The only thing you should switch off are restarts. These restarts can lead to a wrong
  * counting process. We recommend using the counting settings which can be set in the interactive shell as follows:
  *
@@ -7334,7 +7576,7 @@
  * subtree detection. Using this technique it is possible to detect several solutions at once. Therefore, it can happen
  * that the solution limit is exceeded before SCIP is stopped.
  *
- * @section COLLECTALLFEASEBLES Collect all feasible solution
+ * @section COLLECTALLFEASEBLES Collect all feasible solutions
  *
  * Per default SCIP only counts all feasible solutions. This means, these solutions are not stored. If you switch the
  * parameter <code>constraints/countsols/collect</code> to TRUE (the default value is FALSE) the detected solutions are
@@ -7456,7 +7698,7 @@
   * @section OTHER Interfaces for other programming languages
   *
   * Interfaces for other programming languages are developed and maintained independently from the SCIP Optimization Suite
-  * on <a href="https://github.com/SCIP-Interfaces">GitHub</a> in order to provide extensions and patches faster
+  * on <a href="https://github.com/scipopt">GitHub</a> in order to provide extensions and patches faster
   * and to collaborate on them more easily. Besides the popular interfaces for Python and Java, there is also an interface
   * for Julia available. Contributions to these projects are very welcome.
   *
@@ -7512,9 +7754,9 @@
  * @brief methods to create a problem that \SCIP should solve
  *
  * This module summarizes the main methods needed to create a problem for \SCIP, and access its most important members:
- * - Declaring, adding, acessing, and changing variables of the problem
- * - Declaring, adding, acessing, and changing constraints of the problem
- * - Creating, adding, acessing, changing, and checking of solutions to the problem
+ * - Declaring, adding, accessing, and changing variables of the problem
+ * - Declaring, adding, accessing, and changing constraints of the problem
+ * - Creating, adding, accessing, changing, and checking of solutions to the problem
  *
  * @note These core methods are not sufficient to create constraints of a certain type that is provided by the default plugins of \SCIP.
  *  An example would be the creation of a linear constraint for which the methods provided by the
@@ -7670,7 +7912,6 @@
  * @brief methods for reoptimization related tasks
  */
 
-
 /** @defgroup DataStructures Data Structures
  *  @ingroup PUBLICCOREAPI
  *  @brief commonly used data structures
@@ -7694,6 +7935,11 @@
 /**@defgroup DirectedGraph Directed Graph
  * @ingroup DataStructures
  * @brief graph structure with common algorithms for directed and undirected graphs
+ */
+
+/**@defgroup DecompMethods Decomposition data structure
+ * @ingroup DataStructures
+ * @brief methods for creating and accessing user decompositions
  */
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
@@ -8049,6 +8295,11 @@
  *
  */
 
+/**@defgroup PublicSymmetryMethods Symmetry
+ * @ingroup INTERNALAPI
+ * @brief methods for symmetry handling
+ */
+
 /**@defgroup EXPRINTS Expression Interpreter
  * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the default expression interpreters of \SCIP
@@ -8254,4 +8505,25 @@
  * - query the numerical tolerances of \SCIP, as well as special values such as infinity.
  * - change tolerances inside relaxations
  * - epsilon-comparison methods for floating point numbers
+ */
+
+/** @defgroup CFILES Implementation files (.c files)
+ *  @brief implementation files (.c files) of the SCIP core and the default plugins
+ *
+ *  The core provides the functionality for creating problems, variables, and general constraints.
+ *  The default plugins of SCIP provide a mix of public API function and private, static function and callback declarations.
+ */
+
+/** @defgroup DEFPLUGINS SCIP Default Plugins
+ *  @ingroup CFILES
+ *  @brief implementation files (.c files) of the SCIP default plugins
+ *
+ *  The SCIP default plugins provide a mix of public API function and private, static function and callback declarations.
+ */
+
+/** @defgroup OTHER_CFILES Other implementation files of SCIP
+ *  @ingroup CFILES
+ *  @brief other implementation files of SCIP
+ *
+ *  Relevant core and other functionality of SCIP.
  */

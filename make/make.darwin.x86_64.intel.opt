@@ -3,7 +3,7 @@ CXX		=	icc -Kc++
 LINKCC		=	icc
 LINKCXX		=	icc -Kc++
 FLAGS		+=	-DNDEBUG -DSCIP_ROUNDING_FE
-OFLAGS		+=	-O2 -fp-model extended -fp-model fast -mtune=core2 -w1 -ip
+OFLAGS		+=	-O2 -fp-model precise -mtune=native -w1 -ip
 CFLAGS		+=      -std=c99 -D_XOPEN_SOURCE=600
 CXXFLAGS	+=	-std=c++0x
 ARFLAGS		=	crs

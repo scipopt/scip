@@ -301,7 +301,7 @@ SCIP_RETCODE sepaspecial_pacliquesSeparate(
       {
          printf("violation for ancestor %d (%f > 1) \n", i, ancestorweights[i]);
 
-         SCIP_CALL(SCIPcreateEmptyRowCons(scip, &(rows[i]), conshdlr, "pa-clique", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
+         SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &(rows[i]), conshdlr, "pa-clique", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
          SCIP_CALL(SCIPcacheRowExtensions(scip, rows[i]));
       }
       else
@@ -576,7 +576,7 @@ SCIP_RETCODE sepaspecial_pcimplicationsSeparate(
       if( maxnode >= 0 )
       {
 #ifdef XXX_XXX
-         SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE));
+         SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE));
          SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
          for( int e = g->inpbeg[maxnode]; e != EAT_LAST; e = g->ieat[e] )
@@ -590,7 +590,7 @@ SCIP_RETCODE sepaspecial_pcimplicationsSeparate(
             const int rootedge = graph_pc_getRoot2PtermEdge(g, twinterm);
             assert(rootedge >= 0);
 
-            SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
+            SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
             SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
             for( int e = g->inpbeg[maxnode]; e != EAT_LAST; e = g->ieat[e] )
@@ -780,7 +780,7 @@ SCIP_RETCODE sepaspecial_vtimplicationsSeparate(
       {
          SCIP_ROW* row = NULL;
 
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "vtimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "vtimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
          SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
          printf("found implication cut: %f < %f \n", xval[imparc] + xval[imparc_rev], inflow);

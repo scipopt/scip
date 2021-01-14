@@ -3,20 +3,20 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   concsolver_scip.c
  * @ingroup PARALLEL
  * @brief  implementation of concurrent solver interface for SCIP
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -178,14 +178,14 @@ SCIP_RETCODE includeEventHdlrSync(
 /** data for a concurrent solver type */
 struct SCIP_ConcSolverTypeData
 {
-   SCIP_Bool             loademphasis;       /**< should emphasis settings be loaded whe ncreatig an instance of this concurrent solver */
+   SCIP_Bool             loademphasis;       /**< should emphasis settings be loaded when creating an instance of this concurrent solver */
    SCIP_PARAMEMPHASIS    emphasis;           /**< parameter emphasis that will be loaded if loademphasis is true */
 };
 
 /** data for a concurrent solver */
 struct SCIP_ConcSolverData
 {
-   SCIP*                 solverscip;         /**< the concurrent solvers private scip datastructure */
+   SCIP*                 solverscip;         /**< the concurrent solvers private SCIP datastructure */
    SCIP_VAR**            vars;               /**< array of variables in the order of the main SCIP's variable array */
    int                   nvars;              /**< number of variables in the above arrays */
 };
@@ -205,8 +205,7 @@ SCIP_RETCODE disableConflictingDualReductions(
    if( !commvarbnds )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
-
+   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowstrongdualreds", FALSE) );
    return SCIP_OKAY;
 }
 
@@ -256,7 +255,8 @@ SCIP_RETCODE initConcsolver(
    /* create the concurrent solver's SCIP instance and set up the problem */
    SCIP_CALL( SCIPcreate(&data->solverscip) );
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), data->nvars) );
-   SCIP_CALL( SCIPcopy(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver), TRUE, FALSE, FALSE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver), TRUE, FALSE, FALSE,
+         FALSE, &valid) );
    assert(valid);
 
    /* allocate memory for the arrays to store the variable mapping */
@@ -268,6 +268,7 @@ SCIP_RETCODE initConcsolver(
    {
       SCIP_VAR* var;
       var = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+      assert(var != NULL);
       varperm[SCIPvarGetIndex(var)] = i;
       data->vars[i] = var;
    }
@@ -395,7 +396,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    /* use wall clock time in subscips */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
 
-   /* don't catch ctrlc since already caught in main scip */
+   /* don't catch ctrlc since already caught in main SCIP */
    SCIP_CALL( SCIPsetBoolParam(data->solverscip, "misc/catchctrlc", FALSE) );
 
    /* one solver can do all dual reductions and share them with the other solvers */
@@ -604,8 +605,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
 
-   /* consider at most maxcandsols many solutions, and since
-    * the solution array is sorted, we will cosider the best
+   /* consider at most maxcandsols many solutions, and since the solution array is sorted, we will cosider the best
     * solutions
     */
    nsols = SCIPgetNSols(data->solverscip);
@@ -679,9 +679,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       if( concsolverids[i] == concsolverid )
          continue;
 
-      /* solution is from other solver so translate to this solvers variable space
-       * and add it to the SCIP
-       */
+      /* solution is from other solver so translate to this solvers variable space and add it to SCIP */
       ++(*nsolsrecvd);
       SCIP_CALL( SCIPcreateOrigSol(data->solverscip, &newsol, NULL) );
 
@@ -690,9 +688,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       SCIP_CALL( SCIPaddConcurrentSol(data->solverscip, newsol) );
    }
 
-   /* get bound changes from the synchronization data and add it to this
-    * concurrent solvers SCIP
-    */
+   /* get bound changes from the synchronization data and add it to this concurrent solvers SCIP */
    *ntighterbnds = 0;
    *ntighterintbnds = 0;
    boundstore = SCIPsyncdataGetBoundChgs(syncdata);
@@ -745,9 +741,9 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
 
    assert(scip != NULL);
 
-   /* include concurrent solvers for SCIP for all emphasis settings and without an emphasis setting.
+   /* Include concurrent solvers for SCIP for all emphasis settings and without an emphasis setting.
     * For the SCIP without an emphasis setting we set the default preferred priority to 1 and for the other types to 0
-    * so that the default concurent solve will use multiple SCIP's using settings as specified by the user in the main SCIP
+    * so that the default concurent solve will use multiple SCIP's using settings as specified by the user in the main SCIP.
     */
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = FALSE;

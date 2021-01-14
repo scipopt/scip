@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_gms.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  GAMS file writer
  * @author Ambros Gleixner
  * @author Stefan Vigerske
@@ -157,6 +158,7 @@ void endLine(
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
+   assert( 0 <= *linecnt && *linecnt < GMS_MAX_LINELEN );
 
    if( (*linecnt) > 0 )
    {
@@ -189,7 +191,7 @@ void appendLine(
     * because of overlapping memory areas in memcpy used in sprintf.
     */
    len = strlen(linebuffer);
-   strncat(linebuffer, extension, GMS_MAX_PRINTLEN - len);
+   (void) strncat(linebuffer, extension, GMS_MAX_PRINTLEN - len);
 
    (*linecnt) += (int) strlen(extension);
 
@@ -475,6 +477,9 @@ SCIP_RETCODE printLinearRow(
 
    for( v = 0; v < nvars; ++v )
    {
+      assert(vars != NULL);  /* for lint */
+      assert(vals != NULL);
+
       var = vars[v];
       assert( var != NULL );
 
@@ -1483,7 +1488,7 @@ SCIP_RETCODE printExpr(
           * but if reading/gmsreader/signpower is TRUE, then we print as signpower(x,y), unless y is odd integer
           */
          exponent = SCIPexprGetSignPowerExponent(expr);
-         nisoddint = (((SCIP_Real)((int)exponent)) == exponent) && (((int)exponent)%2 == 1);
+         nisoddint = (((SCIP_Real)((int)exponent)) == exponent) && (((int)exponent)%2 == 1); /*lint !e777*/
 
          if( !nisoddint )
          {
@@ -1732,7 +1737,7 @@ SCIP_RETCODE printExpr(
                   SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
                   appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
                }
-               else if( ((SCIP_Real)((int)exponent)) == exponent )
+               else if( ((SCIP_Real)((int)exponent)) == exponent ) /*lint !e777*/
                {
                   appendLineWithIndent(scip, file, linebuffer, linecnt, "power(");
                   SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
