@@ -49,19 +49,6 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    SCIP_NLPIORACLE**     oracle              /**< pointer to NLPIORACLE data structure */
    );
 
-/** sets the value for infinity */
-SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleSetInfinity(
-   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   SCIP_Real             infinity            /**< value to use for infinity */
-   );
-
-/** gets the value for infinity */
-SCIP_EXPORT
-SCIP_Real SCIPnlpiOracleGetInfinity(
-   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-   );
-
 /** sets the problem name (used for printing) */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleSetProblemName(
@@ -268,7 +255,7 @@ char* SCIPnlpiOracleGetConstraintName(
    );
 
 /** gives maximum degree of a constraint or objective
- *  The degree is the maximal degree of all summands,, and is infinity for nonpolynomial terms.
+ *  The degree is the maximal degree of all summands and is infinity for nonpolynomial terms.
  */ 
 SCIP_EXPORT
 int SCIPnlpiOracleGetConstraintDegree(

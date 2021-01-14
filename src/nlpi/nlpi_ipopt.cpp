@@ -41,6 +41,7 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_message.h"
 #include "scip/scip_general.h"
+#include "scip/scip_numerics.h"
 #include "scip/pub_misc.h"
 
 #include <new>      /* for std::bad_alloc */
@@ -119,13 +120,10 @@ class ScipNLP;
 struct SCIP_NlpiData
 {
 public:
-   SCIP_Real                   infinity;     /**< initial value for infinity */
    std::string                 defoptions;   /**< modified default options for Ipopt */
 
    /** constructor */
-   explicit SCIP_NlpiData()
-     : infinity(SCIP_DEFAULT_INFINITY)
-   { }
+   explicit SCIP_NlpiData() { }
 };
 
 struct SCIP_NlpiProblem
@@ -518,7 +516,6 @@ SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
    targetdata = SCIPnlpiGetData(targetnlpi);
    assert(targetdata != NULL);
 
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, targetnlpi, NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
    targetdata->defoptions = sourcedata->defoptions;
 
    return SCIP_OKAY;
@@ -578,7 +575,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       return SCIP_NOMEMORY;
 
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
-   SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
 
    try
@@ -615,9 +611,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
    (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
    (*problem)->ipopt->Options()->SetIntegerValue("max_iter", DEFAULT_MAXITER);
-   (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -data->infinity, false);
-   (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  data->infinity, false);
-   (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", data->infinity, false);
+   (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
+   (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
+   (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
    /* (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
    /* if the expression interpreter does not give hessians, tell Ipopt to approximate hessian */
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
@@ -1354,12 +1350,6 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
       return SCIP_PARAMETERWRONGTYPE;
    }
 
-   case SCIP_NLPPAR_INFINITY:
-   {
-      SCIPerrorMessage("infinity parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
    case SCIP_NLPPAR_ITLIM:
    {
       problem->ipopt->Options()->GetIntegerValue("max_iter", *ival, "");
@@ -1471,12 +1461,6 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
       return SCIP_PARAMETERWRONGTYPE;
    }
 
-   case SCIP_NLPPAR_INFINITY:
-   {
-      SCIPerrorMessage("infinity parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
    case SCIP_NLPPAR_ITLIM:
    {
       if( ival >= 0 )
@@ -1532,7 +1516,7 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
  *
  *  input:
  *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
+ *  - problem datastructure for problem instance
  *  - type parameter number
  *  - dval pointer to store the parameter value
  *
@@ -1544,8 +1528,8 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 {
    assert(nlpi != NULL);
    assert(dval != NULL);
-   assert(type == SCIP_NLPPAR_INFINITY || problem != NULL);
-   assert(type == SCIP_NLPPAR_INFINITY || IsValid(problem->ipopt));
+   assert(problem != NULL);
+   assert(IsValid(problem->ipopt));
 
    switch( type )
    {
@@ -1575,22 +1559,7 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 
    case SCIP_NLPPAR_LOBJLIM:
    {
-      *dval = -SCIPnlpiOracleGetInfinity(problem->oracle);
-      break;
-   }
-
-   case SCIP_NLPPAR_INFINITY:
-   {
-      if( problem )
-      {
-         *dval = SCIPnlpiOracleGetInfinity(problem->oracle);
-      }
-      else
-      {
-         SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
-         assert(data != NULL);
-         *dval = data->infinity;
-      }
+      *dval = -SCIPinfinity(scip);
       break;
    }
 
@@ -1632,7 +1601,7 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
  *
  *  input:
  *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
+ *  - problem datastructure for problem instance
  *  - type parameter number
  *  - dval parameter value
  */
@@ -1640,8 +1609,8 @@ static
 SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
 {
    assert(nlpi != NULL);
-   assert(type == SCIP_NLPPAR_INFINITY || problem != NULL);
-   assert(type == SCIP_NLPPAR_INFINITY || IsValid(problem->ipopt));
+   assert(problem != NULL);
+   assert(IsValid(problem->ipopt));
 
    switch( type )
    {
@@ -1688,26 +1657,6 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
    case SCIP_NLPPAR_LOBJLIM:
    {
       SCIPwarningMessage(scip, "Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
-      break;
-   }
-
-   case SCIP_NLPPAR_INFINITY:
-   {
-      if( dval < 0.0 )
-         return SCIP_PARAMETERWRONGVAL;
-      if( problem )
-      {
-         problem->ipopt->Options()->SetNumericValue("diverging_iterates_tol", dval);
-         problem->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -dval);
-         problem->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  dval);
-         SCIPnlpiOracleSetInfinity(problem->oracle, dval);
-      }
-      else
-      {
-         SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
-         assert(data != NULL);
-         data->infinity = dval;
-      }
       break;
    }
 
@@ -1803,12 +1752,6 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParIpopt )
       return SCIP_PARAMETERWRONGTYPE;
    }
 
-   case SCIP_NLPPAR_INFINITY:
-   {
-      SCIPerrorMessage("infinity parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
    case SCIP_NLPPAR_ITLIM:
    {
       SCIPerrorMessage("iteration limit parameter is of type int.\n");
@@ -1889,12 +1832,6 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
    case SCIP_NLPPAR_LOBJLIM:
    {
       SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_INFINITY:
-   {
-      SCIPerrorMessage("infinity parameter is of type real.\n");
       return SCIP_PARAMETERWRONGTYPE;
    }
 

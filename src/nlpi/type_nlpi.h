@@ -46,11 +46,10 @@ enum SCIP_NlpParam
    SCIP_NLPPAR_FEASTOL        =  2,      /**< feasibility tolerance for primal variables and slacks (real) */
    SCIP_NLPPAR_RELOBJTOL      =  3,      /**< relative objective tolerance (real) */
    SCIP_NLPPAR_LOBJLIM        =  4,      /**< lower objective limit (cutoff) (real) */
-   SCIP_NLPPAR_INFINITY       =  5,      /**< value for infinity used to decide unbounded sides, unbounded variable and constraint bounds, and upper objective limit (real) */
-   SCIP_NLPPAR_ITLIM          =  6,      /**< NLP iteration limit (int) */
-   SCIP_NLPPAR_TILIM          =  7,      /**< NLP time limit (real) */
-   SCIP_NLPPAR_OPTFILE        =  8,      /**< name of a solver specific option file (string) */
-   SCIP_NLPPAR_FASTFAIL       =  9       /**< should the NLP solver stop early if convergence is slow?: 0 no, 1 yes (int) */
+   SCIP_NLPPAR_ITLIM          =  5,      /**< NLP iteration limit (int) */
+   SCIP_NLPPAR_TILIM          =  6,      /**< NLP time limit (real) */
+   SCIP_NLPPAR_OPTFILE        =  7,      /**< name of a solver specific option file (string) */
+   SCIP_NLPPAR_FASTFAIL       =  8       /**< should the NLP solver stop early if convergence is slow?: 0 no, 1 yes (int) */
 };
 typedef enum SCIP_NlpParam SCIP_NLPPARAM;  /**< NLP solver parameter */
 

@@ -53,7 +53,6 @@ typedef struct SCIP_NlpiOracleCons SCIP_NLPIORACLECONS;
 
 struct SCIP_NlpiOracle
 {
-   SCIP_Real             infinity;           /**< value for infinity */
    char*                 name;               /**< name of problem */
 
    int                   varssize;           /**< length of variables related arrays */
@@ -394,6 +393,7 @@ void freeConstraints(
  */
 static
 SCIP_RETCODE moveVariable(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to store NLPIORACLE data structure */
    int                   fromidx,            /**< index of variable to move */
    int                   toidx               /**< index of place where to move variable to */
@@ -408,16 +408,16 @@ SCIP_RETCODE moveVariable(
    assert(fromidx < oracle->nvars);
    assert(toidx   < oracle->nvars);
 
-   assert(oracle->varlbs[toidx] <= -oracle->infinity);
-   assert(oracle->varubs[toidx] >=  oracle->infinity);
+   assert(SCIPisInfinity(scip, -oracle->varlbs[toidx]));
+   assert(SCIPisInfinity(scip, oracle->varubs[toidx]));
    assert(oracle->varnames == NULL || oracle->varnames[toidx] == NULL);
    assert(!oracle->vardegreesuptodate || oracle->vardegrees[toidx] == -1);
 
    oracle->varlbs[toidx] = oracle->varlbs[fromidx];
    oracle->varubs[toidx] = oracle->varubs[fromidx];
 
-   oracle->varlbs[fromidx] = -oracle->infinity;
-   oracle->varubs[fromidx] =  oracle->infinity;
+   oracle->varlbs[fromidx] = -SCIPinfinity(scip);
+   oracle->varubs[fromidx] =  SCIPinfinity(scip);
 
    oracle->vardegrees[toidx]   = oracle->vardegrees[fromidx];
    oracle->vardegrees[fromidx] = -1;
@@ -632,7 +632,7 @@ SCIP_RETCODE evalFunctionValue(
       SCIP_Real  nlval;
 
       SCIP_CALL( SCIPexprintEval(scip, oracle->exprinterpreter, cons->expr, cons->exprintdata, (SCIP_Real*)x, &nlval) );
-      if( !SCIPisFinite(nlval) || ABS(nlval) >= oracle->infinity )
+      if( !SCIPisFinite(nlval) || SCIPisInfinity(scip, ABS(nlval)) )
          *val  = nlval;
       else
          *val += nlval;
@@ -679,7 +679,7 @@ SCIP_RETCODE evalFunctionGradient(
       SCIPdebug( printf("g ="); for( i = 0; i < oracle->nvars; ++i) printf(" %g", grad[i]); printf("\n"); )
 
       /* check for eval error */
-      if( !SCIPisFinite(nlval) || ABS(nlval) >= oracle->infinity )
+      if( !SCIPisFinite(nlval) || SCIPisInfinity(scip, ABS(nlval)) )
       {
          SCIPdebugMessage("gradient evaluation yield invalid function value %g\n", nlval);
          return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
@@ -1005,7 +1005,6 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    SCIP_CALL( SCIPallocMemory(scip, oracle) );
    BMSclearMemory(*oracle);
 
-   (*oracle)->infinity = SCIP_DEFAULT_INFINITY;
    (*oracle)->vardegreesuptodate = TRUE;
 
    SCIPdebugMessage("Oracle initializes expression interpreter %s\n", SCIPexprintGetName());
@@ -1045,34 +1044,6 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    BMSfreeMemory(oracle);
 
    return SCIP_OKAY;
-}
-
-/** sets the value for infinity */
-SCIP_RETCODE SCIPnlpiOracleSetInfinity(
-   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   SCIP_Real             infinity            /**< value to use for infinity */
-   )
-{
-   assert(oracle != NULL);
-   assert(infinity > 0.0);
-
-   SCIPdebugMessage("%p set infinity\n", (void*)oracle);
-
-   oracle->infinity = infinity;
-
-   return SCIP_OKAY;
-}
-
-/** gets the value for infinity */
-SCIP_Real SCIPnlpiOracleGetInfinity(
-   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-   )
-{
-   assert(oracle != NULL);
-
-   SCIPdebugMessage("%p get infinity\n", (void*)oracle);
-
-   return oracle->infinity;
 }
 
 /** sets the problem name (used for printing) */
@@ -1140,7 +1111,7 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    }
    else
       for( i = 0; i < nvars; ++i )
-         oracle->varlbs[oracle->nvars+i] = -oracle->infinity;
+         oracle->varlbs[oracle->nvars+i] = -SCIPinfinity(scip);
 
    if( ubs != NULL )
    {
@@ -1158,7 +1129,7 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    }
    else
       for( i = 0; i < nvars; ++i )
-         oracle->varubs[oracle->nvars+i] =  oracle->infinity;
+         oracle->varubs[oracle->nvars+i] =  SCIPinfinity(scip);
 
    if( varnames != NULL )
    {
@@ -1236,8 +1207,8 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             lininds != NULL ? lininds[c] : NULL,
             linvals != NULL ? linvals[c] : NULL,
             exprs != NULL ? exprs[c] : NULL,
-            lhss != NULL ? lhss[c] : -oracle->infinity,
-            rhss != NULL ? rhss[c] :  oracle->infinity,
+            lhss != NULL ? lhss[c] : -SCIPinfinity(scip),
+            rhss != NULL ? rhss[c] :  SCIPinfinity(scip),
             consnames != NULL ? consnames[c] : NULL
             ) );
 
@@ -1278,7 +1249,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    )
 {  /*lint --e{715}*/
    assert(oracle != NULL);
-   assert(REALABS(constant) < oracle->infinity);
+   assert(!SCIPisInfinity(scip, REALABS(constant)));
 
    SCIPdebugMessage("%p set objective\n", (void*)oracle);
 
@@ -1324,8 +1295,8 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
       assert(indices[i] >= 0);
       assert(indices[i] < oracle->nvars);
 
-      oracle->varlbs[indices[i]] = (lbs != NULL ? lbs[i] : -oracle->infinity);
-      oracle->varubs[indices[i]] = (ubs != NULL ? ubs[i] :  oracle->infinity);
+      oracle->varlbs[indices[i]] = (lbs != NULL ? lbs[i] : -SCIPinfinity(scip));
+      oracle->varubs[indices[i]] = (ubs != NULL ? ubs[i] :  SCIPinfinity(scip));
 
       if( oracle->varlbs[indices[i]] > oracle->varubs[indices[i]] )
       {
@@ -1361,8 +1332,8 @@ SCIP_RETCODE SCIPnlpiOracleChgConsSides(
       assert(indices[i] >= 0);
       assert(indices[i] < oracle->nconss);
 
-      oracle->conss[indices[i]]->lhs = (lhss != NULL ? lhss[i] : -oracle->infinity);
-      oracle->conss[indices[i]]->rhs = (rhss != NULL ? rhss[i] :  oracle->infinity);
+      oracle->conss[indices[i]]->lhs = (lhss != NULL ? lhss[i] : -SCIPinfinity(scip));
+      oracle->conss[indices[i]]->rhs = (rhss != NULL ? rhss[i] :  SCIPinfinity(scip));
       if( oracle->conss[indices[i]]->lhs > oracle->conss[indices[i]]->rhs )
       {
          assert(EPSEQ(oracle->conss[indices[i]]->lhs, oracle->conss[indices[i]]->rhs, SCIP_DEFAULT_EPSILON));
@@ -1436,7 +1407,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
       delstats[c] = -1;
 
       /* move constraint at position lastgood to position c */
-      SCIP_CALL( moveVariable(oracle, lastgood, c) );
+      SCIP_CALL( moveVariable(scip, oracle, lastgood, c) );
       delstats[lastgood] = c; /* mark that lastgood variable is now at position c */
 
       /* move lastgood forward, delete variables on the way */
@@ -2246,7 +2217,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
 
       SCIPdebug( printf("g ="); for( l = oracle->jacoffsets[i]; l < oracle->jacoffsets[i+1]; ++l) printf(" %g", grad[oracle->jaccols[l]]); printf("\n"); )
 
-      if( !SCIPisFinite(nlval) || ABS(nlval) >= oracle->infinity )
+      if( !SCIPisFinite(nlval) || SCIPisInfinity(scip, ABS(nlval)) )
       {
          SCIPdebugMessage("gradient evaluation yield invalid function value %g\n", nlval);
          retcode = SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
@@ -2482,16 +2453,16 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
       lhs = oracle->conss[i]->lhs;
       rhs = oracle->conss[i]->rhs;
       SCIPinfoMessage(scip, file, ": ");
-      if( lhs > -oracle->infinity && rhs < oracle->infinity && lhs != rhs )
+      if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && lhs != rhs )
          SCIPinfoMessage(scip, file, "%.20g <= ", lhs);
 
       SCIP_CALL( printFunction(scip, oracle, file, oracle->conss[i], FALSE) );
 
       if( lhs == rhs )
          SCIPinfoMessage(scip, file, " = %.20g", rhs);
-      else if( rhs <  oracle->infinity )
+      else if( !SCIPisInfinity(scip, rhs) )
          SCIPinfoMessage(scip, file, " <= %.20g", rhs);
-      else if( lhs > -oracle->infinity )
+      else if( !SCIPisInfinity(scip, -lhs) )
          SCIPinfoMessage(scip, file, " >= %.20g", lhs);
 
       SCIPinfoMessage(scip, file, "\n");
@@ -2568,12 +2539,12 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       }
       else
       {
-         if( oracle->varlbs[i] > -oracle->infinity )
+         if( !SCIPisInfinity(scip, -oracle->varlbs[i]) )
          {
             printName(namebuf, name, i, 'x', NULL, havelongvarnames);
             SCIPinfoMessage(scip, file, "%s.lo = %.20g;\t", namebuf, oracle->varlbs[i]);
          }
-         if( oracle->varubs[i] <  oracle->infinity )
+         if( !SCIPisInfinity(scip, oracle->varubs[i]) )
          {
             printName(namebuf, name, i, 'x', NULL, havelongvarnames);
             SCIPinfoMessage(scip, file, "%s.up = %.20g;\t", namebuf, oracle->varubs[i]);
@@ -2594,7 +2565,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       printName(namebuf, oracle->conss[i]->name, i, 'e', NULL, havelongequnames);
       SCIPinfoMessage(scip, file, "%s, ", namebuf);
 
-      if( oracle->conss[i]->lhs > -oracle->infinity && oracle->conss[i]->rhs < oracle->infinity && oracle->conss[i]->lhs != oracle->conss[i]->rhs )
+      if( !SCIPisInfinity(scip, -oracle->conss[i]->lhs) && !SCIPisInfinity(scip, oracle->conss[i]->rhs) && oracle->conss[i]->lhs != oracle->conss[i]->rhs )
       {
          /* ranged row: add second constraint */
          printName(namebuf, oracle->conss[i]->name, i, 'e', "_RNG", havelongequnames);
@@ -2626,15 +2597,15 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
 
       if( lhs == rhs )
          SCIPinfoMessage(scip, file, " =E= %.20g", rhs);
-      else if( rhs <  oracle->infinity )
+      else if( !SCIPisInfinity(scip, rhs) )
          SCIPinfoMessage(scip, file, " =L= %.20g", rhs);
-      else if( lhs > -oracle->infinity )
+      else if( !SCIPisInfinity(scip, -lhs) )
          SCIPinfoMessage(scip, file, " =G= %.20g", lhs);
       else
          SCIPinfoMessage(scip, file, " =N= 0");
       SCIPinfoMessage(scip, file, ";\n");
 
-      if( lhs > -oracle->infinity && rhs < oracle->infinity && lhs != rhs )
+      if( !SCIPisInfinity(scip, lhs) && !SCIPisInfinity(scip, rhs) && lhs != rhs )
       {
          printName(namebuf, oracle->conss[i]->name, i, 'e', "_RNG", havelongequnames);
          SCIPinfoMessage(scip, file, "%s.. ", namebuf);
