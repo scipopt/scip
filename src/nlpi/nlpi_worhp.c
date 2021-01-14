@@ -30,8 +30,13 @@
 #include "nlpi/nlpioracle.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
-#include "scip/misc.h"
-#include "scip/pub_message.h"
+#include "scip/scip_nlp.h"
+#include "scip/scip_general.h"
+#include "scip/scip_message.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_numerics.h"
+#include "scip/scip_randnumgen.h"
+#include "scip/pub_misc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,16 +64,12 @@
 
 struct SCIP_NlpiData
 {
-   BMS_BLKMEM*                 blkmem;       /**< block memory */
-   SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
-   SCIP_Real                   infinity;     /**< initial value for infinity */
    SCIP_Bool                   useip;        /**< should the Interior Point solver of Worhp be used? */
 };
 
 struct SCIP_NlpiProblem
 {
    SCIP_NLPIORACLE*            oracle;       /**< Oracle-helper to store and evaluate NLP */
-   BMS_BLKMEM*                 blkmem;       /**< block memory */
    SCIP_RANDNUMGEN*            randnumgen;   /**< random number generator */
 
    SCIP_NLPTERMSTAT            lasttermstat; /**< termination status from last run */
@@ -112,16 +113,16 @@ struct SCIP_NlpiProblem
 /** clears the last solution information */
 static
 void invalidateSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
    assert(problem != NULL);
-   assert(problem->blkmem != NULL);
 
-   BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastprimal), problem->lastprimalsize);
-   BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastdualcons), problem->lastdualconssize);
-   BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastduallb), problem->lastduallbsize);
-   BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastdualub), problem->lastdualubsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(problem->lastprimal),   problem->lastprimalsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(problem->lastdualcons), problem->lastdualconssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(problem->lastduallb),   problem->lastduallbsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(problem->lastdualub),   problem->lastdualubsize);
 
    problem->lastprimalsize = 0;
    problem->lastdualconssize = 0;
@@ -134,6 +135,7 @@ void invalidateSolution(
 /** evaluate last Worhp run */
 static
 SCIP_RETCODE evaluateWorhpRun(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
@@ -150,8 +152,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case InitError:
    {
       /* initialization error */
-      SCIPdebugMessage("Worhp failed because of initialization error!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because of initialization error!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       problem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
       break;
@@ -160,8 +162,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case DataError:
    {
       /* data error */
-      SCIPdebugMessage("Worhp failed because of data error!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because of data error!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
       break;
@@ -171,7 +173,7 @@ SCIP_RETCODE evaluateWorhpRun(
    {
       /* license error */
       SCIPerrorMessage("Worhp failed because of license error!\n");
-      invalidateSolution(problem);
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       problem->lasttermstat = SCIP_NLPTERMSTAT_LICERR;
       break;
@@ -180,8 +182,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case evalsNaN:
    {
       /* evaluation errors */
-      SCIPdebugMessage("Worhp failed because of a NaN value in an evaluation!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because of a NaN value in an evaluation!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
       break;
@@ -193,8 +195,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case LinearSolverFailed:
    {
       /* numerical errors during solution of NLP */
-      SCIPdebugMessage("Worhp failed because of a numerical error during optimization!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because of a numerical error during optimization!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
       break;
@@ -204,8 +206,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case MaxIter:
    {
       /* maximal number of calls or iteration */
-      SCIPdebugMessage("Worhp failed because maximal number of calls or iterations is reached!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because maximal number of calls or iterations is reached!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       problem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
       break;
@@ -214,8 +216,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case Timeout:
    {
       /* time limit reached */
-      SCIPdebugMessage("Worhp failed because time limit is reached!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because time limit is reached!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
       problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
       break;
@@ -225,8 +227,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case DivergingDual:
    {
       /* iterates diverge */
-      SCIPdebugMessage("Worhp failed because of diverging iterates!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because of diverging iterates!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
       problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
       break;
@@ -236,8 +238,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case LocalInfeasOptimal:
    {
       /* infeasible stationary point found */
-      SCIPdebugMessage("Worhp failed because of convergence against infeasible stationary point!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because of convergence against infeasible stationary point!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -246,8 +248,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case GlobalInfeas:
    {
       /* infeasible stationary point found */
-      SCIPdebugMessage("Worhp failed because of convergence against infeasible stationary point!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because of convergence against infeasible stationary point!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -256,8 +258,8 @@ SCIP_RETCODE evaluateWorhpRun(
    case RegularizationFailed:
    {
       /* regularization of Hessian matrix failed */
-      SCIPdebugMessage("Worhp failed because of regularization of Hessian matrix failed!\n");
-      invalidateSolution(problem);
+      SCIPdebugMsg(scip, "Worhp failed because of regularization of Hessian matrix failed!\n");
+      invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
       break;
@@ -266,7 +268,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case OptimalSolution:
    {
       /* everything went fine */
-      SCIPdebugMessage("Worhp terminated successfully at a local optimum!\n");
+      SCIPdebugMsg(scip, "Worhp terminated successfully at a local optimum!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCOPT;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -275,7 +277,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case OptimalSolutionConstantF:
    {
       /* feasible point, KKT conditions are not satisfied, and Worhp thinks that there is no objective function */
-      SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are not met!\n");
+      SCIPdebugMsg(scip, "Worhp terminated successfully with a feasible point but KKT are not met!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -286,7 +288,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case AcceptablePreviousScaled:
    {
       /* feasible point but KKT conditions are violated in unscaled space */
-      SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are violated in unscaled space!\n");
+      SCIPdebugMsg(scip, "Worhp terminated successfully with a feasible point but KKT are violated in unscaled space!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -295,7 +297,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case LowPassFilterOptimal:
    {
       /* feasible and no further progress */
-      SCIPdebugMessage("Worhp terminated at feasible solution without further progress!\n");
+      SCIPdebugMsg(scip, "Worhp terminated at feasible solution without further progress!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -304,7 +306,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case FeasibleSolution:
    {
       /* feasible and in feasibility mode, i.e., optimality not required */
-      SCIPdebugMessage("Worhp terminated at feasible solution, optimality was not required!\n");
+      SCIPdebugMsg(scip, "Worhp terminated at feasible solution, optimality was not required!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -314,7 +316,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case AcceptableSolutionConstantF:
    {
       /* acceptable solution found, but stopped due to limit or error */
-      SCIPdebugMessage("Worhp terminated at acceptable solution due to limit or error!\n");
+      SCIPdebugMsg(scip, "Worhp terminated at acceptable solution due to limit or error!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -324,7 +326,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case AcceptablePreviousConstantF:
    {
       /* previously acceptable solution was found, but stopped due to limit or error */
-      SCIPdebugMessage("Worhp previously found acceptable solution but terminated due to limit or error!\n");
+      SCIPdebugMsg(scip, "Worhp previously found acceptable solution but terminated due to limit or error!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -333,7 +335,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case LowPassFilterAcceptable:
    {
       /* acceptable solution found, and no further progress */
-      SCIPdebugMessage("Worhp found acceptable solution but terminated due no further progress!\n");
+      SCIPdebugMsg(scip, "Worhp found acceptable solution but terminated due no further progress!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -343,7 +345,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case SearchDirectionSmall:
    {
       /* acceptable solution found, but search direction is small or zero */
-      SCIPdebugMessage("Worhp found acceptable solution but search direction is small or zero!\n");
+      SCIPdebugMsg(scip, "Worhp found acceptable solution but search direction is small or zero!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -354,7 +356,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case Unbounded:
    {
       /* acceptable solution found, but not optimal */
-      SCIPdebugMessage("Worhp found acceptable solution but terminated perhaps due to nondifferentiability, unboundedness or at Fritz John point!\n");
+      SCIPdebugMsg(scip, "Worhp found acceptable solution but terminated perhaps due to nondifferentiability, unboundedness or at Fritz John point!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -374,19 +376,19 @@ SCIP_RETCODE evaluateWorhpRun(
   {
      if( problem->opt->m > 0 )
      {
-        SCIP_ALLOC( BMSduplicateBlockMemoryArray(problem->blkmem, &problem->lastdualcons, problem->opt->Mu, problem->opt->m) );
+        SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &problem->lastdualcons, problem->opt->Mu, problem->opt->m) );
         problem->lastdualconssize = problem->opt->m;
      }
 
      if( problem->opt->n > 0 )
      {
-        SCIP_ALLOC( BMSduplicateBlockMemoryArray(problem->blkmem, &problem->lastprimal, problem->opt->X, problem->opt->n) );
+        SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &problem->lastprimal, problem->opt->X, problem->opt->n) );
         problem->lastprimalsize = problem->opt->n;
 
-        SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &problem->lastduallb, problem->opt->n) );
+        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->lastduallb, problem->opt->n) );
         problem->lastduallbsize = problem->opt->n;
 
-        SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &problem->lastdualub, problem->opt->n) );
+        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->lastdualub, problem->opt->n) );
         problem->lastdualubsize = problem->opt->n;
      }
   }
@@ -421,6 +423,7 @@ SCIP_RETCODE evaluateWorhpRun(
 /** evaluates objective function and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userF(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
@@ -428,13 +431,12 @@ SCIP_RETCODE userF(
 
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-   assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
    assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
-   SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->opt->X, &objval) );
+   SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(scip, problem->oracle, problem->opt->X, &objval) );
    problem->opt->F = problem->wsp->ScaleObj * objval;
 
 #ifdef SCIP_DEBUG_USERF
@@ -454,18 +456,18 @@ SCIP_RETCODE userF(
 /** evaluates constraints and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userG(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-   assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
    assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
-   SCIP_CALL( SCIPnlpiOracleEvalConstraintValues(problem->oracle, problem->opt->X, problem->opt->G) );
+   SCIP_CALL( SCIPnlpiOracleEvalConstraintValues(scip, problem->oracle, problem->opt->X, problem->opt->G) );
 
 #ifdef SCIP_DEBUG_USERG
    {
@@ -486,6 +488,7 @@ SCIP_RETCODE userG(
 /** computes objective gradient and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userDF(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
@@ -493,14 +496,13 @@ SCIP_RETCODE userDF(
 
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-   assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
    assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    /* TODO this needs to be changed if we store the gradient of the objective function in a sparse format */
-   SCIP_CALL( SCIPnlpiOracleEvalObjectiveGradient(problem->oracle, problem->opt->X, TRUE, &objval,
+   SCIP_CALL( SCIPnlpiOracleEvalObjectiveGradient(scip, problem->oracle, problem->opt->X, TRUE, &objval,
          problem->wsp->DF.val) );
 
    /* scale gradient if necessary */
@@ -530,6 +532,7 @@ SCIP_RETCODE userDF(
 /** computes jacobian matrix and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userDG(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
@@ -538,14 +541,13 @@ SCIP_RETCODE userDG(
 
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-   assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
    assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
-   SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &jacvals, problem->wsp->DG.nnz) );
-   retcode = SCIPnlpiOracleEvalJacobian(problem->oracle, problem->opt->X, TRUE, NULL, jacvals);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &jacvals, problem->wsp->DG.nnz) );
+   retcode = SCIPnlpiOracleEvalJacobian(scip, problem->oracle, problem->opt->X, TRUE, NULL, jacvals);
 
    if( retcode == SCIP_OKAY )
    {
@@ -567,7 +569,7 @@ SCIP_RETCODE userDG(
    }
 
    /* free memory */
-   BMSfreeBlockMemoryArray(problem->blkmem, &jacvals, problem->wsp->DG.nnz);
+   SCIPfreeBlockMemoryArray(scip, &jacvals, problem->wsp->DG.nnz);
 
    return retcode;
 }
@@ -575,6 +577,7 @@ SCIP_RETCODE userDG(
 /** computes hessian matrix and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userHM(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
@@ -585,19 +588,18 @@ SCIP_RETCODE userHM(
 
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-   assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
    assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    /* get nonzero entries in HM of SCIP (excludes unused diagonal entries) */
-   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, NULL) );
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, NULL) );
    nnonz = offset[problem->opt->n];
 
    /* evaluate hessian */
-   SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &hessianvals, problem->wsp->HM.nnz) );
-   retcode = SCIPnlpiOracleEvalHessianLag(problem->oracle, problem->opt->X, TRUE, problem->wsp->ScaleObj,
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hessianvals, problem->wsp->HM.nnz) );
+   retcode = SCIPnlpiOracleEvalHessianLag(scip, problem->oracle, problem->opt->X, TRUE, problem->wsp->ScaleObj,
          problem->opt->Mu, hessianvals);
 
    if( retcode == SCIP_OKAY )
@@ -624,7 +626,7 @@ SCIP_RETCODE userHM(
    }
 
    /* free memory */
-   BMSfreeBlockMemoryArray(problem->blkmem, &hessianvals, problem->wsp->HM.nnz);
+   SCIPfreeBlockMemoryArray(scip, &hessianvals, problem->wsp->HM.nnz);
 
    return retcode;
 }
@@ -640,6 +642,7 @@ static void noprint(
 /** initialize Worhp data */
 static
 SCIP_RETCODE initWorhp(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
@@ -678,21 +681,21 @@ SCIP_RETCODE initWorhp(
    /* set problem dimensions */
    opt->n = SCIPnlpiOracleGetNVars(problem->oracle);
    opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle);
-   SCIPdebugMessage("nvars %d nconss %d\n", opt->n, opt->m);
+   SCIPdebugMsg(scip, "nvars %d nconss %d\n", opt->n, opt->m);
 
    /* assume that objective function is dense; TODO use sparse representation */
    wsp->DF.nnz = opt->n;
 
    /* get number of non-zero entries in Jacobian */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->oracle, &offset, NULL) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &offset, NULL) );
    wsp->DG.nnz = offset[opt->m];
-   SCIPdebugMessage("nnonz jacobian %d\n", wsp->DG.nnz);
+   SCIPdebugMsg(scip, "nnonz jacobian %d\n", wsp->DG.nnz);
 
    /* get number of non-zero entries in hessian
     *
     * note that Worhp wants to have the full diagonal in ANY case
     */
-   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, &cols) );
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &cols) );
    wsp->HM.nnz = 0;
 
    j = offset[0];
@@ -712,7 +715,7 @@ SCIP_RETCODE initWorhp(
       }
    }
    assert(offset[opt->n] <= wsp->HM.nnz);
-   SCIPdebugMessage("nnonz hessian %d\n", wsp->HM.nnz);
+   SCIPdebugMsg(scip, "nnonz hessian %d\n", wsp->HM.nnz);
 
    /* initialize data in Worhp */
    WorhpInit(opt, wsp, par, cnt);
@@ -732,7 +735,7 @@ SCIP_RETCODE initWorhp(
 #ifdef SCIP_DEBUG
    for( i = 0; i < opt->n; ++i )
    {
-      SCIPdebugMessage("bounds %d [%g,%g]\n", i, opt->XL[i], opt->XU[i]);
+      SCIPdebugMsg(scip, "bounds %d [%g,%g]\n", i, opt->XL[i], opt->XU[i]);
    }
 #endif
 
@@ -743,14 +746,14 @@ SCIP_RETCODE initWorhp(
       opt->GU[i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
 
       /* adjust constraint sides when both are infinite */
-      if( opt->GL[i] <= -nlpidata->infinity && opt->GU[i] >= nlpidata->infinity )
+      if( SCIPisInfinity(scip, -opt->GL[i]) && SCIPisInfinity(scip, opt->GU[i]) )
       {
-         SCIPmessagePrintWarning(nlpidata->messagehdlr, "Lhs and rhs of constraint %d are infinite.\n", i);
-         opt->GL[i] = -nlpidata->infinity / 10.0;
-         opt->GU[i] = nlpidata->infinity / 10.0;
+         SCIPwarningMessage(scip, "Lhs and rhs of constraint %d are infinite.\n", i);
+         opt->GL[i] = -SCIPinfinity(scip) / 10.0;
+         opt->GU[i] = SCIPinfinity(scip) / 10.0;
       }
 
-      SCIPdebugMessage("sides %d [%g,%g]\n", i, opt->GL[i], opt->GU[i]);
+      SCIPdebugMsg(scip, "sides %d [%g,%g]\n", i, opt->GL[i], opt->GU[i]);
    }
 
    /* set column indices of objective function; note that indices go from 1 to n */
@@ -770,7 +773,7 @@ SCIP_RETCODE initWorhp(
    {
       int nnonz;
 
-      SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->oracle, &offset, &cols) );
+      SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &offset, &cols) );
       assert(offset[opt->m] == wsp->DG.nnz);
 
       nnonz = 0;
@@ -796,7 +799,7 @@ SCIP_RETCODE initWorhp(
       int nnonz;
       int k;
 
-      SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, &cols) );
+      SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &cols) );
       assert(offset[opt->n] <= wsp->HM.nnz);
 
       k = offset[opt->n];
@@ -831,10 +834,10 @@ SCIP_RETCODE initWorhp(
       SortWorhpMatrix(&wsp->HM);
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("column and row indices of hessian:\n");
+      SCIPdebugMsg(scip, "column and row indices of hessian:\n");
       for( i = 0; i < wsp->HM.nnz; ++i )
       {
-         SCIPdebugMessage("  entry %d: (row,col) = (%d,%d)\n", i, wsp->HM.row[i], wsp->HM.col[i]);
+         SCIPdebugMsg(scip, "  entry %d: (row,col) = (%d,%d)\n", i, wsp->HM.row[i], wsp->HM.col[i]);
       }
 #endif
    }
@@ -904,66 +907,37 @@ SCIP_RETCODE freeWorhp(
  * Callback methods of NLP solver interface
  */
 
-/* TODO: Implement all necessary NLP interface methods. The methods with an #if 0 ... #else #define ... are optional
- * (currently, all methods are required) */
-
-/** copy method of NLP interface (called when SCIP copies plugins)
- *
- * input:
- *  - blkmem block memory in target SCIP
- *  - sourcenlpi the NLP interface to copy
- *  - targetnlpi buffer to store pointer to copy of NLP interface
- */
+/** copy method of NLP interface (called when SCIP copies plugins) */
 static
-SCIP_DECL_NLPICOPY( nlpiCopyWorhp )
+SCIP_DECL_NLPICOPY(nlpiCopyWorhp)
 {
    SCIP_NLPIDATA* sourcedata;
 
    assert(sourcenlpi != NULL);
-   assert(targetnlpi != NULL);
 
    sourcedata = SCIPnlpiGetData(sourcenlpi);
    assert(sourcedata != NULL);
 
-   SCIP_CALL( SCIPcreateNlpSolverWorhp(blkmem, targetnlpi, sourcedata->useip) );
-   assert(*targetnlpi != NULL);
-
-   SCIP_CALL( SCIPnlpiSetRealPar(*targetnlpi, NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
-   SCIP_CALL( SCIPnlpiSetMessageHdlr(*targetnlpi, sourcedata->messagehdlr) );
+   SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, sourcedata->useip) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** destructor of NLP interface to free nlpi data
- *
- * input:
- *  - nlpi datastructure for solver interface
- */
+/** destructor of NLP interface to free nlpi data */
 static
-SCIP_DECL_NLPIFREE( nlpiFreeWorhp )
+SCIP_DECL_NLPIFREE(nlpiFreeWorhp)
 {
-   SCIP_NLPIDATA* data;
-
    assert(nlpi != NULL);
+   assert(nlpidata != NULL);
+   assert(*nlpidata != NULL);
 
-   data = SCIPnlpiGetData(nlpi);
-   assert(data != NULL);
-   assert(data->blkmem != NULL);
-
-   BMSfreeBlockMemory(data->blkmem, &data);
+   SCIPfreeBlockMemory(scip, nlpidata);
+   assert(*nlpidata == NULL);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gets pointer for NLP solver
- *
- *  to do dirty stuff
- *
- * input:
- *  - nlpi datastructure for solver interface
- *
- * return: void pointer to solver
- */
+/** gets pointer for NLP solver */
 static
 SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerWorhp)
 {
@@ -972,13 +946,7 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerWorhp)
    return NULL;
 }  /*lint !e715*/
 
-/** creates a problem instance
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem pointer to store the problem data
- *  - name name of problem, can be NULL
- */
+/** creates a problem instance */
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
 {
@@ -990,23 +958,18 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, problem) );
-   if( *problem == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, problem) );
 
    /* initialize problem */
-   BMSclearMemory((*problem));
-   (*problem)->blkmem = data->blkmem;
    (*problem)->firstrun = TRUE;
-   SCIP_CALL( SCIPnlpiOracleCreate(data->blkmem, &(*problem)->oracle) );
-   SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
-   SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
+   SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
+   SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
 
    /* allocate memory for Worhp data */
-   SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->opt) );
-   SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->wsp) );
-   SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->par) );
-   SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->cnt) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(*problem)->opt) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(*problem)->wsp) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(*problem)->par) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(*problem)->cnt) );
    WorhpPreInit((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt);
 
    /* set default parameters */
@@ -1020,17 +983,12 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    (*problem)->fastfail = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&(*problem)->randnumgen, (*problem)->blkmem, DEFAULT_RANDSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &(*problem)->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** free a problem instance
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem pointer where problem data is stored
- */
+/** free a problem instance */
 static
 SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
 {
@@ -1046,7 +1004,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
    if( (*problem)->opt != NULL )
    {
       /* free memory for last solution information */
-      invalidateSolution(*problem);
+      invalidateSolution(scip, *problem);
 
       assert((*problem)->wsp != NULL);
       assert((*problem)->par != NULL);
@@ -1054,35 +1012,26 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
 
       /* free Worhp data */
       SCIP_CALL( freeWorhp(*problem) );
-      BMSfreeBlockMemory(data->blkmem, &(*problem)->cnt);
-      BMSfreeBlockMemory(data->blkmem, &(*problem)->par);
-      BMSfreeBlockMemory(data->blkmem, &(*problem)->wsp);
-      BMSfreeBlockMemory(data->blkmem, &(*problem)->opt);
+      SCIPfreeBlockMemory(scip, &(*problem)->cnt);
+      SCIPfreeBlockMemory(scip, &(*problem)->par);
+      SCIPfreeBlockMemory(scip, &(*problem)->wsp);
+      SCIPfreeBlockMemory(scip, &(*problem)->opt);
    }
 
    if( (*problem)->oracle != NULL )
    {
-      SCIP_CALL( SCIPnlpiOracleFree(&(*problem)->oracle) );
+      SCIP_CALL( SCIPnlpiOracleFree(scip, &(*problem)->oracle) );
    }
 
-   SCIPrandomFree(&(*problem)->randnumgen, (*problem)->blkmem);
-   BMSfreeMemoryArrayNull(&(*problem)->initguess);
-   BMSfreeBlockMemory(data->blkmem, problem);
+   SCIPfreeRandom(scip, &(*problem)->randnumgen);
+   SCIPfreeMemoryArrayNull(scip, &(*problem)->initguess);
+   SCIPfreeBlockMemory(scip, problem);
    *problem = NULL;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gets pointer to solver-internal problem instance
- *
- *  to do dirty stuff
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *
- * return: void pointer to problem instance
- */
+/** gets pointer to solver-internal problem instance */
 static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerWorhp)
 {
@@ -1092,16 +1041,7 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerWorhp)
    return NULL;
 }  /*lint !e715*/
 
-/** add variables
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nvars number of variables
- *  - lbs lower bounds of variables, can be NULL if -infinity
- *  - ubs upper bounds of variables, can be NULL if +infinity
- *  - varnames names of variables, can be NULL
- */
+/** add variables */
 static
 SCIP_DECL_NLPIADDVARS( nlpiAddVarsWorhp )
 {
@@ -1109,102 +1049,38 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsWorhp )
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleAddVars(problem->oracle, nvars, lbs, ubs, varnames) );
+   SCIP_CALL( SCIPnlpiOracleAddVars(scip, problem->oracle, nvars, lbs, ubs, varnames) );
 
-   BMSfreeMemoryArrayNull(&problem->initguess);
-   invalidateSolution(problem);
+   SCIPfreeMemoryArrayNull(scip, &problem->initguess);
+   invalidateSolution(scip, problem);
    problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
 
-/** add constraints
- * quadratic coefficiens: row oriented matrix for each constraint
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - ncons number of added constraints
- *  - lhss left hand sides of constraints
- *  - rhss right hand sides of constraints
- *  - nlininds number of linear coefficients for each constraint
- *    may be NULL in case of no linear part
- *  - lininds indices of variables for linear coefficients for each constraint
- *    may be NULL in case of no linear part
- *  - linvals values of linear coefficient for each constraint
- *    may be NULL in case of no linear part
- *  - nquadrows number of columns in matrix of quadratic part for each constraint
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadrowidxs indices of variables for which a quadratic part is specified
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadoffsets start index of each rows quadratic coefficients in quadinds[.] and quadvals[.]
- *    indices are given w.r.t. quadrowidxs., i.e., quadoffsets[.][i] gives the start index of row quadrowidxs[.][i] in quadvals[.]
- *    quadoffsets[.][nquadrows[.]] gives length of quadinds[.] and quadvals[.]
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadinds column indices w.r.t. quadrowidxs, i.e., quadrowidxs[quadinds[.][i]] gives the index of the variable corresponding
- *    to entry i, entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
- *  - quadvals coefficient values
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
- *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
- *    entry of array may be NULL in case of no expression tree
- *    may be NULL in case of no expression tree in any constraint
- *  - exprtrees expression tree for nonquadratic part of constraints
- *    entry of array may be NULL in case of no nonquadratic part
- *    may be NULL in case of no nonquadratic part in any constraint
- *  - names of constraints, may be NULL or entries may be NULL
- */
+/** add constraints */
 static
-SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsWorhp )
+SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleAddConstraints(problem->oracle,
-         ncons, lhss, rhss,
+   SCIP_CALL( SCIPnlpiOracleAddConstraints(scip, problem->oracle,
+         nconss, lhss, rhss,
          nlininds, lininds, linvals,
-         nquadelems, quadelems,
-         exprvaridxs, exprtrees, names) );
+         exprs, names) );
 
-   invalidateSolution(problem);
+   invalidateSolution(scip, problem);
    problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** sets or overwrites objective, a minimization problem is expected
- *  May change sparsity pattern.
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nlins number of linear variables
- *  - lininds variable indices
- *    may be NULL in case of no linear part
- *  - linvals coefficient values
- *    may be NULL in case of no linear part
- *  - nquadcols number of columns in matrix of quadratic part
- *  - quadcols indices of variables for which a quadratic part is specified
- *    may be NULL in case of no quadratic part
- *  - quadoffsets start index of each rows quadratic coefficients in quadinds and quadvals
- *    quadoffsets[.][nquadcols] gives length of quadinds and quadvals
- *    may be NULL in case of no quadratic part
- *  - quadinds column indices
- *    may be NULL in case of no quadratic part
- *  - quadvals coefficient values
- *    may be NULL in case of no quadratic part
- *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
- *    may be NULL in case of no expression tree
- *  - exprtree expression tree for nonquadratic part of objective function
- *    may be NULL in case of no nonquadratic part
- *  - constant objective value offset
- */
+/** sets or overwrites objective, a minimization problem is expected */
 static
-SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveWorhp )
+SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -1215,31 +1091,20 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveWorhp )
     * sparsity pattern of the Hessian of the Lagrangian may change.  Thus, reset Worhp if the objective was and/or
     * becomes nonlinear, but leave firstrun untouched if it was and stays linear.
     */
-   if( nquadelems > 0 || exprtree != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+   if( expr != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
       problem->firstrun = TRUE;
 
-   SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
-         constant, nlins, lininds, linvals,
-         nquadelems, quadelems,
-         exprvaridxs, exprtree) );
+   SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle,
+         constant, nlins, lininds, linvals, expr) );
 
-   invalidateSolution(problem);
+   invalidateSolution(scip, problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** change variable bounds
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nvars number of variables to change bounds
- *  - indices indices of variables to change bounds
- *  - lbs new lower bounds
- *  - ubs new upper bounds
- */
+/** change variable bounds */
 static
-SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
+SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsWorhp)
 {
 #ifdef SCIP_DISABLED_CODE
    const SCIP_Real* oldlbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
@@ -1259,7 +1124,7 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
    for( i = 0; i < nvars; ++i )
    {
       int index = indices[i];
-      SCIPdebugMessage("change bounds of %d from [%g,%g] -> [%g,%g]\n", index, oldlbs[index], oldubs[index],
+      SCIPdebugMsg(scip, "change bounds of %d from [%g,%g] -> [%g,%g]\n", index, oldlbs[index], oldubs[index],
          lbs[i], ubs[i]);
 
       if( REALABS(lbs[i] - ubs[i]) <= problem->feastol )
@@ -1270,25 +1135,16 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
    }
 #endif
 
-   SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
+   SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, problem->oracle, nvars, indices, lbs, ubs) );
 
-   invalidateSolution(problem);
+   invalidateSolution(scip, problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** change constraint bounds
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nconss number of constraints to change sides
- *  - indices indices of constraints to change sides
- *  - lhss new left hand sides
- *  - rhss new right hand sides
- */
+/** change constraint bounds */
 static
-SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesWorhp )
+SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -1305,201 +1161,100 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesWorhp )
          int index = indices[i];
          oldlhs = SCIPnlpiOracleGetConstraintLhs(problem->oracle, index);
          oldrhs = SCIPnlpiOracleGetConstraintRhs(problem->oracle, index);
-         SCIPdebugMessage("change constraint side of %d from [%g,%g] -> [%g,%g]\n", index, oldlhs, oldrhs, lhss[i], rhss[i]);
+         SCIPdebugMsg(scip, "change constraint side of %d from [%g,%g] -> [%g,%g]\n", index, oldlhs, oldrhs, lhss[i], rhss[i]);
       }
    }
 #endif
 
-   SCIP_CALL( SCIPnlpiOracleChgConsSides(problem->oracle, nconss, indices, lhss, rhss) );
+   SCIP_CALL( SCIPnlpiOracleChgConsSides(scip, problem->oracle, nconss, indices, lhss, rhss) );
 
-   invalidateSolution(problem);
+   invalidateSolution(scip, problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** delete a set of variables
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - dstats deletion status of vars; 1 if var should be deleted, 0 if not
- *
- * output:
- *  - dstats new position of var, -1 if var was deleted
- */
+/** delete a set of variables */
 static
-SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetWorhp )
+SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleDelVarSet(problem->oracle, dstats) );
+   SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, problem->oracle, dstats) );
 
-   BMSfreeMemoryArrayNull(&problem->initguess); // @TODO keep initguess for remaining variables
+   SCIPfreeMemoryArrayNull(scip, &problem->initguess); /* @TODO keep initguess for remaining variables */
 
-   invalidateSolution(problem);
+   invalidateSolution(scip, problem);
    problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** delete a set of constraints
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - dstats deletion status of rows; 1 if row should be deleted, 0 if not
- *
- * output:
- *  - dstats new position of row, -1 if row was deleted
- */
+/** delete a set of constraints */
 static
-SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetWorhp )
+SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleDelConsSet(problem->oracle, dstats) );
+   SCIP_CALL( SCIPnlpiOracleDelConsSet(scip, problem->oracle, dstats) );
 
-   invalidateSolution(problem);
+   invalidateSolution(scip, problem);
    problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** changes (or adds) linear coefficients in a constraint or objective
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idx index of constraint or -1 for objective
- *  - nvals number of values in linear constraint to change
- *  - varidxs indices of variables which coefficient to change
- *  - vals new values for coefficients
- */
+/** changes (or adds) linear coefficients in a constraint or objective */
 static
-SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsWorhp )
+SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(problem->oracle, idx, nvals, varidxs, vals) );
+   SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, problem->oracle, idx, nvals, varidxs, vals) );
 
-   invalidateSolution(problem);
+   invalidateSolution(scip, problem);
    problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** changes (or adds) coefficients in the quadratic part of a constraint or objective
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idx index of constraint or -1 for objective
- *  - nentries number of entries in quadratic matrix to change
- *  - rows row indices of entries in quadratic matrix where values should be changed
- *  - cols column indices of entries in quadratic matrix where values should be changed
- *  - values new values for entries in quadratic matrix
- */
+/** replaces the expression of a constraint or objective */
 static
-SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsWorhp )
+SCIP_DECL_NLPICHGEXPR(nlpiChgExprWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(problem->oracle, idx, nquadelems, quadelems) );
+   SCIP_CALL( SCIPnlpiOracleChgExpr(scip, problem->oracle, idxcons, expr) );
 
-   invalidateSolution(problem);
+   invalidateSolution(scip, problem);
    problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** replaces the expression tree of a constraint or objective
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idxcons index of constraint or -1 for objective
- *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL
- *  - exprtree new expression tree for constraint or objective, or NULL to only remove previous tree
- */
+/** change the constant offset in the objective */
 static
-SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeWorhp )
+SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleChgExprtree(problem->oracle, idxcons, exprvaridxs, exprtree) );
-
-   invalidateSolution(problem);
-   problem->firstrun = TRUE;
+   SCIP_CALL( SCIPnlpiOracleChgObjConstant(scip, problem->oracle, objconstant) );
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** change one coefficient in the nonlinear part
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idxcons index of constraint or -1 for objective
- *  - idxparam index of parameter
- *  - value new value for nonlinear parameter
- *
- * return: Error if parameter does not exist
- */
+/** sets initial guess for primal variables */
 static
-SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefWorhp )
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-   assert(problem->oracle != NULL);
-
-   SCIP_CALL( SCIPnlpiOracleChgExprParam(problem->oracle, idxcons, idxparam, value) );
-
-   invalidateSolution(problem);
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** change the constant offset in the objective
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - objconstant new value for objective constant
- */
-static
-SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantWorhp )
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-   assert(problem->oracle != NULL);
-
-   SCIP_CALL( SCIPnlpiOracleChgObjConstant(problem->oracle, objconstant) );
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets initial guess for primal variables
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - primalvalues initial primal values for variables, or NULL to clear previous values
- *  - consdualvalues initial dual values for constraints, or NULL to clear previous values
- *  - varlbdualvalues  initial dual values for variable lower bounds, or NULL to clear previous values
- *  - varubdualvalues  initial dual values for variable upper bounds, or NULL to clear previous values
- */
-static
-SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessWorhp )
+SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -1509,8 +1264,7 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessWorhp )
    {
       if( !problem->initguess )
       {
-         if( BMSduplicateMemoryArray(&problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_CALL( SCIPduplicateMemoryArray(scip, &problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) );
       }
       else
       {
@@ -1519,20 +1273,15 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessWorhp )
    }
    else
    {
-      BMSfreeMemoryArrayNull(&problem->initguess);
+      SCIPfreeMemoryArrayNull(scip, &problem->initguess);
    }
 
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** tries to solve NLP
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- */
+/** tries to solve NLP */
 static
-SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
+SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
 {
    SCIP_NLPIDATA* nlpidata = SCIPnlpiGetData(nlpi);
    Workspace* wsp = problem->wsp;
@@ -1561,7 +1310,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    if( problem->firstrun )
    {
       SCIP_CALL( freeWorhp(problem) );
-      SCIP_CALL( initWorhp(nlpi, problem) );
+      SCIP_CALL( initWorhp(scip, nlpi, problem) );
       problem->firstrun = FALSE;
    }
    else
@@ -1579,7 +1328,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    par->ScaledKKT = DEFAULT_SCALEDKKT;
    par->sKKTOnlyAcceptable = DEFAULT_SCALEDKKT;
 
-   par->Infty = nlpidata->infinity;
+   par->Infty = SCIPinfinity(scip);
    par->TolFeas = problem->feastol;
    par->TolOpti = problem->relobjtol;
    par->TolComp = problem->relobjtol;
@@ -1609,7 +1358,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
 
       assert(problem->randnumgen != NULL);
 
-      SCIPdebugMessage("Worhp started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+      SCIPdebugMsg(scip, "Worhp started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
       for( i = 0; i < problem->opt->n; ++i )
       {
@@ -1627,10 +1376,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("start point:\n");
+   SCIPdebugMsg(scip, "start point:\n");
    for( i = 0; i < problem->opt->n; ++i )
    {
-      SCIPdebugMessage("x[%d] = %f\n", i, problem->opt->X[i]);
+      SCIPdebugMsg(scip, "x[%d] = %f\n", i, problem->opt->X[i]);
    }
 #endif
 
@@ -1670,7 +1419,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalF) )
       {
-         if( userF(problem) != SCIP_OKAY )
+         if( userF(scip, problem) != SCIP_OKAY )
             break;
          DoneUserAction(cnt, evalF);
       }
@@ -1681,7 +1430,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalG) )
       {
-         if( userG(problem) != SCIP_OKAY )
+         if( userG(scip, problem) != SCIP_OKAY )
             break;
          DoneUserAction(cnt, evalG);
       }
@@ -1692,7 +1441,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalDF) )
       {
-         if( userDF(problem) != SCIP_OKAY )
+         if( userDF(scip, problem) != SCIP_OKAY )
             break;
          DoneUserAction(cnt, evalDF);
       }
@@ -1703,7 +1452,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalDG) )
       {
-         if( userDG(problem) != SCIP_OKAY )
+         if( userDG(scip, problem) != SCIP_OKAY )
             break;
          DoneUserAction(cnt, evalDG);
       }
@@ -1714,7 +1463,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalHM) )
       {
-         if( userHM(problem) != SCIP_OKAY)
+         if( userHM(scip, problem) != SCIP_OKAY)
             break;
          DoneUserAction(cnt, evalHM);
       }
@@ -1733,13 +1482,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    /* interpret Worhp result */
    if( cnt->status < TerminateSuccess && cnt->status > TerminateError )
    {
-      SCIPmessagePrintWarning(nlpidata->messagehdlr, "Worhp failed because of an invalid function evaluation!\n");
+      SCIPwarningMessage(scip, "Worhp failed because of an invalid function evaluation!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
    }
    else
    {
-      SCIP_CALL( evaluateWorhpRun(problem) );
+      SCIP_CALL( evaluateWorhpRun(scip, problem) );
    }
 
    /* prints a status message with information about the current solver status */
@@ -1752,16 +1501,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gives solution status
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *
- * return: Solution Status
- */
+/** gives solution status */
 static
-SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatWorhp )
+SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -1769,16 +1511,9 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatWorhp )
    return problem->lastsolstat;
 }  /*lint !e715*/
 
-/** gives termination reason
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *
- * return: Termination Status
- */
+/** gives termination reason */
 static
-SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatWorhp )
+SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -1786,22 +1521,7 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatWorhp )
    return problem->lasttermstat;
 }  /*lint !e715*/
 
-/** gives primal and dual solution values
- *
- * solver can return NULL in dual values if not available
- * but if solver provides dual values for one side of variable bounds, then it must also provide those for the other side
- *
- * for a ranged constraint, the dual variable is positive if the right hand side is active and negative if the left hand side is active
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - primalvalues buffer to store pointer to array to primal values, or NULL if not needed
- *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
- *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
- *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
- *  - objval buffer store the objective value, or NULL if not needed
- */
+/** gives primal and dual solution values */
 static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
 {
@@ -1824,7 +1544,7 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
       if( problem->lastprimal != NULL )
       {
          /* TODO store last solution value instead of reevaluating the objective function */
-         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->lastprimal, objval) );
+         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(scip, problem->oracle, problem->lastprimal, objval) );
       }
       else
          *objval = SCIP_INVALID;
@@ -1833,18 +1553,9 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gives solve statistics
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - statistics pointer to store statistics
- *
- * output:
- *  - statistics solve statistics
- */
+/** gives solve statistics */
 static
-SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsWorhp )
+SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -1855,74 +1566,36 @@ SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsWorhp )
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gives required size of a buffer to store a warmstart object
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - size pointer to store required size for warmstart buffer
- *
- * output:
- *  - size required size for warmstart buffer
- */
+/** gives required size of a buffer to store a warmstart object */
 static
-SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstartSizeWorhp )
+SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeWorhp)
 {
    /* TODO */
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** stores warmstart information in buffer
- *
- * required size of buffer should have been obtained by SCIPnlpiGetWarmstartSize before
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - buffer memory to store warmstart information
- *
- * output:
- *  - buffer warmstart information in solver specific data structure
- */
+/** stores warmstart information in buffer */
 static
-SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstartMemoWorhp )
+SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoWorhp)
 {
    /* TODO */
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** sets warmstart information in solver
- *
- * write warmstart to buffer
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - buffer warmstart information
- */
+/** sets warmstart information in solver */
 static
-SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstartMemoWorhp )
+SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoWorhp)
 {
    /* TODO */
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** gets integer parameter of NLP
- *
- * input:
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - ival pointer to store the parameter value
- *
- * output:
- *  - ival parameter value
- */
+/** gets integer parameter of NLP */
 static
-SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParWorhp )
+SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParWorhp)
 {
    assert(nlpi != NULL);
    assert(ival != NULL);
@@ -1960,12 +1633,6 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParWorhp )
       return SCIP_PARAMETERWRONGTYPE;
    }
 
-   case SCIP_NLPPAR_INFINITY:
-   {
-      SCIPerrorMessage("infinity parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
    case SCIP_NLPPAR_ITLIM:
    {
       *ival = problem->itlim;
@@ -2000,16 +1667,9 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParWorhp )
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** sets integer parameter of NLP
- *
- * input:
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - ival parameter value
- */
+/** sets integer parameter of NLP */
 static
-SCIP_DECL_NLPISETINTPAR( nlpiSetIntParWorhp )
+SCIP_DECL_NLPISETINTPAR(nlpiSetIntParWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
@@ -2020,7 +1680,7 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParWorhp )
    {
       if( ival == 0 || ival == 1 )
       {
-         SCIPdebugMessage("from scratch parameter not supported by Worhp interface yet. Ignored.\n");
+         SCIPdebugMsg(scip, "from scratch parameter not supported by Worhp interface yet. Ignored.\n");
       }
       else
       {
@@ -2052,12 +1712,6 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParWorhp )
    case SCIP_NLPPAR_LOBJLIM:
    {
       SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_INFINITY:
-   {
-      SCIPerrorMessage("infinity parameter is of type real.\n");
       return SCIP_PARAMETERWRONGTYPE;
    }
 
@@ -2109,19 +1763,9 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParWorhp )
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gets floating point parameter of NLP
- *
- * input:
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
- *  - type parameter number
- *  - dval pointer to store the parameter value
- *
- * output:
- *  - dval parameter value
- */
+/** gets floating point parameter of NLP */
 static
-SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParWorhp )
+SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParWorhp)
 {
    SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
 
@@ -2160,12 +1804,6 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParWorhp )
          break;
       }
 
-      case SCIP_NLPPAR_INFINITY:
-      {
-         *dval = data->infinity;
-         break;
-      }
-
       case SCIP_NLPPAR_ITLIM:
       {
          SCIPerrorMessage("itlim parameter is of type int.\n");
@@ -2199,16 +1837,9 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParWorhp )
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** sets floating point parameter of NLP
- *
- * input:
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
- *  - type parameter number
- *  - dval parameter value
- */
+/** sets floating point parameter of NLP */
 static
-SCIP_DECL_NLPISETREALPAR( nlpiSetRealParWorhp )
+SCIP_DECL_NLPISETREALPAR(nlpiSetRealParWorhp)
 {
    SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
 
@@ -2246,12 +1877,6 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParWorhp )
          break;
       }
 
-      case SCIP_NLPPAR_INFINITY:
-      {
-         data->infinity = dval;
-         break;
-      }
-
       case SCIP_NLPPAR_ITLIM:
       {
          SCIPerrorMessage("itlim parameter is of type real.\n");
@@ -2285,25 +1910,13 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParWorhp )
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** gets string parameter of NLP
- *
- * input:
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - sval pointer to store the string value, the user must not modify the string
- *
- * output:
- *  - sval parameter value
- */
+/** gets string parameter of NLP */
 static
-SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParWorhp )
+SCIP_DECL_NLPIGETSTRINGPAR(nlpiGetStringParWorhp)
 {
-   SCIP_NLPIDATA* nlpidata = SCIPnlpiGetData(nlpi);
-
    if( type == SCIP_NLPPAR_OPTFILE )
    {
-      SCIPmessagePrintWarning(nlpidata->messagehdlr, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
+      SCIPwarningMessage(scip, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
    }
    else
    {
@@ -2314,49 +1927,19 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParWorhp )
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** sets string parameter of NLP
- *
- * input:
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - sval parameter value
- */
+/** sets string parameter of NLP */
 static
 SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParWorhp )
 {
-   SCIP_NLPIDATA* nlpidata = SCIPnlpiGetData(nlpi);
-
    if( type == SCIP_NLPPAR_OPTFILE )
    {
-      SCIPmessagePrintWarning(nlpidata->messagehdlr, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
+      SCIPwarningMessage(scip, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
    }
    else
    {
       SCIPerrorMessage("parameter %d is not of type string.\n", type);
       return SCIP_PARAMETERWRONGTYPE;
    }
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets message handler for message output
- *
- * input:
- *  - nlpi NLP interface structure
- *  - messagehdlr SCIP message handler, or NULL to suppress all output
- */
-static
-SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrWorhp )
-{
-   SCIP_NLPIDATA* nlpidata;
-
-   assert(nlpi != NULL);
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
-
-   nlpidata->messagehdlr = messagehdlr;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -2376,16 +1959,9 @@ SCIP_RETCODE SCIPincludeNlpSolverWorhp(
    char name[SCIP_MAXSTRLEN];
    int priority;
 
-   assert(nlpi   != NULL);
-
    /* create Worhp solver interface data */
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, &nlpidata) );
-
-   nlpidata->blkmem = SCIPblkmem(scip);
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlpidata) );
    nlpidata->useip = useip;
-
-   /* initialize parameter */
-   nlpidata->infinity = SCIP_DEFAULT_INFINITY;
 
    /* disable Worhp's keyboard handler, not useful here and not threadsafe */
    (void) setenv("WORHP_DISABLE_KEYBOARD_HANDLER", "1", 0);
