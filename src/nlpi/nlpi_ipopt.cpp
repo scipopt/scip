@@ -1107,7 +1107,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             SCIPerrorMessage("Ipopt returned with status \"Insufficient Memory\"\n");
             return SCIP_NOMEMORY;
          case Invalid_Number_Detected:
-            SCIPdebugMessage("Ipopt failed because of an invalid number in function or derivative value\n");
+            SCIPdebugMsg(scip, "Ipopt failed because of an invalid number in function or derivative value\n");
             invalidateSolution(problem);
             problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
             problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
@@ -2053,7 +2053,7 @@ bool ScipNLP::get_bounds_info(
          return false;
       if( vardegree == 0 )
       {
-         SCIPdebugMessage("fix unused variable x%d [%g,%g] to 0.0 or bound\n", i, x_l[i], x_u[i]);
+         SCIPdebugMsg(scip, "fix unused variable x%d [%g,%g] to 0.0 or bound\n", i, x_l[i], x_u[i]);
          assert(x_l[i] <= x_u[i]);
          x_l[i] = x_u[i] = MAX(MIN(x_u[i], 0.0), x_l[i]);
       }
@@ -2098,7 +2098,7 @@ bool ScipNLP::get_starting_point(
       {
          SCIP_Real lb, ub;
 
-         SCIPdebugMessage("Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+         SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
          for( int i = 0; i < n; ++i )
          {
@@ -2466,7 +2466,7 @@ bool ScipNLP::intermediate_callback(
 
       if( tnlp_adapter != NULL && ip_data != NULL && IsValid(ip_data->curr()) )
       {
-         SCIPdebugMessage("update lastsol: inf_pr old = %g -> new = %g\n", nlpiproblem->lastsolinfeas, inf_pr);
+         SCIPdebugMsg(scip, "update lastsol: inf_pr old = %g -> new = %g\n", nlpiproblem->lastsolinfeas, inf_pr);
 
          if( nlpiproblem->lastsolprimals == NULL )
          {
@@ -2548,7 +2548,7 @@ bool ScipNLP::intermediate_callback(
             else if( iter >= conv_iterlim[i] )
             {
                /* we hit a limit, should we really stop? */
-               SCIPdebugMessage("convcheck %d: inf_pr = %e > target %e; inf_du = %e target %e: ",
+               SCIPdebugMsg(scip, "convcheck %d: inf_pr = %e > target %e; inf_du = %e target %e: ",
                   i, inf_pr, conv_prtarget[i], inf_du, conv_dutarget[i]);
                if( mode == RegularMode && iter <= conv_lastrestoiter + convcheck_startiter )
                {
@@ -2692,7 +2692,7 @@ void ScipNLP::finalize_solution(
       else
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
 
-      SCIPdebugMessage("drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead (acceptable: %g)\n",
+      SCIPdebugMsg(scip, "drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead (acceptable: %g)\n",
          nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas, constrvioltol);
    }
    else
