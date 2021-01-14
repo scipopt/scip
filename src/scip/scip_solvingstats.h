@@ -1277,6 +1277,27 @@ SCIP_Real SCIPgetUpperbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets global exact upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
+ *
+ *  @return the global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetUpperboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< the resulting upper bound value */
+   );
+
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
  *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
  *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound;

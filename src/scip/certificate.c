@@ -338,9 +338,16 @@ SCIP_RETCODE SCIPcertificateSetInheritanceData(
 
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
+
+   /* do nothing if the newbound is worse than the inherited bound */
+   if( RatIsLT(newbound, nodedata->derbound_inherit) )
+      return SCIP_OKAY;
+
    nodedata->inheritedbound = FALSE;
    nodedata->derindex_inherit = fileindex;
    RatSet(nodedata->derbound_inherit, newbound);
+
+   return SCIP_OKAY;
 }
 
 /** creates certificate data structure */
@@ -964,11 +971,15 @@ SCIP_RETCODE SCIPcertificatePrintResult(
 
       if( isorigfile )
       {
-         /** @todo exip: retransformSolExact would be needed here */
-         SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob, primalbound);
+         SCIP_CALL( SCIPretransformSolExact(scip, bestsol) );
       }
+
+      if( isorigfile )
+         SCIPgetPrimalboundExact(scip, primalbound);
       else
-         SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob, primalbound);
+      {
+         SCIPgetUpperboundExact(scip, primalbound);
+      }
 
       assert(!RatIsAbsInfinity(primalbound));
 
@@ -988,12 +999,16 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       /* two cases to distinguish: a primal bound has been found or not */
       if( SCIPisPrimalboundSol(scip) )
       {
-         /** @todo exip: retransformSolExact would be needed here in orig case */
          bestsol = SCIPgetBestSol(scip);
-         if( SCIPsolIsExact(bestsol) )
-            SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob, primalbound);
+         if( isorigfile )
+         {
+            SCIP_CALL( SCIPretransformSolExact(scip, bestsol) );
+         }
+
+         if( isorigfile )
+            SCIPgetPrimalboundExact(scip, primalbound);
          else
-            RatSetReal(primalbound, SCIPsolGetObj(bestsol, set, scip->transprob, scip->origprob));
+            SCIPgetUpperboundExact(scip, primalbound);
       }
       else
       {
@@ -1455,12 +1470,20 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
    )
 {
    SCIP_CERTNODEDATA* nodedataparent;
+   SCIP_CERTNODEDATA* nodedata;
 
    assert(node != NULL);
    assert(fileindex >= 0);
 
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
+      return SCIP_OKAY;
+
+   /* Retrieve node data */
+   assert(SCIPhashmapExists(certificate->nodedatahash, node));
+   nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
+
+   if( RatIsLT(newbound, nodedata->derbound_inherit) )
       return SCIP_OKAY;
 
    /* If the node is the root node, then when only update the index and bound */
@@ -1653,7 +1676,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CALL( RatCreateBuffer(set->buffer, &lowerbound) );
    if( usefarkas )
    {
-      RatSetString(lowerbound, "-inf");
+      RatSetString(lowerbound, "inf");
       /* Scale proof to have RHS = 1 */
       // for( i = 0; i < len; ++i)
       //    RatDiv(vals[i], vals[i], farkasrhs);
@@ -1842,7 +1865,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
       SCIPcertificatePrintProofMessage(certificate, "%s ", linename);
    }
 
-   if( RatIsNegInfinity(lowerbound) )
+   if( RatIsInfinity(lowerbound) )
    {
       SCIPcertificatePrintProofMessage(certificate, "G 1 0");
    }
@@ -2039,7 +2062,7 @@ int SCIPcertificatePrintUnsplitting(
       if( nodedata->leftinfeas && nodedata->rightinfeas )
       {
          infeas = TRUE;
-         RatSetString(lowerbound, "-inf");
+         RatSetString(lowerbound, "inf");
       }
       else if( nodedata->leftinfeas )
          RatSet(lowerbound, nodedata->derbound_right);
@@ -2047,6 +2070,9 @@ int SCIPcertificatePrintUnsplitting(
          RatSet(lowerbound, nodedata->derbound_left);
       else
          RatMIN(lowerbound, nodedata->derbound_left, nodedata->derbound_right);
+
+      if( RatIsInfinity(nodedata->derbound_left) && RatIsInfinity(nodedata->derbound_right) )
+         infeas = TRUE;
 
       certificate->indexcounter++;
 

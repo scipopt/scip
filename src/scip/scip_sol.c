@@ -1383,6 +1383,34 @@ SCIP_RETCODE SCIPunlinkSol(
    return SCIP_OKAY;
 }
 
+/** stores exact solution values of variables in solution's own array
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPunlinkSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPunlinkSolExact", FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL( SCIPsolUnlinkExact(sol, scip->set, scip->transprob) );
+
+   return SCIP_OKAY;
+}
+
 /** sets value of variable in primal CIP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -2863,6 +2891,66 @@ SCIP_RETCODE SCIPretransformSol(
       SCIP_Bool hasinfval;
 
       SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
+      break;
+   }
+   case SCIP_SOLORIGIN_PARTIAL:
+   case SCIP_SOLORIGIN_UNKNOWN:
+      SCIPerrorMessage("unknown solution origin.\n");
+      return SCIP_INVALIDCALL;
+
+   default:
+      /* note that this is in an internal SCIP error since all solution origins are covert in the switch above */
+      SCIPerrorMessage("invalid solution origin <%d>\n", SCIPsolGetOrigin(sol));
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** retransforms exact solution to original problem space
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPretransformSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPretransformSolExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   switch ( SCIPsolGetOrigin(sol) )
+   {
+   case SCIP_SOLORIGIN_ORIGINAL:
+      /* nothing to do */
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_LPSOL:
+   case SCIP_SOLORIGIN_NLPSOL:
+   case SCIP_SOLORIGIN_RELAXSOL:
+   case SCIP_SOLORIGIN_PSEUDOSOL:
+
+      /* first unlink solution */
+      SCIP_CALL( SCIPunlinkSolExact(scip, sol) );
+
+      /*lint -fallthrough*/
+   case SCIP_SOLORIGIN_ZERO:
+   {
+      SCIP_Bool hasinfval;
+
+      SCIP_CALL( SCIPsolRetransformExact(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
       break;
    }
    case SCIP_SOLORIGIN_PARTIAL:
