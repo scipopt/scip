@@ -667,26 +667,12 @@ SCIP_RETCODE solveSubscip(
    assert(scip != NULL);
    assert(subscip != NULL);
 
-   softtimeparam = SCIPgetParam(scip, "limits/softtime");
-
    /* set time limit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
    {
       timelimit -= SCIPgetSolvingTime(scip);
       timelimit += SCIPgetSolvingTime(subscip);
-   }
-
-   /* set soft time limit, if specified in main SCIP and if it exists */
-   if( softtimeparam != NULL )
-   {
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/softtime", &softtimelimit) );
-      if( softtimelimit > -0.5 )
-      {
-         softtimelimit -= SCIPgetSolvingTime(scip);
-         softtimelimit += SCIPgetSolvingTime(subscip);
-         softtimelimit = MAX(softtimelimit, 0.0);
-      }
    }
 
    /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
@@ -713,9 +699,21 @@ SCIP_RETCODE solveSubscip(
    /* set time and memory limit for the subproblem */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
 
-   /* only set parameter if it exists */
+   /* only set soft time limit if it exists */
+   softtimeparam = SCIPgetParam(scip, "limits/softtime");
    if( softtimeparam != NULL )
+   {
+       /* set soft time limit, if specified in main SCIP and if it exists */
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/softtime", &softtimelimit) );
+      if( softtimelimit > -0.5 )
+      {
+         softtimelimit -= SCIPgetSolvingTime(scip);
+         softtimelimit += SCIPgetSolvingTime(subscip);
+         softtimelimit = MAX(softtimelimit, 0.0);
+      }
+
       SCIP_CALL( SCIPsetRealParam(subscip, "limits/softtime", softtimelimit) );
+   }
 
    /* set gap limit */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", gaplimit) );
