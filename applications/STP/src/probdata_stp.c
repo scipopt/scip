@@ -2745,6 +2745,8 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/probing/maxprerounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/pseudoobj/timingmask", 5) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/redcost/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", 0) );
    SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/maxreliable", 1.0) );
 
    SCIP_CALL( SCIPsetBoolParam(scip, "timing/reading", TRUE) );
