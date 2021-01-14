@@ -139,7 +139,6 @@
 #include <scip/cons_linking.h>
 #include <scip/cons_bounddisjunction.h>
 #include <scip/cons_nonlinear.h>
-//#include <scip/cons_expr_var.h>
 #include <scip/pub_expr.h>
 #include <scip/misc.h>
 #include <scip/scip_datastructures.h>
@@ -1244,13 +1243,13 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    int**                 perms               /**< permutations */
    )
 {
-   SCIP_CONSHDLR* exprconshdlr;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_HASHMAP* varmap;
    SCIP_VAR** occuringvars;
    SCIP_Real* permrow = 0;
    SCIP_Bool success;
    int* rhsmatbeg = 0;
-   int nexprconss;
+   int nconss;
    int noccuringvars;
    int oldrhs;
    int i;
@@ -1268,8 +1267,8 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       rhsmatbeg[j] = -1;
 
    /* get info for non-linear part */
-   exprconshdlr = SCIPfindConshdlr(scip, "expr");
-   nexprconss = SCIPconshdlrGetNConss(exprconshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   nconss = conshdlr != NULL ? SCIPconshdlrGetNConss(conshdlr) : 0;
 
    /* create hashmaps for variable permutation and constraints in non-linear part array for occuring variables */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), matrixdata->npermvars) );
@@ -1404,12 +1403,12 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       }
 
       /* check all non-linear constraints */
-      for( i = 0; i < nexprconss; ++i )
+      for( i = 0; i < nconss; ++i )
       {
          SCIP_CONS* cons1;
          int npermuted = 0;
 
-         cons1 = SCIPconshdlrGetConss(exprconshdlr)[i];
+         cons1 = SCIPconshdlrGetConss(conshdlr)[i];
 
          SCIP_CALL( SCIPgetConsVars(scip, cons1, occuringvars, matrixdata->npermvars, &success) );
          assert(success);
@@ -1434,7 +1433,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             SCIP_Bool infeasible;
 
             /* copy contraints but exchange variables according to hashmap */
-            SCIP_CALL( SCIPgetConsCopy(scip, scip, cons1, &permutedcons, exprconshdlr, varmap, NULL, NULL,
+            SCIP_CALL( SCIPgetConsCopy(scip, scip, cons1, &permutedcons, conshdlr, varmap, NULL, NULL,
                   SCIPconsIsInitial(cons1), SCIPconsIsSeparated(cons1), SCIPconsIsEnforced(cons1),
                   SCIPconsIsChecked(cons1), SCIPconsIsPropagated(cons1), SCIPconsIsLocal(cons1),
                   SCIPconsIsModifiable(cons1), SCIPconsIsDynamic(cons1), SCIPconsIsRemovable(cons1),
@@ -1448,11 +1447,11 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             assert(!infeasible);
 
             /* look for a constraint with same lhs, rhs and expression */
-            for( j = 0; j < nexprconss; ++j )
+            for( j = 0; j < nconss; ++j )
             {
                SCIP_CONS* cons2;
 
-               cons2 = SCIPconshdlrGetConss(exprconshdlr)[j];
+               cons2 = SCIPconshdlrGetConss(conshdlr)[j];
 
                if( SCIPisEQ(scip, SCIPgetRhsConsNonlinear(cons2), SCIPgetRhsConsNonlinear(permutedcons))
                   && SCIPisEQ(scip, SCIPgetLhsConsNonlinear(cons2), SCIPgetLhsConsNonlinear(permutedcons))
@@ -1686,7 +1685,7 @@ SCIP_RETCODE computeSymmetryGroup(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLR* exprconshdlr;
+   SCIP_CONSHDLR* nlconshdlr;
    SYM_MATRIXDATA matrixdata;
    SYM_EXPRDATA exprdata;
    SCIP_HASHTABLE* vartypemap;
@@ -1705,7 +1704,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int nuniquevararray = 0;
    int nhandleconss;
    int nactiveconss;
-   int nexprconss;
+   int nnlconss;
    int nconss;
    int nvars;
    int nbinvars;
@@ -1756,11 +1755,11 @@ SCIP_RETCODE computeSymmetryGroup(
    conss = SCIPgetConss(scip);
    assert( conss != NULL );
 
-   exprconshdlr = SCIPfindConshdlr(scip, "expr");
+   nlconshdlr = SCIPfindConshdlr(scip, "nonlinear");
 
    /* compute the number of active constraints */
    nactiveconss = SCIPgetNActiveConss(scip);
-   nexprconss = SCIPconshdlrGetNActiveConss(exprconshdlr);
+   nnlconss = nlconshdlr != NULL ? SCIPconshdlrGetNActiveConss(nlconshdlr) : 0;
 
    /* exit if no active constraints are available */
    if ( nactiveconss == 0 )
@@ -1830,10 +1829,10 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
 
    /* create hashset for auxvars and iterator for expression constraints */
-   if( nexprconss > 0 )
+   if( nnlconss > 0 )
    {
       SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, isnonlinvar, nvars) );
-      SCIP_CALL( SCIPhashsetCreate(&auxvars, SCIPblkmem(scip), nexprconss) );
+      SCIP_CALL( SCIPhashsetCreate(&auxvars, SCIPblkmem(scip), nnlconss) );
       SCIP_CALL( SCIPcreateExpriter(scip, &it) );
    }
    else
@@ -2151,7 +2150,7 @@ SCIP_RETCODE computeSymmetryGroup(
                   SCIPconsIsTransformed(cons), SYM_SENSE_BOUNDIS_TYPE_2, &matrixdata, nconssforvar) );
          }
       }
-      else if ( strcmp(conshdlrname, "expr") == 0 )
+      else if ( strcmp(conshdlrname, "nonlinear") == 0 )
       {
          SCIP_EXPR* expr;
          SCIP_EXPR* rootexpr = SCIPgetExprConsNonlinear(cons);
@@ -2210,14 +2209,14 @@ SCIP_RETCODE computeSymmetryGroup(
          return SCIP_ERROR;
       }
    }
-   assert( matrixdata.nrhscoef <= 2 * (nactiveconss - nexprconss) );
+   assert( matrixdata.nrhscoef <= 2 * (nactiveconss - nnlconss) );
    assert( matrixdata.nrhscoef >= 0 );
 
    SCIPfreeBlockMemoryArray(scip, &consvals, nallvars);
    SCIPfreeBlockMemoryArray(scip, &consvars, nallvars);
 
    /* if no active constraint contains active variables */
-   if ( nexprconss == 0 && matrixdata.nrhscoef == 0 )
+   if ( nnlconss == 0 && matrixdata.nrhscoef == 0 )
    {
       *success = TRUE;
 
@@ -2268,7 +2267,7 @@ SCIP_RETCODE computeSymmetryGroup(
       assert( var != NULL );
 
       /* if the variable type should be fixed, just increase the color */
-      if ( SymmetryFixVar(fixedtype, var) || (nexprconss > 0 && SCIPhashsetExists(auxvars, (void*) var)) )
+      if ( SymmetryFixVar(fixedtype, var) || (nnlconss > 0 && SCIPhashsetExists(auxvars, (void*) var)) )
       {
          matrixdata.permvarcolors[j] = matrixdata.nuniquevars++;
 #ifdef SCIP_OUTPUT
@@ -2333,7 +2332,7 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( usecolumnsparsity )
          SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
-      if( nexprconss > 0 )
+      if( nnlconss > 0 )
       {
          SCIPfreeExpriter(&it);
          SCIPhashsetFree(&auxvars, SCIPblkmem(scip));
@@ -2464,7 +2463,7 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvarsorig);
 
    /* free cons expr specific data */
-   if( nexprconss > 0 )
+   if( nnlconss > 0 )
    {
       assert(it != NULL);
       assert(auxvars != NULL);
@@ -2494,6 +2493,7 @@ SCIP_RETCODE determineSymmetry(
    SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
    )
 { /*lint --e{641}*/
+   SCIP_CONSHDLR* conshdlr;
    SCIP_Bool successful;
    int maxgenerators;
    int nhandleconss;
@@ -2681,7 +2681,8 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
 
    /* store whether problem is linear */
-   propdata->islinearproblem = (SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "expr")) == 0);
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   propdata->islinearproblem = (conshdlr == NULL) || (SCIPconshdlrGetNConss(conshdlr) == 0);
 
    /* actually compute (global) symmetry */
    SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, propdata->compresssymmetries, propdata->compressthreshold,

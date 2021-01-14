@@ -19,18 +19,11 @@
  * @author Fabian Wegscheider
  */
 
-#include <scip/scip.h>
-#include <scip/cons_expr.h>
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_var.h"
-#include <scip/cons_expr_pow.h>
-#include <include/scip_test.h>
-#include <scip/symmetry.h>
-#include <scip/prop_symmetry.h>
-#include <symmetry/compute_symmetry.h>
-#include <scip/scipdefplugins.h>
-#include <scip/cons_expr_exp.h>
-#include <scip/cons_expr_product.h>
+#include "scip/scip.h"
+#include "scip/scipdefplugins.h"
+#include "scip/symmetry.h"
+#include "symmetry/compute_symmetry.h"
+#include "include/scip_test.h"
 
 static SCIP* scip;
 
@@ -823,7 +816,7 @@ Test(test_compute_symmetry, basic6, .description = "compute symmetry for a simpl
 }
 
 /* TEST 4 */
-Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple example with 4 variables and 2 expr constraints - before presolving")
+Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple example with 4 variables and 2 nonlinear constraints - before presolving")
 {
    SCIP_VAR* x;
    SCIP_VAR* y;
@@ -832,14 +825,14 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
    SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** permvars;
-   SCIP_CONSEXPR_EXPR* xexpr;
-   SCIP_CONSEXPR_EXPR* yexpr;
-   SCIP_CONSEXPR_EXPR* zexpr;
-   SCIP_CONSEXPR_EXPR* wexpr;
-   SCIP_CONSEXPR_EXPR** powexprs1;
-   SCIP_CONSEXPR_EXPR** powexprs2;
-   SCIP_CONSEXPR_EXPR* sumexpr1;
-   SCIP_CONSEXPR_EXPR* sumexpr2;
+   SCIP_EXPR* xexpr;
+   SCIP_EXPR* yexpr;
+   SCIP_EXPR* zexpr;
+   SCIP_EXPR* wexpr;
+   SCIP_EXPR** powexprs1;
+   SCIP_EXPR** powexprs2;
+   SCIP_EXPR* sumexpr1;
+   SCIP_EXPR* sumexpr2;
    int** perms;
    int* orbits;
    int* orbitbegins;
@@ -850,8 +843,8 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
    SCIP_CALL( SCIPallocBufferArray(scip, &powexprs1, 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &powexprs2, 2) );
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert(conshdlr != NULL);
 
    /* skip test if no symmetry can be computed */
@@ -874,22 +867,22 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
    SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, w) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[0], xexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[1], yexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[0], zexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[1], wexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr1, 2, powexprs1, NULL, 0) );
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr2, 2, powexprs2, NULL, 0) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[0], xexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[1], yexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[0], zexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[1], wexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 2, powexprs1, NULL, 0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 2, powexprs2, NULL, 0, NULL, NULL) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e1", sumexpr1, 1.0, 1.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e1", sumexpr1, 1.0, 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e2", sumexpr2, 1.0, 1.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e2", sumexpr2, 1.0, 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -947,16 +940,16 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
       }
 #endif
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr2) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr1) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[1]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[0]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[1]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[0]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
@@ -967,7 +960,7 @@ Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple
 }
 
 /* TEST 5 */
-Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more complex example with 5 variables and 3 expr constraints - before presolving")
+Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more complex example with 5 variables and 3 nonlinear constraints - before presolving")
 {
    SCIP_VAR* x;
    SCIP_VAR* y;
@@ -977,19 +970,19 @@ Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more c
    SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** permvars;
-   SCIP_CONSEXPR_EXPR* xexpr;
-   SCIP_CONSEXPR_EXPR* yexpr;
-   SCIP_CONSEXPR_EXPR* zexpr;
-   SCIP_CONSEXPR_EXPR* wexpr;
-   SCIP_CONSEXPR_EXPR* vexpr;
-   SCIP_CONSEXPR_EXPR** powexprs1;
-   SCIP_CONSEXPR_EXPR** powexprs2;
-   SCIP_CONSEXPR_EXPR* sumexpr1;
-   SCIP_CONSEXPR_EXPR* sumexpr2;
-   SCIP_CONSEXPR_EXPR* sumexpr3;
-   SCIP_CONSEXPR_EXPR* expexpr1;
-   SCIP_CONSEXPR_EXPR* expexpr2;
-   SCIP_CONSEXPR_EXPR* expexpr3;
+   SCIP_EXPR* xexpr;
+   SCIP_EXPR* yexpr;
+   SCIP_EXPR* zexpr;
+   SCIP_EXPR* wexpr;
+   SCIP_EXPR* vexpr;
+   SCIP_EXPR** powexprs1;
+   SCIP_EXPR** powexprs2;
+   SCIP_EXPR* sumexpr1;
+   SCIP_EXPR* sumexpr2;
+   SCIP_EXPR* sumexpr3;
+   SCIP_EXPR* expexpr1;
+   SCIP_EXPR* expexpr2;
+   SCIP_EXPR* expexpr3;
    SCIP_Real vals1[5] = {1,1,1,1,-1};
    SCIP_Real vals2[5] = {5,5,5,5,5};
    int** perms;
@@ -1002,8 +995,8 @@ Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more c
    SCIP_CALL( SCIPallocBufferArray(scip, &powexprs1, 5) );
    SCIP_CALL( SCIPallocBufferArray(scip, &powexprs2, 5) );
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert(conshdlr != NULL);
 
    /* skip test if no symmetry can be computed */
@@ -1029,41 +1022,41 @@ Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more c
    SCIP_CALL( SCIPcreateVarBasic(scip, &v, "v", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, v) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &vexpr, v) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &vexpr, v, NULL, NULL) );
 
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[0], xexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[1], yexpr, 3) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[2], zexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[3], wexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[4], vexpr, 2) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[0], xexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[1], yexpr, 3, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[2], zexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[3], wexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[4], vexpr, 2, NULL, NULL) );
 
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[0], xexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[1], yexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[2], zexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[3], wexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[4], vexpr, 2) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[0], xexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[1], yexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[2], zexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[3], wexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[4], vexpr, 2, NULL, NULL) );
 
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr1, 5, powexprs1, NULL, 0) );
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr2, 5, powexprs2, vals1, 0) );
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr3, 5, powexprs2, vals2, 0) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 5, powexprs1, NULL, 0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 5, powexprs2, vals1, 0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr3, 5, powexprs2, vals2, 0, NULL, NULL) );
 
-   SCIP_CALL( SCIPcreateConsExprExprExp(scip, conshdlr, &expexpr1, sumexpr1) );
-   SCIP_CALL( SCIPcreateConsExprExprExp(scip, conshdlr, &expexpr2, sumexpr2) );
-   SCIP_CALL( SCIPcreateConsExprExprExp(scip, conshdlr, &expexpr3, sumexpr3) );
+   SCIP_CALL( SCIPcreateExprExp(scip, &expexpr1, sumexpr1, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprExp(scip, &expexpr2, sumexpr2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprExp(scip, &expexpr3, sumexpr3, NULL, NULL) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e1", expexpr1, 0.0, 1.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e1", expexpr1, 0.0, 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e2", expexpr2, 0.0, 1.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e2", expexpr2, 0.0, 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e3", expexpr3, 0.0, 1.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e3", expexpr3, 0.0, 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -1119,27 +1112,27 @@ Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more c
    }
 #endif
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expexpr3) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expexpr2) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expexpr1) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr3) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr2) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr1) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[4]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[3]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[2]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[1]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[0]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[4]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[3]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[2]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[1]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[0]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &vexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expexpr3) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr3) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[4]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[3]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[2]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[4]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[3]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[2]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &vexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &v) );
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
@@ -1151,7 +1144,7 @@ Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more c
 }
 
 /* TEST 6 */
-Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple example with 4 variables, 2 expr constraints and 1 linear constaint - before presolving")
+Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple example with 4 variables, 2 nonlinear constraints and 1 linear constaint - before presolving")
 {
    SCIP_VAR* x;
    SCIP_VAR* y;
@@ -1162,14 +1155,14 @@ Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple
    SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** permvars;
-   SCIP_CONSEXPR_EXPR* xexpr;
-   SCIP_CONSEXPR_EXPR* yexpr;
-   SCIP_CONSEXPR_EXPR* zexpr;
-   SCIP_CONSEXPR_EXPR* wexpr;
-   SCIP_CONSEXPR_EXPR** powexprs1;
-   SCIP_CONSEXPR_EXPR** powexprs2;
-   SCIP_CONSEXPR_EXPR* sumexpr1;
-   SCIP_CONSEXPR_EXPR* sumexpr2;
+   SCIP_EXPR* xexpr;
+   SCIP_EXPR* yexpr;
+   SCIP_EXPR* zexpr;
+   SCIP_EXPR* wexpr;
+   SCIP_EXPR** powexprs1;
+   SCIP_EXPR** powexprs2;
+   SCIP_EXPR* sumexpr1;
+   SCIP_EXPR* sumexpr2;
    int** perms;
    int* orbits;
    int* orbitbegins;
@@ -1180,8 +1173,8 @@ Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple
    SCIP_CALL( SCIPallocBufferArray(scip, &powexprs1, 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &powexprs2, 2) );
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert(conshdlr != NULL);
 
    /* skip test if no symmetry can be computed */
@@ -1205,22 +1198,22 @@ Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple
    SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, w) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[0], xexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs1[1], yexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[0], zexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexprs2[1], wexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr1, 2, powexprs1, NULL, 0) );
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr2, 2, powexprs2, NULL, 0) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[0], xexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[1], yexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[0], zexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[1], wexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 2, powexprs1, NULL, 0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 2, powexprs2, NULL, 0, NULL, NULL) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e1", sumexpr1, 1.0, 1.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e1", sumexpr1, 1.0, 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e2", sumexpr2, 1.0, 1.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e2", sumexpr2, 1.0, 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -1291,16 +1284,16 @@ Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple
       }
    #endif
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr2) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr1) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[1]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs2[0]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[1]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexprs1[0]) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
@@ -1311,7 +1304,7 @@ Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple
 }
 
 /* TEST 6 */
-Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple example with 4 variables and 3 expr constraint - before presolving")
+Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple example with 4 variables and 3 nonlinear constraints - before presolving")
 {
    SCIP_VAR* x;
    SCIP_VAR* y;
@@ -1321,17 +1314,17 @@ Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple
    SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** permvars;
-   SCIP_CONSEXPR_EXPR** summands;
-   SCIP_CONSEXPR_EXPR* xexpr;
-   SCIP_CONSEXPR_EXPR* yexpr;
-   SCIP_CONSEXPR_EXPR* zexpr;
-   SCIP_CONSEXPR_EXPR* wexpr;
-   SCIP_CONSEXPR_EXPR* powexpr1;
-   SCIP_CONSEXPR_EXPR* powexpr2;
-   SCIP_CONSEXPR_EXPR* prodexpr;
-   SCIP_CONSEXPR_EXPR* sumexpr1;
-   SCIP_CONSEXPR_EXPR* sumexpr2;
-   SCIP_CONSEXPR_EXPR* sumexpr3;
+   SCIP_EXPR** summands;
+   SCIP_EXPR* xexpr;
+   SCIP_EXPR* yexpr;
+   SCIP_EXPR* zexpr;
+   SCIP_EXPR* wexpr;
+   SCIP_EXPR* powexpr1;
+   SCIP_EXPR* powexpr2;
+   SCIP_EXPR* prodexpr;
+   SCIP_EXPR* sumexpr1;
+   SCIP_EXPR* sumexpr2;
+   SCIP_EXPR* sumexpr3;
    int** perms;
    int* orbits;
    int* orbitbegins;
@@ -1342,8 +1335,8 @@ Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple
 
    SCIP_CALL( SCIPallocBufferArray(scip, &summands, 3) );
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert(conshdlr != NULL);
 
    /* skip test if no symmetry can be computed */
@@ -1367,42 +1360,42 @@ Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple
    SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, w) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexpr1, xexpr, 2) );
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &powexpr2, yexpr, 2) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr1, xexpr, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr2, yexpr, 2, NULL, NULL) );
    summands[0] = xexpr;
    summands[1] = yexpr;
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexpr, 2, summands, 1) );
+   SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr, 2, summands, 1, NULL, NULL) );
 
    summands[0] = powexpr1;
    summands[1] = zexpr;
    vals[0] = 1.0;
    vals[1] = -4.0;
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr1, 2, summands, vals, 0) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 2, summands, vals, 0, NULL, NULL) );
 
    summands[0] = powexpr2;
    summands[1] = wexpr;
    vals[0] = 1.0;
    vals[1] = -4.0;
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr2, 2, summands, vals, 0) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 2, summands, vals, 0, NULL, NULL) );
 
    summands[0] = xexpr;
    summands[1] = yexpr;
    summands[2] = prodexpr;
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr3, 3, summands, NULL, 0) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr3, 3, summands, NULL, 0, NULL, NULL) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e1", sumexpr1, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e1", sumexpr1, -SCIPinfinity(scip), 0.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e2", sumexpr2, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e2", sumexpr2, -SCIPinfinity(scip), 0.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "e3", sumexpr3, -SCIPinfinity(scip), 1.0) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e3", sumexpr3, -SCIPinfinity(scip), 1.0) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -1462,16 +1455,16 @@ Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple
    }
 #endif
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr3) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr2) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr1) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr2) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr1) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr3) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );

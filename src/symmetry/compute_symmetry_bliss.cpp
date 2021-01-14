@@ -32,11 +32,13 @@
 #include <vector>
 #include <list>
 #include <math.h>
-#include <scip/cons_expr_var.h>
-#include <scip/cons_expr_sum.h>
-#include <scip/cons_expr_pow.h>
-#include <scip/cons_expr_iterator.h>
-#include <scip/cons_linear.h>
+
+#include "scip/expr_var.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_pow.h"
+#include "scip/expr.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_linear.h"
 
 using std::vector;
 
@@ -74,12 +76,12 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQOptype)
    k2 = (SYM_OPTYPE*) key2;
 
    /* first check operator name */
-   if ( SCIPgetConsExprExprHdlr(k1->expr) != SCIPgetConsExprExprHdlr(k2->expr) )
+   if ( SCIPexprGetHdlr(k1->expr) != SCIPexprGetHdlr(k2->expr) )
       return FALSE;
 
-   /* for pow expressions, also check exponent */
-   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(k1->expr)), "pow") == 0
-      && SCIPgetConsExprExprPowExponent(k1->expr) != SCIPgetConsExprExprPowExponent(k2->expr) )
+   /* for pow expressions, also check exponent (TODO should that happen for signpow as well?) */
+   if( SCIPisExprPower((SCIP*)userptr, k1->expr)
+      && SCIPgetExponentExprPow(k1->expr) != SCIPgetExponentExprPow(k2->expr) )
    {
          return FALSE;
    }
@@ -100,13 +102,13 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
 
    k = (SYM_OPTYPE*) key;
 
-   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(k->expr)), "pow") == 0 )
-      exponent = SCIPgetConsExprExprPowExponent(k->expr);
+   if( SCIPisExprPower((SCIP*)userptr, k->expr) )
+      exponent = SCIPgetExponentExprPow(k->expr);
    else
       exponent = 1.0;
 
    return SCIPhashTwo(SCIPrealHashCode(exponent), k->level),
-      (uint64_t) SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(k->expr));
+      (uint64_t) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr));
 }
 
 /* ------------------- map for constant types ------------------- */
@@ -491,9 +493,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SYM_CONSTTYPE* uniqueconstarray = NULL;
    SYM_CONSTTYPE* sumcoefarray = NULL;
    SYM_RHSTYPE* uniquerhsarray = NULL;
-   SCIP_CONSHDLR* consexprhdlr = SCIPfindConshdlr(scip, "expr");
-   SCIP_CONS** exprconss = SCIPconshdlrGetConss(consexprhdlr);
-   int nexprconss = SCIPconshdlrGetNConss(consexprhdlr);
+   SCIP_CONSHDLR* conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   SCIP_CONS** conss = SCIPconshdlrGetConss(conshdlr);
+   int nconss = SCIPconshdlrGetNConss(conshdlr);
    int nuniqueops = 0;
    int nuniqueconsts = 0;
    int nuniquecoefs = 0;
@@ -501,7 +503,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    int oparraysize = exprdata->nuniqueoperators;
    int constarraysize = exprdata->nuniqueconstants;
    int coefarraysize = exprdata->nuniquecoefs;
-   int rhsarraysize = nexprconss;
+   int rhsarraysize = nconss;
 
    assert(scip != NULL);
    assert(G != NULL);
@@ -531,38 +533,37 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sumcoefarray, coefarraysize) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquerhsarray, rhsarraysize) );
 
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_EXPRITER* it;
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
 
    success = TRUE; /*lint !e838*/
 
    /* iterate over all expressions and add the corresponding nodes to the graph */
-   for( int i = 0; i < nexprconss; ++i )
+   for( int i = 0; i < nconss; ++i )
    {
-      SCIP_CONSEXPR_EXPR* rootexpr = SCIPgetExprConsExpr(scip, exprconss[i]);
+      SCIP_EXPR* rootexpr = SCIPgetExprConsNonlinear(conss[i]);
       vector<int> visitednodes(0);
       vector<SCIP_Bool> ischildofsum(0);
       int currentlevel = 0;
 
-      SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-      SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+      SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+      SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
 
-      for( SCIP_CONSEXPR_EXPR* expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( SCIP_EXPR* expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
-         switch( SCIPexpriteratorGetStageDFS(it) )
+         switch( SCIPexpriterGetStageDFS(it) )
          {
             /* upon entering an expression, check its type and add nodes and edges if neccessary */
-            case SCIP_CONSEXPRITERATOR_ENTEREXPR:
+            case SCIP_EXPRITER_ENTEREXPR:
             {
                int node = -1;
                int parentnode = -1;
                int color = -1;
-               const char* opname = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
 
                /* for variable expressions, get the corresponding node that is already in the graph */
-               if( SCIPisConsExprExprVar(expr))
+               if( SCIPisExprVar(scip, expr))
                {
-                  SCIP_VAR* var = (SCIPgetConsExprExprVarVar(expr));
+                  SCIP_VAR* var = SCIPgetVarExprVar(expr);
 
                   /* check whether the variable is active; if not, then replace the inactive variable by its aggregation
                    * or its fixed value; note that this step is equivalent as representing an inactive variable as sum
@@ -697,14 +698,14 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
                }
                /* for constant expressions, get the color of its type (value) or assign a new one */
-               else if( strcmp(opname, "val") == 0 )
+               else if( SCIPisExprValue(scip, expr) )
                {
                   SYM_CONSTTYPE* ct;
 
                   assert(nuniqueconsts < constarraysize);
 
                   ct = &uniqueconstarray[nuniqueconsts];
-                  ct->value = SCIPgetConsExprExprValue(expr);
+                  ct->value = SCIPgetValueExprValue(expr);
 
                   if( !SCIPhashtableExists(consttypemap, (void *) ct))
                   {
@@ -744,7 +745,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                }
 
                /* if this is the root expression, add the constraint side node (will be parent of expression node) */
-               if( SCIPexpriteratorGetParentDFS(it) == NULL )
+               if( SCIPexpriterGetParentDFS(it) == NULL )
                {
                   /* add the node corresponding to the constraint */
                   SYM_RHSTYPE* rt;
@@ -753,8 +754,8 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   assert(nuniquerhs < rhsarraysize);
 
                   rt = &uniquerhsarray[nuniquerhs];
-                  rt->lhs = SCIPgetLhsConsExpr(scip, exprconss[i]);
-                  rt->rhs = SCIPgetRhsConsExpr(scip, exprconss[i]);
+                  rt->lhs = SCIPgetLhsConsNonlinear(conss[i]);
+                  rt->rhs = SCIPgetRhsConsNonlinear(conss[i]);
 
                   if( !SCIPhashtableExists(rhstypemap, (void *) rt))
                   {
@@ -801,13 +802,13 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                ++nedges;
 
                /* for sum expression, also add intermediate nodes for the coefficients */
-               if( strcmp(opname, "sum") == 0 )
+               if( SCIPisExprSum(scip, expr) )
                {
-                  SCIP_Real* coefs = SCIPgetConsExprExprSumCoefs(expr);
+                  SCIP_Real* coefs = SCIPgetCoefsExprSum(expr);
                   int internode;
 
                   /* iterate over children from last to first, such that visitednodes array is in correct order */
-                  for( int j = SCIPgetConsExprExprNChildren(expr) - 1; j >= 0; --j )
+                  for( int j = SCIPexprGetNChildren(expr) - 1; j >= 0; --j )
                   {
                      SYM_CONSTTYPE* ct;
 
@@ -841,7 +842,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
 
                   /* add node for the constant term of the sum expression */
-                  SCIP_Real constval = SCIPgetConsExprExprSumConstant(expr);
+                  SCIP_Real constval = SCIPgetConstantExprSum(expr);
                   if( constval != 0.0 )
                   {
                      SYM_CONSTTYPE* ct;
@@ -888,7 +889,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
             }
 
             /* when leaving an expression, the nodes that are not needed anymore are erased from the respective arrays */
-            case SCIP_CONSEXPRITERATOR_LEAVEEXPR:
+            case SCIP_EXPRITER_LEAVEEXPR:
             {
                visitednodes.pop_back();
                ischildofsum.pop_back();
@@ -925,7 +926,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    }
 
    /* free everything */
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
    SCIPfreeBlockMemoryArrayNull(scip, &uniquerhsarray, rhsarraysize);
    SCIPfreeBlockMemoryArrayNull(scip, &sumcoefarray, coefarraysize);
    SCIPfreeBlockMemoryArrayNull(scip, &uniqueconstarray, constarraysize);

@@ -46,6 +46,7 @@ void setup(void)
 
    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
