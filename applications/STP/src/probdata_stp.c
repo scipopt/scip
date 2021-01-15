@@ -2708,15 +2708,15 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
       printf("\n using SoPlex specific parameters (use of commercial LP solver is recommended!) \n\n");
 
       SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) );
-      SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.4) ); // todo tune > 0.4  best soplex: 0.8
-      SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune > 0.4 best soplex: 0.8
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.8) );
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.8) );
       SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.01) );
    }
    else
    {
       SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) ); // todo tune
       SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.4) ); // todo tune > 0.4
-      SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune > 0.4 best soplex: 0.8
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) ); // todo tune > 0.4
       SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.01) ); // todo tune < 0.1
    }
 
@@ -2754,9 +2754,9 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    // todo test properly; normal dfs?
    SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/restartdfs/stdpriority", 400000) );
 
-   SCIP_CALL( SCIPsetCharParam(scip, "estimation/restarts/restartpolicy", 'n') );
-   SCIP_CALL( SCIPsetCharParam(scip, "estimation/method", 'o') );
-
+   // todo: try estimation/method", 'o'
+ //  SCIP_CALL( SCIPsetCharParam(scip, "estimation/restarts/restartpolicy", 'n') );
+ //  SCIP_CALL( SCIPsetCharParam(scip, "estimation/method", 'o') );
 
    return SCIP_OKAY;
 }
