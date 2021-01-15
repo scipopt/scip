@@ -660,9 +660,7 @@ SCIP_RETCODE solveSubscip(
    )
 {
    SCIP_Real timelimit;
-   SCIP_Real softtimelimit;
    SCIP_Real memorylimit;
-   SCIP_PARAM* softtimeparam;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -700,9 +698,10 @@ SCIP_RETCODE solveSubscip(
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
 
    /* only set soft time limit if it exists */
-   softtimeparam = SCIPgetParam(scip, "limits/softtime");
-   if( softtimeparam != NULL )
+   if( SCIPgetParam(scip, "limits/softtime") != NULL )
    {
+      SCIP_Real softtimelimit;
+
        /* set soft time limit, if specified in main SCIP and if it exists */
       SCIP_CALL( SCIPgetRealParam(scip, "limits/softtime", &softtimelimit) );
       if( softtimelimit > -0.5 )
