@@ -1941,6 +1941,32 @@ SCIP_Real solstp_getObjCsr(
 }
 
 
+/** gets STP solution from SCIP solution */
+void solstp_getStpFromSCIPsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             scipsol,
+   const GRAPH*          g,                  /**< the graph */
+   int*                  soledges            /**< solution (CONNECT/UNKNOWN)  */
+   )
+{
+   const SCIP_Real* xval;
+   const int nedges = graph_get_nEdges(g);
+
+   assert(scip && scipsol && soledges);
+
+   xval = SCIPprobdataGetXval(scip, scipsol);
+   assert(xval);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( EQ(xval[e], 1.0) )
+         soledges[e] = CONNECT;
+      else
+         soledges[e] = UNKNOWN;
+   }
+}
+
+
 
 /** converts solution from CSR to graph based */
 void solstp_convertCsrToGraph(

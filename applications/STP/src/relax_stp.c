@@ -25,12 +25,14 @@
 #include "relax_stp.h"
 #include "prop_stp.h"
 #include "dualascent.h"
+#include "solstp.h"
 
 #define RELAX_NAME             "stp"
 #define RELAX_DESC             "relaxator for STP"
 #define RELAX_PRIORITY         0
 #define RELAX_FREQ             1
 
+#define DA_MAXNROOTS 4
 
 /*
  * Data structures
@@ -39,8 +41,9 @@
 /** relaxator data */
 struct SCIP_RelaxData
 {
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Longint          lastnodenumber;     /**< node number of last call */
-   SCIP_Bool             isActive;
+   SCIP_Bool             isActive;           /**< is the relaxator being used? */
 };
 
 
@@ -50,25 +53,76 @@ struct SCIP_RelaxData
 
 
 
+/** collects roots */
+static inline
+void collectRoots(
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   int*                  terminals,          /**< terminals array (of size graph->terms) */
+   int*                  nterms              /**< number of terminals */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+   const int maxnterms = DA_MAXNROOTS;
+   int termcount = 0;
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
+
+   assert(graph->stp_type != STP_PCSPG && graph->stp_type != STP_MWCSP);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(graph->term[i]) )
+      {
+         if( isRpcmw && !graph_pc_knotIsFixedTerm(graph, i) )
+         {
+            continue;
+         }
+         terminals[termcount++] = i;
+      }
+   }
+
+   assert(termcount == graph->terms || isRpcmw);
+   SCIPrandomPermuteIntArray(randnumgen, terminals, 0, termcount);
+
+   *nterms = MIN(termcount, maxnterms);
+
+   /*
+   for( int i = 0; i < *nterms; i++ )
+   {
+      if( terminals[i] == graph->source )
+      {
+         rootIsIncluded = TRUE;
+         break;
+      }
+   }
+
+   if( !rootIsIncluded )
+      terminals[0] = graph->source;
+      */
+}
+
+
+
 
 /** computes lower bound */
 static
 SCIP_RETCODE runDualAscent(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Real*            lowerbound
    )
 {
    const SCIP_Bool mw = (graph->stp_type == STP_MWCSP);
    const SCIP_Bool pc = (graph->stp_type == STP_PCSPG);
-   const SCIP_Bool doAscendPrune = !FALSE; // todo?
+   const SCIP_Bool doAscendPrune = !TRUE; // todo?
+
+   *lowerbound = -SCIPinfinity(scip);
 
    if( doAscendPrune )
    {
       SCIP_CALL( graph_path_init(scip, graph) );
    }
-
-   // int dod
 
    if( pc || mw )
    {
@@ -76,17 +130,60 @@ SCIP_RETCODE runDualAscent(
    }
    else
    {
-      DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = doAscendPrune, .root = graph->source,
-                   .is_pseudoroot = FALSE, .damaxdeviation = 0.1 };
+      int* terms;
+      int* soledges;
+      int nterms;
 
-      if( graph->stp_type == STP_DCSTP )
+      SCIP_CALL( SCIPallocBufferArray(scip, &soledges, graph->edges) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &terms, graph->terms) );
+      collectRoots(graph, randnumgen, terms, &nterms);
+
+      for( int i = 0; i < nterms; i++ )
       {
-         SCIP_CALL( dualascent_execDegCons(scip, graph, NULL, &daparams, NULL, lowerbound) );
+         DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = doAscendPrune, .root = terms[i],
+                   .is_pseudoroot = FALSE, .damaxdeviation = 0.1 };
+         SCIP_Real lowerbound_local;
+
+         if( i > 0 )
+            daparams.ascendandprune = FALSE;
+
+         if( SCIPrandomGetInt(randnumgen, 0, 1) == 0 || SCIPgetNSols(scip) == 0 )
+         {
+            printf("running without guiding solution ...");
+
+            SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lowerbound_local) );
+         }
+         else
+         {
+            SCIP_Bool isInfeas = FALSE;
+            solstp_getStpFromSCIPsol(scip, SCIPgetBestSol(scip), graph, soledges);
+
+            printf("running WITH guiding solution ...");
+
+            SCIP_CALL(solstp_rerootInfeas(scip, graph, soledges, daparams.root, &isInfeas));
+
+            /* NOTE: might happen because of graph changes*/
+            if( isInfeas )
+            {
+               printf("is infeasible! \n");
+            }
+
+            if( isInfeas )
+               SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lowerbound_local) );
+            else
+               SCIP_CALL( dualascent_exec(scip, graph, soledges, &daparams, NULL, &lowerbound_local) );
+         }
+
+         printf("run %d for root=%d ... ", i, terms[i]);
+         printf("bound=%f \n", lowerbound_local);
+
+         if( lowerbound_local > *lowerbound )
+            *lowerbound = lowerbound_local;
       }
-      else
-      {
-         SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, lowerbound) );
-      }
+
+      SCIPfreeBufferArray(scip, &terms);
+      SCIPfreeBufferArray(scip, &soledges);
+
    }
 
    if( doAscendPrune )
@@ -107,6 +204,7 @@ SCIP_DECL_RELAXFREE(relaxFreeStp)
    SCIP_RELAXDATA* relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata);
 
+   SCIPfreeRandom(scip, &(relaxdata->randnumgen));
    SCIPfreeMemory(scip, &relaxdata);
 
    SCIPrelaxSetData(relax, NULL);
@@ -158,11 +256,16 @@ SCIP_DECL_RELAXEXEC(relaxExecStp)
    SCIP_Longint nodenumber;
    SCIP_Longint graphnodenumber;
    SCIP_Bool probisinfeas;
+   SCIP_Real offset = 0.0;
 
    *lowerbound = -SCIPinfinity(scip);
    *result = SCIP_DIDNOTRUN;
 
    if( !relaxdata->isActive )
+      return SCIP_OKAY;
+
+   /* NOTE node supported because might mess up the offset */
+   if( graph_pc_isUnrootedPcMw(SCIPprobdataGetGraph2(scip)) )
       return SCIP_OKAY;
 
    nodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
@@ -176,7 +279,7 @@ SCIP_DECL_RELAXEXEC(relaxExecStp)
 
    relaxdata->lastnodenumber = nodenumber;
 
-   SCIP_CALL( SCIPStpPropGetGraph(scip, &graph, &graphnodenumber, &probisinfeas) );
+   SCIP_CALL( SCIPStpPropGetGraph(scip, &graph, &graphnodenumber, &probisinfeas, &offset) );
 
    if( probisinfeas )
    {
@@ -187,12 +290,15 @@ SCIP_DECL_RELAXEXEC(relaxExecStp)
    {
       assert(graph);
       assert(graphnodenumber == nodenumber);
-      // todo there might be a problem for pc/mw due to the offset from reomving nodes!
-      assert(!graph_pc_isPcMw(graph) && "todo: adapt offset");
 
-      SCIP_CALL( runDualAscent(scip, graph, lowerbound) );
+      SCIP_CALL( runDualAscent(scip, graph, relaxdata->randnumgen, lowerbound) );
 
-      *lowerbound += SCIPprobdataGetOffset(scip);
+      *lowerbound += offset;
+
+      printf("offset=%f \n", offset);
+      printf("scip offset=%f  \n", SCIPprobdataGetOffset(scip));
+
+
 
       printf("Stp lower bound = %f \n", *lowerbound);
       *result = SCIP_SUCCESS;
@@ -248,6 +354,8 @@ SCIP_RETCODE SCIPincludeRelaxStp(
 
    relaxdata->lastnodenumber = -1;
    relaxdata->isActive = FALSE;
+
+   SCIP_CALL( SCIPcreateRandom(scip, &relaxdata->randnumgen, 1, TRUE) );
 
    return SCIP_OKAY;
 }

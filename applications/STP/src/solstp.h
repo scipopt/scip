@@ -52,6 +52,7 @@ extern SCIP_Real solstp_getObjCsr(const GRAPH*, const CSR*, const int*, const ST
 extern int       solstp_getNedges(const GRAPH*, const int*);
 extern int       solstp_getNedgesBounded(const GRAPH*, const int*, int);
 extern void      solstp_getTrivialSol(const GRAPH*, int*);
+extern void      solstp_getStpFromSCIPsol(SCIP*, SCIP_SOL*, const GRAPH*, int*);
 extern void      solstp_convertCsrToGraph(SCIP*, const GRAPH*, const CSR*, const int*, STP_Bool* RESTRICT, int* RESTRICT);
 extern SCIP_RETCODE   solstp_getOrg(SCIP*, const GRAPH*, const GRAPH*, const int*, int*);
 extern SCIP_RETCODE   solstp_reroot(SCIP*, const GRAPH*, int*, int);

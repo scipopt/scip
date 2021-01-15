@@ -2251,7 +2251,8 @@ SCIP_RETCODE SCIPStpPropGetGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data */
    SCIP_Longint*         graphnodenumber,    /**< point to b&b node for which graph is valid */
-   SCIP_Bool*            probisinfeas        /**< infeasible problem? */
+   SCIP_Bool*            probisinfeas,       /**< infeasible problem? */
+   SCIP_Real*            offset              /**< needed for PC/MW */
    )
 {
    SCIP_PROPDATA* propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
@@ -2259,11 +2260,10 @@ SCIP_RETCODE SCIPStpPropGetGraph(
    const GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
    int* nodestate ;
    int* edgestate;
-   SCIP_Real offset = -1.0;  /* dummy */
    const int nnodes = graph_get_nNodes(orggraph);
    const int nedges = graph_get_nEdges(orggraph);
 
-   assert(probisinfeas);
+   assert(probisinfeas && offset);
    assert(vars && orggraph && propdata);
 
    *probisinfeas = FALSE;
@@ -2286,7 +2286,7 @@ SCIP_RETCODE SCIPStpPropGetGraph(
 
    /* note: graph type might change (from PC/MW to RPC/RMW) */
    SCIP_CALL( propgraphApplyBoundchanges(scip, vars, orggraph, nodestate, edgestate, propdata, probisinfeas,
-        &offset ) );
+        offset ) );
 
    if( *probisinfeas )
    {
@@ -2295,7 +2295,7 @@ SCIP_RETCODE SCIPStpPropGetGraph(
    }
    else
    {
-      SCIP_CALL( propgraphPruneUnconnected(scip, propdata->propgraph, probisinfeas, &offset ) );
+      SCIP_CALL( propgraphPruneUnconnected(scip, propdata->propgraph, probisinfeas, offset ) );
 
       if( *probisinfeas )
       {

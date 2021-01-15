@@ -72,7 +72,8 @@ SCIP_RETCODE SCIPStpPropGetGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data */
    SCIP_Longint*         graphnodenumber,    /**< point to b&b node for which graph is valid */
-   SCIP_Bool*            probisinfeas        /**< infeasible problem? */
+   SCIP_Bool*            probisinfeas,       /**< infeasible problem? */
+   SCIP_Real*            offset              /**< needed for PC/MW */
    );
 
 /** gives array indicating which nodes are degree-2 bounded */
