@@ -37,6 +37,7 @@
 #include <assert.h>
 #include <string.h>
 #include "heur_tm.h"
+#include "relax_stp.h"
 #include "probdata_stp.h"
 #include "portab.h"
 #include "solstp.h"
@@ -2802,6 +2803,10 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    heurdata->ncalls++;
 
    if( runs == 0 )
+      return SCIP_OKAY;
+
+   // todo solution should anyway come from the branching rule
+   if( !SCIPhasCurrentNodeLP(scip) && SCIPStpRelaxIsActive(scip) )
       return SCIP_OKAY;
 
    if( graph->stp_type == STP_DCSTP )

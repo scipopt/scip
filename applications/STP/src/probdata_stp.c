@@ -2911,9 +2911,6 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
 
    SCIP_CALL( createModel(scip, probdata) );
 
-   /* todo test */
-   assert(usedacuts == STP_CONS_ALWAYS || usedacuts == STP_CONS_AUTOMATIC);
-
 #ifndef WITH_UG
    if( probdata->mode == STP_MODE_CUT && !isSubProb && graph_typeIsSpgLike(graph) )
    {

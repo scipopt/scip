@@ -1925,19 +1925,18 @@ SCIP_RETCODE initPropAtFirstCall(
 
    if( graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP) )
    {
-      /* first call? */
       if( !propdata->propgraph )
       {
          assert(!propdata->isInitialized);
 
          SCIP_CALL( initPropgraph(scip, graph, propdata) );
 
-         if( useRedcostdata(graph) )
-         {
-            SCIP_CALL( initRedcostdata(scip, graph, vars, propdata) );
-         }
-
          assert(propdata->propgraph);
+      }
+
+      if( !propdata->isInitialized && useRedcostdata(graph) )
+      {
+         SCIP_CALL( initRedcostdata(scip, graph, vars, propdata) );
       }
    }
 
@@ -2248,23 +2247,75 @@ int SCIPStpNfixedEdges(
 }
 
 /** gives propagator graph  */
-void SCIPStpPropGetGraph(
+SCIP_RETCODE SCIPStpPropGetGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data */
-   SCIP_Longint*         graphnodenumber     /**< point to b&b node for which graph is valid */
+   SCIP_Longint*         graphnodenumber,    /**< point to b&b node for which graph is valid */
+   SCIP_Bool*            probisinfeas        /**< infeasible problem? */
    )
 {
-   SCIP_PROPDATA* propdata;
+   SCIP_PROPDATA* propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
+   SCIP_VAR** vars = SCIPprobdataGetVars(scip);
+   const GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
+   int* nodestate ;
+   int* edgestate;
+   SCIP_Real offset = -1.0;  /* dummy */
+   const int nnodes = graph_get_nNodes(orggraph);
+   const int nedges = graph_get_nEdges(orggraph);
 
-   assert(scip != NULL);
+   assert(probisinfeas);
+   assert(vars && orggraph && propdata);
 
-   /* get propagator data */
-   assert(SCIPfindProp(scip, "stp") != NULL);
-   propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
-   assert(propdata != NULL);
+   *probisinfeas = FALSE;
+   *graphnodenumber = -1;
+   *graph = NULL;
 
-   *graph = (propdata->propgraph);
-   *graphnodenumber = propdata->propgraphnodenumber;
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgestate, nedges) );
+
+   if( !propdata->propgraph )
+   {
+      SCIP_CALL( initPropgraph(scip, orggraph, propdata) );
+   }
+   else
+   {
+      SCIP_CALL( updatePropgraph(scip, orggraph, propdata) );
+   }
+
+   assert(propdata->propgraph);
+
+   /* note: graph type might change (from PC/MW to RPC/RMW) */
+   SCIP_CALL( propgraphApplyBoundchanges(scip, vars, orggraph, nodestate, edgestate, propdata, probisinfeas,
+        &offset ) );
+
+   if( *probisinfeas )
+   {
+      SCIPdebugMessage("problem has become infeasible after applying bound changes: terminating! \n");
+      *probisinfeas = TRUE;
+   }
+   else
+   {
+      SCIP_CALL( propgraphPruneUnconnected(scip, propdata->propgraph, probisinfeas, &offset ) );
+
+      if( *probisinfeas )
+      {
+         SCIPdebugMessage("problem has become infeasible after pruning (terminals not connected): terminating! \n");
+         *probisinfeas = TRUE;
+      }
+   }
+
+   if( FALSE == *probisinfeas )
+   {
+      assert(graph_valid(scip, propdata->propgraph));
+      *graph = propdata->propgraph;
+      *graphnodenumber = propdata->propgraphnodenumber;
+   }
+
+   graph_path_exit(scip, propdata->propgraph);
+   SCIPfreeBufferArray(scip, &edgestate);
+   SCIPfreeBufferArray(scip, &nodestate);
+
+   return SCIP_OKAY;
 }
 
 /** gives array indicating which nodes are degree-2 bounded */

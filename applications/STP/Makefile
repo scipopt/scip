@@ -129,6 +129,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_simple.o \
 			reduce_sol.o \
 			reduce_util.o \
+			relax_stp.o \
 			sepaspecial.o \
 			shortestpath.o \
 			solhistory.o \

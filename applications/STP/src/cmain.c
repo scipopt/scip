@@ -28,6 +28,7 @@
 #include "scip/scipshell.h"
 #include "scip/scipdefplugins.h"
 
+#include "relax_stp.h"
 #include "reader_stp.h"
 #include "reader_gr.h"
 #include "cons_stp.h"
@@ -80,6 +81,8 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
 
    SCIP_CALL( SCIPincludeConshdlrStpcomponents(scip) );
+
+   SCIP_CALL( SCIPincludeRelaxStp(scip) );
 
    SCIP_CALL( SCIPStpIncludeHeurTM(scip) );
 

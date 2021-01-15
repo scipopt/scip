@@ -83,6 +83,7 @@ add_executable(scipstp
     src/reduce_simple.c
     src/reduce_sol.c
     src/reduce_util.c
+    src/relax_stp.c
     src/sepaspecial.c
     src/shortestpath.c
     src/stptest_base.c
