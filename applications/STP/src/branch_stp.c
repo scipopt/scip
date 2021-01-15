@@ -46,7 +46,7 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 #define BRANCHRULE_TMRUNS          20
-
+#define BRANCHRULE_TMRUNS_SPG       8
 #define BRANCH_STP_ON_LP   0
 #define BRANCH_STP_ON_LP2  1
 #define BRANCH_STP_ON_SOL  2
@@ -318,6 +318,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
 #endif
    SCIP_Bool success;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+   const int ntmruns = graph_typeIsSpgLike(graph) ? BRANCHRULE_TMRUNS_SPG : BRANCHRULE_TMRUNS;
 
    assert(scip && vertex);
    assert(!pcmw || graph->extended);
@@ -325,10 +326,6 @@ SCIP_RETCODE selectBranchingVertexBySol(
    assert(probAllowsSolBranching(graph));
 
    *vertex = UNKNOWN;
-
-   /* check whether LP solution is available */
-   if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return SCIP_OKAY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &costorg, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &soledges, nedges) );
@@ -376,10 +373,11 @@ SCIP_RETCODE selectBranchingVertexBySol(
    applyBranchHistoryToGraph(scip, nodestatenew, graph);
 
    /* compute locally feasible solution (SPH + local) */
-   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, NULL, soledges, BRANCHRULE_TMRUNS, &success) );
+   SCIP_CALL( SCIPStpHeurTMRunLP(scip, graph, NULL, soledges, ntmruns, &success) );
    assert(success);
 
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, soledges) );
+   if( !graph_typeIsSpgLike(graph) )
+      SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, soledges) );
 
    assert(solstp_isValid(scip, graph, soledges));
 
