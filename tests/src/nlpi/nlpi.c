@@ -68,6 +68,7 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    SCIP_EXPR* varexprs[4];
    SCIP_Real lbs[4] = {-0.5, -2, 0, -2};
    SCIP_Real ubs[4] = {INF, INF, 2, 2};
+   SCIP_Real start[4] = {0.1,0.6,1.1,2.9};
 
    /* objective */
    SCIP_Real objvals[1] = {-1};
@@ -153,6 +154,9 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPnlpiSetIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
 #endif
+
+   /* set a starting point close to solution to improve likelihood to converge to expected solution on this nonconvex NLP */
+   SCIP_CALL( SCIPnlpiSetInitialGuess(scip, nlpi, nlpiprob, start, NULL, NULL, NULL) );
 
    /* solve NLP */
    SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
