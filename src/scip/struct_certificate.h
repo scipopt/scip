@@ -73,6 +73,7 @@ struct SCIP_Certificate
    SCIP_CERTIFICATEBOUND* workbound;         /**< temporary memory for hashing bound information */
    BMS_BLKMEM*           blkmem;             /**< SCIP block memory */
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
+   SCIP_Longint          indexcounter_ori;   /**< counter for line indices in origial problem vipr file */
    SCIP_Longint          conscounter;        /**< counter for line indices in constraint section */
    SCIP_FILE*            origfile;           /**< file to store original problem definition */
    SCIP_FILE*            transfile;          /**< file to store transformed problem (after presolving) */

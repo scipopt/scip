@@ -170,7 +170,8 @@ void SCIPcertificatePrintConsHeader(
 
 /** prints derivation section header */
 void SCIPcertificatePrintDerHeader(
-   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile          /**< shoud the line be printed to the origfile or the transfile */
    );
 
 /** prints constraint */

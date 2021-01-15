@@ -363,6 +363,7 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->workbound = NULL;
    (*certificate)->blkmem = NULL;
    (*certificate)->indexcounter = 0;
+   (*certificate)->indexcounter_ori = 0;
    (*certificate)->conscounter = 0;
    (*certificate)->origfile = NULL;
    (*certificate)->transfile = NULL;
@@ -983,8 +984,15 @@ SCIP_RETCODE SCIPcertificatePrintResult(
 
       assert(!RatIsAbsInfinity(primalbound));
 
-      /* print RTP range (same when optimal solution found) */
-      SCIPcertificatePrintRtpRange(certificate, isorigfile, primalbound, primalbound);
+      /* for the orig file we only print the primal bound, since the derivation happens in the transformed problem */
+      if( isorigfile )
+      {
+         RatSetString(dualbound, "-inf");
+         /* print RTP range (same when optimal solution found) */
+         SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound);
+      }
+      else
+         SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound);
 
       /* print optimal solution into certificate */
       SCIP_CALL( SCIPcertificatePrintSol(scip, isorigfile, certificate, bestsol) );
@@ -1016,11 +1024,16 @@ SCIP_RETCODE SCIPcertificatePrintResult(
          RatSetString(primalbound, "inf");
       }
 
-      SCIPcertificatePrintRtpRange(certificate, isorigfile, certificate->finalbound, primalbound);
+      if( isorigfile )
+         RatSetString(dualbound, "-inf");
+      else
+         RatSet(dualbound, certificate->finalbound);
+
+      SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound);
       SCIP_CALL( SCIPcertificatePrintSol(scip, isorigfile, certificate, bestsol) );
    }
-   if( !isorigfile )
-      SCIPcertificatePrintDerHeader(certificate);
+
+   SCIPcertificatePrintDerHeader(certificate, isorigfile);
 
    RatFreeBuffer(set->buffer, &dualbound);
    RatFreeBuffer(set->buffer, &primalbound);
@@ -1262,7 +1275,8 @@ void SCIPcertificatePrintConsHeader(
 
 /** prints derivation section header */
 void SCIPcertificatePrintDerHeader(
-   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile          /**< shoud the line be printed to the origfile or the transfile */
    )
 {
    int nders;
@@ -1272,8 +1286,12 @@ void SCIPcertificatePrintDerHeader(
    if( certificate->transfile == NULL )
       return;
 
-   nders = certificate->indexcounter - certificate->conscounter;
-   SCIPcertificatePrintProblemMessage(certificate, FALSE, "DER %d\n", nders);
+   if( !isorigfile )
+      nders = certificate->indexcounter - certificate->conscounter;
+   else
+      nders = 0;
+
+   SCIPcertificatePrintProblemMessage(certificate, isorigfile, "DER %d\n", nders);
 }
 
 /** prints constraint */
@@ -1311,7 +1329,10 @@ void SCIPcertificatePrintCons(
    }
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "\n");
 
-   certificate->indexcounter++;
+   if( isorigfile )
+      certificate->indexcounter_ori++;
+   else
+      certificate->indexcounter++;
 
    if( !isorigfile )
    {
@@ -1375,13 +1396,21 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
          SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
          certificate->indexcounter++;
          certificate->conscounter++;
+
+         if( boundname == NULL )
+            SCIPcertificatePrintProblemMessage(certificate, isorigfile, "B%d %c ", certificate->indexcounter - 1, (isupper ? 'L' : 'G'));
+         else
+            SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", boundname, (isupper ? 'L' : 'G'));
       }
    }
-
-   if( boundname == NULL )
-      SCIPcertificatePrintProblemMessage(certificate, isorigfile, "B%d %c ", certificate->indexcounter - 1, (isupper ? 'L' : 'G'));
    else
-     SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", boundname, (isupper ? 'L' : 'G'));
+   {
+      certificate->indexcounter_ori++;
+      if( boundname == NULL )
+         SCIPcertificatePrintProblemMessage(certificate, isorigfile, "B%d %c ", certificate->indexcounter_ori - 1, (isupper ? 'L' : 'G'));
+      else
+         SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", boundname, (isupper ? 'L' : 'G'));
+   }
 
    SCIPcertificatePrintProblemRational(certificate, isorigfile, boundval, 10);
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, " 1 %d 1\n", varindex);
