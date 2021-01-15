@@ -3039,6 +3039,8 @@ void SCIPsolRecomputeInternObjExact(
    nvars = prob->nvars;
    RatCreateBuffer(set->buffer, &solval);
 
+   RatSetInt(sol->valsexact->obj, 0, 1);
+
    /* recompute the objective value */
    for( v = 0; v < nvars; ++v )
    {

@@ -3165,99 +3165,50 @@ SCIP_RETCODE printCertificateConsLinear(
       row = SCIPgetRowexExactLinear(scip, cons);
       assert(row != NULL);
 
-      /* in case the row is a bound change (i.e. a row with only one variable), we add the bound change to the variable
-       * hashtable
-       */
-      if( !SCIProwExactIsModifiable(row) && SCIProwExactGetNNonz(row) == 1 && RatIsEqualReal(SCIProwExactGetVals(row)[0], 1.0) )
+      image = SCIPhashmapGetImage(certificate->rowdatahash, row);
+      /* add row to hashmap */
+      if( image != NULL )
       {
-         var = SCIPcolExactGetVar(SCIProwExactGetCols(row)[0]);
-         vals = SCIProwExactGetVals(row);
-         assert(vals != NULL);
-         assert(!RatIsZero(vals[0]));
-
-         lhs = consdata->lhs;
-         rhs = consdata->rhs;
-
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &quotient) );
-
-         /* if the variable is fixed/aggregated anyway we do not need to consider this singleton, print a dummy row instead so the
-            counts in the certificate match*/
-         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE )
-         {
-            if( !RatIsAbsInfinity(lhs) && !RatIsAbsInfinity(rhs) && !RatIsEqual(lhs, rhs) )
-               SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', quotient, 0, NULL, NULL);
-            SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', quotient, 0, NULL, NULL);
-
-            RatFreeBuffer(SCIPbuffer(scip), &quotient);
-
-            return SCIP_OKAY;
-         }
-
-         /* coefficient is positive -> lhs corresponds to lower bound, if negative to upper bound */
-         if( !RatIsAbsInfinity(lhs) )
-         {
-            isupper = RatIsPositive(vals[0]) ? FALSE : TRUE;
-            RatDiv(quotient, lhs, vals[0]);
-            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, SCIPvarGetCertificateIndex(var), quotient, isupper) );
-         }
-
-         /* coefficient is positive -> rhs corresponds to upper bound, if negative to lower bound */
-         if( !RatIsAbsInfinity(rhs) )
-         {
-            isupper = RatIsPositive(vals[0]) ? TRUE : FALSE;
-            RatDiv(quotient, rhs, vals[0]);
-            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, SCIPvarGetCertificateIndex(var), quotient, isupper) );
-         }
-
-         RatFreeBuffer(SCIPbuffer(scip), &quotient);
+         SCIPmessageFPrintWarning(scip->messagehdlr, "%ld \n", (size_t) SCIPhashmapGetImage(certificate->rowdatahash, row));
+         SCIPerrorMessage("Duplicate row in certificate row hashmap\n");
+         SCIPABORT();
+         return SCIP_ERROR;
       }
       else
       {
-         image = SCIPhashmapGetImage(certificate->rowdatahash, row);
-         /* add row to hashmap */
-         if( image != NULL )
-         {
-            SCIPmessageFPrintWarning(scip->messagehdlr, "%ld \n", (size_t) SCIPhashmapGetImage(certificate->rowdatahash, row));
-            SCIPerrorMessage("Duplicate row in certificate row hashmap\n");
-            SCIPABORT();
-            return SCIP_ERROR;
-         }
-         else
-         {
-            SCIP_CALL( SCIPhashmapInsert(certificate->rowdatahash, row, (void*)(size_t)certificate->indexcounter) );
-            assert(SCIPhashmapExists(certificate->rowdatahash, row));
-         }
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &varsindex, consdata->nvars) );
-         for( i = 0; i < SCIProwExactGetNNonz(row); ++i )
-            varsindex[i] = SCIPvarGetCertificateIndex(SCIPcolExactGetVar(SCIProwExactGetCols(row)[i]));
-
-         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &correctedside) );
-
-         /* print constraint */
-         if( RatIsEqual(consdata->lhs, consdata->rhs) )
-         {
-            assert(!RatIsAbsInfinity(consdata->lhs));
-            RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
-            SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
-         }
-         else
-         {
-            if( !RatIsNegInfinity(consdata->lhs) )
-            {
-               RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
-               SCIPcertificatePrintCons(certificate, FALSE, NULL, 'G', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
-            }
-            if( !RatIsInfinity(consdata->rhs) )
-            {
-               RatDiff(correctedside, SCIProwExactGetRhs(row), SCIProwExactGetConstant(row));
-               SCIPcertificatePrintCons(certificate, FALSE, NULL, 'L', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
-            }
-         }
-
-         RatFreeBuffer(SCIPbuffer(scip), &correctedside);
-         SCIPfreeBufferArray(scip, &varsindex);
+         SCIP_CALL( SCIPhashmapInsert(certificate->rowdatahash, row, (void*)(size_t)certificate->indexcounter) );
+         assert(SCIPhashmapExists(certificate->rowdatahash, row));
       }
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varsindex, consdata->nvars) );
+      for( i = 0; i < SCIProwExactGetNNonz(row); ++i )
+         varsindex[i] = SCIPvarGetCertificateIndex(SCIPcolExactGetVar(SCIProwExactGetCols(row)[i]));
+
+      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &correctedside) );
+
+      /* print constraint */
+      if( RatIsEqual(consdata->lhs, consdata->rhs) )
+      {
+         assert(!RatIsAbsInfinity(consdata->lhs));
+         RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
+         SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
+      }
+      else
+      {
+         if( !RatIsNegInfinity(consdata->lhs) )
+         {
+            RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
+            SCIPcertificatePrintCons(certificate, FALSE, NULL, 'G', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
+         }
+         if( !RatIsInfinity(consdata->rhs) )
+         {
+            RatDiff(correctedside, SCIProwExactGetRhs(row), SCIProwExactGetConstant(row));
+            SCIPcertificatePrintCons(certificate, FALSE, NULL, 'L', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
+         }
+      }
+
+      RatFreeBuffer(SCIPbuffer(scip), &correctedside);
+      SCIPfreeBufferArray(scip, &varsindex);
    }
    else
       return SCIP_OKAY;

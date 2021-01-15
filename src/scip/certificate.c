@@ -992,7 +992,7 @@ SCIP_RETCODE SCIPcertificatePrintResult(
          SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound);
       }
       else
-         SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound);
+         SCIPcertificatePrintRtpRange(certificate, isorigfile, primalbound, primalbound);
 
       /* print optimal solution into certificate */
       SCIP_CALL( SCIPcertificatePrintSol(scip, isorigfile, certificate, bestsol) );
@@ -1763,6 +1763,10 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
 
    if( psval < SCIPnodeGetLowerbound(node) )
       return SCIP_OKAY;
+
+   /* if at root node set, objintegral flag */
+   if( SCIPnodeGetParent(node) == NULL )
+      certificate->objintegral = SCIPprobIsObjIntegral(prob);
 
    vars = SCIPprobGetVars(prob);
    nvars = SCIPprobGetNVars(prob);
