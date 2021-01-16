@@ -14925,7 +14925,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
+   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid or NULL */
    )
 {
    SCIP_COL** lpicols;
@@ -15005,7 +15005,8 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
             SCIPsetDebugMsg(set, "farkas proof is invalid: row <%s>[lhs=%g,rhs=%g,c=%g] has multiplier %g\n",
                SCIProwGetName(lpirows[r]), lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, dualfarkas[r]);
 
-            *valid = FALSE; /*lint !e613*/
+            if( valid != NULL )
+               *valid = FALSE;
 
             goto TERMINATE;
          }
@@ -15080,7 +15081,8 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    {
       SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f, lhs=%.12f\n", maxactivity, farkaslhs);
 
-      *valid = FALSE; /*lint !e613*/
+      if( valid != NULL )
+         *valid = FALSE;
    }
 
   TERMINATE:
