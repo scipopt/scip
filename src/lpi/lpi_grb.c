@@ -2593,8 +2593,9 @@ SCIP_RETCODE SCIPlpiGetRows(
                if ( lpi->rngrowmap[i] >= 0 )
                   theend--;
 
-               memmove(&ind[newnz], &ind[thebeg], (size_t) (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
-               memmove(&val[newnz], &val[thebeg], (size_t) (theend - thebeg) * sizeof(*val)); /*lint !e776*/
+               assert( theend >= thebeg );
+               memmove(&ind[newnz], &ind[thebeg], ((size_t) (theend - thebeg)) * sizeof(*ind)); /*lint !e776*/
+               memmove(&val[newnz], &val[thebeg], ((size_t) (theend - thebeg)) * sizeof(*val)); /*lint !e776*/
                beg[i - firstrow] = newnz; /*lint !e661*/
                newnz += theend - thebeg;
             }
