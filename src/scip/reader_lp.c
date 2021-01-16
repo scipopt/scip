@@ -1478,7 +1478,12 @@ SCIP_RETCODE createIndicatorConstraint(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(scip, lpinput) || !isSense(lpinput, &linsense) )
+   if( !getNextToken(scip, lpinput) )
+   {
+      syntaxError(scip, lpinput, "missing constraint sense.");
+      goto TERMINATE;
+   }
+   if( !isSense(lpinput, &linsense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
@@ -1652,7 +1657,12 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(scip, lpinput) || !isSense(lpinput, &sense) )
+   if( !getNextToken(scip, lpinput) )
+   {
+      syntaxError(scip, lpinput, "missing constraint sense.");
+      goto TERMINATE;
+   }
+   if( !isSense(lpinput, &sense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;

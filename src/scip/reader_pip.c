@@ -1508,7 +1508,12 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the constraint sense */
-   if ( !getNextToken(scip, pipinput) || !isSense(pipinput, &sense) )
+   if ( !getNextToken(scip, pipinput) )
+   {
+      syntaxError(scip, pipinput, "expected constraint sense.");
+      goto TERMINATE;
+   }
+   if ( !isSense(pipinput, &sense) )
    {
       syntaxError(scip, pipinput, "expected constraint sense '<=', '=', or '>='");
       goto TERMINATE;
