@@ -2594,8 +2594,8 @@ SCIP_RETCODE SCIPlpiGetRows(
                   theend--;
 
                assert( theend >= thebeg );
-               memmove(&ind[newnz], &ind[thebeg], ((size_t) (theend - thebeg)) * sizeof(*ind)); /*lint !e776*/
-               memmove(&val[newnz], &val[thebeg], ((size_t) (theend - thebeg)) * sizeof(*val)); /*lint !e776*/
+               memmove(&ind[newnz], &ind[thebeg], ((size_t) (theend - thebeg)) * sizeof(*ind)); /*lint !e776 !e571*/
+               memmove(&val[newnz], &val[thebeg], ((size_t) (theend - thebeg)) * sizeof(*val)); /*lint !e776 !e571*/
                beg[i - firstrow] = newnz; /*lint !e661*/
                newnz += theend - thebeg;
             }
@@ -5145,7 +5145,7 @@ SCIP_RETCODE SCIPlpiSetState(
    if ( lpistate->nrngrows > 0 && lpistate->ncols < ncols )
    {
       /* New columns have been added: need to move range variable information */
-      memmove(&lpi->cstat[ncols], &lpi->cstat[lpistate->ncols], (size_t) lpistate->nrngrows * sizeof(*lpi->cstat));
+      memmove(&lpi->cstat[ncols], &lpi->cstat[lpistate->ncols], (size_t) lpistate->nrngrows * sizeof(*lpi->cstat)); /*lint !e571*/
    }
 
    /* extend the basis to the current LP beyond the previously existing columns */
