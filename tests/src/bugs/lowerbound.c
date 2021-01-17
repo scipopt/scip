@@ -26,6 +26,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <signal.h>
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
@@ -89,7 +90,8 @@ SCIP_DECL_RELAXEXEC(relaxExecConstant)
 
 /* TESTS */
 
-Test(lowerbound, constant)
+/* This test constructs an instance on which the assert for testing the lower bound should fail. */
+Test(lowerbound, constant, .signal = SIGABRT)
 {
    char name[SCIP_MAXSTRLEN];
    SCIP* scip = NULL;
@@ -99,6 +101,11 @@ Test(lowerbound, constant)
    SCIP_CONS* cons;
    SCIP_Real rhs;
    int i;
+
+   /* this test can only work in debug mode, so we make it pass in opt mode */
+#ifdef NDEBUG
+   abort(); /* return SIGABORT */
+#endif
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
