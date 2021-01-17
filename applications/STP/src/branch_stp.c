@@ -1025,7 +1025,7 @@ SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP_CALL( SCIPaddIntParam(scip, "branching/stp/type",
          "Branching: 0 based on LP, 1 based on LP and with indegree > 1, 2 based on best solution,"
          "3 based on degree",
-         &(branchruledata->branchtype), FALSE, BRANCH_STP_ON_SOL, 0, 3, NULL, NULL) );
+         &(branchruledata->branchtype), FALSE, BRANCH_STP_ON_LP, 0, 3, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/stp/vertexbranching",
          "use branching on vertices?",

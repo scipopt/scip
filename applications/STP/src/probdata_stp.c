@@ -2742,6 +2742,7 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zirounding/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/oneopt/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/locks/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/distributiondiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/probing/maxprerounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/pseudoobj/timingmask", 5) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/redcost/freq", -1) );
@@ -2754,9 +2755,8 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    // todo test properly; normal dfs?
    SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/restartdfs/stdpriority", 400000) );
 
-   // todo: try estimation/method", 'o'
- //  SCIP_CALL( SCIPsetCharParam(scip, "estimation/restarts/restartpolicy", 'n') );
- //  SCIP_CALL( SCIPsetCharParam(scip, "estimation/method", 'o') );
+   //SCIP_CALL( SCIPsetCharParam(scip, "estimation/restarts/restartpolicy", 'n') );
+   //SCIP_CALL( SCIPsetCharParam(scip, "estimation/method", 'o') );
 
    return SCIP_OKAY;
 }
