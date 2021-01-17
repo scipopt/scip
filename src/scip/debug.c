@@ -1123,6 +1123,55 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    return SCIP_OKAY;
 }
 
+/** checks whether lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckLowerbound(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+   SCIP_Real treelowerbound;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( !SCIPdebugSolIsEnabled(set->scip) )
+      return SCIP_OKAY;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
+   if( SCIPgetStage(set->scip) <= SCIP_STAGE_INITSOLVE )
+      return SCIP_OKAY;
+
+   if( SCIPgetStatus(set->scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(set->scip) == SCIP_STATUS_UNBOUNDED )
+      return SCIP_OKAY;
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   /* make sure a debug solution has been read */
+   if( debugsoldata->debugsol == NULL )
+   {
+      SCIP_CALL( readSolution(set) );
+   }
+
+   /* get lower bound of tree (do not use SCIPgetLowerbound() since this adjusts the value using the primal bound) */
+   treelowerbound = SCIPtreeGetLowerbound(set->scip->tree, set);
+   treelowerbound = SCIPprobExternObjval(set->scip->transprob, set->scip->origprob, set, treelowerbound);
+
+   if( (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol)))
+      || (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol))) )
+   {
+      SCIPerrorMessage("lower bound is larger than the value of the debuggin solution.\n");
+      SCIPABORT();
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks whether given variable bound is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckVbound(
    SCIP_SET*             set,                /**< global SCIP settings */

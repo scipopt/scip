@@ -1077,6 +1077,9 @@ SCIP_RETCODE SCIPnodeFree(
    /* inform solution debugger, that the node has been freed */
    SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
 
+   /* check lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckLowerbound(blkmem, set) );
+
    /* check, if the node to be freed is the root node */
    isroot = (SCIPnodeGetDepth(*node) == 0);
 
@@ -4343,6 +4346,9 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(lp != NULL);
    assert(conflictstore != NULL);
    assert(cutoff != NULL);
+
+   /* check lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckLowerbound(blkmem, set) );
 
    SCIPsetDebugMsg(set, "focusing node #%" SCIP_LONGINT_FORMAT " of type %d in depth %d\n",
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
