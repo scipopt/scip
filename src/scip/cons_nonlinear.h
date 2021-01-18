@@ -697,7 +697,7 @@ SCIP_RETCODE SCIPgetExprAbsOrigViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_SOL*             sol,                /**< solution */
-   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_Real*            viol,               /**< buffer to store computed violation */
    SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(x) is violated, or NULL */
    SCIP_Bool*            violover            /**< buffer to store whether z <= f(x) is violated, or NULL */

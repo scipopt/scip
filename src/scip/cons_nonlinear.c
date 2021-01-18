@@ -181,7 +181,7 @@ struct SCIP_ConsData
    SCIP_Real             lhsviol;            /**< violation of left-hand side by current solution */
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution */
    SCIP_Real             gradnorm;           /**< norm of gradient of constraint function in current solution (if evaluated) */
-   unsigned int          gradnormsoltag;     /**< tag of solution used that gradnorm corresponds to */
+   SCIP_Longint          gradnormsoltag;     /**< tag of solution used that gradnorm corresponds to */
 
    /* status flags */
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
@@ -1538,7 +1538,7 @@ SCIP_RETCODE getConsRelViolation(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Real*            viol,               /**< buffer to store violation */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0 */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -1588,7 +1588,7 @@ SCIP_RETCODE getConsRelViolation(
 
    /* if not 'n' or 'a', then it has to be 'g' at the moment */
    assert(conshdlrdata->violscale == 'g');
-   if( soltag == 0 || consdata->gradnormsoltag != soltag )
+   if( soltag == 0L || consdata->gradnormsoltag != soltag )
    {
       /* we need the varexprs to conveniently access the gradient */
       SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
@@ -6322,7 +6322,7 @@ SCIP_RETCODE collectBranchingCandidates(
    int                   nconss,             /**< number of constraints */
    SCIP_Real             maxrelconsviol,     /**< maximal scaled constraint violation */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Longint          soltag,             /**< tag of solution */
    BRANCHCAND*           cands,              /**< array where to store candidates, must be at least SCIPgetNVars() long */
    int*                  ncands              /**< number of candidates found */
    )
@@ -6872,7 +6872,7 @@ SCIP_RETCODE branching(
    int                   nconss,             /**< number of constraints */
    SCIP_Real             maxrelconsviol,     /**< maximal scaled constraint violation */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_RESULT*          result              /**< pointer to store the result of branching */
    )
 {
@@ -7113,7 +7113,7 @@ SCIP_RETCODE enforceExpr(
    SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
-   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_Bool             allowweakcuts,      /**< whether we allow weak cuts */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement (and not just separation) */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
@@ -7321,7 +7321,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint to process */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_EXPRITER*        it,                 /**< expression iterator that we can just use here */
    SCIP_Bool             allowweakcuts,      /**< whether to allow weak cuts in this round */
    SCIP_Bool             inenforcement,      /**< whether to we are in enforcement, and not just separation */
@@ -7440,7 +7440,7 @@ SCIP_RETCODE enforceConstraints(
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, and not just separation */
    SCIP_Real             maxrelconsviol,     /**< largest scaled violation among all violated expr-constraints, only used if in enforcement */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
@@ -7566,7 +7566,7 @@ SCIP_RETCODE analyzeViolation(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
-   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_Real*            maxabsconsviol,     /**< buffer to store maximal absolute violation of constraints */
    SCIP_Real*            maxrelconsviol,     /**< buffer to store maximal relative violation of constraints */
    SCIP_Real*            minauxviol,         /**< buffer to store minimal (nonzero) violation of auxiliaries */
@@ -7756,7 +7756,7 @@ SCIP_RETCODE consEnfo(
    SCIP_Real minauxviol;
    SCIP_Real maxauxviol;
    SCIP_Real maxvarboundviol;
-   unsigned int soltag;
+   SCIP_Longint soltag;
    int nnotify;
    int c;
 
@@ -7925,7 +7925,7 @@ SCIP_RETCODE consSepa(
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
-   unsigned int soltag;
+   SCIP_Longint soltag;
    SCIP_Bool haveviol = FALSE;
    int c;
 
@@ -9541,7 +9541,7 @@ static
 SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
 {  /*lint --e{715}*/
    SCIP_RESULT propresult;
-   unsigned int soltag;
+   SCIP_Longint soltag;
    int nchgbds;
    int nnotify;
    int c;
@@ -12203,7 +12203,7 @@ SCIP_RETCODE SCIPgetExprAbsOrigViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_SOL*             sol,                /**< solution */
-   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_Real*            viol,               /**< buffer to store computed violation */
    SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(x) is violated, or NULL */
    SCIP_Bool*            violover            /**< buffer to store whether z <= f(x) is violated, or NULL */
