@@ -359,8 +359,10 @@ SCIP_RETCODE heurExec(
       SCIP_NLROW* nlrow = SCIPgetNLPNlRows(scip)[i];
       assert(nlrow != NULL);
 
-      nlpcostperiter += 1.0 * SCIPnlrowGetNLinearVars(nlrow)
-               + 3.0 * getExprSize(SCIPnlrowGetExpr(nlrow));
+      nlpcostperiter += 1.0 * SCIPnlrowGetNLinearVars(nlrow);
+
+      if( SCIPnlrowGetExpr(nlrow) != NULL )
+         nlpcostperiter += 3.0 * getExprSize(SCIPnlrowGetExpr(nlrow));
    }
 
    /* set initial guess */

@@ -2107,7 +2107,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
    SCIP_Real childub;
    SCIP_Real exponent;
    SCIP_Bool isinteger;
-   SCIP_Bool branchcand = TRUE;
+   SCIP_Bool branchcand;
    SCIP_Bool success;
    SCIP_Bool islocal;
    SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
@@ -2167,6 +2167,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
 
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
+      branchcand = TRUE;
       SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub, SCIPexprIsIntegral(child), refpoint, exponent,
             coefs[*nreturned], &constant[*nreturned], &success, &islocal, &branchcand) );
 

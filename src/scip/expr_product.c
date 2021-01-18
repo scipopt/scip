@@ -1698,7 +1698,6 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
    assert(nfactors > 0);
    assert(bounds != NULL);
    assert(constantfactor != 0.0);
-   assert(refpoint != NULL);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(success != NULL);
