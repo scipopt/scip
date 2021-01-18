@@ -197,7 +197,7 @@ void blisshook(
    assert( aut != NULL );
    assert( user_param != NULL );
 
-   BLISS_Data* data = (BLISS_Data*) user_param;
+   BLISS_Data* data = static_cast<BLISS_Data*>(user_param);
    assert( data->scip != NULL );
    assert( data->npermvars < (int) n );
    assert( data->maxgenerators >= 0);
