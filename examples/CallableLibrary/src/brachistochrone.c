@@ -57,11 +57,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
-#include "scip/cons_expr_var.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_product.h"
-
 /* default start and end points */
 #define Y_START  1.0
 #define Y_END    0.0
@@ -78,8 +73,6 @@ SCIP_RETCODE setupProblem(
    SCIP_VAR***           yvars               /**< buffer to store pointer to y variables array */
    )
 {
-   SCIP_CONSHDLR* conshdlr;
-
    /* variables:
     * t[i] i=0..N-1, such that: value function=sum t[i]
     * v[i] i=0..N-1, such that: v_i = ||(x_{i+1},y_{i+1})-(x_i,y_i)||_2
@@ -104,9 +97,6 @@ SCIP_RETCODE setupProblem(
    /* an upper bound for v */
    SCIP_Real maxdistance = 10.0 * sqrt(SQR(coord[1]-coord[0]) + SQR(coord[3]-coord[2]));
    unsigned int i;
-
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
 
    /* create empty problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "brachistochrone") );
@@ -190,35 +180,35 @@ SCIP_RETCODE setupProblem(
        * texpr: expression for t[i]
        * vexpr: expression for v[i]
        */
-      SCIP_CONSEXPR_EXPR* yplusexpr;
-      SCIP_CONSEXPR_EXPR* yexpr;
-      SCIP_CONSEXPR_EXPR* texpr;
-      SCIP_CONSEXPR_EXPR* vexpr;
+      SCIP_EXPR* yplusexpr;
+      SCIP_EXPR* yexpr;
+      SCIP_EXPR* texpr;
+      SCIP_EXPR* vexpr;
 
       /* intermediary expressions */
-      SCIP_CONSEXPR_EXPR* expr1;
-      SCIP_CONSEXPR_EXPR* expr2;
-      SCIP_CONSEXPR_EXPR* expr3;
-      SCIP_CONSEXPR_EXPR* expr4;
-      SCIP_CONSEXPR_EXPR* expr5;
-      SCIP_CONSEXPR_EXPR* expr6;
-      SCIP_CONSEXPR_EXPR* expr7;
+      SCIP_EXPR* expr1;
+      SCIP_EXPR* expr2;
+      SCIP_EXPR* expr3;
+      SCIP_EXPR* expr4;
+      SCIP_EXPR* expr5;
+      SCIP_EXPR* expr6;
+      SCIP_EXPR* expr7;
 
       SCIP_Real minusone = -1.0;
 
       for( i = 0; i < n; ++i )
       {
-         SCIP_CONSEXPR_EXPR* exprs[3];
+         SCIP_EXPR* exprs[3];
          SCIP_Real coefs[3];
          SCIP_VAR* quadvars1[7];
          SCIP_VAR* quadvars2[7];
          SCIP_Real quadcoefs[7];
 
          /* create expressions for variables that are used in nonlinear constraint */
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yplusexpr, y[i+1]) );
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y[i]) );
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &texpr, t[i]) );
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &vexpr, v[i]) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &yplusexpr, y[i+1], NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y[i], NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &texpr, t[i], NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &vexpr, v[i], NULL, NULL) );
 
          /* set up the i-th constraint
           * expr1: 1 - y[i+1]
@@ -229,39 +219,39 @@ SCIP_RETCODE setupProblem(
           * expr6: t[i] * sqrt(1 - y[i])
           * expr7: t[i] * sqrt(1 - y[i+1]) + t[i] * sqrt(1 - y[i]) - v[i]
           */
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr1, 1, &yplusexpr, &minusone, 1.0) );
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr2, 1, &yexpr, &minusone, 1.0) );
-         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &expr3, expr1, 0.5) );
-         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &expr4, expr2, 0.5) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr1, 1, &yplusexpr, &minusone, 1.0, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr2, 1, &yexpr, &minusone, 1.0, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &expr3, expr1, 0.5, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &expr4, expr2, 0.5, NULL, NULL) );
          exprs[0] = expr3;
          exprs[1] = texpr;
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr5, 2, exprs, 1.0) );
+         SCIP_CALL( SCIPcreateExprProduct(scip, &expr5, 2, exprs, 1.0, NULL, NULL) );
          exprs[0] = expr4;
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr6, 2, exprs, 1.0) );
+         SCIP_CALL( SCIPcreateExprProduct(scip, &expr6, 2, exprs, 1.0, NULL, NULL) );
          exprs[0] = expr5;  coefs[0] =  1.0;
          exprs[1] = expr6;  coefs[1] =  1.0;
          exprs[2] = vexpr;  coefs[2] = -1.0;
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr7, 3, exprs, coefs, 0.0) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr7, 3, exprs, coefs, 0.0, NULL, NULL) );
 
          /* create the constraint expr7 >= 0, add to the problem, and release it */
          SCIPsnprintf(consname, SCIP_MAXSTRLEN, "timestep(%d)", i);
-         SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, consname, expr7, 0.0, SCIPinfinity(scip)) );
+         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, consname, expr7, 0.0, SCIPinfinity(scip)) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
          /* release exprs */
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr7) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr6) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr5) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr4) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr7) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr6) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr5) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr4) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr3) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
 
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &vexpr) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &texpr) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yplusexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &vexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &texpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &yplusexpr) );
 
          /* create constraint v_i^2 >= (y_{i+1}^2 - 2*y_{i+1}y_i + y_i^2) + (x_{i+1}^2 - 2*x_{i+1}x_i + x_i^2)
           * SCIP should recognize that this can be formulated as SOC
@@ -275,7 +265,7 @@ SCIP_RETCODE setupProblem(
          quadvars1[6] = v[i];   quadvars2[6] = v[i];   quadcoefs[6] = -1.0;
 
          SCIPsnprintf(consname, SCIP_MAXSTRLEN, "steplength(%d)", i);
-         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, consname, 0, NULL, NULL, 7, quadvars1, quadvars2, quadcoefs, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, consname, 0, NULL, NULL, 7, quadvars1, quadvars2, quadcoefs, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          /* add the constraint to the problem and forget it */
          SCIP_CALL( SCIPaddCons(scip, cons) );
