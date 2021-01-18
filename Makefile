@@ -361,7 +361,7 @@ endif
 
 NLPILIBCOBJ	= 	nlpi/nlpi.o nlpi/expr_varidx.o nlpi/nlpioracle.o nlpi/nlpi_all.o
 
-NLPILIBCXXOBJ	= 	nlpi/intervalarithext.o
+NLPILIBCXXOBJ =
 
 NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
 			scip/misc.o \
