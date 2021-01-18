@@ -752,13 +752,13 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/interrupt.o \
 			scip/intervalarith.o \
 			scip/lp.o \
-			scip/nlp.o \
 			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/misc_linear.o \
 			scip/misc_rowprep.o \
 			scip/nlhdlr.o \
+			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
@@ -839,7 +839,6 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			tclique/tclique_graph.o \
 			dijkstra/dijkstra.o \
 			xml/xmlparse.o
-
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)

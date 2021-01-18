@@ -52,34 +52,13 @@ set(scipsources
     scip/cons_countsols.c
     scip/cons_cumulative.c
     scip/cons_disjunction.c
-    scip/cons_expr.c
-    scip/cons_expr_abs.c
-    scip/cons_expr_cos.c
-    scip/cons_expr_entropy.c
-    scip/cons_expr_erf.c
-    scip/cons_expr_exp.c
-    scip/cons_expr_iterator.c
-    scip/cons_expr_rowprep.c
-    scip/cons_expr_log.c
-    scip/cons_expr_pow.c
-    scip/cons_expr_product.c
-    scip/cons_expr_sin.c
-    scip/cons_expr_sum.c
-    scip/cons_expr_value.c
-    scip/cons_expr_var.c
-    scip/cons_expr_nlhdlr_bilinear.c
-    scip/cons_expr_nlhdlr_convex.c
-    scip/cons_expr_nlhdlr_default.c
-    scip/cons_expr_nlhdlr_perspective.c
-    scip/cons_expr_nlhdlr_quadratic.c
-    scip/cons_expr_nlhdlr_quotient.c
-    scip/cons_expr_nlhdlr_soc.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c
     scip/cons_linear.c
     scip/cons_linking.c
     scip/cons_logicor.c
+    scip/cons_nonlinear.c
     scip/cons_or.c
     scip/cons_orbisack.c
     scip/cons_orbitope.c
@@ -97,6 +76,18 @@ set(scipsources
     scip/event_estim.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
+    scip/expr_abs.c
+    scip/expr_cos.c
+    scip/expr_entropy.c
+    scip/expr_erf.c
+    scip/expr_exp.c
+    scip/expr_log.c
+    scip/expr_pow.c
+    scip/expr_product.c
+    scip/expr_sin.c
+    scip/expr_sum.c
+    scip/expr_value.c
+    scip/expr_var.c
     scip/disp_default.c
     scip/heur_actconsdiving.c
     scip/heur_adaptivediving.c
@@ -124,7 +115,7 @@ set(scipsources
     scip/heur_locks.c
     scip/heur_alns.c
     scip/heur_mutation.c
-    scip/heur_multistart.c
+#    scip/heur_multistart.c
     scip/heur_mpec.c
     scip/heur_nlpdiving.c
     scip/heur_objpscostdiving.c
@@ -157,6 +148,13 @@ set(scipsources
     scip/heur_zeroobj.c
     scip/heur_zirounding.c
     scip/message_default.c
+    scip/nlhdlr_bilinear.c
+    scip/nlhdlr_convex.c
+    scip/nlhdlr_default.c
+    scip/nlhdlr_perspective.c
+    scip/nlhdlr_quadratic.c
+    scip/nlhdlr_quotient.c
+    scip/nlhdlr_soc.c
     scip/nodesel_bfs.c
     scip/nodesel_breadthfirst.c
     scip/nodesel_dfs.c
@@ -222,10 +220,10 @@ set(scipsources
     scip/sepa_clique.c
     scip/sepa_closecuts.c
     scip/sepa_aggregation.c
-    scip/sepa_convexproj.c
+#    scip/sepa_convexproj.c
     scip/sepa_disjunctive.c
     scip/sepa_eccuts.c
-    scip/sepa_gauge.c
+#    scip/sepa_gauge.c
     scip/sepa_gomory.c
     scip/sepa_impliedbounds.c
     scip/sepa_intobj.c
@@ -261,6 +259,9 @@ set(scipsources
     scip/dialog.c
     scip/disp.c
     scip/event.c
+    scip/expr.c
+    scip/exprcurv.c
+    scip/expriter.c
     scip/fileio.c
     scip/heur.c
     scip/heuristics.c
@@ -274,6 +275,8 @@ set(scipsources
     scip/mem.c
     scip/misc.c
     scip/misc_linear.c
+    scip/misc_rowprep.c
+    scip/nlhdlr.c
     scip/nlp.c
     scip/nodesel.c
     scip/paramset.c
@@ -382,8 +385,7 @@ set(nlpisources
     nlpi/nlpi.c
     nlpi/nlpi_all.c
     nlpi/nlpioracle.c
-    nlpi/expr.c
-    nlpi/intervalarithext.cpp
+    nlpi/expr_varidx.c
     ${nlpi}
     ${exprinterpret}
 )
@@ -410,20 +412,17 @@ set(dijkstraheaders
 )
 
 set(nlpiheaders
-    nlpi/exprinterpret.h
-    nlpi/intervalarithext.h
     nlpi/nlpi_all.h
     nlpi/nlpi.h
     nlpi/nlpi_filtersqp.h
     nlpi/nlpi_ipopt.h
     nlpi/nlpi_worhp.h
     nlpi/nlpioracle.h
-    nlpi/pub_expr.h
-    nlpi/struct_expr.h
     nlpi/struct_nlpi.h
-    nlpi/type_expr.h
-    nlpi/type_exprinterpret.h
     nlpi/type_nlpi.h
+    nlpi/expr_varidx.h
+    nlpi/exprinterpret.h
+    nlpi/type_exprinterpret.h
 )
 
 set(objscipheaders
@@ -494,11 +493,9 @@ set(scipheaders
     scip/concurrent.h
     scip/conflict.h
     scip/conflictstore.h
-    scip/cons_abspower.h
     scip/cons_and.h
     scip/cons_benders.h
     scip/cons_benderslp.h
-    scip/cons_bivariate.h
     scip/cons_bounddisjunction.h
     scip/cons_cardinality.h
     scip/cons_components.h
@@ -506,23 +503,6 @@ set(scipheaders
     scip/cons_countsols.h
     scip/cons_cumulative.h
     scip/cons_disjunction.h
-    scip/cons_expr.h
-    scip/cons_expr_abs.h
-    scip/cons_expr_cos.h
-    scip/cons_expr_erf.h
-    scip/cons_expr_exp.h
-    scip/cons_expr_log.h
-    scip/cons_expr_pow.h
-    scip/cons_expr_product.h
-    scip/cons_expr_sin.h
-    scip/cons_expr_sum.h
-    scip/cons_expr_value.h
-    scip/cons_expr_var.h
-    scip/cons_expr_nlhdlr_bilinear.h
-    scip/cons_expr_nlhdlr_convex.h
-    scip/cons_expr_nlhdlr_default.h
-    scip/cons_expr_nlhdlr_quadratic.h
-    scip/cons_expr_nlhdlr_quotient.h
     scip/cons.h
     scip/cons_indicator.h
     scip/cons_integral.h
@@ -535,9 +515,7 @@ set(scipheaders
     scip/cons_orbitope.h
     scip/cons_or.h
     scip/cons_pseudoboolean.h
-    scip/cons_quadratic.h
     scip/cons_setppc.h
-    scip/cons_soc.h
     scip/cons_sos1.h
     scip/cons_sos2.h
     scip/cons_superindicator.h
@@ -559,6 +537,18 @@ set(scipheaders
     scip/event_estim.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
+    scip/expr_abs.h
+    scip/expr_cos.h
+    scip/expr_entropy.h
+    scip/expr_erf.h
+    scip/expr_exp.h
+    scip/expr_log.h
+    scip/expr_pow.h
+    scip/expr_product.h
+    scip/expr_sin.h
+    scip/expr_sum.h
+    scip/expr_value.h
+    scip/expr_var.h
     scip/heur_actconsdiving.h
     scip/heur_adaptivediving.h
     scip/heur_bound.h
@@ -628,6 +618,13 @@ set(scipheaders
     scip/message_default.h
     scip/message.h
     scip/misc.h
+    scip/nlhdlr_bilinear.h
+    scip/nlhdlr_convex.h
+    scip/nlhdlr_default.h
+    scip/nlhdlr_perspective.h
+    scip/nlhdlr_quadratic.h
+    scip/nlhdlr_quotient.h
+    scip/nlhdlr_soc.h
     scip/nlp.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
@@ -688,6 +685,7 @@ set(scipheaders
     scip/pub_dialog.h
     scip/pub_disp.h
     scip/pub_event.h
+    scip/pub_expr.h
     scip/pub_fileio.h
     scip/pub_heur.h
     scip/pub_history.h
@@ -697,8 +695,10 @@ set(scipheaders
     scip/pub_message.h
     scip/pub_misc.h
     scip/pub_misc_linear.h
+    scip/pub_misc_rowprep.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
+    scip/pub_nlhdlr.h
     scip/pub_nlp.h
     scip/pub_nodesel.h
     scip/pub_paramset.h
@@ -834,6 +834,7 @@ set(scipheaders
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
+    scip/struct_expr.h
     scip/struct_heur.h
     scip/struct_history.h
     scip/struct_implics.h
@@ -842,6 +843,7 @@ set(scipheaders
     scip/struct_mem.h
     scip/struct_message.h
     scip/struct_misc.h
+    scip/struct_nlhdlr.h
     scip/struct_nlp.h
     scip/struct_nodesel.h
     scip/struct_paramset.h
@@ -882,13 +884,13 @@ set(scipheaders
     scip/type_conflict.h
     scip/type_conflictstore.h
     scip/type_cons.h
-    scip/type_cons_expr.h
     scip/type_cutpool.h
     scip/type_cuts.h
     scip/type_dcmp.h
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
+    scip/type_expr.h
     scip/type_heur.h
     scip/type_history.h
     scip/type_implics.h
@@ -898,6 +900,7 @@ set(scipheaders
     scip/type_mem.h
     scip/type_message.h
     scip/type_misc.h
+    scip/type_nlhdlr.h
     scip/type_nlp.h
     scip/type_nodesel.h
     scip/type_paramset.h
