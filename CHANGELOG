@@ -55,6 +55,7 @@ Fixed bugs
 - Fixed numerical bug by creating and checking the empty solution when problem vanishes in presolving.
 - Replace wrong usage of CMAKE_BINARY_DIR by PROJECT_BINARY_DIR in CMake system
 - Fixed lpi_glop to use absl flag instead of GFlags
+- Fixed invalid initialization of limits/softtime parameter in cons_components
 
 Miscellaneous
 -------------
@@ -181,7 +182,6 @@ Fixed bugs
 - Fixed inability to set a value in a solution if it was within epsilon to the current value
 - Fixed problems for linking optimized code with debug library of SCIP (and vice versa) by moving debug-only members
   to end of SCIP structs
-- Fixed invalid initialization of limits/softtime parameter in cons_components
 
 Miscellaneous
 -------------
