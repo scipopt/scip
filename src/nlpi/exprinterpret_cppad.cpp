@@ -1376,7 +1376,7 @@ SCIP_RETCODE eval(
    Type&                 val                 /**< buffer to store expression value */
    )
 {
-   Type* buf = 0;
+   Type* buf = NULL;
 
    assert(expr != NULL);
 
@@ -1385,25 +1385,24 @@ SCIP_RETCODE eval(
    //   they could hold Type*, but then we need to alloc small portions all the time
    //   or we have a big Type-array outside and point to it in iterdata
 
-   if( SCIPexprGetNChildren(expr) > 0 )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &buf, SCIPexprGetNChildren(expr)) );
-
-      for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
-      {
-         SCIP_CALL( eval(scip, SCIPexprGetChildren(expr)[i], exprintdata, x, buf[i]) );
-      }
-   }
-
    if( SCIPisExprVaridx(scip, expr) )
    {
       val = x[exprintdata->getVarPos(SCIPgetIndexExprVaridx(expr))];
+      return SCIP_OKAY;
    }
-   else if( SCIPisExprValue(scip, expr) )
+   if( SCIPisExprValue(scip, expr) )
    {
       val = SCIPgetValueExprValue(expr);
+      return SCIP_OKAY;
    }
-   else if( SCIPisExprSum(scip, expr) )
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &buf, SCIPexprGetNChildren(expr)) );
+   for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
+   {
+      SCIP_CALL( eval(scip, SCIPexprGetChildren(expr)[i], exprintdata, x, buf[i]) );
+   }
+
+   if( SCIPisExprSum(scip, expr) )
    {
       val = SCIPgetConstantExprSum(expr);
       for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
@@ -1468,7 +1467,7 @@ SCIP_RETCODE eval(
       return SCIP_ERROR;
    }
 
-   SCIPfreeBufferArrayNull(scip, &buf);
+   SCIPfreeBufferArray(scip, &buf);
 
    return SCIP_OKAY;
 }

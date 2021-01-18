@@ -551,6 +551,7 @@ SCIP_RETCODE nlrowChgLinearCoefPos(
 {
    assert(nlrow != NULL);
    assert(0 <= pos && pos < nlrow->nlinvars);
+   assert(nlrow->linvars != NULL);
    assert(nlrow->linvars[pos] != NULL);
 
    if( SCIPsetIsZero(set, coef) )
