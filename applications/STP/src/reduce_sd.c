@@ -4886,6 +4886,7 @@ SCIP_RETCODE reduce_bd34WithSd(
    int adjvert[STP_BD_MAXDEGREE];
    GRAPH* auxg;
    const int nnodes = g->knots;
+   int nnewelims = 0;
 
    assert(scip && g && vnoi);
    assert(!graph_pc_isPcMw(g));
@@ -4949,7 +4950,7 @@ SCIP_RETCODE reduce_bd34WithSd(
                assert(g->grad[i] == 0);
 
                SCIPdebugMessage("BD3-R Reduction: %f %f %f csum: %f\n ", sd[0], sd[1], sd[2], costsum);
-               (*nelims)++;
+               nnewelims++;
             }
          }
          /* vertex of degree 4? */
@@ -5039,17 +5040,23 @@ SCIP_RETCODE reduce_bd34WithSd(
 
                if( success )
                {
-                  (*nelims)++;
+                  nnewelims++;
                }
             }
          }
       }
    }
 
+   // todo there might be an issue that SDs become invalid because of a conflict deletion...
+   if( nnewelims > 0 )
+      SCIP_CALL( reduce_unconnected(scip, g) );
+
    assert(graph_valid(scip, g));
 
    graph_path_exit(scip, auxg);
    graph_free(scip, &auxg, TRUE);
+
+   *nelims += nnewelims;
 
    return SCIP_OKAY;
 }
