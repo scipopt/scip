@@ -298,5 +298,5 @@ void SCIPsetIndexExprVaridx(
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(newindex >= 0);
 
-   SCIPexprSetData(expr, (void*)(size_t)newindex);  /*lint !e571*/
+   SCIPexprSetData(expr, (SCIP_EXPRDATA*)(size_t)newindex);  /*lint !e571*/
 }
