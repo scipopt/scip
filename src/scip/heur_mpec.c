@@ -26,6 +26,9 @@
 #include "scip/intervalarith.h"
 #include "nlpi/nlpi.h"
 #include "scip/pub_expr.h"
+#include "scip/expr_var.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_pow.h"
 #include "scip/heur_mpec.h"
 #include "scip/heur_subnlp.h"
 #include "scip/pub_cons.h"
@@ -193,43 +196,42 @@ SCIP_RETCODE addRegularScholtes(
    /* add or update regularization for each non-fixed binary variables */
    if( !update )
    {
-#if !1  // FIXME
-      SCIP_QUADELEM* quadelems;
-      SCIP_Real* linvals;
-      int* lininds;
+      SCIP_NLROW** nlrows;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &lininds, 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &linvals, 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &nlrows, nbinvars) );
 
       for( i = 0; i < nbinvars; ++i )
       {
-         SCIP_VAR* var = binvars[i];
-         SCIP_Real lhs = -SCIPinfinity(scip);
-         SCIP_Real rhs = theta;
-         int nlininds = 1;
-         int nquadelems = 1;
-         int idx;
+         SCIP_Real one = 1.0;
+         SCIP_Real minusone = -1.0;
+         SCIP_EXPR* varexpr;
+         SCIP_EXPR* powexpr;
+         SCIP_EXPR* sumexpr;
+         char name[SCIP_MAXSTRLEN];
 
-         assert(var != NULL);
-         assert(heurdata->var2idx != NULL);
-         assert(SCIPhashmapExists(heurdata->var2idx, (void*)var));
-         idx = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)var);
+         SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_reg", SCIPvarGetName(binvars[i]));
 
-         lininds[0] = idx;
-         linvals[0] = 1.0;
-         quadelems->idx1 = lininds[0];
-         quadelems->idx2 = lininds[0];
-         quadelems->coef = -1.0;
+         /* -binvars[i]^2 */
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, binvars[i], NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, varexpr, 2.0, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 1, &powexpr, &minusone, 0.0, NULL, NULL) );
 
-         SCIP_CALL( SCIPnlpiAddConstraints(scip, heurdata->nlpi, heurdata->nlpiprob, 1, &lhs, &rhs, &nlininds,
-               &lininds, &linvals, &nquadelems, &quadelems, NULL, NULL, NULL) );
+         /* binvars[i] - binvars[i]^2 <= theta */
+         SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[i], name, 0.0, 1, &binvars[i], &one, sumexpr, -SCIPinfinity(scip), theta, SCIP_EXPRCURV_CONCAVE) );
+
+         SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
       }
 
-      SCIPfreeBufferArray(scip, &linvals);
-      SCIPfreeBufferArray(scip, &lininds);
-      SCIPfreeBufferArray(scip, &quadelems);
-#endif
+      SCIP_CALL( SCIPaddNlpiProbNlRows(scip, heurdata->nlpi, heurdata->nlpiprob, heurdata->var2idx, nlrows, nbinvars) );
+
+      for( i = nbinvars-1; i >= 0; --i )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[i]) );
+      }
+
+      SCIPfreeBufferArray(scip, &nlrows);
    }
    else
    {
