@@ -92,7 +92,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    nlpi = SCIPgetNlpis(scip)[0];
    assert(nlpi != NULL);
 
-   SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "relax-NLP") );
+   SCIP_CALL( SCIPnlpiCreateProblem(scip, nlpi, &nlpiprob, "relax-NLP") );
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, NULL, SCIPgetCutoffbound(scip),
@@ -111,17 +111,17 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
       }
    }
 
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
-   SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, NLPITERLIMIT) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * FEASTOLFAC) );
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * RELOBJTOLFAC) );
-   SCIP_CALL( SCIPnlpiSetIntPar(nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERLEVEL) );
+   SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPnlpiSetIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, NLPITERLIMIT) );
+   SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * FEASTOLFAC) );
+   SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * RELOBJTOLFAC) );
+   SCIP_CALL( SCIPnlpiSetIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERLEVEL) );
 
    /* solve NLP */
-   SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
+   SCIP_CALL( SCIPnlpiSolve(scip, nlpi, nlpiprob) );
 
    /* forward solution if we solved to optimality; local optimality is enough since the NLP is convex */
-   if( SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
+   if( SCIPnlpiGetSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
    {
       SCIP_VAR** vars;
       SCIP_Real* primal;
@@ -132,7 +132,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
       vars = SCIPgetVars(scip);
       nvars = SCIPgetNVars(scip);
 
-      SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL, &relaxval) );
+      SCIP_CALL( SCIPnlpiGetSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, &relaxval) );
 
       /* store relaxation solution in original SCIP if it improves the best relaxation solution thus far */
       if( (! SCIPisRelaxSolValid(scip)) || SCIPisGT(scip, relaxval, SCIPgetRelaxSolObj(scip)) )
@@ -167,7 +167,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
 
    /* free memory */
    SCIPhashmapFree(&var2idx);
-   SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &nlpiprob) );
+   SCIP_CALL( SCIPnlpiFreeProblem(scip, nlpi, &nlpiprob) );
 
    return SCIP_OKAY;
 }
