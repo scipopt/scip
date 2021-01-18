@@ -252,6 +252,18 @@ SCIP_RETCODE SCIPaddNlpiProbRows(
    int                   nrows               /**< total number of rows to add */
    );
 
+/** adds nonlinear rows to the NLP relaxation */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddNlpiProbNlRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_NLROW**          nlrows,             /**< rows to add */
+   int                   nnlrows             /**< total number of rows to add */
+   );
+
 /**@} */
 
 #ifdef __cplusplus

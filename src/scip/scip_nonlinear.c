@@ -1552,7 +1552,7 @@ SCIP_RETCODE SCIPaddNlpiProbRows(
    assert(var2idx != NULL);
    assert(nrows == 0 || rows != NULL);
 
-   SCIPdebugMsg(scip, "call SCIPaddConvexNlpRowsNlobbt() with %d rows\n", nrows);
+   SCIPdebugMsg(scip, "call SCIPaddNlpiProbRows() with %d rows\n", nrows);
 
    if( nrows <= 0 )
       return SCIP_OKAY;
@@ -1602,6 +1602,117 @@ SCIP_RETCODE SCIPaddNlpiProbRows(
    {
       SCIPfreeBufferArray(scip, &lininds[i]);
    }
+   SCIPfreeBufferArray(scip, &nlininds);
+   SCIPfreeBufferArray(scip, &lininds);
+   SCIPfreeBufferArray(scip, &linvals);
+   SCIPfreeBufferArray(scip, &rhss);
+   SCIPfreeBufferArray(scip, &lhss);
+   SCIPfreeBufferArray(scip, &names);
+
+   return SCIP_OKAY;
+}
+
+/** adds nonlinear rows to the NLP relaxation */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddNlpiProbNlRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_NLROW**          nlrows,             /**< rows to add */
+   int                   nnlrows             /**< total number of rows to add */
+   )
+{
+   const char** names;
+   SCIP_Real* lhss;
+   SCIP_Real* rhss;
+   SCIP_Real** linvals;
+   int** lininds;
+   int* nlininds;
+   SCIP_EXPR** exprs;
+   int i;
+
+   assert(nlpi != NULL);
+   assert(nlpiprob != NULL);
+   assert(var2idx != NULL);
+   assert(nnlrows == 0 || nlrows != NULL);
+
+   SCIPdebugMsg(scip, "call SCIPaddNlpiProbNlRows() with %d rows\n", nnlrows);
+
+   if( nnlrows <= 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &names, nnlrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhss, nnlrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhss, nnlrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nnlrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nnlrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nnlrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nnlrows) );
+
+   for( i = 0; i < nnlrows; ++i )
+   {
+      SCIP_NLROW* nlrow;
+
+      nlrow = nlrows[i];
+      assert(nlrow != NULL);
+
+      lhss[i] = !SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)) ? SCIPnlrowGetLhs(nlrow) - SCIPnlrowGetConstant(nlrow) : -SCIPinfinity(scip);
+      rhss[i] = !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)) ? SCIPnlrowGetRhs(nlrow) - SCIPnlrowGetConstant(nlrow) :  SCIPinfinity(scip);
+      names[i] = SCIPnlrowGetName(nlrow);
+      nlininds[i] = 0;
+      lininds[i] = NULL;
+      linvals[i] = NULL;
+
+      /* copy linear part */
+      if( SCIPnlrowGetNLinearVars(nlrow) > 0 )
+      {
+         SCIP_VAR* var;
+         int k;
+
+         nlininds[i] = SCIPnlrowGetNLinearVars(nlrow);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], nlininds[i]) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[i], nlininds[i]) ); /*lint !e866*/
+
+         for( k = 0; k < nlininds[i]; ++k )
+         {
+            var = SCIPnlrowGetLinearVars(nlrow)[k];
+            assert(var != NULL);
+            assert(SCIPhashmapExists(var2idx, (void*)var));
+
+            lininds[i][k] = SCIPhashmapGetImageInt(var2idx, (void*)var);
+            linvals[i][k] = SCIPnlrowGetLinearCoefs(nlrow)[k];
+         }
+      }
+
+      if( SCIPnlrowGetExpr(nlrow) != NULL )
+      {
+         /* create copy of expr that uses varidx expressions corresponding to variables indices in NLPI */
+         SCIP_CALL( SCIPduplicateExpr(scip, SCIPnlrowGetExpr(nlrow), &exprs[i], mapvar2varidx, var2idx, NULL, NULL) );
+      }
+      else
+      {
+         exprs[i] = NULL;
+      }
+   }
+
+   /* pass all rows to the nlpi */
+   SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nlpiprob, nnlrows, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
+
+   /* free memory */
+   for( i = nnlrows - 1; i >= 0; --i )
+   {
+      SCIPfreeBufferArrayNull(scip, &linvals[i]);
+      SCIPfreeBufferArrayNull(scip, &lininds[i]);
+      if( exprs[i] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseExpr(scip, &exprs[i]) );
+      }
+
+   }
+   SCIPfreeBufferArray(scip, &exprs);
    SCIPfreeBufferArray(scip, &nlininds);
    SCIPfreeBufferArray(scip, &lininds);
    SCIPfreeBufferArray(scip, &linvals);
