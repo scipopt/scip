@@ -181,6 +181,7 @@ Fixed bugs
 - Fixed inability to set a value in a solution if it was within epsilon to the current value
 - Fixed problems for linking optimized code with debug library of SCIP (and vice versa) by moving debug-only members
   to end of SCIP structs
+- Fixed invalid initialization of limits/softtime parameter in cons_components
 
 Miscellaneous
 -------------
