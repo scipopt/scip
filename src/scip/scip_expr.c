@@ -1256,12 +1256,20 @@ SCIP_RETCODE SCIPcopyExpr(
    SCIP_Bool*            valid               /**< pointer to store whether all checked or enforced constraints were validly copied */
    )
 {
+#ifndef _MSC_VER
    COPY_MAPEXPR_DATA copydata = {
       .varmap = varmap,
       .consmap = consmap,
       .global = global,
       .valid = TRUE
    };
+#else  /* MS compiler doesn't have proper C99 support... */
+   COPY_MAPEXPR_DATA copydata;
+   copydata.varmap = varmap;
+   copydata.consmap = consmap;
+   copydata.global = global;
+   copydata.valid = TRUE;
+#endif
 
    assert(sourcescip != NULL);
    assert(sourcescip->mem != NULL);

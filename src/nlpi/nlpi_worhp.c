@@ -44,7 +44,7 @@
 #include "worhp/worhp.h"
 
 #if WORHP_MAJOR < 2 && WORHP_MINOR < 10
-#error "Require at least Worhp 1.10"
+//#error "Require at least Worhp 1.10"
 #endif
 
 #define NLPI_DESC              "Worhp interface"            /**< description of solver */
@@ -655,7 +655,6 @@ SCIP_RETCODE initWorhp(
    const SCIP_Real* ubs;
    const int* offset;
    const int* cols;
-   SCIP_NLPIDATA* nlpidata;
    int i;
    int j;
 
@@ -671,9 +670,6 @@ SCIP_RETCODE initWorhp(
    cnt = problem->cnt;
    opt = problem->opt;
    par = problem->par;
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
 
    /* properly zeros everything */
    WorhpPreInit(opt, wsp, par, cnt);
@@ -950,13 +946,8 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerWorhp)
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
 {
-   SCIP_NLPIDATA* data;
-
    assert(nlpi    != NULL);
    assert(problem != NULL);
-
-   data = SCIPnlpiGetData(nlpi);
-   assert(data != NULL);
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, problem) );
 
@@ -992,14 +983,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
 static
 SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
 {
-   SCIP_NLPIDATA* data;
-
    assert(nlpi     != NULL);
    assert(problem  != NULL);
    assert(*problem != NULL);
-
-   data = SCIPnlpiGetData(nlpi);
-   assert(data != NULL);
 
    if( (*problem)->opt != NULL )
    {
@@ -1767,9 +1753,6 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParWorhp)
 static
 SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParWorhp)
 {
-   SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
-
-   assert(data != NULL);
    assert(dval != NULL);
 
    switch( type )
@@ -1841,10 +1824,6 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParWorhp)
 static
 SCIP_DECL_NLPISETREALPAR(nlpiSetRealParWorhp)
 {
-   SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
-
-   assert(data != NULL);
-
    switch( type )
    {
       case SCIP_NLPPAR_FROMSCRATCH:

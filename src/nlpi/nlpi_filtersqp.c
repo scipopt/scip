@@ -924,13 +924,8 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerFilterSQP)
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
 {
-   SCIP_NLPIDATA* data;
-
    assert(nlpi    != NULL);
    assert(problem != NULL);
-
-   data = SCIPnlpiGetData(nlpi);
-   assert(data != NULL);
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, problem) );
    (*problem)->scip = scip;
@@ -954,14 +949,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
 static
 SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
 {
-   SCIP_NLPIDATA* data;
-
    assert(nlpi     != NULL);
    assert(problem  != NULL);
    assert(*problem != NULL);
-
-   data = SCIPnlpiGetData(nlpi);
-   assert(data != NULL);
 
    if( (*problem)->oracle != NULL )
    {
@@ -1004,15 +994,11 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerFilterSQP)
 static
 SCIP_DECL_NLPIADDVARS(nlpiAddVarsFilterSQP)
 {
-   SCIP_NLPIDATA* nlpidata;
    int oldnvars;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
 
    oldnvars = SCIPnlpiOracleGetNVars(problem->oracle);
 
@@ -1107,15 +1093,11 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsFilterSQP)
 static
 SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsFilterSQP)
 {
-   SCIP_NLPIDATA* nlpidata;
    int oldnconss;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
 
    oldnconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
@@ -1191,14 +1173,9 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsFilterSQP)
 static
 SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveFilterSQP )
 {
-   SCIP_NLPIDATA* nlpidata;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle,
          constant, nlins, lininds, linvals, expr) );
@@ -1274,14 +1251,9 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesFilterSQP)
 static
 SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetFilterSQP)
 {
-   SCIP_NLPIDATA* nlpidata;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, problem->oracle, dstats) );
 
@@ -1309,14 +1281,9 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetFilterSQP)
 static
 SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetFilterSQP)
 {
-   SCIP_NLPIDATA* nlpidata;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleDelConsSet(scip, problem->oracle, dstats) );
 
@@ -1341,14 +1308,9 @@ SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetFilterSQP)
 static
 SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsFilterSQP)
 {
-   SCIP_NLPIDATA* nlpidata;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, problem->oracle, idx, nvals, varidxs, vals) );
 
@@ -1370,14 +1332,9 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsFilterSQP)
 static
 SCIP_DECL_NLPICHGEXPR(nlpiChgExprFilterSQP)
 {
-   SCIP_NLPIDATA* nlpidata;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgExpr(scip, problem->oracle, idxcons, expr) );
 
@@ -1416,14 +1373,9 @@ SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantFilterSQP)
 static
 SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessFilterSQP)
 {
-   SCIP_NLPIDATA* nlpidata;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
 
    if( primalvalues != NULL )
    {

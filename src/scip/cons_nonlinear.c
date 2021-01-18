@@ -9114,7 +9114,6 @@ static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLR*     targetconshdlr;
-   SCIP_CONSHDLRDATA* targetconshdlrdata;
    SCIP_CONSHDLRDATA* sourceconshdlrdata;
    int                i;
 
@@ -9129,8 +9128,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
    targetconshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(targetconshdlr != NULL);
    assert(targetconshdlr != conshdlr);
-   targetconshdlrdata = SCIPconshdlrGetData(targetconshdlr);
-   assert(targetconshdlrdata != NULL);
 
    sourceconshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(sourceconshdlrdata != NULL);

@@ -1870,14 +1870,17 @@ SCIP_RETCODE isCandidate(
       for( j = 0; j < nadjbilin; ++j )
       {
          SCIP_EXPR* qterm1;
+         SCIP_EXPR* qterm2;
          SCIP_VAR* var2;
          SCIP_Real coef;
          int pos2;
 
-         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, NULL, &coef, &pos2, NULL);
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, &qterm2, &coef, &pos2, NULL);
 
          if( qterm1 != qterm )
             continue;
+
+         var2 = SCIPgetVarExprVar(qterm2);
 
          /* do not consider loops or global fixed variables */
          if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var2), SCIPvarGetUbGlobal(var2)) )

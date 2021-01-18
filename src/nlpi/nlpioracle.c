@@ -1441,7 +1441,9 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
          /* update variable indices in varidx expressions */
          SCIP_EXPR* expr;
          SCIP_Bool keptvar = FALSE;  /* whether any of the variables in expr was not deleted */
+#ifndef NDEBUG
          SCIP_Bool delvar = FALSE; /* whether any of the variables in expr was deleted */
+#endif
 
          SCIP_CALL( SCIPexpriterInit(it, cons->expr, SCIP_EXPRITER_DFS, FALSE) );
          for( expr = cons->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
@@ -1460,7 +1462,9 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
             }
             else
             {
+#ifndef NDEBUG
                delvar = TRUE;
+#endif
                /* if variable is deleted, then there must not have been any variable that was kept
                 * (either all variables are deleted, which removes the expr, or none)
                 */

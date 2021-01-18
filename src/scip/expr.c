@@ -1733,7 +1733,6 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
 }
 
 /** captures an expression (increments usage count) */
-SCIP_EXPORT
 void SCIPexprCapture(
    SCIP_EXPR*            expr                /**< expression */
    )
@@ -1744,7 +1743,6 @@ void SCIPexprCapture(
 }
 
 /** releases an expression (decrements usage count and possibly frees expression) */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprRelease(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */

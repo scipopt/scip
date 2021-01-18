@@ -69,15 +69,6 @@ static int _nnlps = 0;                       /**< number of NLPs that have been 
 static
 SCIP_DECL_NLPICOPY(nlpiCopyAll)
 {
-   SCIP_NLPIDATA* sourcedata;
-
-   assert(sourcenlpi != NULL);
-
-   sourcedata = SCIPnlpiGetData(sourcenlpi);
-   assert(sourcedata != NULL);
-   assert(sourcedata->nnlpis > 1);
-   assert(sourcedata->nlpis[0] != NULL);
-
    /* include NLPI */
    SCIP_CALL( SCIPincludeNlpSolverAll(scip) );
 
