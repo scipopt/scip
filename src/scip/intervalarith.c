@@ -4613,7 +4613,7 @@ int SCIPintervalPropagateWeightedSum(
    int minlinactivityinf;
    int maxlinactivityinf;
    int nreductions = 0;
-   int c = 0;
+   int c;
 
    assert(noperands > 0);
    assert(operands != NULL);
@@ -4732,7 +4732,7 @@ int SCIPintervalPropagateWeightedSum(
       SCIPintervalIntersect(&resultants[c], operands[c], childbounds);
       if( SCIPintervalIsEmpty(infinity, resultants[c]) )
          *infeasible = TRUE;
-      else if( resultants[c].inf != operands[c].inf || resultants[c].sup != operands[c].sup )
+      else if( resultants[c].inf != operands[c].inf || resultants[c].sup != operands[c].sup )  /*lint !e777*/
          ++nreductions;
    }
 
@@ -4741,7 +4741,7 @@ TERMINATE:
 
    if( c < noperands )
    {
-      BMScopyMemoryArray(&resultants[c], &operands[c], noperands - c);
+      BMScopyMemoryArray(&resultants[c], &operands[c], noperands - c); /*lint !e776 !e866*/
    }
 
    return nreductions;

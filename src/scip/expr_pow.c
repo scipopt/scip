@@ -24,6 +24,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /*lint --e{835}*/
+/*lint -e777*/
 
 #include <string.h>
 
@@ -320,7 +321,7 @@ void computeSecant(
        * unless the bounds are close to 0 as well (xub <= 0.1 in the "if" above)
        * or we have exactly xlb=-xub, where we can return a clean 0.0 (though it's probably useless)
        */
-      if( xlb == -xub ) /*lint !e777*/
+      if( xlb == -xub )
       {
          *slope = 0.0;
          *constant = pow(xlb, exponent);
@@ -331,13 +332,13 @@ void computeSecant(
          return;
       }
    }
-   else if( xlb == 0.0 && exponent > 0.0 ) /*lint !e777*/
+   else if( xlb == 0.0 && exponent > 0.0 )
    {
       assert(xub >= 0.0);
       *slope = pow(xub, exponent-1.0);
       *constant = 0.0;
    }
-   else if( xub == 0.0 && exponent > 0.0 ) /*lint !e777*/
+   else if( xub == 0.0 && exponent > 0.0 )
    {
       /* normal pow: slope = - xlb^exponent / (-xlb) = xlb^(exponent-1)
        * signpower:  slope = (-xlb)^exponent / (-xlb) = (-xlb)^(exponent-1)
@@ -373,7 +374,7 @@ void computeSecant(
        * - the secant would be ok, if SCIPisEQ(xlb, xub), but this is already excluded above
        * - the secant would be ok, if SCIPisEQ(xlb, -xub) and the exponent is even, but this is already handled above
        */
-      if( lbval == ubval ) /*lint !e777*/
+      if( lbval == ubval )
          return;
 
       *slope = (ubval - lbval) / (xub - xlb);
@@ -1157,7 +1158,7 @@ SCIP_RETCODE addSignpowerRefpoints(
    if( (underestimate && SCIPisInfinity(scip, -lb)) || (!underestimate && SCIPisInfinity(scip, ub)) )
       return SCIP_OKAY;
 
-   if( exprdata->root == SCIP_INVALID ) /*lint !e777*/
+   if( exprdata->root == SCIP_INVALID )
    {
       SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
    }
@@ -1295,7 +1296,7 @@ SCIP_DECL_EXPRCOMPARE(comparePow)
    expo1 = SCIPgetExponentExprPow(expr1);
    expo2 = SCIPgetExponentExprPow(expr2);
 
-   return expo1 == expo2 ? 0 : expo1 < expo2 ? -1 : 1; /*lint !e777*/
+   return expo1 == expo2 ? 0 : expo1 < expo2 ? -1 : 1;
 }
 
 /** simplifies a pow expression
@@ -1752,7 +1753,7 @@ SCIP_DECL_EXPREVAL(evalPow)
 
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID);
 
    exponent = SCIPgetExponentExprPow(expr);
    base = SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]);
@@ -1781,12 +1782,12 @@ SCIP_DECL_EXPRFWDIFF(fwdiffPow)
 
    assert(expr != NULL);
    assert(SCIPexprGetData(expr) != NULL);
-   assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID);
 
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
    assert(!SCIPisExprValue(scip, child));
-   assert(SCIPexprGetDot(child) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetDot(child) != SCIP_INVALID);
 
    exponent = SCIPgetExponentExprPow(expr);
    assert(exponent != 1.0 && exponent != 0.0);
@@ -1813,13 +1814,13 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffPow)
 
    assert(expr != NULL);
    assert(SCIPexprGetData(expr) != NULL);
-   assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID);
    assert(childidx == 0);
 
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
    assert(!SCIPisExprValue(scip, child));
-   assert(SCIPexprGetDot(child) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetDot(child) != SCIP_INVALID);
 
    exponent = SCIPgetExponentExprPow(expr);
    assert(exponent != 1.0 && exponent != 0.0);
@@ -1850,7 +1851,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffPow)
    assert(!SCIPisExprValue(scip, child));
 
    childval = SCIPexprGetEvalValue(child);
-   assert(childval != SCIP_INVALID); /*lint !e777*/
+   assert(childval != SCIP_INVALID);
 
    exponent = SCIPgetExponentExprPow(expr);
    assert(exponent != 1.0 && exponent != 0.0);
@@ -2159,9 +2160,9 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
          continue;
 
       assert(overest[i] || i < 3); /* make sure that no out-of-bounds array access will be attempted */
-      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i];
+      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i % 3];
 
-      if( refpoint == SCIP_INVALID )  /*lint !e777*/
+      if( refpoint == SCIP_INVALID )
          continue;
 
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
@@ -2250,7 +2251,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityPow)
 
    if( expisint )
    {
-      SCIP_Bool expisodd = ceil(exponent/2) != exponent/2; /*lint !e777*/
+      SCIP_Bool expisodd = ceil(exponent/2) != exponent/2;
 
       if( expisodd )
       {
@@ -2590,7 +2591,7 @@ SCIP_DECL_EXPREVAL(evalSignpower)
 
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID);
 
    exponent = SCIPgetExponentExprPow(expr);
    base = SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]);
@@ -2623,7 +2624,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffSignpower)
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(child)), "val") != 0);
 
    childval = SCIPexprGetEvalValue(child);
-   assert(childval != SCIP_INVALID); /*lint !e777*/
+   assert(childval != SCIP_INVALID);
 
    exponent = SCIPgetExponentExprPow(expr);
    assert(exponent >= 1.0);
@@ -2712,7 +2713,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
             *islocal = TRUE;
          else
          {
-            if( exprdata->root == SCIP_INVALID ) /*lint !e777*/
+            if( exprdata->root == SCIP_INVALID )
             {
                SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
             }
@@ -2723,7 +2724,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
    else  /* and childlb < 0.0 due to previous if */
    {
       /* compute root if not known yet; only needed if mixed sign (global child ub > 0) */
-      if( exprdata->root == SCIP_INVALID && childgub > 0.0 ) /*lint !e777*/
+      if( exprdata->root == SCIP_INVALID && childgub > 0.0 )
       {
          SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
       }
@@ -2796,8 +2797,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
          continue;
 
       assert(overest[i] || i < 3); /* make sure that no out-of-bounds array access will be attempted */
-      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i];
-      if( refpoint == SCIP_INVALID ) /*lint !e777*/
+      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i % 3];
+      if( refpoint == SCIP_INVALID )
          continue;
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
@@ -2851,7 +2852,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropSignpower)
    /* f = pow(c0, alpha) -> c0 = pow(f, 1/alpha) */
    SCIPintervalSet(&exprecip, exponent);
    SCIPintervalReciprocal(SCIP_INTERVAL_INFINITY, &exprecip, exprecip);
-   if( exprecip.inf == exprecip.sup )  /*lint !e777*/
+   if( exprecip.inf == exprecip.sup )
    {
       SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval, bounds, exprecip.inf);
    }

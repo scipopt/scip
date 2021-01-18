@@ -116,13 +116,13 @@ void printBacktraces(
    }
 }
 #else
-#define storeBacktrace(subscipdepth,iterpos)
+#define storeBacktrace(subscipdepth, iterpos)
 
 static
 void printBacktraces(
    int                   subscipdepth        /**< current subscip depth */
    )
-{
+{  /*lint --e{715}*/
    SCIPerrorMessage("Rebuild with SCIP_DEBUG_EXPRITER defined in src/scip/expriter.c to see where currently active iterators were initialized.\n");
 }
 #endif
@@ -588,7 +588,7 @@ SCIP_RETCODE SCIPexpriterInit(
    }
    else
    {
-      iterator->visitedtag = 0;
+      iterator->visitedtag = 0L;
    }
 
    switch( iterator->itertype )

@@ -36,6 +36,8 @@
  */
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
+/*lint -e666*/
+
 /** evaluates an expression w.r.t. the values in the auxiliary variables */
 static
 SCIP_RETCODE evalExprInAux(
@@ -245,7 +247,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
             SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[v]), coefs[nreturned][v]) );
          }
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
-         SCIProwprepAddConstant(rowprep, constant[nreturned]);
+         SCIProwprepAddConstant(rowprep, constant[nreturned]);  /*lint !e644*/
 
          /* straighten out numerics */
          SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
@@ -340,7 +342,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       /* add variables to rowprep (coefs were already added by SCIPexprhdlrEstimateExpr) */
       for( i = 0; i < nchildren; ++i )
       {
-         SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]), SCIProwprepGetCoefs(rowprep)[i]);
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]), SCIProwprepGetCoefs(rowprep)[i]) );
       }
 
       SCIProwprepAddConstant(rowprep, constant);

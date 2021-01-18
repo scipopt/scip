@@ -521,7 +521,6 @@ SCIP_RETCODE SCIPexprEvalGradient(
 SCIP_RETCODE SCIPexprEvalHessianDir(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            rootexpr,           /**< expression to be evaluated */
    SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */

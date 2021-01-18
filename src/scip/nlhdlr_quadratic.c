@@ -93,7 +93,7 @@ struct SCIP_NlhdlrExprData
    int                   nposinfinityquadact;/**< number of quadratic terms contributing +infinity to activity */
    SCIP_INTERVAL*        quadactivities;     /**< activity of each quadratic term as defined in nlhdlrIntevalQuadratic */
    SCIP_INTERVAL         quadactivity;       /**< activity of quadratic part (sum of quadactivities) */
-   unsigned int          activitiestag;      /**< value of activities tag when activities were computed */
+   SCIP_Longint          activitiestag;      /**< value of activities tag when activities were computed */
 
    SCIP_CONS*            cons;               /**< if expr is the root of constraint cons, store cons; otherwise NULL */
    SCIP_Bool             separating;         /**< whether we are using the nlhdlr also for separation */
@@ -2439,7 +2439,6 @@ SCIP_Bool isPropagableTerm(
 static
 SCIP_RETCODE propagateBoundsQuadExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_EXPR*            expr,               /**< expression for which to solve */
    SCIP_Real             sqrcoef,            /**< square coefficient */
    SCIP_INTERVAL         b,                  /**< interval acting as linear coefficient */
@@ -2491,7 +2490,6 @@ SCIP_RETCODE propagateBoundsQuadExpr(
 static
 SCIP_RETCODE propagateBoundsLinExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_EXPR*            expr,               /**< expression for which to solve */
    SCIP_Real             b,                  /**< linear coefficient */
    SCIP_INTERVAL         rhs,                /**< interval acting as rhs */
@@ -3832,7 +3830,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
             assert(nadjbilin == 0);
 
             /* solve sqrcoef sqrexpr in rhs_i */
-            SCIP_CALL( propagateBoundsLinExpr(scip, conshdlr, sqrexpr, sqrcoef, rhs_i, infeasible, nreductions) );
+            SCIP_CALL( propagateBoundsLinExpr(scip, sqrexpr, sqrcoef, rhs_i, infeasible, nreductions) );
          }
          else
          {
@@ -3853,7 +3851,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
             if( expr1 == qexpr )
             {
                /* solve prodcoef prodexpr in rhs_i */
-               SCIP_CALL( propagateBoundsLinExpr(scip, conshdlr, prodexpr, prodcoef, rhs_i, infeasible, nreductions) );
+               SCIP_CALL( propagateBoundsLinExpr(scip, prodexpr, prodcoef, rhs_i, infeasible, nreductions) );
             }
          }
       }
@@ -3901,7 +3899,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          if( !*infeasible )
          {
             /* solve a_i expr_i^2 + b expr_i in rhs_i */
-            SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, qexpr, sqrcoef, b, rhs_i, infeasible, nreductions) );
+            SCIP_CALL( propagateBoundsQuadExpr(scip, qexpr, sqrcoef, b, rhs_i, infeasible, nreductions) );
          }
 
          if( nbilin > 0 && !*infeasible )

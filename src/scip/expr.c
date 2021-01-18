@@ -36,6 +36,9 @@
 #include "scip/struct_stat.h"
 #include "nlpi/nlpi_ipopt.h" /* for LAPACK */
 
+/*lint -e441*/
+/*lint -e777*/
+
 /*
  * Data structures
  */
@@ -236,7 +239,7 @@ SCIP_RETCODE evalAndDiff(
    return SCIP_OKAY;
 }
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** print statistics for expression handlers */
 static
 void printExprHdlrStatistics(
@@ -889,7 +892,7 @@ SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
    assert(expr->exprhdlr == exprhdlr);
    assert(isintegral != NULL);
 
-   *isintegral = SCIP_MONOTONE_UNKNOWN;
+   *isintegral = FALSE;
 
    /* check whether the expression handler implements the monotonicity callback */
    if( exprhdlr->integrality != NULL )
@@ -2267,7 +2270,7 @@ SCIP_RETCODE SCIPexprDismantle(
             if( expr->ownerprint != NULL )
             {
                SCIPmessageFPrintInfo(messagehdlr, file, "%*s   ", nspaces, "");
-               expr->ownerprint(set->scip, file, expr, expr->ownerdata);
+               SCIP_CALL( expr->ownerprint(set->scip, file, expr, expr->ownerdata) );
             }
 
             break;
@@ -2509,7 +2512,6 @@ SCIP_RETCODE SCIPexprEvalGradient(
 SCIP_RETCODE SCIPexprEvalHessianDir(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            rootexpr,           /**< expression to be evaluated */
    SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
@@ -3234,7 +3236,7 @@ void SCIPexprFreeQuadratic(
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->lincoefs, expr->quaddata->nlinexprs);
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->bilinexprterms, expr->quaddata->nbilinexprterms);
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvalues, n);
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvectors, n * n);
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvectors, n * n);  /*lint !e647*/
 
    for( i = 0; i < n; ++i )
    {

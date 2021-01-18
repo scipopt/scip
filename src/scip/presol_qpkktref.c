@@ -1538,7 +1538,6 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
 static
 SCIP_RETCODE checkConsQuadraticProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        nlconshdlr,         /**< nonlinear constraint handler */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_EXPR*            quadexpr,           /**< quadratic expression */
    SCIP_Bool             allowbinary,        /**< if TRUE then allow binary variables in the problem, if FALSE then all
@@ -1889,7 +1888,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
     *       x \in \{0, 1\}^{p} \times R^{n-p}.
     *
     */
-   SCIP_CALL( checkConsQuadraticProblem(scip, nlconshdlr, cons, expr, presoldata->addkktbinary, &objvar, &scale,
+   SCIP_CALL( checkConsQuadraticProblem(scip, cons, expr, presoldata->addkktbinary, &objvar, &scale,
       &objrhs, &isqp) );
    if( ! isqp )
       return SCIP_OKAY;

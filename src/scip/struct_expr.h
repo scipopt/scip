@@ -80,7 +80,7 @@ struct SCIP_ExprIterData
 {
    SCIP_EXPR*             parent;            /**< parent expression in DFS iteration */
    int                    currentchild;      /**< child that is currently visited (or will be visited next) by DFS iteration */
-   unsigned int           visitedtag;        /**< tag to identify whether an expression has been visited already */
+   SCIP_Longint           visitedtag;        /**< tag to identify whether an expression has been visited already */
    SCIP_EXPRITER_USERDATA userdata;          /**< space for iterator user to store some (temporary) data */
 };
 
@@ -197,7 +197,7 @@ struct SCIP_ExprIter
    SCIP_EXPRITER_TYPE    itertype;           /**< type of expression iterator */
    SCIP_EXPR*            curr;               /**< current expression of the iterator */
    int                   iterindex;          /**< index of iterator data in expressions, or -1 if not using iterator data in expressions */
-   unsigned int          visitedtag;         /**< tag to mark and recognize an expression as visited, or 0 if not avoiding multiple visits */
+   SCIP_Longint          visitedtag;         /**< tag to mark and recognize an expression as visited, or 0 if not avoiding multiple visits */
 
    /* data for rtopological mode */
    SCIP_EXPR**           dfsexprs;           /**< DFS stack */

@@ -52,6 +52,10 @@
 
 #define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
 
+/*lint -e441*/
+/*lint -e666*/
+/*lint -e777*/
+
 /*
  * Data structures
  */
@@ -89,7 +93,6 @@ typedef struct
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata;
    SCIP_SOL*             evalsol;
    SCIP*                 scip;
-   SCIP_CONSHDLR*        conshdlr;
 } VERTEXPOLYFUN_EVALDATA;
 
 /** stack used in constructExpr to store expressions that need to be investigated ("to do list") */
@@ -220,7 +223,7 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalConcave)
       SCIP_CALL_ABORT( SCIPsetSolVal(evaldata->scip, evaldata->evalsol, SCIPgetVarExprVar(evaldata->nlhdlrexprdata->leafexprs[i]), args[i]) );
    }
 
-   SCIP_CALL_ABORT( SCIPevalExpr(evaldata->scip, evaldata->nlhdlrexprdata->nlexpr, evaldata->evalsol, 0) );
+   SCIP_CALL_ABORT( SCIPevalExpr(evaldata->scip, evaldata->nlhdlrexprdata->nlexpr, evaldata->evalsol, 0L) );
 
    return SCIPexprGetEvalValue(evaldata->nlhdlrexprdata->nlexpr);
 }
@@ -1397,7 +1400,7 @@ SCIP_RETCODE estimateVertexPolyhedral(
          xstar[i] = 0.5 * (box[2*i] + box[2*i+1]);
       else
          xstar[i] = SCIPgetSolVal(scip, sol, var);
-      assert(xstar[i] != SCIP_INVALID);  /*lint !e777*/
+      assert(xstar[i] != SCIP_INVALID);
    }
 
    if( allfixed )
@@ -1421,7 +1424,9 @@ SCIP_RETCODE estimateVertexPolyhedral(
    SCIProwprepSetLocal(rowprep, TRUE);
    SCIProwprepAddConstant(rowprep, facetconstant);
    for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
-      SCIPaddRowprepTerm(scip, rowprep, SCIPgetVarExprVar(nlhdlrexprdata->leafexprs[i]), SCIProwprepGetCoefs(rowprep)[i]);
+   {
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetVarExprVar(nlhdlrexprdata->leafexprs[i]), SCIProwprepGetCoefs(rowprep)[i]) );
+   }
 
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "computed estimator: ");
@@ -1466,17 +1471,17 @@ SCIP_RETCODE estimateGradient(
    *success = FALSE;
 
    /* evaluation error -> skip */
-   if( auxvalue == SCIP_INVALID )  /*lint !e777*/
+   if( auxvalue == SCIP_INVALID )
    {
       SCIPdebugMsg(scip, "evaluation error / too large value (%g) for %p\n", auxvalue, (void*)nlexpr);
       return SCIP_OKAY;
    }
 
    /* compute gradient (TODO: this also reevaluates (soltag=0), which shouldn't be necessary unless we tried ConvexSecant before) */
-   SCIP_CALL( SCIPevalExprGradient(scip, nlexpr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, nlexpr, sol, 0L) );
 
    /* gradient evaluation error -> skip */
-   if( SCIPexprGetDerivative(nlexpr) == SCIP_INVALID ) /*lint !e777*/
+   if( SCIPexprGetDerivative(nlexpr) == SCIP_INVALID )
    {
       SCIPdebugMsg(scip, "gradient evaluation error for %p\n", (void*)nlexpr);
       return SCIP_OKAY;
@@ -1496,7 +1501,7 @@ SCIP_RETCODE estimateGradient(
 
       assert(SCIPexprGetDiffTag(nlhdlrexprdata->leafexprs[i]) == SCIPexprGetDiffTag(nlexpr));
       deriv = SCIPexprGetDerivative(nlhdlrexprdata->leafexprs[i]);
-      if( deriv == SCIP_INVALID ) /*lint !e777*/
+      if( deriv == SCIP_INVALID )
       {
          SCIPdebugMsg(scip, "gradient evaluation error for component %d of %p\n", i, (void*)nlexpr);
          return SCIP_OKAY;
@@ -1585,7 +1590,7 @@ SCIP_RETCODE estimateConvexSecant(
       left = SCIPfloor(scip, x);
       right = SCIPceil(scip, x);
    }
-   assert(left != right); /*lint !e777*/
+   assert(left != right);
 
    /* now evaluate at left and right */
    if( nlhdlrdata->evalsol == NULL )
@@ -1594,7 +1599,7 @@ SCIP_RETCODE estimateConvexSecant(
    }
 
    SCIP_CALL( SCIPsetSolVal(scip, nlhdlrdata->evalsol, var, left) );
-   SCIP_CALL( SCIPevalExpr(scip, nlexpr, nlhdlrdata->evalsol, 0) );
+   SCIP_CALL( SCIPevalExpr(scip, nlexpr, nlhdlrdata->evalsol, 0L) );
 
    /* evaluation error or a too large constant -> skip */
    fleft = SCIPexprGetEvalValue(nlexpr);
@@ -1605,7 +1610,7 @@ SCIP_RETCODE estimateConvexSecant(
    }
 
    SCIP_CALL( SCIPsetSolVal(scip, nlhdlrdata->evalsol, var, right) );
-   SCIP_CALL( SCIPevalExpr(scip, nlexpr, nlhdlrdata->evalsol, 0) );
+   SCIP_CALL( SCIPevalExpr(scip, nlexpr, nlhdlrdata->evalsol, 0L) );
 
    /* evaluation error or a too large constant -> skip */
    fright = SCIPexprGetEvalValue(nlexpr);
@@ -1781,7 +1786,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalAuxConvexConcave)
    assert(nlhdlrexprdata->nlexpr != NULL);
    assert(auxvalue != NULL);
 
-   SCIP_CALL( SCIPevalExpr(scip, nlhdlrexprdata->nlexpr, sol, 0) );
+   SCIP_CALL( SCIPevalExpr(scip, nlhdlrexprdata->nlexpr, sol, 0L) );
    *auxvalue = SCIPexprGetEvalValue(nlhdlrexprdata->nlexpr);
 
    return SCIP_OKAY;
@@ -1932,7 +1937,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 
    /* we can skip eval as nlhdlrEvalAux should have been called for same solution before */
    /* SCIP_CALL( nlhdlrExprEval(scip, nlexpr, sol) ); */
-   assert(auxvalue == SCIPexprGetEvalValue(nlhdlrexprdata->nlexpr)); /* given value (originally from nlhdlrEvalAuxConvexConcave) should coincide with the one stored in nlexpr */  /*lint !e777*/
+   assert(auxvalue == SCIPexprGetEvalValue(nlhdlrexprdata->nlexpr)); /* given value (originally from nlhdlrEvalAuxConvexConcave) should coincide with the one stored in nlexpr */
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 

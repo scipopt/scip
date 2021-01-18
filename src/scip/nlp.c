@@ -64,6 +64,9 @@
 #define EVENTHDLR_DESC   "handles all events necessary for maintaining NLP data"  /**< description of NLP event handler */
 #define ADDNAMESTONLPI   0                   /**< whether to give variable and row names to NLPI */
 
+/*lint -e441*/
+/*lint -e777*/
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -422,7 +425,7 @@ SCIP_RETCODE nlrowAddLinearCoef(
    return SCIP_OKAY;
 }
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** adds a linear coefficient to a nonlinear row
  * if the variable exists in the linear part of the row already, the coefficients are added
  * otherwise the variable is added to the row */
@@ -658,7 +661,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
    SCIP_CALL( nlrowLinearCoefChanged(nlrow, set, stat, var, 0.0, nlp) );
 
    /* notify nlrow that constant of row has changed */
-   if( oldconstant != nlrow->constant )  /*lint !e777*/
+   if( oldconstant != nlrow->constant )
       SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
 
    if( SCIPvarIsActive(nlrow->linvars[pos]) )
@@ -1420,7 +1423,7 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
 
       SCIP_CALL( SCIPsolCreateNLPSol(&sol, blkmem, set, stat, primal, tree, nlp, NULL) );
 
-      SCIP_CALL( SCIPexprEval(set, stat, blkmem, nlrow->expr, sol, 0) );
+      SCIP_CALL( SCIPexprEval(set, stat, blkmem, nlrow->expr, sol, 0L) );
       if( SCIPexprGetEvalValue(nlrow->expr) == SCIP_INVALID )
          nlrow->activity = SCIP_INVALID;
       else
@@ -1520,7 +1523,7 @@ SCIP_RETCODE SCIPnlrowRecalcPseudoActivity(
 
       SCIP_CALL( SCIPsolCreatePseudoSol(&sol, blkmem, set, stat, prob, primal, tree, lp, NULL) );
 
-      SCIP_CALL( SCIPexprEval(set, stat, blkmem, nlrow->expr, sol, 0) );
+      SCIP_CALL( SCIPexprEval(set, stat, blkmem, nlrow->expr, sol, 0L) );
       if( SCIPexprGetEvalValue(nlrow->expr) == SCIP_INVALID )
          nlrow->pseudoactivity = SCIP_INVALID;
       else
@@ -1615,7 +1618,7 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
       assert(nlrow->linvars[i] != NULL);
 
       val1 = SCIPsolGetVal(sol, set, stat, nlrow->linvars[i]);
-      if( val1 == SCIP_UNKNOWN ) /*lint !e777*/
+      if( val1 == SCIP_UNKNOWN )
       {
          *activity = SCIP_INVALID;
          return SCIP_OKAY;
@@ -1865,7 +1868,7 @@ SCIP_RETCODE nlpRowChanged(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLROW*           nlrow               /**< nonlinear row which was changed */
    )
-{
+{  /*lint --e{715}*/
    assert(nlp != NULL);
    assert(nlrow != NULL);
    assert(!nlp->indiving);

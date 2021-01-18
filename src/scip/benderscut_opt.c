@@ -1097,15 +1097,16 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
       }
 
       /* eval gradient */
-      SCIP_CALL( SCIPevalExprGradient(subproblem, expr, primalsol, 0) );
+      SCIP_CALL( SCIPevalExprGradient(subproblem, expr, primalsol, 0L) );
 
-      assert(SCIPexprGetDerivative(expr) != SCIP_INVALID);  /* TODO this should be a proper check&abort */
+      assert(SCIPexprGetDerivative(expr) != SCIP_INVALID);  /* TODO this should be a proper check&abort */ /*lint !e777*/
 
       SCIP_CALL( SCIPfreeSol(subproblem, &primalsol) );
 
       /* update corresponding gradient entry */
       SCIP_CALL( SCIPcreateExpriter(subproblem, &it) );
-      for( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+      SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+      for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
       {
          if( !SCIPisExprVar(subproblem, expr) )
             continue;
@@ -1118,7 +1119,7 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
          if( mastervar == NULL )
             continue;
 
-         assert(SCIPexprGetDerivative(expr) != SCIP_INVALID);
+         assert(SCIPexprGetDerivative(expr) != SCIP_INVALID);  /*lint !e777*/
          coef = mult * SCIPexprGetDerivative(expr);
 
          /* adding the variable to the storage */

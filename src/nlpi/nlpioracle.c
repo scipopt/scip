@@ -80,6 +80,9 @@ struct SCIP_NlpiOracle
 
 /**@} */
 
+/*lint -e441*/
+/*lint -e866*/
+
 /**@name Local functions */
 /**@{ */
 
@@ -365,7 +368,7 @@ SCIP_RETCODE freeConstraint(
 
 /** frees all constraints */
 static
-void freeConstraints(
+SCIP_RETCODE freeConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    )
@@ -378,13 +381,15 @@ void freeConstraints(
 
    for( i = 0; i < oracle->nconss; ++i )
    {
-      freeConstraint(scip, oracle, &oracle->conss[i]);
+      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[i]) );
       assert(oracle->conss[i] == NULL);
    }
    oracle->nconss = 0;
 
    SCIPfreeBlockMemoryArrayNull(scip, &oracle->conss, oracle->consssize);
    oracle->consssize = 0;
+
+   return SCIP_OKAY;
 }
 
 /** moves one variable
@@ -491,7 +496,7 @@ SCIP_RETCODE updateVariableDegreesCons(
       SCIP_EXPR* expr;
 
       SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-      SCIPexpriterInit(it, cons->expr, SCIP_EXPRITER_DFS, FALSE);
+      SCIP_CALL( SCIPexpriterInit(it, cons->expr, SCIP_EXPRITER_DFS, FALSE) );
 
       for( expr = cons->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
          if( SCIPisExprVaridx(scip, expr) )
@@ -1030,8 +1035,8 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    invalidateJacobiSparsity(scip, *oracle);
    invalidateHessianLagSparsity(scip, *oracle);
 
-   freeConstraint(scip, *oracle, &(*oracle)->objective);
-   freeConstraints(scip, *oracle);
+   SCIP_CALL( freeConstraint(scip, *oracle, &(*oracle)->objective) );
+   SCIP_CALL( freeConstraints(scip, *oracle) );
    freeVariables(scip, *oracle);
 
    SCIP_CALL( SCIPexprintFree(scip, &(*oracle)->exprinterpreter) );
@@ -1257,7 +1262,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       invalidateHessianLagSparsity(scip, oracle);
 
    /* clear previous objective */
-   freeConstraint(scip, oracle, &oracle->objective);
+   SCIP_CALL( freeConstraint(scip, oracle, &oracle->objective) );
 
    SCIP_CALL( createConstraint(scip, &oracle->objective,
          nlin, lininds, linvals, expr, constant, constant, NULL) );
@@ -1513,14 +1518,14 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       /* all constraints should be deleted */
       for( c = 0; c < oracle->nconss; ++c )
          delstats[c] = -1;
-      freeConstraints(scip, oracle);
+      SCIP_CALL( freeConstraints(scip, oracle) );
       return SCIP_OKAY;
    }
 
    /* delete constraints at the end */
    for( c = oracle->nconss - 1; c > lastgood; --c )
    {
-      freeConstraint(scip, oracle, &oracle->conss[c]);
+      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c]) );
       assert(oracle->conss[c] == NULL);
       delstats[c] = -1;
    }
@@ -1538,7 +1543,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       }
       assert(delstats[c] == 1); /* constraint should be deleted */
 
-      freeConstraint(scip, oracle, &oracle->conss[c]);
+      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c]) );
       assert(oracle->conss[c] == NULL);
       delstats[c] = -1;
 
@@ -1552,7 +1557,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       /* move lastgood forward, delete constraints on the way */
       while( lastgood > c && delstats[lastgood] == 1)
       {
-         freeConstraint(scip, oracle, &oracle->conss[lastgood]);
+         SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[lastgood]) );
          assert(oracle->conss[lastgood] == NULL);
          delstats[lastgood] = -1;
          --lastgood;
@@ -2082,7 +2087,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nzflag, oracle->nvars) );
 
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-   SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE);
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
 
    for( i = 0; i < oracle->nconss; ++i )
    {

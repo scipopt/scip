@@ -423,7 +423,8 @@ SCIP_RETCODE processNlRow(
          int probidx;
 
          SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-         for( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+         for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
          {
             if( !SCIPisExprVar(scip, expr) )
                continue;

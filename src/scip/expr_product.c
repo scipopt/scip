@@ -48,11 +48,16 @@
 #define DEFAULT_RANDSEED      101  /**< initial random seed */
 
 /** macro to activate/deactivate debugging information of simplify method */
+/*lint -emacro(681,debugSimplify) */
+/*lint -emacro(506,debugSimplify) */
 #ifdef SIMPLIFY_DEBUG
 #define debugSimplify                   printf
 #else
 #define debugSimplify                   while( FALSE ) printf
 #endif
+
+
+/*lint -e777*/
 
 /*
  * Data structures
@@ -1473,7 +1478,7 @@ SCIP_DECL_EXPREVAL(evalProduct)
    for( c = 0; c < SCIPexprGetNChildren(expr) && (*val != 0.0); ++c )
    {
       childval = SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[c]);
-      assert(childval != SCIP_INVALID); /*lint !e777*/
+      assert(childval != SCIP_INVALID);
 
       *val *= childval;
    }
@@ -1553,7 +1558,7 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffProduct)
    partialchild = SCIPexprGetChildren(expr)[childidx];
    assert(partialchild != NULL);
    assert(!SCIPisExprValue(scip, partialchild));
-   assert(SCIPexprGetEvalValue(partialchild) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(partialchild) != SCIP_INVALID);
 
    *bardot = 0.0;
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
@@ -1565,8 +1570,8 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffProduct)
 
       child = SCIPexprGetChildren(expr)[c];
 
-      assert(SCIPexprGetEvalValue(child) != SCIP_INVALID); /*lint !e777*/
-      assert(SCIPexprGetDot(child) != SCIP_INVALID); /*lint !e777*/
+      assert(SCIPexprGetEvalValue(child) != SCIP_INVALID);
+      assert(SCIPexprGetDot(child) != SCIP_INVALID);
 
       if( SCIPexprGetDot(child) == 0.0 )
          continue;
@@ -1606,7 +1611,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffProduct)
    child = SCIPexprGetChildren(expr)[childidx];
    assert(child != NULL);
    assert(!SCIPisExprValue(scip, child));
-   assert(SCIPexprGetEvalValue(child) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(child) != SCIP_INVALID);
 
    if( !SCIPisZero(scip, SCIPexprGetEvalValue(child)) )
    {
@@ -1745,7 +1750,7 @@ CLEANUP:
  */
 static
 SCIP_DECL_EXPRESTIMATE(estimateProduct)
-{
+{  /*lint --e{715}*/
    SCIP_EXPRDATA* exprdata;
    int nchildren;
 
@@ -2038,7 +2043,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityProduct)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
-   *isintegral = EPSISINT(exprdata->coefficient, 0.0);
+   *isintegral = EPSISINT(exprdata->coefficient, 0.0); /*lint !e835*/
 
    for( i = 0; i < SCIPexprGetNChildren(expr) && *isintegral; ++i )
    {

@@ -49,6 +49,8 @@
 
 /* #define PARSE_DEBUG */
 
+/*lint -e441*/
+
 /*
  * local functions
  */
@@ -120,6 +122,8 @@ SCIP_DECL_EXPR_MAPEXPR(copyVarExpr)
  *       <pre> Term       -> Factor { ("*" | "/" | "^") Factor } </pre>
  */
 
+/*lint -emacro(681,debugParse) */
+/*lint -emacro(506,debugParse) */
 #ifdef PARSE_DEBUG
 #define debugParse                      printf
 #else
@@ -1622,7 +1626,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprEvalHessianDir(scip->set, scip->stat, scip->tree, scip->mem->probmem, expr, sol, soltag, direction) );
+   SCIP_CALL( SCIPexprEvalHessianDir(scip->set, scip->stat, scip->mem->probmem, expr, sol, soltag, direction) );
 
    return SCIP_OKAY;
 }

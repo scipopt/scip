@@ -1256,7 +1256,7 @@ void evalUser(
 #endif
 #endif
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** template for evaluation for minimum operator
  *
  *  Only implemented for real numbers, thus gives error by default.

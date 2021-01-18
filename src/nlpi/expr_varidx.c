@@ -37,7 +37,7 @@
  * Data structures
  */
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** expression data */
 struct SCIP_ExprData
 {
@@ -254,7 +254,7 @@ SCIP_RETCODE SCIPcreateExprVaridx(
    }
 
    /* create expression data */
-   exprdata = (SCIP_EXPRDATA*)(size_t)varidx;
+   exprdata = (SCIP_EXPRDATA*)(size_t)varidx;  /*lint !e571*/
 
    /* create expression */
    SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, 0, NULL, ownercreate, ownercreatedata) );
@@ -298,5 +298,5 @@ void SCIPsetIndexExprVaridx(
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(newindex >= 0);
 
-   SCIPexprSetData(expr, (void*)(size_t)newindex);
+   SCIPexprSetData(expr, (void*)(size_t)newindex);  /*lint !e571*/
 }

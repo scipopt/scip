@@ -371,7 +371,7 @@ SCIP_RETCODE nlrowaggrAddLinearTerm(
    return SCIP_OKAY;
 }
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 /** stores quadratic variables in a given nonlinear row aggregation */
 static
 SCIP_RETCODE nlrowaggrStoreQuadraticVars(
@@ -1803,9 +1803,9 @@ SCIP_RETCODE isCandidate(
                                               *   the >= lhs case */
    )
 {
-   SCIP_EXPR* expr;
+   SCIP_EXPR* expr = NULL;
    SCIP_Bool takerow = FALSE;
-   int nquadvars;
+   int nquadvars = 0;
    int* degrees;
    int ninterestingnodes;
    int nposedges;

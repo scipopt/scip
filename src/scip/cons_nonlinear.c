@@ -36,7 +36,11 @@
 /* define to get more debug output from domain propagation */
 /* #define DEBUG_PROP */
 
+/*lint -e441*/
 /*lint -e528*/
+/*lint -e666*/
+/*lint -e777*/
+/*lint -e866*/
 
 #include <assert.h>
 #include <ctype.h>
@@ -494,7 +498,7 @@ SCIP_DECL_EXPR_OWNERFREE(exprownerFree)
 
 static
 SCIP_DECL_EXPR_OWNERPRINT(exprownerPrint)
-{
+{  /*lint --e{715}*/
    assert(ownerdata != NULL);
 
    /* print nl handlers associated to expr */
@@ -644,7 +648,7 @@ SCIP_RETCODE createExprVar(
 /* map var exprs to var-expr from var2expr hashmap */
 static
 SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLR* conshdlr = (SCIP_CONSHDLR*)mapexprdata;
 
    assert(sourcescip != NULL);
@@ -668,7 +672,7 @@ SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
 /* map var exprs to var-expr from var2expr hashmap corresponding to transformed var */
 static
 SCIP_DECL_EXPR_MAPEXPR(mapexprtransvar)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLR* conshdlr = (SCIP_CONSHDLR*)mapexprdata;
    SCIP_VAR* var;
 
@@ -879,13 +883,13 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
          if( !SCIPisInfinity(scip, -lb) )
          {
             SCIP_Real bnd = floor(lb);
-            lb = MAX(bnd, lb - MIN(conshdlrdata->varboundrelaxamount * MAX(1.0, REALABS(lb)), 0.001 * REALABS(ub-lb)));  /*lint !e666*/
+            lb = MAX(bnd, lb - MIN(conshdlrdata->varboundrelaxamount * MAX(1.0, REALABS(lb)), 0.001 * REALABS(ub-lb)));
          }
 
          if( !SCIPisInfinity(scip, ub) )
          {
             SCIP_Real bnd = ceil(ub);
-            ub = MIN(bnd, ub + MIN(conshdlrdata->varboundrelaxamount * MAX(1.0, REALABS(ub)), 0.001 * REALABS(ub-lb)));  /*lint !e666*/
+            ub = MIN(bnd, ub + MIN(conshdlrdata->varboundrelaxamount * MAX(1.0, REALABS(ub)), 0.001 * REALABS(ub-lb)));
          }
 
          break;
@@ -1495,7 +1499,7 @@ SCIP_RETCODE computeViolation(
    activity = SCIPexprGetEvalValue(consdata->expr);
 
    /* consider constraint as violated if it is undefined in the current point */
-   if( activity == SCIP_INVALID ) /*lint !e777*/
+   if( activity == SCIP_INVALID )
    {
       consdata->lhsviol = SCIPinfinity(scip);
       consdata->rhsviol = SCIPinfinity(scip);
@@ -1600,7 +1604,7 @@ SCIP_RETCODE getConsRelViolation(
       SCIP_CALL( SCIPevalExprGradient(scip, consdata->expr, sol, soltag) );
 
       /* gradient evaluation error -> no scaling */
-      if( SCIPexprGetDerivative(consdata->expr) != SCIP_INVALID ) /*lint !e777*/
+      if( SCIPexprGetDerivative(consdata->expr) != SCIP_INVALID )
       {
          int i;
          for( i = 0; i < consdata->nvarexprs; ++i )
@@ -1609,7 +1613,7 @@ SCIP_RETCODE getConsRelViolation(
 
             assert(SCIPexprGetDiffTag(consdata->expr) == SCIPexprGetDiffTag(consdata->varexprs[i]));
             deriv = SCIPexprGetDerivative(consdata->varexprs[i]);
-            if( deriv == SCIP_INVALID ) /*lint !e777*/
+            if( deriv == SCIP_INVALID )
             {
                /* SCIPdebugMsg(scip, "gradient evaluation error for component %d\n", i); */
                consdata->gradnorm = 0.0;
@@ -3327,7 +3331,7 @@ SCIP_RETCODE detectNlhdlrs(
       SCIP_CALL( SCIPcomputeExprIntegrality(scip, consdata->expr) );
 
       /* run detectNlhdlr on all expr where required */
-      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
       {
          ownerdata = SCIPexprGetOwnerData(expr);
          assert(ownerdata != NULL);
@@ -3809,7 +3813,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       goto TERMINATE;
 
    /* store how often each variable appears in a bilinear binary product */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &count, ntotalvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &isused, nchildren) );
 
@@ -4613,7 +4617,7 @@ SCIP_RETCODE canonicalizeConstraints(
       assert(consdata != NULL);
 
       SCIP_CALL( SCIPexpriterInit(it, consdata->expr, SCIP_EXPRITER_RTOPOLOGIC, TRUE) );
-      for( expr = consdata->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
+      for( expr = consdata->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
       {
          assert(expr != NULL);
          assert(SCIPexprGetOwnerData(expr)->nlocksneg == 0);
@@ -5952,7 +5956,7 @@ SCIP_Real getViolSplitWeight(
       case 'm' :  /* midness of solution: 0.5 if in middle of domain, 0.05 if close to lower or upper bound */
       {
          SCIP_Real weight;
-         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)); /*lint !e666*/
+         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var));
          return MAX(0.05, weight);
       }
 
@@ -6561,7 +6565,7 @@ SCIP_Real getDualBranchscore(
    }
 
    /* divide by optimal value of LP for scaling */
-   dualscore /= MAX(1.0, REALABS(SCIPgetLPObjval(scip)));  /*lint !e666*/
+   dualscore /= MAX(1.0, REALABS(SCIPgetLPObjval(scip)));
 
    return dualscore;
 }
@@ -6737,17 +6741,17 @@ void scoreBranchingCandidates(
             else
                pscostup = SCIP_INVALID;
 
-            if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )  /*lint !e777*/
+            if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
                cands[c].pscost = SCIP_INVALID;
-            else if( pscostdown == SCIP_INVALID )  /*lint !e777*/
+            else if( pscostdown == SCIP_INVALID )
                cands[c].pscost = pscostup;
-            else if( pscostup == SCIP_INVALID )  /*lint !e777*/
+            else if( pscostup == SCIP_INVALID )
                cands[c].pscost = pscostdown;
             else
                cands[c].pscost = SCIPgetBranchScore(scip, NULL, pscostdown, pscostup);  /* pass NULL for var to avoid multiplication with branch-factor */
          }
 
-         if( cands[c].pscost != SCIP_INVALID )  /*lint !e777*/
+         if( cands[c].pscost != SCIP_INVALID )
             maxscore.pscost = MAX(cands[c].pscost, maxscore.pscost);
       }
 
@@ -6820,7 +6824,7 @@ void scoreBranchingCandidates(
       /* use pseudo-costs, if we have some for at least half the candidates */
       if( maxscore.pscost > 0.0 )
       {
-         if( cands[c].pscost != SCIP_INVALID )  /*lint !e777*/
+         if( cands[c].pscost != SCIP_INVALID )
          {
             cands[c].weighted += conshdlrdata->branchpscostweight * cands[c].pscost / maxscore.pscost;
             weightsum += conshdlrdata->branchpscostweight;
@@ -6857,7 +6861,7 @@ SCIP_DECL_SORTINDCOMP(branchcandCompare)
 {
    BRANCHCAND* cands = (BRANCHCAND*)dataptr;
 
-   if( cands[ind1].weighted != cands[ind2].weighted )  /*lint !e777*/
+   if( cands[ind1].weighted != cands[ind2].weighted )
       return cands[ind1].weighted < cands[ind2].weighted ? -1 : 1;
    else
       return SCIPvarGetIndex(SCIPgetExprAuxVarNonlinear(cands[ind1].expr)) - SCIPvarGetIndex(SCIPgetExprAuxVarNonlinear(cands[ind2].expr));
@@ -7189,7 +7193,7 @@ SCIP_RETCODE enforceExpr(
       assert(auxviol >= 0.0);
 
       /* if aux-violation is much smaller than orig-violation, then better enforce further down in the expression first */
-      if( !SCIPisInfinity(scip, auxviol) && auxviol < conshdlrdata->enfoauxviolfactor * origviol )  /*lint !e777*/
+      if( !SCIPisInfinity(scip, auxviol) && auxviol < conshdlrdata->enfoauxviolfactor * origviol )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with " \
                   "auxviolation %g << origviolation %g under:%d over:%d\n", SCIPnlhdlrGetName(nlhdlr), (void*)expr,
@@ -7200,7 +7204,7 @@ SCIP_RETCODE enforceExpr(
       }
 
       /* if aux-violation is small (below feastol) and we look only for strong cuts, then it's unlikely to give a strong cut, so skip it */
-      if( !allowweakcuts && auxviol < SCIPfeastol(scip) )  /*lint !e777*/
+      if( !allowweakcuts && auxviol < SCIPfeastol(scip) )
       {
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "   skip enforce using nlhdlr <%s> for expr %p (%s) with tiny " \
                   "auxviolation %g under:%d over:%d\n", SCIPnlhdlrGetName(nlhdlr), (void*)expr, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), auxviol,
@@ -7701,8 +7705,8 @@ SCIP_RETCODE analyzeViolation(
             continue;
 
          /* TODO remove? origviol shouldn't be mixed up with auxviol */
-         *maxauxviol = MAX(*maxauxviol, origviol);  /*lint !e666*/
-         *minauxviol = MIN(*minauxviol, origviol);  /*lint !e666*/
+         *maxauxviol = MAX(*maxauxviol, origviol);
+         *minauxviol = MIN(*minauxviol, origviol);
 
          /* compute aux-violation for each nonlinear handlers */
          for( e = 0; e < ownerdata->nenfos; ++e )
@@ -7723,7 +7727,7 @@ SCIP_RETCODE analyzeViolation(
 
             auxviol = getExprAbsAuxViolation(scip, expr, ownerdata->enfos[e]->auxvalue, sol, &violunder, &violover);
 
-            if( auxviol > 0.0 )  /*lint !e777*/
+            if( auxviol > 0.0 )
             {
                ENFOLOG( SCIPinfoMessage(scip, enfologfile, " auxvar %s nlhdlr-expr violated by %g", violover ? "<=" : ">=", auxviol); )
                *maxauxviol = MAX(*maxauxviol, auxviol);
@@ -8032,11 +8036,11 @@ SCIP_DECL_SORTPTRCOMP(auxexprComp)
    /* compare the coefficients and constants */
    for( i = 0; i < 3; ++i )
    {
-      if( auxexpr1->coefs[i] != auxexpr2->coefs[i] ) /*lint !e777*/
+      if( auxexpr1->coefs[i] != auxexpr2->coefs[i] )
          return auxexpr1->coefs[i] < auxexpr2->coefs[i] ? -1 : 1;
    }
 
-   return auxexpr1->cst < auxexpr2->cst ? -1 : auxexpr1->cst == auxexpr2->cst ? 0 : 1; /*lint !e777*/
+   return auxexpr1->cst < auxexpr2->cst ? -1 : auxexpr1->cst == auxexpr2->cst ? 0 : 1;
 }
 
 /* add an auxiliary expression to a bilinear term */
@@ -8704,7 +8708,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
     * if some ub-lb is small, we need higher accuracy, since below we divide coefs by ub-lb (we moved and scaled the box)
     * thus, we set the dual feastol to be between SCIPepsilon and SCIPfeastol
     */
-   SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, MIN(SCIPfeastol(scip), MAX(SCIPepsilon(scip), mindomwidth * SCIPfeastol(scip)))) ); /*lint !e666*/
+   SCIP_CALL( SCIPlpiSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, MIN(SCIPfeastol(scip), MAX(SCIPepsilon(scip), mindomwidth * SCIPfeastol(scip)))) );
 
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_LPINFO, 1) );
@@ -8834,8 +8838,8 @@ SCIP_RETCODE computeVertexPolyhedralFacetUnivariate(
    assert(SCIPisLE(scip, left, right));
    assert(!SCIPisInfinity(scip, -left));
    assert(!SCIPisInfinity(scip, right));
-   assert(SCIPisFinite(funleft) && funleft != SCIP_INVALID);  /*lint !e777*/
-   assert(SCIPisFinite(funright) && funright != SCIP_INVALID);  /*lint !e777*/
+   assert(SCIPisFinite(funleft) && funleft != SCIP_INVALID);
+   assert(SCIPisFinite(funright) && funright != SCIP_INVALID);
    assert(success != NULL);
    assert(facetcoef != NULL);
    assert(facetconstant != NULL);
@@ -8990,10 +8994,10 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
 
    assert(scip != NULL);
    assert(success != NULL);
-   assert(SCIPisFinite(p1val) && p1val != SCIP_INVALID);  /*lint !e777*/
-   assert(SCIPisFinite(p2val) && p2val != SCIP_INVALID);  /*lint !e777*/
-   assert(SCIPisFinite(p3val) && p3val != SCIP_INVALID);  /*lint !e777*/
-   assert(SCIPisFinite(p4val) && p4val != SCIP_INVALID);  /*lint !e777*/
+   assert(SCIPisFinite(p1val) && p1val != SCIP_INVALID);
+   assert(SCIPisFinite(p2val) && p2val != SCIP_INVALID);
+   assert(SCIPisFinite(p3val) && p3val != SCIP_INVALID);
+   assert(SCIPisFinite(p4val) && p4val != SCIP_INVALID);
    assert(facetcoefs != NULL);
    assert(facetconstant != NULL);
 
@@ -9312,7 +9316,7 @@ SCIP_DECL_CONSEXIT(consExitNonlinear)
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 {  /*lint --e{715}*/
@@ -9623,7 +9627,7 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
       if( isConsViolated(scip, conss[c]) )
       {
          *result = SCIP_INFEASIBLE;
-         maxviol = MAX(maxviol, getConsAbsViolation(conss[c]));  /*lint !e666*/
+         maxviol = MAX(maxviol, getConsAbsViolation(conss[c]));
 
          consdata = SCIPconsGetData(conss[c]);
          assert(consdata != NULL);
@@ -9842,7 +9846,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
 
 /** propagation conflict resolving method of constraint handler */
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_CONSRESPROP(consRespropNonlinear)
 {  /*lint --e{715}*/
@@ -9950,7 +9954,7 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
                continue;
 
             /* check which expression is stored in the hashmap for the var of child */
-            hashmapexpr = SCIPhashmapGetImage(conshdlrdata->var2expr, SCIPgetVarExprVar(child));
+            hashmapexpr = (SCIP_EXPR*)SCIPhashmapGetImage(conshdlrdata->var2expr, SCIPgetVarExprVar(child));
             /* if a varexpr exists already in the hashmap, but it is child, then replace child by the one in the hashmap */
             if( hashmapexpr != NULL && hashmapexpr != child )
             {
@@ -10057,7 +10061,7 @@ SCIP_DECL_CONSDISABLE(consDisableNonlinear)
 }
 
 /** variable deletion of constraint handler */
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_CONSDELVARS(consDelvarsNonlinear)
 {  /*lint --e{715}*/
@@ -10331,7 +10335,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
 }
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsNonlinear)
 {  /*lint --e{715}*/
@@ -10609,7 +10613,7 @@ SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
    consupgrade->active   = active;
 
    /* insert expression constraint upgrade method into constraint handler data */
-   SCIPensureBlockMemoryArray(scip, &conshdlrdata->consupgrades, &conshdlrdata->consupgradessize, conshdlrdata->nconsupgrades+1);
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &conshdlrdata->consupgrades, &conshdlrdata->consupgradessize, conshdlrdata->nconsupgrades+1) );
    assert(conshdlrdata->nconsupgrades+1 <= conshdlrdata->consupgradessize);
 
    for( i = conshdlrdata->nconsupgrades; i > 0 && conshdlrdata->consupgrades[i-1]->priority < consupgrade->priority; --i )
@@ -10842,7 +10846,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
 {
    SCIP_Real cutviol;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Real auxvarvalue;
+   SCIP_Real auxvarvalue = SCIP_INVALID;
    SCIP_Bool sepasuccess;
    SCIP_Real estimateval = SCIP_INVALID;
    SCIP_Real mincutviolation;
@@ -10937,7 +10941,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
                sepasuccess = cutviol > mincutviolation;
          }
 
-         if( sepasuccess && auxvalue != SCIP_INVALID ) /*lint !e777*/
+         if( sepasuccess && auxvalue != SCIP_INVALID )
          {
             /* check whether cut is weak now
              * auxvar z may now have a coefficient due to scaling (down) in cleanup - take this into account when
@@ -11541,7 +11545,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
 
       SCIPdebugMsgPrint(scip, "obj = %e\n", funvals[i]);
 
-      if( funvals[i] == SCIP_INVALID || SCIPisInfinity(scip, REALABS(funvals[i])) )  /*lint !e777*/
+      if( funvals[i] == SCIP_INVALID || SCIPisInfinity(scip, REALABS(funvals[i])) )
       {
          SCIPdebugMsg(scip, "cannot compute underestimator; function value at corner is too large %g\n", funvals[i]);
          goto CLEANUP;
@@ -11607,7 +11611,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
       for( j = 0; j < nvars; ++j )
          corner[nonfixedpos[j]] = (box[2 * nonfixedpos[j]] + box[2 * nonfixedpos[j] + 1]) / 2.0;
       midval = function(corner, nallvars, fundata);
-      if( midval == SCIP_INVALID )  /*lint !e777*/
+      if( midval == SCIP_INVALID )
          midval = 1.0;
 
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -11860,7 +11864,7 @@ SCIP_RETCODE SCIPgetAbsViolationConsNonlinear(
    assert(cons != NULL);
    assert(viol != NULL);
 
-   SCIP_CALL( computeViolation(scip, cons, sol, 0) );
+   SCIP_CALL( computeViolation(scip, cons, sol, 0L) );
    *viol = getConsAbsViolation(cons);
 
    return SCIP_OKAY;
@@ -11883,8 +11887,8 @@ SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
    assert(cons != NULL);
    assert(viol != NULL);
 
-   SCIP_CALL( computeViolation(scip, cons, sol, 0) );
-   SCIP_CALL( getConsRelViolation(scip, cons, viol, sol, 0) );
+   SCIP_CALL( computeViolation(scip, cons, sol, 0L) );
+   SCIP_CALL( getConsRelViolation(scip, cons, viol, sol, 0L) );
 
    return SCIP_OKAY;
 }
