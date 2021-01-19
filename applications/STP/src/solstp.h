@@ -32,6 +32,12 @@
 #include "graph.h"
 #include "shortestpath.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 extern void solstp_pcConnectDummies(const GRAPH*, int, int* RESTRICT, STP_Bool* RESTRICT);
 extern SCIP_Real solstp_pcGetObjCsr(const GRAPH*, const CSR*, const int*, const STP_Bool*);
 extern int solstp_pcGetSolRoot(SCIP*, const GRAPH*, const STP_Bool*);
@@ -63,5 +69,9 @@ SCIP_RETCODE       solstp_pruneFromTmHeur_csr(SCIP*, const GRAPH*, SPATHS*, int*
 SCIP_RETCODE       solstp_pruneFromNodes(SCIP*, const GRAPH*, int*, STP_Bool*);
 SCIP_RETCODE       solstp_pruneFromEdges(SCIP*, const GRAPH*, int*);
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* APPLICATIONS_STP_SRC_SOLSTP_H_ */

@@ -27,6 +27,11 @@
 #define APPLICATIONS_STP_SRC_EXTREDUCEDEFS_H_
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #define STP_EXT_CLOSENODES_MAXN 80
 #define STP_EXT_MAXSTACKSIZE  5000
 #define STP_EXT_MAXNCOMPS     1000
@@ -490,5 +495,12 @@ SCIP_Bool extReddataHasBiasedSds(
 
    return (reddata->sdsbias_use);
 }
+
+
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCEDEFS_H_ */

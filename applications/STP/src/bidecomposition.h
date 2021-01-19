@@ -29,6 +29,12 @@
 #include "graph.h"
 #include "stpvector.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 //#define CUTTREE_PRINT_STATISTICS
 
 
@@ -74,6 +80,12 @@ extern SCIP_Bool    bidecomposition_componentIsTrivial(const BIDECOMP*, int);
 extern SCIP_Bool    bidecomposition_isPossible(const GRAPH*);
 extern SCIP_RETCODE bidecomposition_getMarkedSubRoot(SCIP*, const BIDECOMP*, const GRAPH*, const GRAPH*, int*);
 extern SCIP_Real    bidecomposition_getMaxcompNodeRatio(const BIDECOMP*);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* APPLICATIONS_STP_SRC_BIDECOMPOSITION_H_ */

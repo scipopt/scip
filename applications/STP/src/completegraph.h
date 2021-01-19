@@ -26,10 +26,18 @@
 #ifndef APPLICATIONS_STP_SRC_COMPLETEGRAPH_H_
 #define APPLICATIONS_STP_SRC_COMPLETEGRAPH_H_
 
-#define CGRAPH_EDGECOST_UNDEFINED_VALUE -1.0
 
 #include "scip/scip.h"
 #include "graph.h"
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+#define CGRAPH_EDGECOST_UNDEFINED_VALUE -1.0
+
 
 /** complete, undirected graph storage */
 typedef struct complete_graph
@@ -90,6 +98,11 @@ SCIP_Bool cmst_isSync(const CGRAPH*, const CMST*);
 SCIP_RETCODE cmst_init(SCIP*, CMST**, int);
 void cmst_free(SCIP*, CMST**);
 void cmst_computeMst(const CGRAPH*, int, CMST*);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* APPLICATIONS_STP_SRC_COMPLETEGRAPH_H_ */

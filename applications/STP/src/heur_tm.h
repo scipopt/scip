@@ -34,12 +34,12 @@
 #include "scip/scip.h"
 #include "graph.h"
 
-#define DEFAULT_HOPFACTOR 0.33
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define DEFAULT_HOPFACTOR 0.33
 
 
 /** TM mode for PC/MW

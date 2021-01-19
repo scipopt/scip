@@ -32,6 +32,10 @@
 #include "portab.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 /** gets closest node from heap */
 inline static int nearestX(
@@ -157,6 +161,11 @@ inline static void resetX(
       c = j / 2;
    }
 }
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 

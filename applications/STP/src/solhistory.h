@@ -31,6 +31,11 @@
 #include "graph.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /** bi-decomposition reduction parameters */
 typedef struct solution_history
 {
@@ -47,6 +52,11 @@ extern SCIP_RETCODE solhistory_init(SCIP*, const GRAPH*, SOLHISTORY**);
 extern void solhistory_free(SCIP*, SOLHISTORY**);
 extern SCIP_RETCODE solhistory_computeHistory(SCIP*, SCIP_SOL*, const GRAPH*, SOLHISTORY*);
 
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* APPLICATIONS_STP_SRC_SOLHISTORY_H_ */

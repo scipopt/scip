@@ -30,6 +30,12 @@
 #include "reduce.h"
 #include "scip/scip.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #define STPTEST_ASSERT_MSG_ARGS(cond, msg, ...)  \
    do                                            \
    {                                             \
@@ -147,6 +153,12 @@ extern SCIP_RETCODE    stptest_testHeurLocal(SCIP*);
  */
 extern SCIP_RETCODE    stptest_testSolPrune(SCIP*);
 extern SCIP_RETCODE    stptest_testHeurTm(SCIP*);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* APPLICATIONS_STP_SRC_STPTEST_H_ */

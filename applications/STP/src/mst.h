@@ -30,6 +30,12 @@
 #include "completegraph.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 /** information for (sparse) MST computations */
 typedef
 struct minimum_spanning_tree
@@ -43,7 +49,13 @@ struct minimum_spanning_tree
 } MST;
 
 
-void mst_computeOnMarked(const GRAPH*, const STP_Bool*, int, MST*);
+extern void mst_computeOnMarked(const GRAPH*, const STP_Bool*, int, MST*);
+
+
+#ifdef __cplusplus
+}
+#endif
+
 
 
 #endif /* APPLICATIONS_STP_SRC_MST_H_ */

@@ -33,6 +33,12 @@
 #include "portab.h"
 #include "extreducedefs.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /* extreduce_base.c
  */
 extern SCIP_RETCODE    extreduce_init(SCIP*, SCIP_Bool, enum EXTRED_MODE, GRAPH*, REDCOST*, STP_Bool*, EXTPERMA**);
@@ -212,6 +218,12 @@ extern SCIP_Bool       extreduce_mstTopCompExtObjValid(SCIP*, const GRAPH*, int,
 extern SCIP_Bool       extreduce_mstTopCompObjValid(SCIP*, const GRAPH*, SCIP_Real, EXTDATA*);
 extern SCIP_Bool       extreduce_mstInternalsInSync(const EXTDATA*);
 extern SCIP_Bool       extreduce_mstTopLevelBaseObjValid(SCIP*, const GRAPH*, int, EXTDATA*);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCE_H_ */

@@ -32,6 +32,12 @@
 #include "graph.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 /** cuts for pseudo ancestor cliques */
 typedef struct pseudoancestor_cliques PACLIQUES;
 
@@ -55,6 +61,11 @@ extern SCIP_RETCODE sepaspecial_vtimplicationsInit(SCIP*, const GRAPH*, VTIMPLIC
 extern void         sepaspecial_vtimplicationsFree(SCIP*, VTIMPLICATION**);
 extern SCIP_RETCODE sepaspecial_vtimplicationsSeparate(SCIP*, SCIP_CONSHDLR*, VTIMPLICATION*, int, int*);
 
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* APPLICATIONS_STP_SRC_SEPASPECIAL_H_ */

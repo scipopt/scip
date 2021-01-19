@@ -31,6 +31,12 @@
 #include "portab.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 #define STP_REDUCTION_NONE      0
 #define STP_REDUCTION_BASIC     1
 #define STP_REDUCTION_ADVANCED  2
@@ -227,6 +233,12 @@ SCIP_Real reduce_sdprofitGetBiasedDist(
 
    return distnew;
 }
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* APPLICATIONS_STP_SRC_REDUCEDEFS_H_ */

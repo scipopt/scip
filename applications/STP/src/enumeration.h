@@ -30,8 +30,19 @@
 #include "graph.h"
 #include "scip/scip.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 extern SCIP_RETCODE enumeration_findSolPcMw(SCIP*, GRAPH*, int* RESTRICT);
 extern SCIP_Bool enumeration_isPossible(const GRAPH*);
 
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* APPLICATIONS_STP_SRC_ENUMERATION_H_ */

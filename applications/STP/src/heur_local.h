@@ -31,6 +31,7 @@
 
 #include "scip/scip.h"
 #include "graph.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

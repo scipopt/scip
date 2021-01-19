@@ -30,6 +30,10 @@
 #include "graph.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** element of Steiner tree solution pool */
 typedef struct stp_solution
 {
@@ -98,6 +102,12 @@ void solpool_free(
    SCIP*                 scip,               /**< SCIP data structure */
    STPSOLPOOL**          pool                /**< the pool */
    );
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* APPLICATIONS_STP_SRC_STPSOLPOOL_H_ */

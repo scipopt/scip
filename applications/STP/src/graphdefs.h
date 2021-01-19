@@ -33,6 +33,12 @@
 #include "portab.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 #define STP_SPG                      0
 #define STP_SAP                      1
 #define STP_PCSPG                    2
@@ -333,6 +339,11 @@ typedef struct special_distance_clique
    int                   centernode;         /**< center node or, if there is none, -1 */
    int                   ncliquenodes;       /**< number of nodes */
 } SDCLIQUE;
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 

@@ -29,6 +29,11 @@
 #include "graph.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 
 /** reduced cost parameters */
 typedef struct reduce_cost_parameters
@@ -113,6 +118,12 @@ SCIP_Bool dualascent_allTermsReachable(
    int                   root,               /**< root for reduced costs */
    const SCIP_Real*      redcost             /**< reduced costs */
 );
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* APPLICATIONS_STP_SRC_DUALASCENT_H_ */

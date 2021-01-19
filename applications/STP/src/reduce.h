@@ -33,6 +33,11 @@
 #include "reducedefs.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /* reduce_base.c
  */
 extern int reduce_getMinNreductions(const GRAPH*, int);
@@ -282,5 +287,13 @@ extern void             reduce_sdgraphFreeFromDistGraph(SCIP*, SDGRAPH**);
 extern void             reduce_sdgraphInsertEdge(SCIP*, int, int, SCIP_Real, int, int* RESTRICT, SDGRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE     reduce_sdgraphMstBuild(SCIP*, const GRAPH*, SDGRAPH*);
 extern void             reduce_sdgraphMstSortCosts(SDGRAPH*);
+
+
+
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */

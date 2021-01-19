@@ -36,11 +36,13 @@ extern "C" {
 #endif
 
 /** include user parameters */
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpReaderIncludeParams(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** includes the stp file reader in SCIP */
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderStp(
    SCIP*                 scip                /**< SCIP data structure */
    );

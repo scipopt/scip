@@ -56,7 +56,6 @@
 
 
 
-SCIP_Bool show;
 
 enum PC_REDTYPE {pc_sdc, pc_sdstar, pc_sdw1, pc_sdw2, pc_bd3};
 enum STP_REDTYPE {stp_bdk, stp_sdstar, stp_sdstarbot};
@@ -1701,7 +1700,7 @@ SCIP_RETCODE redLoopPc(
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
    SCIP_Bool advancedrun = dualascent;
    SCIP_Real prizesum;
-   const SCIP_Bool verbose = show && dualascent && userec && nodereplacing;
+   const SCIP_Bool verbose = FALSE && dualascent && userec && nodereplacing;
    int nelims;
    int degnelims;
    const int reductbound_global = reductbound * STP_RED_GLBFACTOR;
@@ -2079,7 +2078,6 @@ SCIP_RETCODE reduce(
    assert(minelims >= 0);
    assert(EQ(*offset, 0.0));
 
-   show = FALSE;
    stp_type = graph->stp_type;
 
    if( !graphIsSetUp )
@@ -2175,7 +2173,6 @@ SCIP_RETCODE reduce(
    }
 
    SCIPdebugMessage("offset : %f \n", *offset);
-   show = FALSE;
 
    assert(graph_valid(scip, graph));
 

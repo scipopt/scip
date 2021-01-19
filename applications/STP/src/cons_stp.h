@@ -36,11 +36,6 @@ extern "C" {
 #endif
 
 
-#ifndef RESTRICT
-#define RESTRICT restrict
-#endif
-
-
 /** creates the handler for element constraints and includes it in SCIP */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrStp(
