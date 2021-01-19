@@ -22,7 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/exprinterpret.h"
+#include "scip/scip_expr.h"
 #include "scip/pub_expr.h"
 #include "scip/heur_multistart.h"
 #include "scip/heur_subnlp.h"
@@ -83,7 +83,6 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter to compute gradients */
    int                   nrndpoints;         /**< number of random points generated per execution call */
    SCIP_Real             maxboundsize;       /**< maximum variable domain size for unbounded variables */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
@@ -241,9 +240,9 @@ static
 SCIP_RETCODE computeGradient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_SOL*             sol,                /**< solution to compute the gradient for */
    SCIP_HASHMAP*         varindex,           /**< maps variables to indicies between 0,..,SCIPgetNVars(scip)-1 uniquely */
+   SCIP_EXPR**           varexprs,           /**< buffer to store variable expressions */
    SCIP_Real*            grad,               /**< buffer to store the gradient; grad[varindex(i)] corresponds to SCIPgetVars(scip)[i] */
    SCIP_Real*            norm                /**< buffer to store ||grad||^2  */
    )
@@ -255,7 +254,6 @@ SCIP_RETCODE computeGradient(
    assert(scip != NULL);
    assert(nlrow != NULL);
    assert(varindex != NULL);
-   assert(exprint != NULL);
    assert(sol != NULL);
    assert(norm != NULL);
 
@@ -274,41 +272,27 @@ SCIP_RETCODE computeGradient(
 
    /* expression part */
    expr = SCIPnlrowGetExpr(nlrow);
+
    if( expr != NULL )
    {
-      SCIP_Real* exprgrad;
-      SCIP_Real* x;
-      SCIP_Real val;
+      int nvars;
 
-      assert(SCIPexprtreeGetNVars(expr) <= SCIPgetNVars(scip));
+      /* TODO: change this when nlrows store the vars */
+      SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvars) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &x, SCIPexprtreeGetNVars(expr)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &exprgrad, SCIPexprtreeGetNVars(expr)) );
-
-      /* compile expression, if not done before */
-      if( SCIPexprtreeGetInterpreterData(expr) == NULL )
-      {
-         SCIP_CALL( SCIPexprintCompile(exprint, expr) );
-      }
-
-      /* sets the solution value */
-      for( i = 0; i < SCIPexprtreeGetNVars(expr); ++i )
-         x[i] = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(expr)[i]);
-
-      SCIP_CALL( SCIPexprintGrad(exprint, expr, x, TRUE, &val, exprgrad) );
+      SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
 
       /* update corresponding gradient entry */
-      for( i = 0; i < SCIPexprtreeGetNVars(expr); ++i )
+      for( i = 0; i < nvars; ++i )
       {
-         var = SCIPexprtreeGetVars(expr)[i];
+         var = SCIPgetVarExprVar(varexprs[i]);
          assert(var != NULL);
          assert(getVarIndex(varindex, var) >= 0 && getVarIndex(varindex, var) < SCIPgetNVars(scip));
 
-         grad[getVarIndex(varindex, var)] += exprgrad[i];
-      }
+         grad[getVarIndex(varindex, var)] += SCIPexprGetDerivative(varexprs[i]);
 
-      SCIPfreeBufferArray(scip, &exprgrad);
-      SCIPfreeBufferArray(scip, &x);
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
+      }
    }
 
    /* compute ||grad||^2 */
@@ -325,7 +309,6 @@ SCIP_RETCODE improvePoint(
    SCIP_NLROW**          nlrows,             /**< array containing all nlrows */
    int                   nnlrows,            /**< total number of nlrows */
    SCIP_HASHMAP*         varindex,           /**< maps variables to indicies between 0,..,SCIPgetNVars(scip)-1 */
-   SCIP_EXPRINT*         exprinterpreter,    /**< expression interpreter */
    SCIP_SOL*             point,              /**< random generated point */
    int                   maxiter,            /**< maximum number of iterations */
    SCIP_Real             minimprfac,         /**< minimum required improving factor to proceed in the improvement of a single point */
@@ -336,6 +319,7 @@ SCIP_RETCODE improvePoint(
    )
 {
    SCIP_VAR** vars;
+   SCIP_EXPR** varexprs;
    SCIP_Real* grad;
    SCIP_Real* updatevec;
    SCIP_Real lastminfeas;
@@ -344,7 +328,6 @@ SCIP_RETCODE improvePoint(
    int i;
 
    assert(varindex != NULL);
-   assert(exprinterpreter != NULL);
    assert(point != NULL);
    assert(maxiter > 0);
    assert(minfeas != NULL);
@@ -375,6 +358,7 @@ SCIP_RETCODE improvePoint(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &grad, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &updatevec, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nvars) );
 
    /* main loop */
    for( r = 0; r < maxiter && SCIPisFeasLT(scip, *minfeas, 0.0); ++r )
@@ -402,7 +386,7 @@ SCIP_RETCODE improvePoint(
          ++nviolnlrows;
 
          SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrows[i], point, &activity) );
-         SCIP_CALL( computeGradient(scip, nlrows[i], exprinterpreter, point, varindex, grad, &nlrownorm) );
+         SCIP_CALL( computeGradient(scip, nlrows[i], point, varindex, varexprs, grad, &nlrownorm) );
 
          /* update estimated costs for computing gradients */
          *gradcosts += nlrowgradcosts[i];
@@ -458,6 +442,7 @@ TERMINATE:
    printf("niter=%d minfeas=%e\n", r, *minfeas);
 #endif
 
+   SCIPfreeBufferArray(scip, &varexprs);
    SCIPfreeBufferArray(scip, &updatevec);
    SCIPfreeBufferArray(scip, &grad);
 
@@ -787,11 +772,6 @@ SCIP_RETCODE applyHeur(
    nnlrows = SCIPgetNNLPNlRows(scip);
    bestobj = SCIPgetNSols(scip) > 0 ? MINIMPRFAC * SCIPgetSolTransObj(scip, SCIPgetBestSol(scip)) : SCIPinfinity(scip);
 
-   if( heurdata->exprinterpreter == NULL )
-   {
-      SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &heurdata->exprinterpreter) );
-   }
-
    SCIP_CALL( SCIPallocBufferArray(scip, &points, heurdata->nrndpoints) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlrowgradcosts, nnlrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &feasibilities, heurdata->nrndpoints) );
@@ -829,7 +809,7 @@ SCIP_RETCODE applyHeur(
    {
       SCIP_Real gradcosts;
 
-      SCIP_CALL( improvePoint(scip, nlrows, nnlrows, varindex, heurdata->exprinterpreter, points[npoints],
+      SCIP_CALL( improvePoint(scip, nlrows, nnlrows, varindex, points[npoints],
             heurdata->maxiter, heurdata->minimprfac, heurdata->minimpriter, &feasibilities[npoints], nlrowgradcosts,
             &gradcosts) );
 
@@ -938,11 +918,6 @@ SCIP_DECL_HEURFREE(heurFreeMultistart)
 
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
-
-   if( heurdata->exprinterpreter != NULL )
-   {
-      SCIP_CALL( SCIPexprintFree(&heurdata->exprinterpreter) );
-   }
 
    SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);

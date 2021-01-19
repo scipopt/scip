@@ -115,7 +115,7 @@ set(scipsources
     scip/heur_locks.c
     scip/heur_alns.c
     scip/heur_mutation.c
-#    scip/heur_multistart.c
+    scip/heur_multistart.c
     scip/heur_mpec.c
     scip/heur_nlpdiving.c
     scip/heur_objpscostdiving.c

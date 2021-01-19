@@ -1629,7 +1629,7 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
 
    if( nlrow->expr != NULL )
    {
-      SCIP_CALL( SCIPexprEvalActivity(set, stat, blkmem, nlrow->expr) );
+      SCIP_CALL( SCIPexprEval(set, stat, blkmem, nlrow->expr, sol, 0L) );
       if( SCIPexprGetEvalValue(nlrow->expr) == SCIP_INVALID )
          *activity = SCIP_INVALID;
       else
