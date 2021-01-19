@@ -21,7 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scipdefplugins.h"
-#include "scip/cons_nonlinear.c"
+#include "scip/cons_nonlinear.h"
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/struct_scip.h"
@@ -166,7 +166,8 @@ Test(separation, sepadata, .init = setup, .fini = teardown, .description = "test
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* adds locks */
 
    /* creates auxvars and creates disaggregation variables and row */
-   SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
+   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
+   cr_assert_not(infeasible);
 
    SCIP_CALL( SCIPcollectBilinTermsNonlinear(scip, conshdlr, &cons, 1) );
 

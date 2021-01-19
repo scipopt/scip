@@ -23,7 +23,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_nonlinear.c"
 #include "scip/sepa_rlt.c"
 #include "include/scip_test.h"
 
@@ -124,10 +123,10 @@ void setup(void)
    SCIP_CALL( SCIPreleaseVar(scip, &zo) );
 
    /* collect auxvars */
-   expr = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[0])->expr;
+   expr = SCIPgetExprConsNonlinear(SCIPconshdlrGetConss(conshdlr)[0]);
    xx = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[0]);
    xy = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[1]);
-   expr = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[1])->expr;
+   expr = SCIPgetExprConsNonlinear(SCIPconshdlrGetConss(conshdlr)[1]);
    prodvar = SCIPgetExprAuxVarNonlinear(expr);
    absvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[0]);
    powvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[1]);

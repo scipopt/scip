@@ -23,7 +23,8 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_stat.h"
 #include "scip/sepa_rlt.c"
-#include "scip/cons_nonlinear.c"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_linear.h"
 #include "include/scip_test.h"
 
 /* in all comments it is assumed that the linear relations used for product detections have the form:
