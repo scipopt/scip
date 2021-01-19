@@ -39,7 +39,6 @@
 #include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
-//#include "scip/cons_expr_nlhdlr_convex.h"
 
 #include "scip/struct_benders.h"
 #include "scip/struct_benderscut.h"
@@ -1691,7 +1690,7 @@ SCIP_RETCODE checkSubproblemConvexity(
                /* if not found convex, compute curvature via nlhdlr_convex and decide again */
 
                /* make sure activities are uptodate, SCIPhasExprCurvature currently assumes that this is already the case */
-               SCIP_CALL( SCIPevalExprActivity(subproblem, SCIPgetExprConsNonlinear(cons)) );  // FIXME use cons_nonlinear specific activity-eval function
+               SCIP_CALL( SCIPevalExprActivity(subproblem, SCIPgetExprConsNonlinear(cons)) );
 
                SCIP_CALL( SCIPhasExprCurvature(subproblem, SCIPgetExprConsNonlinear(cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
             }
