@@ -677,7 +677,7 @@ SCIP_RETCODE reinsertSubgraph(
    reinsertSubgraphTransferFixedHistory(scip, subgraph, orggraph);
    SCIP_CALL( reinsertSubgraphDeleteOldEdges(scip, subgraph, subinout, orggraph) );
    SCIP_CALL( reinsertSubgraphTransferEdges(scip, subgraph, subinout, orggraph) );
-   reinsertSubgraphTransferTerminals(subgraph, subinout, orggraph);
+   SCIP_CALL( reinsertSubgraphTransferTerminals(subgraph, subinout, orggraph) );
 
    SCIP_CALL( borderNodesContract(scip, subgraph, subinout, orggraph) );
    reinsertSubgraphAdaptSubToOrgMap(subgraph, orggraph, subinout);

@@ -2386,13 +2386,16 @@ SCIP_RETCODE graph_path_st_brmwcs(
                   if( connected[n] )
                   {
                      pathdist[n] = 0.0;
-                     resetX(pathdist, heap, state, &count, n, 0.0 );
-                  }else
+                     resetX(pathdist, heap, state, &count, n, 0.0);
+                  }
+                  else
                   {
                      pathdist[n] = FARAWAY;
-                          if( Is_term( g->term[n] ) ){
+                     if( Is_term(g->term[n]) )
+                     {
                         my[n] = 0.0;
-                     }else
+                     }
+                     else
                      {
                         my[n] = nodeweight[n];
                      }
