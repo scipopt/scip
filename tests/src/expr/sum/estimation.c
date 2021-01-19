@@ -33,20 +33,21 @@ Test(estimation, sum, .init = setup, .fini = teardown,
    SCIP_Real constant;
    SCIP_Bool islocal;
    SCIP_Bool success;
-   SCIP_Bool branchcand = TRUE;
+   SCIP_Bool branchcand[2] = { TRUE, TRUE };
 
    SCIP_CALL( SCIPcreateExprSum(scip, &expr, 0, NULL, NULL, 1.5, NULL, NULL) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr, xexpr, 2.3) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr, yexpr, -5.1) );
 
-   SCIP_CALL( estimateSum(scip, expr, bounds, bounds, refpoint, TRUE, SCIP_INVALID, coefs, &constant, &islocal, &success, &branchcand) );
+   SCIP_CALL( estimateSum(scip, expr, bounds, bounds, refpoint, TRUE, SCIP_INVALID, coefs, &constant, &islocal, &success, branchcand) );
 
    cr_expect(success);
    cr_expect_eq(coefs[0], 2.3);
    cr_expect_eq(coefs[1], -5.1);
    cr_expect_eq(constant, 1.5);
    cr_expect_not(islocal);
-   cr_expect_not(branchcand);
+   cr_expect_not(branchcand[0]);
+   cr_expect_not(branchcand[1]);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
