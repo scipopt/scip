@@ -28,9 +28,11 @@
 #include <string.h>
 
 #include "blockmemshell/memory.h"
-#include "nlpi/nlpi.h"
 #include "scip/scip_expr.h"
-#include "scip/pub_expr.h"
+#include "nlpi/nlpi.h"
+#include "nlpi/expr_varidx.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_sum.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_nlp.h"
@@ -262,8 +264,8 @@ SCIP_RETCODE setQuadraticObj(
    SCIP_SEPADATA*        sepadata            /**< the cut separator data */
    )
 {
-#if !1 //FIXME
-   SCIP_QUADELEM* quadelems;
+   SCIP_EXPR* exprsum;
+   SCIP_EXPR** exprspow;
    int i;
 
    assert(scip != NULL);
@@ -273,29 +275,33 @@ SCIP_RETCODE setQuadraticObj(
    assert(sepadata->var2nlpiidx != NULL);
    assert(sepadata->nlpinvars > 0);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, sepadata->nlpinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprspow, sepadata->nlpinvars) );
    for( i = 0; i < sepadata->nlpinvars; i++ )
    {
       SCIP_VAR* var;
+      SCIP_EXPR* varexpr;
 
       var = sepadata->nlpivars[i];
       assert(SCIPhashmapExists(sepadata->var2nlpiidx, (void*)var) );
 
-      quadelems[i].idx1 = SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void*)var);
-      quadelems[i].idx2 = quadelems[i].idx1;
-      quadelems[i].coef = 1.0;
+      SCIP_CALL( SCIPcreateExprVaridx(scip, &varexpr, SCIPhashmapGetImageInt(sepadata->var2nlpiidx, (void*)var), NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &exprspow[i], varexpr, 2.0, NULL, NULL) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
    }
 
+   SCIP_CALL( SCIPcreateExprSum(scip, &exprsum, sepadata->nlpinvars, exprspow, NULL, 0.0, NULL, NULL) );
+
    /* set quadratic part of objective function */
-   SCIP_CALL( SCIPnlpiSetObjective(sepadata->nlpi, sepadata->nlpiprob,
-            0, NULL, NULL, sepadata->nlpinvars, quadelems, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPnlpiSetObjective(scip, sepadata->nlpi, sepadata->nlpiprob, 0, NULL, NULL, exprsum, 0.0) );
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &quadelems);
-#else
-   (void) scip;  /* lint */
-   (void) sepadata;  /* lint */
-#endif
+   SCIP_CALL( SCIPreleaseExpr(scip, &exprsum) );
+   for( i = sepadata->nlpinvars-1; i >= 0; --i )
+   {
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprspow[i]) );
+   }
+   SCIPfreeBufferArray(scip, &exprspow);
+
    return SCIP_OKAY;
 }
 
