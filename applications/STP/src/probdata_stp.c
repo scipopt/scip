@@ -1937,9 +1937,15 @@ SCIP_RETCODE setParams(
 	   SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 0));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", zerhalf_nrounds));
    }
+   else
+   {
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 50)); // default is 20
+   }
 
+   SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/freq", 3));  // default is 10
+
+   //SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 0));
    //SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxrounds", 0));
-
    SCIP_CALL(SCIPsetIntParam(scip, "separating/clique/freq", -1));
    SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
 
