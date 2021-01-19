@@ -52,10 +52,12 @@
 
 #define DEFAULT_DURINGROOT    TRUE
 #define DEFAULT_MAXFREQLOC    FALSE
-#define DEFAULT_MAXNBESTSOLS  30
+#define DEFAULT_MAXNBESTSOLS  50
 #define DEFAULT_NBESTSOLS     15
+#define DEFAULT_NBESTSOLS_HARD 50
 #define DEFAULT_NELITESOLS    3
 #define DEFAULT_MINNBESTSOLS  10
+#define DEFAULT_MINNBESTSOLS_HARD  30
 #define DEFAULT_RANDSEED      1492          /**< random seed                                                                       */
 #define LOCAL_MAXRESTARTS  10
 
@@ -74,6 +76,7 @@ struct SCIP_HeurData
    int                   nfails;             /**< number of fails */
    int                   maxnsols;           /**< maximal number of best solutions to improve */
    int                   nbestsols;          /**< number of best solutions to improve */
+   int                   nbestsols_min;      /**< minimum number of best solutions to improve */
    int*                  lastsolindices;     /**< indices of a number of best solutions already tried */
    SCIP_Bool             maxfreq;            /**< should the heuristic be called with maximum frequency? */
    SCIP_Bool             duringroot;         /**< should the heuristic be called during the root node? */
@@ -278,6 +281,28 @@ void solGetStpSol(
 }
 
 
+/** initializes */
+static
+void initSolNumberBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata
+)
+{
+   assert(heurdata->nbestsols == -1 && heurdata->nbestsols_min == -1);
+
+   if( SCIPprobdataProbIsAversarial(scip) )
+   {
+      heurdata->nbestsols = DEFAULT_NBESTSOLS_HARD;
+      heurdata->nbestsols_min = DEFAULT_MINNBESTSOLS_HARD;
+   }
+   else
+   {
+      heurdata->nbestsols = DEFAULT_NBESTSOLS;
+      heurdata->nbestsols_min = DEFAULT_MINNBESTSOLS;
+   }
+}
+
+
 /** tries to add solution stored in 'results' to SCIP solution pool */
 static inline
 SCIP_RETCODE solAddTry(
@@ -358,7 +383,7 @@ SCIP_RETCODE solAddTry(
    if( *result != SCIP_FOUNDSOL )
    {
       heurdata->nfails++;
-      if( heurdata->nbestsols > DEFAULT_MINNBESTSOLS && heurdata->nfails > 1 )
+      if( heurdata->nbestsols > heurdata->nbestsols_min && heurdata->nfails > 1 )
          heurdata->nbestsols--;
 
       SCIPdebugMessage("fail! %d \n", heurdata->nbestsols);
@@ -3604,7 +3629,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolLocal)
    heurdata = SCIPheurGetData(heur);
 
    heurdata->nfails = 1;
-   heurdata->nbestsols = DEFAULT_NBESTSOLS;
+   heurdata->nbestsols = -1;
+   heurdata->nbestsols_min = -1;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), heurdata->maxnsols) );
 
@@ -3706,6 +3732,9 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    /* no new solution available? */
    if( v == nActiveSols )
       return SCIP_OKAY;
+
+   if( heurdata->nbestsols == -1 )
+      initSolNumberBounds(scip, heurdata);
 
    initialsol = sols[v];
    lastsolindices[v] = SCIPsolGetIndex(initialsol);
@@ -4312,7 +4341,7 @@ SCIP_RETCODE SCIPStpIncludeHeurLocal(
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxnsols",
          "maximum number of best solutions to improve",
-         &heurdata->maxnsols, FALSE, DEFAULT_MAXNBESTSOLS, 1, 50, NULL, NULL) );
+         &heurdata->maxnsols, FALSE, DEFAULT_MAXNBESTSOLS, DEFAULT_NBESTSOLS_HARD, 100, NULL, NULL) );
 
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 

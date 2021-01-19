@@ -3339,6 +3339,9 @@ SCIP_Bool SCIPprobdataProbIsAversarial(
    probdata = SCIPgetProbData(scip);
    assert(probdata);
 
+   if( probdata->isSubProb )
+      return FALSE;
+
    graph = probdata->graph;
    assert(graph);
 
