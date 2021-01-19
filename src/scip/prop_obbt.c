@@ -2660,15 +2660,11 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    }
 
 #ifdef SCIP_DEBUG
+   for( i = 0; i < SCIPgetNVars(scip); ++i)
    {
-      int i;
-
-      for( i = 0; i < SCIPgetNVars(scip); ++i)
-      {
-         SCIP_VAR* var = SCIPgetVars(scip)[i];
-         assert(var != NULL);
-         SCIPdebugMsg(scip, "nccounts[%s] = %u\n", SCIPvarGetName(var), nccounts[SCIPvarGetProbindex(var)]);
-      }
+      SCIP_VAR* var = SCIPgetVars(scip)[i];
+      assert(var != NULL);
+      SCIPdebugMsg(scip, "nccounts[%s] = %u\n", SCIPvarGetName(var), nccounts[SCIPvarGetProbindex(var)]);
    }
 #endif
 

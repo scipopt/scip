@@ -2766,7 +2766,7 @@ SCIP_RETCODE computeCut(
    SCIP_CALL( SCIPallocBufferArray(scip, &bestfacet, bestfacetsize) );
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPnlrowPrint(nlrowaggr->nlrow, SCIPgetMessagehdlr(scip), NULL) );
+   SCIP_CALL( SCIPprintNlRow(scip, nlrowaggr->nlrow, NULL) );
 
    SCIPdebugMsg(scip, "current solution:\n");
    for( i = 0; i < SCIPgetNVars(scip); ++i )

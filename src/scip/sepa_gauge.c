@@ -245,7 +245,7 @@ SCIP_RETCODE computeInteriorPoint(
          ++nconvexnlrows;
       }
    }
-   SCIPdebug( SCIP_CALL( SCIPnlpiOraclePrintProblem(nlpioracle, SCIPgetMessagehdlr(scip), NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, nlpioracle, NULL) ) );
 
    /* check if convex relaxation is interesting */
    if( nconvexnlrows < 2 )
@@ -294,11 +294,11 @@ SCIP_RETCODE computeInteriorPoint(
 
       /* get statistics */
       SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
-      SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, nlpstatistics) );
+      SCIP_CALL( SCIPnlpiGetStatistics(scip, nlpi, nlpiprob, nlpstatistics) );
 
       SCIPdebugMsg(scip, "nlpi took iters %d, time %g searching for an find interior point: solstat %d\n",
             SCIPnlpStatisticsGetNIterations(nlpstatistics), SCIPnlpStatisticsGetTotalTime(nlpstatistics),
-            SCIPnlpiGetSolstat(nlpi, nlpiprob));
+            SCIPnlpiGetSolstat(scip, nlpi, nlpiprob));
 
       SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
    }
