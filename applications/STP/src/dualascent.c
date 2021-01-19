@@ -43,9 +43,6 @@
 /* do depth-first search */
 #define DFS
 
-#ifndef RESTRICT
-#define RESTRICT restrict
-#endif
 
 #ifdef BITFIELDSARRAY
 #define ARRLENGTH 32
