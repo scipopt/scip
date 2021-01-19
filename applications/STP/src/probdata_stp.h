@@ -243,6 +243,14 @@ SCIP_Bool SCIPprobdataIsSubproblem(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+
+/** returns whether problem seems very hard */
+SCIP_EXPORT
+SCIP_Bool SCIPprobdataProbIsAversarial(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
 /** writes the best solution to the intermediate solution file */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(

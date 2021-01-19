@@ -73,7 +73,8 @@
 #define CYC_CONS_LIMIT 10000         /**< maximum number of symmetry inequalities for PCSPG */
 
 #define CUT_MINREDUCTION_RATIO 0.95
-#define HEUR_MINREDUCTION_RATIO 0.95
+#define MINREDUCTION_RATIO_STP 0.95
+#define MINREDUCTION_RATIO_PCMW 0.85
 #define CUT_MAXNTERMINALS 500
 #define CUT_MAXNEDGES     10000
 #define CUT_MAXTOTNEDGES  50000
@@ -1951,13 +1952,9 @@ SCIP_RETCODE setParams(
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
    }
 
-   if( graph_typeIsSpgLike(graph) && getEdgeReductionRatio(probdata, graph) < HEUR_MINREDUCTION_RATIO )
-   {
-      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
-   }
-
    if( graph_typeIsSpgLike(graph) || graph_pc_isPcMw(graph) )
    {
+      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/simplerounding/freq", -1));
    }
 
@@ -3330,7 +3327,39 @@ SCIP_Bool SCIPprobdataObjIsIntegral(
 }
 
 
-/* returns if in subproblem */
+/** returns whether problem seems very hard */
+SCIP_Bool SCIPprobdataProbIsAversarial(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real redratio;
+   GRAPH* graph;
+   SCIP_PROBDATA* probdata;
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata);
+
+   graph = probdata->graph;
+   assert(graph);
+
+   redratio = getEdgeReductionRatio(probdata, graph);
+
+   if( graph_pc_isPcMw(graph) )
+   {
+      if( GT(redratio, MINREDUCTION_RATIO_PCMW) )
+         return TRUE;
+   }
+   else
+   {
+      if( GT(redratio, MINREDUCTION_RATIO_STP) )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
+
+/** returns if in subproblem */
 SCIP_Bool SCIPprobdataIsSubproblem(
    SCIP*                 scip                /**< SCIP data structure */
    )
