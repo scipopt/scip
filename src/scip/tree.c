@@ -1077,9 +1077,6 @@ SCIP_RETCODE SCIPnodeFree(
    /* inform solution debugger, that the node has been freed */
    SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, *node) );
 
-   /* check lower bound w.r.t. debugging solution */
-   SCIP_CALL( SCIPdebugCheckLowerbound(blkmem, set) );
-
    /* check, if the node to be freed is the root node */
    isroot = (SCIPnodeGetDepth(*node) == 0);
 
@@ -1171,6 +1168,9 @@ SCIP_RETCODE SCIPnodeFree(
    /* delete the tree's root node pointer, if the freed node was the root */
    if( isroot )
       tree->root = NULL;
+
+   /* check lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
 
    return SCIP_OKAY;
 }
@@ -4347,8 +4347,11 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(conflictstore != NULL);
    assert(cutoff != NULL);
 
-   /* check lower bound w.r.t. debugging solution */
-   SCIP_CALL( SCIPdebugCheckLowerbound(blkmem, set) );
+   /* check global lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
+
+   /* check local lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckLocalLowerbound(blkmem, set, *node) );
 
    SCIPsetDebugMsg(set, "focusing node #%" SCIP_LONGINT_FORMAT " of type %d in depth %d\n",
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,

@@ -115,10 +115,17 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    SCIP_NODE*            node                /**< node that will be freed */
    );
 
-/** checks whether lower bound does not exceed debuging solution value */
-SCIP_RETCODE SCIPdebugCheckLowerbound(
+/** checks whether global lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckGlobalLowerbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** checks whether local lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckLocalLowerbound(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node that will be freed */
    );
 
 /** checks whether given variable bound is valid for the debugging solution */
@@ -252,7 +259,8 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugCheckUbGlobal(scip,var,ub) SCIP_OKAY
 #define SCIPdebugCheckInference(blkmem,set,node,var,newbound,boundtype) SCIP_OKAY
 #define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
-#define SCIPdebugCheckLowerbound(blkmem,set) SCIP_OKAY
+#define SCIPdebugCheckGlobalLowerbound(blkmem,set) SCIP_OKAY
+#define SCIPdebugCheckLocalLowerbound(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckAggregation(set,var,aggrvars,scalars,constant,naggrvars) SCIP_OKAY

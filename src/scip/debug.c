@@ -1123,8 +1123,8 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    return SCIP_OKAY;
 }
 
-/** checks whether lower bound does not exceed debuging solution value */
-SCIP_RETCODE SCIPdebugCheckLowerbound(
+/** checks whether global lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckGlobalLowerbound(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -1158,15 +1158,73 @@ SCIP_RETCODE SCIPdebugCheckLowerbound(
       SCIP_CALL( readSolution(set) );
    }
 
-   /* get lower bound of tree (do not use SCIPgetLowerbound() since this adjusts the value using the primal bound) */
+   /* get global lower bound of tree (do not use SCIPgetLowerbound() since this adjusts the value using the primal bound) */
    treelowerbound = SCIPtreeGetLowerbound(set->scip->tree, set);
    treelowerbound = SCIPprobExternObjval(set->scip->transprob, set->scip->origprob, set, treelowerbound);
 
    if( (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol)))
       || (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol))) )
    {
-      SCIPerrorMessage("lower bound is larger than the value of the debuggin solution.\n");
+      SCIPerrorMessage("global lower bound %g is larger than the value of the debugging solution %g.\n", treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol));
       SCIPABORT();
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether local lower bound does not exceed debuging solution value */
+SCIP_RETCODE SCIPdebugCheckLocalLowerbound(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NODE*            node                /**< node that will be freed */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+   SCIP_Bool solisinnode;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( !SCIPdebugSolIsEnabled(set->scip) )
+      return SCIP_OKAY;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
+   if( SCIPgetStage(set->scip) <= SCIP_STAGE_INITSOLVE )
+      return SCIP_OKAY;
+
+   if( SCIPgetStatus(set->scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(set->scip) == SCIP_STATUS_UNBOUNDED )
+      return SCIP_OKAY;
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   /* make sure a debug solution has been read */
+   if( debugsoldata->debugsol == NULL )
+   {
+      SCIP_CALL( readSolution(set) );
+   }
+
+   /* check local lower bound */
+   SCIP_CALL( isSolutionInNode(blkmem, set, node, &solisinnode) );
+
+   /* if we are in a node that contains the given debug solution, the lower bound should not exceed the solution's objective */
+   if( solisinnode )
+   {
+      SCIP_Real localbound;
+
+      localbound = SCIPnodeGetLowerbound(node);
+
+      if( (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol)))
+         || (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol))) )
+      {
+         SCIPerrorMessage("local lower bound %g of node #%" SCIP_LONGINT_FORMAT " at depth %d is larger than the value of the debugging solution %g contained in this node.\n",
+            localbound, node->number, SCIPnodeGetDepth(node), SCIPsolGetOrigObj(debugsoldata->debugsol));
+         SCIPABORT();
+      }
    }
 
    return SCIP_OKAY;
