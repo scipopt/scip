@@ -786,8 +786,9 @@ SCIP_RETCODE applyHeur(
    /* compute estimated costs of computing a gradient for each nlrow */
    for( i = 0; i < nnlrows; ++i )
    {
-      nlrowgradcosts[i] = GRADCOSTFAC_LINEAR * SCIPnlrowGetNLinearVars(nlrows[i])
-         + GRADCOSTFAC_NONLINEAR * getExprSize(SCIPnlrowGetExpr(nlrows[i]));
+      nlrowgradcosts[i] = GRADCOSTFAC_LINEAR * SCIPnlrowGetNLinearVars(nlrows[i]);
+      if( SCIPnlrowGetExpr(nlrows[i]) != NULL )
+         nlrowgradcosts[i] += GRADCOSTFAC_NONLINEAR * getExprSize(SCIPnlrowGetExpr(nlrows[i]));
    }
 
    /*
