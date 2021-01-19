@@ -24,7 +24,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "scip/intervalarith.h"
 #include "scip/scip_expr.h"
 #include "scip/expr.h"
 #include "scip/set.h"

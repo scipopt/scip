@@ -38,7 +38,6 @@
 #include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/expr_varidx.h"
-#include "scip/intervalarith.h"
 #include "scip/scip_expr.h"
 #include "scip/pub_expr.h"
 #include "scip/dbldblarith.h"

@@ -24,7 +24,6 @@
 #ifndef SCIP_EXPR_H_
 #define SCIP_EXPR_H_
 
-#include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"

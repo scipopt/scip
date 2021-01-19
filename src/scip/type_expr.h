@@ -25,7 +25,7 @@
 #define SCIP_TYPE_EXPR_H_
 
 #include "scip/def.h"
-#include "intervalarith.h"
+#include "scip/intervalarith.h"
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"

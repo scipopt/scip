@@ -20,7 +20,6 @@
  * Declarations are in pub_expr.h
  */
 
-#include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
 
 /** curvature names as strings */

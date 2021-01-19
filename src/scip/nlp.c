@@ -30,14 +30,12 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#include "scip/intervalarith.h"
 #include "nlpi/nlpi.h"
 #include "scip/pub_expr.h"
 #include "scip/expr.h"
 #include "nlpi/expr_varidx.h"
 #include "scip/clock.h"
 #include "scip/event.h"
-#include "scip/intervalarith.h"
 #include "scip/nlp.h"
 #include "scip/primal.h"
 #include "scip/pub_event.h"

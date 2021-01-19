@@ -28,7 +28,6 @@
 
 #include <string.h>
 
-#include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
 #include "scip/expr_product.h"
 #include "scip/expr_sum.h"

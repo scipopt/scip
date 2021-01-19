@@ -23,7 +23,6 @@
 
 #include <assert.h>
 
-#include "scip/intervalarith.h"
 #include "scip/pub_nlhdlr.h"
 #include "scip/nlhdlr.h"
 #include "scip/struct_nlhdlr.h"
