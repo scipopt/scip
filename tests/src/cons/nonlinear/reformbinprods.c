@@ -22,6 +22,7 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
+#include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
 #include "include/scip_test.h"
 

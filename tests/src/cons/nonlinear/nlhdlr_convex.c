@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "scip/scipdefplugins.h"
+#include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
 #include "nlpi/nlpi_ipopt.h" /* to check whether LAPACK is around */
 

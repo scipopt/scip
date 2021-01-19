@@ -32,6 +32,7 @@
 #include "scip/expr_sum.h"
 #include "scip/expr_sin.h"
 #include "scip/expr_cos.h"
+#include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
 #include "scip/nlhdlr_soc.c"
 

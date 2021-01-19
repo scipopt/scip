@@ -22,7 +22,6 @@
 #include <string.h>
 
 #include "scip/scipdefplugins.h"
-#include "scip/cons_nonlinear.c"
 #include "nlpi/nlpi_ipopt.h" /* to check whether LAPACK is around */
 
 #define NLHDLR_CONVEX_UNITTEST

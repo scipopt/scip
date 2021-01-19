@@ -33,7 +33,6 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-#include "scip/pub_nlhdlr.h"
 
 /*
  * NONLINEAR HANDLER

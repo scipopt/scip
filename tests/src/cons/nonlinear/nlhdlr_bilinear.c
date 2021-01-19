@@ -19,13 +19,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#include <scip/misc.h>
 #include "scip/scipdefplugins.h"
 #include "scip/scip.h"
-#include "scip/cons_nonlinear.h"
-#include "scip/expr_var.h"
-#include "scip/expr_product.h"
-#include "scip/expr_exp.h"
 #include "scip/nlhdlr_bilinear.c"
 
 #include "include/scip_test.h"

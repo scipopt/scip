@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "scip/scipdefplugins.h"
+#include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
 #include "scip/nlhdlr_quotient.c"
 

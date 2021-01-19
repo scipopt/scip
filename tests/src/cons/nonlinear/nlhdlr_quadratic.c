@@ -26,6 +26,7 @@
  * we actually need them
  */
 #include "scip/nlhdlr_quadratic.c"
+#include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
 #include "scip/nlhdlr_default.h"
 #include "scip/expr_abs.h"
