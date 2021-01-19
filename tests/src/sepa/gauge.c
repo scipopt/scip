@@ -173,6 +173,9 @@ void evaluation_setup(void)
    SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
    SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
 
+   /* if no IPOPT available, don't run test */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    SCIPincludeNlpSolverIpopt(scip);
 
@@ -497,6 +500,10 @@ Test(interior_point, compute_interior_point)
    SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
    SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
    SCIP_CALL( SCIPincludeExprHdlrVaridx(scip) );
+
+   /* if no IPOPT available, don't run test */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    /* include NLPI's */
    SCIPincludeNlpSolverIpopt(scip);

@@ -220,7 +220,7 @@ set(scipsources
     scip/sepa_clique.c
     scip/sepa_closecuts.c
     scip/sepa_aggregation.c
-#    scip/sepa_convexproj.c
+    scip/sepa_convexproj.c
     scip/sepa_disjunctive.c
     scip/sepa_eccuts.c
     scip/sepa_gauge.c

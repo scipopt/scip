@@ -28,8 +28,8 @@
 #include <string.h>
 
 #include "blockmemshell/memory.h"
-#include "nlpi/exprinterpret.h"
 #include "nlpi/nlpi.h"
+#include "scip/scip_expr.h"
 #include "scip/pub_expr.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -103,8 +103,6 @@ struct SCIP_SepaData
    int                   nnlrows;            /**< total number of nlrows */
    int                   nlrowssize;         /**< memory allocated for nlrows, convexsides and nlrowsidx */
 
-   SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter to compute gradients */
-
    /* parameter */
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for no limit */
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for no limit */
@@ -143,8 +141,7 @@ SCIP_RETCODE sepadataClear(
       SCIPfreeBlockMemoryArray(scip, &sepadata->nlpivars, sepadata->nlpinvars);
 
       SCIPhashmapFree(&sepadata->var2nlpiidx);
-      SCIP_CALL( SCIPnlpiFreeProblem(sepadata->nlpi, &sepadata->nlpiprob) );
-      SCIP_CALL( SCIPexprintFree(&sepadata->exprinterpreter) );
+      SCIP_CALL( SCIPnlpiFreeProblem(scip, sepadata->nlpi, &sepadata->nlpiprob) );
 
       sepadata->nlpinvars = 0;
       sepadata->nnlrows = 0;
@@ -158,58 +155,11 @@ SCIP_RETCODE sepadataClear(
    return SCIP_OKAY;
 }
 
-/** computes gradient of expr at projection */
-static
-SCIP_RETCODE computeGradient(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
-   SCIP_SOL*             projection,         /**< point where we compute gradient */
-   SCIP_EXPR*            expr,               /**< expression for which we compute the gradient */
-   SCIP_Real*            grad                /**< buffer to store the gradient */
-   )
-{
-   SCIP_Real* x;
-   SCIP_Real val;
-   int nvars;
-   int i;
-
-   assert(scip != NULL);
-   assert(exprint != NULL);
-   assert(projection != NULL);
-   assert(expr != NULL);
-   assert(grad != NULL);
-
-   nvars = SCIPexprtreeGetNVars(expr);
-   assert(nvars > 0);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &x, nvars) );
-
-   /* compile expression, if not done before */
-   if( SCIPexprtreeGetInterpreterData(expr) == NULL )
-   {
-      SCIP_CALL( SCIPexprintCompile(exprint, expr) );
-   }
-
-   for( i = 0; i < nvars; ++i )
-   {
-      x[i] = SCIPgetSolVal(scip, projection, SCIPexprtreeGetVars(expr)[i]);
-   }
-
-   SCIP_CALL( SCIPexprintGrad(exprint, expr, x, TRUE, &val, grad) );
-
-   /*SCIPdebug( for( i = 0; i < nvars; ++i ) printf("%e [%s]\n", grad[i], SCIPvarGetName(SCIPexprtreeGetVars(expr)[i])) );*/
-
-   SCIPfreeBufferArray(scip, &x);
-
-   return SCIP_OKAY;
-}
-
 /** computes gradient cut (linearization) of nlrow at projection */
 static
 SCIP_RETCODE generateCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< the cut separator itself */
-   SCIP_EXPRINT*         exprint,            /**< expression interpreter */
    SCIP_SOL*             projection,         /**< point where we compute gradient cut */
    SCIP_NLROW*           nlrow,              /**< constraint for which we generate gradient cut */
    CONVEXSIDE            convexside,         /**< which side makes the nlrow convex */
@@ -220,11 +170,13 @@ SCIP_RETCODE generateCut(
    char rowname[SCIP_MAXSTRLEN];
    SCIP_SEPADATA* sepadata;
    SCIP_Real gradx0; /* <grad f(x_0), x_0> */
+   SCIP_EXPR* expr;
+   SCIP_EXPR** varexprs;
+   int nvars;
    int i;
 
    assert(scip != NULL);
    assert(sepa != NULL);
-   assert(exprint != NULL);
    assert(nlrow != NULL);
    assert(row != NULL);
 
@@ -254,30 +206,26 @@ SCIP_RETCODE generateCut(
       SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPnlrowGetLinearVars(nlrow)[i], SCIPnlrowGetLinearCoefs(nlrow)[i]) );
    }
 
-#if !1 // FIXME
+   expr = SCIPnlrowGetExpr(nlrow);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, projection, 0) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvars) );
+
    /* expression part */
+   for( i = 0; i < nvars; i++ )
    {
-      SCIP_Real* grad;
-      SCIP_EXPR* expr;
+      SCIP_Real grad;
+      SCIP_VAR* var;
 
-      expr = SCIPnlrowGetExpr(nlrow);
+      grad = SCIPexprGetDerivative(varexprs[i]);
+      var = SCIPgetVarExprVar(varexprs[i]);
 
-      if( expr != NULL && SCIPexprtreeGetNVars(expr) > 0 )
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &grad, SCIPexprtreeGetNVars(expr)) );
-
-         SCIP_CALL( computeGradient(scip, sepadata->exprinterpreter, projection, expr, grad) );
-
-         for( i = 0; i < SCIPexprtreeGetNVars(expr); i++ )
-         {
-            gradx0 +=  grad[i] * SCIPgetSolVal(scip, projection, SCIPexprtreeGetVars(expr)[i]);
-            SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPexprtreeGetVars(expr)[i], grad[i]) );
-         }
-
-         SCIPfreeBufferArray(scip, &grad);
-      }
+      gradx0 +=  grad * SCIPgetSolVal(scip, projection, var);
+      SCIP_CALL( SCIPaddVarToRow(scip, *row, var, grad) );
    }
-#endif
 
    SCIP_CALL( SCIPflushRowExtensions(scip, *row) );
 
@@ -414,7 +362,7 @@ SCIP_RETCODE separateCuts(
    }
 
    /* set linear part of objective function */
-   SCIP_CALL( SCIPnlpiChgLinearCoefs(sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
+   SCIP_CALL( SCIPnlpiChgLinearCoefs(scip, sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
 
    /* set parameters in nlpi; time and iterations limit, tolerance, verbosity; for time limit, get time limit of scip;
     * if scip doesn't have much time left, don't run separator. otherwise, timelimit is the minimum between whats left
@@ -432,20 +380,20 @@ SCIP_RETCODE separateCuts(
    }
    if( sepadata->nlptimelimit > 0.0 )
       timelimit = MIN(sepadata->nlptimelimit, timelimit);
-   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPnlpiSetRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
 
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
-   SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
-   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) / 10.0) ); /* use tighter tolerances for the NLP solver */
-   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
-   SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
+   SCIP_CALL( SCIPnlpiSetIntPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
+   SCIP_CALL( SCIPnlpiSetRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) / 10.0) ); /* use tighter tolerances for the NLP solver */
+   SCIP_CALL( SCIPnlpiSetRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
+   SCIP_CALL( SCIPnlpiSetIntPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute the projection onto the convex NLP relaxation */
-   SCIP_CALL( SCIPnlpiSolve(sepadata->nlpi, sepadata->nlpiprob) );
-   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(sepadata->nlpi, sepadata->nlpiprob));
+   SCIP_CALL( SCIPnlpiSolve(scip, sepadata->nlpi, sepadata->nlpiprob) );
+   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(scip, sepadata->nlpi, sepadata->nlpiprob));
 
    /* if solution is feasible, add cuts */
-   switch( SCIPnlpiGetSolstat(sepadata->nlpi, sepadata->nlpiprob) )
+   switch( SCIPnlpiGetSolstat(scip, sepadata->nlpi, sepadata->nlpiprob) )
    {
       case SCIP_NLPSOLSTAT_GLOBOPT:
       case SCIP_NLPSOLSTAT_LOCOPT:
@@ -459,7 +407,7 @@ SCIP_RETCODE separateCuts(
           */
 
          /* get solution: build SCIP_SOL out of nlpi sol */
-         SCIP_CALL( SCIPnlpiGetSolution(sepadata->nlpi, sepadata->nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPnlpiGetSolution(scip, sepadata->nlpi, sepadata->nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
          assert(nlpisol != NULL);
 
          SCIP_CALL( SCIPcreateSol(scip, &projection, NULL) );
@@ -502,7 +450,7 @@ SCIP_RETCODE separateCuts(
             {
                SCIP_ROW* row;
 
-               SCIP_CALL( generateCut(scip, sepa, sepadata->exprinterpreter, projection, nlrow, convexside, activity,
+               SCIP_CALL( generateCut(scip, sepa, projection, nlrow, convexside, activity,
                         &row) );
 
                SCIPdebugMsg(scip, "active or violated nlrow: (sols vio: %e)\n", sepadata->constraintviolation[i]);
@@ -595,7 +543,7 @@ SCIP_RETCODE separateCuts(
 
    /* reset objective */
    BMSclearMemoryArray(linvals, nlpinvars);
-   SCIP_CALL( SCIPnlpiChgLinearCoefs(sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
+   SCIP_CALL( SCIPnlpiChgLinearCoefs(scip, sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
 
 CLEANUP:
    /* free memory */
@@ -824,14 +772,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
          return SCIP_OKAY;
       }
 
-      /* create the expression interpreter */
-      SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &sepadata->exprinterpreter) );
-
       sepadata->nlpinvars = SCIPgetNVars(scip);
       sepadata->nlpi = SCIPgetNlpis(scip)[0];
       assert(sepadata->nlpi != NULL);
 
-      SCIP_CALL( SCIPnlpiCreateProblem(sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp") );
+      SCIP_CALL( SCIPnlpiCreateProblem(scip, sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp") );
       SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) ); /*lint !e666*/
 
