@@ -597,6 +597,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_lpface.o \
 			scip/heur_alns.o \
 			scip/heur_locks.o \
+			scip/heur_multistart.o \
 			scip/heur_mutation.o \
 			scip/heur_mpec.o \
 			scip/heur_nlpdiving.o \
@@ -694,12 +695,14 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/reader_tim.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
+			scip/sepa_aggregation.o \
 			scip/sepa_cgmip.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
-			scip/sepa_aggregation.o \
+			scip/sepa_convexproj.o \
 			scip/sepa_disjunctive.o \
 			scip/sepa_eccuts.o \
+			scip/sepa_gauge.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
@@ -711,9 +714,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
-#			scip/sepa_convexproj.o \
-#			scip/sepa_gauge.o \
-#			scip/heur_multistart.o \
 
 
 SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o
