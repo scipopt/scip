@@ -1185,6 +1185,10 @@ SCIP_RETCODE SCIPdebugCheckLocalLowerbound(
    assert(set != NULL);
    assert(blkmem != NULL);
 
+   /* exit if we do not have a node to check */
+   if( node == NULL )
+      return SCIP_OKAY;
+
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( !SCIPdebugSolIsEnabled(set->scip) )
       return SCIP_OKAY;
