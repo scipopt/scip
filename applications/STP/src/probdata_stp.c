@@ -2827,7 +2827,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    GRAPH*                graph_move          /**< graph; will be moved to probdata and pointer invalidated! */
    )
 {
-   REDSOL* redsol;
+   REDSOL* redsol = NULL;
    SCIP_PROBDATA* probdata;
    GRAPH* graph = graph_move;
    SCIP_Bool printGraph;
