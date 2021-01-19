@@ -209,7 +209,7 @@ SCIP_RETCODE generateCut(
    expr = SCIPnlrowGetExpr(nlrow);
    assert(expr != NULL);
 
-   SCIP_CALL( SCIPevalExprGradient(scip, expr, projection, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, projection, 0L) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvars) );
@@ -292,6 +292,9 @@ SCIP_RETCODE setQuadraticObj(
 
    /* free memory */
    SCIPfreeBufferArray(scip, &quadelems);
+#else
+   (void) scip;  /* lint */
+   (void) sepadata;  /* lint */
 #endif
    return SCIP_OKAY;
 }

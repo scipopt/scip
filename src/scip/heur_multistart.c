@@ -73,7 +73,6 @@
 #define MINIMPRFAC            0.95           /**< improvement factor used to discard randomly generated points with a
                                               *   too large objective value */
 #define GRADCOSTFAC_LINEAR    1.0            /**< gradient cost factor for the number of linear variables */
-#define GRADCOSTFAC_QUAD      2.0            /**< gradient cost factor for the number of quadratic terms */
 #define GRADCOSTFAC_NONLINEAR 3.0            /**< gradient cost factor for the number of nodes in nonlinear expression */
 
 /*
@@ -280,7 +279,7 @@ SCIP_RETCODE computeGradient(
       /* TODO: change this when nlrows store the vars */
       SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvars) );
 
-      SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
+      SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0L) );
 
       /* update corresponding gradient entry */
       for( i = 0; i < nvars; ++i )

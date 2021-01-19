@@ -208,7 +208,7 @@ SCIP_RETCODE addRegularScholtes(
          SCIP_EXPR* sumexpr;
          char name[SCIP_MAXSTRLEN];
 
-         SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_reg", SCIPvarGetName(binvars[i]));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_reg", SCIPvarGetName(binvars[i]));
 
          /* -binvars[i]^2 */
          SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, binvars[i], NULL, NULL) );

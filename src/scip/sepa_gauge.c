@@ -571,7 +571,7 @@ SCIP_RETCODE generateCut(
 
    assert(expr != NULL);
 
-   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0L) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvars) );
@@ -585,7 +585,7 @@ SCIP_RETCODE generateCut(
       var = SCIPgetVarExprVar(varexprs[i]);
 
       /* check gradient entries: function might not be differentiable */
-      if( !SCIPisFinite(grad) || grad == SCIP_INVALID )
+      if( !SCIPisFinite(grad) || grad == SCIP_INVALID ) /*lint !e777*/
       {
          *success = FALSE;
          break;
