@@ -1064,6 +1064,9 @@ SCIP_RETCODE SCIPnodeFree(
 
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
+   /* check lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
+
    if( SCIPnodeGetType(*node) != SCIP_NODETYPE_PROBINGNODE )
    {
       SCIP_EVENT event;
@@ -1168,9 +1171,6 @@ SCIP_RETCODE SCIPnodeFree(
    /* delete the tree's root node pointer, if the freed node was the root */
    if( isroot )
       tree->root = NULL;
-
-   /* check lower bound w.r.t. debugging solution */
-   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
 
    return SCIP_OKAY;
 }
