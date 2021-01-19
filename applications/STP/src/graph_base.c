@@ -223,8 +223,7 @@ SCIP_Bool graphisValidPcMw(
 static
 SCIP_RETCODE packPcMwVanished(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g_old,              /**< the old graph */
-   GRAPH*                g_new               /**< the new graph */
+   GRAPH*                g_old               /**< the old graph */
    )
 {
    int term = -1;
@@ -1345,7 +1344,7 @@ SCIP_RETCODE graph_pack(
 
       if( pcmw )
       {
-         SCIP_CALL( packPcMwVanished(scip, g_old, g_new) );
+         SCIP_CALL( packPcMwVanished(scip, g_old) );
       }
    }
 

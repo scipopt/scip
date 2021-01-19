@@ -242,7 +242,6 @@ void cutNodesTreeBuildSteinerTree(
    STP_Vectype(int) stack = NULL;
    int* RESTRICT nodes_pred = cuttree->nodes_prednode;
    SCIP_Bool* RESTRICT nodes_isTree = cuttree->nodes_isTree;
-   const int* const biconn_nodesmark = biconn_nodesmark;
    const int nnodes = graph_get_nNodes(g);
    const int root = cutnodes->dfsroot;
    const int lastcutnode = cutNodesGetLastCutnode(cutnodes);

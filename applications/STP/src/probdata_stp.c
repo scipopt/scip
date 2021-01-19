@@ -3553,7 +3553,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       grid_dim = graph->grid_dim;
       assert(grid_dim > 1);
       assert(grid_dim < 256);
-      SCIP_CALL( SCIPallocBufferArray(scip, &nodenumber, norgnodes) );
       strcpy(strdim, "P");
       for( i = 1; i < grid_dim; i++ )
          strcat(strdim, "P");
@@ -3567,6 +3566,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 
       assert(norgedges >= 0);
       assert(norgnodes >= 1);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodenumber, norgnodes) );
 
       SCIP_CALL( SCIPallocBufferArray(scip, &orgedges, norgedges) );
       SCIP_CALL( SCIPallocBufferArray(scip, &orgnodes, norgnodes) );

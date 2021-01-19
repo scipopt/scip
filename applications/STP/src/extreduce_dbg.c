@@ -43,7 +43,7 @@ SCIP_Real sdmstGetWeight(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   nnodes,             /**< number of nodes for MST computation */
-   const int             nodes[nnodes],      /**< nodes (from graph) for MST computation */
+   const int             nodes[],            /**< nodes (from graph) for MST computation */
    SCIP_Bool             computeLower,       /**< compute lower bound? (otherwise upper) */
    EXTDATA*              extdata             /**< extension data */
    )
@@ -182,7 +182,7 @@ static
 void mstTopLevelBaseGetNodes(
    int                   extnode,            /**< extension nodes */
    int                   nnodes,             /**< number of nodes */
-   int                   nodes[nnodes],      /**< nodes (from graph) to be filled in */
+   int                   nodes[],            /**< nodes (from graph) to be filled in */
    const EXTDATA*        extdata             /**< extension data */
 )
 {
@@ -217,8 +217,8 @@ static
 SCIP_Bool mstTopLevelBaseValidWeight(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
-   int                   base_nnodes,         /**< number of nodes */
-   int                   base_nodes[base_nnodes],  /**< MST nodes (from graph) */
+   int                   base_nnodes,        /**< number of nodes */
+   int                   base_nodes[],       /**< MST nodes (from graph) */
    const CSR*            mst_base,           /**< the stored MST */
    EXTDATA*              extdata             /**< extension data */
 )
