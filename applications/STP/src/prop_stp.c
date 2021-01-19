@@ -2029,15 +2029,34 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
-   /* get problem data */
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   /* get all variables (corresponding to the edges) */
    vars = SCIPprobdataGetVars(scip);
+   assert(vars);
 
-   if( vars == NULL )
-      return SCIP_OKAY;
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+
+   // todo extra method
+   if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0 )
+   {
+      int branchvertex;
+      SCIP_Bool isDeleted = FALSE;
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgLast(scip, &branchvertex, &isDeleted) );
+
+      if( isDeleted )
+      {
+         for( int e = graph->outbeg[branchvertex]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            SCIP_CALL( fixEdgeVar(scip, e, vars, propdata) );
+            SCIP_CALL( fixEdgeVar(scip, flipedge(e), vars, propdata) );
+         }
+      }
+   }
 
    /* check if all integral variables are fixed */
    if( SCIPgetNPseudoBranchCands(scip) == 0 )
@@ -2045,10 +2064,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    if( !redcosts_forLPareAvailable(scip) )
       return SCIP_OKAY;
-
-   /* get propagator data */
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
 
    propdata->ncalls++;
 
@@ -2062,9 +2077,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    propdata->nlastnlpiter = SCIPgetNLPIterations(scip);
    propdata->nlastcall = propdata->ncalls;
-
-   graph = SCIPprobdataGetGraph(probdata);
-   assert(graph != NULL);
 
    propdata->nfixededges_curr = 0;
    propdata->nfixededges_bicurr = 0;

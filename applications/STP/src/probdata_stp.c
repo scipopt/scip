@@ -1937,6 +1937,8 @@ SCIP_RETCODE setParams(
       SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", zerhalf_nrounds));
    }
 
+   //SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxrounds", 0));
+
    SCIP_CALL(SCIPsetIntParam(scip, "separating/clique/freq", -1));
    SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
 
@@ -2750,12 +2752,14 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/dualfix/maxprerounds", 0) );
    SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/maxreliable", 1.0) );
 
+   SCIP_CALL( SCIPsetBoolParam(scip, "conflict/enable", FALSE) );
+
    SCIP_CALL( SCIPsetBoolParam(scip, "timing/reading", TRUE) );
 
    // todo test properly; normal dfs?
    SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/restartdfs/stdpriority", 400000) );
 
-   //SCIP_CALL( SCIPsetCharParam(scip, "estimation/restarts/restartpolicy", 'n') );
+   SCIP_CALL( SCIPsetCharParam(scip, "estimation/restarts/restartpolicy", 'n') );
    //SCIP_CALL( SCIPsetCharParam(scip, "estimation/method", 'o') );
 
    return SCIP_OKAY;

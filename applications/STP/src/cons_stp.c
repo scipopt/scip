@@ -305,6 +305,7 @@ SCIP_RETCODE sep_flowTermIn(
    const SCIP_Real*      nodes_inflow,       /**< incoming flow per node */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      xval,               /**< LP-solution values */
+   const int*            termorg,            /**< original terminals or NULL */
    int                   vertex,             /**< vertex */
    SCIP_VAR**            vars,               /**< variables */
    int*                  cutcount            /**< counts cuts */
@@ -325,8 +326,9 @@ SCIP_RETCODE sep_flowTermIn(
    {
       SCIP_ROW* row = NULL;
       SCIP_Bool infeasible;
+      const SCIP_Bool isLocal = (termorg != NULL && termorg[vertex] != g->term[vertex]);
 
-      SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "term", 1.0, 1.0, FALSE, FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "term", 1.0, 1.0, isLocal, FALSE, TRUE) );
 
       SCIP_CALL(SCIPcacheRowExtensions(scip, row));
 
@@ -335,7 +337,15 @@ SCIP_RETCODE sep_flowTermIn(
 
       SCIP_CALL(SCIPflushRowExtensions(scip, row));
       SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
-      assert(!infeasible);
+
+      if( infeasible )
+      {
+         assert(isLocal);
+      }
+      else
+      {
+         (*cutcount)++;
+      }
 
 #if ADDCUTSTOPOOL
       /* add cut to pool */
@@ -343,7 +353,6 @@ SCIP_RETCODE sep_flowTermIn(
          SCIP_CALL( SCIPaddPoolCut(scip, row) );
 #endif
 
-      (*cutcount)++;
 
       SCIP_CALL(SCIPreleaseRow(scip, &row));
    }
@@ -492,6 +501,7 @@ SCIP_RETCODE sep_flow(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
+   const int*            termorg,            /**< original terminals or NULL */
    int                   maxcuts,            /**< maximal number of cuts */
    int*                  ncuts               /**< pointer to store number of cuts */
    )
@@ -530,7 +540,7 @@ SCIP_RETCODE sep_flow(
 
       if( intermflowsep && Is_term(g->term[i]) )
       {
-         SCIP_CALL( sep_flowTermIn(scip, conshdlr, nodes_inflow, g, xval, i, vars, &count) );
+         SCIP_CALL( sep_flowTermIn(scip, conshdlr, nodes_inflow, g, xval, termorg, i, vars, &count) );
 
          if( count >= maxcuts_local )
             break;
@@ -770,8 +780,6 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
       }
    }
 
-   SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
-
    if( graph_pc_isPcMw(g) && g->stp_type != STP_BRMWCSP )
    {
       if( conshdlrdata->pcimplications == NULL )
@@ -824,6 +832,8 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
             graph_knot_chg(g, k, STP_TERM);
       }
    }
+
+   SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, termorg, maxcuts, &ncuts) );
 
    /* NOTE: for 2-terminal problems no cuts are necessary if flows are given */
    if( !conshdlrdata->flowsep || g->terms != 2 )

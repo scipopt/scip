@@ -457,15 +457,49 @@ SCIP_RETCODE selectBranchingVertexByLp(
    for( int k = 0; k < nnodes; k++ )
    {
       SCIP_Real inflow = 0.0;
+
+      if( Is_term(g->term[k])  )
+         continue;
+
       for( int a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
          inflow += SCIPvarGetLPSol(edgevars[a]);
 
-      if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow, 1.0) && fabs(inflow - 0.5) < bestflow && SCIPisPositive(scip, inflow) )
+      if( SCIPisLT(scip, inflow, 1.0) && SCIPisPositive(scip, inflow) && fabs(inflow - 0.5) < bestflow )
       {
          *vertex = k;
          bestflow = fabs(inflow - 0.5);
          SCIPdebugMessage("new maxflow %f on vertex %d \n", inflow, k );
       }
+   }
+
+   if( *vertex == UNKNOWN && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) != 0 )
+   {
+      SCIP_Bool conflict = FALSE;
+      int* nodestate;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
+      SCIPStpBranchruleInitNodeState(g, nodestate);
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestate, &conflict) );
+      assert(!conflict);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         SCIP_Real inflow = 0.0;
+
+         if( Is_term(g->term[k]) || nodestate[k] != BRANCH_STP_VERTEX_NONTERM )
+            continue;
+
+         for( int a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
+            inflow += SCIPvarGetLPSol(edgevars[a]);
+
+         if( SCIPisPositive(scip, inflow) )
+         {
+            *vertex = k;
+            break;
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &nodestate);
    }
 
    SCIPdebugMessage("maxflow %f on vertex %d, term? %d \n", bestflow, *vertex, Is_term(g->term[*vertex])  );
@@ -575,15 +609,21 @@ SCIP_RETCODE branchOnVertex(
    (void) SCIPsnprintf(consnameout, SCIP_MAXSTRLEN, "consout%d", branchvertex);
 
    /* create constraints */
-   SCIP_CALL( SCIPcreateConsSetpart(scip, &consin,
-         consnamein, 0, NULL, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+ //  SCIP_CALL( SCIPcreateConsSetpart(scip, &consin,
+   //      consnamein, 0, NULL, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+
+   SCIP_CALL( SCIPcreateConsLinear(scip, &consin,
+         consnamein, 0, NULL, NULL, 1.0, 1.0, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcreateConsLinear(scip, &consout,
-         consnameout, 0, NULL, NULL, 0.0, 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+         consnameout, 0, NULL, NULL, 0.0, 0.0, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+//+         consnameout, 0, NULL, NULL, 0.0, 0.0, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
    for( int e = g->inpbeg[branchvertex]; e != EAT_LAST; e = g->ieat[e] )
    {
-      SCIP_CALL(SCIPaddCoefSetppc(scip, consin, edgevars[e]));
+      //SCIP_CALL(SCIPaddCoefSetppc(scip, consin, edgevars[e]));
+      SCIP_CALL(SCIPaddCoefLinear(scip, consin, edgevars[e], 1.0));
+
       SCIP_CALL(SCIPaddCoefLinear(scip, consout, edgevars[e], 1.0));
       SCIP_CALL(SCIPaddCoefLinear(scip, consout, edgevars[flipedge(e)], 1.0));
    }
@@ -960,6 +1000,69 @@ SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
 
       if( localconflict )
          *conflictFound = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** get last change */
+SCIP_RETCODE SCIPStpBranchruleGetVertexChgLast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  vertex,             /**< changed vertex */
+   SCIP_Bool*            isDeleted           /**< deleted? (otherwise terminal) */
+   )
+{
+   char* consname;
+   SCIP_CONS* cons;
+   SCIP_BRANCHRULE* branchrule = NULL;
+   SCIP_BRANCHRULEDATA* branchruledata;
+   int naddedconss;
+
+   branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   *vertex = -1;
+
+   if( !(branchruledata->active) )
+   {
+      SCIPerrorMessage("STP branchrule not active! \n");
+      return SCIP_ERROR;
+   }
+
+   assert(SCIPnodeGetNAddedConss(SCIPgetCurrentNode(scip)) == 1);
+
+   SCIPnodeGetAddedConss(SCIPgetCurrentNode(scip), &cons, &naddedconss, 1);
+   consname = (char*) SCIPconsGetName(cons);
+
+   if( strncmp(consname, "consin", 6) == 0 )
+   {
+      char *tailptr;
+      const int term = (int) strtol(consname + 6, &tailptr, 10);
+
+      SCIPdebugMessage("mark terminal %d \n", term);
+      *vertex = term;
+      *isDeleted = FALSE;
+   }
+   /* node removal constraint? */
+   else if( strncmp(consname, "consout", 7) == 0 )
+   {
+      char *tailptr;
+      const int vert = (int) strtol(consname + 7, &tailptr, 10);
+
+      SCIPdebugMessage("mark deleted node %d \n", vert);
+
+      *vertex = vert;
+      *isDeleted = TRUE;
+   }
+   else
+   {
+      printf("found unknown constraint at b&b node \n");
+      return SCIP_ERROR;
    }
 
    return SCIP_OKAY;

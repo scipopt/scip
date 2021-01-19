@@ -55,6 +55,16 @@ SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
    SCIP_Bool*            conflictFound       /**< conflict with existing vertex changes found? */
    );
 
+
+/** get last change */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpBranchruleGetVertexChgLast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  vertex,             /**< changed vertex */
+   SCIP_Bool*            isDeleted           /**< deleted? (otherwise terminal) */
+   );
+
+
 /** is the branching rule active? */
 SCIP_EXPORT
 SCIP_Bool SCIPStpBranchruleIsActive(
