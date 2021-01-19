@@ -79,7 +79,6 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/cons_nonlinear.h"
-//#include "scip/cons_expr_var.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
