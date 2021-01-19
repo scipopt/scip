@@ -1221,7 +1221,7 @@ SCIP_RETCODE SCIPdebugCheckLocalLowerbound(
       SCIP_Real localbound;
 
       localbound = SCIPnodeGetLowerbound(node);
-      lowerbound = SCIPprobExternObjval(set->scip->transprob, set->scip->origprob, set, lowerbound);
+      localbound = SCIPprobExternObjval(set->scip->transprob, set->scip->origprob, set, localbound);
 
       if( (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol)))
          || (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol))) )
