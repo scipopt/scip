@@ -2768,6 +2768,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    const char*           filename            /**< file name */
    )
 {
+   SCIP_RETCODE redcode;
    PRESOL presolinfo;
    SCIP_PROBDATA* probdata;
    GRAPH* graph;
@@ -2781,7 +2782,13 @@ SCIP_RETCODE SCIPprobdataCreate(
    presolinfo.fixed = 0.0;
 
    /* read graph from file */
-   SCIP_CALL( graph_load(scip, &graph, filename, &presolinfo) );
+   redcode = graph_load(scip, &graph, filename, &presolinfo);
+
+   if( redcode != SCIP_OKAY )
+   {
+      SCIPerrorMessage("error while loading graph, aborting \n");
+      abort();
+   }
 
    SCIPdebugMessage("load type :: %d \n\n", graph->stp_type);
    SCIPdebugMessage("fixed: %f \n\n", presolinfo.fixed );
