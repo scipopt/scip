@@ -209,6 +209,18 @@ set(settings_Or
 
 
 #
+# read/write instances
+#
+set(instances_MIP_readwrite
+    "instances/MIP/bell5.mps\;8966406.49"
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/flugpl.mps\;1201500"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/p0033.osil\;3089"
+    "instances/MIP/stein27.fzn\;18"
+    "instances/MIP/stein27_inf.lp\;+infinity"
+    )
+#
 # MIP instances
 #
 set(instances_MIP
@@ -405,17 +417,10 @@ set(scip_reader_extensions
   )
 
 #
-# Writer output formats
+# Writer output formats that are not also readers (all writers are scip_reader_extensions + scip_only_writer_extensions)
 #
-set(scip_writer_extensions
-  "cip"
-  "opb"
-  "pip"
-  "rlp"
-  "mps"
-  "lp"
+set(scip_only_writer_extensions
   "wbo"
-  "fzn"
   )
 
 #
@@ -593,31 +598,21 @@ set(message_format_opb "WARNING: only binary problems can be written in OPB form
 #
 # test writing and reading from and to different file extensions for MIP
 #
-foreach(instance ${instances_MIP})
-  foreach(wextension ${scip_writer_extensions})
+foreach(instance ${instances_MIP_readwrite})
+  foreach(extension ${scip_writer_only_extensions})
     split_instance(instance)
-    foreach(rextension ${scip_reader_extensions})
-        # does this instance match the requirements of this format?
-        list(FIND basenames_${rextension}_wrongformat ${basename} wrongformat)
-        list(FIND scip_reader_extensions ${rextension} in_readers)
-        list(FIND scip_writer_extensions ${wextension} in_writers)
+    configure_file(interactiveshell/writeronlytest.bat.in interactiveshell/writeronlytest-${extension}-${basename}.bat)
+    set(regex "Validation         : Success")
 
-        # use different template batch files depending on the format requirements
-        if( wrongformat EQUAL -1 AND in_readers GREATER -1 AND in_writers GREATER -1)
-          configure_file(interactiveshell/readerwritertest.bat.in interactiveshell/readerwritertest-${rextension}-${wextension}-${basename}.bat)
-          set(regex "Validation         : Success")
-
-          add_test(NAME MIP-readerwritertest-${rextension}-${wextension}-${basename}
-                  COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readerwritertest-${rextension}-${wextension}-${basename}.bat
-                  )
-          set_tests_properties(MIP-readerwritertest-${rextension}-${wextension}-${basename}
-                              PROPERTIES
-                                  PASS_REGULAR_EXPRESSION ${regex}
-                                  DEPENDS scip-build
-                              )
-        endif()
-    endforeach(rextension)
-  endforeach(wextension)
+    add_test(NAME MIP-writeronlytest-${extension}-${basename}
+      COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/writeronlytest-${extension}-${basename}.bat
+      )
+    set_tests_properties(MIP-writeronlytest-${extension}-${basename}
+      PROPERTIES
+      PASS_REGULAR_EXPRESSION ${regex}
+      DEPENDS scip-build
+      )
+  endforeach(extension)
 endforeach(instance)
 
 #
@@ -625,6 +620,10 @@ endforeach(instance)
 #
 foreach(instance ${instances_MIP})
     split_instance(instance)
+    if(${basename} STREQUAL "rgn.mps")
+      continue()
+    endif()
+
     foreach(extension ${scip_reader_extensions})
         #
         # configure the batch file for this test by substituting placeholders in the in.file

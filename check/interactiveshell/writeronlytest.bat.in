@@ -1,0 +1,2 @@
+read "${PROJECT_SOURCE_DIR}"/check/"${path}"
+write problem temp/${basename}.${extension}

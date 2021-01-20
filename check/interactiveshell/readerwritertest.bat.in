@@ -1,6 +1,0 @@
-read "${PROJECT_SOURCE_DIR}"/check/"${path}"
-write problem temp/${basename}.${wextension}
-read temp/${basename}.${wextension}
-optimize
-validatesolve "${optval}" "${optval}"
-quit
