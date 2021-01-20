@@ -1171,9 +1171,21 @@ SCIP_Bool solOfInterest(
    )
 {
    SCIP_Real obj;
+   SCIP_Bool solOfInterestexact;
 
    obj = SCIPsolGetObj(sol, set, transprob, origprob);
+   solOfInterestexact = FALSE;
 
+   if( set->exact_enabled && SCIPsolIsExact(sol) )
+   {
+      SCIP_Rational* tmpobj;
+
+      SCIP_CALL( RatCreateBuffer(set->buffer, &tmpobj) );
+      SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
+      solOfInterestexact = RatIsLT(tmpobj, primal->cutoffboundexact);
+
+      RatFreeBuffer(set->buffer, &tmpobj);
+   }
    /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
     * current cutoff bound; solutions with infinite objective value are never accepted
     */
