@@ -655,7 +655,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
          SCIP_Real fixbnd;
 
          /* bound already good enough? */
-         if( SCIPisLT(scip, upperbound, replacebounds[node]) )
+         if( SCIPisFeasLT(scip, upperbound, replacebounds[node]) )
                continue;
 
          fixbnd = pathdist[node] + vnoi[node].dist + vnoi[node + nnodes].dist + lpobjval;
@@ -663,7 +663,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
          assert(!Is_pseudoTerm(graph->term[node]));
 
          /* Y-test for small degrees */
-         if( degree <= STP_DABD_MAXDEGREE && !SCIPisLT(scip, upperbound, fixbnd) )
+         if( degree <= STP_DABD_MAXDEGREE && !SCIPisFeasLT(scip, upperbound, fixbnd) )
          {
             int eqstack_size = 0;
             int edgecount = 0;
@@ -874,7 +874,7 @@ int reduceWithNodeFixingBounds(
 
       assert(!Is_pseudoTerm(graph->term[k]));
 
-      if( SCIPisLT(scip, upperbound, fixingbounds[k]) )
+      if( SCIPisFeasLT(scip, upperbound, fixingbounds[k]) )
       {
          SCIPdebugMessage("delete knot %d %f < %f %d\n", k, upperbound, fixingbounds[k], graph->grad[k]);
          nfixed += graph->grad[k];
@@ -928,7 +928,7 @@ int reduceWithEdgeFixingBounds(
             SCIP_Bool deleteEdge;
 
             if( !solgiven || result[e] == CONNECT || result[erev] == CONNECT )
-               deleteEdge = (SCIPisLT(scip, upperbound, fixingbounds[e]) && SCIPisLT(scip, upperbound, fixingbounds[erev]));
+               deleteEdge = (SCIPisFeasLT(scip, upperbound, fixingbounds[e]) && SCIPisFeasLT(scip, upperbound, fixingbounds[erev]));
             else
                deleteEdge = (SCIPisLE(scip, upperbound, fixingbounds[e]) && SCIPisLE(scip, upperbound, fixingbounds[erev]));
 
@@ -949,7 +949,7 @@ int reduceWithEdgeFixingBounds(
             {
                SCIP_Bool deleteArc;
                if( !solgiven || result[e] == CONNECT )
-                  deleteArc = (SCIPisLT(scip, upperbound, fixingbounds[e]) );
+                  deleteArc = (SCIPisFeasLT(scip, upperbound, fixingbounds[e]) );
                else
                   deleteArc = (SCIPisLE(scip, upperbound, fixingbounds[e]) );
 
@@ -1049,7 +1049,7 @@ void markPseudoDeletablesFromBounds(
             continue;
          }
 
-         if( SCIPisLT(scip, upperbound, replacebounds[k]))
+         if( SCIPisFeasLT(scip, upperbound, replacebounds[k]))
          {
             pseudoDelNodes[k] = TRUE;
          }
@@ -2183,7 +2183,7 @@ SCIP_RETCODE reduceRootedProb(
 
       /* note: if we want to keep the solution we cannot just delete vertices */
       if( !Is_term(graph->term[k]) && !keepsol &&
-         (SCIPisGT(scip, redcost, cutoffbound) || (solgiven && SCIPisEQ(scip, redcost, cutoffbound) && !nodearrchar[k])) )
+         (SCIPisFeasGT(scip, redcost, cutoffbound) || (solgiven && SCIPisEQ(scip, redcost, cutoffbound) && !nodearrchar[k])) )
       {
          (*nfixedp) += graph->grad[k];
          graph_knot_del(scip, graph, k, TRUE);
