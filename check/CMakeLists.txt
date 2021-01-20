@@ -211,11 +211,11 @@ set(settings_Or
 #
 # read/write instances
 #
-set(instances_MIP_readwrite
-    "instances/MIP/bell5.mps\;8966406.49"
-    "instances/MIP/egout.mps\;568.1007"
-    "instances/MIP/flugpl.mps\;1201500"
-    "instances/MIP/MANN_a9.clq.lp\;16"
+set(instances_MIP_write
+  #"instances/MIP/bell5.mps\;8966406.49"
+  #"instances/MIP/egout.mps\;568.1007"
+  #"instances/MIP/flugpl.mps\;1201500"
+  #"instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
@@ -419,7 +419,7 @@ set(scip_reader_extensions
 #
 # Writer output formats that are not also readers (all writers are scip_reader_extensions + scip_only_writer_extensions)
 #
-set(scip_only_writer_extensions
+set(scip_writer_only_extensions
   "wbo"
   )
 
@@ -598,11 +598,11 @@ set(message_format_opb "WARNING: only binary problems can be written in OPB form
 #
 # test writing and reading from and to different file extensions for MIP
 #
-foreach(instance ${instances_MIP_readwrite})
+foreach(instance ${instances_MIP_write})
   foreach(extension ${scip_writer_only_extensions})
     split_instance(instance)
     configure_file(interactiveshell/writeronlytest.bat.in interactiveshell/writeronlytest-${extension}-${basename}.bat)
-    set(regex "Validation         : Success")
+    set(regex "written original problem to file")
 
     add_test(NAME MIP-writeronlytest-${extension}-${basename}
       COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/writeronlytest-${extension}-${basename}.bat
