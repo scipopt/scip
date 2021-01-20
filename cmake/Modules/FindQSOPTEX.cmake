@@ -25,10 +25,6 @@ find_library(QSOPTEX_LIBRARY
 set(QSOPTEX_INCLUDE_DIRS "${QSOPTEX_INCLUDE_DIR}" )
 set(QSOPTEX_LIBRARIES "${QSOPTEX_LIBRARY}" )
 
-message(STATUS "${QSOPTEX_INCLUDE_DIRS}")
-message(STATUS "${QSOPTEX_LIBRARIES}")
-
-
 include(FindPackageHandleStandardArgs)
 # handle the QUIETLY and REQUIRED arguments and set QSOPTEX_FOUND to TRUE
 # if all listed variables are TRUE

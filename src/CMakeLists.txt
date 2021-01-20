@@ -1028,7 +1028,6 @@ target_link_libraries(libscip PRIVATE
     ${PAPILO_IMPORTED_TARGETS})
 
 if(SHARED)
-    message(STATUS "oh no its shared")
     set(SOPLEX_NEEDED 0)
     set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
