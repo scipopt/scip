@@ -2042,7 +2042,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    assert(graph != NULL);
 
    // todo extra method
-   if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0 )
+   if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0 && SCIPStpBranchruleIsActive(scip) )
    {
       int branchvertex;
       SCIP_Bool isDeleted = FALSE;
