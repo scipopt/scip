@@ -477,7 +477,7 @@ SCIP_Real extSdIsNonTrivial(
   )
 {
    assert(specialDist >= 0 || EQ(specialDist, -1.0));
-   assert(LT(specialDist, FARAWAY));
+   assert(LT(specialDist, FARAWAY) && "todo: might fail for edge replacement");
 
    return (specialDist >= -0.5);
 }
