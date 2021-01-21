@@ -7354,7 +7354,6 @@ SCIP_RETCODE lpExactRestoreSolVals(
 #ifdef SCIP_WITH_QSOPTEX
       lpexact->solved = FALSE;
 #endif
-      //lpexact->validsollp = validlp;
       RatSet(lpexact->lpobjval, storedsolvals->lpobjval);
       lpexact->lpsolstat = storedsolvals->lpsolstat;
       lpexact->primalfeasible = storedsolvals->primalfeasible;

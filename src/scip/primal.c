@@ -1171,10 +1171,10 @@ SCIP_Bool solOfInterest(
    )
 {
    SCIP_Real obj;
-   SCIP_Bool solOfInterestexact;
+   SCIP_Bool solisbetterexact;
 
    obj = SCIPsolGetObj(sol, set, transprob, origprob);
-   solOfInterestexact = FALSE;
+   solisbetterexact = FALSE;
 
    if( set->exact_enabled && SCIPsolIsExact(sol) )
    {
@@ -1182,14 +1182,14 @@ SCIP_Bool solOfInterest(
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmpobj) );
       SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
-      solOfInterestexact = RatIsLT(tmpobj, primal->cutoffboundexact);
+      solisbetterexact = RatIsLT(tmpobj, primal->cutoffboundexact);
 
       RatFreeBuffer(set->buffer, &tmpobj);
    }
    /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
     * current cutoff bound; solutions with infinite objective value are never accepted
     */
-   if( (!set->misc_improvingsols || obj < primal->cutoffbound) && !SCIPsetIsInfinity(set, obj) )
+   if( (!set->misc_improvingsols || obj < primal->cutoffbound || solisbetterexact) && !SCIPsetIsInfinity(set, obj) )
    {
       /* find insert position for the solution */
       (*insertpos) = primalSearchSolPos(primal, set, transprob, origprob, sol);
