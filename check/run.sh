@@ -128,7 +128,7 @@ echo -----------------------------  >> $OUTFILE
 # build/check/compress vipr file if it exists
 VIPRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr
 VIPRORIFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr_ori
-VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipraw
+VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprraw
 if test -e $VIPRFILE
 then
 echo Building vipr file ... >> $OUTFILE
