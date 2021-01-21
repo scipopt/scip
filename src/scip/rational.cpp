@@ -533,12 +533,12 @@ void RatSetInt(
 static
 std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
 {
-  auto it = std::search(
-    str.begin(), str.end(),
-    substr.begin(),   substr.end(),
-    [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
-  );
-  return it;
+   auto it = std::search(
+      str.begin(), str.end(),
+      substr.begin(),   substr.end(),
+      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
+   );
+   return it;
 }
 
 /** set a rational to the value described by a string */

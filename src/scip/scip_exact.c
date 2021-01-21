@@ -184,7 +184,7 @@ SCIP_Bool SCIPisCertificateActive(
 
 /** returns certificate data structure
  *
- *  @return tolerance certificate data structure
+ *  @return certificate data structure
  */
 SCIP_CERTIFICATE* SCIPgetCertificate(
    SCIP*                 scip                /**< SCIP data structure */

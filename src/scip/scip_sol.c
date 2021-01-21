@@ -2931,7 +2931,7 @@ SCIP_RETCODE SCIPretransformSolExact(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPretransformSolExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   switch ( SCIPsolGetOrigin(sol) )
+   switch( SCIPsolGetOrigin(sol) )
    {
    case SCIP_SOLORIGIN_ORIGINAL:
       /* nothing to do */
