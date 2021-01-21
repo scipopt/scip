@@ -8415,6 +8415,41 @@ SCIP_RETCODE varEventObjChanged(
    return SCIP_OKAY;
 }
 
+/** appends OBJCHANGED event to the event queue */
+static
+SCIP_RETCODE varEventObjChangedExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Rational*        oldobj,             /**< old objective value for variable */
+   SCIP_Rational*        newobj              /**< new objective value for variable */
+   )
+{
+   SCIP_EVENT* event;
+
+   assert(var != NULL);
+   assert(var->scip == set->scip);
+   assert(var->eventfilter != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarIsTransformed(var));
+
+   /* In the case where the objcetive value of a variable is very close to epsilon, and it is aggregated
+   * into a variable with a big objective value, round-off errors might make the assert oldobj != newobj fail.
+   * Hence, we relax it by letting it pass if the variables are percieved the same and we use very large values
+   * that make comparison with values close to epsilon inaccurate.
+   */
+   assert(!RatIsEqual(oldobj, newobj));
+
+   SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, RatApproxReal(oldobj), RatApproxReal(newobj)) );
+   SCIP_CALL( SCIPeventAddExactObjChg(event, blkmem, oldobj, newobj) );
+   SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
+
+   return SCIP_OKAY;
+}
+
 /** changes objective value of variable */
 SCIP_RETCODE SCIPvarChgObj(
    SCIP_VAR*             var,                /**< variable to change */
@@ -8503,7 +8538,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
    )
 {
    SCIP_Real newobjreal;
-   SCIP_Real oldobj;
+   SCIP_Rational* oldobj;
    SCIP_Rational* tmp;
 
    assert(var != NULL);
@@ -8516,6 +8551,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
    assert(var->scip == set->scip);
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &oldobj) );
    newobjreal = RatApproxReal(newobj);
 
    RatDebugMessage("changing exact objective value of <%s> from %q to %q\n", var->name, var->exactdata->obj, newobj);
@@ -8545,7 +8581,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
 
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
-         oldobj = var->obj;
+         RatSet(oldobj, var->exactdata->obj);
          RatSet(var->exactdata->obj, newobj);
          var->obj = newobjreal;
 
@@ -8558,9 +8594,9 @@ SCIP_RETCODE SCIPvarChgObjExact(
           * since the objective of inactive variables cannot be changed, this corresponds to probindex != -1
           */
          if( SCIPvarIsActive(var) )
-            SCIPprobUpdateNObjVars(prob, set, oldobj, var->obj);
+            SCIPprobUpdateNObjVars(prob, set, RatApproxReal(oldobj), var->obj);
 
-         SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp->fplp, eventqueue, oldobj, var->obj) );
+         SCIP_CALL( varEventObjChangedExact(var, blkmem, set, primal, lp->fplp, eventqueue, oldobj, var->exactdata->obj) );
 
          break;
 
@@ -8577,6 +8613,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
       }
    }
 
+   RatFreeBuffer(set->buffer, &oldobj);
    RatFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
@@ -8772,21 +8809,23 @@ SCIP_RETCODE SCIPvarAddObjExact(
          if( SCIPvarIsActive(var) )
 	         SCIPprobUpdateNObjVars(transprob, set, oldobjreal, var->obj);
 
-         SCIP_CALL( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobjreal, var->obj) );
+         SCIP_CALL( varEventObjChangedExact(var, blkmem, set, primal, lp, eventqueue, oldobj, var->exactdata->obj) );
          break;
 
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
-         /** @todo exip: do we need an exact variant here? */
+         RatMult(tmpobj, var->exactdata->locdom.lb, addobj);
+         SCIPprobAddObjoffsetExact(transprob, tmpobj);
          SCIPprobAddObjoffset(transprob, var->locdom.lb * addobjreal);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
-         /** @todo exip: do we need an exact variant here? */
+         RatMult(tmpobj, var->exactdata->aggregate.constant, addobj);
+         SCIPprobAddObjoffsetExact(transprob, tmpobj);
          SCIPprobAddObjoffset(transprob, var->data.aggregate.constant * addobjreal);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
 
          RatMult(tmpobj, var->exactdata->aggregate.scalar, addobj);
 
@@ -8799,9 +8838,11 @@ SCIP_RETCODE SCIPvarAddObjExact(
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIP_CALL( RatCreateBuffer(set->buffer, &multaggrobj) );
 
-         /** @todo exip: exact offset? */
+         RatMult(tmpobj, var->exactdata->multaggr.constant, addobj);
+         SCIPprobAddObjoffsetExact(transprob, tmpobj);
          SCIPprobAddObjoffset(transprob, var->data.multaggr.constant * addobjreal);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
             RatMult(multaggrobj, addobj, var->exactdata->multaggr.scalars[i]);
@@ -8816,9 +8857,12 @@ SCIP_RETCODE SCIPvarAddObjExact(
          assert(var->negatedvar != NULL);
          assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(var->negatedvar->negatedvar == var);
-         /** @todo exip: do we need an exact variant here? */
+
+         RatMultReal(tmpobj, addobj, var->data.negate.constant);
+         SCIPprobAddObjoffsetExact(transprob, tmpobj);
          SCIPprobAddObjoffset(transprob, var->data.negate.constant * addobjreal);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+
          RatNegate(tmpobj, addobj);
          SCIP_CALL( SCIPvarAddObjExact(var->negatedvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
                eventfilter, eventqueue, tmpobj) );
@@ -9318,7 +9362,7 @@ SCIP_RETCODE varEventGlbChangedExact(
       RatDebugMessage("issue exact GLBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
       SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS)) );
-      SCIP_CALL( SCIPeventAddExactChg(event, blkmem, oldbound, newbound) );
+      SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
 
@@ -9395,7 +9439,7 @@ SCIP_RETCODE varEventGubChangedExact(
       SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
       SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
-      SCIP_CALL( SCIPeventAddExactChg(event, blkmem, oldbound, newbound) );
+      SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
 
@@ -10905,7 +10949,7 @@ SCIP_RETCODE varEventLbChangedExact(
       RatDebugMessage("issue exact LBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
       SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS)) );
-      SCIP_CALL( SCIPeventAddExactChg(event, blkmem, oldbound, newbound) );
+      SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
 
@@ -10981,7 +11025,7 @@ SCIP_RETCODE varEventUbChangedExact(
       SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
       SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
-      SCIP_CALL( SCIPeventAddExactChg(event, blkmem, oldbound, newbound) );
+      SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
 

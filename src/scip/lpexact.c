@@ -4313,6 +4313,14 @@ void SCIProwExactPrint(
          SCIPmessageFPrintInfo(messagehdlr, file, "%s<%s> ", buf, SCIPvarGetName(row->cols[r]->var));
    }
 
+   /* print constant */
+   if( !RatIsZero(row->constant) )
+   {
+      if( RatIsPositive(row->constant) )
+         SCIPmessageFPrintInfo(messagehdlr, file, "+");
+      RatMessage(messagehdlr, file, row->constant);
+   }
+
    RatToString(row->rhs, buf, SCIP_MAXSTRLEN);
    SCIPmessageFPrintInfo(messagehdlr, file, "<= %s, ", buf);
    SCIPmessageFPrintInfo(messagehdlr, file, "\n");
@@ -4336,6 +4344,27 @@ int SCIProwExactGetNNonz(
    assert(row != NULL);
 
    return row->len;
+}
+
+/** gets array with coefficients of nonzero entries */
+SCIP_Rational** SCIProwExactGetVals(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->vals;
+}
+
+
+/** gets array of exact columns */
+SCIP_COLEXACT** SCIProwExactGetCols(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->cols;
 }
 
 /** returns TRUE iff row is member of current LP */
@@ -4432,6 +4461,10 @@ void SCIPcolExactCalcFarkasRedcostCoef(
          val = (dual == NULL) ? row->dualsol : dual[row->lppos];
 
       assert(!RatIsInfinity(val));
+
+      /* we don't want to save the redcost/farkascoef in singletons */
+      if( SCIProwExactGetNNonz(row) == 1 )
+         RatSetReal(val, 0.0);
 
       RatMult(tmp, col->vals[i], val);
       if( usefarkas )
@@ -5278,6 +5311,16 @@ SCIP_Rational* SCIPcolExactGetPrimsol(
       return NULL;
 }
 
+/** gets variable this column represents */
+SCIP_VAR* SCIPcolExactGetVar(
+   SCIP_COLEXACT*        col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->var;
+}
+
 /** ensures, that column array of row can store at least num entries */
 SCIP_RETCODE SCIProwExactEnsureSize(
    SCIP_ROWEXACT*        row,                /**< LP row */
@@ -5489,6 +5532,17 @@ SCIP_Rational* SCIProwExactGetRhs(
    assert(row->rhs != NULL);
 
    return row->rhs;
+}
+
+/** returns the constant of the row */
+SCIP_Rational* SCIProwExactGetConstant(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert(row->constant != NULL);
+
+   return row->constant;
 }
 
 /** compute the objective delta due the new lower bound */
@@ -6003,6 +6057,58 @@ SCIP_RETCODE SCIPlexGetNRows(
    return lp->nrows;
 }
 
+static
+SCIP_RETCODE lpexactComputeDualValidity(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational**       dualsol,            /**< row dual multipliers */
+   SCIP_Rational**       redcost             /**< column reduced costs */
+   )
+{
+   int r,c;
+   SCIP_Rational** obj;
+   SCIP_Rational* objval;
+
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &obj, lp->ncols) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &objval) );
+
+   for( c = 0; c < lp->nlpicols; c++ )
+   {
+      RatSet(obj[c], lp->cols[c]->obj);
+      RatDiff(obj[c], obj[c], redcost[c]);
+
+      if( RatIsPositive(redcost[c]) )
+         RatDiffProd(objval, redcost[c], lp->cols[c]->lb);
+      else if( RatIsNegative(redcost[c]) )
+         RatAddProd(objval, redcost[c], lp->cols[c]->ub);
+   }
+
+   for( r = 0; r < lp->nlpirows; r++ )
+   {
+      SCIP_ROWEXACT* row = lp->lpirows[r];
+
+      if( RatIsPositive(dualsol[r]) )
+         RatDiffProd(objval, dualsol[r], row->lhs);
+      else if( RatIsNegative(dualsol[r]) )
+         RatAddProd(objval, dualsol[r], row->rhs);
+
+      for( c = 0; c < row->len; c++ )
+      {
+         int idx = row->cols_index[c];
+         RatDiffProd(obj[idx], row->vals[c], dualsol[r]);
+      }
+   }
+
+   for( c = 0; c < lp->ncols; c++ )
+   {
+      assert(RatIsZero(obj[c]));
+   }
+
+   RatFreeBuffer(set->buffer, &objval);
+   RatFreeBufferArray(set->buffer, &obj, lp->ncols);
+   return SCIP_OKAY;
+}
+
 /** stores the LP solution in the columns and rows */
 SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -6098,6 +6204,8 @@ SCIP_RETCODE SCIPlpExactGetSol(
 
    RatSetReal(primalbound, 0.0);
    RatSetReal(dualbound, 0.0);
+
+   SCIPdebug(SCIP_CALL( lpexactComputeDualValidity(lp, set, dualsol, redcost) ));
 
    /* copy primal solution and reduced costs into columns */
    for( c = 0; c < nlpicols; ++c )
@@ -6736,14 +6844,15 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       RatSetString(lpicols[c]->primsol, "inf");
       RatSetString(lpicols[c]->redcost, "inf");
       lpicols[c]->validredcostlp = -1L;
-      lpicols[c]->validfarkaslp = -1L;
+      RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
+      lpicols[c]->validfarkaslp = stat->lpcount;
       if( overwritefplp )
       {
          lp->fplp->lpicols[c]->farkascoef = RatApproxReal(lp->lpicols[c]->farkascoef);
          lp->fplp->lpicols[c]->primsol =  SCIPsetInfinity(set);
          lp->fplp->lpicols[c]->redcost =  SCIPsetInfinity(set);
          lp->fplp->lpicols[c]->validredcostlp = -1L;
-         lpicols[c]->validfarkaslp = -1L;
+         lpicols[c]->validfarkaslp = stat->lpcount;
       }
 
       if( checkfarkas )

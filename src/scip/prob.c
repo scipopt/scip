@@ -329,6 +329,11 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->nlpenabled = FALSE;
    (*prob)->permuted = FALSE;
    (*prob)->conscompression = FALSE;
+   (*prob)->objoffsetexact = NULL;
+   if( set->exact_enabled )
+   {
+      SCIP_CALL( RatCreateBlock(blkmem, &(*prob)->objoffsetexact) );
+   }
 
    return SCIP_OKAY;
 }
@@ -510,6 +515,10 @@ SCIP_RETCODE SCIPprobFree(
    if( (*prob)->consnames != NULL )
    {
       SCIPhashtableFree(&(*prob)->consnames);
+   }
+   if( (*prob)->objoffsetexact != NULL )
+   {
+      RatFreeBlock(blkmem, &(*prob)->objoffsetexact);
    }
    BMSfreeMemoryArray(&(*prob)->name);
    BMSfreeMemory(prob);
@@ -1447,6 +1456,20 @@ void SCIPprobAddObjoffset(
    prob->objoffset += addval;
 }
 
+/** adds value to objective offset */
+void SCIPprobAddObjoffsetExact(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Rational*        addval              /**< value to add to objective offset */
+   )
+{
+   assert(prob != NULL);
+   assert(prob->transformed);
+   assert(prob->objoffsetexact != NULL);
+
+   RatDebugMessage("adding %q to objective offset %q \n", addval, prob->objoffsetexact);
+   RatAdd(prob->objoffsetexact, prob->objoffsetexact, addval);
+}
+
 /** sets the dual bound on objective function */
 void SCIPprobSetDualbound(
    SCIP_PROB*            prob,               /**< problem data */
@@ -2274,10 +2297,10 @@ void SCIPprobExternObjvalExact(
    }
    else
    {
-      RatAddReal(objvalext, objval, transprob->objoffset);
+      RatAdd(objvalext, objval, transprob->objoffsetexact);
       RatMultReal(objvalext, objvalext, transprob->objscale);
       RatMultReal(objvalext, objvalext, (SCIP_Real) transprob->objsense);
-      RatAddReal(objvalext, objvalext, origprob->objoffset);
+      RatAdd(objvalext, objvalext, origprob->objoffsetexact);
    }
 
    RatFreeBuffer(set->buffer, &tmpval);
@@ -2332,10 +2355,10 @@ void SCIPprobInternObjvalExact(
    }
    else
    {
-      RatDiffReal(objvalint, objval, origprob->objoffset);
+      RatDiff(objvalint, objval, origprob->objoffsetexact);
       RatDivReal(objval, objvalint, transprob->objscale);
       RatMultReal(objvalint, objvalint, (SCIP_Real) transprob->objsense);
-      RatDiffReal(objvalint, objvalint, transprob->objoffset);
+      RatDiff(objvalint, objvalint, transprob->objoffsetexact);
    }
 
    RatFreeBuffer(set->buffer, &tmpval);

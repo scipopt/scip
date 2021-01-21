@@ -73,11 +73,13 @@ struct SCIP_Certificate
    SCIP_CERTIFICATEBOUND* workbound;         /**< temporary memory for hashing bound information */
    BMS_BLKMEM*           blkmem;             /**< SCIP block memory */
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
+   SCIP_Longint          indexcounter_ori;   /**< counter for line indices in origial problem vipr file */
    SCIP_Longint          conscounter;        /**< counter for line indices in constraint section */
-   SCIP_FILE*            file;               /**< file to store problem definition */
+   SCIP_FILE*            origfile;           /**< file to store original problem definition */
+   SCIP_FILE*            transfile;          /**< file to store transformed problem (after presolving) */
    SCIP_FILE*            derivationfile;     /**< file to store derivations temporarily */
    char*                 derivationfilename; /**< name of the derivation file */
-   char*                 objstring;          /**< string for buffering the objective function */
+   char*                 origfilename;       /**< name of the original problem file */
    SCIP_Real             filesize;           /**< size of derivation file in MB */
    SCIP_HASHMAP*         rowdatahash;        /**< Hashmap storing mapping between rows and file index */
    SCIP_Rational*        rootbound;          /**< the bound for the root node */

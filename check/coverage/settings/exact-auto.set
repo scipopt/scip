@@ -7,5 +7,3 @@ misc/improvingsols = TRUE
 # should the problem be solved exactly (with proven dual bounds)? (Only possible if no problem has been read in yet)
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
 exact/enabled = TRUE
-
-presolving/milp/maxrounds = 0

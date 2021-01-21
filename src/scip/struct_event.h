@@ -65,6 +65,8 @@ struct SCIP_EventObjChg
 {
    SCIP_Real             oldobj;             /**< old objective value before value changed */
    SCIP_Real             newobj;             /**< new objective value after value changed */
+   SCIP_Rational*        oldobjexact;        /**< exact old obj (NULL if not an exact change) */
+   SCIP_Rational*        newobjexact;        /**< exact new obj (NULL if not an exact change) */
    SCIP_VAR*             var;                /**< variable whose objective value changed */
 };
 
@@ -73,7 +75,7 @@ struct SCIP_EventBdChg
 {
    SCIP_Real             oldbound;           /**< old bound before bound changed */
    SCIP_Real             newbound;           /**< new bound after bound changed */
-   SCIP_Rational*        oldboundexact;      /**< exact new variable bound (NULL if not an exact change) */
+   SCIP_Rational*        oldboundexact;      /**< exact old variable bound (NULL if not an exact change) */
    SCIP_Rational*        newboundexact;      /**< exact new variable bound (NULL if not an exact change) */
    SCIP_VAR*             var;                /**< variable whose bound changed */
 };
