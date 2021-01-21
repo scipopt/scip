@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -329,6 +329,10 @@ SCIP_RETCODE packingUpgrade(
 
          /* get set packing/partitioning variables */
          nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
+
+         /* skip empty constraints (might not have been removed by presolving yet) */
+         if ( nsetppcvars == 0 )
+            continue;
          assert( nsetppcvars > 0 );
 
          setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);

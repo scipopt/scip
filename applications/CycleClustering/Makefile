@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -150,11 +150,13 @@ $(BINDIR):
 .PHONY: test
 test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evaluate.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_solufile.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);

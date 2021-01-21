@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -280,7 +280,7 @@ SCIP_RETCODE applyCliqueFixings(
          /* variable is already fixed */
          if( SCIPvarGetUbLocal(var) < SCIPvarGetLbLocal(var) + 0.5 )
          {
-            SCIPdebugMessage("<%s> is already fixed to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+            SCIPdebugMsg(scip, "<%s> is already fixed to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
 
             /* clique variable is fixed to 1 */
             if( cliquevals[v] == (SCIPvarGetLbLocal(var) > 0.5) )
@@ -308,7 +308,7 @@ SCIP_RETCODE applyCliqueFixings(
                {
                   SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 1.0) );
                }
-               SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
+               SCIPdebugMsg(scip, "fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
                newnode = TRUE;
             }
 
@@ -328,7 +328,7 @@ SCIP_RETCODE applyCliqueFixings(
             {
                SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
             }
-            SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+            SCIPdebugMsg(scip, "fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
             newnode = TRUE;
          }
       }
@@ -346,7 +346,7 @@ SCIP_RETCODE applyCliqueFixings(
             {
                SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 1.0) );
             }
-            SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
+            SCIPdebugMsg(scip, "fixed <%s> to %g\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
             newnode = TRUE;
          }
 
@@ -366,7 +366,7 @@ SCIP_RETCODE applyCliqueFixings(
             {
                SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
             }
-            SCIPdebugMessage("fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+            SCIPdebugMsg(scip, "fixed <%s> to %g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
             newnode = TRUE;
          }
       }
@@ -389,7 +389,7 @@ SCIP_RETCODE applyCliqueFixings(
             SCIP_CALL( SCIPfixVarProbing(scip, cliquevars[bestpos], 0.0) );
             onefixvals[(*nonefixvars)] = 0;
          }
-         SCIPdebugMessage("fixed <%s> to %g*\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
+         SCIPdebugMsg(scip, "fixed <%s> to %g*\n", SCIPvarGetName(cliquevars[bestpos]), SCIPvarGetUbLocal(cliquevars[bestpos]));
          ++(*nonefixvars);
          newnode = TRUE;
       }
@@ -399,7 +399,7 @@ SCIP_RETCODE applyCliqueFixings(
          /* propagate fixings */
          SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, cutoff, NULL) );
 
-         SCIPdebugMessage("propagate fixings of clique %d: cutoff=%u\n", c, *cutoff);
+         SCIPdebugMsg(scip, "propagate fixings of clique %d: cutoff=%u\n", c, *cutoff);
 
          if( SCIPisStopped(scip) )
             break;
@@ -433,7 +433,7 @@ SCIP_RETCODE applyCliqueFixings(
                      /* propagate fixings */
                      SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, cutoff, NULL) );
 
-                     SCIPdebugMessage("backtrack %d was %sfeasible\n", nbacktracks, (*cutoff ? "in" : ""));
+                     SCIPdebugMsg(scip, "backtrack %d was %sfeasible\n", nbacktracks, (*cutoff ? "in" : ""));
                   }
 #ifndef NDEBUG
                   else

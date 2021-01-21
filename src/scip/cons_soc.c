@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -874,26 +874,34 @@ SCIP_RETCODE generateCutSol(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
    assert(!SCIPisInfinity(scip, consdata->lhsval));
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   for( i = 0; i < consdata->nvars; ++i )
+   if( SCIPisPositive(scip, consdata->lhsval) )
    {
-      val  = SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i];
-      val *= consdata->coefs[i] * consdata->coefs[i];
+      /* if lhs is 0, then we cannot linearize
+       * but since we are violated, we have rhs < 0, so underestimating lhs by 0 could still give us a useful cut
+       */
+      SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
+      for( i = 0; i < consdata->nvars; ++i )
+      {
+         val  = SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i];
+         val *= consdata->coefs[i] * consdata->coefs[i];
 
-      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->vars[i], val / consdata->lhsval) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->vars[i], val / consdata->lhsval) );
 
-      val *= SCIPgetSolVal(scip, sol, consdata->vars[i]);
-      SCIPaddRowprepSide(*rowprep, val);
+         val *= SCIPgetSolVal(scip, sol, consdata->vars[i]);
+         SCIPaddRowprepSide(*rowprep, val);
+      }
+      (*rowprep)->side /= consdata->lhsval;
+      (*rowprep)->side -= consdata->lhsval;
    }
-   (*rowprep)->side /= consdata->lhsval;
-   (*rowprep)->side -= consdata->lhsval - consdata->rhscoeff * consdata->rhsoffset;
 
+   /* add linear rhs: rhscoeff * (rhsvar + rhsoffset) */
+   (*rowprep)->side += consdata->rhscoeff * consdata->rhsoffset;
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->rhsvar, -consdata->rhscoeff) );
 
    return SCIP_OKAY;
@@ -937,7 +945,7 @@ SCIP_RETCODE generateCutPoint(
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    for( i = 0; i < consdata->nvars; ++i )
    {
@@ -1007,11 +1015,11 @@ SCIP_RETCODE generateCutProjectedPoint(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
    assert(!SCIPisInfinity(scip, consdata->lhsval));
 
-   if( !SCIPisZero(scip, consdata->constant) )
-   {  /* have not thought about this case yet */
+   if( !SCIPisZero(scip, consdata->constant) || !SCIPisPositive(scip, consdata->lhsval) )
+   {
+      /* have not thought about the constant=0 case yet; if lhsval is 0, also fall back to simple case */
       SCIP_CALL( generateCutSol(scip, cons, sol, rowprep) );
       return SCIP_OKAY;
    }
@@ -1033,7 +1041,7 @@ SCIP_RETCODE generateCutProjectedPoint(
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    for( i = 0; i < consdata->nvars; ++i )
    {
@@ -1087,10 +1095,9 @@ SCIP_RETCODE generateSparseCut(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
    assert(!SCIPisInfinity(scip, consdata->lhsval));
 
-   if( consdata->nvars <= 3 )
+   if( consdata->nvars <= 3 || !SCIPisPositive(scip, consdata->lhsval) )
    {
       SCIP_CALL( generateCutSol(scip, cons, sol, rowprep) );
       return SCIP_OKAY;
@@ -2516,6 +2523,7 @@ SCIP_RETCODE propagateBounds(
 {
    SCIP_CONSDATA* consdata;
    SCIP_INTERVAL  lhsrange;
+   SCIP_INTERVAL  lhsrange_squared;
    SCIP_INTERVAL* lhsranges;
    SCIP_INTERVAL  rhsrange;
    SCIP_INTERVAL  a, b, c;
@@ -2532,6 +2540,7 @@ SCIP_RETCODE propagateBounds(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->constant >= 0.0);
 
    *redundant = FALSE;
 
@@ -2567,8 +2576,11 @@ SCIP_RETCODE propagateBounds(
 
       SCIPintervalAdd(SCIPinfinity(scip), &lhsrange, lhsrange, lhsranges[i]);
    }
+   assert(lhsrange.inf >= 0);  /* a sum of squares plus positive constant should be non-negative */
+   lhsrange_squared = lhsrange;  /* we will need the squared version later */
+   SCIPintervalSquareRoot(SCIPinfinity(scip), &lhsrange, lhsrange);
 
-   /* compute activity on rhs: rhsrange = sqr(rhscoeff * (rhsvar + rhsoffset) ) */
+   /* compute activity on rhs: rhsrange = rhscoeff * (rhsvar + rhsoffset) */
    lb = SCIPcomputeVarLbLocal(scip, consdata->rhsvar) - SCIPepsilon(scip);
    ub = SCIPcomputeVarUbLocal(scip, consdata->rhsvar) + SCIPepsilon(scip);
    SCIPintervalSetBounds(&rhsrange, MIN(lb, ub), MAX(lb, ub));
@@ -2577,7 +2589,6 @@ SCIP_RETCODE propagateBounds(
       SCIPintervalAddScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhsoffset);
    if( consdata->rhscoeff  != 1.0 )
       SCIPintervalMulScalar(SCIPinfinity(scip), &rhsrange, rhsrange, consdata->rhscoeff);
-   SCIPintervalSquare(SCIPinfinity(scip), &rhsrange, rhsrange);
 
    /* check for infeasibility */
    if( SCIPisGT(scip, lhsrange.inf-SCIPfeastol(scip), rhsrange.sup) )
@@ -2600,12 +2611,24 @@ SCIP_RETCODE propagateBounds(
    /* try to tighten variable on rhs */
    if( SCIPvarGetStatus(consdata->rhsvar) != SCIP_VARSTATUS_MULTAGGR )
    {
-      SCIPintervalSquareRoot(SCIPinfinity(scip), &a, lhsrange);
+      /* we have lhsrange <= rhscoeff * (rhsvar + rhsoffset)
+       * if rhscoeff > 0, then lhsrange / rhscoeff - rhsoffset <= rhsvar
+       * if rhscoeff < 0, then lhsrange / rhscoeff - rhsoffset >= rhsvar
+       */
+      a = lhsrange;
       if( consdata->rhscoeff != 1.0 )
          SCIPintervalDivScalar(SCIPinfinity(scip), &a, a, consdata->rhscoeff);
       if( consdata->rhsoffset != 0.0 )
          SCIPintervalSubScalar(SCIPinfinity(scip), &a, a, consdata->rhsoffset);
-      SCIP_CALL( SCIPtightenVarLb(scip, consdata->rhsvar, SCIPintervalGetInf(a), FALSE, &infeas, &tightened) );
+
+      if( consdata->rhscoeff > 0.0 )
+      {
+         SCIP_CALL( SCIPtightenVarLb(scip, consdata->rhsvar, SCIPintervalGetInf(a), FALSE, &infeas, &tightened) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPtightenVarUb(scip, consdata->rhsvar, SCIPintervalGetSup(a), FALSE, &infeas, &tightened) );
+      }
       if( infeas )
       {
          SCIPdebugMsg(scip, "propagation found constraint <%s> infeasible\n", SCIPconsGetName(cons));
@@ -2620,8 +2643,20 @@ SCIP_RETCODE propagateBounds(
       }
    }
 
-   /* try to tighten variables on lhs */
-   SCIPintervalSub(SCIPinfinity(scip), &b, rhsrange, lhsrange);  /*lint !e644 */
+   /* try to tighten variables on lhs:
+    * (coefs[i] * (vars[i] + offset[i]))^2 <= sqr(rhsrange) - (constant + sum_{j != i} (coefs[j] * (vars[j] + offset[j]))^2)
+    *
+    * first, set b = sqr(rhsrange) - (constant + sum_i (coefs[i] * (vars[i] + offset[i]))^2)
+    * then, for each i, we undo the subtraction of (coefs[i] * (vars[i] + offset[i]))^2 in b and take a square root
+    *   thus, we get a = sqrt(sqr(rhsrange) - (constant + sum_{j != i} (coefs[j] * (vars[j] + offset[j]))^2))
+    *   and |coefs[i] * (vars[i] + offset[i])| <= a
+    * this gives us the two inequalities
+    *   vars[i] <=  sqrt(b)/coefs[i] - offset[i]
+    *   vars[i] >= -sqrt(b)/coefs[i] - offset[i]
+    * (note that coefs[i] >= 0)
+    */
+   SCIPintervalSquare(SCIPinfinity(scip), &b, rhsrange);
+   SCIPintervalSub(SCIPinfinity(scip), &b, b, lhsrange_squared);  /*lint !e644 */
    for( i = 0; i < consdata->nvars; ++i )
    {
       if( SCIPvarGetStatus(consdata->vars[i]) == SCIP_VARSTATUS_MULTAGGR )

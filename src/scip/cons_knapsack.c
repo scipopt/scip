@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4903,7 +4903,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 
@@ -5070,7 +5070,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 
@@ -5197,7 +5197,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 

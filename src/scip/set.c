@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -615,7 +615,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
 
 /** information method for a parameter change of infinity value */
 static
-SCIP_DECL_PARAMCHGD(paramChgInfinity)
+SCIP_DECL_PARAMCHGD(paramChgdInfinity)
 {  /*lint --e{715}*/
    SCIP_Real infinity;
 
@@ -684,11 +684,17 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
 static
 SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+
    assert( scip != NULL );
    assert( param != NULL );
 
    /* create or deconstruct the reoptimization data structures */
-   SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
+   retcode = SCIPenableReoptimization(scip, SCIPparamGetBool(param));
+
+   /* an appropriate error message is already printed in the above method */
+   if( retcode == SCIP_INVALIDCALL )
+      return SCIP_PARAMETERWRONGVAL;
 
    return SCIP_OKAY;
 }
@@ -704,7 +710,8 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
    {
       if ( SCIPparamGetInt(param) > 0 )
       {
-         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving.\n");
+         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving or change method.\n");
+         return SCIP_PARAMETERWRONGVAL;
       }
    }
 
@@ -1584,7 +1591,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
-         &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_MEM_NOLIMIT,
+         &(*set)->limit_memory, FALSE, (SCIP_Real)SCIP_DEFAULT_LIMIT_MEMORY, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/gap",
@@ -2028,7 +2035,7 @@ SCIP_RETCODE SCIPsetCreate(
          "numerics/infinity",
          "values larger than this are considered infinity",
          &(*set)->num_infinity, FALSE, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
-         paramChgInfinity, NULL) );
+         paramChgdInfinity, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/epsilon",
          "absolute values smaller than this are considered zero",

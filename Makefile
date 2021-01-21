@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -1343,6 +1343,13 @@ $(BINOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(BINOBJDIR)
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(DFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
+
+# add special target for papilo to avoid sanitizers (leading to false positives in TBB)
+ifeq ($(SANITIZE),true)
+$(LIBOBJDIR)/scip/presol_milp.o: $(SRCDIR)/scip/presol_milp.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
+		@echo "-> compiling $@"
+		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@ -fno-sanitize=all
+endif
 
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"

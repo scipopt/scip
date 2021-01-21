@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2712,7 +2712,8 @@ SCIP_RETCODE checkSystemGF2(
                   consdata = SCIPconsGetData(conss[i]);
                   assert(consdata != NULL);
 
-                  if ( xoractive[i] && consdata->intvar != NULL )
+                  /* only try for active constraints and integral variable; hope for the best if they are not active */
+                  if ( xoractive[i] && consdata->intvar != NULL && SCIPvarIsActive(consdata->intvar) )
                   {
                      SCIP_Real val;
                      int nones = 0;
@@ -3090,7 +3091,7 @@ SCIP_RETCODE propagateCons(
 
                *cutoff = TRUE;
             }
-            else
+            else if( SCIPvarGetStatus(consdata->intvar) != SCIP_VARSTATUS_MULTAGGR )
             {
                if ( ! SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->intvar), (SCIP_Real) fixval) )
                {
@@ -3133,8 +3134,8 @@ SCIP_RETCODE propagateCons(
 
       (*nfixedvars)++;
 
-      /* fix integral variable if present */
-      if ( consdata->intvar != NULL && !consdata->deleteintvar )
+      /* fix integral variable if present and not multi-aggregated */
+      if ( consdata->intvar != NULL && !consdata->deleteintvar && SCIPvarGetStatus(consdata->intvar) != SCIP_VARSTATUS_MULTAGGR )
       {
          int fixval;
 
@@ -3239,80 +3240,83 @@ SCIP_RETCODE propagateCons(
          return SCIP_OKAY;
       }
 
-      /* compute new bounds on the integral variable */
-      newlb = (SCIP_Real)((nfixedones + 1 - (int) consdata->rhs) / 2); /*lint !e653*/
-      newub = (SCIP_Real)((nvars - nfixedzeros - (int) consdata->rhs) / 2); /*lint !e653*/
-
-      /* new lower bound is better */
-      if( newlb > SCIPvarGetLbLocal(consdata->intvar) + 0.5 )
+      if( SCIPvarGetStatus(consdata->intvar) != SCIP_VARSTATUS_MULTAGGR )
       {
-         SCIPdebugMsg(scip, "constraint <%s>: propagated lower bound of integral variable <%s> to %g\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->intvar), newlb);
-         SCIP_CALL( SCIPinferVarLbCons(scip, consdata->intvar, newlb, cons, (int)PROPRULE_INTUB, TRUE, &infeasible, &tightened) );
-         assert(tightened);
-         assert(!infeasible);
+         /* compute new bounds on the integral variable */
+         newlb = (SCIP_Real)((nfixedones + 1 - (int) consdata->rhs) / 2); /*lint !e653*/
+         newub = (SCIP_Real)((nvars - nfixedzeros - (int) consdata->rhs) / 2); /*lint !e653*/
 
-         ++(*nchgbds);
-
-         nonesmin = 2 * (int)(SCIPvarGetLbLocal(consdata->intvar) + 0.5) + (int) consdata->rhs; /*lint !e713*/
-      }
-
-      /* new upper bound is better */
-      if( newub < SCIPvarGetUbLocal(consdata->intvar) - 0.5 )
-      {
-         SCIPdebugMsg(scip, "constraint <%s>: propagated upper bound of integral variable <%s> to %g\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->intvar), newub);
-         SCIP_CALL( SCIPinferVarUbCons(scip, consdata->intvar, newub, cons, (int)PROPRULE_INTLB, TRUE, &infeasible, &tightened) );
-         assert(tightened);
-         assert(!infeasible);
-
-         ++(*nchgbds);
-
-         nonesmax = 2 * (int)(SCIPvarGetUbLocal(consdata->intvar) + 0.5) + (int) consdata->rhs; /*lint !e713*/
-      }
-
-      assert(nvars - nfixedzeros >= nonesmin);
-      assert(nfixedones <= nonesmax);
-
-      /* the number of variables that are free or fixed to 1 is exactly the minimum required -> fix free variables to 1 */
-      if ( nvars - nfixedzeros == nonesmin )
-      {
-         SCIPdebugMsg(scip, "constraint <%s>: fix %d free variables to 1 to reach lower bound of %d\n", SCIPconsGetName(cons), nvars - nfixedzeros - nfixedones, nonesmin);
-
-         for (i = 0; i < nvars; ++i)
+         /* new lower bound is better */
+         if( newlb > SCIPvarGetLbLocal(consdata->intvar) + 0.5 )
          {
-            if ( SCIPvarGetLbLocal(vars[i]) < 0.5 && SCIPvarGetUbLocal(vars[i]) > 0.5 )
-            {
-               SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], TRUE, cons, (int)PROPRULE_INTLB, &infeasible, &tightened) );
-               assert( !infeasible );
-               assert( tightened );
+            SCIPdebugMsg(scip, "constraint <%s>: propagated lower bound of integral variable <%s> to %g\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->intvar), newlb);
+            SCIP_CALL( SCIPinferVarLbCons(scip, consdata->intvar, newlb, cons, (int)PROPRULE_INTUB, TRUE, &infeasible, &tightened) );
+            assert(tightened);
+            assert(!infeasible);
 
-               ++(*nfixedvars);
-            }
+            ++(*nchgbds);
+
+            nonesmin = 2 * (int)(SCIPvarGetLbLocal(consdata->intvar) + 0.5) + (int) consdata->rhs; /*lint !e713*/
          }
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
 
-         return SCIP_OKAY;
-      }
-
-      /* the number of variables that are fixed to 1 is exactly the maximum required -> fix free variables to 0 */
-      if ( nfixedones == nonesmax )
-      {
-         SCIPdebugMsg(scip, "constraint <%s>: fix %d free variables to 0 to guarantee upper bound of %d\n", SCIPconsGetName(cons), nvars - nfixedzeros - nfixedones, nonesmax);
-
-         for (i = 0; i < nvars; ++i)
+         /* new upper bound is better */
+         if( newub < SCIPvarGetUbLocal(consdata->intvar) - 0.5 )
          {
-            if ( SCIPvarGetLbLocal(vars[i]) < 0.5 && SCIPvarGetUbLocal(vars[i]) > 0.5 )
-            {
-               SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], FALSE, cons, (int)PROPRULE_INTUB, &infeasible, &tightened) );
-               assert(!infeasible);
-               assert(tightened);
-               ++(*nfixedvars);
-            }
-         }
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+            SCIPdebugMsg(scip, "constraint <%s>: propagated upper bound of integral variable <%s> to %g\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->intvar), newub);
+            SCIP_CALL( SCIPinferVarUbCons(scip, consdata->intvar, newub, cons, (int)PROPRULE_INTLB, TRUE, &infeasible, &tightened) );
+            assert(tightened);
+            assert(!infeasible);
 
-         return SCIP_OKAY;
+            ++(*nchgbds);
+
+            nonesmax = 2 * (int)(SCIPvarGetUbLocal(consdata->intvar) + 0.5) + (int) consdata->rhs; /*lint !e713*/
+         }
+
+         assert(nvars - nfixedzeros >= nonesmin);
+         assert(nfixedones <= nonesmax);
+
+         /* the number of variables that are free or fixed to 1 is exactly the minimum required -> fix free variables to 1 */
+         if ( nvars - nfixedzeros == nonesmin )
+         {
+            SCIPdebugMsg(scip, "constraint <%s>: fix %d free variables to 1 to reach lower bound of %d\n", SCIPconsGetName(cons), nvars - nfixedzeros - nfixedones, nonesmin);
+
+            for (i = 0; i < nvars; ++i)
+            {
+               if ( SCIPvarGetLbLocal(vars[i]) < 0.5 && SCIPvarGetUbLocal(vars[i]) > 0.5 )
+               {
+                  SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], TRUE, cons, (int)PROPRULE_INTLB, &infeasible, &tightened) );
+                  assert( !infeasible );
+                  assert( tightened );
+
+                  ++(*nfixedvars);
+               }
+            }
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+
+            return SCIP_OKAY;
+         }
+
+         /* the number of variables that are fixed to 1 is exactly the maximum required -> fix free variables to 0 */
+         if ( nfixedones == nonesmax )
+         {
+            SCIPdebugMsg(scip, "constraint <%s>: fix %d free variables to 0 to guarantee upper bound of %d\n", SCIPconsGetName(cons), nvars - nfixedzeros - nfixedones, nonesmax);
+
+            for (i = 0; i < nvars; ++i)
+            {
+               if ( SCIPvarGetLbLocal(vars[i]) < 0.5 && SCIPvarGetUbLocal(vars[i]) > 0.5 )
+               {
+                  SCIP_CALL( SCIPinferBinvarCons(scip, vars[i], FALSE, cons, (int)PROPRULE_INTUB, &infeasible, &tightened) );
+                  assert(!infeasible);
+                  assert(tightened);
+                  ++(*nfixedvars);
+               }
+            }
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+
+            return SCIP_OKAY;
+         }
       }
    }
 

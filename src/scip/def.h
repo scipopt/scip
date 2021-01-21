@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -121,10 +121,10 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                702 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_VERSION                703 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               0 /**< SCIP sub version number */
 #define SCIP_APIVERSION              68 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -291,7 +291,7 @@ extern "C" {
 #define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
 
-#define SCIP_MEM_NOLIMIT (SCIP_Longint)SCIP_LONGINT_MAX/1048576.0/**< initial size of dynamically allocated arrays */
+#define SCIP_MEM_NOLIMIT (SCIP_Longint)(SCIP_LONGINT_MAX >> 20)/**< initial size of dynamically allocated arrays */
 
 /*
  * Tree settings

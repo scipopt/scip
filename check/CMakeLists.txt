@@ -594,6 +594,13 @@ set(basenames_opb_wrongformat
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
+#
+# the following instances use variable or equations names that are not supported in pip format
+#
+set(basenames_pip_wrongformat
+    rgn.mps
+    )
+set(message_format_pip "PIP might be corrupted")
 
 #
 # test writing and reading from and to different file extensions for MIP

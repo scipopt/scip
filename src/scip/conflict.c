@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2432,6 +2432,9 @@ SCIP_RETCODE detectImpliedBounds(
       if( glbinfeas )
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+
+         /* clear the memory array before freeing it */
+         BMSclearMemoryArray(redundants, nbdchginfos);
          goto TERMINATE;
       }
 
@@ -3095,9 +3098,9 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_OKAY;
 
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualproofsinfsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsinfsuccess);
    else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%d", conflict->ndualproofsbndsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsbndsuccess);
    else
       return SCIP_INVALIDCALL;
 

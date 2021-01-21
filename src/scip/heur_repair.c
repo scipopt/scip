@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -498,7 +498,7 @@ SCIP_RETCODE createNewSol(
    /* try to add new solution to SCIP and free it immediately */
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
-#ifdef SCIP_STATISTICS
+#ifdef SCIP_STATISTIC
    {
       SCIP_HEURDATA* heurdata;
       heurdata = SCIPheurGetData(heur);
@@ -1129,7 +1129,7 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
    SCIPstatistic(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "<repair> \n total violations             : %10d\n", violateds);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " violated variables           : %10d\n", ninvars);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " total variables              : %10d\n", nvars)
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " total variables              : %10d\n", nvars);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " relative violated variables  : %10.2f%%\n", 100 * relvars);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " violated constraints         : %10d\n", ninvcons);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " total constraints            : %10d\n", ncons);
@@ -1143,7 +1143,6 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "</repair>\n\n");
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " value of best solution       : %10g\n", solval);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " improved orig. solval        : %10g\n", heurdata->improvedoldsol);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, message);
    )
 
 #endif

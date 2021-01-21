@@ -28,9 +28,12 @@ doc/inc/faq/faqdata.php
 doc/inc/faq/faq.inc
 doc/inc/parameters.set
 doc/**/*.tmp
+doc/*.log
 .cproject
 .project
 .vscode/
+.idea/
+cmake-build-debug/
 .settings/
 hooks/
 build/
@@ -69,3 +72,8 @@ interfaces/gams/test
 examples/*/doc/html
 applications/*/doc/html
 doc/inc/simpleinstance/output.log
+
+# tex documents
+tex/*
+!tex/*.tex
+!tex/*.bib

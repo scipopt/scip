@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2208,7 +2208,7 @@ SCIP_Bool SCIPstrToRealValue(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
-/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+/** copies the first size characters between a start and end character of str into token, if no error occurred endptr
  *  will point to the position after the read part, otherwise it will point to @p str
  */
 SCIP_EXPORT
@@ -2220,6 +2220,14 @@ void SCIPstrCopySection(
    int                   size,               /**< size of the token char array */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
+
+/** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
+SCIP_EXPORT
+SCIP_Bool SCIPstrAtStart(
+        const char*           s,                  /**< string to search in */
+        const char*           t,                  /**< string to search for */
+        size_t                tlen                /**< length of t */
+);
 
 /**@} */
 

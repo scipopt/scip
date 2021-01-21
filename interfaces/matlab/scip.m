@@ -3,7 +3,7 @@
 %*                  This file is part of the program and library             *
 %*         SCIP --- Solving Constraint Integer Programs                      *
 %*                                                                           *
-%*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+%*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 %*                            fuer Informationstechnik Berlin                *
 %*                                                                           *
 %*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -22,7 +22,7 @@ function[bestsol, objval] = scip(matrix, lhs, rhs, obj, lb, ub, vartype, objsens
 
 % copyright %
 fprintf('SCIP-MATLAB interface\n');
-fprintf('Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n\n');
+fprintf('Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n\n');
 
 % syntax description %
 usage = '\n';

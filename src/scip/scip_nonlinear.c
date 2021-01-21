@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1104,34 +1104,36 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       SCIP_Bool userhs;
       SCIP_Bool uselhs;
       int k;
+      SCIP_NLROW* nlrow;
 
-      assert(nlrows[i] != NULL);
+      nlrow = nlrows[i];
+      assert(nlrow != NULL);
 
       uselhs = FALSE;
       userhs = FALSE;
 
       /* check curvature together with constraint sides of a nonlinear row */
-      if( SCIPnlrowGetNQuadElems(nlrows[i]) == 0 && SCIPnlrowGetExprtree(nlrows[i]) == NULL )
+      if( SCIPnlrowGetNQuadElems(nlrow) == 0 && SCIPnlrowGetExprtree(nlrow) == NULL )
       {
          uselhs = TRUE;
          userhs = TRUE;
       }
       else
       {
-         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX)
-            && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) )
+         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONVEX)
+            && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)) )
             userhs = TRUE;
-         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONCAVE)
-            && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrows[i])) )
+         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONCAVE)
+            && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrow)) )
             uselhs = TRUE;
       }
 
       if( !uselhs && !userhs )
          continue;
 
-      lhss[nconss] = uselhs ? SCIPnlrowGetLhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) : -SCIPinfinity(scip);
-      rhss[nconss] = userhs ? SCIPnlrowGetRhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) :  SCIPinfinity(scip);
-      names[nconss] = SCIPnlrowGetName(nlrows[i]);
+      lhss[nconss] = uselhs ? SCIPnlrowGetLhs(nlrow) - SCIPnlrowGetConstant(nlrow) : -SCIPinfinity(scip);
+      rhss[nconss] = userhs ? SCIPnlrowGetRhs(nlrow) - SCIPnlrowGetConstant(nlrow) :  SCIPinfinity(scip);
+      names[nconss] = SCIPnlrowGetName(nlrow);
       nlininds[nconss] = 0;
       lininds[nconss] = NULL;
       linvals[nconss] = NULL;
@@ -1141,46 +1143,46 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       exprvaridxs[nconss] = NULL;
 
       /* copy linear part */
-      if( SCIPnlrowGetNLinearVars(nlrows[i]) > 0 )
+      if( SCIPnlrowGetNLinearVars(nlrow) > 0 )
       {
          SCIP_VAR* var;
 
-         nlininds[nconss] = SCIPnlrowGetNLinearVars(nlrows[i]);
+         nlininds[nconss] = SCIPnlrowGetNLinearVars(nlrow);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nlininds[nconss]) ); /*lint !e866*/
          SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nlininds[nconss]) ); /*lint !e866*/
 
          for( k = 0; k < nlininds[nconss]; ++k )
          {
-            var = SCIPnlrowGetLinearVars(nlrows[i])[k];
+            var = SCIPnlrowGetLinearVars(nlrow)[k];
             assert(var != NULL);
             assert(SCIPhashmapExists(var2idx, (void*)var));
 
             lininds[nconss][k] = SCIPhashmapGetImageInt(var2idx, (void*)var);
             assert(var == vars[lininds[nconss][k]]);
-            linvals[nconss][k] = SCIPnlrowGetLinearCoefs(nlrows[i])[k];
+            linvals[nconss][k] = SCIPnlrowGetLinearCoefs(nlrow)[k];
          }
       }
 
       /* copy quadratic part */
-      if( SCIPnlrowGetNQuadElems(nlrows[i]) > 0 )
+      if( SCIPnlrowGetNQuadElems(nlrow) > 0 )
       {
          SCIP_QUADELEM quadelem;
          SCIP_VAR* var1;
          SCIP_VAR* var2;
 
-         nquadelems[nconss] = SCIPnlrowGetNQuadElems(nlrows[i]);
+         nquadelems[nconss] = SCIPnlrowGetNQuadElems(nlrow);
          SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[nconss], nquadelems[nconss]) ); /*lint !e866*/
 
          for( k = 0; k < nquadelems[nconss]; ++k )
          {
-            quadelem = SCIPnlrowGetQuadElems(nlrows[i])[k];
+            quadelem = SCIPnlrowGetQuadElems(nlrow)[k];
 
-            var1 = SCIPnlrowGetQuadVars(nlrows[i])[quadelem.idx1];
+            var1 = SCIPnlrowGetQuadVars(nlrow)[quadelem.idx1];
             assert(var1 != NULL);
             assert(SCIPhashmapExists(var2idx, (void*)var1));
 
-            var2 = SCIPnlrowGetQuadVars(nlrows[i])[quadelem.idx2];
+            var2 = SCIPnlrowGetQuadVars(nlrow)[quadelem.idx2];
             assert(var2 != NULL);
             assert(SCIPhashmapExists(var2idx, (void*)var2));
 
@@ -1206,14 +1208,14 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       }
 
       /* copy expression tree */
-      if( SCIPnlrowGetExprtree(nlrows[i]) != NULL )
+      if( SCIPnlrowGetExprtree(nlrow) != NULL )
       {
          SCIP_VAR* var;
 
          /* note that we don't need to copy the expression tree here since only the mapping between variables in the
           * tree and the corresponding indices change; this mapping is stored in the exprvaridxs array
           */
-         exprtrees[nconss] = SCIPnlrowGetExprtree(nlrows[i]);
+         exprtrees[nconss] = SCIPnlrowGetExprtree(nlrow);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprtrees[nconss])) ); /*lint !e866*/
 
@@ -1234,7 +1236,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       /* if the row to index hash map is provided, we need to store the row index */
       if( nlrow2idx != NULL )
       {
-         SCIP_CALL( SCIPhashmapInsertInt(nlrow2idx, nlrows[i], nconss) );
+         SCIP_CALL( SCIPhashmapInsertInt(nlrow2idx, nlrow, nconss) );
       }
 
       ++nconss;

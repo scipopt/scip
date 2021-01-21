@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -6587,6 +6587,7 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
    assert( consdata->slackvar != NULL );
    assert( consdata->lincons != NULL );
    SCIPinfoMessage(scip, file, " -> <%s> = 0", SCIPvarGetName(consdata->slackvar));
+   SCIPinfoMessage(scip, file, " (<%s>)", SCIPconsGetName(consdata->lincons));
 
    return SCIP_OKAY;
 }
@@ -6724,21 +6725,23 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
 {  /*lint --e{715}*/
    char binvarname[1024];
    char slackvarname[1024];
+   char linconsname[1024];
    SCIP_VAR* binvar;
    SCIP_VAR* slackvar;
    SCIP_CONS* lincons;
-   const char* posstr;
    int zeroone;
    int nargs;
 
    *success = TRUE;
 
    /* read indicator constraint */
-   nargs = sscanf(str, " <%1023[^>]> = %d -> <%1023[^>]> = 0", binvarname, &zeroone, slackvarname);
+   /* coverity[secure_coding] */
+   nargs = sscanf(str, " <%1023[^>]> = %d -> <%1023[^>]> = 0 (<%1023[^>]>)", binvarname, &zeroone, slackvarname, linconsname);
 
-   if ( nargs != 3 )
+   /* downward compatible: accept missing linear constraint at end */
+   if ( nargs != 3 && nargs != 4 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected the following form: <var> = [0|1] -> <var> = 0.\n%s\n", str);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected the following form: <var> = [0|1] -> <var> = 0 (<lincons>).\n%s\n", str);
       *success = FALSE;
       return SCIP_OKAY;
    }
@@ -6771,40 +6774,66 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
       return SCIP_OKAY;
    }
 
-   /* find matching linear constraint */
-   posstr = strstr(slackvarname, "indslack");
-   if ( posstr == NULL )
+   /* determine linear constraint */
+   if ( nargs == 4 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", slackvarname);
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* overwrite binvarname: set up name for linear constraint */
-   (void) SCIPsnprintf(binvarname, 1023, "indlin%s", posstr+8);
-
-   lincons = SCIPfindCons(scip, binvarname);
-   if ( lincons == NULL )
-   {
-      /* if not found - check without indlin */
-      (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+9);
-      lincons = SCIPfindCons(scip, binvarname);
-
+      lincons = SCIPfindCons(scip, linconsname);
       if ( lincons == NULL )
       {
-         /* if not found - check without indrhs or indlhs */
-         (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+16);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown constraint <%s>\n", linconsname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      if ( strncmp(SCIPconshdlrGetName(SCIPconsGetHdlr(lincons)), "linear", 6) != 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "constraint <%s> is not linear\n", linconsname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      const char* posstr;
+
+      /* for backward compability try to determine name of linear constraint from variables names */
+      assert( nargs == 3 );
+
+      /* find matching linear constraint */
+      posstr = strstr(slackvarname, "indslack");
+      if ( posstr == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", slackvarname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      /* overwrite binvarname: set up name for linear constraint */
+      (void) SCIPsnprintf(binvarname, 1023, "indlin%s", posstr+8);
+
+      lincons = SCIPfindCons(scip, binvarname);
+      if ( lincons == NULL )
+      {
+         /* if not found - check without indlin */
+         (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+9);
          lincons = SCIPfindCons(scip, binvarname);
 
-         if( lincons == NULL )
+         if ( lincons == NULL )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s>, <%s> or <%s>.\n",
-               name, posstr+8, posstr+9, posstr+16);
-            *success = FALSE;
-            return SCIP_OKAY;
+            /* if not found - check without indrhs or indlhs */
+            (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+16);
+            lincons = SCIPfindCons(scip, binvarname);
+
+            if( lincons == NULL )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s>, <%s> or <%s>.\n",
+                  name, posstr+8, posstr+9, posstr+16);
+               *success = FALSE;
+               return SCIP_OKAY;
+            }
          }
       }
    }
+   assert( lincons != NULL );
 
    /* check correct linear constraint */
    if ( ! SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) && ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) )

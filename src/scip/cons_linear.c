@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1479,7 +1479,7 @@ void consdataCheckNonbinvar(
 
 
 #ifdef CHECKMAXACTDELTA
-/* checks that the stored maximal activity delta (if not invalid) is correct */
+/** checks that the stored maximal activity delta (if not invalid) is correct */
 static
 void checkMaxActivityDelta(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4159,7 +4159,7 @@ SCIP_RETCODE scaleCons(
    return SCIP_OKAY;
 }
 
-/* perform deletion of variables in all constraints of the constraint handler */
+/** perform deletion of variables in all constraints of the constraint handler */
 static
 SCIP_RETCODE performVarDeletions(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9478,7 +9478,7 @@ SCIP_RETCODE consdataTightenCoefs(
    return SCIP_OKAY;
 }
 
-/* processes equality with only one variable by fixing the variable and deleting the constraint */
+/** processes equality with only one variable by fixing the variable and deleting the constraint */
 static
 SCIP_RETCODE convertUnaryEquality(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9534,7 +9534,7 @@ SCIP_RETCODE convertUnaryEquality(
    return SCIP_OKAY;
 }
 
-/* processes equality with exactly two variables by aggregating one of the variables and deleting the constraint */
+/** processes equality with exactly two variables by aggregating one of the variables and deleting the constraint */
 static
 SCIP_RETCODE convertBinaryEquality(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9640,11 +9640,11 @@ void getNewSidesAfterAggregation(
    assert(SCIPisLE(scip, *newlhs, *newrhs));
 }
 
-/* processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
- * into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that
- * is implicitly integral by this constraint
+/** processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
+ *  into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that
+ *  is implicitly integral by this constraint
  *
- * @todo Check whether a more clever way of avoiding aggregation of variables containing implicitly integer variables
+ *  @todo Check whether a more clever way of avoiding aggregation of variables containing implicitly integer variables
  *       can help.
  */
 static
@@ -10582,8 +10582,8 @@ SCIP_Bool consdataIsResidualIntegral(
    return TRUE;
 }
 
-/* check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
- * check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
+/** check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i,
+ *  check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
  */
 static
 void calculateMinvalAndMaxval(
@@ -10627,8 +10627,8 @@ void calculateMinvalAndMaxval(
 }
 
 
-/* applies dual presolving for variables that are locked only once in a direction, and this locking is due to a
- * linear inequality
+/** applies dual presolving for variables that are locked only once in a direction, and this locking is due to a
+ *  linear inequality
  */
 static
 SCIP_RETCODE dualPresolve(
@@ -11938,7 +11938,7 @@ SCIP_RETCODE simplifyInequalities(
 
          /* get new constraint data */
          nvars = consdata->nvars;
-         assert(nvars >= 2);
+         assert(nvars > 0);
 
          allcoefintegral = TRUE;
 
@@ -12666,12 +12666,12 @@ SCIP_RETCODE simplifyInequalities(
 }
 
 
-/* tries to aggregate an (in)equality and an equality in order to decrease the number of variables in the (in)equality:
+/** tries to aggregate an (in)equality and an equality in order to decrease the number of variables in the (in)equality:
  *   cons0 := a * cons0 + b * cons1,
- * where a = val1[v] and b = -val0[v] for common variable v which removes most variable weight;
- * for numerical stability, we will only accept integral a and b;
- * the variable weight is a weighted sum over all included variables, where each binary variable weighs BINWEIGHT,
- * each integer or implicit integer variable weighs INTWEIGHT and each continuous variable weighs CONTWEIGHT
+ *  where a = val1[v] and b = -val0[v] for common variable v which removes most variable weight;
+ *  for numerical stability, we will only accept integral a and b;
+ *  the variable weight is a weighted sum over all included variables, where each binary variable weighs BINWEIGHT,
+ *  each integer or implicit integer variable weighs INTWEIGHT and each continuous variable weighs CONTWEIGHT
  */
 static
 SCIP_RETCODE aggregateConstraints(
@@ -13001,7 +13001,7 @@ SCIP_DECL_HASHGETKEY(hashGetKeyLinearcons)
 }
 
 /** returns TRUE iff both keys are equal; two constraints are equal if they have the same variables and the 
- * coefficients are either equal or negated
+ *  coefficients are either equal or negated
  */
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
@@ -16790,8 +16790,9 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
    return SCIP_OKAY;
 }
 
-/* find operators '<=', '==', '>=', [free] in input string and return those places. There should only be one operator,
- * except for ranged rows for which exactly two operators '<=' must be present
+/** find operators '<=', '==', '>=', [free] in input string and return those places
+ *
+ *  There should only be one operator, except for ranged rows for which exactly two operators '<=' must be present.
  */
 static
 void findOperators(
@@ -17093,6 +17094,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsLinear)
  * Callback methods of event handler
  */
 
+/** execution method of event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecLinear)
 {  /*lint --e{715}*/
@@ -17288,6 +17290,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
  * Callback methods of conflict handler
  */
 
+/** conflict processing method of conflict handler (called when conflict was found) */
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 {  /*lint --e{715}*/

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -39,20 +39,38 @@ SCIPSETTINGS=${SOLVERPATH}/../../ug/settings/$SETNAME.set
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
 
-echo "start checking mount"         >> $OUTFILE
-date                                >> $OUTFILE
-echo                                >> $OUTFILE
+# function to copy back the results and delete temporary files
+function cleanup {
+   echo                                >> $OUTFILE
+   echo "start moving files"           >> $OUTFILE
+   date                                >> $OUTFILE
+   echo                                >> $OUTFILE
 
-echo $SETTINGS is used as UG parameters  >> $OUTFILE
-echo $SCIPSETTINGS is used as SCIP parameters  >> $OUTFILE
-# gnerate UG parameter file
-cp $SETTINGS $SETFILE
-echo TimeLimit = $TIMELIMIT               >> $SETFILE
-# gnerate SCIP parameter file
-cp $SCIPSETTINGS $SCIPSETFILE
+   mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
+   mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
+   if [ -f "${ERRFILE}.rr" ] ;
+   then
+       mv -f $ERRFILE.rr $SOLVERPATH/$OUTPUTDIR/$BASENAME.rr
+   fi
+
+   rm -f $SOLFILE
+   rm -f $SETFILE
+   rm -f $SCIPSETFILE
+
+   echo                                >> $OUTFILE
+   echo "--- FINISH ---"               >> $OUTFILE
+   date                                >> $OUTFILE
+   echo                                >> $OUTFILE
+}
+
+# ensure TMPFILE is deleted and results are copied when exiting (normally or due to abort/interrupt)
+trap cleanup EXIT
+
+# only wait for optimi to be mounted in run.sh if you are on an opt computer at zib
+OPTHOST=$(uname -n | sed 's/.zib.de//g' | sed 's/portal//g' | tr -cd '[:alpha:]')
 
 # check if the scripts runs a *.zib.de host
-if hostname -f | grep -q zib.de ;
+if $(hostname -f | grep -q zib.de) && $([[ "${OPTHOST}" == "opt" ]] || [[ "${OPTHOST}" == "optc" ]]);
 then
   # access /optimi once to force a mount
   ls /nfs/optimi/QUOTAS >/dev/null 2>&1
@@ -82,12 +100,26 @@ then
   done
 fi
 
+echo "start checking mount"         >> $OUTFILE
+date                                >> $OUTFILE
+echo                                >> $OUTFILE
+
+echo $SETTINGS is used as UG parameters  >> $OUTFILE
+echo $SCIPSETTINGS is used as SCIP parameters  >> $OUTFILE
+# gnerate UG parameter file
+cp $SETTINGS $SETFILE
+echo TimeLimit = $TIMELIMIT               >> $SETFILE
+# gnerate SCIP parameter file
+cp $SCIPSETTINGS $SCIPSETFILE
+
 echo "start printing some stats"    >> $OUTFILE
 date                                >> $OUTFILE
 echo                                >> $OUTFILE
 
 echo                                >> $OUTFILE
-top -b -n 1 | head -n 15            >> $OUTFILE
+if test `uname` == Linux ; then   # -b does not work with top on macOS
+  top -b -n 1 | head -n 15          >> $OUTFILE
+fi
 echo                                >> $OUTFILE
 echo "hard time limit: $HARDTIMELIMIT">>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT" >>$OUTFILE
@@ -110,7 +142,8 @@ echo                                >> $OUTFILE
 
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
-EXECNAME=$SRUN${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+EXECNAME=${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+EXECNAME=$SRUN${EXECNAME/RRTRACEFOLDER_PLACEHOLDER/${ERRFILE}}
 # eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
 echo $EXECNAME  $SETFILE $FILENAME -sth $THREADS -fsol $SOLFILE -sr $SCIPSETFILE -s $SCIPSETFILE
 eval $EXECNAME  $SETFILE $FILENAME -sth $THREADS -fsol $SOLFILE -sr $SCIPSETFILE -s $SCIPSETFILE 2>>$ERRFILE  | tee -a $OUTFILE
@@ -155,23 +188,3 @@ echo -----------------------------  >> $OUTFILE
 date                                >> $ERRFILE
 echo                                >> $OUTFILE
 echo =ready=                        >> $OUTFILE
-
-echo                                >> $OUTFILE
-echo "start moving files"           >> $OUTFILE
-date                                >> $OUTFILE
-echo                                >> $OUTFILE
-echo                                >> $OUTFILE
-echo "--- FINISH ---"               >> $OUTFILE
-date                                >> $OUTFILE
-echo                                >> $OUTFILE
-
-mv $OUTFILE $SOLVERPATH/results/$BASENAME.out
-mv $ERRFILE $SOLVERPATH/results/$BASENAME.err
-
-rm -f $SOLFILE
-rm -f $SETFILE
-rm -f $SCIPSETFILE
-
-#chmod g+r $ERRFILE
-#chmod g+r $SCIPPATH/results/$BASENAME.out
-#chmod g+r $SCIPPATH/results/$BASENAME.set

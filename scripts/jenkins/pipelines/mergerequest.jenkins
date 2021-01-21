@@ -2,7 +2,7 @@
 
 gitlabCommitStatus(name: 'cmake compilation') {
     node ('ubuntu18') {
-        timeout(1) {
+        timeout(3) {
             stage('Clean') {
                 cleanWs() // clean workspace
             }
@@ -33,7 +33,7 @@ gitlabCommitStatus(name: 'cmake compilation') {
 
                 String[] buildtypes = ["Release", "Debug"]
                 String[] compilers = ["gnu", "clang", "intel"]
-                String[] CXXONLY = ["off", "on"]
+                String[] CXXONLY = ["off"]
                 for(i = 0; i < buildtypes.size(); i += 1) {
                     def bt = buildtypes[i]
 
@@ -47,14 +47,25 @@ gitlabCommitStatus(name: 'cmake compilation') {
                                             build job: 'template_SCIP_cmake_mergerequest',
                                             parameters: [
                                                 string(name: 'buildtype', value: "${bt}"),
-                                            string(name: 'compiler', value: "${c}"),
-                                            string(name: 'cpp', value: "${cpp}")
+                                                string(name: 'compiler', value: "${c}"),
+                                                string(name: 'cpp', value: "${cpp}")
                                             ],
                                             propagate: true,
                                             wait: true
                                         }
                                 }
                         }
+                }
+
+                paramjobs["Test Debug intel on"] = {
+                    build job: 'template_SCIP_cmake_mergerequest',
+                    parameters: [
+                        string(name: 'buildtype', value: "Debug"),
+                        string(name: 'compiler', value: "intel"),
+                        string(name: 'cpp', value: "on")
+                    ],
+                    propagate: true,
+                    wait: true
                 }
             parallel paramjobs
         }

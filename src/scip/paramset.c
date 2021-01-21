@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4436,16 +4436,20 @@ SCIP_RETCODE SCIPparamSetBool(
 {
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter */
    SCIP_CALL_QUIET( paramTestBool(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize || (param->data.boolparam.valueptr != NULL && *param->data.boolparam.valueptr != value)
       || (param->data.boolparam.valueptr == NULL && param->data.boolparam.curvalue != value) )
    {
+      SCIP_Bool oldvalue;
+
+      /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetBool(param);
       if( param->data.boolparam.valueptr != NULL )
          *param->data.boolparam.valueptr = value;
       else
@@ -4454,7 +4458,21 @@ SCIP_RETCODE SCIPparamSetBool(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.boolparam.valueptr != NULL )
+               *param->data.boolparam.valueptr = oldvalue;
+            else
+               param->data.boolparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4478,16 +4496,20 @@ SCIP_RETCODE SCIPparamSetInt(
 {
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter */
    SCIP_CALL_QUIET( paramTestInt(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize || (param->data.intparam.valueptr != NULL && *param->data.intparam.valueptr != value)
       || (param->data.intparam.valueptr == NULL && param->data.intparam.curvalue != value) )
    {
+      int oldvalue;
+
+      /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetInt(param);
       if( param->data.intparam.valueptr != NULL )
          *param->data.intparam.valueptr = value;
       else
@@ -4496,7 +4518,21 @@ SCIP_RETCODE SCIPparamSetInt(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.intparam.valueptr != NULL )
+               *param->data.intparam.valueptr = oldvalue;
+            else
+               param->data.intparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4520,16 +4556,20 @@ SCIP_RETCODE SCIPparamSetLongint(
 {
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter */
    SCIP_CALL_QUIET( paramTestLongint(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize ||  (param->data.longintparam.valueptr != NULL && *param->data.longintparam.valueptr != value)
       || (param->data.longintparam.valueptr == NULL && param->data.longintparam.curvalue != value) )
    {
+      SCIP_Longint oldvalue;
+
+      /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetLongint(param);
       if( param->data.longintparam.valueptr != NULL )
          *param->data.longintparam.valueptr = value;
       else
@@ -4538,7 +4578,21 @@ SCIP_RETCODE SCIPparamSetLongint(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.longintparam.valueptr != NULL )
+               *param->data.longintparam.valueptr = oldvalue;
+            else
+               param->data.longintparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4562,7 +4616,7 @@ SCIP_RETCODE SCIPparamSetReal(
 {
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter */
    value = MAX(value, SCIP_REAL_MIN);
    value = MIN(value, SCIP_REAL_MAX);
    SCIP_CALL_QUIET( paramTestReal(param, messagehdlr, value) );
@@ -4571,9 +4625,13 @@ SCIP_RETCODE SCIPparamSetReal(
    if( initialize || (param->data.realparam.valueptr != NULL && *param->data.realparam.valueptr != value) /*lint !e777*/
       || (param->data.realparam.valueptr == NULL && param->data.realparam.curvalue != value) ) /*lint !e777*/
    {
+      SCIP_Real oldvalue;
+
+      /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetReal(param);
       if( param->data.realparam.valueptr != NULL )
          *param->data.realparam.valueptr = value;
       else
@@ -4582,7 +4640,21 @@ SCIP_RETCODE SCIPparamSetReal(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.realparam.valueptr != NULL )
+               *param->data.realparam.valueptr = oldvalue;
+            else
+               param->data.realparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4613,9 +4685,12 @@ SCIP_RETCODE SCIPparamSetChar(
    if( initialize || (param->data.charparam.valueptr != NULL && *param->data.charparam.valueptr != value)
       || (param->data.charparam.valueptr == NULL && param->data.charparam.curvalue != value) )
    {
+      char oldvalue;
+
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetChar(param);
       if( param->data.charparam.valueptr != NULL )
          *param->data.charparam.valueptr = value;
       else
@@ -4624,7 +4699,21 @@ SCIP_RETCODE SCIPparamSetChar(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.charparam.valueptr != NULL )
+               *param->data.charparam.valueptr = oldvalue;
+            else
+               param->data.charparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4645,28 +4734,55 @@ SCIP_RETCODE SCIPparamSetString(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
+   char* oldvalue = NULL;
+
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramTestString(param, messagehdlr, value) );
    SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
    if( param->data.stringparam.valueptr != NULL )
    {
-      BMSfreeMemoryArrayNull(param->data.stringparam.valueptr);
+      oldvalue = *param->data.stringparam.valueptr;
       SCIP_ALLOC( BMSduplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1) );
    }
    else
    {
-      BMSfreeMemoryArrayNull(&param->data.stringparam.curvalue);
+      oldvalue = param->data.stringparam.curvalue;
       SCIP_ALLOC( BMSduplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1) );
    }
 
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && set != NULL )
    {
-      SCIP_CALL( param->paramchgd(set->scip, param) );
+      SCIP_RETCODE retcode;
+
+      retcode = param->paramchgd(set->scip, param);
+
+      if( retcode == SCIP_PARAMETERWRONGVAL )
+      {
+         if( param->data.stringparam.valueptr != NULL )
+         {
+            BMSfreeMemoryArrayNull(param->data.stringparam.valueptr);
+            *param->data.stringparam.valueptr = oldvalue;
+         }
+         else
+         {
+            BMSfreeMemoryArrayNull(&param->data.stringparam.curvalue);
+            param->data.stringparam.curvalue = oldvalue;
+         }
+      }
+      else
+      {
+         BMSfreeMemoryArrayNull(&oldvalue);
+         SCIP_CALL( retcode );
+      }
+   }
+   else
+   {
+      BMSfreeMemoryArrayNull(&oldvalue);
    }
 
    if( !quiet )

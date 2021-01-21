@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -150,6 +150,9 @@ fi
 if test "$DEBUGTOOL" = "valgrind"
 then
     DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --suppressions=${SCIPPATH}/../suppressions.valgrind "
+elif test "$DEBUGTOOL" = "rr"
+then
+    DEBUGTOOLCMD="rr record --chaos -o RRTRACEFOLDER_PLACEHOLDER.rr "
 elif test "$DEBUGTOOL" = "gdb"
 then
     #  set a gdb command, but leave a place holder for the error file we want to log to, which gets replaced in 'run.sh'
