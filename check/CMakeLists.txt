@@ -955,6 +955,7 @@ if(TEST_MIPEX)
                     COMMAND viprchk ${basename}.${setting}.vipr)
             set_tests_properties(MIPEX-${setting}-${basename}-vipr
                                 PROPERTIES
+                                DEPENDS MIPEX-${setting}-${basename}
                                 PASS_REGULAR_EXPRESSION "Successfully verified"
                                 FAIL_REGULAR_EXPRESSION "Error"
                                 FAIL_REGULAR_EXPRESSION "Failed")
@@ -963,9 +964,11 @@ if(TEST_MIPEX)
                     COMMAND viprchk ${basename}.${setting}.vipr_ori)
             set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
                                 PROPERTIES
+                                DEPENDS MIPEX-${setting}-${basename}
                                 PASS_REGULAR_EXPRESSION "Successfully checked solution for feasibility"
                                 FAIL_REGULAR_EXPRESSION "Error"
                                 FAIL_REGULAR_EXPRESSION "Failed")
+
         endforeach(setting)
     endforeach(instance ${instances_MIPEX})
 endif()
