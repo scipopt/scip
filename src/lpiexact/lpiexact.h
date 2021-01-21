@@ -263,7 +263,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactScaleRow(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number to scale */
-   const SCIP_Rational*  scaleval            /**< scaling multiplier */
+   SCIP_Rational*        scaleval            /**< scaling multiplier */
    );
 
 /** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
@@ -273,7 +273,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactScaleCol(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   col,                /**< column number to scale */
-   const SCIP_Rational*  scaleval            /**< scaling multiplier */
+   SCIP_Rational*        scaleval            /**< scaling multiplier */
    );
 
 /**@} */
@@ -922,7 +922,7 @@ void SCIPlpiExactPosInfinity(
 SCIP_EXPORT
 SCIP_Bool SCIPlpiExactIsPosInfinity(
    SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   const SCIP_Rational*  val             /**< given value */
+   SCIP_Rational*        val             /**< given value */
    );
 
 /** returns value treated as negative infinity in the LP solver */
@@ -936,7 +936,7 @@ void SCIPlpiExactNegInfinity(
 SCIP_EXPORT
 SCIP_Bool SCIPlpiExactIsNegInfinity(
    SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   const SCIP_Rational*  val             /**< given value */
+   SCIP_Rational*        val             /**< given value */
    );
 
 /** returns value treated as infinity in the LP solver */

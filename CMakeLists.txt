@@ -97,6 +97,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
+set(LPSEXACT spxexact CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )  #define list of values GUI will offer for the variable
 
 set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
@@ -222,14 +223,33 @@ if(EXACTSOLVE)
     if(Boost_FOUND)
         include_directories(${Boost_INCLUDE_DIRS})
         add_definitions(-DSCIP_WITH_BOOST)
-        if(SOPLEX_FOUND)
-            set(TEST_MIPEX on)
-            set(lpiexact lpiexact/lpiexact_spx.cpp)
-        else()
+        if(LPSEXACT STREQUAL "spxexact")
+            find_package(SOPLEX REQUIRED CONFIG)
+        elseif(LPSEXACT STREQUAL "qsoex")
+            find_package(QSOPTEX REQUIRED)
+            find_package(EGLIB REQUIRED)
+            set(BUILD_SHARED_LIBS off)
+            set(SHARED off)
+            message(STATUS "Turning off shared libraries.")
+         endif()
+
+         if(QSOPTEX_FOUND)
+             set(TEST_MIPEX on)
+             include_directories(${QSOPTEX_INCLUDE_DIRS})
+             include_directories(${EGLIB_INCLUDE_DIRS})
+             set(lpiexact lpiexact/lpiexact_qsoex.c)
+             set(LPSEX_LIBRARIES ${QSOPTEX_LIBRARIES} ${EGLIB_LIBRARIES})
+             set(SCIP_WITH_QSOPTEX on)
+         elseif(SOPLEX_FOUND)
+             set(TEST_MIPEX on)
+             include_directories(${SOPLEX_INCLUDE_DIRS})
+             set(lpiexact lpiexact/lpiexact_spx.cpp)
+             set(LPSEX_LIBRARIES ${SOPLEX_LIBRARIES})
+         else()
             message(WARNING "SoPlex is needed as exact LP solver to compile with exact solving support.\
                 No SoPlex was found. Continuing without support for exact solving.")
             set(EXACTSOLVE off)
-        endif()
+         endif()
     else()
         message(WARNING "Boost Version 1.65 or high is needed to compile with exact solving support.\
         No Boost was found. Continuing without support for exact solving.")

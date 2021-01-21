@@ -3195,6 +3195,11 @@ SCIP_RETCODE SCIPlpExactFlush(
       checkLinks(lp);
    }
 
+   /* we can't retrieve the solution from Qsoptex after anything was changed, so we need to resolve the lp */
+#ifdef SCIP_WITH_QSOPTEX
+   lp->solved = FALSE;
+#endif
+
    assert(lp->nlpicols == lp->ncols);
    assert(lp->lpifirstchgcol == lp->nlpicols);
    assert(lp->nlpirows == lp->nrows);
@@ -7346,7 +7351,9 @@ SCIP_RETCODE lpExactRestoreSolVals(
    if( storedsolvals != NULL )
    {
       lpexact->solved = storedsolvals->lpissolved;
-      //lpexact->validsollp = validlp;
+#ifdef SCIP_WITH_QSOPTEX
+      lpexact->solved = FALSE;
+#endif
       RatSet(lpexact->lpobjval, storedsolvals->lpobjval);
       lpexact->lpsolstat = storedsolvals->lpsolstat;
       lpexact->primalfeasible = storedsolvals->primalfeasible;
