@@ -36,6 +36,7 @@ extern SCIP_RETCODE mincut_termsepasInit(SCIP*, const GRAPH*, TERMSEPAS**);
 extern void         mincut_termsepasFree(SCIP*, TERMSEPAS**);
 extern int          mincut_termsepasGetNall(const TERMSEPAS*);
 extern int          mincut_termsepasGetN(const TERMSEPAS*, int);
+extern const int*   mincut_termsepasGetFirst(int, TERMSEPAS*, int*, int*);
 extern const int*   mincut_termsepasGetNext(int, TERMSEPAS*, int*, int*);
 extern SCIP_Bool mincut_findTerminalSeparatorsIsPromising(const GRAPH*);
 extern SCIP_RETCODE mincut_findTerminalSeparators(SCIP*, unsigned int, GRAPH*, TERMSEPAS*);

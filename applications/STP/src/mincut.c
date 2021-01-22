@@ -1993,6 +1993,38 @@ int mincut_termsepasGetNall(
 }
 
 
+/** returns number of separators per given size */
+int mincut_termsepasGetN(
+   const TERMSEPAS*      termsepas,          /**< terminal separators */
+   int                   sepasize            /**< size */
+)
+{
+   assert(termsepas);
+   assert(sepasize >= 1 && sepasize <= TERMSEPA_MAXCUTSIZE);
+   assert(termsepas->nsepas[sepasize] >= 0);
+   assert(termsepas->nsepas[sepasize] <= TERMSEPA_MAXNCUTS);
+
+   return termsepas->nsepas[sepasize];
+}
+
+
+/** Returns first separator of given size. Returns NULL if none is available. */
+const int* mincut_termsepasGetFirst(
+   int                   sepasize,           /**< size */
+   TERMSEPAS*            termsepas,          /**< terminal separators */
+   int*                  sinkterm,
+   int*                  nsinknodes
+)
+{
+   assert(termsepas && sinkterm && nsinknodes);
+   assert(sepasize >= 1 && sepasize <= TERMSEPA_MAXCUTSIZE);
+
+   termsepas->currsepa_n[sepasize] = -1;
+
+   return mincut_termsepasGetNext(sepasize, termsepas, sinkterm, nsinknodes);
+}
+
+
 /** Returns next separator of given size. Returns NULL if none is available. */
 const int* mincut_termsepasGetNext(
    int                   sepasize,           /**< size */
@@ -2003,6 +2035,7 @@ const int* mincut_termsepasGetNext(
 {
    assert(termsepas && sinkterm && nsinknodes);
    assert(sepasize >= 1 && sepasize <= TERMSEPA_MAXCUTSIZE);
+   assert(termsepas->currsepa_n[sepasize] >= -1);
 
    *sinkterm = -1;
    *nsinknodes = -1;
@@ -2043,22 +2076,6 @@ const int* mincut_termsepasGetNext(
 
    return NULL;
 }
-
-
-/** returns number of separators per given size */
-int mincut_termsepasGetN(
-   const TERMSEPAS*      termsepas,          /**< terminal separators */
-   int                   sepasize            /**< size */
-)
-{
-   assert(termsepas);
-   assert(sepasize >= 1 && sepasize <= TERMSEPA_MAXCUTSIZE);
-   assert(termsepas->nsepas[sepasize] >= 0);
-   assert(termsepas->nsepas[sepasize] <= TERMSEPA_MAXNCUTS);
-
-   return termsepas->nsepas[sepasize];
-}
-
 
 
 /** is it promising to look for terminal separators? */
