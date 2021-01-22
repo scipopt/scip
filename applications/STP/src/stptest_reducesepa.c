@@ -40,48 +40,13 @@ SCIP_RETCODE testTerminalSeparatorsAreFound(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   TERMSEPAS* termsepas;
-   GRAPH* graph;
-   int nnodes = 3;
-   int nedges = 4;
-
-   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
-
-   for( int i = 0; i < nnodes; i++ )
-      graph_knot_add(graph, STP_TERM_NONE);
-
-   graph_knot_chg(graph, 0, STP_TERM);
-   graph_knot_chg(graph, 1, STP_TERM);
-   graph_knot_chg(graph, 2, STP_TERM);
-   graph->source = 0;
-
-   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
-   graph_edge_addBi(scip, graph, 1, 2, 1.0); // 2
-
-   SCIP_CALL( stptest_graphSetUp(scip, graph) );
-
-   SCIP_CALL( mincut_termsepasInit(scip, graph, &termsepas) );
-
-   SCIP_CALL( mincut_findTerminalSeparators(scip, 1, graph, termsepas) );
-
-   mincut_termsepasFree(scip, &termsepas);
-
-   stptest_graphTearDown(scip, graph);
-
-   return SCIP_OKAY;
-}
-
-
-/** tests terminal separator method */
-static
-SCIP_RETCODE testTerminalSeparatorsAreFound2(
-   SCIP*                 scip                /**< SCIP data structure */
-)
-{
+   const int* sepaterms;
    TERMSEPAS* termsepas;
    GRAPH* graph;
    int nnodes = 5;
    int nedges = 10;
+   int nsinknodes;
+   int sinkterm;
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
@@ -105,12 +70,91 @@ SCIP_RETCODE testTerminalSeparatorsAreFound2(
 
    SCIP_CALL( mincut_termsepasInit(scip, graph, &termsepas) );
    SCIP_CALL( mincut_findTerminalSeparators(scip, 1, graph, termsepas) );
+   sepaterms = mincut_termsepasGetFirst(2, termsepas, &sinkterm, &nsinknodes);
+
+   STPTEST_ASSERT(sepaterms != NULL);
+   STPTEST_ASSERT(sinkterm == 4);
+   STPTEST_ASSERT(mincut_termsepasGetNall(termsepas) == 1);
+
+   sepaterms = mincut_termsepasGetNext(2, termsepas, &sinkterm, &nsinknodes);
+   STPTEST_ASSERT(sepaterms == NULL);
+
    mincut_termsepasFree(scip, &termsepas);
 
    stptest_graphTearDown(scip, graph);
 
    return SCIP_OKAY;
 }
+
+
+
+/** tests terminal separator method */
+static
+SCIP_RETCODE testTerminalSeparatorsAreFound2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   const int* sepaterms;
+   TERMSEPAS* termsepas;
+   GRAPH* graph;
+   int nnodes = 8;
+   int nedges = 22;
+   int nsinknodes;
+   int sinkterm;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph_knot_chg(graph, 4, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+   graph_knot_chg(graph, 7, STP_TERM);
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 2, 1.0);
+   graph_edge_addBi(scip, graph, 0, 6, 1.0);
+   graph_edge_addBi(scip, graph, 0, 7, 1.0);
+
+   graph_edge_addBi(scip, graph, 1, 2, 1.0);
+   graph_edge_addBi(scip, graph, 1, 3, 1.0);
+   graph_edge_addBi(scip, graph, 1, 5, 1.0);
+   graph_edge_addBi(scip, graph, 2, 4, 1.0);
+   graph_edge_addBi(scip, graph, 3, 4, 1.0);
+
+   graph_edge_addBi(scip, graph, 5, 7, 1.0);
+   graph_edge_addBi(scip, graph, 6, 7, 1.0);
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   SCIP_CALL( mincut_termsepasInit(scip, graph, &termsepas) );
+
+   SCIP_CALL( mincut_findTerminalSeparators(scip, 1, graph, termsepas) );
+   sepaterms = mincut_termsepasGetFirst(2, termsepas, &sinkterm, &nsinknodes);
+
+   STPTEST_ASSERT(sepaterms != NULL);
+   STPTEST_ASSERT(sinkterm == 4 || sinkterm == 5);
+
+   sepaterms = mincut_termsepasGetNext(2, termsepas, &sinkterm, &nsinknodes);
+
+   STPTEST_ASSERT(sepaterms != NULL);
+   STPTEST_ASSERT(sinkterm == 4 || sinkterm == 5);
+
+  // printf("%d %d \n", sepaterms[0], sepaterms[1]);
+
+   mincut_termsepasFree(scip, &termsepas);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
 
 
 /** tests terminal separator method */
@@ -534,9 +578,9 @@ SCIP_RETCODE stptest_reduceBiconnected(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   SCIP_CALL( testTerminalSeparatorsAreFound(scip) );
    SCIP_CALL( testTerminalSeparatorsAreFound3(scip) );
    SCIP_CALL( testTerminalSeparatorsAreFound2(scip) );
-   SCIP_CALL( testTerminalSeparatorsAreFound(scip) );
 
    SCIP_CALL( testBiconnectedDecomposition(scip) );
    SCIP_CALL( testBiconnectedDecomposition2(scip) );
@@ -547,6 +591,7 @@ SCIP_RETCODE stptest_reduceBiconnected(
    SCIP_CALL( testBiconnectedComponentsAreFound3(scip) );
 
    printf("reduce biconnected test: all ok \n");
+
 
    return SCIP_OKAY;
 }
