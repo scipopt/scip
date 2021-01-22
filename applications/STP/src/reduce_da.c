@@ -2779,7 +2779,7 @@ SCIP_RETCODE reduce_da(
          if( useExtRed && run == nruns - 1 )
          {
             const SCIP_Bool useSd = !graph_pc_isPc(graph);
-            SCIP_CALL( extreduce_init(scip, useSd, paramsda->extredMode, graph, redcostdata, arcsdeleted, &extpermanent) );
+            SCIP_CALL( extreduce_init(scip, useSd, paramsda->extredMode, graph, redcostdata, &extpermanent) );
             extpermanent->solIsValid = havebestsol;
             extpermanent->result = havebestsol ? bestresult : NULL;
 

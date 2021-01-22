@@ -41,7 +41,7 @@ extern "C" {
 
 /* extreduce_base.c
  */
-extern SCIP_RETCODE    extreduce_init(SCIP*, SCIP_Bool, enum EXTRED_MODE, GRAPH*, REDCOST*, STP_Bool*, EXTPERMA**);
+extern SCIP_RETCODE    extreduce_init(SCIP*, SCIP_Bool, enum EXTRED_MODE, GRAPH*, REDCOST*, EXTPERMA**);
 extern void            extreduce_exit(SCIP*, GRAPH*, EXTPERMA**);
 extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, EXTPERMA*, GRAPH*, int*);

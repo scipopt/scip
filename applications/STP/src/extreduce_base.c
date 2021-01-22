@@ -1438,7 +1438,6 @@ SCIP_RETCODE extreduce_init(
    enum EXTRED_MODE      mode,               /**< mode */
    GRAPH*                graph,              /**< graph data structure */
    REDCOST*              redcostdata,        /**> reduced costs data */
-   STP_Bool*             edgedeletable,      /**< edge array to mark which (directed) edge can be removed or NULL */
    EXTPERMA**            extpermanent        /**< permanent extension data (out) */
 )
 {

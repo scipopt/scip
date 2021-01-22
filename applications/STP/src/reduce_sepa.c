@@ -54,6 +54,10 @@ typedef struct cut_tree_data
 } CUTTREE;
 
 
+/*
+ * Local methods
+ */
+
 /** helper */
 static inline
 int cutNodesGetLastCutnode(
