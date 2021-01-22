@@ -218,13 +218,19 @@ extern "C" {
 #endif
 
 #ifndef MAX
-#define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
-#define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
+#define MAX(x, y) ((x) >= (y) ? (x) : (y)) /**< returns maximum of x and y */
+#endif
+
+#ifndef MIN
+#define MIN(x, y) ((x) <= (y) ? (x) : (y)) /**< returns minimum of x and y */
 #endif
 
 #ifndef MAX3
-#define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))  /**< returns maximum of x, y, and z */
-#define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
+#define MAX3(x, y, z) ((x) >= (y) ? MAX(x, z) : MAX(y, z)) /**< returns maximum of x, y, and z */
+#endif
+
+#ifndef MIN3
+#define MIN3(x, y, z) ((x) <= (y) ? MIN(x, z) : MIN(y, z)) /**< returns minimum of x, y, and z */
 #endif
 
 /* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
