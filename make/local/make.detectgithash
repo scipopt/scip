@@ -17,8 +17,15 @@
 #@brief   SCIP sub Makefile
 #@author  Stefan Heinz
 
-SCIPGITHASH	=	$(shell git describe --always --dirty  | sed 's/^.*-g//')
+gitdir = .git
+
+$(gitdir)::
+		echo "generating githash"
+		SCIPGITHASH=$(shell git describe --always --dirty  | sed 's/^.*-g//')
+
+gengithash:: | $(gitdir)
+		SCIPGITHASH="NoGitInfo"
 
 .PHONY: githash
-githash::	# do not remove the double-colon
+githash:: gengithash    # do not remove the double-colon
 		@echo "#define SCIP_GITHASH \"$(SCIPGITHASH)\"" > $(SCIPGITHASHFILE)
