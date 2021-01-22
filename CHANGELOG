@@ -56,6 +56,7 @@ Fixed bugs
 - Replace wrong usage of CMAKE_BINARY_DIR by PROJECT_BINARY_DIR in CMake system
 - Fixed lpi_glop to use absl flag instead of GFlags
 - Fixed invalid initialization of limits/softtime parameter in cons_components
+- Fixed MIN macro not defined in some cases. 
 
 Miscellaneous
 -------------
