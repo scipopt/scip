@@ -71,7 +71,7 @@
 
 
 #define CONSHDLR_PROP_TIMING   SCIP_PROPTIMING_BEFORELP // SCIP_PROPTIMING_DURINGLPLOOP //  SCIP_PROPTIMING_BEFORELP
-#define DAQ_MINCOMPRATIO 0.9
+#define DAQ_MINCOMPRATIO 0.95
 
 
 /**@} */
@@ -79,6 +79,7 @@
 /*
  * Data structures
  */
+
 
 /** @brief Constraint data for  \ref cons_stp.c "Stp" constraints */
 struct SCIP_ConsData
