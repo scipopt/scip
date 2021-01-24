@@ -31,6 +31,7 @@
 #include "stpvector.h"
 #include "redcosts.h"
 #include "reducedefs.h"
+#include "extreducedefs.h"
 
 
 #ifdef __cplusplus
@@ -288,7 +289,10 @@ extern void             reduce_sdgraphInsertEdge(SCIP*, int, int, SCIP_Real, int
 extern SCIP_RETCODE     reduce_sdgraphMstBuild(SCIP*, const GRAPH*, SDGRAPH*);
 extern void             reduce_sdgraphMstSortCosts(SDGRAPH*);
 
-
+/* reduce_termsepada.c
+ */
+extern SCIP_RETCODE     reduce_sepaDualAscentWithExperma(SCIP*, GRAPH*, EXTPERMA*, int*);
+extern SCIP_RETCODE     reduce_sepaDualAscent(SCIP*, GRAPH*, int*);
 
 
 #ifdef __cplusplus

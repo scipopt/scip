@@ -82,6 +82,7 @@ add_executable(scipstp
     src/reduce_sdutil.c
     src/reduce_simple.c
     src/reduce_sol.c
+    src/reduce_termsepada.c
     src/reduce_util.c
     src/relax_stp.c
     src/sepaspecial.c
