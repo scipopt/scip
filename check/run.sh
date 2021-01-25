@@ -127,7 +127,8 @@ echo -----------------------------  >> $OUTFILE
 
 # build/check/compress vipr file if it exists
 VIPRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr
-VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipraw
+VIPRORIFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr_ori
+VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprraw
 if test -e $VIPRFILE
 then
 echo Building vipr file ... >> $OUTFILE
@@ -158,11 +159,24 @@ if test $retcode != 0
 then
   echo "vipr returned with error code $retcode." >>$ERRFILE
 fi
+# run vipr also on original file to check solution
+echo Checking vipr_ori file ... >> $OUTFILE
+bash -c "$VIPRCHECKNAME $VIPRORIFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+retcode=${PIPESTATUS[0]}
+if test $retcode != 0
+then
+  echo "vipr on original problem returned with error code $retcode." >>$ERRFILE
+fi
 
 # compress vipr file
 echo Gzipping vipr file ... >> $OUTFILE
 bash -c "gzip $VIPRFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
 echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
+
+# compress vipr_ori file
+echo Gzipping vipr_ori file ... >> $OUTFILE
+bash -c "gzip $VIPRORIFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
+echo "vipr_ori file gzipped:   " `ls -lisa $VIPRORIFILE.gz` >> $OUTFILE
 
 # compress untightened vipr file
 echo Gzipping untightened vipr file ... >> $OUTFILE
@@ -171,6 +185,7 @@ echo "raw viprfile gzipped:   " `ls -lisa $VIPRRAWFILE.gz` >> $OUTFILE
 
 mv $VIPRFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr.gz
 mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
+mv $VIPRORIFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr_ori.gz
 fi
 
 if test -e $SOLFILE

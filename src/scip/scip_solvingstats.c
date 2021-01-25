@@ -1676,7 +1676,7 @@ void SCIPgetPrimalboundExact(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetPrimalboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, scip->primal->upperboundexact, result);
+   SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, scip->primal->upperboundexact, result);
 }
 
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
@@ -1704,6 +1704,34 @@ SCIP_Real SCIPgetUpperbound(
       return -SCIPinfinity(scip);
    else
       return scip->primal->upperbound;
+}
+
+/** gets global exact upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
+ *
+ *  @return the global upper (primal) bound in transformed problem (objective value of best solution or user objective limit)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Real SCIPgetUpperboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< the resulting upper bound value */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   if( SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED )
+      RatSetString(result, "-inf");
+   else
+      RatSet(result, scip->primal->upperboundexact);
 }
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff

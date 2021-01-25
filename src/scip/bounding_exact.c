@@ -18,7 +18,6 @@
  * @author Leon Eifler
  *
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #ifndef __SCIP_BOUNDING_EXACT_C__
 #define __SCIP_BOUNDING_EXACT_C__
@@ -1716,6 +1715,11 @@ SCIP_RETCODE projectShift(
    }
    for( i = 0; i < nrows; i++ )
    {
+      if( !RatIsZero(dualsol[i]) )
+      {
+         RatDebugMessage("row %s has multiplier %q: ", lpexact->rows[i]->fprow->name, dualsol[i]);
+         SCIPdebug(SCIProwExactPrint(lpexact->rows[i], messagehdlr, NULL));
+      }
       for( j = 0; j < lpexact->rows[i]->len; j++ )
       {
          currentrow = lpexact->rows[i]->cols_index[j];
@@ -1725,7 +1729,12 @@ SCIP_RETCODE projectShift(
    }
    for( i = 0; i < ncols; i++ )
    {
-         RatDiff(violation[i], violation[i], dualsol[i + nrows]);
+      if( !RatIsZero(lpexact->cols[i]->farkascoef) )
+      {
+         RatDebugMessage("variable %q <= %s <= %q has farkas coefficient %q \n", lpexact->cols[i]->lb,
+            SCIPvarGetName(lpexact->cols[i]->var), lpexact->cols[i]->ub, lpexact->cols[i]->farkascoef);
+      }
+      RatDiff(violation[i], violation[i], dualsol[i + nrows]);
    }
 
    for( i = 0; i < ncols && rval == 0; i++ )
@@ -1758,11 +1767,21 @@ SCIP_RETCODE projectShift(
       RatAdd(dualbound, dualbound, tmp);
    }
 
+   /* since we negate the farkas-coef for the project-shift representation, it has to be negated again here for saving */
+   if( usefarkas )
+   {
+      for( i = nrows; i < ncols + nrows; i++ )
+      {
+         RatNegate(dualsol[i], dualsol[i]);
+      }
+   }
+
    computedbound = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
 
    if( !usefarkas )
    {
-      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
+          && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
          stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
          *safebound = computedbound;
@@ -2020,6 +2039,7 @@ SCIP_RETCODE boundShift(
    SCIP_INTERVAL safeboundinterval;
    SCIP_ROW* row;
    SCIP_COL* col;
+   SCIP_COLEXACT* colexact;
    SCIP_Real* fpdual;
    SCIP_Real* fpdualcolwise;
    SCIP_Real c;
@@ -2334,21 +2354,17 @@ SCIP_RETCODE boundShift(
          else
             RatSetReal(lpexact->rows[j]->dualsol, fpdual[j]);
       }
+
       for( j = 0; j < lpexact->ncols; j++ )
       {
-         cand1 = productcoldualval[j].inf;
-         cand2 = productcoldualval[j].sup;
-         SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp, ublbcol[j], cand1);
-         SCIPintervalMulScalar(SCIPsetInfinity(set), &tmp2, ublbcol[j], cand2);
-         if( ((tmp.inf) < (tmp2.inf)) == RatIsPositive(lpexact->cols[j]->obj))
-            value = cand1;
-         else
-            value = cand2;
-
+         colexact = lpexact->cols[j];
+         /* this should not need to be recomputed. However, since vipr does only detect
+         that a constraint cTx>=b dominates some other constraint c'Tx>=b' if c==c'
+         we need to recompute the exact coefficients here. */
          if( usefarkas )
-            RatSetReal(lpexact->cols[j]->farkascoef, value);
+            SCIPcolExactCalcFarkasRedcostCoef(colexact, set, colexact->farkascoef, NULL, usefarkas);
          else
-            RatSetReal(lpexact->cols[j]->redcost, value);
+            SCIPcolExactCalcFarkasRedcostCoef(colexact, set, colexact->redcost, NULL, usefarkas);
       }
    }
 

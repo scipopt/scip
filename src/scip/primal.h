@@ -126,6 +126,21 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** recalculates upper bound and cutoff bound in primal data after a change of the problem's objective offset */
+SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** adds additional objective offset in origanal space to all existing solution (in original space) */
 void SCIPprimalAddOrigObjoffset(
    SCIP_PRIMAL*          primal,             /**< primal data */

@@ -337,6 +337,7 @@ BEGIN {
    reoptimization = 0;
    niter = 0;
    certified = 0;
+   certified_ori = 0;
 }
 
 /@03/ {
@@ -786,6 +787,9 @@ BEGIN {
 /^(Successfully verified|Infeasibility verified.)/           {
    certified = 1;
 }
+/^Successfully checked solution for feasibility/           {
+   certified_ori = 1;
+}
 #
 # solver status overview (in order of priority):
 # 1) solver broke before returning solution => abort
@@ -1084,7 +1088,7 @@ BEGIN {
       {
          setStatusToFail("fail (solution infeasible)");
       }
-      else if( certified )
+      else if( certified && certified_ori )
       {
          status = "ok (vipr-verified)";
          pass++;

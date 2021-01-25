@@ -305,6 +305,12 @@ void SCIPprobAddObjoffset(
    SCIP_Real             addval              /**< value to add to objective offset */
    );
 
+/** adds value to objective offset */
+void SCIPprobAddObjoffsetExact(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Rational*        addval              /**< value to add to objective offset */
+   );
+
 /** sets the dual bound on objective function */
 void SCIPprobSetDualbound(
    SCIP_PROB*            prob,               /**< problem data */

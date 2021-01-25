@@ -179,12 +179,12 @@ SCIP_Bool SCIPisCertificateActive(
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   return (scip->stat->certificate != NULL && scip->stat->certificate->file != NULL);
+   return (scip->stat->certificate != NULL && scip->stat->certificate->transfile != NULL);
 }
 
 /** returns certificate data structure
  *
- *  @return tolerance certificate data structure
+ *  @return certificate data structure
  */
 SCIP_CERTIFICATE* SCIPgetCertificate(
    SCIP*                 scip                /**< SCIP data structure */
@@ -192,8 +192,6 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
 {
    assert(scip != NULL);
    assert(scip->stat != NULL);
-
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCertificate", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return scip->stat->certificate;
 }

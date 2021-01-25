@@ -96,6 +96,37 @@ SCIP_RETCODE SCIPreleaseRowExact(
    SCIP_ROWEXACT**       row                 /**< pointer to LP row */
    );
 
+/** changes left hand side of exact LP row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgRowExactLhs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        row,                /**< LP row */
+   SCIP_Rational*        lhs                 /**< new left hand side */
+   );
+
+/** changes right hand side of exact LP row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgRowExactRhs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        row,                /**< LP row */
+   SCIP_Rational*        rhs                 /**< new right hand side */
+   );
 
 /** resolves variables to columns and adds them with the coefficients to the row;
  *  this method caches the row extensions and flushes them afterwards to gain better performance

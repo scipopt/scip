@@ -279,6 +279,14 @@ void RatCanonicalize(
    SCIP_Rational*        r                   /**< rational to put in canonical form */
    );
 
+/* checks if the underlying Rational has a value >= infinity;
+ * needed after underlying value was directly set, e.g. by exact lp solver
+ */
+SCIP_EXPORT
+void RatCheckInfByValue(
+   SCIP_Rational*        rational            /**< rational number */
+   );
+
 /** adds two rationals and saves the result in res */
 SCIP_EXPORT
 void RatAdd(
@@ -583,7 +591,7 @@ SCIP_Longint RatDenominator(
 /** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
 SCIP_EXPORT
 int RatGetSign(
-   SCIP_Rational*        rational            /**< the rational */
+   const SCIP_Rational*  rational            /**< the rational */
    );
 
 /** converts a rational to a string for printing, returns the number of copied characters.

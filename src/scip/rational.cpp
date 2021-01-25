@@ -326,7 +326,7 @@ mpq_t* RatGetGMP(
    if( rational->isinf )
    {
       /** @todo exip: get proper inf value in here */
-      RatSetReal(rational, 1e100 * rational->val.sign());
+      rational->val = 1e150 * rational->val.sign();
       rational->isinf = TRUE;
    }
 
@@ -342,6 +342,7 @@ void RatSetGMP(
    rational->val = numb;
    rational->isinf = FALSE;
    rational->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   RatCheckInfByValue(rational);
 }
 
 /** init and set value of mpq array from rational array */
@@ -396,7 +397,7 @@ void RatClearGMPArray(
 }
 #endif
 
-/* transform rational into canonical form */
+/* transforms rational into canonical form */
 /** @todo exip: this does not work with cpp_rational currently */
 void RatCanonicalize(
    SCIP_Rational*        rational            /**< rational to put in canonical form */
@@ -405,6 +406,24 @@ void RatCanonicalize(
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
    mpq_canonicalize(rational->val.backend().data());
 #endif
+}
+
+/* checks if the underlying Rational has a value >= infinity;
+ * needed after underlying value was directly set, e.g. by exact lp solver
+ */
+void RatCheckInfByValue(
+   SCIP_Rational*        rational            /**< rational number */
+   )
+{
+   if( rational->val * rational->val.sign() >= infinity )
+   {
+      rational->isinf = TRUE;
+      rational->val = rational->val.sign();
+   }
+   else
+   {
+      rational->isinf = FALSE;
+   }
 }
 
 /** free an array of rationals */
@@ -529,6 +548,18 @@ void RatSetInt(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
+/* find substring, ignore case */
+static
+std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
+{
+   auto it = std::search(
+      str.begin(), str.end(),
+      substr.begin(),   substr.end(),
+      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
+   );
+   return it;
+}
+
 /** set a rational to the value described by a string */
 void RatSetString(
    SCIP_Rational*        res,                /**< the result */
@@ -559,6 +590,15 @@ void RatSetString(
       /* case 2: string is given as base-10 decimal number */
       else
       {
+         std::string::const_iterator it = findSubStringIC("e", s);
+         int exponent = 1;
+         int mult = 0;
+         if( it != s.end() )
+         {
+            int exponentidx = it - s.begin();
+            mult = std::stoi(s.substr(exponentidx + 1, s.length()));
+            s = s.substr(0, exponentidx);
+         }
          // std::cout << s << std::endl;
          if( s[0] == '.' )
             s.insert(0, "0");
@@ -573,10 +613,12 @@ void RatSetString(
          s.append("/");
          s.append(den);
          res->val = Rational(s);
+         res->val *= pow(10, mult);
          res->isinf = FALSE;
          // RatPrint(res);
       }
    }
+
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
@@ -1346,7 +1388,7 @@ SCIP_Bool RatIsIntegral(
 {
    assert(rational != NULL);
    if( rational->isinf )
-      return FALSE;
+      return TRUE;
    else if( denominator(rational->val) == 1 )
       return TRUE;
    else if( numerator(rational->val) < denominator(rational->val) )
@@ -1544,6 +1586,7 @@ void RatPrintf(const char *format, ...)
    char* sval;
    SCIP_Real dval;
    int ival;
+   SCIP_Longint lval;
    char cval;
 
    va_list arguments;
@@ -1578,6 +1621,10 @@ void RatPrintf(const char *format, ...)
          case 'i':
             ival = va_arg(arguments, int);
             printf("%d", ival);
+            break;
+         case 'l':
+            lval = va_arg(arguments, SCIP_Longint);
+            printf("%lld", lval);
             break;
          case 'u':
             ival = va_arg(arguments, int);
@@ -1658,7 +1705,7 @@ SCIP_Longint Rdenominator(
 
 /** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
 int RatGetSign(
-   SCIP_Rational*        rational            /**< the rational */
+   const SCIP_Rational*  rational            /**< the rational */
    )
 {
    return rational->val.sign();
