@@ -1601,20 +1601,25 @@ static
 SCIP_RETCODE getMaxAndConsDim(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
-   const char*           filename            /**< name of the input file */
+   const char*           filename,           /**< name of the input file */
+   SCIP_Real*            objoffset           /**< pointer to store objective offset */
    )
 {
    SCIP_Bool stop;
    char* commentstart;
    char* nproducts;
+   char* str;
    int i;
 
    assert(scip != NULL);
    assert(opbinput != NULL);
+   assert(objoffset != NULL);
 
    stop = FALSE;
    commentstart = NULL;
    nproducts = NULL;
+
+   *objoffset = 0.0;
 
    do
    {
@@ -1661,6 +1666,16 @@ SCIP_RETCODE getMaxAndConsDim(
 
                stop = TRUE;
             }
+
+            /* search for "Obj. offset      : <number>" in comment line */
+            str = strstr(opbinput->linebuf, "Obj. offset      : ");
+            if( str != NULL )
+            {
+               str += strlen("Obj. offset      : ");
+               *objoffset = atof(str);
+               break;
+            }
+
             break;
          }
       }
@@ -1688,6 +1703,7 @@ SCIP_RETCODE readOPBFile(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_Real objoffset;
    int nNonlinearConss;
    int i;
 
@@ -1703,16 +1719,22 @@ SCIP_RETCODE readOPBFile(
       return SCIP_NOFILE;
    }
 
-   /* tries to read the first comment line which usually contains information about the max size of "and" products */
-   SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename) );
-
-   /* reading additional information about the number of and constraints in comments to avoid reallocating
+   /* @todo: reading additional information about the number of and constraints in comments to avoid reallocating
     * "opbinput.andconss"
     */
+
+   /* tries to read the first comment line which usually contains information about the max size of "and" products */
+   SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename, &objoffset) );
+
    BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      SCIP_CALL( SCIPaddOrigObjoffset(scip, objoffset) );
+   }
 
    nNonlinearConss = 0;
 
