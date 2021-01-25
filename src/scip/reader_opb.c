@@ -3246,7 +3246,64 @@ SCIP_RETCODE printPseudobooleanCons(
    return retcode;
 }
 
+/** determine total number of linear constraints split into lhs/rhs */
+static
+void determineTotalNumberLinearConss(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_CONS**const      conss,              /**< array with constraints of the problem */
+   int const             nconss,             /**< number of constraints in the problem */
+   int*                  nlinearconss,       /**< pointer to store the total number of linear constraints */
+   int*                  nsplitlinearconss   /**< pointer to store the total number of linear constraints split into lhs/rhs */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   const char* conshdlrname;
+   SCIP_CONS* cons;
+   int c;
 
+   assert(scip != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nlinearconss != NULL);
+   assert(nsplitlinearconss != NULL);
+
+   *nlinearconss = 0;
+   *nsplitlinearconss = 0;
+
+   /* loop over all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      cons = conss[c];
+      assert(cons != NULL);
+      conshdlr = SCIPconsGetHdlr(cons); /*lint !e613*/
+      assert(conshdlr != NULL);
+
+      conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+      if( strcmp(conshdlrname, "linear") == 0 )
+      {
+         if( ! SCIPisInfinity(scip, SCIPgetLhsLinear(scip, cons)) )
+            ++(*nsplitlinearconss);
+
+         if( ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, cons)) )
+            ++(*nsplitlinearconss);
+
+         ++(*nlinearconss);
+      }
+
+      if( strcmp(conshdlrname, "varbound") == 0 )
+      {
+         if( ! SCIPisInfinity(scip, SCIPgetLhsVarbound(scip, cons)) )
+            ++(*nsplitlinearconss);
+
+         if( ! SCIPisInfinity(scip, SCIPgetRhsVarbound(scip, cons)) )
+            ++(*nsplitlinearconss);
+
+         ++(*nlinearconss);
+      }
+   }
+}
+
+/** write constraints */
 static
 SCIP_RETCODE writeOpbConstraints(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -4168,6 +4225,8 @@ SCIP_RETCODE writeOpb(
    SCIP_HASHTABLE* printedfixing;
    SCIP_Bool usesymbol;
    SCIP_RETCODE retcode;
+   int nlinearconss;
+   int nsplitlinearconss;
 
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
@@ -4178,11 +4237,14 @@ SCIP_RETCODE writeOpb(
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/multisymbol", &usesymbol) );
    (void) SCIPsnprintf(multisymbol, OPB_MAX_LINELEN, "%s", usesymbol ? " * " : " ");
 
+   /* determine how many linear constraints are split */
+   determineTotalNumberLinearConss(scip, conss, nconss, &nlinearconss, &nsplitlinearconss);
+
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "* SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "*   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "*   Variables        : %d (all binary)\n", nvars);
-   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
+   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss - nlinearconss + nsplitlinearconss);
 
    /* create a hash table */
    SCIP_CALL( SCIPhashtableCreate(&printedfixing, SCIPblkmem(scip), nvars,
