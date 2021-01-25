@@ -18,9 +18,9 @@
 #@author  Stefan Heinz
 
 ifneq ($(wildcard .git),)
-		SCIPGITHASH = $(shell git describe --always --dirty  | sed 's/^.*-g//')
+	SCIPGITHASH = $(shell git describe --always --dirty  | sed 's/^.*-g//')
 else
-    SCIPGITHASH = "NoGitInfo"
+	SCIPGITHASH = "NoGitInfo"
 endif
 
 .PHONY: githash
