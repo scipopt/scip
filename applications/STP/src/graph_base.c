@@ -781,6 +781,12 @@ void graph_free(
    p = *graph;
    assert(p != NULL);
 
+   if( graph_mincut_isInitialized(p) )
+      graph_mincut_exit(scip, p);
+
+   if( graph_path_exists(p) )
+      graph_path_exit(scip, p);
+
    graph_freeHistory(scip, p);
 
    if( final )
@@ -814,12 +820,6 @@ void graph_free(
       if( p->grid_ncoords != NULL )
          SCIPfreeMemoryArray(scip, &(p->grid_ncoords));
    }
-
-   if( graph_mincut_isInitialized(p) )
-      graph_mincut_exit(scip, p);
-
-   if( graph_path_exists(p) )
-      graph_path_exit(scip, p);
 
    SCIPfreeMemoryArray(scip, &(p->oeat));
    SCIPfreeMemoryArray(scip, &(p->ieat));
