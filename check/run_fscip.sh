@@ -46,9 +46,8 @@ function cleanup {
    date                                >> $OUTFILE
    echo                                >> $OUTFILE
 
-   mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
    mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
-   if [ -f "${ERRFILE}.rr" ] ;
+   if [ -d "${ERRFILE}.rr" ] ;
    then
        mv -f $ERRFILE.rr $SOLVERPATH/$OUTPUTDIR/$BASENAME.rr
    fi
@@ -61,6 +60,8 @@ function cleanup {
    echo "--- FINISH ---"               >> $OUTFILE
    date                                >> $OUTFILE
    echo                                >> $OUTFILE
+
+   mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
 }
 
 # ensure TMPFILE is deleted and results are copied when exiting (normally or due to abort/interrupt)
