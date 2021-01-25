@@ -35,11 +35,11 @@
 
 #define EXT_ANCESTORS_MAX  16
 
-#define STP_EXT_MAXDFSDEPTH 6
-#define STP_EXT_MINDFSDEPTH 4
-#define STP_EXT_MAXGRAD 8
-#define STP_EXT_MINGRAD 6
-#define STP_EXT_EDGELIMIT 50000
+#define RED_EXT_MAXDFSDEPTH 6
+#define RED_EXT_MINDFSDEPTH 4
+#define RED_EXT_MAXGRAD 8
+#define RED_EXT_MINGRAD 6
+#define RED_EXT_EDGELIMIT 50000
 
 
 /** deletes an edge and makes corresponding adaptations */
@@ -530,7 +530,7 @@ SCIP_Bool ruleOutSubtree(
          {
             const SCIP_Bool is_term = Is_term(graph->term[tail]);
 
-            for( int e2 = graph->outbeg[tail], count = 0; e2 != EAT_LAST && count < STP_EXT_MAXGRAD;
+            for( int e2 = graph->outbeg[tail], count = 0; e2 != EAT_LAST && count < RED_EXT_MAXGRAD;
                   e2 = graph->oeat[e2], count++ )
             {
                int head2;
@@ -589,7 +589,7 @@ SCIP_RETCODE reduceCheckEdge(
 {
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
-   const int maxgrad = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINGRAD : STP_EXT_MAXGRAD;
+   const int maxgrad = (graph->edges > RED_EXT_EDGELIMIT) ? RED_EXT_MINGRAD : RED_EXT_MAXGRAD;
    SCIP_Real edgebound = redcost[edge] + pathdist[tail] + vnoi[head].dist;
 
    assert(scip != NULL);
@@ -618,13 +618,13 @@ SCIP_RETCODE reduceCheckEdge(
    else if( (graph->grad[tail] <= maxgrad && !Is_term(graph->term[tail]))
          || (graph->grad[head] <= maxgrad && !Is_term(graph->term[head])) )
    {
-      SCIP_Real treecosts[STP_EXT_MAXDFSDEPTH + 1];
-      int treeedges[STP_EXT_MAXDFSDEPTH + 1];
+      SCIP_Real treecosts[RED_EXT_MAXDFSDEPTH + 1];
+      int treeedges[RED_EXT_MAXDFSDEPTH + 1];
       SCIP_Real basebottlenecks[3];
       int* nodepos;
       int* ancestormark;
       const int nnodes = graph->knots;
-      const int maxdfsdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
+      const int maxdfsdepth = (graph->edges > RED_EXT_EDGELIMIT) ? RED_EXT_MINDFSDEPTH : RED_EXT_MAXDFSDEPTH;
 
       /* allocate clean arrays */
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodepos, nnodes) );
@@ -635,7 +635,7 @@ SCIP_RETCODE reduceCheckEdge(
       basebottlenecks[1] = -1.0;
       basebottlenecks[2] = -1.0;
 
-      for( int i = 0; i < STP_EXT_MAXDFSDEPTH + 1; i++ )
+      for( int i = 0; i < RED_EXT_MAXDFSDEPTH + 1; i++ )
       {
          treecosts[i] = -1.0;
          treeedges[i] = -1;
@@ -890,8 +890,8 @@ SCIP_RETCODE reduce_extendedCheck3Tree(
    }
    else
    {
-      SCIP_Real treecosts[STP_EXT_MAXDFSDEPTH + 1];
-      int treeedges[STP_EXT_MAXDFSDEPTH + 1];
+      SCIP_Real treecosts[RED_EXT_MAXDFSDEPTH + 1];
+      int treeedges[RED_EXT_MAXDFSDEPTH + 1];
       SCIP_Real basebottlenecks[3];
       const SCIP_Real basecost = redcost[inedge] + redcost[outedges[0]] + redcost[outedges[1]] + pathdist[graph->tail[inedge]];
       int* nodepos;
@@ -899,8 +899,8 @@ SCIP_RETCODE reduce_extendedCheck3Tree(
       const int nnodes = graph->knots;
       const int innode = graph->tail[inedge];
       const int basenode = graph->head[inedge];
-      const int maxdfsdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
-      const int maxgrad = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINGRAD : STP_EXT_MAXGRAD;
+      const int maxdfsdepth = (graph->edges > RED_EXT_EDGELIMIT) ? RED_EXT_MINDFSDEPTH : RED_EXT_MAXDFSDEPTH;
+      const int maxgrad = (graph->edges > RED_EXT_EDGELIMIT) ? RED_EXT_MINGRAD : RED_EXT_MAXGRAD;
 
       assert(basenode == graph->tail[outedges[0]] && basenode == graph->tail[outedges[1]]);
 
@@ -912,7 +912,7 @@ SCIP_RETCODE reduce_extendedCheck3Tree(
       nodepos[innode] = nnodes + 2;              /* innode */
 
 #ifndef NDEBUG
-      for( int i = 0; i < STP_EXT_MAXDFSDEPTH + 1; i++ )
+      for( int i = 0; i < RED_EXT_MAXDFSDEPTH + 1; i++ )
       {
          treecosts[i] = -1.0;
          treeedges[i] = -1;

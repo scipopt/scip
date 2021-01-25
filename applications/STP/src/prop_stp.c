@@ -1237,7 +1237,9 @@ SCIP_RETCODE initPropgraph(
    propdata->propgraph->norgmodelknots = propdata->propgraph->knots;
 
    SCIP_CALL( graph_initHistory(scip, propdata->propgraph) );
+#ifndef WITH_UG
    SCIP_CALL( graph_copyPseudoAncestors(scip, graph, propdata->propgraph) );
+#endif
 
    assert(propdata->nfixededges_all == 0);
    assert(propdata->nfixededges_curr == 0);
