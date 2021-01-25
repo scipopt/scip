@@ -47,6 +47,7 @@
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 #define CONSHDLR_MAXSTALLS         1000 /**< disable after this many unsuccessful calls in a row */
 #define DEFAULT_SOLBUFSIZE           10 /**< how many heuristic solutions should be buffered before we start checking */
+#define DEFAULT_CHECKFPFEASIBILITY TRUE /**< should a solution be checked in floating-point arithmetic prior to being processed? */
 
 static int ncurrentstalls = 0; /* number of times the exact lp was solved unsuccesfully in a row */
 
@@ -68,6 +69,7 @@ struct SCIP_ConshdlrData
    int                   lenhash;            /**< length of the hashedassignments array */
    int                   nbufferedsols;      /**< number of solutions currently in the solubuffer */
    int                   lensolubuffer;      /**< length of the solubuffer */
+   SCIP_Bool             checkfpfeasibility; /**< should a solution be checked in floating-point arithmetic prior to being processed? */
 };
 
 /** gets the key of the given element */
@@ -272,6 +274,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    SCIP_SOL* worksol;
    SCIP_Bool foundsol;
    SCIP_Bool lperror;
+   SCIP_Bool checkfpfeasibility;
    int nintvars;
    int nvars;
    int nfixedvars;
@@ -303,6 +306,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPsolGetType(sol) != SCIP_SOLTYPE_HEUR )
       return SCIP_OKAY;
 
+   /* do not run for problems that contain mostly continuous variables */
    if( SCIPgetNContVars(scip) > 0.8 * SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
@@ -319,8 +323,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPlpDiving(scip->lp) )
       return SCIP_OKAY;
 
-   /* do not run, e.g. for trivial since it would only be buffered and never used */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   /* do not run for trivial since it would only be buffered and never used */
+   if( strcmp(SCIPheurGetName(SCIPsolGetHeur(sol)), "trivial") == 0 )
       return SCIP_OKAY;
 
    /** if we are at a point where we can't dive exactly, buffer the solution and return */
@@ -347,8 +351,10 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    nconsprob = SCIPgetNConss(scip);
    consprob = SCIPgetConss(scip);
 
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkfpfeasibility", &checkfpfeasibility) );
+
    /* check if solution is floating point feasible */
-   for( c = 0; c < nconsprob && *result == SCIP_FEASIBLE; ++c )
+   for( c = 0; c < nconsprob && *result == SCIP_FEASIBLE && checkfpfeasibility; ++c )
    {
       SCIP_Real activity;
       SCIP_ROW* row;
@@ -662,6 +668,11 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpExactSol, consEnfopsExactSol, consCheckExactSol, consLockExactSol,
          conshdlrdata) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/checkfpfeasibility",
+         "should a solution be checked in floating-point arithmetic prior to being processed?",
+         &conshdlrdata->checkfpfeasibility, TRUE, DEFAULT_CHECKFPFEASIBILITY, NULL, NULL) );
 
    SCIPconshdlrSetInit(conshdlr, consInitExactSol);
    SCIPconshdlrSetExit(conshdlr, consExitExactSol);
