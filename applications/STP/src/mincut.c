@@ -37,8 +37,8 @@
 #define Q_NULL     -1         /* NULL element of queue/list */
 #define ADDCUTSTOPOOL FALSE
 #define TERMSEPA_SPARSE_MAXRATIO 4
-#define TERMSEPA_MAXCUTSIZE 10
-#define TERMSEPA_MAXNCUTS   50
+#define TERMSEPA_MAXCUTSIZE 5
+#define TERMSEPA_MAXNCUTS   100
 
 /* *
 #define FLOW_FACTOR     100000
@@ -299,7 +299,6 @@ SCIP_Bool csrFlipedgesAreValid(
    return TRUE;
 }
 
-#endif
 
 /** checks cut */
 static
@@ -396,6 +395,7 @@ SCIP_Bool termsepaCutIsCorrect(
 
    return isCorrect;
 }
+#endif
 
 
 /** gets infinity */
@@ -724,20 +724,17 @@ SCIP_RETCODE termsepaStoreCutTry(
    {
       assert(termsepaCutIsCorrect(scip, g, ncutterms, cutterms, sinkterm, mincut));
 
-      if( !termsepaCutIsCorrect(scip, g, ncutterms, cutterms, sinkterm, mincut) )
-         return SCIP_ERROR;
+
+    //  if( !termsepaCutIsCorrect(scip, g, ncutterms, cutterms, sinkterm, mincut) )
+    //     return SCIP_ERROR;
 
       termsepaStoreCutFinalize(g, sinkterm, mincut, ncutterms, termsepas);
 
-
-      if( ncutterms > 1 && 0 )
+      if( ncutterms > 1 )
       {
-         int todo;
          SCIP_CALL( termsepaRemoveCutTerminals(scip, g, ncutterms, cutterms, sinkterm, mincut) );
       }
-
    }
-
 
    return SCIP_OKAY;
 }
@@ -1953,7 +1950,7 @@ SCIP_RETCODE mincut_termsepasInit(
    tsepas->sepastarts_csr[0] = 0;
    tsepas->root = -1;
 
-   for( int i = 0; i < TERMSEPA_MAXCUTSIZE; i++ )
+   for( int i = 0; i <= TERMSEPA_MAXCUTSIZE; i++ )
    {
       tsepas->nsepas[i] = 0;
       tsepas->currsepa_n[i] = -1;
@@ -1970,7 +1967,7 @@ void mincut_termsepasFree(
 )
 {
    TERMSEPAS* tsepas;
-   assert(scip && tsepas);
+   assert(scip && termsepas);
 
    tsepas = *termsepas;
    assert(tsepas);
@@ -2159,8 +2156,9 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    assert(nodes_wakeState);
    assert(termsepas->nsepas_all == 0);
 
-   SCIPdebugMessage("ntermcands=%d \n",  mincut->ntermcands );
+   printf("ntermcands=%d \n",  mincut->ntermcands );
 
+   // todo probably want to bound the maximum number of iterations!
    while( mincut->ntermcands > 0 && termsepas->nsepas_all < TERMSEPA_MAXNCUTS )
    {
       int sinkterm;

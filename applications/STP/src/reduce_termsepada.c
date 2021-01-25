@@ -70,7 +70,7 @@ typedef struct terminal_separator_component
    int*                  nodemap_orgToSub;   /**< map */
    int*                  nodemap_subToOrg;   /**< map */
    int*                  edgemap_subToOrg;   /**< map */
-   STP_Vectype(int)      dfsstack;           /**< DFS */
+   STP_Vectype(int)      bfsqueue;           /**< queue for BFS */
    STP_Vectype(int)      elim_edges;         /**< edges to eliminate */
    STP_Vectype(int)      elim_nodes;         /**< nodes to pseudo-eliminate */
    int                   subnnodes;
@@ -106,7 +106,7 @@ SCIP_RETCODE termcompInit(
    comp->nodemap_subToOrg = NULL;
    comp->elim_edges = NULL;
    comp->elim_nodes = NULL;
-   comp->dfsstack = NULL;
+   comp->bfsqueue = NULL;
    comp->subnedges = -1;
    comp->subnnodes = -1;
 
@@ -133,7 +133,7 @@ void termcompFree(
 
    StpVecFree(scip, comp->elim_nodes);
    StpVecFree(scip, comp->elim_edges);
-   StpVecFree(scip, comp->dfsstack);
+   StpVecFree(scip, comp->bfsqueue);
 
    SCIPfreeMemoryArrayNull(scip, &(comp->subsolution));
    SCIPfreeMemoryArray(scip, &(comp->nodemap_subToOrg));
@@ -161,7 +161,7 @@ void subgraphIdentify(
    const COMPINIT* const sepainitializer = termcomp->sepainitializer;
    const int* const sepaterms = sepainitializer->sepaterms;
    int* const nodemap_orgToSub = termcomp->nodemap_orgToSub;
-   STP_Vectype(int) dfsstack = NULL;
+   STP_Vectype(int) bfsqueue = NULL;
    int* RESTRICT gmark = g->mark;
    int sub_e = 0;
    int sub_n = 0;
@@ -189,14 +189,14 @@ void subgraphIdentify(
    }
 
    assert(!gmark[sourceterm]);
-   StpVecReserve(scip, dfsstack, 16);
-   StpVecPushBack(scip, dfsstack, sourceterm);
+   StpVecReserve(scip, bfsqueue, 16);
+   StpVecPushBack(scip, bfsqueue, sourceterm);
    gmark[sourceterm] = MARK_SUBNODE;
 
-   while( StpVecGetSize(dfsstack) )
+   /* BFS loop */
+   for( int i = 0; i < StpVecGetSize(bfsqueue); i++ )
    {
-      const int k = dfsstack[StpVecGetSize(dfsstack) - 1];
-      StpVecPopBack(dfsstack);
+      const int k = bfsqueue[i];
 
       assert(gmark[k]);
       assert(nodemap_orgToSub[k] == UNKNOWN);
@@ -210,20 +210,20 @@ void subgraphIdentify(
          const int head = g->head[e];
          if( !gmark[head] )
          {
-            StpVecPushBack(scip, dfsstack, head);
+            StpVecPushBack(scip, bfsqueue, head);
             gmark[head] = MARK_SUBNODE;
          }
       }
    }
 
-   assert(termcomp->dfsstack == NULL);
+   assert(termcomp->bfsqueue == NULL);
    assert(termcomp->subnnodes == -1);
    assert(termcomp->subnedges == -1);
 
    /* reserve space for the separator terminal clique */
    sub_e += (nsepaterms) * (nsepaterms - 1);
 
-   termcomp->dfsstack = dfsstack;
+   termcomp->bfsqueue = bfsqueue;
    termcomp->subnnodes = sub_n;
    termcomp->subnedges = sub_e;
 }
@@ -249,7 +249,7 @@ SCIP_RETCODE subgraphBuild(
    const int nsepaterms = sepainitializer->nsepatterms;
    const int nnodes_sub = termcomp->subnnodes;
    const int nedges_sub = termcomp->subnedges;
-   STP_Vectype(int) dfsstack = termcomp->dfsstack;
+   STP_Vectype(int) bfsqueue = termcomp->bfsqueue;
 
    assert(nsepaterms >= 2 && nsepaterms < orggraph->terms);
    assert(nnodes_sub > 0 && nedges_sub > 0);
@@ -265,18 +265,18 @@ SCIP_RETCODE subgraphBuild(
    for( int i = 0; i < nsepaterms; i++ )
    {
       assert(graph_knot_isInRange(orggraph, sepaterms[i]) && Is_term(orggraph->term[sepaterms[i]]));
-      assert(nodemap_orgToSub[sepaterms[i]] == orggraph->knots);
+      assert(nodemap_orgToSub[sepaterms[i]] == subgraph->knots);
 
       graph_knot_add(subgraph, STP_TERM);
       nodemap_subToOrg[i] = sepaterms[i];
    }
 
-   for( int i = 0; i < StpVecGetSize(dfsstack); i++ )
+   for( int i = 0; i < StpVecGetSize(bfsqueue); i++ )
    {
-      const int orgnode = dfsstack[i];
-      assert(nodemap_orgToSub[orgnode] == orggraph->knots);
+      const int orgnode = bfsqueue[i];
+      assert(nodemap_orgToSub[orgnode] == subgraph->knots);
 
-      nodemap_subToOrg[orggraph->knots] = orgnode;
+      nodemap_subToOrg[subgraph->knots] = orgnode;
       graph_knot_add(subgraph, orggraph->term[orgnode]);
    }
 
@@ -339,9 +339,9 @@ SCIP_RETCODE subgraphBuild(
       }
    }
 
-   for( int i = 0; i < StpVecGetSize(dfsstack); i++ )
+   for( int i = 0; i < StpVecGetSize(bfsqueue); i++ )
    {
-      const int orgnode = dfsstack[i];
+      const int orgnode = bfsqueue[i];
       const int subnode = nodemap_orgToSub[orgnode];
 
       for( int e = orggraph->outbeg[orgnode]; e != EAT_LAST; e = orggraph->oeat[e] )
@@ -599,6 +599,7 @@ SCIP_RETCODE reduce_sepaDualAscent(
 
    assert(scip && g && nelims);
 
+   SCIP_CALL( graph_init_dcsr(scip, g) );
    SCIP_CALL( extreduce_extPermaInit(scip, extred_fast, g, NULL, &extperma) );
    SCIP_CALL( extreduce_distDataInit(scip, g, 50, useSd, FALSE, &(extperma->distdata_default)) );
 
