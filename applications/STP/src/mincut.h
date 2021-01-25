@@ -38,6 +38,7 @@ extern int          mincut_termsepasGetNall(const TERMSEPAS*);
 extern int          mincut_termsepasGetN(const TERMSEPAS*, int);
 extern const int*   mincut_termsepasGetFirst(int, TERMSEPAS*, int*, int*);
 extern const int*   mincut_termsepasGetNext(int, TERMSEPAS*, int*, int*);
+extern int          mincut_termsepasGetSource(const TERMSEPAS*);
 extern SCIP_Bool mincut_findTerminalSeparatorsIsPromising(const GRAPH*);
 extern SCIP_RETCODE mincut_findTerminalSeparators(SCIP*, unsigned int, GRAPH*, TERMSEPAS*);
 extern SCIP_RETCODE mincut_separateLp(SCIP*, SCIP_CONSHDLR*, SCIP_RANDNUMGEN*, const int*, GRAPH*, int, int*);

@@ -462,7 +462,6 @@ void getNextComponent(
 
    if( *compWasFound )
    {
-     // int todo; // ADD extra methd to get source from temrinal sepa
       const int nsourcenodes = sepacomp->ngraphnodes - nsinknodes;
 
       assert(nsinknodes > 0);
@@ -474,8 +473,8 @@ void getNextComponent(
       /* NOTE: we want to take the smaller component */
       if( nsinknodes > nsourcenodes )
       {
-         const int sourceterm = g->source;
-         assert(0);
+         const int sourceterm = mincut_termsepasGetSource(termsepas);
+         assert(graph_knot_isInRange(g, sourceterm));
 
          sepacomp->sourceterm = sourceterm;
       }

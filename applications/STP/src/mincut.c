@@ -92,6 +92,7 @@ struct terminal_separator_storage
    int*                  sepastarts_csr;
    int                   nsepaterms_csr;
    int                   nsepas_all;
+   int                   root;
 };
 
 /*
@@ -1950,6 +1951,7 @@ SCIP_RETCODE mincut_termsepasInit(
    tsepas->nsepas_all = 0;
    tsepas->nsepaterms_csr = 0;
    tsepas->sepastarts_csr[0] = 0;
+   tsepas->root = -1;
 
    for( int i = 0; i < TERMSEPA_MAXCUTSIZE; i++ )
    {
@@ -2078,6 +2080,17 @@ const int* mincut_termsepasGetNext(
 }
 
 
+/** gets terminal separator source */
+int mincut_termsepasGetSource(
+   const TERMSEPAS*      termsepas           /**< terminal separators */
+)
+{
+   assert(termsepas);
+
+   return termsepas->root;
+}
+
+
 /** is it promising to look for terminal separators? */
 SCIP_Bool mincut_findTerminalSeparatorsIsPromising(
    const GRAPH*          g                   /**< graph data structure */
@@ -2112,7 +2125,7 @@ SCIP_Bool mincut_findTerminalSeparatorsIsPromising(
 /** searches for (small) terminal separators */
 SCIP_RETCODE mincut_findTerminalSeparators(
    SCIP*                 scip,               /**< SCIP data structure */
-   unsigned int          randseed,           /**< random seed */
+   unsigned int          randseed,           /**< random seed for computing separator source terminal */
    GRAPH*                g,                  /**< graph data structure */
    TERMSEPAS*            termsepas           /**< terminal separator storage */
    )
@@ -2134,6 +2147,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    graph_printInfoReduced(g);
 
    SCIP_CALL( mincutInit(scip, randseed, FALSE, g, &mincut) );
+   termsepas->root = mincut->root;
 
    /* sets excess, g->mincut_head, g->mincut_head_inact */
    graph_mincut_setDefaultVals(g);
