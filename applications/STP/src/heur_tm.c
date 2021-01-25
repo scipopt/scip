@@ -2717,6 +2717,7 @@ SCIP_DECL_HEURINIT(heurInitTM)
    SCIP_HEURDATA* heurdata;
    SCIP_PROBDATA* probdata;
    GRAPH* graph;
+   int pcmwmode;
 
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
@@ -2737,6 +2738,9 @@ SCIP_DECL_HEURINIT(heurInitTM)
    heurdata->ncalls = 0;
    heurdata->nlpiterations = -1;
    heurdata->nexecs = 0;
+
+   SCIP_CALL( SCIPgetIntParam(scip, "heuristics/TM/pcmwmode", &(pcmwmode)) );
+   heurdata->pcmw_mode = pcmwmode;
 
    return SCIP_OKAY;
 }
@@ -3667,7 +3671,6 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
    char paramdesc[SCIP_MAXSTRLEN];
-   int pcmwmode = -1;
 
    /* create TM primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
@@ -3713,13 +3716,11 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
          "Heuristic: 0 automatic, 1 TM_SP, 2 TM_VORONOI, 3 TM_DIJKSTRA",
          &heurdata->type, FALSE, DEFAULT_TYPE, 0, 3, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/pcmwmode",
-         "PC/MW solving mode: 0 simple, 1 bias, 2 full bias, 3 full tree, 4 all",
-         &pcmwmode, FALSE, DEFAULT_PCMODE, 0, 4, NULL, NULL) );
+         "PC/MW solving mode: 0 simple, 1 bias, 2 full bias, 3 full tree, 4 all, 5 bias and full tree",
+         NULL, FALSE, DEFAULT_PCMODE, 0, 4, NULL, NULL) );
 
-   assert(pcmwmode >= 0 && pcmwmode <= 4);
-
-   heurdata->pcmw_mode = pcmwmode;
    heurdata->hopfactor = DEFAULT_HOPFACTOR;
+   heurdata->pcmw_mode = DEFAULT_PCMODE;
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed, TRUE) );
