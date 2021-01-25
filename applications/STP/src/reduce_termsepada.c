@@ -42,6 +42,7 @@
 
 #define MARK_SUBNODE 1
 #define MARK_SEPARATOR 2
+#define COMPONENT_MINNODESRATIO 0.01
 #define SEPARATOR_MAXSIZE 5
 #define SEPARATOR_MAXNCHECKS 50
 
@@ -52,8 +53,10 @@ typedef struct terminial_component_initializes
    const int*            sepaterms;          /**< separator terminals */
    int                   sourceterm;         /**< source terminal NOTE: we eliminate the associated sub-graph! */
    int                   nsepatterms;        /**< size of separator */
-   int                   componentnumber;    /**< */
-   int                   ngraphnodes;
+   int                   ncomponentnodes;    /**< NOTE: possibly overestimate */
+   int                   componentnumber;    /**< number of component (0,1,...)*/
+   int                   ngraphnodes;        /**< number of nodes of underlying graph, not counting degree 0 nodes */
+   SCIP_Bool             rootcompIsProcessed;/**< already processed root component? */
 } COMPINIT;
 
 
@@ -147,7 +150,7 @@ void termcompFree(
 }
 
 
-/**  identifies subgraph */
+/** identifies subgraph */
 static
 void subgraphIdentify(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -190,7 +193,7 @@ void subgraphIdentify(
    StpVecPushBack(scip, dfsstack, sourceterm);
    gmark[sourceterm] = MARK_SUBNODE;
 
-   while( StpVecGetSize(dfsstack)  )
+   while( StpVecGetSize(dfsstack) )
    {
       const int k = dfsstack[StpVecGetSize(dfsstack) - 1];
       StpVecPopBack(dfsstack);
@@ -330,8 +333,8 @@ SCIP_RETCODE subgraphBuild(
          graph_edge_addBi(scip, subgraph, subsepaterm, subsepaterm2, sd);
 
 #ifdef SCIP_DEBUG
-            SCIPdebugMessage("adding separator-to-separator edge: ");
-            graph_edge_printInfo(subgraph, subgraph->edges - 2);
+         SCIPdebugMessage("adding separator-to-separator edge: ");
+         graph_edge_printInfo(subgraph, subgraph->edges - 2);
 #endif
       }
    }
@@ -390,6 +393,40 @@ SCIP_RETCODE termcompBuildSubgraphWithSds(
 
    return SCIP_OKAY;
 }
+
+
+/** promising to perform reductions on given component? */
+static
+SCIP_Bool termcompIsPromising(
+   const GRAPH*          g,                  /**< graph data structure */
+   const COMPINIT*       sepainitializer     /**< terminal separator component initializer */
+   )
+{
+   /* NOTE: we allow a few components regardless of their size */
+   if( sepainitializer->componentnumber < 10 )
+   {
+      SCIPdebugMessage("...component is promising \n");
+      return TRUE;
+   }
+   else
+   {
+      const SCIP_Real noderatio = sepainitializer->ncomponentnodes / sepainitializer->ngraphnodes;
+      assert(GT(noderatio, 0.0));
+
+      SCIPdebugMessage(" noderatio=%f \n", noderatio);
+
+      if( noderatio > COMPONENT_MINNODESRATIO )
+      {
+         SCIPdebugMessage("...component is promising \n");
+         return TRUE;
+      }
+   }
+
+   SCIPdebugMessage("...component is NOT promising! \n");
+
+   return TRUE;
+}
+
 
 /** processes subgraph associated with SEPADA */
 static
@@ -470,20 +507,28 @@ void getNextComponent(
       sepacomp->nsepatterms = nsepaterms;
       sepacomp->sepaterms = sepaterms;
 
-      /* NOTE: we want to take the smaller component */
-      if( nsinknodes > nsourcenodes )
+      /* NOTE: we want to take the smaller component if possible */
+      if( nsinknodes > nsourcenodes && !sepacomp->rootcompIsProcessed )
       {
          const int sourceterm = mincut_termsepasGetSource(termsepas);
          assert(graph_knot_isInRange(g, sourceterm));
 
          sepacomp->sourceterm = sourceterm;
+         sepacomp->ncomponentnodes = nsourcenodes;
+         /* NOTE: even if the component turns out to not be promising, we only want to check it once */
+         sepacomp->rootcompIsProcessed = TRUE;
       }
       else
       {
          sepacomp->sourceterm = sinkterm;
+         sepacomp->ncomponentnodes = nsinknodes;
       }
 
-      SCIPdebugMessage("selecting component with source %d and %d separator terminals \n", sepacomp->sourceterm, nsepaterms);
+      SCIPdebugMessage("selecting component: source=%d, |S|=%d, |V'|=%d \n", sepacomp->sourceterm, nsepaterms, sepacomp->ncomponentnodes);
+   }
+   else
+   {
+      SCIPdebugMessage("no further components available, stopping sepaDualAscent reductions \n");
    }
 }
 
@@ -503,7 +548,9 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
    )
 {
    COMPINIT sepacomp = { .sepaterms = NULL, .sourceterm = -1,
-                         .nsepatterms = 2, .componentnumber = 0, .ngraphnodes = -1 };
+                         .nsepatterms = 2, .componentnumber = 0,
+                         .ncomponentnodes = -1, .ngraphnodes = -1,
+                         .rootcompIsProcessed = FALSE };
    TERMSEPAS* termsepas;
 
    assert(scip && g && nelims && extperma);
@@ -524,6 +571,10 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
 
       if( !compWasFound )
          break;
+
+      // todo problem: can we process root component multiple times????
+      if( !termcompIsPromising(g, &sepacomp) )
+         continue;
 
       SCIP_CALL( processComponent(scip, &sepacomp, g, extperma, nelims) );
    }
