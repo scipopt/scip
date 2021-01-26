@@ -17,8 +17,12 @@
 #@brief   SCIP sub Makefile
 #@author  Stefan Heinz
 
-SCIPGITHASH	=	$(shell git describe --always --dirty  | sed 's/^.*-g//')
+ifneq ($(wildcard .git),)
+	SCIPGITHASH = $(shell git describe --always --dirty  | sed 's/^.*-g//')
+else
+	SCIPGITHASH = "NoGitInfo"
+endif
 
 .PHONY: githash
-githash::	# do not remove the double-colon
+githash:: # do not remove the double-colon
 		@echo "#define SCIP_GITHASH \"$(SCIPGITHASH)\"" > $(SCIPGITHASHFILE)
