@@ -167,6 +167,8 @@ void subgraphIdentify(
       assert(!gmark[term]);
       assert(nodemap_orgToSub[term] == UNKNOWN);
 
+      SCIPdebugMessage("mapping separator %d to %d \n", term, sub_n);
+
       nodemap_orgToSub[term] = sub_n;
       sub_n++;
       sub_e += g->grad[term];
@@ -612,6 +614,7 @@ void termcompDeleteEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    REDCOST*              redcostdata,        /**< reduced costs */
    GRAPH*                g,                  /**< graph data structure */
+   EXTPERMA*             extperma,           /**< extension data */
    TERMCOMP*             termcomp            /**< component */
    )
 {
@@ -622,6 +625,8 @@ void termcompDeleteEdges(
    const SCIP_Real* pathdist = redcosts_getRootToNodeDistTop(redcostdata);
    const SCIP_Real cutoffbound = redcosts_getCutoffTop(redcostdata);
    const int* const edgemap_subToOrg = termcomp->edgemap_subToOrg;
+
+   graph_mark(g);
 
    for( int k = 0; k < subnnodes; k++ )
    {
@@ -647,7 +652,7 @@ void termcompDeleteEdges(
                SCIPdebugMessage("deleting original edge (%f>%f): ", redcost, cutoffbound);
                graph_edge_printInfo(g, edgemap_subToOrg[e]);
 #endif
-               graph_edge_del(scip, g, edgemap_subToOrg[e], TRUE);
+               extreduce_edgeRemove(scip, edgemap_subToOrg[e], g, extperma->distdata_default, extperma);
             }
          }
       }
@@ -660,6 +665,7 @@ static
 SCIP_RETCODE termcompReduce(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
+   EXTPERMA*             extperma,           /**< extension data */
    TERMCOMP*             termcomp            /**< component */
    )
 {
@@ -685,7 +691,7 @@ SCIP_RETCODE termcompReduce(
    SCIP_CALL( redcosts_initializeDistancesTop(scip, subgraph, redcostdata) );
    redcosts_setCutoffFromBoundTop(subprimal, redcostdata);
 
-   termcompDeleteEdges(scip, redcostdata, g, termcomp);
+   termcompDeleteEdges(scip, redcostdata, g, extperma, termcomp);
 
    // todo check for nodes...don't delete
    {
@@ -795,7 +801,7 @@ SCIP_RETCODE processComponent(
    SCIP_CALL( termcompChangeSubgraphToBottleneck(scip, g, termcomp) );
 
    // todo, also mark pseudo-eliminaitons
-   SCIP_CALL( termcompReduce(scip, g, termcomp) );
+   SCIP_CALL( termcompReduce(scip, g, extperma, termcomp) );
 
    termcompFree(scip, &termcomp);
 
@@ -948,9 +954,11 @@ SCIP_RETCODE reduce_sepaDualAscent(
    SCIP_CALL( graph_init_dcsr(scip, g) );
    SCIP_CALL( extreduce_extPermaInit(scip, extred_fast, g, NULL, &extperma) );
    SCIP_CALL( extreduce_distDataInit(scip, g, 50, useSd, FALSE, &(extperma->distdata_default)) );
+   SCIP_CALL( reduce_sdRepairSetUp(scip, g, extperma->distdata_default->sdistdata) );
 
    SCIP_CALL( reduce_sepaDualAscentWithExperma(scip, g, extperma, nelims) );
 
+   /* NOTE: also frees DCSR */
    extreduce_exit(scip, g, &extperma);
 
    return SCIP_OKAY;
