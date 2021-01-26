@@ -43,6 +43,8 @@ Testing
 Build system
 ------------
 
+- Compilation will now also work in a raw tarball of the scip git repository
+
 ### Cmake
 
 - Make find_package more verbose and require packages to be found. Now enabled packages that are not found result in an error.
