@@ -407,9 +407,17 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    /* next, check if we should buffer the solution instead of checking it right now */
    if( conshdlrdata->nbufferedsols < DEFAULT_SOLBUFSIZE )
    {
+      SCIP_Real multiplier;
+
       SCIP_CALL( bufferSolution(scip, sol, conshdlrdata) );
-      *result = SCIP_INFEASIBLE;
-      return SCIP_OKAY;
+
+      multiplier = SCIPgetSolTransObj(scip, sol) > 0 ? 1.2 : 0.8;
+      /* if the new solution is at least 20% better than the current upperbound, we stop buffering and repair immediately */
+      if( !SCIPisLT(scip, multiplier * SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
+      {
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
    }
 
    scip->stat->ncallsexactsol++;
