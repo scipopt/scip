@@ -1251,6 +1251,7 @@ SCIP_RETCODE solstp_addSolToProb(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    const int*            soledge,            /**< solution */
+   SCIP_HEUR*            heur,               /**< heuristic data or NULL */
    SCIP_Bool*            success             /**< denotes whether the new solution has been successfully added */
    )
 {
@@ -1265,7 +1266,7 @@ SCIP_RETCODE solstp_addSolToProb(
    for( int e = 0; e < nedges; e++ )
       nval[e] = (CONNECT == soledge[e]) ? 1.0 : 0.0;
 
-   SCIP_CALL(SCIPprobdataAddNewSol(scip, nval, NULL, success));
+   SCIP_CALL(SCIPprobdataAddNewSol(scip, nval, heur, success));
 
    SCIPfreeBufferArray(scip, &nval);
 

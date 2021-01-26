@@ -2760,7 +2760,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    assert(scip != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   assert(scip != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
@@ -2839,39 +2838,19 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    if( success )
    {
-      SCIP_Real* nval;
-      const int nvars = SCIPprobdataGetNVars(scip);
-
-      assert(nvars == nedges);
-
-      SCIP_CALL(SCIPallocBufferArray(scip, &nval, nvars));
-
-      for( int v = 0; v < nvars; v++ )
-      {
-         nval[v] = (soledges[v] == CONNECT) ? 1.0 : 0.0;
-      }
-
-      SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, FALSE, &success) );
-
-      assert(success || graph->stp_type == STP_BRMWCSP);
+      SCIP_CALL( solstp_addSolToProb(scip, graph, soledges, heur, &success) );
 
       if( success )
       {
-         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, &success) );
+         SCIPdebugMessage("TM solution added, value %f \n",
+               solstp_getObjBounded(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
 
-         if( success )
-         {
-            SCIPdebugMessage("TM solution added, value %f \n",
-                  solstp_getObjBounded(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
-
-            *result = SCIP_FOUNDSOL;
-         }
+         *result = SCIP_FOUNDSOL;
       }
       else
       {
          SCIPdebugMessage("TM solution not added \n");
       }
-      SCIPfreeBufferArray(scip, &nval);
    }
 
    heurdata->nlpiterations = SCIPgetNLPIterations(scip);
