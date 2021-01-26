@@ -3765,6 +3765,17 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
    return SCIP_OKAY;
 }
 
+/** comparison method for sorting solution by decreasing objective value (best solution will be sorted to the end) */
+SCIP_DECL_SORTPTRCOMP(SCIPsolComp)
+{
+   if( ((SCIP_SOL*)elem1)->obj - ((SCIP_SOL*)elem2)->obj < 0 )
+      return 1;
+   else if( ((SCIP_SOL*)elem1)->obj - ((SCIP_SOL*)elem2)->obj > 0 )
+      return -1;
+   else
+      return 0;
+}
+
 /*
  * simple functions implemented as defines
  */
