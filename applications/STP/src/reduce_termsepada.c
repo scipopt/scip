@@ -563,7 +563,7 @@ SCIP_RETCODE termcompChangeSubgraphToBottleneck(
       g->mark[i] = (g->mark[i] != MARK_SUBNODE);
 
    SCIPallocBufferArray(scip, &mst, nnodes);
-   graph_path_exec(scip, g, MST_MODE, mstroot, subgraph->cost, mst);
+   graph_path_exec(scip, g, MST_MODE, mstroot, g->cost, mst);
 
    for( int i = 0; i < subgraph->knots; i++ )
       subgraph->mark[i] = MARK_NONACTIVE;
