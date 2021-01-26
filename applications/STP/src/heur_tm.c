@@ -2842,9 +2842,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
       if( success )
       {
-         SCIPdebugMessage("TM solution added, value %f \n",
-               solstp_getObjBounded(graph, soledges, SCIPprobdataGetOffset(scip), nedges));
-
+         SCIPdebugMessage("TM solution added, value %f \n", solstp_getObj(graph, soledges, SCIPprobdataGetOffset(scip)));
          *result = SCIP_FOUNDSOL;
       }
       else
@@ -3620,7 +3618,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       }
    }
 
-
    for( int e = 0; e < nedges; e++ )
       costrev[e] = cost[flipedge_Uint(e)];
 
@@ -3631,6 +3628,66 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    /* build a Steiner tree */
    SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_bias,
       graph, NULL, prize, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, success));
+
+
+   // todo extra method etc. just a test currently
+   if( xval && graph_typeIsSpgLike(graph) )
+   {
+      int* termorg;
+      int* soledges;
+      SCIP_Real* nodes_inflow;
+      const SCIP_Real termbound = SCIPrandomGetReal(heurdata->randnumgen, 0.95, 1.0);
+      SCIP_Bool solFound = FALSE;
+
+      SCIP_CALL(SCIPallocBufferArray(scip, &soledges, nedges));
+      SCIP_CALL(SCIPallocBufferArray(scip, &termorg, nnodes));
+      SCIP_CALL(SCIPallocBufferArray(scip, &nodes_inflow, nnodes));
+      BMScopyMemoryArray(termorg, graph->term, nnodes);
+
+      for( int k = 0; k < nnodes; k++ )
+         nodes_inflow[k] = 0.0;
+
+      for( int e = 0; e < nedges; e++ )
+      {
+         const int head = graph->head[e];
+         nodes_inflow[head] += xval[e];
+      }
+
+      for( int e = 0; e < nedges; e++ )
+         soledges[e] = UNKNOWN;
+
+     // printf("termbound=%f \n", termbound);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( !Is_term(graph->term[k]) && nodes_inflow[k] > termbound )
+         {
+            graph_knot_chg(graph, k, STP_TERM);
+         }
+      }
+
+      SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_bias,
+            graph, &(graph->source), prize, soledges, 1, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor),
+            nodepriority, &solFound));
+
+      SCIP_CALL( solstp_addSolToProb(scip, graph, soledges, heur, &solFound) );
+
+   //   printf("success2=%d \n", solFound);
+
+     // printf("obj1=%f obj2=%f \n", solstp_getObj(graph, result, SCIPprobdataGetOffset(scip)),
+       //    solstp_getObj(graph, soledges, SCIPprobdataGetOffset(scip)));
+
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( graph->term[k] != termorg[k] )
+            graph_knot_chg(graph, k, termorg[k]);
+      }
+
+      SCIPfreeBufferArray(scip, &nodes_inflow);
+      SCIPfreeBufferArray(scip, &termorg);
+      SCIPfreeBufferArray(scip, &soledges);
+   }
 
    SCIPfreeBufferArrayNull(scip, &prize);
    SCIPfreeBufferArrayNull(scip, &nodepriority);
