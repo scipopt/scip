@@ -32,17 +32,21 @@
 #include <string.h>
 #include <assert.h>
 #include "graph.h"
+#include "dualascent.h"
 #include "reduce.h"
 #include "extreduce.h"
+#include "solstp.h"
 #include "mincut.h"
+#include "heur_ascendprune.h"
 #include "portab.h"
 #include "stpvector.h"
 #include "scip/scip.h"
 
-
-#define MARK_SUBNODE 1
+#define MARK_NONACTIVE 0
+#define MARK_SUBNODE   1
 #define MARK_SEPARATOR 2
 #define COMPONENT_MINNODESRATIO 0.01
+#define COMPONENT_MAXNODESRATIO 0.5
 #define SEPARATOR_MAXSIZE 5
 #define SEPARATOR_MAXNCHECKS 50
 
@@ -50,33 +54,31 @@
 /** separator data needed to build component */
 typedef struct terminial_component_initializes
 {
-   const int*            sepaterms;          /**< separator terminals */
+   SCIP_Real*            nodes_bdist;        /**< bottleneck computation distance for each node, always reset to -1.0 */
+   const int*            sepaterms;          /**< separator terminals NON OWNED */
    int                   sourceterm;         /**< source terminal NOTE: we eliminate the associated sub-graph! */
    int                   nsepatterms;        /**< size of separator */
    int                   ncomponentnodes;    /**< NOTE: possibly overestimate */
    int                   componentnumber;    /**< number of component (0,1,...)*/
    int                   ngraphnodes;        /**< number of nodes of underlying graph, not counting degree 0 nodes */
    SCIP_Bool             rootcompIsProcessed;/**< already processed root component? */
-} COMPINIT;
+} COMPBUILDER;
 
 
 
 /** (extended) terminal component */
 typedef struct terminal_separator_component
 {
-   const COMPINIT*       sepainitializer;    /**< initializer; NON-OWNED */
+   COMPBUILDER*          builder;            /**< initializer; NON-OWNED */
    GRAPH*                subgraph;           /**< graph for (extended) component */
    int*                  subsolution;        /**< primal solution for (extended) component (CONNECTED/UNKNOWN) */
    int*                  nodemap_orgToSub;   /**< map */
    int*                  nodemap_subToOrg;   /**< map */
    int*                  edgemap_subToOrg;   /**< map */
    STP_Vectype(int)      bfsqueue;           /**< queue for BFS */
-   STP_Vectype(int)      elim_edges;         /**< edges to eliminate */
-   STP_Vectype(int)      elim_nodes;         /**< nodes to pseudo-eliminate */
    int                   subnnodes;
    int                   subnedges;
 } TERMCOMP;
-
 
 
 /*
@@ -84,38 +86,35 @@ typedef struct terminal_separator_component
  */
 
 
-
 /** initializes */
 static
-SCIP_RETCODE termcompInit(
+SCIP_RETCODE compbuilderInit(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   const COMPINIT*       sepainitializer,    /**< initializer */
-   TERMCOMP**            termcomp            /**< to initialize */
+   COMPBUILDER**         compbuilder         /**< to initialize */
    )
 {
-   TERMCOMP* comp;
+   COMPBUILDER* builder;
+   const int nnodes = graph_get_nNodes(g);
 
-   SCIP_CALL( SCIPallocMemory(scip, termcomp) );
-   comp = *termcomp;
+   SCIP_CALL( SCIPallocMemory(scip, compbuilder) );
+   builder = *compbuilder;
 
-   comp->sepainitializer = sepainitializer;
-   comp->subgraph = NULL;
-   comp->subsolution = NULL;
-   comp->edgemap_subToOrg = NULL;
-   comp->nodemap_subToOrg = NULL;
-   comp->elim_edges = NULL;
-   comp->elim_nodes = NULL;
-   comp->bfsqueue = NULL;
-   comp->subnedges = -1;
-   comp->subnnodes = -1;
+   builder->sepaterms = NULL;
+   builder->sourceterm = -1;
+   builder->nsepatterms = 2;
+   builder->componentnumber = 0;
+   builder->ncomponentnodes = -1;
+   builder->ngraphnodes = -1;
+   builder->rootcompIsProcessed = FALSE;
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(comp->nodemap_orgToSub), g->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(builder->nodes_bdist), nnodes) );
+   graph_get_nVET(g, &(builder->ngraphnodes), NULL, NULL);
 
-#ifndef NDEBUG
-   for( int i = 0; i < g->knots; i++ )
-      comp->nodemap_orgToSub[i] = UNKNOWN;
-#endif
+   for( int i = 0; i < nnodes; i++ )
+   {
+      builder->nodes_bdist[i] = -1.0;
+   }
 
    return SCIP_OKAY;
 }
@@ -123,30 +122,16 @@ SCIP_RETCODE termcompInit(
 
 /** frees */
 static
-void termcompFree(
+void compbuilderFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   TERMCOMP**            termcomp            /**< to initialize */
+   COMPBUILDER**         compbuilder         /**< to free */
    )
 {
-   TERMCOMP* comp;
-   comp = *termcomp;
+   COMPBUILDER* builder;
+   builder = *compbuilder;
 
-   StpVecFree(scip, comp->elim_nodes);
-   StpVecFree(scip, comp->elim_edges);
-   StpVecFree(scip, comp->bfsqueue);
-
-   SCIPfreeMemoryArrayNull(scip, &(comp->subsolution));
-   SCIPfreeMemoryArray(scip, &(comp->nodemap_subToOrg));
-   SCIPfreeMemoryArray(scip, &(comp->edgemap_subToOrg));
-
-   if( comp->subgraph )
-   {
-      graph_free(scip, &(comp->subgraph), TRUE);
-   }
-
-   SCIPfreeMemoryArray(scip, &(comp->nodemap_orgToSub));
-
-   SCIPfreeMemory(scip, termcomp);
+   SCIPfreeMemoryArray(scip, &(builder->nodes_bdist));
+   SCIPfreeMemory(scip, compbuilder);
 }
 
 
@@ -158,15 +143,15 @@ void subgraphIdentify(
    TERMCOMP*             termcomp            /**< component */
    )
 {
-   const COMPINIT* const sepainitializer = termcomp->sepainitializer;
-   const int* const sepaterms = sepainitializer->sepaterms;
+   const COMPBUILDER* const builder = termcomp->builder;
+   const int* const sepaterms = builder->sepaterms;
    int* const nodemap_orgToSub = termcomp->nodemap_orgToSub;
    STP_Vectype(int) bfsqueue = NULL;
    int* RESTRICT gmark = g->mark;
    int sub_e = 0;
    int sub_n = 0;
-   const int nsepaterms = sepainitializer->nsepatterms;
-   const int sourceterm = sepainitializer->sourceterm;
+   const int nsepaterms = builder->nsepatterms;
+   const int sourceterm = builder->sourceterm;
 
    assert(graph_knot_isInRange(g, sourceterm) && Is_term(g->term[sourceterm]));
    assert(sepaterms && nodemap_orgToSub);
@@ -240,13 +225,13 @@ SCIP_RETCODE subgraphBuild(
 {
    GRAPH* subgraph;
    DISTDATA* const distdata = extperma->distdata_default;
-   const COMPINIT* const sepainitializer = termcomp->sepainitializer;
+   const COMPBUILDER* const builder = termcomp->builder;
    const int* const nodemap_orgToSub = termcomp->nodemap_orgToSub;
    int* nodemap_subToOrg;
    int* edgemap_subToOrg;
    const int* const orgmark = orggraph->mark;
-   const int* const sepaterms = sepainitializer->sepaterms;
-   const int nsepaterms = sepainitializer->nsepatterms;
+   const int* const sepaterms = builder->sepaterms;
+   const int nsepaterms = builder->nsepatterms;
    const int nnodes_sub = termcomp->subnnodes;
    const int nedges_sub = termcomp->subnedges;
    STP_Vectype(int) bfsqueue = termcomp->bfsqueue;
@@ -369,12 +354,83 @@ SCIP_RETCODE subgraphBuild(
       }
    }
 
+   assert(graph_knot_isInRange(orggraph, builder->sourceterm));
+   assert(graph_knot_isInRange(orggraph, nodemap_orgToSub[builder->sourceterm]));
+
+   subgraph->source = nodemap_orgToSub[builder->sourceterm];
+   subgraph->stp_type = orggraph->stp_type;
+
+   SCIP_CALL( graph_path_init(scip, subgraph) );
+
    assert(!termcomp->nodemap_subToOrg && !termcomp->edgemap_subToOrg);
 
    termcomp->nodemap_subToOrg = nodemap_subToOrg;
    termcomp->edgemap_subToOrg = edgemap_subToOrg;
 
    return SCIP_OKAY;
+}
+
+
+
+
+/** initializes */
+static
+SCIP_RETCODE termcompInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   COMPBUILDER*          builder,            /**< initializer */
+   TERMCOMP**            termcomp            /**< to initialize */
+   )
+{
+   TERMCOMP* comp;
+
+   SCIP_CALL( SCIPallocMemory(scip, termcomp) );
+   comp = *termcomp;
+
+   comp->builder = builder;
+   comp->subgraph = NULL;
+   comp->subsolution = NULL;
+   comp->edgemap_subToOrg = NULL;
+   comp->nodemap_subToOrg = NULL;
+   comp->bfsqueue = NULL;
+   comp->subnedges = -1;
+   comp->subnnodes = -1;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(comp->nodemap_orgToSub), g->knots) );
+
+#ifndef NDEBUG
+   for( int i = 0; i < g->knots; i++ )
+      comp->nodemap_orgToSub[i] = UNKNOWN;
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+static
+void termcompFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TERMCOMP**            termcomp            /**< to initialize */
+   )
+{
+   TERMCOMP* comp;
+   comp = *termcomp;
+
+   StpVecFree(scip, comp->bfsqueue);
+
+   SCIPfreeMemoryArrayNull(scip, &(comp->subsolution));
+   SCIPfreeMemoryArray(scip, &(comp->nodemap_subToOrg));
+   SCIPfreeMemoryArray(scip, &(comp->edgemap_subToOrg));
+
+   if( comp->subgraph )
+   {
+      graph_free(scip, &(comp->subgraph), TRUE);
+   }
+
+   SCIPfreeMemoryArray(scip, &(comp->nodemap_orgToSub));
+
+   SCIPfreeMemory(scip, termcomp);
 }
 
 
@@ -395,27 +451,320 @@ SCIP_RETCODE termcompBuildSubgraphWithSds(
 }
 
 
+/** gets extended bottleneck distances */
+static
+SCIP_Real termcompGetExtBottleneckDist(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   term1,              /**< terminal */
+   int                   term2,              /**< terminal */
+   int                   mstsource,          /**< source node of minimum spanning tree */
+   PATH*                 mst,                /**< minimum spanning tree */
+   SCIP_Real* RESTRICT   mstsdist            /**< node distance helper */
+   )
+{
+   SCIP_Real sdist = 0.0;
+   int tempnode = term1;
+
+   assert(Is_term(g->term[term1]));
+   assert(Is_term(g->term[term2]));
+   assert(term1 != term2);
+
+   mstsdist[tempnode] = 0.0;
+
+   while( tempnode != mstsource )
+   {
+      const int ne = mst[tempnode].edge;
+
+      assert(g->head[ne] == tempnode);
+      tempnode = g->tail[ne];
+
+      if( g->cost[ne] > sdist )
+         sdist = g->cost[ne];
+
+      mstsdist[tempnode] = sdist;
+      if( tempnode == term2 )
+         break;
+   }
+
+   /* already finished? */
+   if( tempnode == term2 )
+   {
+      tempnode = mstsource;
+   }
+   else
+   {
+      tempnode = term2;
+      sdist = 0.0;
+   }
+
+   while( tempnode != mstsource )
+   {
+      const int ne = mst[tempnode].edge;
+      tempnode = g->tail[ne];
+
+      if( g->cost[ne] > sdist )
+         sdist = g->cost[ne];
+
+      /* already visited? */
+      if( mstsdist[tempnode] > -0.5 )
+      {
+         if( mstsdist[tempnode] > sdist )
+            sdist = mstsdist[tempnode];
+         break;
+      }
+
+      assert(EQ(mstsdist[tempnode], -1.0));
+   }
+
+   /* restore */
+   tempnode = term1;
+   mstsdist[tempnode] = -1.0;
+   while( tempnode != mstsource )
+   {
+      const int ne = mst[tempnode].edge;
+      tempnode = g->tail[ne];
+      mstsdist[tempnode] = -1.0;
+      if( tempnode == term2 )
+         break;
+   }
+
+#ifndef NDEBUG
+   for( int i = 0; i < g->knots; i++ )
+      assert(EQ(mstsdist[i], -1.0));
+#endif
+
+   return sdist;
+}
+
+
+/** changes weights between terminal separator nodes to bottlenecks */
+static
+SCIP_RETCODE termcompChangeSubgraphToBottleneck(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   TERMCOMP*             termcomp            /**< component */
+   )
+{
+   GRAPH* subgraph = termcomp->subgraph;
+   PATH* mst;
+   COMPBUILDER* const builder = termcomp->builder;
+   const int* const subsol = termcomp->subsolution; // maybe also have a path for the subsolution? and modify it?
+   const int* const sepaterms = builder->sepaterms;
+   const int* const nodemap_orgToSub = termcomp->nodemap_orgToSub;
+   const int* const nodemap_subToOrg = termcomp->nodemap_subToOrg;
+   const int nsepaterms = builder->nsepatterms;
+   const int nnodes = graph_get_nNodes(g);
+   const int mstroot = sepaterms[0];
+
+   /* mark the anti-component */
+   for( int i = 0; i < nnodes; i++ )
+      g->mark[i] = (g->mark[i] != MARK_SUBNODE);
+
+   SCIPallocBufferArray(scip, &mst, nnodes);
+   graph_path_exec(scip, g, MST_MODE, mstroot, subgraph->cost, mst);
+
+   for( int i = 0; i < subgraph->knots; i++ )
+      subgraph->mark[i] = MARK_NONACTIVE;
+
+   for( int i = 0; i < nsepaterms; i++ )
+   {
+      const int term = sepaterms[i];
+      const int term_sub = nodemap_orgToSub[term];
+      assert(graph_knot_isInRange(subgraph, term_sub));
+      assert(subgraph->mark[term_sub] == MARK_NONACTIVE);
+
+      subgraph->mark[term_sub] = MARK_SEPARATOR;
+   }
+
+   for( int i = 0; i < nsepaterms; i++ )
+   {
+      const int term = sepaterms[i];
+      const int term_sub = nodemap_orgToSub[term];
+
+      for( int e = subgraph->outbeg[term_sub]; e != EAT_LAST; e = subgraph->oeat[e] )
+      {
+         const int head_sub = subgraph->head[e];
+
+         if( head_sub > term_sub && subgraph->mark[head_sub] == MARK_SEPARATOR )
+         {
+            const int head = nodemap_subToOrg[head_sub];
+            const SCIP_Real b = termcompGetExtBottleneckDist(g, term, head, mstroot, mst, builder->nodes_bdist);
+
+            subgraph->cost[e] = b;
+            subgraph->cost[flipedge(e)] = b;
+
+            SCIPdebugMessage("%d->%d setting b=%f \n", term_sub, head_sub, b);
+
+            // using also primal solution! and unmark primal solution
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &mst);
+
+   return SCIP_OKAY;
+}
+
+
+/** deletes */
+static
+void termcompDeleteEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   REDCOST*              redcostdata,        /**< reduced costs */
+   GRAPH*                g,                  /**< graph data structure */
+   TERMCOMP*             termcomp            /**< component */
+   )
+{
+   GRAPH* subgraph = termcomp->subgraph;
+   const int subnnodes = graph_get_nNodes(subgraph);
+   const PATH* vnoi = redcosts_getNodeToTermsPathsTop(redcostdata);
+   const SCIP_Real* cost = redcosts_getEdgeCostsTop(redcostdata);
+   const SCIP_Real* pathdist = redcosts_getRootToNodeDistTop(redcostdata);
+   const SCIP_Real cutoffbound = redcosts_getCutoffTop(redcostdata);
+   const int* const edgemap_subToOrg = termcomp->edgemap_subToOrg;
+
+   for( int k = 0; k < subnnodes; k++ )
+   {
+      for( int e = subgraph->outbeg[k]; e != EAT_LAST; e = subgraph->oeat[e] )
+      {
+         const int subhead = subgraph->head[e];
+
+         /* NOTE: we avoid double checking and deletion of artificial edges */
+         if( subhead > k && edgemap_subToOrg[e] >= 0)
+         {
+            SCIP_Real redcost = pathdist[k] + cost[e] + vnoi[subhead].dist;
+
+            if( !SCIPisGT(scip, redcost, cutoffbound) )
+               continue;
+
+           // graph_edge_printInfo(g, edgemap_subToOrg[e]);
+          //  printf("%f %f %f \n", pathdist[k], cost[e], vnoi[subhead].dist);
+            redcost = pathdist[subhead] + cost[flipedge(e)] + vnoi[k].dist;
+
+            if( SCIPisGT(scip, redcost, cutoffbound) )
+            {
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("deleting original edge (%f>%f): ", redcost, cutoffbound);
+               graph_edge_printInfo(g, edgemap_subToOrg[e]);
+#endif
+               graph_edge_del(scip, g, edgemap_subToOrg[e], TRUE);
+            }
+         }
+      }
+   }
+}
+
+
+/** perform reductions */
+static
+SCIP_RETCODE termcompReduce(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   TERMCOMP*             termcomp            /**< component */
+   )
+{
+   DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = -1,
+           .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
+   GRAPH* subgraph = termcomp->subgraph;
+   RCPARAMS rcparams = { .cutoff = -1.0, .nLevels = 1, .nCloseTerms = 2, .nnodes = subgraph->knots,
+                       .nedges = subgraph->edges, .redCostRoot = subgraph->source };
+   REDCOST* redcostdata;
+   const int* const subsol = termcomp->subsolution; // maybe also have a path for the subsolution? and modify it?
+   const SCIP_Real subprimal = solstp_getObj(subgraph, subsol, 0.0);
+   SCIP_Real subdual;
+
+   SCIP_CALL( redcosts_initFromParams(scip, &rcparams, &redcostdata) );
+
+   daparams.root = subgraph->source;
+   SCIP_CALL( dualascent_exec(scip, subgraph, NULL, &daparams, redcosts_getEdgeCostsTop(redcostdata), &subdual) );
+
+   SCIPdebugMessage("subdual=%f, subprimal=%f \n", subdual, subprimal);
+
+   redcosts_setDualBoundTop(subdual, redcostdata);
+   graph_mark(subgraph);
+   SCIP_CALL( redcosts_initializeDistancesTop(scip, subgraph, redcostdata) );
+   redcosts_setCutoffFromBoundTop(subprimal, redcostdata);
+
+   termcompDeleteEdges(scip, redcostdata, g, termcomp);
+
+   // todo check for nodes...don't delete
+   {
+      int todo; // check nodes and also run dual ascent twice, once without guiding solution, once with
+                //...or maybe run with different root if component is not big!
+   }
+
+   redcosts_free(scip, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
+
+/** computes primal solution on subgraph */
+static
+SCIP_RETCODE termcompComputeSubgraphSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TERMCOMP*             termcomp            /**< component */
+   )
+{
+   DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = -1,
+           .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
+
+   GRAPH* subgraph = termcomp->subgraph;
+   SCIP_Real* redcosts;
+   int* subsol;
+   const int* const nodemap_orgToSub = termcomp->nodemap_orgToSub;
+   SCIP_Real dualobjval;
+   SCIP_Bool success;
+   const int nedges = graph_get_nEdges(subgraph);
+   const int sourceterm_org = termcomp->builder->sourceterm;
+
+   assert(nedges >= 2);
+   assert(!termcomp->subsolution);
+   assert(nodemap_orgToSub);
+   assert(sourceterm_org >= 0);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(subsol), nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(redcosts), nedges) );
+
+   daparams.root = nodemap_orgToSub[sourceterm_org];
+   SCIP_CALL( dualascent_exec(scip, subgraph, NULL, &daparams, redcosts, &dualobjval) );
+
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, subgraph, redcosts, subsol,
+         daparams.root, &success, FALSE));
+   assert(success);
+
+   termcomp->subsolution = subsol;
+   SCIPfreeBufferArray(scip, &redcosts);
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("primal sub-sol value: %f \n", solstp_getObj(subgraph, subsol, 0.0));
+#endif
+
+   return SCIP_OKAY;
+}
+
+
 /** promising to perform reductions on given component? */
 static
 SCIP_Bool termcompIsPromising(
    const GRAPH*          g,                  /**< graph data structure */
-   const COMPINIT*       sepainitializer     /**< terminal separator component initializer */
+   const COMPBUILDER*    builder             /**< terminal separator component initializer */
    )
 {
    /* NOTE: we allow a few components regardless of their size */
-   if( sepainitializer->componentnumber < 10 )
+   if( builder->componentnumber < 10 )
    {
       SCIPdebugMessage("...component is promising \n");
       return TRUE;
    }
    else
    {
-      const SCIP_Real noderatio = sepainitializer->ncomponentnodes / sepainitializer->ngraphnodes;
+      const SCIP_Real noderatio = builder->ncomponentnodes / builder->ngraphnodes;
       assert(GT(noderatio, 0.0));
 
       SCIPdebugMessage(" noderatio=%f \n", noderatio);
 
-      if( noderatio > COMPONENT_MINNODESRATIO )
+      if( COMPONENT_MINNODESRATIO < noderatio && noderatio < COMPONENT_MAXNODESRATIO )
       {
          SCIPdebugMessage("...component is promising \n");
          return TRUE;
@@ -432,26 +781,23 @@ SCIP_Bool termcompIsPromising(
 static
 SCIP_RETCODE processComponent(
    SCIP*                 scip,               /**< SCIP data structure */
-   const COMPINIT*       sepainitializer,    /**< terminal separator component initializer */
+   COMPBUILDER*          builder,            /**< terminal separator component initializer */
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
    int*                  nelims              /**< number of eliminations*/
    )
 {
-   TERMCOMP* component;
+   TERMCOMP* termcomp;
 
-   SCIP_CALL( termcompInit(scip, g, sepainitializer, &component) );
-   SCIP_CALL( termcompBuildSubgraphWithSds(scip, g, extperma, component) );
+   SCIP_CALL( termcompInit(scip, g, builder, &termcomp) );
+   SCIP_CALL( termcompBuildSubgraphWithSds(scip, g, extperma, termcomp) );
+   SCIP_CALL( termcompComputeSubgraphSol(scip, termcomp) );
+   SCIP_CALL( termcompChangeSubgraphToBottleneck(scip, g, termcomp) );
 
-   // compute solution on graph (A & P)
+   // todo, also mark pseudo-eliminaitons
+   SCIP_CALL( termcompReduce(scip, g, termcomp) );
 
-   // compute b on anti-component and add to sub-graph
-
-   // dual-scent, and mark edges, nodes (need nodes, edges)
-
-   // delete edges, save nodes
-
-   termcompFree(scip, &component);
+   termcompFree(scip, &termcomp);
 
    return SCIP_OKAY;
 }
@@ -462,22 +808,22 @@ static
 void getNextComponent(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   TERMSEPAS*            termsepas,
-   COMPINIT*             sepacomp,           /**< component identifier */
-   SCIP_Bool*            compWasFound
+   TERMSEPAS*            termsepas,          /**< terminal separator store */
+   COMPBUILDER*          builder,            /**< builder */
+   SCIP_Bool*            compWasFound        /**< was new component found? */
    )
 {
    const int* sepaterms = NULL;
    int sinkterm;
    int nsinknodes;
-   int nsepaterms = sepacomp->nsepatterms;
+   int nsepaterms = builder->nsepatterms;
 
    *compWasFound = FALSE;
 
    assert(nsepaterms >= 2);
-   assert(sepacomp->componentnumber >= 0);
+   assert(builder->componentnumber >= 0);
 
-   if( sepacomp->componentnumber++ > SEPARATOR_MAXNCHECKS )
+   if( builder->componentnumber > SEPARATOR_MAXNCHECKS )
    {
       SCIPdebugMessage("maximum number of components reached, stopping sepaDualAscent reductions \n");
       return;
@@ -499,32 +845,32 @@ void getNextComponent(
 
    if( *compWasFound )
    {
-      const int nsourcenodes = sepacomp->ngraphnodes - nsinknodes;
+      const int nsourcenodes = builder->ngraphnodes - nsinknodes;
 
       assert(nsinknodes > 0);
       assert(nsourcenodes > 0);
 
-      sepacomp->nsepatterms = nsepaterms;
-      sepacomp->sepaterms = sepaterms;
+      builder->nsepatterms = nsepaterms;
+      builder->sepaterms = sepaterms;
 
       /* NOTE: we want to take the smaller component if possible */
-      if( nsinknodes > nsourcenodes && !sepacomp->rootcompIsProcessed )
+      if( nsinknodes > nsourcenodes && !builder->rootcompIsProcessed )
       {
          const int sourceterm = mincut_termsepasGetSource(termsepas);
          assert(graph_knot_isInRange(g, sourceterm));
 
-         sepacomp->sourceterm = sourceterm;
-         sepacomp->ncomponentnodes = nsourcenodes;
+         builder->sourceterm = sourceterm;
+         builder->ncomponentnodes = nsourcenodes;
          /* NOTE: even if the component turns out to not be promising, we only want to check it once */
-         sepacomp->rootcompIsProcessed = TRUE;
+         builder->rootcompIsProcessed = TRUE;
       }
       else
       {
-         sepacomp->sourceterm = sinkterm;
-         sepacomp->ncomponentnodes = nsinknodes;
+         builder->sourceterm = sinkterm;
+         builder->ncomponentnodes = nsinknodes;
       }
 
-      SCIPdebugMessage("selecting component: source=%d, |S|=%d, |V'|=%d \n", sepacomp->sourceterm, nsepaterms, sepacomp->ncomponentnodes);
+      SCIPdebugMessage("selecting component: source=%d, |S|=%d, |V'|=%d \n", builder->sourceterm, nsepaterms, builder->ncomponentnodes);
    }
    else
    {
@@ -547,39 +893,39 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
    int*                  nelims              /**< number of eliminations*/
    )
 {
-   COMPINIT sepacomp = { .sepaterms = NULL, .sourceterm = -1,
-                         .nsepatterms = 2, .componentnumber = 0,
-                         .ncomponentnodes = -1, .ngraphnodes = -1,
-                         .rootcompIsProcessed = FALSE };
+   COMPBUILDER* builder;
    TERMSEPAS* termsepas;
 
    assert(scip && g && nelims && extperma);
    *nelims = 0;
 
-   graph_get_nVET(g, &(sepacomp.ngraphnodes), NULL, NULL);
-
    // todo probably we want to have an array (parameter) to keep the nodes for pseudo-elimination
 
    SCIP_CALL( mincut_termsepasInit(scip, g, &termsepas) );
+   SCIP_CALL( compbuilderInit(scip, g, &builder) );
+
    // todo different random seed! g->terms maybe
    SCIP_CALL( mincut_findTerminalSeparators(scip, 1, g, termsepas) );
 
    for( ;; )
    {
       SCIP_Bool compWasFound;
-      getNextComponent(scip, g, termsepas, &sepacomp, &compWasFound);
+      getNextComponent(scip, g, termsepas, builder, &compWasFound);
 
       if( !compWasFound )
          break;
 
-      // todo problem: can we process root component multiple times????
-      if( !termcompIsPromising(g, &sepacomp) )
+      if( !termcompIsPromising(g, builder) )
          continue;
 
-      SCIP_CALL( processComponent(scip, &sepacomp, g, extperma, nelims) );
+      SCIP_CALL( processComponent(scip, builder, g, extperma, nelims) );
+
+      builder->componentnumber++;
    }
 
+   compbuilderFree(scip, &builder);
    mincut_termsepasFree(scip, &termsepas);
+
 
    return SCIP_OKAY;
 }

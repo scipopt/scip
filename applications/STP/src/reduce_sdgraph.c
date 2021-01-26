@@ -217,8 +217,10 @@ SCIP_Real sdgraphGetSd(
       if( distgraph->cost[ne] > sdist )
          sdist = distgraph->cost[ne];
 
+      assert(GE(mstsdist[tempnode], 0.0) == (mstsdist[tempnode] > -0.5));
+
       /* already visited? */
-      if( GE(mstsdist[tempnode], 0.0) )
+      if( mstsdist[tempnode] > -0.5 )
       {
          if( mstsdist[tempnode] > sdist )
             sdist = mstsdist[tempnode];

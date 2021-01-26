@@ -527,9 +527,6 @@ SCIP_RETCODE redcosts_initializeDistances(
       const int nCloseTerms = redcostdata->nCloseTerms;
       SCIP_CALL( SCIPallocBufferArray(scip, &state, nCloseTerms * nnodes) );
 
-      // todo deleteme
-      assert(nCloseTerms == 3);
-
       if( nCloseTerms == 2 )
       {
          graph_get2nextTermPaths(g, costrev, costrev, vnoi, vbase, state);
@@ -603,6 +600,7 @@ SCIP_RETCODE redcosts_initFromParams(
    return SCIP_OKAY;
 }
 
+
 /** initializes reduced costs data structure */
 SCIP_RETCODE redcosts_init(
    SCIP*                 scip,               /**< SCIP */
@@ -620,7 +618,6 @@ SCIP_RETCODE redcosts_init(
 
    return SCIP_OKAY;
 }
-
 
 
 /** sets cutoff */
