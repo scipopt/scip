@@ -2676,16 +2676,19 @@ SCIP_RETCODE reversePropagateLinearExpr(
    SCIP_CALL( SCIPallocBufferArray(scip, &newboundslin, nlinexprs) );
 
    for( i = 0; i < nlinexprs; ++i )
-      oldboundslin[i] = SCIPexprGetActivity(linexprs[i]);
+      oldboundslin[i] = SCIPexprGetActivity(linexprs[i]);  /* TODO use SCIPgetExprBoundsNonlinear(scip, linexprs[i]) ? */
 
    *nreductions = SCIPintervalPropagateWeightedSum(SCIP_INTERVAL_INFINITY, nlinexprs,
             oldboundslin, lincoefs, constant, rhs, newboundslin, infeasible);
 
-   /* SCIP is more conservative with what constitutes a reduction than interval arithmetic so we follow SCIP */
-   *nreductions = 0;
-   for( i = 0; i < nlinexprs && ! (*infeasible); ++i )
+   if( *nreductions > 0 && !*infeasible )
    {
-      SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, linexprs[i], newboundslin[i], infeasible, nreductions) );
+      /* SCIP is more conservative with what constitutes a reduction than interval arithmetic so we follow SCIP */
+      *nreductions = 0;
+      for( i = 0; i < nlinexprs && ! (*infeasible); ++i )
+      {
+         SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, linexprs[i], newboundslin[i], infeasible, nreductions) );
+      }
    }
 
    SCIPfreeBufferArray(scip, &newboundslin);
@@ -3645,7 +3648,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    SCIP_INTERVAL quadactivity;
    int i;
 
-   SCIPdebugMsg(scip, "Reverse propagation of quadratic expr\n");
+   SCIPdebugMsg(scip, "Reverse propagation of quadratic expr given bounds = [%g,%g]\n", bounds.inf, bounds.sup);
 
    assert(scip != NULL);
    assert(expr != NULL);
