@@ -77,6 +77,7 @@ typedef struct terminal_separator_component
    int*                  edgemap_subToOrg;   /**< map */
    int*                  nodes_mark;         /**< marker for nodes of component */
    STP_Vectype(int)      bfsqueue;           /**< queue for BFS */
+   SCIP_Real             subprimalobj;
    int                   subnnodes;
    int                   subnedges;
 } TERMCOMP;
@@ -398,6 +399,7 @@ SCIP_RETCODE termcompInit(
    comp->bfsqueue = NULL;
    comp->subnedges = -1;
    comp->subnnodes = -1;
+   comp->subprimalobj = -FARAWAY;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(comp->nodes_mark), g->knots) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(comp->nodemap_orgToSub), g->knots) );
@@ -713,9 +715,10 @@ SCIP_RETCODE termcompReduce(
    RCPARAMS rcparams = { .cutoff = -1.0, .nLevels = 1, .nCloseTerms = 2, .nnodes = subgraph->knots,
                        .nedges = subgraph->edges, .redCostRoot = subgraph->source };
    REDCOST* redcostdata;
-   const int* const subsol = termcomp->subsolution; // maybe also have a path for the subsolution? and modify it?
-   const SCIP_Real subprimal = solstp_getObj(subgraph, subsol, 0.0);
+   const SCIP_Real subprimal = termcomp->subprimalobj;
    SCIP_Real subdual;
+
+   assert(GE(subprimal, 0.0));
 
    SCIP_CALL( redcosts_initFromParams(scip, &rcparams, &redcostdata) );
 
@@ -778,6 +781,7 @@ SCIP_RETCODE termcompComputeSubgraphSol(
    assert(success);
 
    termcomp->subsolution = subsol;
+   termcomp->subprimalobj = solstp_getObj(subgraph, subsol, 0.0);
    SCIPfreeBufferArray(scip, &redcosts);
 
 #ifdef SCIP_DEBUG
