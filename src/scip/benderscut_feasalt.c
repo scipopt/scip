@@ -252,7 +252,6 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
 /** updates the non-linear problem that is resolved to generate a cut for the infeasible subproblem */
 static
 SCIP_RETCODE updateAuxiliaryNonlinearSubproblem(
-   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERSCUT*      benderscut          /**< the benders' decomposition cut method */
    )
@@ -321,7 +320,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    }
    else
    {
-      SCIP_CALL( updateAuxiliaryNonlinearSubproblem(masterprob, subproblem, benderscut) );
+      SCIP_CALL( updateAuxiliaryNonlinearSubproblem(subproblem, benderscut) );
    }
 
    /* solving the NLPI problem to get the minimum infeasible solution */
