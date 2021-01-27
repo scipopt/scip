@@ -34,6 +34,12 @@
 
 #define _USE_MATH_DEFINES  /* to get M_PI, etc, on Windows */
 
+/* workaround if standard makefiles aren't used */
+#if !defined(_XOPEN_SOURCE) || _XOPEN_SOURCE < 600
+#undef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
+#endif
+
 #include <stdio.h>
 #include <math.h>
 
