@@ -1595,6 +1595,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    assert(redcosts_getRootTop(redcostdata) >= 0 && redcosts_getRootTop(redcostdata) < graph->knots);
    assert(graph_isMarked(graph));
    assert((result != NULL) == extperma->solIsValid);
+   assert(!extperma->solIsValid || solstp_isValid(scip, graph, result));
 
    *nelims = 0;
 
@@ -1646,8 +1647,6 @@ SCIP_RETCODE extreduce_deleteEdges(
       *nelims += ngenstarelims;
    }
 
-
-
    assert(graphmarkIsClean(redcostdata, graph));
 
    return SCIP_OKAY;
@@ -1670,6 +1669,7 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 
    assert(scip && extperma && extperma->redcostdata && graph && nelims);
    assert(!extperma->useSdBias);
+   assert(!extperma->solIsValid || solstp_isValid(scip, graph, result));
 
    *nelims = 0;
 

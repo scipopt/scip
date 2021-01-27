@@ -2780,6 +2780,7 @@ SCIP_RETCODE reduce_da(
          {
             const SCIP_Bool useSd = !graph_pc_isPc(graph);
             SCIP_CALL( extreduce_init(scip, useSd, paramsda->extredMode, graph, redcostdata, &extpermanent) );
+            havebestsol = havebestsol && solstp_isUnreduced(scip, graph, bestresult);
             extpermanent->solIsValid = havebestsol;
             extpermanent->result = havebestsol ? bestresult : NULL;
 
@@ -2798,14 +2799,18 @@ SCIP_RETCODE reduce_da(
          reduce_sollocalSetOffset(*offsetp, redsollocal);
          reduce_sollocalUpdateUpperBound(upperbound, redsollocal);
 
-         if( reduce_sollocalUsesNodesol(redsollocal) && havebestsol )
+         if( reduce_sollocalUsesNodesol(redsollocal) )
          {
-            SCIP_Bool isinfeas;
-            SCIP_CALL(solstp_rerootInfeas(scip, graph, bestresult, graph->source, &isinfeas));
-
-            if( !isinfeas )
+            havebestsol = havebestsol && solstp_isUnreduced(scip, graph, bestresult);
+            if( havebestsol )
             {
-               SCIP_CALL( reduce_sollocalUpdateNodesol(scip, bestresult, graph, redsollocal) );
+               SCIP_Bool isinfeas;
+               SCIP_CALL(solstp_rerootInfeas(scip, graph, bestresult, graph->source, &isinfeas));
+
+               if( !isinfeas )
+               {
+                  SCIP_CALL( reduce_sollocalUpdateNodesol(scip, bestresult, graph, redsollocal) );
+               }
             }
          }
       }
