@@ -198,6 +198,13 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 
    *infeasible = FALSE;
 
+   if( !SCIPexprhdlrHasInitEstimates(SCIPexprGetHdlr(expr)) )
+      return SCIP_OKAY;
+
+   SCIPdebug( SCIPinfoMessage(scip, NULL, "initsepa exprhdlr %s for expr ", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr))) );
+   SCIPdebug( SCIPprintExpr(scip, expr, NULL) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, "\n") );
+
    /* get global bounds of auxiliary variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &childrenbounds, SCIPexprGetNChildren(expr)) );
    for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
@@ -258,8 +265,14 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
             /* add the cut */
             SCIP_ROW* row;
 
+            (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "init%sestimate%d_%s", i == 0 ? "under" : "over", nreturned, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
+
             SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+
+            SCIPdebug( SCIPinfoMessage(scip, NULL, "  added %scut ", *infeasible ? "infeasible " : "") );
+            SCIPdebug( SCIPprintRow(scip, row, NULL) );
+
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
       }
