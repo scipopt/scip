@@ -32,16 +32,13 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES  /* to get M_PI, etc, on Windows */
+
 #include <stdio.h>
 #include <math.h>
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-
-#ifndef M_PI
-#define M_PI           3.141592653589793238462643
-#endif
-
 
 /* Model parameters */
 
@@ -178,7 +175,7 @@ SCIP_RETCODE setupProblem(
 
       /* create PI/2 * (ncoils+2)*coil*wire^2 - volume */
       exprs[0] = prodexpr;
-      coefs[0] = M_PI / 2.0;
+      coefs[0] = M_PI_2;
       exprs[1] = volumeexpr;
       coefs[1] = -1.0;
       SCIP_CALL( SCIPcreateExprSum(scip, &expr, 2, exprs, coefs, 0.0, NULL, NULL) );
