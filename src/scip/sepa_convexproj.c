@@ -227,7 +227,11 @@ SCIP_RETCODE generateCut(
 
       gradx0 +=  grad * SCIPgetSolVal(scip, projection, var);
       SCIP_CALL( SCIPaddVarToRow(scip, *row, var, grad) );
+
+      SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
    }
+
+   SCIPfreeBufferArray(scip, &varexprs);
 
    SCIP_CALL( SCIPflushRowExtensions(scip, *row) );
 
