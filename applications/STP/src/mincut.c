@@ -537,15 +537,18 @@ void termsepaCollectCutNodes(
 }
 
 
-/** removes terminals in current cut */
+
+/** helper; traverses and does additional optional stuff */
 static
-SCIP_RETCODE termsepaRemoveCutTerminals(
+SCIP_RETCODE termsepaTraverseSinkComp(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
+   SCIP_Bool             removeTerms,
    int                   ncutterms,
    const int*            cutterms,
    int                   sinkterm,           /**< sink terminal of current cut */
-   MINCUT*               mincut              /**< minimum cut */
+   MINCUT*               mincut,             /**< minimum cut */
+   int*                  ncompnodes
 )
 {
    int* RESTRICT termcands = mincut->terms;
@@ -579,7 +582,7 @@ SCIP_RETCODE termsepaRemoveCutTerminals(
       const int node = queue[i];
       assert(nodes_isVisited[node]);
 
-      if( Is_term(g->term[node]) && node != sinkterm )
+      if( removeTerms && Is_term(g->term[node]) && node != sinkterm )
       {
          const int ntermcands = mincut->ntermcands;
 
@@ -612,6 +615,9 @@ SCIP_RETCODE termsepaRemoveCutTerminals(
       }
    }
 
+   if( ncompnodes )
+      *ncompnodes = StpVecGetSize(queue);
+
    for( int i = 0; i < StpVecGetSize(queue); i++ )
    {
       const int node = queue[i];
@@ -641,41 +647,83 @@ SCIP_RETCODE termsepaRemoveCutTerminals(
 }
 
 
+/** removes terminals in current cut */
+static
+SCIP_RETCODE termsepaRemoveCutTerminals(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   ncutterms,
+   const int*            cutterms,
+   int                   sinkterm,           /**< sink terminal of current cut */
+   MINCUT*               mincut              /**< minimum cut */
+)
+{
+   const SCIP_Bool removeTerms = TRUE;
+   SCIP_CALL( termsepaTraverseSinkComp(scip, g, removeTerms, ncutterms, cutterms, sinkterm, mincut, NULL) );
+
+   return SCIP_OKAY;
+}
+
+
+/** gets number of nodes */
+static
+SCIP_RETCODE termsepaGetCompNnodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   ncutterms,
+   const int*            cutterms,
+   int                   sinkterm,           /**< sink terminal of current cut */
+   MINCUT*               mincut,             /**< minimum cut */
+   int*                  ncompnodes
+)
+{
+   const SCIP_Bool removeTerms = FALSE;
+   SCIP_CALL( termsepaTraverseSinkComp(scip, g, removeTerms, ncutterms, cutterms, sinkterm, mincut, ncompnodes) );
+
+   return SCIP_OKAY;
+}
+
+
 /** stores cut
  *  NOTE: this methods is call once the cut vertices are already stored in the CSR array */
 static
-void termsepaStoreCutFinalize(
+SCIP_RETCODE termsepaStoreCutFinalize(
+   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
    int                   sinkterm,
-   const MINCUT*         mincut,             /**< minimum cut */
+   MINCUT*               mincut,             /**< minimum cut */
    int                   ncutterms,
+   const int*            cutterms,
    TERMSEPAS*            termsepas           /**< terminal separator storage */
 )
 {
    TSEPA* sepas = termsepas->sepas;
    const int* const nodes_wakeState = mincut->nodes_wakeState;
-   const int nnodes = graph_get_nNodes(g);
    int nsinknodes = 0;
-   int nsinkterms = 0;
    const int nsepas_all = termsepas->nsepas_all;
 
    assert(0 <= nsepas_all && nsepas_all < TERMSEPA_MAXNCUTS);
    assert(0 <= ncutterms && ncutterms <= TERMSEPA_MAXCUTSIZE);
    assert(termsepas->nsepaterms_csr + ncutterms <= TERMSEPA_MAXNCUTS * TERMSEPA_MAXCUTSIZE);
 
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( nodes_wakeState[i] == 0 )
-      {
-         nsinknodes++;
-
-         if( Is_term(g->term[i]) )
-            nsinkterms++;
-      }
-   }
+   SCIP_CALL( termsepaGetCompNnodes(scip, g, ncutterms, cutterms, sinkterm, mincut, &nsinknodes) );
 
    sepas[nsepas_all].sinkterm = sinkterm;
    sepas[nsepas_all].nsinknodes = nsinknodes;
+
+#ifndef NDEBUG
+   {
+      int nsinknodes_dbg = 0;
+      const int nnodes = graph_get_nNodes(g);
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( nodes_wakeState[i] == 0 )
+            nsinknodes_dbg++;
+      }
+
+      assert(nsinknodes_dbg >= nsinknodes);
+   }
+#endif
 
    termsepas->sepastarts_csr[nsepas_all + 1] = termsepas->sepastarts_csr[nsepas_all] + ncutterms;
    termsepas->nsepaterms_csr += ncutterms;
@@ -686,16 +734,16 @@ void termsepaStoreCutFinalize(
 
    if( ncutterms <= 8 )
    {
-      const int* cutterms = &(termsepas->sepaterms_csr[nsepas_all]);
-
       printf("terminal cut of size %d for sink %d \n", ncutterms, sinkterm);
-      printf("nsinknodes=%d nsinkterms=%d \n", nsinknodes, nsinkterms);
+      printf("nsinknodes=%d  \n", nsinknodes);
 
       for( int i = 0; i < ncutterms; i++ )
       {
          printf("%d \n", cutterms[i]);
       }
    }
+
+   return SCIP_OKAY;
 }
 
 
@@ -728,12 +776,9 @@ SCIP_RETCODE termsepaStoreCutTry(
     //  if( !termsepaCutIsCorrect(scip, g, ncutterms, cutterms, sinkterm, mincut) )
     //     return SCIP_ERROR;
 
-      termsepaStoreCutFinalize(g, sinkterm, mincut, ncutterms, termsepas);
+      SCIP_CALL( termsepaStoreCutFinalize(scip, g, sinkterm, mincut, ncutterms, cutterms, termsepas) );
 
-      if( ncutterms > 1 )
-      {
-         SCIP_CALL( termsepaRemoveCutTerminals(scip, g, ncutterms, cutterms, sinkterm, mincut) );
-      }
+      SCIP_CALL( termsepaRemoveCutTerminals(scip, g, ncutterms, cutterms, sinkterm, mincut) );
    }
 
    return SCIP_OKAY;
