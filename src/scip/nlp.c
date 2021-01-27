@@ -1631,7 +1631,7 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
       if( SCIPexprGetEvalValue(nlrow->expr) == SCIP_INVALID )
          *activity = SCIP_INVALID;
       else
-         *activity = SCIPexprGetEvalValue(nlrow->expr);
+         *activity += SCIPexprGetEvalValue(nlrow->expr);
    }
 
    inf = SCIPsetInfinity(set);
