@@ -698,7 +698,6 @@ SCIP_RETCODE termsepaStoreCutFinalize(
 )
 {
    TSEPA* sepas = termsepas->sepas;
-   const int* const nodes_wakeState = mincut->nodes_wakeState;
    int nsinknodes = 0;
    const int nsepas_all = termsepas->nsepas_all;
 
@@ -713,6 +712,7 @@ SCIP_RETCODE termsepaStoreCutFinalize(
 
 #ifndef NDEBUG
    {
+      const int* const nodes_wakeState = mincut->nodes_wakeState;
       int nsinknodes_dbg = 0;
       const int nnodes = graph_get_nNodes(g);
       for( int i = 0; i < nnodes; i++ )
