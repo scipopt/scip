@@ -771,7 +771,7 @@ SCIP_Bool termcompIsPromising(
    }
    else
    {
-      const SCIP_Real noderatio = builder->ncomponentnodes / builder->ngraphnodes;
+      const SCIP_Real noderatio = (SCIP_Real) builder->ncomponentnodes / (SCIP_Real) builder->ngraphnodes;
       assert(GT(noderatio, 0.0));
 
       SCIPdebugMessage(" noderatio=%f \n", noderatio);
