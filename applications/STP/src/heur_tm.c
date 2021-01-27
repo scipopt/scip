@@ -3656,33 +3656,29 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       for( int e = 0; e < nedges; e++ )
          soledges[e] = UNKNOWN;
 
-     // printf("termbound=%f \n", termbound);
-
       for( int k = 0; k < nnodes; k++ )
       {
          if( !Is_term(graph->term[k]) && nodes_inflow[k] > termbound )
-         {
             graph_knot_chg(graph, k, STP_TERM);
-         }
       }
 
       SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_bias,
             graph, &(graph->source), prize, soledges, 1, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor),
             nodepriority, &solFound));
 
-      SCIP_CALL( solstp_addSolToProb(scip, graph, soledges, heur, &solFound) );
-
-   //   printf("success2=%d \n", solFound);
-
-     // printf("obj1=%f obj2=%f \n", solstp_getObj(graph, result, SCIPprobdataGetOffset(scip)),
-       //    solstp_getObj(graph, soledges, SCIPprobdataGetOffset(scip)));
-
-
       for( int k = 0; k < nnodes; k++ )
       {
          if( graph->term[k] != termorg[k] )
             graph_knot_chg(graph, k, termorg[k]);
       }
+
+      SCIP_CALL( solstp_pruneFromEdges(scip, graph, soledges) );
+      SCIP_CALL( solstp_addSolToProb(scip, graph, soledges, heur, &solFound) );
+
+      // printf("termbound=%f \n", termbound);
+      //   printf("success2=%d \n", solFound);
+        // printf("obj1=%f obj2=%f \n", solstp_getObj(graph, result, SCIPprobdataGetOffset(scip)),
+          //    solstp_getObj(graph, soledges, SCIPprobdataGetOffset(scip)));
 
       SCIPfreeBufferArray(scip, &nodes_inflow);
       SCIPfreeBufferArray(scip, &termorg);
