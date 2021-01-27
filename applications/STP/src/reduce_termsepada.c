@@ -905,6 +905,11 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
    assert(scip && g && nelims && extperma);
    *nelims = 0;
 
+   if( g->terms == 1 )
+   {
+      return SCIP_OKAY;
+   }
+
    // todo probably we want to have an array (parameter) to keep the nodes for pseudo-elimination
 
    SCIP_CALL( mincut_termsepasInit(scip, g, &termsepas) );
@@ -950,6 +955,12 @@ SCIP_RETCODE reduce_sepaDualAscent(
    const SCIP_Bool useSd = TRUE;
 
    assert(scip && g && nelims);
+
+   if( g->terms == 1 )
+   {
+      *nelims = 0;
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( graph_init_dcsr(scip, g) );
    SCIP_CALL( extreduce_extPermaInit(scip, extred_fast, g, NULL, &extperma) );
