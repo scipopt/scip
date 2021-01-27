@@ -85,13 +85,15 @@ struct SCIP_BenderscutData
 /** frees the non linear problem */
 static
 SCIP_RETCODE freeNonlinearProblem(
-   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERSCUT*      benderscut          /**< the Benders' decomposition structure */
    )
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
 
-   assert(scip != NULL);
+   assert(masterprob != NULL);
+   assert(subproblem != NULL);
    assert(benderscut != NULL);
 
    benderscutdata = SCIPbenderscutGetData(benderscut);
@@ -101,15 +103,15 @@ SCIP_RETCODE freeNonlinearProblem(
    {
       assert(benderscutdata->nlpi != NULL);
 
-      SCIPfreeBlockMemoryArray(scip, &benderscutdata->slackvarinds, benderscutdata->nlpinvars);
-      SCIPfreeBlockMemoryArray(scip, &benderscutdata->slackvarubs, benderscutdata->nlpinvars);
-      SCIPfreeBlockMemoryArray(scip, &benderscutdata->slackvarlbs, benderscutdata->nlpinvars);
-      SCIPfreeBlockMemoryArray(scip, &benderscutdata->nlpirows, benderscutdata->nlpinrows);
-      SCIPfreeBlockMemoryArray(scip, &benderscutdata->nlpivars, benderscutdata->nlpinvars);
+      SCIPfreeBlockMemoryArray(masterprob, &benderscutdata->slackvarinds, benderscutdata->nlpinvars);
+      SCIPfreeBlockMemoryArray(masterprob, &benderscutdata->slackvarubs, benderscutdata->nlpinvars);
+      SCIPfreeBlockMemoryArray(masterprob, &benderscutdata->slackvarlbs, benderscutdata->nlpinvars);
+      SCIPfreeBlockMemoryArray(masterprob, &benderscutdata->nlpirows, benderscutdata->nlpinrows);
+      SCIPfreeBlockMemoryArray(masterprob, &benderscutdata->nlpivars, benderscutdata->nlpinvars);
       SCIPhashmapFree(&benderscutdata->row2idx);
       SCIPhashmapFree(&benderscutdata->var2idx);
 
-      SCIP_CALL( SCIPnlpiFreeProblem(scip, benderscutdata->nlpi, &benderscutdata->nlpiprob) );
+      SCIP_CALL( SCIPnlpiFreeProblem(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob) );
 
       benderscutdata->nlpinslackvars = 0;
       benderscutdata->nlpinrows = 0;
@@ -189,7 +191,7 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    assert(benderscutdata != NULL);
 
    /* first freeing the non-linear problem if it exists */
-   SCIP_CALL( freeNonlinearProblem(masterprob, benderscut) );
+   SCIP_CALL( freeNonlinearProblem(masterprob, subproblem, benderscut) );
 
    assert(benderscutdata->nlpi == NULL);
    assert(benderscutdata->nlpiprob == NULL);
@@ -199,7 +201,7 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    benderscutdata->nlpi = SCIPgetNlpis(subproblem)[0];
    assert(benderscutdata->nlpi != NULL);
 
-   SCIP_CALL( SCIPnlpiCreateProblem(masterprob, benderscutdata->nlpi, &benderscutdata->nlpiprob, "benders-feascutalt-nlp") );
+   SCIP_CALL( SCIPnlpiCreateProblem(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob, "benders-feascutalt-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&benderscutdata->var2idx, SCIPblkmem(masterprob), benderscutdata->nlpinvars) );
    SCIP_CALL( SCIPhashmapCreate(&benderscutdata->row2idx, SCIPblkmem(masterprob), benderscutdata->nlpinrows) );
 
@@ -235,11 +237,11 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    }
 
    /* setting the objective function */
-   SCIP_CALL( SCIPnlpiSetObjective(masterprob, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
+   SCIP_CALL( SCIPnlpiSetObjective(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
          benderscutdata->slackvarinds, obj, NULL, 0.0) );
 
    /* unfixing the slack variables */
-   SCIP_CALL( SCIPnlpiChgVarBounds(masterprob, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
+   SCIP_CALL( SCIPnlpiChgVarBounds(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
          benderscutdata->slackvarinds, benderscutdata->slackvarlbs, benderscutdata->slackvarubs) );
 
    SCIPfreeBufferArray(masterprob, &obj);
@@ -272,7 +274,7 @@ SCIP_RETCODE updateAuxiliaryNonlinearSubproblem(
          benderscutdata->nlpivars, benderscutdata->nlpinvars, SCIPinfinity(subproblem)) );
 
    /* unfixing the slack variables */
-   SCIP_CALL( SCIPnlpiChgVarBounds(masterprob, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
+   SCIP_CALL( SCIPnlpiChgVarBounds(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
          benderscutdata->slackvarinds, benderscutdata->slackvarlbs, benderscutdata->slackvarubs) );
 
    return SCIP_OKAY;
@@ -397,9 +399,6 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitFeasalt)
    assert( benderscut != NULL );
    assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
 
-   /* freeing the non-linear problem information */
-   SCIP_CALL( freeNonlinearProblem(scip, benderscut) );
-
    return SCIP_OKAY;
 }
 
@@ -447,6 +446,10 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeasalt)
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, subproblem, benders, benderscut, sol, probnumber, type, result) );
+
+      /* TODO this was in benderscutExitFeasalt, but freeNonlinearProblem now needs subproblem, which didn't seem to be easily available there */
+      /* freeing the non-linear problem information */
+      SCIP_CALL( freeNonlinearProblem(scip, subproblem, benderscut) );
    }
 
    return SCIP_OKAY;
