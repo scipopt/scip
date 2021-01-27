@@ -25,7 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +36,7 @@
 #include "reduce.h"
 #include "extreduce.h"
 #include "solstp.h"
+#include "heur_local.h"
 #include "mincut.h"
 #include "heur_ascendprune.h"
 #include "portab.h"
@@ -136,6 +137,20 @@ void compbuilderFree(
    SCIPfreeMemory(scip, compbuilder);
 }
 
+
+/** gets nodes ratio of subgraph  */
+static
+SCIP_Real compbuilderGetSubNodesRatio(
+   const COMPBUILDER*    compbuilder         /**< builder */
+   )
+{
+   const SCIP_Real ratio = (SCIP_Real) compbuilder->ncomponentnodes / (SCIP_Real) compbuilder->ngraphnodes;
+
+   assert(GT(ratio, 0.0));
+   assert(LE(ratio, 1.0));
+
+   return ratio;
+}
 
 /** identifies subgraph */
 static
@@ -780,6 +795,10 @@ SCIP_RETCODE termcompComputeSubgraphSol(
          daparams.root, &success, FALSE));
    assert(success);
 
+   // todo maybe deactivate if too expensive...
+   //if( compbuilderGetSubNodesRatio(termcomp->builder) <= COMPONENT_MAXNODESRATIO )
+   SCIP_CALL( SCIPStpHeurLocalRun(scip, subgraph, subsol) );
+
    termcomp->subsolution = subsol;
    termcomp->subprimalobj = solstp_getObj(subgraph, subsol, 0.0);
    SCIPfreeBufferArray(scip, &redcosts);
@@ -807,7 +826,7 @@ SCIP_Bool termcompIsPromising(
    }
    else
    {
-      const SCIP_Real noderatio = (SCIP_Real) builder->ncomponentnodes / (SCIP_Real) builder->ngraphnodes;
+      const SCIP_Real noderatio = compbuilderGetSubNodesRatio(builder);
       assert(GT(noderatio, 0.0));
 
       SCIPdebugMessage(" noderatio=%f \n", noderatio);

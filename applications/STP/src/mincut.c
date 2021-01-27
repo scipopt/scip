@@ -593,7 +593,7 @@ SCIP_RETCODE termsepaTraverseSinkComp(
          {
             if( node == termcands[t] )
             {
-               printf("removing terminal %d \n", node);
+              // printf("removing terminal %d \n", node);
 
                SWAP_INTS(termcands[mincut->ntermcands - 1], termcands[t]);
                mincut->ntermcands--;
