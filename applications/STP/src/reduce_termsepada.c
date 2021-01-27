@@ -480,6 +480,7 @@ SCIP_Real termcompGetExtBottleneckDist(
    {
       const int ne = mst[tempnode].edge;
 
+      assert(ne >= 0);
       assert(g->head[ne] == tempnode);
       tempnode = g->tail[ne];
 
@@ -505,6 +506,8 @@ SCIP_Real termcompGetExtBottleneckDist(
    while( tempnode != mstsource )
    {
       const int ne = mst[tempnode].edge;
+      assert(ne >= 0);
+
       tempnode = g->tail[ne];
 
       if( g->cost[ne] > sdist )
@@ -547,7 +550,8 @@ static
 SCIP_RETCODE termcompChangeSubgraphToBottleneck(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   TERMCOMP*             termcomp            /**< component */
+   TERMCOMP*             termcomp,           /**< component */
+   SCIP_Bool*            success
    )
 {
    GRAPH* subgraph = termcomp->subgraph;
@@ -562,12 +566,36 @@ SCIP_RETCODE termcompChangeSubgraphToBottleneck(
    const int nnodes = graph_get_nNodes(g);
    const int mstroot = sepaterms[0];
 
+   *success = TRUE;
+
    /* mark the anti-component */
    for( int i = 0; i < nnodes; i++ )
       g->mark[i] = (nodes_mark[i] != MARK_SUBNODE);
 
    SCIPallocBufferArray(scip, &mst, nnodes);
    graph_path_exec(scip, g, MST_MODE, mstroot, g->cost, mst);
+
+   for( int i = 0; i < nsepaterms; i++ )
+   {
+      const int term = sepaterms[i];
+      if( term != mstroot && mst[term].edge == -1 )
+      {
+         SCIPfreeBufferArray(scip, &mst);
+         *success = FALSE;
+         graph_mark(g);
+         return SCIP_OKAY;
+      }
+   }
+
+#ifndef NDEBUG
+   for( int i = 0; i < g->knots; i++ )
+   {
+      if( Is_term(g->term[i]) && g->mark[i] && i != mstroot )
+      {
+         assert(mst[i].edge != -1);
+      }
+   }
+#endif
 
    for( int i = 0; i < subgraph->knots; i++ )
       subgraph->mark[i] = MARK_NONACTIVE;
@@ -606,6 +634,7 @@ SCIP_RETCODE termcompChangeSubgraphToBottleneck(
       }
    }
 
+   graph_mark(g);
    SCIPfreeBufferArray(scip, &mst);
 
    return SCIP_OKAY;
@@ -619,7 +648,8 @@ void termcompDeleteEdges(
    REDCOST*              redcostdata,        /**< reduced costs */
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
-   TERMCOMP*             termcomp            /**< component */
+   TERMCOMP*             termcomp,           /**< component */
+   int*                  nelims              /**< number of eliminations*/
    )
 {
    GRAPH* subgraph = termcomp->subgraph;
@@ -630,7 +660,7 @@ void termcompDeleteEdges(
    const SCIP_Real cutoffbound = redcosts_getCutoffTop(redcostdata);
    const int* const edgemap_subToOrg = termcomp->edgemap_subToOrg;
 
-   graph_mark(g);
+   assert(graph_isMarked(g));
 
    for( int k = 0; k < subnnodes; k++ )
    {
@@ -657,6 +687,7 @@ void termcompDeleteEdges(
                graph_edge_printInfo(g, edgemap_subToOrg[e]);
 #endif
                extreduce_edgeRemove(scip, edgemap_subToOrg[e], g, extperma->distdata_default, extperma);
+               (*nelims)++;
             }
          }
       }
@@ -672,7 +703,8 @@ SCIP_RETCODE termcompReduce(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
-   TERMCOMP*             termcomp            /**< component */
+   TERMCOMP*             termcomp,           /**< component */
+   int*                  nelims              /**< number of eliminations*/
    )
 {
    DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = -1,
@@ -697,7 +729,7 @@ SCIP_RETCODE termcompReduce(
    SCIP_CALL( redcosts_initializeDistancesTop(scip, subgraph, redcostdata) );
    redcosts_setCutoffFromBoundTop(subprimal, redcostdata);
 
-   termcompDeleteEdges(scip, redcostdata, g, extperma, termcomp);
+   termcompDeleteEdges(scip, redcostdata, g, extperma, termcomp, nelims);
 
    // todo check for nodes...don't delete
    {
@@ -800,14 +832,21 @@ SCIP_RETCODE processComponent(
    )
 {
    TERMCOMP* termcomp;
+   SCIP_Bool success;
 
    SCIP_CALL( termcompInit(scip, g, builder, &termcomp) );
    SCIP_CALL( termcompBuildSubgraphWithSds(scip, g, extperma, termcomp) );
    SCIP_CALL( termcompComputeSubgraphSol(scip, termcomp) );
-   SCIP_CALL( termcompChangeSubgraphToBottleneck(scip, g, termcomp) );
+   SCIP_CALL( termcompChangeSubgraphToBottleneck(scip, g, termcomp, &success) );
 
-   // todo, also mark pseudo-eliminaitons
-   SCIP_CALL( termcompReduce(scip, g, extperma, termcomp) );
+   assert(success || *nelims > 0);
+
+   /* NOTE: we might fail because the separator is not connected anymore one one side */
+   if( success )
+   {
+      // todo, also mark pseudo-eliminaitons
+      SCIP_CALL( termcompReduce(scip, g, extperma, termcomp, nelims) );
+   }
 
    termcompFree(scip, &termcomp);
 
