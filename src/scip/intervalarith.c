@@ -4593,6 +4593,8 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
  * Given constant + sum weights_i operands_i \in rhs,
  * computes possibly tighter interval for each term.
  *
+ * @attention valid values are returned in resultants only if any tightening has been found and no empty interval, that is, function returns with non-zero and *infeasible == FALSE
+ *
  * @return Number of terms for which resulting interval is smaller than operand interval.
  */
 int SCIPintervalPropagateWeightedSum(
@@ -4602,7 +4604,7 @@ int SCIPintervalPropagateWeightedSum(
    SCIP_Real*            weights,            /**< weights of intervals in sum */
    SCIP_Real             constant,           /**< constant in sum */
    SCIP_INTERVAL         rhs,                /**< right-hand-side interval */
-   SCIP_INTERVAL*        resultants,         /**< array to store propagated intervals */
+   SCIP_INTERVAL*        resultants,         /**< array to store propagated intervals, if any reduction is found at all (check return code and *infeasible) */
    SCIP_Bool*            infeasible          /**< buffer to store if propagation produced empty interval */
    )
 {
@@ -4648,7 +4650,7 @@ int SCIPintervalPropagateWeightedSum(
       if( SCIPintervalIsEmpty(infinity, childbounds) )
       {
          *infeasible = TRUE;
-         c = 0;  /* signal for terminate code to copy all operands to resultants */
+         c = noperands;  /* signal for terminate code to not copy operands to resultants because we return *infeasible == TRUE */
          goto TERMINATE;
       }
 
@@ -4680,11 +4682,11 @@ int SCIPintervalPropagateWeightedSum(
    /* if there are too many unbounded bounds, then could only compute infinite bounds for children, so give up */
    if( (minlinactivityinf >= 2 || rhs.sup >= infinity) && (maxlinactivityinf >= 2 || rhs.inf <= -infinity) )
    {
-      c = 0;  /* signal for terminate code to copy all operands to resultants */
+      c = noperands;  /* signal for terminate code that it doesn't need to copy operands to resultants because we return nreductions==0 */
       goto TERMINATE;
    }
 
-   for( c = 0; c < noperands && !(*infeasible); ++c )
+   for( c = 0; c < noperands; ++c )
    {
       /* upper bounds of c_i is
        *   node->bounds.sup - (minlinactivity - c_i.inf), if c_i.inf > -infinity and minlinactivityinf == 0
@@ -4731,8 +4733,12 @@ int SCIPintervalPropagateWeightedSum(
 
       SCIPintervalIntersect(&resultants[c], operands[c], childbounds);
       if( SCIPintervalIsEmpty(infinity, resultants[c]) )
+      {
          *infeasible = TRUE;
-      else if( resultants[c].inf != operands[c].inf || resultants[c].sup != operands[c].sup )  /*lint !e777*/
+         c = noperands;
+         goto TERMINATE;
+      }
+      if( resultants[c].inf != operands[c].inf || resultants[c].sup != operands[c].sup )  /*lint !e777*/
          ++nreductions;
    }
 
