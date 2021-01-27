@@ -188,7 +188,7 @@ SCIP_RETCODE generateCut(
 
    gradx0 = 0.0;
 
-   /* an nlrow has a linear part, quadratic part and expression; ideally one would just build the gradient but we
+   /* an nlrow has a linear part and expression; ideally one would just build the gradient but we
     * do not know if the different parts share variables or not, so we can't just build the gradient; for this reason
     * we create the row right away and compute the gradients of each part independently and add them to the row; the
     * row takes care to add coeffs corresponding to the same variable when they appear in different parts of the nlrow

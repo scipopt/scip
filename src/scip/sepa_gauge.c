@@ -567,6 +567,12 @@ SCIP_RETCODE generateCut(
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
+   /* linear part */
+   for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )
+   {
+      SCIP_CALL( SCIPaddVarToRow(scip, row, SCIPnlrowGetLinearVars(nlrow)[i], SCIPnlrowGetLinearCoefs(nlrow)[i]) );
+   }
+
    expr = SCIPnlrowGetExpr(nlrow);
 
    assert(expr != NULL);
