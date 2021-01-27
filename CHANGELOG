@@ -64,6 +64,8 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- Added workaround for bug in MSVS 2019 when compiling CppAD source.
+
 Known bugs
 ----------
 
