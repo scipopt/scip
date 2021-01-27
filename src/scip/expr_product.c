@@ -1701,6 +1701,8 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
    assert(constant != NULL);
    assert(success != NULL);
 
+   *success = FALSE;
+
    /* assemble box, check for unbounded variables, assemble xstar */
    SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nfactors) );
    SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nfactors) );
@@ -1725,6 +1727,7 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
 
    if( nfixed < nfactors && nfactors - nfixed <= SCIP_MAXVERTEXPOLYDIM )
    {
+      // FIXME store conshdlr in exprhdlrdata and handle case that it isn't available
       SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"),
          overestimate, prodfunction, &constantfactor, xstar, box, nfactors, targetvalue, success, coefs, constant) );
    }
