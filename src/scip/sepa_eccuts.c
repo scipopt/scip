@@ -1940,9 +1940,6 @@ SCIP_RETCODE findAndStoreEcAggregations(
    assert(nlrow != NULL);
    assert(sepadata != NULL);
 
-   SCIPexprGetQuadraticData(SCIPnlrowGetExpr(nlrow), NULL, NULL, NULL, NULL, &nquadvars, NULL, NULL, NULL);
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadvar2aggr, nquadvars) ); /*lint !e705*/
-
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "search for edge-concave aggregation for the nonlinear row: \n");
    SCIP_CALL( SCIPprintNlRow(scip, nlrow, NULL) );
@@ -1951,6 +1948,12 @@ SCIP_RETCODE findAndStoreEcAggregations(
    /* check obvious conditions for existing cycles with an odd number of positive/negative edges */
    SCIP_CALL( isCandidate(scip, sepadata, nlrow, &rhscandidate, &lhscandidate) );
    SCIPdebugMsg(scip, "rhs candidate = %u lhs candidate = %u\n", rhscandidate, lhscandidate);
+
+   if( !rhscandidate && !lhscandidate )
+      return SCIP_OKAY;
+
+   SCIPexprGetQuadraticData(SCIPnlrowGetExpr(nlrow), NULL, NULL, NULL, NULL, &nquadvars, NULL, NULL, NULL);
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadvar2aggr, nquadvars) ); /*lint !e705*/
 
    /* search for edge-concave aggregations (consider <= rhs) */
    if( rhscandidate )
