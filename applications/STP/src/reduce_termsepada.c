@@ -75,6 +75,7 @@ typedef struct terminal_separator_component
    int*                  nodemap_orgToSub;   /**< map */
    int*                  nodemap_subToOrg;   /**< map */
    int*                  edgemap_subToOrg;   /**< map */
+   int*                  nodes_mark;         /**< marker for nodes of component */
    STP_Vectype(int)      bfsqueue;           /**< queue for BFS */
    int                   subnnodes;
    int                   subnedges;
@@ -147,7 +148,7 @@ void subgraphIdentify(
    const int* const sepaterms = builder->sepaterms;
    int* const nodemap_orgToSub = termcomp->nodemap_orgToSub;
    STP_Vectype(int) bfsqueue = NULL;
-   int* RESTRICT gmark = g->mark;
+   int* RESTRICT gmark = termcomp->nodes_mark;
    int sub_e = 0;
    int sub_n = 0;
    const int nsepaterms = builder->nsepatterms;
@@ -231,7 +232,7 @@ SCIP_RETCODE subgraphBuild(
    const int* const nodemap_orgToSub = termcomp->nodemap_orgToSub;
    int* nodemap_subToOrg;
    int* edgemap_subToOrg;
-   const int* const orgmark = orggraph->mark;
+   const int* const orgmark = termcomp->nodes_mark;
    const int* const sepaterms = builder->sepaterms;
    const int nsepaterms = builder->nsepatterms;
    const int nnodes_sub = termcomp->subnnodes;
@@ -398,6 +399,7 @@ SCIP_RETCODE termcompInit(
    comp->subnedges = -1;
    comp->subnnodes = -1;
 
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(comp->nodes_mark), g->knots) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(comp->nodemap_orgToSub), g->knots) );
 
 #ifndef NDEBUG
@@ -431,6 +433,7 @@ void termcompFree(
    }
 
    SCIPfreeMemoryArray(scip, &(comp->nodemap_orgToSub));
+   SCIPfreeMemoryArray(scip, &(comp->nodes_mark));
 
    SCIPfreeMemory(scip, termcomp);
 }
@@ -554,13 +557,14 @@ SCIP_RETCODE termcompChangeSubgraphToBottleneck(
    const int* const sepaterms = builder->sepaterms;
    const int* const nodemap_orgToSub = termcomp->nodemap_orgToSub;
    const int* const nodemap_subToOrg = termcomp->nodemap_subToOrg;
+   const int* const nodes_mark = termcomp->nodes_mark;
    const int nsepaterms = builder->nsepatterms;
    const int nnodes = graph_get_nNodes(g);
    const int mstroot = sepaterms[0];
 
    /* mark the anti-component */
    for( int i = 0; i < nnodes; i++ )
-      g->mark[i] = (g->mark[i] != MARK_SUBNODE);
+      g->mark[i] = (nodes_mark[i] != MARK_SUBNODE);
 
    SCIPallocBufferArray(scip, &mst, nnodes);
    graph_path_exec(scip, g, MST_MODE, mstroot, g->cost, mst);
@@ -657,6 +661,8 @@ void termcompDeleteEdges(
          }
       }
    }
+
+   assert(graph_valid(scip, g));
 }
 
 
