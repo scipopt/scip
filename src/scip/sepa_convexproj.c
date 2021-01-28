@@ -166,6 +166,7 @@ SCIP_RETCODE generateCut(
    SCIP_NLROW*           nlrow,              /**< constraint for which we generate gradient cut */
    CONVEXSIDE            convexside,         /**< which side makes the nlrow convex */
    SCIP_Real             activity,           /**< activity of constraint at projection */
+   SCIP_EXPRITER*        exprit,             /**< expression iterator that can be used */
    SCIP_ROW**            row                 /**< storage for cut */
    )
 {
@@ -173,8 +174,6 @@ SCIP_RETCODE generateCut(
    SCIP_SEPADATA* sepadata;
    SCIP_Real gradx0; /* <grad f(x_0), x_0> */
    SCIP_EXPR* expr;
-   SCIP_EXPR** varexprs;
-   int nvars;
    int i;
 
    assert(scip != NULL);
@@ -213,25 +212,23 @@ SCIP_RETCODE generateCut(
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, projection, 0L) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvars) );
-
-   /* expression part */
-   for( i = 0; i < nvars; i++ )
+   SCIP_CALL( SCIPexpriterInit(exprit, expr, SCIP_EXPRITER_DFS, FALSE) );
+   for( ; !SCIPexpriterIsEnd(exprit); expr = SCIPexpriterGetNext(exprit) )  /*lint !e441*/
    {
       SCIP_Real grad;
       SCIP_VAR* var;
 
-      grad = SCIPexprGetDerivative(varexprs[i]);
-      var = SCIPgetVarExprVar(varexprs[i]);
+      if( !SCIPisExprVar(scip, expr) )
+         continue;
 
-      gradx0 +=  grad * SCIPgetSolVal(scip, projection, var);
+      grad = SCIPexprGetDerivative(expr);
+      var = SCIPgetVarExprVar(expr);
+      assert(var != NULL);
+
+      gradx0 += grad * SCIPgetSolVal(scip, projection, var);
       SCIP_CALL( SCIPaddVarToRow(scip, *row, var, grad) );
-
-      SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
    }
 
-   SCIPfreeBufferArray(scip, &varexprs);
 
    SCIP_CALL( SCIPflushRowExtensions(scip, *row) );
 
@@ -332,6 +329,7 @@ SCIP_RETCODE separateCuts(
    int            iterlimit;
    int*           lininds;
    SCIP_Bool      nlpunstable;
+   SCIP_EXPRITER* exprit;
 
    nlpunstable = FALSE;
 
@@ -436,6 +434,8 @@ SCIP_RETCODE separateCuts(
          }
          SCIPdebug( SCIPprintSol(scip, projection, NULL, TRUE) );
 
+         SCIP_CALL( SCIPcreateExpriter(scip, &exprit) );
+
          /* check for active or violated constraints */
          for( i = 0; i < sepadata->nnlrows; ++i )
          {
@@ -463,7 +463,7 @@ SCIP_RETCODE separateCuts(
             {
                SCIP_ROW* row;
 
-               SCIP_CALL( generateCut(scip, sepa, projection, nlrow, convexside, activity,
+               SCIP_CALL( generateCut(scip, sepa, projection, nlrow, convexside, activity, exprit,
                         &row) );
 
                SCIPdebugMsg(scip, "active or violated nlrow: (sols vio: %e)\n", sepadata->constraintviolation[i]);
@@ -494,6 +494,8 @@ SCIP_RETCODE separateCuts(
                SCIP_CALL( SCIPreleaseRow(scip, &row) );
             }
          }
+
+         SCIPfreeExpriter(&exprit);
 
 #ifdef SCIP_DEBUG
          {

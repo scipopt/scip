@@ -44,7 +44,6 @@ static SCIP_HEUR* heurmultistart;
 static SCIP_HASHMAP* varindex;
 static SCIP_SOL* sol;
 static SCIP_RANDNUMGEN* randumgen;
-static SCIP_EXPR* varexprs[50];
 
 #define EPS    1e-5
 
@@ -152,18 +151,21 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    SCIP_Real grad[2];
    SCIP_EXPR* expr;
    SCIP_Real norm;
+   SCIP_EXPRITER* exprit;
 
    linvars[0] = x;
    linvars[1] = y;
    lincoefs[0] = 2.3;
    lincoefs[1] = -3.1;
 
+   SCIP_CALL( SCIPcreateExpriter(scip, &exprit) );
+
    /* compute the gradient for 2.3*x - 3.1*y at point (x,y) = (-2,3) */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -2.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 3.0) );
    SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, NULL, 1.0, 1.0,
          SCIP_EXPRCURV_UNKNOWN) );
-   SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, varexprs, grad, &norm) );
+   SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, exprit, grad, &norm) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
 
    cr_assert( SCIPisEQ(scip, grad[0], 2.3) );
@@ -176,7 +178,7 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -7.0) );
    SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, expr, 1.0, 1.0,
          SCIP_EXPRCURV_UNKNOWN) );
-   SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, varexprs, grad, &norm) );
+   SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, exprit, grad, &norm) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
 
    cr_assert( SCIPisEQ(scip, grad[0], 2.3 + 4 * 1 + 5 * (-7)), "expecting %g, got %g\n", 2.3 + 4 * 1 + 5 * (-7), grad[0]);
@@ -192,11 +194,12 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    /* create expression tree for 2.3*x - 3.1*y + 2*x^2 -4*y^2 + 5xy + x*e^y at point (x,y) = (3,3) */
    SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, "nlrow", 5.0, 2, linvars, lincoefs, expr, 1.0, 1.0,
          SCIP_EXPRCURV_UNKNOWN) );
-   SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, varexprs, grad, &norm) );
+   SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, exprit, grad, &norm) );
 
    cr_assert( SCIPisEQ(scip, grad[0], 2.3 + 4 * 3 + 5 * 3 + exp(3)) );
    cr_assert( SCIPisEQ(scip, grad[1], -3.1 - 8 * 3 + 5 * 3 + 3*exp(3)) );
 
+   SCIPfreeExpriter(&exprit);
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }

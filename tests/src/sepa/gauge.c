@@ -46,6 +46,7 @@ static SCIP_NLROW* nlrow2 = NULL;
 static SCIP_NLROW* nlrow3 = NULL;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
+static SCIP_EXPRITER* exprit;
 
 /* methods to test:
  * computeInteriorPoint: uses SCIP's NLP to build a convex NLP relaxation, solves it and store the solution in the sepadata.
@@ -191,11 +192,15 @@ void evaluation_setup(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
+   /* create expression iterator */
+   SCIP_CALL( SCIPcreateExpriter(scip, &exprit) );
 }
 
 static
 void teardown(void)
 {
+   SCIPfreeExpriter(&exprit);
+
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    if( nlrow1 != NULL )
@@ -357,7 +362,7 @@ Test(evaluation, gradient_cut_convex)
    /* compute gradient cut */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
-   SCIP_CALL( generateCut(scip, x0, nlrow1, convex, gradcut, &success) );
+   SCIP_CALL( generateCut(scip, x0, nlrow1, convex, exprit, gradcut, &success) );
    cr_assert(success);
 
    /* check coefficients */
@@ -394,7 +399,7 @@ Test(evaluation, gradient_cut_concave)
    /* compute gradient cut */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
-   SCIP_CALL( generateCut(scip, x0, nlrow1, convex, gradcut, &success) );
+   SCIP_CALL( generateCut(scip, x0, nlrow1, convex, exprit, gradcut, &success) );
    cr_assert(success);
 
    /* check coefficients */
@@ -431,7 +436,7 @@ Test(evaluation, gradient_complicated_convex)
    /* compute gradient cut */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
-   SCIP_CALL( generateCut(scip, x0, nlrow3, convex, gradcut, &success) );
+   SCIP_CALL( generateCut(scip, x0, nlrow3, convex, exprit, gradcut, &success) );
    cr_assert(success);
 
    /* check coefficients */
@@ -468,7 +473,7 @@ Test(evaluation, gradient_complicated_concave)
    /* compute gradient cut */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
-   SCIP_CALL( generateCut(scip, x0, nlrow3, convex, gradcut, &success) );
+   SCIP_CALL( generateCut(scip, x0, nlrow3, convex, exprit, gradcut, &success) );
    cr_assert(success);
 
    /* check coefficients */

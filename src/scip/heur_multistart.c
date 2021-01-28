@@ -241,7 +241,7 @@ SCIP_RETCODE computeGradient(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_SOL*             sol,                /**< solution to compute the gradient for */
    SCIP_HASHMAP*         varindex,           /**< maps variables to indicies between 0,..,SCIPgetNVars(scip)-1 uniquely */
-   SCIP_EXPR**           varexprs,           /**< buffer to store variable expressions */
+   SCIP_EXPRITER*        exprit,             /**< expression iterator that can be used */
    SCIP_Real*            grad,               /**< buffer to store the gradient; grad[varindex(i)] corresponds to SCIPgetVars(scip)[i] */
    SCIP_Real*            norm                /**< buffer to store ||grad||^2  */
    )
@@ -274,23 +274,22 @@ SCIP_RETCODE computeGradient(
 
    if( expr != NULL )
    {
-      int nvars;
-
-      /* TODO: change this when nlrows store the vars */
-      SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvars) );
+      assert(exprit != NULL);
 
       SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0L) );
 
-      /* update corresponding gradient entry */
-      for( i = 0; i < nvars; ++i )
+      /* TODO: change this when nlrows store the vars */
+      SCIP_CALL( SCIPexpriterInit(exprit, expr, SCIP_EXPRITER_DFS, FALSE) );
+      for( ; !SCIPexpriterIsEnd(exprit); expr = SCIPexpriterGetNext(exprit) )  /*lint !e441*/
       {
-         var = SCIPgetVarExprVar(varexprs[i]);
+         if( !SCIPisExprVar(scip, expr) )
+            continue;
+
+         var = SCIPgetVarExprVar(expr);
          assert(var != NULL);
          assert(getVarIndex(varindex, var) >= 0 && getVarIndex(varindex, var) < SCIPgetNVars(scip));
 
-         grad[getVarIndex(varindex, var)] += SCIPexprGetDerivative(varexprs[i]);
-
-         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
+         grad[getVarIndex(varindex, var)] += SCIPexprGetDerivative(expr);
       }
    }
 
@@ -318,7 +317,7 @@ SCIP_RETCODE improvePoint(
    )
 {
    SCIP_VAR** vars;
-   SCIP_EXPR** varexprs;
+   SCIP_EXPRITER* exprit;
    SCIP_Real* grad;
    SCIP_Real* updatevec;
    SCIP_Real lastminfeas;
@@ -357,7 +356,7 @@ SCIP_RETCODE improvePoint(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &grad, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &updatevec, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, nvars) );
+   SCIP_CALL( SCIPcreateExpriter(scip, &exprit) );
 
    /* main loop */
    for( r = 0; r < maxiter && SCIPisFeasLT(scip, *minfeas, 0.0); ++r )
@@ -385,7 +384,7 @@ SCIP_RETCODE improvePoint(
          ++nviolnlrows;
 
          SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrows[i], point, &activity) );
-         SCIP_CALL( computeGradient(scip, nlrows[i], point, varindex, varexprs, grad, &nlrownorm) );
+         SCIP_CALL( computeGradient(scip, nlrows[i], point, varindex, exprit, grad, &nlrownorm) );
 
          /* update estimated costs for computing gradients */
          *gradcosts += nlrowgradcosts[i];
@@ -441,7 +440,8 @@ TERMINATE:
    printf("niter=%d minfeas=%e\n", r, *minfeas);
 #endif
 
-   SCIPfreeBufferArray(scip, &varexprs);
+   SCIPfreeExpriter(&exprit);
+
    SCIPfreeBufferArray(scip, &updatevec);
    SCIPfreeBufferArray(scip, &grad);
 

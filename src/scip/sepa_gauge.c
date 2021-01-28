@@ -547,6 +547,7 @@ SCIP_RETCODE generateCut(
    SCIP_SOL*             sol,                /**< point used to construct gradient cut (x_0) */
    SCIP_NLROW*           nlrow,              /**< constraint */
    CONVEXSIDE            convexside,         /**< whether we use rhs or lhs of nlrow */
+   SCIP_EXPRITER*        exprit,             /**< expression iterator that can be used */
    SCIP_ROW*             row,                /**< storage for cut */
    SCIP_Bool*            success             /**< buffer to store whether the gradient was finite */
    )
@@ -554,8 +555,6 @@ SCIP_RETCODE generateCut(
    SCIP_EXPR* expr;
    SCIP_Real activity;
    SCIP_Real gradx0; /* <grad f(x_0), x_0> */
-   SCIP_EXPR** varexprs;
-   int nvars;
    int i;
 
    assert(scip != NULL);
@@ -574,21 +573,22 @@ SCIP_RETCODE generateCut(
    }
 
    expr = SCIPnlrowGetExpr(nlrow);
-
    assert(expr != NULL);
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0L) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvars) );
-
-   for( i = 0; i < nvars; i++ )
+   SCIP_CALL( SCIPexpriterInit(exprit, expr, SCIP_EXPRITER_DFS, FALSE) );
+   for( ; !SCIPexpriterIsEnd(exprit); expr = SCIPexpriterGetNext(exprit) )  /*lint !e441*/
    {
       SCIP_Real grad;
       SCIP_VAR* var;
 
-      grad = SCIPexprGetDerivative(varexprs[i]);
-      var = SCIPgetVarExprVar(varexprs[i]);
+      if( !SCIPisExprVar(scip, expr) )
+         continue;
+
+      grad = SCIPexprGetDerivative(expr);
+      var = SCIPgetVarExprVar(expr);
+      assert(var != NULL);
 
       /* check gradient entries: function might not be differentiable */
       if( !SCIPisFinite(grad) || grad == SCIP_INVALID ) /*lint !e777*/
@@ -597,13 +597,9 @@ SCIP_RETCODE generateCut(
          break;
       }
 
-      gradx0 +=  grad * SCIPgetSolVal(scip, sol, var);
+      gradx0 += grad * SCIPgetSolVal(scip, sol, var);
       SCIP_CALL( SCIPaddVarToRow(scip, row, var, grad) );
-
-      SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
    }
-
-   SCIPfreeBufferArray(scip, &varexprs);
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
@@ -663,6 +659,7 @@ SCIP_RETCODE separateCuts(
    int*           nlrowsidx;
    int            nnlrowsidx;
    int            i;
+   SCIP_EXPRITER* exprit;
 
    assert(sepa != NULL);
 
@@ -738,6 +735,8 @@ SCIP_RETCODE separateCuts(
       }
    }
 
+   SCIP_CALL( SCIPcreateExpriter(scip, &exprit) );
+
    /* generate cuts at sol */
    for( i = 0; i < nnlrowsidx; i++ )
    {
@@ -765,7 +764,7 @@ SCIP_RETCODE separateCuts(
       /* @todo: when local nlrows get supported in SCIP, one can think of recomputing the interior point */
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &row, sepa, rowname, -SCIPinfinity(scip), SCIPinfinity(scip),
                FALSE, FALSE , TRUE) );
-      SCIP_CALL( generateCut(scip, sol, nlrow, convexside, row, &success) );
+      SCIP_CALL( generateCut(scip, sol, nlrow, convexside, exprit, row, &success) );
 
       /* add cut */
       SCIPdebugMsg(scip, "cut <%s> has efficacy %g\n", SCIProwGetName(row), SCIPgetCutEfficacy(scip, NULL, row));
@@ -791,6 +790,8 @@ SCIP_RETCODE separateCuts(
       /* release the row */
       SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
+
+   SCIPfreeExpriter(&exprit);
 
 CLEANUP:
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
