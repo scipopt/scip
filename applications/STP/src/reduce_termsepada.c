@@ -46,8 +46,9 @@
 #define MARK_NONACTIVE 0
 #define MARK_SUBNODE   1
 #define MARK_SEPARATOR 2
-#define COMPONENT_MINNODESRATIO 0.01
-#define COMPONENT_MAXNODESRATIO 0.5
+#define COMPONENT_NODESRATIO_MIN 0.01
+#define COMPONENT_NODESRATIO_SMALL 0.1
+#define COMPONENT_NODESRATIO_MAX 0.5
 #define SEPARATOR_MAXSIZE 5
 #define SEPARATOR_MAXNCHECKS 50
 
@@ -681,32 +682,41 @@ void termcompDeleteEdges(
 
    for( int k = 0; k < subnnodes; k++ )
    {
-      for( int e = subgraph->outbeg[k]; e != EAT_LAST; e = subgraph->oeat[e] )
+      int e = subgraph->outbeg[k];
+      while( e != EAT_LAST )
       {
+         const int enext = subgraph->oeat[e];
          const int subhead = subgraph->head[e];
+         const int eorg = edgemap_subToOrg[e];
 
          /* NOTE: we avoid double checking and deletion of artificial edges */
-         if( subhead > k && edgemap_subToOrg[e] >= 0)
+         if( subhead > k && eorg >= 0)
          {
             SCIP_Real redcost = pathdist[k] + cost[e] + vnoi[subhead].dist;
 
             if( !SCIPisGT(scip, redcost, cutoffbound) )
+            {
+               e = enext;
                continue;
+            }
 
-           // graph_edge_printInfo(g, edgemap_subToOrg[e]);
           //  printf("%f %f %f \n", pathdist[k], cost[e], vnoi[subhead].dist);
             redcost = pathdist[subhead] + cost[flipedge(e)] + vnoi[k].dist;
 
-            if( SCIPisGT(scip, redcost, cutoffbound) )
+            if( SCIPisGT(scip, redcost, cutoffbound) && !graph_edge_isDeleted(g, eorg) )
             {
 #ifdef SCIP_DEBUG
                SCIPdebugMessage("deleting original edge (%f>%f): ", redcost, cutoffbound);
-               graph_edge_printInfo(g, edgemap_subToOrg[e]);
+               graph_edge_printInfo(g, eorg);
 #endif
-               extreduce_edgeRemove(scip, edgemap_subToOrg[e], g, extperma->distdata_default, extperma);
+               extreduce_edgeRemove(scip, eorg, g, extperma->distdata_default, extperma);
+               // todo  todo is that ok??? might also change the primal bound
+             //  graph_edge_del(scip, subgraph, e, TRUE);
                (*nelims)++;
             }
          }
+
+         e = enext;
       }
    }
 
@@ -716,19 +726,18 @@ void termcompDeleteEdges(
 
 /** perform reductions */
 static
-SCIP_RETCODE termcompReduce(
+SCIP_RETCODE termcompReduceWithParams(
    SCIP*                 scip,               /**< SCIP data structure */
+   DAPARAMS*             daparams,
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
    TERMCOMP*             termcomp,           /**< component */
    int*                  nelims              /**< number of eliminations*/
    )
 {
-   DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = -1,
-           .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
    GRAPH* subgraph = termcomp->subgraph;
    RCPARAMS rcparams = { .cutoff = -1.0, .nLevels = 1, .nCloseTerms = 2, .nnodes = subgraph->knots,
-                       .nedges = subgraph->edges, .redCostRoot = subgraph->source };
+                       .nedges = subgraph->edges, .redCostRoot = daparams->root };
    REDCOST* redcostdata;
    const SCIP_Real subprimal = termcomp->subprimalobj;
    SCIP_Real subdual;
@@ -737,8 +746,7 @@ SCIP_RETCODE termcompReduce(
 
    SCIP_CALL( redcosts_initFromParams(scip, &rcparams, &redcostdata) );
 
-   daparams.root = subgraph->source;
-   SCIP_CALL( dualascent_exec(scip, subgraph, NULL, &daparams, redcosts_getEdgeCostsTop(redcostdata), &subdual) );
+   SCIP_CALL( dualascent_exec(scip, subgraph, NULL, daparams, redcosts_getEdgeCostsTop(redcostdata), &subdual) );
 
    SCIPdebugMessage("subdual=%f, subprimal=%f \n", subdual, subprimal);
 
@@ -756,6 +764,38 @@ SCIP_RETCODE termcompReduce(
    }
 
    redcosts_free(scip, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
+
+/** perform reductions */
+static
+SCIP_RETCODE termcompReduce(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   EXTPERMA*             extperma,           /**< extension data */
+   TERMCOMP*             termcomp,           /**< component */
+   int*                  nelims              /**< number of eliminations*/
+   )
+{
+   DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = -1,
+           .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
+   const COMPBUILDER* builder = termcomp->builder;
+
+   daparams.root = termcomp->subgraph->source;
+   SCIP_CALL( termcompReduceWithParams(scip, &daparams, g, extperma, termcomp, nelims) );
+
+   if( compbuilderGetSubNodesRatio(builder) <= COMPONENT_NODESRATIO_SMALL && *nelims > 0 )
+   {
+      const int sepaterm = builder->sepaterms[0];
+      assert(daparams.root != termcomp->nodemap_orgToSub[sepaterm]);
+      assert(graph_knot_isInRange(termcomp->subgraph, termcomp->nodemap_orgToSub[sepaterm]));
+
+      daparams.root = termcomp->nodemap_orgToSub[sepaterm];
+
+      SCIP_CALL( termcompReduceWithParams(scip, &daparams, g, extperma, termcomp, nelims) );
+   }
 
    return SCIP_OKAY;
 }
@@ -831,7 +871,7 @@ SCIP_Bool termcompIsPromising(
 
       SCIPdebugMessage(" noderatio=%f \n", noderatio);
 
-      if( COMPONENT_MINNODESRATIO < noderatio && noderatio < COMPONENT_MAXNODESRATIO )
+      if( COMPONENT_NODESRATIO_MIN < noderatio && noderatio < COMPONENT_NODESRATIO_MAX )
       {
          SCIPdebugMessage("...component is promising \n");
          return TRUE;
@@ -857,6 +897,9 @@ SCIP_RETCODE processComponent(
    TERMCOMP* termcomp;
    SCIP_Bool success;
 
+   printf("component nodes=%d \n", builder->ncomponentnodes);
+
+
    SCIP_CALL( termcompInit(scip, g, builder, &termcomp) );
    SCIP_CALL( termcompBuildSubgraphWithSds(scip, g, extperma, termcomp) );
    SCIP_CALL( termcompComputeSubgraphSol(scip, termcomp) );
@@ -869,6 +912,8 @@ SCIP_RETCODE processComponent(
    {
       // todo, also mark pseudo-eliminaitons
       SCIP_CALL( termcompReduce(scip, g, extperma, termcomp, nelims) );
+      printf("nelims=%d \n", *nelims);
+
    }
 
    termcompFree(scip, &termcomp);
@@ -983,7 +1028,7 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
    SCIP_CALL( mincut_termsepasInit(scip, g, &termsepas) );
    SCIP_CALL( compbuilderInit(scip, g, &builder) );
 
-   // todo different random seed! g->terms maybe
+   // todo different random seed! g->terms and real number of edges! or better: provide randnumgeneraotr or NULL!
    SCIP_CALL( mincut_findTerminalSeparators(scip, 1, g, termsepas) );
 
    for( ;; )
