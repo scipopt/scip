@@ -1144,6 +1144,14 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  @subpage SUDOKU_MAIN "Sudoku example"
+ *  </td>
+ *  <td>
+ *  An example solving sudokus.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  @subpage LOP_MAIN "Linear Ordering"
  *  </td>
  *  <td>
@@ -1857,6 +1865,23 @@
  * if all integer variables in the constraint are already fixed.
  * In this case, the LP has to be solved in order to get a solution that satisfies the linear constraint.
  *
+ * @subsection CONSENFORELAX
+ *
+ * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
+ *
+ * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
+ * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
+ * solutions that satisfy all active LP-constraints.
+ *
+ * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
+ * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
+ * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
+ * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
+ *
+ * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
+ * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
+ * via user-plugins.
+ *
  * @subsection CONSLOCK
  *
  * The CONSLOCK callback provides dual information for a single constraint.
@@ -2071,23 +2096,6 @@
  * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
  * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
  * calling CONSSEPASOL.
- *
- * @subsection CONSENFORELAX
- *
- * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
- *
- * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
- * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
- * solutions that satisfy all active LP-constraints.
- *
- * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
- * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
- * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
- * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
- *
- * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
- * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
- * via user-plugins.
  *
  * @subsection CONSPROP
  *
@@ -7855,7 +7863,7 @@
   * @section OTHER Interfaces for other programming languages
   *
   * Interfaces for other programming languages are developed and maintained independently from the SCIP Optimization Suite
-  * on <a href="https://github.com/SCIP-Interfaces">GitHub</a> in order to provide extensions and patches faster
+  * on <a href="https://github.com/scipopt">GitHub</a> in order to provide extensions and patches faster
   * and to collaborate on them more easily. Besides the popular interfaces for Python and Java, there is also an interface
   * for Julia available. Contributions to these projects are very welcome.
   *
