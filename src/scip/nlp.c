@@ -884,6 +884,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    /* nonlinear part */
    if( expr != NULL )
    {
+      /* TODO preserve common subexpressions, or at least use only one varexpr per var */
       SCIP_CALL( SCIPexprCopy(set, stat, blkmem, set, stat, blkmem, expr, &(*nlrow)->expr, NULL, NULL, NULL, NULL) );
    }
    else
@@ -1286,6 +1287,7 @@ SCIP_RETCODE SCIPnlrowChgExpr(
    /* adds new expression tree */
    if( expr != NULL )
    {
+      /* TODO preserve common subexpressions, or at least use only one varexpr per var */
       SCIP_CALL( SCIPexprCopy(set, stat, blkmem, set, stat, blkmem, expr, &nlrow->expr, NULL, NULL, NULL, NULL) );
 
       /* if row is already in NLP, ensure that expr has only active variables */
