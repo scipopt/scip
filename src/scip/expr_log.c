@@ -323,11 +323,11 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
    if( SCIPisEQ(scip, lb, ub) )
       return SCIP_OKAY;
 
-   /* adjust lb */
-   lb = MAX(lb, MIN(0.5 * lb + 0.5 * ub, 0.1));
-
    if( overestimate )
    {
+      /* adjust lb */
+      lb = MAX(lb, MIN(0.5 * lb + 0.5 * ub, 0.1));
+
       refpointsover[0] = lb;
       refpointsover[1] = SCIPisInfinity(scip, ub) ? lb + 2.0 : (lb + ub) / 2;
       refpointsover[2] = SCIPisInfinity(scip, ub) ? lb + 20.0 : ub;
