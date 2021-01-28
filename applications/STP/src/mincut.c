@@ -61,6 +61,8 @@ typedef struct minimum_cut_helper
    int*                  csr_headarr;
    int*                  csr_edgeflipped;
    int*                  termsepa_termToCopy;
+   int*                  terms_minsepasize;     /**< size of smallest separator for given terminal (non-defined for Steiner nodes) */
+   int*                  terms_mincompsize;     /**< size of smallest component for given terminal (non-defined for Steiner nodes) */
    STP_Bool*             edges_isRemoved;    /**< only used for LP cuts */
    int                   ntermcands;
    int                   rootcutsize;
@@ -489,6 +491,7 @@ static
 void termsepaCollectCutNodes(
    const GRAPH*          g,                  /**< the graph */
    const MINCUT*         mincut,             /**< minimum cut */
+   int                   sinkterm,           /**< sink terminal */
    int*                  cutterms,           /**< terminals */
    int*                  ncutterms,          /**< number of terminals */
    SCIP_Bool*            cutIsGood           /**< is cut nodes */
@@ -543,9 +546,10 @@ static
 SCIP_RETCODE termsepaTraverseSinkComp(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   SCIP_Bool             removeTerms,
-   int                   ncutterms,
-   const int*            cutterms,
+   SCIP_Bool             removeTerms,        /**< remove terminals reachable from sink via non-terminal paths? */
+   SCIP_Bool             updateVisitedTerms,
+   int                   ncutterms,          /**< size of the separator */
+   const int*            cutterms,           /**< the separator nodes (all terminals) */
    int                   sinkterm,           /**< sink terminal of current cut */
    MINCUT*               mincut,             /**< minimum cut */
    int*                  ncompnodes
@@ -624,6 +628,16 @@ SCIP_RETCODE termsepaTraverseSinkComp(
       assert(nodes_isVisited[node]);
       nodes_isVisited[node] = FALSE;
 
+      if( updateVisitedTerms && Is_term(g->term[node]) && node != sinkterm )
+      {
+         assert(mincut->terms_minsepasize && mincut->terms_mincompsize);
+
+         if( mincut->terms_minsepasize[node] > ncutterms )
+            mincut->terms_minsepasize[node] = ncutterms;
+
+         if( mincut->terms_mincompsize[node] > *ncompnodes )
+            mincut->terms_mincompsize[node] = *ncompnodes;
+      }
    }
 
    for( int i = 0; i < ncutterms; i++ )
@@ -652,14 +666,16 @@ static
 SCIP_RETCODE termsepaRemoveCutTerminals(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   int                   ncutterms,
-   const int*            cutterms,
+   int                   ncutterms,          /**< size of the separator */
+   const int*            cutterms,           /**< the separator nodes (all terminals) */
    int                   sinkterm,           /**< sink terminal of current cut */
    MINCUT*               mincut              /**< minimum cut */
 )
 {
    const SCIP_Bool removeTerms = TRUE;
-   SCIP_CALL( termsepaTraverseSinkComp(scip, g, removeTerms, ncutterms, cutterms, sinkterm, mincut, NULL) );
+   const SCIP_Bool updateVisitedTerms = FALSE;
+
+   SCIP_CALL( termsepaTraverseSinkComp(scip, g, removeTerms, updateVisitedTerms, ncutterms, cutterms, sinkterm, mincut, NULL) );
 
    return SCIP_OKAY;
 }
@@ -670,15 +686,17 @@ static
 SCIP_RETCODE termsepaGetCompNnodes(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   int                   ncutterms,
-   const int*            cutterms,
+   int                   ncutterms,          /**< size of the separator */
+   const int*            cutterms,           /**< the separator nodes (all terminals) */
    int                   sinkterm,           /**< sink terminal of current cut */
    MINCUT*               mincut,             /**< minimum cut */
    int*                  ncompnodes
 )
 {
    const SCIP_Bool removeTerms = FALSE;
-   SCIP_CALL( termsepaTraverseSinkComp(scip, g, removeTerms, ncutterms, cutterms, sinkterm, mincut, ncompnodes) );
+   const SCIP_Bool updateVisitedTerms = TRUE;
+
+   SCIP_CALL( termsepaTraverseSinkComp(scip, g, removeTerms, updateVisitedTerms, ncutterms, cutterms, sinkterm, mincut, ncompnodes) );
 
    return SCIP_OKAY;
 }
@@ -694,7 +712,8 @@ SCIP_RETCODE termsepaStoreCutFinalize(
    MINCUT*               mincut,             /**< minimum cut */
    int                   ncutterms,
    const int*            cutterms,
-   TERMSEPAS*            termsepas           /**< terminal separator storage */
+   TERMSEPAS*            termsepas,          /**< terminal separator storage */
+   SCIP_Bool*            success
 )
 {
    TSEPA* sepas = termsepas->sepas;
@@ -705,7 +724,19 @@ SCIP_RETCODE termsepaStoreCutFinalize(
    assert(0 <= ncutterms && ncutterms <= TERMSEPA_MAXCUTSIZE);
    assert(termsepas->nsepaterms_csr + ncutterms <= TERMSEPA_MAXNCUTS * TERMSEPA_MAXCUTSIZE);
 
+   *success = TRUE;
+
    SCIP_CALL( termsepaGetCompNnodes(scip, g, ncutterms, cutterms, sinkterm, mincut, &nsinknodes) );
+
+   /* NOTE: if the sink is already contained in a separated component and does not make anything smaller, we don't want to take it */
+   if( ncutterms >= mincut->terms_minsepasize[sinkterm] && nsinknodes >= mincut->terms_mincompsize[sinkterm] )
+   {
+      SCIPdebugMessage("discarding already covered component because of SEPA size: %d>=%d, COMP size: %d>=%d \n", ncutterms
+           , mincut->terms_minsepasize[sinkterm], nsinknodes, mincut->terms_mincompsize[sinkterm]);
+
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 
    sepas[nsepas_all].sinkterm = sinkterm;
    sepas[nsepas_all].nsinknodes = nsinknodes;
@@ -766,19 +797,18 @@ SCIP_RETCODE termsepaStoreCutTry(
    assert(mincut->nodes_wakeState[sinkterm] == 0);
 
    cutterms = &(termsepas->sepaterms_csr[termsepas->nsepaterms_csr]);
-   termsepaCollectCutNodes(g, mincut, cutterms, &ncutterms, &isGoodCut);
+   termsepaCollectCutNodes(g, mincut, sinkterm, cutterms, &ncutterms, &isGoodCut);
 
    if( isGoodCut )
    {
       assert(termsepaCutIsCorrect(scip, g, ncutterms, cutterms, sinkterm, mincut));
 
+      SCIP_CALL( termsepaStoreCutFinalize(scip, g, sinkterm, mincut, ncutterms, cutterms, termsepas, &isGoodCut) );
 
-    //  if( !termsepaCutIsCorrect(scip, g, ncutterms, cutterms, sinkterm, mincut) )
-    //     return SCIP_ERROR;
-
-      SCIP_CALL( termsepaStoreCutFinalize(scip, g, sinkterm, mincut, ncutterms, cutterms, termsepas) );
-
-      SCIP_CALL( termsepaRemoveCutTerminals(scip, g, ncutterms, cutterms, sinkterm, mincut) );
+      if( isGoodCut )
+      {
+         SCIP_CALL( termsepaRemoveCutTerminals(scip, g, ncutterms, cutterms, sinkterm, mincut) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1273,6 +1303,8 @@ SCIP_RETCODE mincutInitForTermSepa(
 {
    int* RESTRICT nodes_termToCopy;
    int* RESTRICT nodes_wakeState;
+   int* RESTRICT terms_sepasize;
+   int* RESTRICT terms_mincompsize;
    int nnodes_enlarged;
    int nedges_enlarged;
    const int nedges = graph_get_nEdges(g);
@@ -1297,11 +1329,17 @@ SCIP_RETCODE mincutInitForTermSepa(
    SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->csr_start), nnodes_enlarged + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->rootcut), nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->termsepa_termToCopy), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->terms_minsepasize), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->terms_mincompsize), nnodes) );
 
    nodes_termToCopy = mincut->termsepa_termToCopy;
+   terms_sepasize = mincut->terms_minsepasize;
+   terms_mincompsize = mincut->terms_mincompsize;
    for( int i = 0; i < nnodes; i++ )
    {
       nodes_termToCopy[i] = -1;
+      terms_sepasize[i] = nnodes;
+      terms_mincompsize[i] = nnodes;
    }
 
    mincut->termsepa_nnodes = nnodes_enlarged;
@@ -1353,6 +1391,8 @@ SCIP_RETCODE mincutInit(
    mcut->csr_nedges = -1;
    mcut->root = g->source;
    mcut->termsepa_termToCopy = NULL;
+   mcut->terms_minsepasize = NULL;
+   mcut->terms_mincompsize = NULL;
    mcut->termsepa_nnodes = -1;
    mcut->termsepa_nedges = -1;
    mcut->randseed = randseed;
@@ -1726,6 +1766,8 @@ void mincutFree(
    assert(*mincut);
    mcut = *mincut;
 
+   SCIPfreeBufferArrayNull(scip, &(mcut->terms_mincompsize));
+   SCIPfreeBufferArrayNull(scip, &(mcut->terms_minsepasize));
    SCIPfreeBufferArrayNull(scip, &(mcut->termsepa_termToCopy));
    SCIPfreeBufferArrayNull(scip, &(mcut->edges_isRemoved));
    SCIPfreeBufferArray(scip, &(mcut->rootcut));
