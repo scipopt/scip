@@ -861,7 +861,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropSum)
 
    SCIP_CALL( SCIPallocBufferArray(scip, &newbounds, nchildren) );
 
-   nreductions = SCIPintervalPropagateWeightedSum(SCIP_DEFAULT_INFINITY, nchildren, childrenbounds, exprdata->coefficients, exprdata->constant, bounds, newbounds, infeasible);
+   nreductions = SCIPintervalPropagateWeightedSum(SCIP_INTERVAL_INFINITY, nchildren, childrenbounds, exprdata->coefficients, exprdata->constant, bounds, newbounds, infeasible);
 
    if( !*infeasible && nreductions > 0 )
       BMScopyMemoryArray(childrenbounds, newbounds, nchildren);
