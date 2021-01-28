@@ -1825,6 +1825,10 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
          SCIPinfoMessage(scip, NULL, ": all elements, due to discontinuities\n");
 #endif
 
+         *rowidxs = exprintdata->hesrowidxs;
+         *colidxs = exprintdata->hescolidxs;
+         *nnz = exprintdata->hesnnz;
+
          return SCIP_OKAY;
       }
 
