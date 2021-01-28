@@ -734,9 +734,10 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** returns the total number of variables in an expression
+/** returns the total number of variable expressions in an expression
  *
- * The function counts variables in common sub-expressions only once.
+ * The function counts variable expressions in common sub-expressions only once, but
+ * counts variables appearing in several variable expressions multiple times.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetExprNVars(
@@ -747,9 +748,13 @@ SCIP_RETCODE SCIPgetExprNVars(
 
 /** returns all variable expressions contained in a given expression
  *
- * the array to store all variable expressions needs
- * to be at least of size the number of unique variables in the expression which is given by SCIPgetExprNVars()
- * and can be bounded by SCIPgetNVars().
+ * The array to store all variable expressions needs to be at least of size
+ * the number of unique variable expressions in the expression which is given by SCIPgetExprNVars().
+ *
+ * If every variable is represented by only one variable expression (common subexpression have been removed)
+ * then SCIPgetExprNVars() can be bounded by SCIPgetNTotalVars().
+ * If, in addition, non-active variables have been removed from the expression, e.g., by simplifying,
+ * then SCIPgetExprNVars() can be bounded by SCIPgetNVars().
  *
  * @note function captures variable expressions
  */
