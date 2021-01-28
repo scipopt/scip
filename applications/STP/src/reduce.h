@@ -291,7 +291,7 @@ extern void             reduce_sdgraphMstSortCosts(SDGRAPH*);
 
 /* reduce_termsepada.c
  */
-extern SCIP_RETCODE     reduce_sepaDualAscentWithExperma(SCIP*, GRAPH*, EXTPERMA*, int*);
+extern SCIP_RETCODE     reduce_sepaDualAscentWithExperma(SCIP*, GRAPH*, EXTPERMA*, SCIP_Bool*, int*);
 extern SCIP_RETCODE     reduce_sepaDualAscent(SCIP*, GRAPH*, int*);
 
 

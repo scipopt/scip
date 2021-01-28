@@ -663,10 +663,10 @@ SCIP_RETCODE termcompChangeSubgraphToBottleneck(
 static
 void termcompDeleteEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   REDCOST*              redcostdata,        /**< reduced costs */
+   const REDCOST*        redcostdata,        /**< reduced costs */
+   const TERMCOMP*       termcomp,           /**< component */
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
-   TERMCOMP*             termcomp,           /**< component */
    int*                  nelims              /**< number of eliminations*/
    )
 {
@@ -724,6 +724,47 @@ void termcompDeleteEdges(
 }
 
 
+
+/** marks nodes for pseudo-deletion */
+static
+void termcompMarkPseudoDelNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const REDCOST*        redcostdata,        /**< reduced costs */
+   const TERMCOMP*       termcomp,           /**< component */
+   GRAPH*                g,                  /**< graph data structure */
+   EXTPERMA*             extperma,           /**< extension data */
+   SCIP_Bool*            pseudoDelNodes      /**< array to mark pseudo deletable nodes  */
+   )
+{
+   GRAPH* subgraph = termcomp->subgraph;
+   const int subnnodes = graph_get_nNodes(subgraph);
+   const PATH* const vnoi = redcosts_getNodeToTermsPathsTop(redcostdata);
+   const SCIP_Real* const pathdist = redcosts_getRootToNodeDistTop(redcostdata);
+   const int* const nodemap_subToOrg = termcomp->nodemap_subToOrg;
+   const SCIP_Real cutoffbound = redcosts_getCutoffTop(redcostdata);
+
+   for( int k = 0; k < subnnodes; k++ )
+   {
+      if( !Is_term(subgraph->term[k]) )
+      {
+         const SCIP_Real redcost = pathdist[k] + vnoi[k].dist + vnoi[k + subnnodes].dist;
+
+         if( SCIPisGT(scip, redcost, cutoffbound) )
+         {
+            const int orgnode = nodemap_subToOrg[k];
+            assert(graph_knot_isInRange(g, orgnode));
+            pseudoDelNodes[orgnode] = TRUE;
+
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("marking original node (%f>%f): ", redcost, cutoffbound);
+            graph_knot_printInfo(g, orgnode);
+#endif
+         }
+      }
+   }
+}
+
+
 /** perform reductions */
 static
 SCIP_RETCODE termcompReduceWithParams(
@@ -732,6 +773,7 @@ SCIP_RETCODE termcompReduceWithParams(
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
    TERMCOMP*             termcomp,           /**< component */
+   SCIP_Bool*            pseudoDelNodes,     /**< array to mark pseudo deletable nodes or NULL (OUT) */
    int*                  nelims              /**< number of eliminations*/
    )
 {
@@ -755,12 +797,11 @@ SCIP_RETCODE termcompReduceWithParams(
    SCIP_CALL( redcosts_initializeDistancesTop(scip, subgraph, redcostdata) );
    redcosts_setCutoffFromBoundTop(subprimal, redcostdata);
 
-   termcompDeleteEdges(scip, redcostdata, g, extperma, termcomp, nelims);
+   termcompDeleteEdges(scip, redcostdata, termcomp, g, extperma, nelims);
 
-   // todo check for nodes...don't delete
+   if( pseudoDelNodes )
    {
-      int todo; // check nodes and also run dual ascent twice, once without guiding solution, once with
-                //...or maybe run with different root if component is not big!
+      termcompMarkPseudoDelNodes(scip, redcostdata, termcomp, g, extperma, pseudoDelNodes);
    }
 
    redcosts_free(scip, &redcostdata);
@@ -776,6 +817,7 @@ SCIP_RETCODE termcompReduce(
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
    TERMCOMP*             termcomp,           /**< component */
+   SCIP_Bool*            pseudoDelNodes,     /**< array to mark pseudo deletable nodes or NULL (OUT) */
    int*                  nelims              /**< number of eliminations*/
    )
 {
@@ -784,7 +826,7 @@ SCIP_RETCODE termcompReduce(
    const COMPBUILDER* builder = termcomp->builder;
 
    daparams.root = termcomp->subgraph->source;
-   SCIP_CALL( termcompReduceWithParams(scip, &daparams, g, extperma, termcomp, nelims) );
+   SCIP_CALL( termcompReduceWithParams(scip, &daparams, g, extperma, termcomp, pseudoDelNodes, nelims) );
 
    if( compbuilderGetSubNodesRatio(builder) <= COMPONENT_NODESRATIO_SMALL && *nelims > 0 )
    {
@@ -794,7 +836,7 @@ SCIP_RETCODE termcompReduce(
 
       daparams.root = termcomp->nodemap_orgToSub[sepaterm];
 
-      SCIP_CALL( termcompReduceWithParams(scip, &daparams, g, extperma, termcomp, nelims) );
+      SCIP_CALL( termcompReduceWithParams(scip, &daparams, g, extperma, termcomp, pseudoDelNodes, nelims) );
    }
 
    return SCIP_OKAY;
@@ -891,6 +933,7 @@ SCIP_RETCODE processComponent(
    COMPBUILDER*          builder,            /**< terminal separator component initializer */
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
+   SCIP_Bool*            pseudoDelNodes,     /**< array to mark pseudo deletable nodes or NULL (OUT) */
    int*                  nelims              /**< number of eliminations*/
    )
 {
@@ -898,7 +941,6 @@ SCIP_RETCODE processComponent(
    SCIP_Bool success;
 
    printf("component nodes=%d \n", builder->ncomponentnodes);
-
 
    SCIP_CALL( termcompInit(scip, g, builder, &termcomp) );
    SCIP_CALL( termcompBuildSubgraphWithSds(scip, g, extperma, termcomp) );
@@ -911,7 +953,7 @@ SCIP_RETCODE processComponent(
    if( success )
    {
       // todo, also mark pseudo-eliminaitons
-      SCIP_CALL( termcompReduce(scip, g, extperma, termcomp, nelims) );
+      SCIP_CALL( termcompReduce(scip, g, extperma, termcomp, pseudoDelNodes, nelims) );
       printf("nelims=%d \n", *nelims);
 
    }
@@ -1009,7 +1051,8 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
-   int*                  nelims              /**< number of eliminations*/
+   SCIP_Bool*            pseudoDelNodes,     /**< array to mark pseudo deletable nodes or NULL (OUT) */
+   int*                  nelims              /**< number of eliminations (OUT)*/
    )
 {
    COMPBUILDER* builder;
@@ -1018,10 +1061,14 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
    assert(scip && g && nelims && extperma);
    *nelims = 0;
 
+   if( pseudoDelNodes )
+      BMSclearMemoryArray(pseudoDelNodes, g->knots);
+
    if( g->terms == 1 )
    {
       return SCIP_OKAY;
    }
+
 
    // todo probably we want to have an array (parameter) to keep the nodes for pseudo-elimination
 
@@ -1042,7 +1089,7 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
       if( !termcompIsPromising(g, builder) )
          continue;
 
-      SCIP_CALL( processComponent(scip, builder, g, extperma, nelims) );
+      SCIP_CALL( processComponent(scip, builder, g, extperma, pseudoDelNodes, nelims) );
 
       builder->componentnumber++;
    }
@@ -1080,7 +1127,7 @@ SCIP_RETCODE reduce_sepaDualAscent(
    SCIP_CALL( extreduce_distDataInit(scip, g, 50, useSd, FALSE, &(extperma->distdata_default)) );
    SCIP_CALL( reduce_sdRepairSetUp(scip, g, extperma->distdata_default->sdistdata) );
 
-   SCIP_CALL( reduce_sepaDualAscentWithExperma(scip, g, extperma, nelims) );
+   SCIP_CALL( reduce_sepaDualAscentWithExperma(scip, g, extperma, NULL, nelims) );
 
    /* NOTE: also frees DCSR */
    extreduce_exit(scip, g, &extperma);
