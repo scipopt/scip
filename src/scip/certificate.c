@@ -576,16 +576,8 @@ SCIP_RETCODE SCIPcertificateInit(
       {
          lb = SCIPgetLhsExactLinear(scip, cons);
          ub = SCIPgetRhsExactLinear(scip, cons);
-         /* if the constraint a singleton we count it as a bound constraint in the certificate */
-         if( SCIPgetNVarsExactLinear(scip, cons) == 1 )
-         {
-            if( !RatIsAbsInfinity(lb) )
-               nboundconss++;
-            if( !RatIsAbsInfinity(ub) )
-               nboundconss++;
-         }
-         /* else we check if it is a ranged row with 2 sides (then we count it twice). otherwise one line gets printed */
-         else if( !RatIsEqual(lb, ub) && !RatIsAbsInfinity(lb) && !RatIsAbsInfinity(ub) )
+
+         if( !RatIsEqual(lb, ub) && !RatIsAbsInfinity(lb) && !RatIsAbsInfinity(ub) )
             ncertcons += 2;
          else
             ncertcons += 1;
@@ -1307,13 +1299,16 @@ void SCIPcertificatePrintCons(
    )
 {
    int i;
+   SCIP_Longint index;
 
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
       return;
 
+   index = isorigfile ? certificate->indexcounter_ori : certificate->indexcounter;
+
    if( consname == NULL )
-      SCIPcertificatePrintProblemMessage(certificate, isorigfile, "C%d %c ", certificate->indexcounter, sense);
+      SCIPcertificatePrintProblemMessage(certificate, isorigfile, "C%d %c ", index, sense);
    else
       SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", consname, sense);
 
