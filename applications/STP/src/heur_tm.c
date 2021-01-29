@@ -3630,6 +3630,8 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       graph, NULL, prize, result, runs, heurdata->beststartnode, cost, costrev, &(heurdata->hopfactor), nodepriority, success));
 
 
+   // todo test and move to extra method or remove
+#ifdef SCIP_DISABLED
    // todo extra method etc. just a test currently
    if( xval && graph_typeIsSpgLike(graph) )
    {
@@ -3684,6 +3686,7 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       SCIPfreeBufferArray(scip, &termorg);
       SCIPfreeBufferArray(scip, &soledges);
    }
+#endif
 
    SCIPfreeBufferArrayNull(scip, &prize);
    SCIPfreeBufferArrayNull(scip, &nodepriority);
