@@ -495,7 +495,7 @@
 #define SCIP_DEFAULT_EXACT_ENABLED        FALSE /**< should the problem be solved exactly (without numerical tolerances)? */
 #define SCIP_DEFAULT_EXACT_SAFEDBMETHOD     'a' /**< method for computing safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
-#define SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ   0 /**< frequency at which safe dual bounding method is interleaved with exact LP
+#define SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY 3 /**< frequency at which safe dual bounding method is interleaved with exact LP
                                                  *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
 #define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION  1 /**< strategy to select which dual columns to use for lp to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
@@ -2670,8 +2670,8 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->exact_psdualcolselection, TRUE, SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION, 0, 2, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "exact/interleavedbfreq",
-         "frequency at which safe dual bounding method is interleaved with exact LP solve (-1: never, 0: automatic, n > 0: every n-th node)",
-         &(*set)->exact_interleavedbfreq, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ, -1, INT_MAX, NULL, NULL) );
+         "strategy to interleave safe dual bounding with exact LP solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,..., 3: close to cutoff bound OR at depth lvl 4,8,16,...) ",
+         &(*set)->exact_interleavestrategy, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY, 2, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/lpinfo",
          "should the exact LP solver display status messages?",

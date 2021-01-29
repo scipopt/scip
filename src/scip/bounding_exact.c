@@ -52,6 +52,20 @@
 
 #ifdef SCIP_WITH_BOOST
 
+/** checks if number is a power of two (negative numbers are reported as false);
+ *
+ * Explanation: any number that is a power of two is 1000...00 in binary representation.
+ * That means that n & (n - 1) is 10000 % 01111 == 0. It is easy to prove that this does
+ * not hold for any other number.
+ */
+static
+bool isPowerOfTwo(
+   SCIP_Longint          n                   /**< the number to check */
+   )
+{
+    return (n > 0) && ((n & (n - 1)) == 0);
+}
+
 /** checks if floating point lp is integer feasible */
 static
 SCIP_Bool fpLPisIntFeasible(
@@ -1888,6 +1902,8 @@ char chooseInitialBoundingMethod(
 )
 {
    char dualboundmethod;
+   SCIP_Bool interleavedepth;
+   SCIP_Bool interleavecutoff;
 
    assert(lpexact != NULL);
    assert(set != NULL);
@@ -1913,15 +1929,14 @@ char chooseInitialBoundingMethod(
    else
    {
       /* decide whether we want to interleave with exact LP call given freq
-       * we do this if a) at depth-levels that are multiples of interleavedbfreq
+       * we do this if a) at depth-levels 4,8,16,...
        * b) if we are almost at cutoffbound */
-      if( (set->exact_interleavedbfreq > 0 && SCIPsetIsInfinity(set, SCIPlpGetCutoffbound(lpexact->fplp)) && SCIPgetDepth(set->scip) > 0
-            && SCIPgetDepth(set->scip) % (set->exact_interleavedbfreq) == 0)
-         || (set->exact_interleavedbfreq == 0 && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
-            && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPlpGetCutoffbound(lpexact->fplp)) )
-      {
+      interleavedepth = set->exact_interleavestrategy >= 2 && SCIPgetDepth(set->scip) > 0 && isPowerOfTwo(SCIPgetDepth(set->scip) - 1);
+      interleavecutoff = (set->exact_interleavestrategy == 1 || set->exact_interleavestrategy == 3)
+         && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
+         && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPlpGetCutoffbound(lpexact->fplp);
+      if( interleavedepth || interleavecutoff )
          dualboundmethod = 'e';
-      }
       else
       {
          /* check if neumair-shcherbina is possible */

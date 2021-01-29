@@ -584,8 +584,9 @@ struct SCIP_Set
 
    /* exact SCIP settings */
    SCIP_Bool             exact_enabled;      /**< should the problem be solved exactly (without numerical tolerances)? */
-   SCIP_Bool             exact_interleavedbfreq; /**< frequency at which safe dual bounding method is interleaved with exact LP
-                                              *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
+   SCIP_Bool             exact_interleavestrategy; /**< strategy to interleave safe dual bounding with exact LP
+                                              *   solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,...,
+                                              *   3: close to cutoff bound OR at depth lvl 4,8,16,...) */
    char                  exact_safedbmethod; /**< method for computing safe dual bounds
                                               *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
    int                   exact_psdualcolselection; /**< strategy to select which dual columns to use for lp to compute interior point
