@@ -4386,13 +4386,13 @@ SCIP_RETCODE writeFzn(
             SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
 
          /* if there is a bound, store the variable and its boundtype for adding a corresponding constraint later-on */
-         if( SCIPisInfinity(scip, ub) )
+         if( ! SCIPisInfinity(scip, ub) )
          {
             boundedvars[nboundedvars] = v;
             boundtypes[nboundedvars] = SCIP_BOUNDTYPE_LOWER;
             nboundedvars++;
          }
-         if( SCIPisInfinity(scip, -lb) )
+         if( ! SCIPisInfinity(scip, -lb) )
          {
             boundedvars[nboundedvars] = v;
             boundtypes[nboundedvars] = SCIP_BOUNDTYPE_UPPER;
