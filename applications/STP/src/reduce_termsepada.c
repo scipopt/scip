@@ -51,7 +51,7 @@
 #define COMPONENT_NODESRATIO_MAX 0.5
 #define SEPARATOR_MAXSIZE 5
 #define SEPARATOR_MAXNCHECKS 50
-
+#define TBOTTLENECK_EDGE_BLOCKED (FARAWAY)
 
 /** separator data needed to build component */
 typedef struct terminial_component_initializes
@@ -67,12 +67,30 @@ typedef struct terminial_component_initializes
 } COMPBUILDER;
 
 
+/** tree bottleneck node */
+typedef struct tree_bottleneck_node
+{
+   SCIP_Real             edgecost;           /**< cost of outgoing edge */
+   SCIP_Real             bottleneck;         /**< (temporary) bottleneck up to this node; -1.0 for UNSET */
+   int                   parent;             /**< parent node index */
+   int                   degree;             /**< degree of node */
+} TBNODE;
+
+
+/** tree bottleneck */
+typedef struct tree_bottleneck
+{
+   TBNODE*               tree;               /**< tree for representation; NOTE: oriented towards root */
+   int                   nnodes;             /**< number of nodes of underlying graph */
+} TBOTTLENECK;
+
 
 /** (extended) terminal component */
 typedef struct terminal_separator_component
 {
    COMPBUILDER*          builder;            /**< initializer; NON-OWNED */
    GRAPH*                subgraph;           /**< graph for (extended) component */
+   TBOTTLENECK*          subsolbottleneck;   /**< tree bottleneck on sub-solution */
    int*                  subsolution;        /**< primal solution for (extended) component (CONNECTED/UNKNOWN) */
    int*                  nodemap_orgToSub;   /**< map */
    int*                  nodemap_subToOrg;   /**< map */
@@ -88,6 +106,249 @@ typedef struct terminal_separator_component
 /*
  * Local methods
  */
+
+
+
+/** initializes */
+static
+SCIP_RETCODE tbottleneckInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int*            soledges,           /**< solution tree to be represented */
+   TBOTTLENECK**         tbottleneck         /**< to initialize */
+   )
+{
+   TBOTTLENECK* tbneck;
+   TBNODE* tbtree;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+
+   assert(scip && soledges);
+   assert(solstp_isValid(scip, g, soledges));
+
+   SCIP_CALL( SCIPallocMemory(scip, tbottleneck) );
+   tbneck = *tbottleneck;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tbneck->tree), nnodes) );
+   tbtree = tbneck->tree;
+   tbneck->nnodes = nnodes;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      tbtree[i].edgecost = -FARAWAY;
+      tbtree[i].parent = UNKNOWN;
+      tbtree[i].bottleneck = -1.0;
+
+      /* NOTE: slight hack to make sure that terminals are not taken as part of key path */
+      if( Is_term(g->term[i]) )
+      {
+         tbtree[i].degree = nnodes;
+      }
+      else
+      {
+         tbtree[i].degree = 0.0;
+      }
+   }
+
+#ifdef SCIP_DEBUG
+   graph_printInfo(g);
+#endif
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( soledges[e] == CONNECT )
+      {
+         const int tail = g->tail[e];
+         const int head = g->head[e];
+
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("soledge: ");
+         graph_edge_printInfo(g, e);
+#endif
+
+         assert(tbtree[head].parent == UNKNOWN);
+
+         tbtree[head].parent = tail;
+         tbtree[head].edgecost = g->cost[e];
+
+         tbtree[tail].degree++;
+         tbtree[head].degree++;
+      }
+   }
+
+   assert(tbtree[g->source].parent == UNKNOWN);
+
+   return SCIP_OKAY;
+}
+
+
+/** helper */
+static
+void tbottleneckCut(
+   int                   startnode,          /**< start node */
+   int                   endnode,            /**< end node */
+   SCIP_Real             maxlength,          /**< length of bottleneck */
+   TBOTTLENECK*          tbottleneck         /**< tree bottleneck structure */
+   )
+{
+   TBNODE* tbtree = tbottleneck->tree;
+   int k;
+   int cutstart = startnode;
+   int cutend;
+   SCIP_Real max_local = 0.0;
+#ifndef NDEBUG
+   SCIP_Real max_debug = 0.0;
+#endif
+
+   assert(startnode != endnode);
+   assert(tbottleneck->nnodes >= 2);
+
+   /* go up to the root, stop at end node  */
+   for( k = startnode; k != endnode; k = tbtree[k].parent )
+   {
+      assert(0 <= k && k < tbottleneck->nnodes);
+
+      if( GE(max_local, maxlength) )
+      {
+         break;
+      }
+
+      assert(tbtree[k].parent != UNKNOWN);
+
+      if( tbtree[k].degree > 2 )
+      {
+         cutstart = k;
+         max_local = 0.0;
+      }
+
+      max_local += tbtree[k].edgecost;
+   }
+
+   assert(EQ(max_local, maxlength));
+   cutend = k;
+
+   for( k = cutstart; k != cutend; k = tbtree[k].parent )
+   {
+      assert(k == cutstart || tbtree[k].degree <= 2);
+#ifndef NDEBUG
+      max_debug += tbtree[k].edgecost;
+#endif
+
+      SCIPdebugMessage("removing tree bottleneck node=%d, degree=%d edgecost=%f \n", k, tbtree[k].degree, tbtree[k].edgecost);
+      tbtree[k].edgecost = TBOTTLENECK_EDGE_BLOCKED;
+   }
+
+#ifndef NDEBUG
+   assert(EQ(max_debug, maxlength));
+#endif
+
+}
+
+/** Gets bottleneck cost.
+ *  If successful, it also removes the tree bottleneck */
+static
+void tbottleneckRemoveMax(
+   int                   node1,              /**< first node */
+   int                   node2,              /**< second node */
+   TBOTTLENECK*          tbottleneck,        /**< tree bottleneck structure */
+   SCIP_Real*            maxlength           /**< IN/OUT! user needs to provide a maximum that is to be surpassed */
+   )
+{
+   int k;
+   TBNODE* tbtree = tbottleneck->tree;
+   SCIP_Real max_local = 0.0;
+   SCIP_Real max1 = 0.0;
+   SCIP_Real max2 = 0.0;
+   SCIP_Real maxtotal;
+
+   assert(node1 >= 0 && node2 >= 0);
+   assert(node1 != node2);
+   assert(GT(*maxlength, 0.0));
+
+   /* go up to the root and mark the tree on the way */
+   for( k = node1; k != UNKNOWN; k = tbtree[k].parent )
+   {
+      assert(0 <= k && k < tbottleneck->nnodes);
+      assert(EQ(tbtree[k].bottleneck, -1.0));
+
+      tbtree[k].bottleneck = max1;
+
+      if( tbtree[k].degree > 2 )
+         max_local = 0.0;
+
+      if( tbtree[k].parent != UNKNOWN )
+      {
+         max_local += tbtree[k].edgecost;
+         assert(GE(tbtree[k].edgecost, 0.0));
+      }
+
+      if( max_local > max1 )
+         max1 = max_local;
+   }
+
+   max_local = 0.0;
+
+   /* go up from second node */
+   for( k = node2; tbtree[k].bottleneck < -0.5; k = tbtree[k].parent )
+   {
+      assert(0 <= k && k < tbottleneck->nnodes);
+      /* NOTE: we should not reach the root */
+      assert(tbtree[k].parent != UNKNOWN);
+
+      if( tbtree[k].degree > 2 )
+         max_local = 0.0;
+
+      max_local += tbtree[k].edgecost;
+      assert(GE(tbtree[k].edgecost, 0.0));
+
+      if( max_local > max2 )
+         max2 = max_local;
+   }
+
+   assert(GE(tbtree[k].bottleneck, 0.0));
+   max1 = tbtree[k].bottleneck;
+
+   SCIPdebugMessage("joint node: %d \n", k);
+   SCIPdebugMessage("tree bdist from node %d: %f \n", node1, max1);
+   SCIPdebugMessage("tree bdist from node %d: %f \n", node2, max2);
+
+   maxtotal = MAX(max1, max2);
+
+   /* not yet removed sub-path and improvement over given distance? */
+   if( LT(maxtotal, TBOTTLENECK_EDGE_BLOCKED) && GT(maxtotal, *maxlength)  )
+   {
+      SCIPdebugMessage("improved tree bottleneck  %f -> %f \n", *maxlength, maxtotal);
+
+      *maxlength = maxtotal;
+
+      if( GT(max1, max2) )
+         tbottleneckCut(node1, k, max1, tbottleneck);
+      else
+         tbottleneckCut(node2, k, max2, tbottleneck);
+   }
+
+   /* reset */
+   for( k = node1; k != UNKNOWN; k = tbtree[k].parent )
+   {
+      assert(0 <= k && k < tbottleneck->nnodes);
+      tbtree[k].bottleneck = -1.0;
+   }
+}
+
+
+/** frees */
+static
+void tbottleneckFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TBOTTLENECK**         tbottleneck         /**< to initialize */
+   )
+{
+   TBOTTLENECK* tbneck;
+   tbneck = *tbottleneck;
+
+   SCIPfreeMemoryArray(scip, &(tbneck->tree));
+   SCIPfreeMemory(scip, tbottleneck);
+}
 
 
 /** initializes */
@@ -207,6 +468,9 @@ void subgraphIdentify(
       assert(nodemap_orgToSub[k] == UNKNOWN);
 
       nodemap_orgToSub[k] = sub_n;
+
+      SCIPdebugMessage("mapping component node %d to %d \n", k, sub_n);
+
       sub_n++;
       sub_e += g->grad[k];
 
@@ -416,6 +680,7 @@ SCIP_RETCODE termcompInit(
    comp->subnedges = -1;
    comp->subnnodes = -1;
    comp->subprimalobj = -FARAWAY;
+   comp->subsolbottleneck = NULL;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(comp->nodes_mark), g->knots) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(comp->nodemap_orgToSub), g->knots) );
@@ -439,6 +704,9 @@ void termcompFree(
    TERMCOMP* comp;
    comp = *termcomp;
 
+   assert(comp->subsolbottleneck && comp->nodemap_subToOrg && comp->edgemap_subToOrg);
+
+   tbottleneckFree(scip, &(comp->subsolbottleneck));
    StpVecFree(scip, comp->bfsqueue);
 
    SCIPfreeMemoryArrayNull(scip, &(comp->subsolution));
@@ -478,16 +746,20 @@ SCIP_RETCODE termcompBuildSubgraphWithSds(
 static
 SCIP_Real termcompGetExtBottleneckDist(
    const GRAPH*          g,                  /**< graph data structure */
-   int                   term1,              /**< terminal */
-   int                   term2,              /**< terminal */
+   int                   term1,              /**< first terminal */
+   int                   term2,              /**< second terminal */
+   int                   term1_sub,          /**< corresponding terminal in subgraph */
+   int                   term2_sub,          /**< corresponding terminal in subgraph */
    int                   mstsource,          /**< source node of minimum spanning tree */
    PATH*                 mst,                /**< minimum spanning tree */
+   TBOTTLENECK*          subsolbottleneck,   /**< tree bottleneck */
    SCIP_Real* RESTRICT   mstsdist            /**< node distance helper */
    )
 {
-   SCIP_Real sdist = 0.0;
+   SCIP_Real bdist = 0.0;
    int tempnode = term1;
 
+   assert(mst && mstsdist && subsolbottleneck);
    assert(Is_term(g->term[term1]));
    assert(Is_term(g->term[term2]));
    assert(term1 != term2);
@@ -502,10 +774,10 @@ SCIP_Real termcompGetExtBottleneckDist(
       assert(g->head[ne] == tempnode);
       tempnode = g->tail[ne];
 
-      if( g->cost[ne] > sdist )
-         sdist = g->cost[ne];
+      if( g->cost[ne] > bdist )
+         bdist = g->cost[ne];
 
-      mstsdist[tempnode] = sdist;
+      mstsdist[tempnode] = bdist;
       if( tempnode == term2 )
          break;
    }
@@ -518,7 +790,7 @@ SCIP_Real termcompGetExtBottleneckDist(
    else
    {
       tempnode = term2;
-      sdist = 0.0;
+      bdist = 0.0;
    }
 
    while( tempnode != mstsource )
@@ -528,14 +800,14 @@ SCIP_Real termcompGetExtBottleneckDist(
 
       tempnode = g->tail[ne];
 
-      if( g->cost[ne] > sdist )
-         sdist = g->cost[ne];
+      if( g->cost[ne] > bdist )
+         bdist = g->cost[ne];
 
       /* already visited? */
       if( mstsdist[tempnode] > -0.5 )
       {
-         if( mstsdist[tempnode] > sdist )
-            sdist = mstsdist[tempnode];
+         if( mstsdist[tempnode] > bdist )
+            bdist = mstsdist[tempnode];
          break;
       }
 
@@ -559,7 +831,10 @@ SCIP_Real termcompGetExtBottleneckDist(
       assert(EQ(mstsdist[i], -1.0));
 #endif
 
-   return sdist;
+   /* updates with tree bottleneck of sub-solution */
+   tbottleneckRemoveMax(term1_sub, term2_sub, subsolbottleneck, &bdist);
+
+   return bdist;
 }
 
 
@@ -575,7 +850,6 @@ SCIP_RETCODE termcompChangeSubgraphToBottleneck(
    GRAPH* subgraph = termcomp->subgraph;
    PATH* mst;
    COMPBUILDER* const builder = termcomp->builder;
-   const int* const subsol = termcomp->subsolution; // maybe also have a path for the subsolution? and modify it?
    const int* const sepaterms = builder->sepaterms;
    const int* const nodemap_orgToSub = termcomp->nodemap_orgToSub;
    const int* const nodemap_subToOrg = termcomp->nodemap_subToOrg;
@@ -640,14 +914,13 @@ SCIP_RETCODE termcompChangeSubgraphToBottleneck(
          if( head_sub > term_sub && subgraph->mark[head_sub] == MARK_SEPARATOR )
          {
             const int head = nodemap_subToOrg[head_sub];
-            const SCIP_Real b = termcompGetExtBottleneckDist(g, term, head, mstroot, mst, builder->nodes_bdist);
+            const SCIP_Real b = termcompGetExtBottleneckDist(g, term, head, term_sub, head_sub, mstroot, mst,
+                  termcomp->subsolbottleneck, builder->nodes_bdist);
 
             subgraph->cost[e] = b;
             subgraph->cost[flipedge(e)] = b;
 
             SCIPdebugMessage("%d->%d setting b=%f \n", term_sub, head_sub, b);
-
-            // using also primal solution! and unmark primal solution
          }
       }
    }
@@ -889,6 +1162,9 @@ SCIP_RETCODE termcompComputeSubgraphSol(
    SCIPdebugMessage("primal sub-sol value: %f \n", solstp_getObj(subgraph, subsol, 0.0));
 #endif
 
+   assert(!termcomp->subsolbottleneck);
+   SCIP_CALL( tbottleneckInit(scip, subgraph, subsol, &(termcomp->subsolbottleneck)) );
+
    return SCIP_OKAY;
 }
 
@@ -940,7 +1216,7 @@ SCIP_RETCODE processComponent(
    TERMCOMP* termcomp;
    SCIP_Bool success;
 
-   printf("component nodes=%d \n", builder->ncomponentnodes);
+   SCIPdebugMessage("component nodes=%d \n", builder->ncomponentnodes);
 
    SCIP_CALL( termcompInit(scip, g, builder, &termcomp) );
    SCIP_CALL( termcompBuildSubgraphWithSds(scip, g, extperma, termcomp) );
