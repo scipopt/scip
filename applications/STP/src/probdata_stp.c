@@ -1940,6 +1940,12 @@ SCIP_RETCODE setParams(
    else
    {
       SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 50)); // default is 20
+
+      // todo tune
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) );
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minorthoroot", 0.4) );
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/minortho", 0.4) );
+      SCIP_CALL( SCIPsetRealParam(scip, "separating/objparalfac", 0.01) );
    }
 
    SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/freq", 3));  // default is 10
