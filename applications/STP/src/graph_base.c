@@ -570,6 +570,27 @@ void graph_getIsTermArray(
 }
 
 
+/** gets terminals */
+void graph_getTerms(
+   const GRAPH*          g,                  /**< the graph */
+   int*                  terms               /**< array of size g->terms */
+)
+{
+   int nterms = 0;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(terms);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) )
+         terms[nterms++] = i;
+   }
+
+   assert(g->terms == nterms);
+}
+
+
 /** initialize graph */
 SCIP_RETCODE graph_init(
    SCIP*                 scip,               /**< SCIP data structure */

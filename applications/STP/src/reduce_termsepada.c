@@ -1237,8 +1237,7 @@ SCIP_RETCODE processComponent(
    {
       // todo, also mark pseudo-eliminaitons
       SCIP_CALL( termcompReduce(scip, g, extperma, termcomp, pseudoDelNodes, nelims) );
-      printf("nelims=%d \n", *nelims);
-
+   //   printf("nelims=%d \n", *nelims);
    }
 
    termcompFree(scip, &termcomp);
@@ -1358,7 +1357,6 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
    SCIP_CALL( mincut_termsepasInit(scip, g, &termsepas) );
    SCIP_CALL( compbuilderInit(scip, g, &builder) );
 
-   // todo different random seed! g->terms and real number of edges! or better: provide randnumgeneraotr or NULL!
    SCIP_CALL( mincut_findTerminalSeparators(scip, extperma->randnumgen, g, termsepas) );
 
    for( ;; )

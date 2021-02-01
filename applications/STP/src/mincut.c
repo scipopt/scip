@@ -39,6 +39,7 @@
 #define TERMSEPA_SPARSE_MAXRATIO 4
 #define TERMSEPA_MAXCUTSIZE 5
 #define TERMSEPA_MAXNCUTS   100
+#define TERMSEPA_NROOTCANDS 3
 
 /* *
 #define FLOW_FACTOR     100000
@@ -411,6 +412,76 @@ int termsepaGetCapaInf(
 }
 
 
+/** updates; takes root candidate if greater than current */
+static
+void updateTerminalSource(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   rootcand,           /**< new root candidate */
+   const GRAPH*          g,                  /**< the graph */
+   int*                  root,               /**< incumbent  (IN/OUT) */
+   int*                  rootcompsize        /**< size of component (IN/OUT) */
+)
+{
+   STP_Vectype(int) queue = NULL;
+   SCIP_Bool* nodes_isVisited;
+   const int nnodes = graph_get_nNodes(g);
+   int compsize = 0;
+
+   assert(graph_knot_isInRange(g, rootcand) && Is_term(g->term[rootcand]));
+
+   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &nodes_isVisited, nnodes) );
+   StpVecReserve(scip, queue, nnodes);
+   StpVecPushBack(scip, queue, rootcand);
+   nodes_isVisited[rootcand] = TRUE;
+
+   /* BFS loop stopping at roots */
+   for( int i = 0; i < StpVecGetSize(queue); i++ )
+   {
+      const int node = queue[i];
+      assert(nodes_isVisited[node]);
+
+      compsize++;
+
+      if( Is_term(g->term[node]) && node != rootcand )
+         continue;
+
+      for( int e = g->outbeg[node]; e >= 0; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         if( !nodes_isVisited[head] )
+         {
+            nodes_isVisited[head] = TRUE;
+            StpVecPushBack(scip, queue, head);
+         }
+      }
+   }
+
+   for( int i = 0; i < StpVecGetSize(queue); i++ )
+   {
+      const int node = queue[i];
+      assert(nodes_isVisited[node]);
+      nodes_isVisited[node] = FALSE;
+   }
+
+   StpVecFree(scip, queue);
+
+#ifndef NDEBUG
+   for( int i = 0; i < nnodes; i++ )
+   {
+      assert(nodes_isVisited[i] == FALSE);
+   }
+#endif
+
+   if( compsize > *rootcompsize )
+   {
+      *rootcompsize = compsize;
+      *root = rootcand;
+   }
+
+   SCIPfreeCleanBufferArray(scip, &nodes_isVisited);
+}
+
+
 /** finds a root terminal */
 static
 int termsepaFindTerminalSource(
@@ -428,51 +499,24 @@ int termsepaFindTerminalSource(
    }
    else
    {
-      int start;
-      const int nnodes = graph_get_nNodes(g);
+      int* terms;
+      int sourcecompsize = 0;
+      const int ntries = MIN(TERMSEPA_NROOTCANDS, g->terms);
 
-      start = SCIPrandomGetInt(mincut->randnumgen, 0, nnodes - 1);
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &terms, g->terms) );
+      graph_getTerms(g, terms);
 
-      for( int i = start; i < nnodes; i++ )
+      for( int i = 0; i < ntries; i++ )
       {
-         if( Is_term(g->term[i]) )
-         {
-            source = i;
-            break;
-         }
+         const int pos = SCIPrandomGetInt(mincut->randnumgen, 0, g->terms - 1);
+         const int cand = terms[pos];
+
+         updateTerminalSource(scip, cand, g, &source, &sourcecompsize );
       }
 
-      if( source == -1 )
-      {
-         for( int i = 0; i < start; i++ )
-         {
-            if( Is_term(g->term[i]) )
-            {
-               source = i;
-               break;
-            }
-         }
-      }
+      assert(sourcecompsize > 0);
 
-#ifdef SCIP_DISABLED
-      for( int i = start; i < nnodes; i++ )
-      {
-         if( !Is_term(g->term[i]) )
-            continue;
-
-         if( g->grad[i] <= g->grad[source] )
-            source = i;
-      }
-
-      for( int i = 0; i < start; i++ )
-      {
-         if( !Is_term(g->term[i]) )
-            continue;
-
-         if( g->grad[i] <= g->grad[source] )
-            source = i;
-      }
-#endif
+      SCIPfreeMemoryArray(scip, &terms);
    }
 
    assert(source >= 0);
@@ -759,7 +803,8 @@ SCIP_RETCODE termsepaStoreCutFinalize(
 
    assert(termsepas->sepastarts_csr[nsepas_all + 1] == termsepas->nsepaterms_csr);
 
-   if( ncutterms <= 8 )
+#ifdef SCIP_DEBUG
+   if( ncutterms <= TERMSEPA_MAXCUTSIZE )
    {
       printf("terminal cut of size %d for sink %d \n", ncutterms, sinkterm);
       printf("nsinknodes=%d  \n", nsinknodes);
@@ -769,6 +814,7 @@ SCIP_RETCODE termsepaStoreCutFinalize(
          printf("%d \n", cutterms[i]);
       }
    }
+#endif
 
    return SCIP_OKAY;
 }
@@ -2276,6 +2322,8 @@ SCIP_RETCODE mincut_findTerminalSeparators(
 
       wasRerun = TRUE;
    }
+
+   printf("number of separators: %d \n", termsepas->nsepas_all);
 
    mincutFree(scip, &mincut);
 
