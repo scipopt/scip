@@ -950,8 +950,10 @@ void termcompDeleteEdges(
    const SCIP_Real* pathdist = redcosts_getRootToNodeDistTop(redcostdata);
    const SCIP_Real cutoffbound = redcosts_getCutoffTop(redcostdata);
    const int* const edgemap_subToOrg = termcomp->edgemap_subToOrg;
+   const int* result = extperma->result;
 
    assert(graph_isMarked(g));
+   assert(!extperma->solIsValid || result);
 
    for( int k = 0; k < subnnodes; k++ )
    {
@@ -985,6 +987,9 @@ void termcompDeleteEdges(
                extreduce_edgeRemove(scip, eorg, g, extperma->distdata_default, extperma);
                // todo  todo is that ok??? might also change the primal bound
              //  graph_edge_del(scip, subgraph, e, TRUE);
+               if( extperma->solIsValid && (result[e] == CONNECT || result[flipedge(e)] == CONNECT) )
+                  extperma->solIsValid = FALSE;
+
                (*nelims)++;
             }
          }
@@ -992,6 +997,8 @@ void termcompDeleteEdges(
          e = enext;
       }
    }
+
+
 
    assert(graph_valid(scip, g));
 }
