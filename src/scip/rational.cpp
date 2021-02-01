@@ -342,7 +342,6 @@ void RatSetGMP(
    rational->val = numb;
    rational->isinf = FALSE;
    rational->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-   RatCheckInfByValue(rational);
 }
 
 /** init and set value of mpq array from rational array */
@@ -863,7 +862,9 @@ void RatAddProd(
    )
 {
    assert(res != NULL && op1 != NULL && op2 != NULL);
-   assert(!res->isinf);
+
+   if( res->isinf && !op1->isinf && !op2->isinf )
+      return;
 
    if( op1->isinf || op2->isinf )
    {
@@ -871,6 +872,12 @@ void RatAddProd(
          return;
       else
       {
+         if( res->isinf && res->val.sign() != (op1->val.sign() * op2->val.sign()) )
+         {
+            SCIPerrorMessage("inf - inf leads to undefined behavior \n");
+            SCIPABORT();
+         }
+
          SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
          res->val = op1->val.sign() * op2->val.sign();
          res->isinf = TRUE;
