@@ -1675,7 +1675,7 @@ SCIP_RETCODE SCIPexprintEval(
       {
          int idx = exprintdata->varidxs[i];
          exprintdata->X[i] = varvals[idx];
-         // exprintdata->x[i] = varvals[idx];
+         exprintdata->x[i] = varvals[idx];  /* need this for a following grad or hessian eval with new_x = false */
       }
 
       CppAD::Independent(exprintdata->X);
