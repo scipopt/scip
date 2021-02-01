@@ -1168,20 +1168,18 @@ SCIP_DECL_EXPR_MAPEXPR(mapvar2varidx)
    assert(sourcescip == targetscip);
    assert(sourceexpr != NULL);
    assert(targetexpr != NULL);
+   assert(*targetexpr == NULL);
    assert(mapexprdata != NULL);
-
-   var2idx = (SCIP_HASHMAP*)mapexprdata;
 
    /* do not provide map if not variable */
    if( !SCIPisExprVar(sourcescip, sourceexpr) )
-   {
-      *targetexpr = NULL;
       return SCIP_OKAY;
-   }
 
    assert(SCIPvarIsActive(SCIPgetVarExprVar(sourceexpr)));
 
+   var2idx = (SCIP_HASHMAP*)mapexprdata;
    assert(SCIPhashmapExists(var2idx, SCIPgetVarExprVar(sourceexpr)));
+
    varidx = SCIPhashmapGetImageInt(var2idx, SCIPgetVarExprVar(sourceexpr));
 
    SCIP_CALL( SCIPcreateExprVaridx(targetscip, targetexpr, varidx, ownercreate, ownercreatedata) );

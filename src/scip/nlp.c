@@ -166,16 +166,14 @@ SCIP_DECL_EXPR_MAPEXPR(mapvar2varidx)
    assert(sourcescip == targetscip);
    assert(sourceexpr != NULL);
    assert(targetexpr != NULL);
+   assert(*targetexpr == NULL);
    assert(mapexprdata != NULL);
 
    nlp = (SCIP_NLP*)mapexprdata;
 
    /* do not provide map if not variable */
    if( !SCIPexprIsVar(sourcescip->set, sourceexpr) )
-   {
-      *targetexpr = NULL;
       return SCIP_OKAY;
-   }
 
    assert(SCIPvarIsActive(SCIPgetVarExprVar(sourceexpr)));  /* because we simplified exprs */
 

@@ -156,7 +156,7 @@ typedef enum
  *
  *  input:
  *  - targetscip      : target SCIP main data structure
- *  - targetexpr      : pointer to store the mapped expression, or NULL if expression shall be copied
+ *  - targetexpr      : pointer to store the mapped expression, or NULL if expression shall be copied; initialized to NULL
  *  - sourcescip      : source SCIP main data structure
  *  - sourceexpr      : expression to be mapped
  *  - ownercreate     : callback to call when creating a new expression

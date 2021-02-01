@@ -655,14 +655,12 @@ SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
    assert(targetscip != NULL);
    assert(sourceexpr != NULL);
    assert(targetexpr != NULL);
+   assert(*targetexpr == NULL);
    assert(mapexprdata != NULL);
 
    /* do not provide map if not variable */
    if( !SCIPisExprVar(sourcescip, sourceexpr) )
-   {
-      *targetexpr = NULL;
       return SCIP_OKAY;
-   }
 
    SCIP_CALL( createExprVar(targetscip, conshdlr, targetexpr, SCIPgetVarExprVar(sourceexpr)) );
 
@@ -680,14 +678,12 @@ SCIP_DECL_EXPR_MAPEXPR(mapexprtransvar)
    assert(targetscip != NULL);
    assert(sourceexpr != NULL);
    assert(targetexpr != NULL);
+   assert(*targetexpr == NULL);
    assert(mapexprdata != NULL);
 
    /* do not provide map if not variable */
    if( !SCIPisExprVar(sourcescip, sourceexpr) )
-   {
-      *targetexpr = NULL;
       return SCIP_OKAY;
-   }
 
    var = SCIPgetVarExprVar(sourceexpr);
    assert(var != NULL);
