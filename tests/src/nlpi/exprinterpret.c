@@ -334,7 +334,7 @@ Test(exprint, pow)
       varvals[0] = 2.0;
       checkAD(expr, 1);
 
-      // FIXME CppAD claims that x^1.875 is non-diff at x=0
+      // FIXME CppAD claims that x^1.875 is non-diff at x=0 because it treats this as exp(log(x)*1.875), see https://github.com/coin-or/CppAD/issues/92
       if( EPSISINT(exponents[i], 0.0) )
       {
          varvals[0] = 0.0;
