@@ -1664,8 +1664,8 @@ SCIP_RETCODE SCIPexprintEval(
 
    if( n == 0 )
    {
-      SCIP_CALL( SCIPevalExpr(scip, expr, NULL, 0) );
-      *val = SCIPexprGetEvalValue(expr);
+      SCIP_CALL( SCIPevalExpr(scip, expr, NULL, 0L) );
+      exprintdata->val = *val = SCIPexprGetEvalValue(expr);
       return SCIP_OKAY;
    }
 
