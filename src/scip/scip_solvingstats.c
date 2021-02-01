@@ -94,6 +94,7 @@
 #include "scip/table.h"
 #include "scip/tree.h"
 #include "scip/var.h"
+#include "scip/cons_exactlp.h"
 #include <string.h>
 
 /** gets number of branch and bound runs performed, including the current run
@@ -3566,10 +3567,19 @@ void SCIPprintLPStatistics(
          SCIPclockGetTime(scip->stat->provedinfeaspstime),
          scip->stat->nprojshiftinf,
          scip->stat->nfailprojshiftinf);
-   }
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Meta heuristic     :   Time Success (%.2f) TimeFail (%.2f) Calls (%d) Found (%d) \n",
-      scip->stat->timesuccessexactsol, scip->stat->timefailexactsol, scip->stat->ncallsexactsol, scip->stat->nfoundexactsol);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Meta heuristic     :   Time Success (%.2f) TimeFail (%.2f) Calls (%d) Found (%d) \n",
+         scip->stat->timesuccessexactsol, scip->stat->timefailexactsol, scip->stat->ncallsexactsol, scip->stat->nfoundexactsol);
+      {
+         SCIP_Longint ncalls;
+         SCIP_Longint nsuccess;
+         SCIP_Longint naborts;
+
+         SCIPgetRunningErrorStatsExactLinear(scip, &ncalls, &nsuccess, &naborts);
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Running error ana  :   Ncalls %10" SCIP_LONGINT_FORMAT " Nsuccess %10" SCIP_LONGINT_FORMAT "  Naborts %10" SCIP_LONGINT_FORMAT "  \n",
+            ncalls, nsuccess, naborts);
+      }
+   }
 }
 
 /** outputs NLP statistics

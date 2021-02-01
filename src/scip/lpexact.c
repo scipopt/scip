@@ -4799,6 +4799,60 @@ void SCIProwExactGetSolFeasibility(
    RatFreeBuffer(set->buffer, &temp1);
 }
 
+/** does activity computation with running error analysis for a row, return TRUE on success */
+SCIP_Bool SCIProwExactGetSolActivityWithErrorbound(
+   SCIP_ROWEXACT*        rowexact,           /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real*            activity,           /**< the approximate activity */
+   SCIP_Real*            errorbound          /**< the error bound */
+   )
+{
+   SCIP_ROW* row;
+   SCIP_Real solval;
+   SCIP_Real mu;
+   SCIP_Real sum;
+   int c;
+
+   assert(rowexact->fprow != NULL);
+
+   row = rowexact->fprow;
+
+   if( row->len != rowexact->len )
+      return FALSE;
+
+   sum = 0.0;
+   mu = 0.0;
+
+   for( c = 0; c < row->len; c++ )
+   {
+      if( sol != NULL)
+         solval = SCIPsolGetVal(sol, set, stat, SCIPcolGetVar(row->cols[c]));
+      else
+         solval = row->cols[c]->primsol;
+
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+         return FALSE;
+
+      sum += row->vals[c] * solval;
+      mu += REALABS(sum);
+      /* the factor 3 + eps is needed to account for rounding errors in valsreal[v]/solval */
+      mu += (3.0 + SCIP_REAL_UNITROUNDOFF) * REALABS(row->vals[c] * solval);
+   }
+
+   sum += row->constant;
+   mu += (3.0 + SCIP_REAL_UNITROUNDOFF) * REALABS(row->constant);
+
+   sum = MAX(sum, -SCIPsetInfinity(set));
+   sum = MIN(sum, SCIPsetInfinity(set));
+
+   *activity = sum;
+   *errorbound = mu;
+
+   return TRUE;
+}
+
 /** returns the activity of a row for a given solution */
 void SCIProwExactGetSolActivity(
    SCIP_ROWEXACT*        rowexact,           /**< LP row */
