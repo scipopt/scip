@@ -277,6 +277,9 @@ struct SCIP_ConshdlrData
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
    int                   nmincomparisons;    /**< number for minimal pairwise presolving comparisons */
    int                   naddconss;          /**< number of added constraints */
+   SCIP_Longint          ncheckserrorbound;  /**< number of times running error analyis activity computation was called */
+   SCIP_Longint          nsuccesserrorbound; /**< number of times running error analyis activity computation could determine feasibility */
+   SCIP_Longint          nabotserrorbound;    /**< number of times running error analysis activity computation not appliccable (e.g. row->len != fprow->len) */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
@@ -539,6 +542,9 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->linconsupgradessize = 0;
    (*conshdlrdata)->nlinconsupgrades = 0;
    (*conshdlrdata)->naddconss = 0;
+   (*conshdlrdata)->ncheckserrorbound = 0;
+   (*conshdlrdata)->nabotserrorbound = 0;
+   (*conshdlrdata)->nsuccesserrorbound = 0;
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale) );
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist) );
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta) );
@@ -2342,6 +2348,9 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
    SCIP_Real sum;
    SCIP_Real mu;
    SCIP_Real inf;
+   SCIP_ROWEXACT* row;
+   SCIP_ROW* fprow;
+   SCIP_Bool success;
    int v;
 
    assert(activity != NULL);
@@ -2353,20 +2362,31 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
 
    sum = 0.0;
    mu = 0.0;
-   for( v = 0; v < consdata->nvars; ++v )
+   /* normally we want to use the row since all fixed/aggregated variables do not appear there */
+   if( consdata->row == NULL )
    {
-      if( SCIPvarGetStatus(consdata->vars[v]) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(consdata->vars[v]) == SCIP_VARSTATUS_LOOSE )
-         solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
-      else
-         return FALSE;
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         if( SCIPvarGetStatus(consdata->vars[v]) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(consdata->vars[v]) == SCIP_VARSTATUS_LOOSE )
+            solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+         else
+            return FALSE;
 
-      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-         return FALSE;
+         if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+            return FALSE;
 
-      sum += consdata->valsreal[v] * solval;
-      mu += REALABS(sum);
-      /* the factor 3 + eps is needed to account for rounding errors in valsreal[v]/solval */
-      mu += (3.0 + SCIP_REAL_UNITROUNDOFF) * REALABS(consdata->valsreal[v] * solval);
+         sum += consdata->valsreal[v] * solval;
+         mu += REALABS(sum);
+         /* the factor 3 + eps is needed to account for rounding errors in valsreal[v]/solval */
+         mu += (3.0 + SCIP_REAL_UNITROUNDOFF) * REALABS(consdata->valsreal[v] * solval);
+      }
+   }
+   else
+   {
+      success = SCIProwExactGetSolActivityWithErrorbound(consdata->rowexact, scip->set, scip->stat, sol, &sum, &mu);
+
+      if( !success )
+         return FALSE;
    }
 
    sum = MAX(sum, -inf);
@@ -7250,6 +7270,7 @@ static
 SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
    SCIP_Bool             useexactsol,        /**< should the sol or solex be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -7279,11 +7300,17 @@ SCIP_RETCODE checkCons(
    violation = consdata->violation;
 
    /* only check exact constraint if fp cons is feasible enough */
+   if( (consdata->row == NULL || checklprows) && !RatIsEqual(consdata->lhs, consdata->rhs) )
    {
       SCIP_Real activityfp;
       SCIP_Real mu;
 
       success = consdataComputeSolActivityWithErrorbound(scip, consdata, sol, &activityfp, &mu);
+
+      conshdlrdata->ncheckserrorbound++;
+
+      if( !success )
+         conshdlrdata->nabotserrorbound++;
 
       if( success )
       {
@@ -7292,6 +7319,7 @@ SCIP_RETCODE checkCons(
             SCIPdebugMsg(scip, "discarding solution due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
                activityfp, consdata->lhsreal, consdata->rhsreal, mu);
             *violated = TRUE;
+            conshdlrdata->nsuccesserrorbound++;
             return SCIP_OKAY;
          }
          else if( activityfp + mu < consdata->rhsreal && activityfp - mu >= consdata->lhsreal )
@@ -7299,6 +7327,7 @@ SCIP_RETCODE checkCons(
             SCIPdebugMsg(scip, "skipping exact check due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
                activityfp, consdata->lhsreal, consdata->rhsreal, mu);
             *violated = FALSE;
+            conshdlrdata->nsuccesserrorbound++;
             return SCIP_OKAY;
          }
          else
@@ -7482,7 +7511,7 @@ SCIP_RETCODE separateCons(
    oldncuts = *ncuts;
    *cutoff = FALSE;
 
-   SCIP_CALL( checkCons(scip, cons, sol, FALSE, (sol != NULL), conshdlrdata->checkrelmaxabs, &violated) );
+   SCIP_CALL( checkCons(scip, cons, conshdlrdata, sol, FALSE, (sol != NULL), conshdlrdata->checkrelmaxabs, &violated) );
 
    if( violated )
    {
@@ -14935,7 +14964,7 @@ SCIP_RETCODE enforceConstraint(
    /* check all useful linear constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], sol, checkexact, FALSE, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], conshdlrdata, sol, checkexact, FALSE, checkrelmaxabs, &violated) );
 
       if( violated )
       {
@@ -14951,7 +14980,7 @@ SCIP_RETCODE enforceConstraint(
    /* check all obsolete linear constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], sol, checkexact, FALSE, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], conshdlrdata, sol, checkexact, FALSE, checkrelmaxabs, &violated) );
 
       if( violated )
       {
@@ -15889,7 +15918,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, TRUE, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], conshdlrdata, NULL, FALSE, TRUE, checkrelmaxabs, &violated) );
    }
 
    if( violated )
@@ -15932,7 +15961,7 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
       SCIP_Bool violated = FALSE;
-      SCIP_CALL( checkCons(scip, conss[c], sol, checkexact, checklprows, checkrelmaxabs, &violated) );
+      SCIP_CALL( checkCons(scip, conss[c], conshdlrdata, sol, checkexact, checklprows, checkrelmaxabs, &violated) );
 
       if( violated )
       {
@@ -18395,6 +18424,32 @@ SCIP_ROWEXACT* SCIPgetRowexExactLinear(
    assert(consdata != NULL);
 
    return consdata->rowexact;
+}
+
+/** returns statistics of running error analysis feasibility checks */
+void SCIPgetRunningErrorStatsExactLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         ncalls,             /**< stores number of times running error analysis was called */
+   SCIP_Longint*         nsuccess,           /**< stores number of times running error analysis successfully determined feasibility */
+   SCIP_Longint*         naborts             /**< stores number of times running error analysis had to abort */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, "linear-exact");
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   assert(conshdlrdata != NULL);
+
+   *ncalls = conshdlrdata->ncheckserrorbound;
+   *nsuccess = conshdlrdata->nsuccesserrorbound;
+   *naborts = conshdlrdata->nabotserrorbound;
 }
 
 #if 0

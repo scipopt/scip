@@ -343,6 +343,16 @@ void SCIProwExactGetSolFeasibility(
    SCIP_Rational*        result              /**< result pointer */
    );
 
+/** does activity computation with running error analysis for a row, return TRUE on success */
+SCIP_Bool SCIProwExactGetSolActivityWithErrorbound(
+   SCIP_ROWEXACT*        rowexact,           /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real*            activity,           /**< the approximate activity */
+   SCIP_Real*            errorbound          /**< the error bound */
+   );
+
 /** returns the activity of a row for a given solution */
 void SCIProwExactGetSolActivity(
    SCIP_ROWEXACT*        rowexact,           /**< LP row */

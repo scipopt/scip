@@ -369,6 +369,15 @@ SCIP_RETCODE SCIPupgradeConsExactLinear(
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
 
+/** returns statistics of running error analysis feasibility checks */
+SCIP_EXPORT
+void SCIPgetRunningErrorStatsExactLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         ncalls,             /**< stores number of times running error analysis was called */
+   SCIP_Longint*         nsuccess,           /**< stores number of times running error analysis successfully determined feasibility */
+   SCIP_Longint*         naborts             /**< stores number of times running error analysis had to abort */
+   );
+
 /** performs linear constraint type classification as used for MIPLIB
  *
  *  iterates through all linear constraints and stores relevant statistics in the linear constraint statistics \p linconsstats.
