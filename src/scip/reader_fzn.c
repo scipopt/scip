@@ -4389,13 +4389,13 @@ SCIP_RETCODE writeFzn(
          if( ! SCIPisInfinity(scip, ub) )
          {
             boundedvars[nboundedvars] = v;
-            boundtypes[nboundedvars] = SCIP_BOUNDTYPE_LOWER;
+            boundtypes[nboundedvars] = SCIP_BOUNDTYPE_UPPER;
             nboundedvars++;
          }
          if( ! SCIPisInfinity(scip, -lb) )
          {
             boundedvars[nboundedvars] = v;
-            boundtypes[nboundedvars] = SCIP_BOUNDTYPE_UPPER;
+            boundtypes[nboundedvars] = SCIP_BOUNDTYPE_LOWER;
             nboundedvars++;
          }
       }
