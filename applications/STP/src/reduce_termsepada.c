@@ -1183,19 +1183,21 @@ SCIP_Bool termcompIsPromising(
    const COMPBUILDER*    builder             /**< terminal separator component initializer */
    )
 {
+   const SCIP_Real noderatio = compbuilderGetSubNodesRatio(builder);
+
+   assert(GT(noderatio, 0.0));
+   SCIPdebugMessage(" noderatio=%f \n", noderatio);
+
    /* NOTE: we allow a few components regardless of their size */
-   if( builder->componentnumber < 10 )
+   if( builder->componentnumber < 10 && noderatio < COMPONENT_NODESRATIO_MAX )
    {
+
       SCIPdebugMessage("...component is promising \n");
+
       return TRUE;
    }
    else
    {
-      const SCIP_Real noderatio = compbuilderGetSubNodesRatio(builder);
-      assert(GT(noderatio, 0.0));
-
-      SCIPdebugMessage(" noderatio=%f \n", noderatio);
-
       if( COMPONENT_NODESRATIO_MIN < noderatio && noderatio < COMPONENT_NODESRATIO_MAX )
       {
          SCIPdebugMessage("...component is promising \n");
@@ -1274,9 +1276,6 @@ void getNextComponent(
 
    for( ; nsepaterms <= SEPARATOR_MAXSIZE; nsepaterms++  )
    {
-      // todo sinknodes should be computed correctly by the routine!
-      // todo!!!
-      // todo!!!
       sepaterms = mincut_termsepasGetNext(nsepaterms, termsepas, &sinkterm, &nsinknodes);
 
       if( sepaterms != NULL )
