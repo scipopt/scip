@@ -1157,9 +1157,9 @@ SCIP_RETCODE termcompComputeSubgraphSol(
          daparams.root, &success, FALSE));
    assert(success);
 
-   // todo maybe deactivate if too expensive...
-   //if( compbuilderGetSubNodesRatio(termcomp->builder) <= COMPONENT_MAXNODESRATIO )
-   SCIP_CALL( SCIPStpHeurLocalRun(scip, subgraph, subsol) );
+   // todo maybe deactivate if still too expensive...
+   if( compbuilderGetSubNodesRatio(termcomp->builder) <= COMPONENT_NODESRATIO_SMALL )
+      SCIP_CALL( SCIPStpHeurLocalRun(scip, subgraph, subsol) );
 
    termcomp->subsolution = subsol;
    termcomp->subprimalobj = solstp_getObj(subgraph, subsol, 0.0);
