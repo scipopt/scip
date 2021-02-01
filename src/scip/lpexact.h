@@ -707,6 +707,14 @@ SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
    SCIP_LPEXACT*         lpexact              /**< current LP data */
    );
 
+/** sets the upper objective limit of the exact LP solver */
+SCIP_RETCODE SCIPlpExactSetCutoffbound(
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             cutoffbound         /**< new upper objective limit */
+   );
+
 /** solves the LP with simplex algorithm, and copy the solution into the column's data */
 SCIP_RETCODE SCIPlpExactSolveAndEval(
    SCIP_LPEXACT*         lpexact,            /**< LP data */

@@ -10400,6 +10400,8 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
    }
 
+   SCIPlpExactSetCutoffbound(lp->lpexact, set, prob, cutoffbound);
+
    lp->cutoffbound = cutoffbound;
 
    return SCIP_OKAY;

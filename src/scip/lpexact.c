@@ -3636,6 +3636,54 @@ SCIP_RETCODE SCIPlpExactAddRow(
    return SCIP_OKAY;
 }
 
+/** should the objective limit of the LP solver be disabled */
+#define lpCutoffDisabled(set) (set->lp_disablecutoff == 1 || (set->nactivepricers > 0 && set->lp_disablecutoff == 2))
+
+/** sets the upper objective limit of the exact LP solver */
+SCIP_RETCODE SCIPlpExactSetCutoffbound(
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real             cutoffbound         /**< new upper objective limit */
+   )
+{
+   SCIP_Rational* tmpobj;
+
+   if( !set->exact_enabled )
+      return SCIP_OKAY;
+
+   assert(lpexact != NULL);
+
+   SCIPsetDebugMsg(set, "setting exact LP upper objective limit from %g to %g\n", lpexact->cutoffbound, cutoffbound);
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpobj) );
+   if( lpexact->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && lpexact->solved && lpexact->flushed )
+      SCIPlpExactGetObjval(lpexact, set, prob, tmpobj);
+
+   /* if the cutoff bound is increased, and the LP was proved to exceed the old cutoff, it is no longer solved */
+   if( lpexact->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT && cutoffbound > lpexact->cutoffbound )
+   {
+      /* mark the current solution invalid */
+      lpexact->solved = FALSE;
+      RatSetString(lpexact->lpobjval, "inf");
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
+   /* if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit;
+    * if the objective limit in the LP solver was disabled, the solution status of the LP is not changed
+    */
+   else if( !lpCutoffDisabled(set) && lpexact->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && lpexact->solved && lpexact->flushed
+            && RatIsGEReal(tmpobj, cutoffbound) )
+   {
+      assert(lpexact->flushed);
+      assert(lpexact->solved);
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+   }
+   RatFreeBuffer(set->buffer, &tmpobj);
+   lpexact->cutoffbound = cutoffbound;
+
+   return SCIP_OKAY;
+}
+
 /** flushes the exact LP and solves it with the primal or dual simplex algorithm, depending on the current basis feasibility */
 static
 SCIP_RETCODE lpExactFlushAndSolve(
@@ -3770,7 +3818,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
          lpexact->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
          lp->validsollp = stat->lpcount;
 
-         if( !SCIPsetIsInfinity(set, lpexact->lpiobjlim) && lp->lpobjval > lpexact->lpiobjlim )
+         if( !SCIPsetIsInfinity(set, lpexact->lpiobjlim) && RatIsGTReal(lpexact->lpobjval, lpexact->lpiobjlim) )
          {
             /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
             RatDebugMessage("optimal solution %q exceeds objective limit %.15g\n", lpexact->lpobjval, lp->lpiobjlim);
@@ -3996,7 +4044,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       break;
 
    case SCIP_LPSOLSTAT_OBJLIMIT:
-      assert(!(set->lp_disablecutoff == 0));
+      assert(!lpCutoffDisabled(set));
       /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
          * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
          * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
