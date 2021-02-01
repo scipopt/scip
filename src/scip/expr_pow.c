@@ -1348,6 +1348,14 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       SCIPdebugPrintf("[simplifyPow] POW3\n");
       baseval = SCIPgetValueExprValue(base);
 
+      /* the assert below was failing on st_e35 for baseval=-1e-15 and fractional exponent
+       * in the subNLP heuristic; I assume that this was because baseval was evaluated after
+       * variable fixings and that there were just floating-point inaccuracies and 0 was meant,
+       * so I treat -1e-15 as 0 here
+       */
+      if( baseval < 0.0 && fmod(exponent, 1.0) != 0.0 && baseval > -SCIPepsilon(scip) )
+         baseval = 0.0;
+
       /* TODO check if those are all important asserts */
       assert(baseval >= 0.0 || fmod(exponent, 1.0) == 0.0);
       assert(baseval != 0.0 || exponent != 0.0);
