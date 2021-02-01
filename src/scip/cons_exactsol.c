@@ -327,6 +327,10 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( strcmp(SCIPheurGetName(SCIPsolGetHeur(sol)), "trivial") == 0 )
       return SCIP_OKAY;
 
+   /* do not run for solutions that are already exact */
+   if( SCIPisExactSol(scip, sol) )
+      return SCIP_OKAY;
+
    /** if we are at a point where we can't dive exactly, buffer the solution and return */
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) || SCIPnodeGetType(SCIPgetCurrentNode(scip)) != SCIP_NODETYPE_FOCUSNODE )
    {
