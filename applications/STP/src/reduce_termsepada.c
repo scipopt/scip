@@ -986,7 +986,7 @@ void termcompDeleteEdges(
 #endif
                extreduce_edgeRemove(scip, eorg, g, extperma->distdata_default, extperma);
                // todo  todo is that ok??? might also change the primal bound
-             //  graph_edge_del(scip, subgraph, e, TRUE);
+               graph_edge_del(scip, subgraph, e, FALSE);
                if( extperma->solIsValid && (result[e] == CONNECT || result[flipedge(e)] == CONNECT) )
                   extperma->solIsValid = FALSE;
 
