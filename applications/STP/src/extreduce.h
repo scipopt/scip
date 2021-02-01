@@ -185,6 +185,7 @@ extern SCIP_Bool       extreduce_redcostRuleOutPeriph(const GRAPH*, EXTDATA*);
 
 void                      extreduce_extCompClean(SCIP*, const GRAPH*, const EXTCOMP*, SCIP_Bool, EXTDATA*);
 extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, enum EXTRED_MODE, const GRAPH*, STP_Bool*, EXTPERMA**);
+extern void               extreduce_extPermaAddRandnumgen(SCIP_RANDNUMGEN*, EXTPERMA*);
 extern SCIP_RETCODE       extreduce_extPermaAddMLdistsbiased(SCIP*, EXTPERMA*);
 extern SCIP_Bool          extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
 extern void               extreduce_extPermaFree(SCIP*, EXTPERMA**);

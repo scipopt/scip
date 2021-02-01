@@ -98,6 +98,7 @@ typedef struct distance_data
 typedef struct extension_data_permanent
 {
 /* non-owned data: */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator (initialized to NULL)  */
    REDCOST*              redcostdata;        /**< reduced cost data (initialized to NULL) */
    DISTDATA*             distdata_default;   /**< default distance data (initialized to NULL) */
    DISTDATA*             distdata_biased;    /**< biased distance data (initialized to NULL) */

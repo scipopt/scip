@@ -214,6 +214,7 @@ SCIP_RETCODE extreduce_extPermaInit(
    SCIP_CALL( extreduce_contractionInit(scip, STP_EXT_MAXDFSDEPTH_GUARD,
          STP_EXTTREE_MAXNLEAVES_GUARD, &(extperm->contration)) );
 
+   extperm->randnumgen = NULL;
    extperm->sdsbias_horizontal = NULL;
    extperm->sdsbias_vertical = NULL;
    extperm->distdata_default = NULL;
@@ -259,6 +260,18 @@ SCIP_RETCODE extreduce_extPermaInit(
    assert(extreduce_extPermaIsClean(graph, extperm));
 
    return SCIP_OKAY;
+}
+
+
+/** adds random number generator */
+void extreduce_extPermaAddRandnumgen(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator to add (NON-OWNED!) */
+   EXTPERMA*             extpermanent        /**< (initialized) extension data */
+)
+{
+   assert(extpermanent && randnumgen);
+
+   extpermanent->randnumgen = randnumgen;
 }
 
 

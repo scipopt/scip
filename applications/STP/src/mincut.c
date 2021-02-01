@@ -70,7 +70,7 @@ typedef struct minimum_cut_helper
    int                   root;
    int                   termsepa_nnodes;
    int                   termsepa_nedges;
-   unsigned int          randseed;
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator or NULL */
    SCIP_Bool             isLpcut;            /**< cut for LP? */
 } MINCUT;
 
@@ -422,18 +422,16 @@ int termsepaFindTerminalSource(
    int source = -1;
 
    /* NOTE: hack to allow for stable unit tests  */
-   if( mincut->randseed == 1 )
+   if( !mincut->randnumgen )
    {
       source = g->source;
    }
    else
    {
-      SCIP_RANDNUMGEN* randnumgen;
       int start;
       const int nnodes = graph_get_nNodes(g);
 
-      SCIP_CALL_ABORT( SCIPcreateRandom(scip, &randnumgen, mincut->randseed, TRUE) );
-      start = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
+      start = SCIPrandomGetInt(mincut->randnumgen, 0, nnodes - 1);
 
       for( int i = start; i < nnodes; i++ )
       {
@@ -475,8 +473,6 @@ int termsepaFindTerminalSource(
             source = i;
       }
 #endif
-
-      SCIPfreeRandom(scip, &randnumgen);
    }
 
    assert(source >= 0);
@@ -1369,7 +1365,7 @@ SCIP_RETCODE mincutInitForTermSepa(
 static
 SCIP_RETCODE mincutInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   unsigned int          randseed,           /**< random seed */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator or NULL */
    SCIP_Bool             isLpcut,            /**< for LP cut? */
    GRAPH*                g,                  /**< the graph */
    MINCUT**              mincut              /**< minimum cut */
@@ -1395,7 +1391,7 @@ SCIP_RETCODE mincutInit(
    mcut->terms_mincompsize = NULL;
    mcut->termsepa_nnodes = -1;
    mcut->termsepa_nedges = -1;
-   mcut->randseed = randseed;
+   mcut->randnumgen = randnumgen;
   // mcut->termsepa_inEdges = NULL;
   // mcut->termsepa_inNeighbors = NULL;
   // mcut->termsepa_inEdgesStart = NULL;
@@ -1642,7 +1638,6 @@ static
 int mincutGetNextSinkTerm(
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Bool             firstrun,           /**< first run?  */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator  or NULL   */
    MINCUT*               mincut              /**< minimum cut */
    )
 {
@@ -1658,9 +1653,9 @@ int mincutGetNextSinkTerm(
 
    if( firstrun )
    {
-      if( randnumgen && ntermcands > 1 )
+      if( mincut->randnumgen && ntermcands > 1 )
       {
-         const int pos = SCIPrandomGetInt(randnumgen, 0, ntermcands - 1);
+         const int pos = SCIPrandomGetInt(mincut->randnumgen, 0, ntermcands - 1);
          assert(0 <= pos && pos <= ntermcands - 1);
 
          SWAP_INTS(termcands[ntermcands - 1], termcands[pos]);
@@ -2209,7 +2204,7 @@ SCIP_Bool mincut_findTerminalSeparatorsIsPromising(
 /** searches for (small) terminal separators */
 SCIP_RETCODE mincut_findTerminalSeparators(
    SCIP*                 scip,               /**< SCIP data structure */
-   unsigned int          randseed,           /**< random seed for computing separator source terminal */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator or NULL */
    GRAPH*                g,                  /**< graph data structure */
    TERMSEPAS*            termsepas           /**< terminal separator storage */
    )
@@ -2230,7 +2225,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    SCIP_CALL( reduce_unconnected(scip, g) );
    graph_printInfoReduced(g);
 
-   SCIP_CALL( mincutInit(scip, randseed, FALSE, g, &mincut) );
+   SCIP_CALL( mincutInit(scip, randnumgen, FALSE, g, &mincut) );
    termsepas->root = mincut->root;
 
    /* sets excess, g->mincut_head, g->mincut_head_inact */
@@ -2254,7 +2249,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
          break;
 
       /* look for non-reachable terminal */
-      sinkterm = mincutGetNextSinkTerm(g, !wasRerun, NULL, mincut);
+      sinkterm = mincutGetNextSinkTerm(g, !wasRerun, mincut);
       mincut->ntermcands--;
 
       SCIPdebugMessage("computing cut for sink terminal %d \n", sinkterm);
@@ -2329,7 +2324,7 @@ SCIP_RETCODE mincut_separateLp(
    assert(nested_cut == FALSE);
    assert(disjunct_cut == FALSE);
 
-   SCIP_CALL( mincutInit(scip, 1, TRUE, g, &mincut) );
+   SCIP_CALL( mincutInit(scip, randnumgen, TRUE, g, &mincut) );
 
    /* sets excess, g->mincut_head,  g->mincut_head_inact */
    graph_mincut_setDefaultVals(g);
@@ -2359,7 +2354,7 @@ SCIP_RETCODE mincut_separateLp(
          break;
 
       /* look for non-reachable terminal */
-      sinkterm = mincutGetNextSinkTerm(g, !wasRerun, randnumgen, mincut);
+      sinkterm = mincutGetNextSinkTerm(g, !wasRerun, mincut);
       mincut->ntermcands--;
 
       assert(Is_term(g->term[sinkterm]) && g->source != sinkterm);

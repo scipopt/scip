@@ -1359,7 +1359,7 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
    SCIP_CALL( compbuilderInit(scip, g, &builder) );
 
    // todo different random seed! g->terms and real number of edges! or better: provide randnumgeneraotr or NULL!
-   SCIP_CALL( mincut_findTerminalSeparators(scip, 1, g, termsepas) );
+   SCIP_CALL( mincut_findTerminalSeparators(scip, extperma->randnumgen, g, termsepas) );
 
    for( ;; )
    {

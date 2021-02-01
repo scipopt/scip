@@ -2652,7 +2652,6 @@ SCIP_RETCODE reduce_da(
    SCIP_Bool havebestsol = FALSE;
    const SCIP_Bool useHops = (paramsda->prevrounds == STP_DAHOPS_MAGIC);    // todo do that properly
 
-
    assert(scip && graph && nelims);
    assert(graph_valid_ancestors(scip, graph) && graph_valid(scip, graph));
    assert(!isRpcmw || !graph->extended);
@@ -2780,6 +2779,7 @@ SCIP_RETCODE reduce_da(
          {
             const SCIP_Bool useSd = !graph_pc_isPc(graph);
             SCIP_CALL( extreduce_init(scip, useSd, paramsda->extredMode, graph, redcostdata, &extpermanent) );
+            extreduce_extPermaAddRandnumgen(randnumgen, extpermanent);
             havebestsol = havebestsol && solstp_isUnreduced(scip, graph, bestresult);
             extpermanent->solIsValid = havebestsol;
             extpermanent->result = havebestsol ? bestresult : NULL;
