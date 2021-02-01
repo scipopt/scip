@@ -1798,7 +1798,7 @@ SCIP_DECL_EXPRFWDIFF(fwdiffPow)
    assert(SCIPexprGetDot(child) != SCIP_INVALID);
 
    exponent = SCIPgetExponentExprPow(expr);
-   assert(exponent != 1.0 && exponent != 0.0);
+   assert(exponent != 0.0);
 
    /* x^exponent is not differentiable for x = 0 and exponent in ]0,1[ */
    if( exponent > 0.0 && exponent < 1.0 && SCIPexprGetEvalValue(child) == 0.0 )
@@ -1831,10 +1831,10 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffPow)
    assert(SCIPexprGetDot(child) != SCIP_INVALID);
 
    exponent = SCIPgetExponentExprPow(expr);
-   assert(exponent != 1.0 && exponent != 0.0);
+   assert(exponent != 0.0);
 
-   /* x^exponent is not twice differentiable for x = 0 and exponent in ]0,2[ */
-   if( exponent > 0.0 && exponent < 2.0 && SCIPexprGetEvalValue(child) == 0.0 )
+   /* x^exponent is not twice differentiable for x = 0 and exponent in ]0,1[ u ]1,2[  */
+   if( exponent > 0.0 && exponent < 2.0 && SCIPexprGetEvalValue(child) == 0.0 && exponent != 1.0 )
       *bardot = SCIP_INVALID;
    else
       *bardot = exponent * (exponent - 1.0) * pow(SCIPexprGetEvalValue(child), exponent - 2.0) * SCIPexprGetDot(child);
@@ -1862,7 +1862,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffPow)
    assert(childval != SCIP_INVALID);
 
    exponent = SCIPgetExponentExprPow(expr);
-   assert(exponent != 1.0 && exponent != 0.0);
+   assert(exponent != 0.0);
 
    /* x^exponent is not differentiable for x = 0 and exponent in ]0,1[ */
    if( exponent > 0.0 && exponent < 1.0 && childval == 0.0 )

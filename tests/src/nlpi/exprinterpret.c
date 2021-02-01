@@ -326,10 +326,6 @@ Test(exprint, pow)
 
    for( i = 0; i < sizeof(exponents) / sizeof(SCIP_Real); ++i )
    {
-      // FIXME expr_pow.c:pwdiffPow asserts non-trivial exponent
-      if( exponents[i] == 1.0 )
-         continue;
-
       SCIP_CALL( SCIPcreateExprPow(scip, &expr, varexprs[0], exponents[i], NULL, NULL) );
 
       varvals[0] = 1.0;
