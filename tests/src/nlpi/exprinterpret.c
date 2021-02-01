@@ -348,6 +348,29 @@ Test(exprint, pow)
    }
 }
 
+Test(exprint, signpow)
+{
+   SCIP_EXPR* expr;
+   SCIP_Real exponents[] = { 1.0, 1.875, 2.0 };
+   size_t i;
+
+   for( i = 0; i < sizeof(exponents) / sizeof(SCIP_Real); ++i )
+   {
+      SCIP_CALL( SCIPcreateExprSignpower(scip, &expr, varexprs[0], exponents[i], NULL, NULL) );
+
+      varvals[0] = -3.0;
+      checkAD(expr, 1);
+
+      varvals[0] = 0.0;
+      checkAD(expr, 1);
+
+      varvals[0] = 5.0;
+      checkAD(expr, 1);
+
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   }
+}
+
 Test(exprint, product)
 {
    SCIP_EXPR* expr;
