@@ -2014,27 +2014,15 @@ SCIP_RETCODE redLoopStp(
          assert(!rerun);
 
          SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, redbaseGetOffsetPointer(redbase), &extendedelims, randnumgen) );
-
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 
          SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &extendedelims, NULL));
-
-#ifdef XXX_XXX
-         if( redparameters->userec )
-         {
-            TERMSEPAS* termsepas;
-            SCIP_CALL( mincut_termsepasInit(scip, g, &termsepas) );
-            SCIP_CALL( mincut_findTerminalSeparators(scip, g, termsepas) );
-            mincut_termsepasFree(scip, &termsepas);
-         }
-#endif
 
          if( nodereplacing )
          {
             int conflictnelims = 0;
 
             SCIP_CALL( reduce_fixedConflicts(scip, NULL, g, &conflictnelims) );
-
             reduceStatsPrint(fullreduce, "fixedconflict", conflictnelims);
             extendedelims += conflictnelims;
          }
@@ -2043,6 +2031,24 @@ SCIP_RETCODE redLoopStp(
          {
             rerun = TRUE;
          }
+
+
+#ifdef XXX_XXX
+         if( !rerun )
+         {
+            int sepanelims = 0;
+
+            // to exact sepa stuff
+            // think of sub-solution? needs to be retained?
+            TERMSEPAS* termsepas;
+            SCIP_CALL( mincut_termsepasInit(scip, g, &termsepas) );
+            SCIP_CALL( mincut_findTerminalSeparators(scip, g, termsepas) );
+            mincut_termsepasFree(scip, &termsepas);
+
+            if( sepanelims > 10.0 * reductbound )
+               rerun = TRUE;
+         }
+#endif
       }
 
       nruns++;

@@ -32,7 +32,7 @@ extern "C" {
 
 typedef struct terminal_separator_storage TERMSEPAS;
 
-extern SCIP_RETCODE mincut_termsepasInit(SCIP*, const GRAPH*, TERMSEPAS**);
+extern SCIP_RETCODE mincut_termsepasInit(SCIP*, const GRAPH*, int, int, TERMSEPAS**);
 extern void         mincut_termsepasFree(SCIP*, TERMSEPAS**);
 extern int          mincut_termsepasGetNall(const TERMSEPAS*);
 extern int          mincut_termsepasGetN(const TERMSEPAS*, int);

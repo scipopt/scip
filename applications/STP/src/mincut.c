@@ -37,8 +37,8 @@
 #define Q_NULL     -1         /* NULL element of queue/list */
 #define ADDCUTSTOPOOL FALSE
 #define TERMSEPA_SPARSE_MAXRATIO 4
-#define TERMSEPA_MAXCUTSIZE 5
-#define TERMSEPA_MAXNCUTS   100
+#define TERMSEPA_MAXCUTSIZE_DEFAULT 5
+#define TERMSEPA_MAXNCUTS_DEFAULT   100
 #define TERMSEPA_NROOTCANDS 3
 
 /* *
@@ -88,14 +88,16 @@ typedef struct terminal_separator
 /** storage */
 struct terminal_separator_storage
 {
-   int                   nsepas[TERMSEPA_MAXCUTSIZE + 1];
-   int                   currsepa_n[TERMSEPA_MAXCUTSIZE + 1];
+   int*                  nsepas;             /**< of size maxsepasize + 1 */
+   int*                  currsepa_n;         /**< of size maxsepasize + 1 */
    TSEPA*                sepas;
    int*                  sepaterms_csr;
    int*                  sepastarts_csr;
    int                   nsepaterms_csr;
    int                   nsepas_all;
    int                   root;
+   int                   maxnsepas;          /**< maximum number of separators to compute */
+   int                   maxsepasize;        /**< maximum size of separator */
 };
 
 /*
@@ -530,6 +532,7 @@ int termsepaFindTerminalSource(
 static
 void termsepaCollectCutNodes(
    const GRAPH*          g,                  /**< the graph */
+   const TERMSEPAS*      termsepas,          /**< terminal separator storage */
    const MINCUT*         mincut,             /**< minimum cut */
    int                   sinkterm,           /**< sink terminal */
    int*                  cutterms,           /**< terminals */
@@ -543,6 +546,7 @@ void termsepaCollectCutNodes(
    const int* const csr_headarr = mincut->csr_headarr;
    const int nnodes_extended = mincut->termsepa_nnodes;
    const int capa_inf = termsepaGetCapaInf(g, mincut);
+   const int maxsepasize = termsepas->maxsepasize;
    SCIP_Bool isGood = TRUE;
    int n = 0;
 
@@ -560,10 +564,10 @@ void termsepaCollectCutNodes(
 
          if( nodes_wakeState[head] == 0 && edges_capa[j] > 0 )
          {
-            assert(n <= TERMSEPA_MAXCUTSIZE );
+            assert(n <= maxsepasize);
             assert(edges_capa[j] == 1 || edges_capa[j] == capa_inf);
 
-            if( edges_capa[j] == capa_inf || n == TERMSEPA_MAXCUTSIZE )
+            if( edges_capa[j] == capa_inf || n == maxsepasize )
             {
                isGood = FALSE;
                break;
@@ -760,9 +764,9 @@ SCIP_RETCODE termsepaStoreCutFinalize(
    int nsinknodes = 0;
    const int nsepas_all = termsepas->nsepas_all;
 
-   assert(0 <= nsepas_all && nsepas_all < TERMSEPA_MAXNCUTS);
-   assert(0 <= ncutterms && ncutterms <= TERMSEPA_MAXCUTSIZE);
-   assert(termsepas->nsepaterms_csr + ncutterms <= TERMSEPA_MAXNCUTS * TERMSEPA_MAXCUTSIZE);
+   assert(0 <= nsepas_all && nsepas_all < termsepas->maxnsepas);
+   assert(0 <= ncutterms && ncutterms <= termsepas->maxsepasize);
+   assert(termsepas->nsepaterms_csr + ncutterms <= termsepas->maxnsepas * termsepas->maxsepasize);
 
    *success = TRUE;
 
@@ -839,7 +843,7 @@ SCIP_RETCODE termsepaStoreCutTry(
    assert(mincut->nodes_wakeState[sinkterm] == 0);
 
    cutterms = &(termsepas->sepaterms_csr[termsepas->nsepaterms_csr]);
-   termsepaCollectCutNodes(g, mincut, sinkterm, cutterms, &ncutterms, &isGoodCut);
+   termsepaCollectCutNodes(g, termsepas, mincut, sinkterm, cutterms, &ncutterms, &isGoodCut);
 
    if( isGoodCut )
    {
@@ -940,6 +944,15 @@ void termsepaCsrAddTermCopies(
 
       }
    }
+
+   // todo check on large test set ... does not seem to help so far
+#ifdef SCIP_DISABLED
+   if( mincut->randnumgen  )
+   {
+      SCIPrandomPermuteIntArray(mincut->randnumgen, terms, 0, ntermcands);
+      printf("PERMUTE \n\n \n");
+   }
+#endif
 
    assert(nnodes_org + nsepaterms <= mincut->termsepa_nnodes);
 
@@ -2061,24 +2074,32 @@ void lpcutSetEdgeCapacity(
 SCIP_RETCODE mincut_termsepasInit(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
+   int                   maxnsepas,          /**< maximum number of separators to compute */
+   int                   maxsepasize,        /**< maximum size of separator */
    TERMSEPAS**           termsepas           /**< to initialize */
 )
 {
    TERMSEPAS* tsepas;
    assert(scip && g);
+   assert(maxnsepas >= 1);
+   assert(maxsepasize >= 2);
 
    SCIP_CALL( SCIPallocMemory(scip, termsepas) );
    tsepas = *termsepas;
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(tsepas->sepas), TERMSEPA_MAXNCUTS) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(tsepas->sepastarts_csr), TERMSEPA_MAXNCUTS + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(tsepas->sepaterms_csr), TERMSEPA_MAXNCUTS * TERMSEPA_MAXCUTSIZE + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tsepas->nsepas), maxsepasize + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tsepas->currsepa_n), maxsepasize + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tsepas->sepas), maxnsepas) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tsepas->sepastarts_csr), maxnsepas + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(tsepas->sepaterms_csr), maxnsepas * maxsepasize + 1) );
+   tsepas->maxnsepas = maxnsepas;
+   tsepas->maxsepasize = maxsepasize;
    tsepas->nsepas_all = 0;
    tsepas->nsepaterms_csr = 0;
    tsepas->sepastarts_csr[0] = 0;
    tsepas->root = -1;
 
-   for( int i = 0; i <= TERMSEPA_MAXCUTSIZE; i++ )
+   for( int i = 0; i <= maxsepasize; i++ )
    {
       tsepas->nsepas[i] = 0;
       tsepas->currsepa_n[i] = -1;
@@ -2103,6 +2124,8 @@ void mincut_termsepasFree(
    SCIPfreeMemoryArray(scip, &(tsepas->sepaterms_csr));
    SCIPfreeMemoryArray(scip, &(tsepas->sepastarts_csr));
    SCIPfreeMemoryArray(scip, &(tsepas->sepas));
+   SCIPfreeMemoryArray(scip, &(tsepas->currsepa_n));
+   SCIPfreeMemoryArray(scip, &(tsepas->nsepas));
 
    SCIPfreeMemory(scip, termsepas);
 }
@@ -2127,9 +2150,9 @@ int mincut_termsepasGetN(
 )
 {
    assert(termsepas);
-   assert(sepasize >= 1 && sepasize <= TERMSEPA_MAXCUTSIZE);
+   assert(sepasize >= 1 && sepasize <= termsepas->maxsepasize);
    assert(termsepas->nsepas[sepasize] >= 0);
-   assert(termsepas->nsepas[sepasize] <= TERMSEPA_MAXNCUTS);
+   assert(termsepas->nsepas[sepasize] <= termsepas->maxnsepas);
 
    return termsepas->nsepas[sepasize];
 }
@@ -2144,7 +2167,7 @@ const int* mincut_termsepasGetFirst(
 )
 {
    assert(termsepas && sinkterm && nsinknodes);
-   assert(sepasize >= 1 && sepasize <= TERMSEPA_MAXCUTSIZE);
+   assert(sepasize >= 1 && sepasize <= termsepas->maxsepasize);
 
    termsepas->currsepa_n[sepasize] = -1;
 
@@ -2161,7 +2184,7 @@ const int* mincut_termsepasGetNext(
 )
 {
    assert(termsepas && sinkterm && nsinknodes);
-   assert(sepasize >= 1 && sepasize <= TERMSEPA_MAXCUTSIZE);
+   assert(sepasize >= 1 && sepasize <= termsepas->maxsepasize);
    assert(termsepas->currsepa_n[sepasize] >= -1);
 
    *sinkterm = -1;
@@ -2183,7 +2206,7 @@ const int* mincut_termsepasGetNext(
       for( s = startpos; s < termsepas->nsepas_all; s++ )
       {
          const int size = starts[s + 1] - starts[s];
-         assert(sepasize >= 1 && sepasize <= TERMSEPA_MAXCUTSIZE);
+         assert(sepasize >= 1 && sepasize <= termsepas->maxsepasize);
 
          if( size == sepasize )
             break;
@@ -2287,7 +2310,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    printf("ntermcands=%d \n",  mincut->ntermcands );
 
    // todo probably want to bound the maximum number of iterations!
-   while( mincut->ntermcands > 0 && termsepas->nsepas_all < TERMSEPA_MAXNCUTS )
+   while( mincut->ntermcands > 0 && termsepas->nsepas_all < termsepas->maxnsepas )
    {
       int sinkterm;
 

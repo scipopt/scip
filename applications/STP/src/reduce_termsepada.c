@@ -46,11 +46,18 @@
 #define MARK_NONACTIVE 0
 #define MARK_SUBNODE   1
 #define MARK_SEPARATOR 2
+
 #define COMPONENT_NODESRATIO_MIN 0.01
 #define COMPONENT_NODESRATIO_SMALL 0.1
 #define COMPONENT_NODESRATIO_MAX 0.5
+
 #define SEPARATOR_MAXSIZE 5
-#define SEPARATOR_MAXNCHECKS 50
+#define SEPARATOR_MAXNCHECKS 75
+#define SEPARATOR_MAXSIZE_FAST 4
+#define SEPARATOR_MAXNCHECKS_FAST 40
+#define SEPARATOR_MINTERMRATIO 0.1
+#define SEPARATOR_MINTERMRATIO_FAST 0.02
+
 
 /** separator data needed to build component */
 typedef struct terminial_component_initializes
@@ -62,6 +69,8 @@ typedef struct terminial_component_initializes
    int                   ncomponentnodes;    /**< NOTE: possibly overestimate */
    int                   componentnumber;    /**< number of component (0,1,...)*/
    int                   ngraphnodes;        /**< number of nodes of underlying graph, not counting degree 0 nodes */
+   int                   maxncompchecks;     /**< maximum number of components to check */
+   int                   maxsepasize;        /**< maximum allowed size of a separator */
    SCIP_Bool             rootcompIsProcessed;/**< already processed root component? */
 } COMPBUILDER;
 
@@ -373,6 +382,8 @@ SCIP_RETCODE compbuilderInit(
    builder->ncomponentnodes = -1;
    builder->ngraphnodes = -1;
    builder->rootcompIsProcessed = FALSE;
+   builder->maxncompchecks = -1;
+   builder->maxsepasize = -1;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(builder->nodes_bdist), nnodes) );
    graph_get_nVET(g, &(builder->ngraphnodes), NULL, NULL);
@@ -1269,13 +1280,13 @@ void getNextComponent(
    assert(nsepaterms >= 2);
    assert(builder->componentnumber >= 0);
 
-   if( builder->componentnumber > SEPARATOR_MAXNCHECKS )
+   if( builder->componentnumber > builder->maxncompchecks )
    {
       SCIPdebugMessage("maximum number of components reached, stopping sepaDualAscent reductions \n");
       return;
    }
 
-   for( ; nsepaterms <= SEPARATOR_MAXSIZE; nsepaterms++  )
+   for( ; nsepaterms <= builder->maxsepasize; nsepaterms++  )
    {
       sepaterms = mincut_termsepasGetNext(nsepaterms, termsepas, &sinkterm, &nsinknodes);
 
@@ -1321,6 +1332,63 @@ void getNextComponent(
    }
 }
 
+/** initializes helpers */
+static
+SCIP_RETCODE initHelpers(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const EXTPERMA*       extperma,           /**< extension data */
+   COMPBUILDER**         builder,            /**< to initialize */
+   TERMSEPAS**           termsepas           /**< to initialize */
+   )
+{
+   int mincheckbound;
+   int maxsepasize;
+   int maxncompchecks;
+
+   if( extperma->mode == extred_fast )
+   {
+      mincheckbound = (int) (SEPARATOR_MINTERMRATIO_FAST * g->terms);
+      maxsepasize = SEPARATOR_MAXSIZE_FAST;
+      maxncompchecks = SEPARATOR_MAXNCHECKS_FAST;
+   }
+   else
+   {
+      mincheckbound = (int) (SEPARATOR_MINTERMRATIO * g->terms);
+      maxsepasize = SEPARATOR_MAXSIZE;
+      maxncompchecks = SEPARATOR_MAXNCHECKS;
+   }
+
+   if( maxncompchecks < mincheckbound )
+   {
+      SCIPdebugMessage("update nChecks %d->%d \n", maxncompchecks, mincheckbound);
+      maxncompchecks = mincheckbound;
+   }
+
+   printf("maxncompchecks=%d \n", maxncompchecks);
+
+   /* NOTE: we want to allow a few more terminal separators to be able to choose small ones */
+   SCIP_CALL( mincut_termsepasInit(scip, g, (int) (1.5 * maxncompchecks), maxsepasize, termsepas) );
+   SCIP_CALL( compbuilderInit(scip, g, builder) );
+
+   (*builder)->maxncompchecks = maxncompchecks;
+   (*builder)->maxsepasize = maxsepasize;
+
+   return SCIP_OKAY;
+}
+
+/** frees helper */
+static
+void freeHelpers(
+   SCIP*                 scip,               /**< SCIP data structure */
+   COMPBUILDER**         builder,            /**< to initialize */
+   TERMSEPAS**           termsepas           /**< to initialize */
+   )
+{
+   compbuilderFree(scip, builder);
+   mincut_termsepasFree(scip, termsepas);
+}
+
 
 /*
  * Interface methods
@@ -1351,12 +1419,7 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
       return SCIP_OKAY;
    }
 
-
-   // todo probably we want to have an array (parameter) to keep the nodes for pseudo-elimination
-
-   SCIP_CALL( mincut_termsepasInit(scip, g, &termsepas) );
-   SCIP_CALL( compbuilderInit(scip, g, &builder) );
-
+   SCIP_CALL( initHelpers(scip, g, extperma, &builder, &termsepas) );
    SCIP_CALL( mincut_findTerminalSeparators(scip, extperma->randnumgen, g, termsepas) );
 
    for( ;; )
@@ -1375,9 +1438,7 @@ SCIP_RETCODE reduce_sepaDualAscentWithExperma(
       builder->componentnumber++;
    }
 
-   compbuilderFree(scip, &builder);
-   mincut_termsepasFree(scip, &termsepas);
-
+   freeHelpers(scip, &builder, &termsepas);
 
    return SCIP_OKAY;
 }
