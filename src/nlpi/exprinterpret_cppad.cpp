@@ -1431,12 +1431,21 @@ SCIP_RETCODE eval(
    }
    else if( SCIPisExprPower(scip, expr) )
    {
-      if( EPSISINT(SCIPgetExponentExprPow(expr), 0.0) )
+      SCIP_Real exponent = SCIPgetExponentExprPow(expr);
+      if( EPSISINT(exponent, 0.0) )
          evalIntPower(val, buf[0], (int)SCIPgetExponentExprPow(expr));
-      else if( SCIPgetExponentExprPow(expr) == 0.5 )
+      else if( exponent == 0.5 )
          val = sqrt(buf[0]);
-      else
+      else if( exponent < 1.0 )
          val = CppAD::pow(buf[0], SCIPgetExponentExprPow(expr));
+      else
+      {
+         // workaround bug where CppAD claims pow(x,fractional>0) is nondiff at x=0
+         // https://github.com/coin-or/CppAD/discussions/93#discussioncomment-327876
+         AD<double> adzero(0.);
+         val = CppAD::CondExpEq(buf[0], adzero, pow(buf[0]+std::numeric_limits<SCIP_Real>::epsilon(), exponent)-pow(std::numeric_limits<SCIP_Real>::epsilon(), exponent),
+            pow(buf[0], exponent));
+      }
    }
    else if( SCIPisExprSignpower(scip, expr) )
    {
