@@ -51,7 +51,6 @@
 #define COMPONENT_NODESRATIO_MAX 0.5
 #define SEPARATOR_MAXSIZE 5
 #define SEPARATOR_MAXNCHECKS 50
-#define TBOTTLENECK_EDGE_BLOCKED (FARAWAY)
 
 /** separator data needed to build component */
 typedef struct terminial_component_initializes
@@ -181,7 +180,8 @@ SCIP_RETCODE tbottleneckInit(
    return SCIP_OKAY;
 }
 
-
+// todo really needed? There should be not need for the key-paths to be disjoint!
+#ifdef SCIP_DISABLED
 /** helper */
 static
 void tbottleneckCut(
@@ -235,7 +235,7 @@ void tbottleneckCut(
 #endif
 
       SCIPdebugMessage("removing tree bottleneck node=%d, degree=%d edgecost=%f \n", k, tbtree[k].degree, tbtree[k].edgecost);
-      tbtree[k].edgecost = TBOTTLENECK_EDGE_BLOCKED;
+      tbtree[k].edgecost = -FARAWAY;
    }
 
 #ifndef NDEBUG
@@ -243,6 +243,7 @@ void tbottleneckCut(
 #endif
 
 }
+#endif
 
 /** Gets bottleneck cost.
  *  If successful, it also removes the tree bottleneck */
@@ -279,7 +280,6 @@ void tbottleneckRemoveMax(
       if( tbtree[k].parent != UNKNOWN )
       {
          max_local += tbtree[k].edgecost;
-         assert(GE(tbtree[k].edgecost, 0.0));
       }
 
       if( max_local > max1 )
@@ -299,7 +299,6 @@ void tbottleneckRemoveMax(
          max_local = 0.0;
 
       max_local += tbtree[k].edgecost;
-      assert(GE(tbtree[k].edgecost, 0.0));
 
       if( max_local > max2 )
          max2 = max_local;
@@ -315,16 +314,18 @@ void tbottleneckRemoveMax(
    maxtotal = MAX(max1, max2);
 
    /* not yet removed sub-path and improvement over given distance? */
-   if( LT(maxtotal, TBOTTLENECK_EDGE_BLOCKED) && GT(maxtotal, *maxlength)  )
+   if( GT(maxtotal, *maxlength)  )
    {
       SCIPdebugMessage("improved tree bottleneck  %f -> %f \n", *maxlength, maxtotal);
 
       *maxlength = maxtotal;
 
+#ifdef SCIP_DISABELD
       if( GT(max1, max2) )
          tbottleneckCut(node1, k, max1, tbottleneck);
       else
          tbottleneckCut(node2, k, max2, tbottleneck);
+#endif
    }
 
    /* reset */
