@@ -76,9 +76,11 @@
  * Define DEBUGUSES_VARNAME to the name of the variable for which to print
  * a backtrace when it is captured and released.
  * Optionally define DEBUGUSES_PROBNAME to the name of a SCIP problem to consider.
+ * Have DEBUGUSES_NOADDR2LINE defined if you do not have addr2line installed on your system.
  */
 /* #define DEBUGUSES_VARNAME "t_t_b7" */
 /* #define DEBUGUSES_PROBNAME "t_st_e35_rens" */
+/* #define DEBUGUSES_NOADDR2LINE */
 
 #ifdef DEBUGUSES_VARNAME
 #include <execinfo.h>
@@ -90,15 +92,42 @@
 static
 void print_backtrace(void)
 {
-  void* array[10];
-  char** strings;
-  int size, i;
+   void* array[10];
+   char** strings;
+   int size, i;
 
-  size = backtrace(array, 10);
-  strings = backtrace_symbols(array, size);
-  if( strings != NULL )
-    for( i = 0; i < size; ++i )
-      printf("  %s\n", strings[i]);
+   size = backtrace(array, 10);
+   strings = backtrace_symbols(array, size);
+   if( strings == NULL )
+      return;
+
+   /* skip first entry, which is the print_backtrace function */
+   for( i = 1; i < size; ++i )
+   {
+      /* if string is something like
+       *  /path/to/scip/bin/../lib/shared/libscip-7.0.1.3.linux.x86_64.gnu.dbg.so(+0x2675dd3)
+       * (that is, no function name because it is a inlined function), then call
+       * addr2line -e <libname> <addr> to get func and code line
+       * dladdr() may be an alternative
+       */
+      char* openpar;
+      char* closepar = NULL;
+#ifndef DEBUGUSES_NOADDR2LINE
+      openpar = strchr(strings[i], '(');
+      if( openpar != NULL && openpar[1] == '+' )
+         closepar = strchr(openpar+2, ')');
+#endif
+      if( closepar != NULL )
+      {
+         char cmd[SCIP_MAXSTRLEN];
+         (void) SCIPsnprintf(cmd, SCIP_MAXSTRLEN, "addr2line -f -p -e \"%.*s\" %.*s", openpar - strings[i], strings[i], closepar-openpar-1, openpar+1);
+         printf("  ");
+         fflush(stdout);
+         system(cmd);
+      }
+      else
+         printf("  %s\n", strings[i]);
+    }
 
   free(strings);
 }
