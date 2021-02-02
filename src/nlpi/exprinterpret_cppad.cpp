@@ -1271,68 +1271,6 @@ void evalUser(
 #endif
 #endif
 
-#ifdef SCIP_DISABLED_CODE
-/** template for evaluation for minimum operator
- *
- *  Only implemented for real numbers, thus gives error by default.
- *  @todo implement own userad function
- */ /*lint -e715*/
-template<class Type>
-static
-void evalMin(
-   Type&                 resultant,          /**< resultant */
-   const Type&           arg1,               /**< first operand */
-   const Type&           arg2                /**< second operand */
-   )
-{  /*lint --e{715,1764}*/
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
-      "evalMin()",
-      "Error: Min not implemented for this value type"
-      );
-}
-
-/** specialization of minimum evaluation for real numbers */
-template<>
-void evalMin(
-   CppAD::AD<double>&    resultant,          /**< resultant */
-   const CppAD::AD<double>& arg1,            /**< first operand */
-   const CppAD::AD<double>& arg2             /**< second operand */
-   )
-{
-   resultant = MIN(arg1, arg2);
-}
-
-/** template for evaluation for maximum operator
- *
- *  Only implemented for real numbers, thus gives error by default.
- *  @todo implement own userad function
- */ /*lint -e715*/
-template<class Type>
-static
-void evalMax(
-   Type&                 resultant,          /**< resultant */
-   const Type&           arg1,               /**< first operand */
-   const Type&           arg2                /**< second operand */
-   )
-{  /*lint --e{715,1764}*/
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
-      "evalMax()",
-      "Error: Max not implemented for this value type"
-      );
-}
-
-/** specialization of maximum evaluation for real numbers */
-template<>
-void evalMax(
-   CppAD::AD<double>&    resultant,          /**< resultant */
-   const CppAD::AD<double>& arg1,            /**< first operand */
-   const CppAD::AD<double>& arg2             /**< second operand */
-   )
-{
-   resultant = MAX(arg1, arg2);
-}
-#endif
-
 /** integer power operation for arbitrary integer exponents */
 template<class Type>
 static
@@ -1604,12 +1542,10 @@ SCIP_RETCODE SCIPexprintCompile(
       if( SCIPisExprVaridx(scip, expr) )
          varidxs.insert(SCIPgetIndexExprVaridx(expr));
 
-      if(  strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "min") == 0
-         || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "max") == 0
-         )
-         (*exprintdata)->need_retape_always = true;
+      //if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "xyz") == 0 )
+      //   (*exprintdata)->need_retape_always = true;
 
-         // FIXME data->userevalcapability &= SCIPexprGetUserEvalCapability(expr);
+      // FIXME data->userevalcapability &= SCIPexprGetUserEvalCapability(expr);
    }
 
    SCIPfreeExpriter(&it);
