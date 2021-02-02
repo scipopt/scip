@@ -69,7 +69,7 @@ SCIP_RETCODE testTerminalSeparatorsAreFound(
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
 
    SCIP_CALL( mincut_termsepasInit(scip, graph, &termsepas) );
-   SCIP_CALL( mincut_findTerminalSeparators(scip, 1, graph, termsepas) );
+   SCIP_CALL( mincut_findTerminalSeparators(scip, NULL, graph, termsepas) );
    sepaterms = mincut_termsepasGetFirst(2, termsepas, &sinkterm, &nsinknodes);
 
    STPTEST_ASSERT(sepaterms != NULL);
@@ -135,7 +135,7 @@ SCIP_RETCODE testTerminalSeparatorsAreFound2(
 
    SCIP_CALL( mincut_termsepasInit(scip, graph, &termsepas) );
 
-   SCIP_CALL( mincut_findTerminalSeparators(scip, 1, graph, termsepas) );
+   SCIP_CALL( mincut_findTerminalSeparators(scip, NULL, graph, termsepas) );
    sepaterms = mincut_termsepasGetFirst(2, termsepas, &sinkterm, &nsinknodes);
 
    STPTEST_ASSERT(sepaterms != NULL);
@@ -203,7 +203,7 @@ SCIP_RETCODE testTerminalSeparatorsAreFound3(
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
 
    SCIP_CALL( mincut_termsepasInit(scip, graph, &termsepas) );
-   SCIP_CALL( mincut_findTerminalSeparators(scip, 1, graph, termsepas) );
+   SCIP_CALL( mincut_findTerminalSeparators(scip, NULL, graph, termsepas) );
    sepaterms = mincut_termsepasGetNext(3, termsepas, &sinkterm, &nsinknodes);
 
    STPTEST_ASSERT(sepaterms != NULL);
