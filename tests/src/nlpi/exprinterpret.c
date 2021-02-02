@@ -445,3 +445,41 @@ Test(exprint, quad)
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
+
+/* https://en.wikipedia.org/wiki/Griewank_function should be there if we test AD */
+Test(exprint, griewank)
+{
+   SCIP_EXPR* exprsum;
+   SCIP_EXPR* exprprod;
+   int i;
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &exprsum, 0, NULL, NULL, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprProduct(scip, &exprprod, 0, NULL, 1.0, NULL, NULL) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_EXPR* expr;
+      SCIP_EXPR* expr2;
+      SCIP_Real coef;
+
+      SCIP_CALL( SCIPcreateExprPow(scip, &expr, varexprs[i], 2.0, NULL, NULL) );
+      SCIP_CALL( SCIPappendExprSumExpr(scip, exprsum, expr, 1.0/4000.0) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+
+      coef = 1.0/sqrt(i+1.0);
+      SCIP_CALL( SCIPcreateExprSum(scip, &expr, 1, &varexprs[i], &coef, 0.0, NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprCos(scip, &expr2, expr, NULL, NULL) );
+      SCIP_CALL( SCIPappendExprChild(scip, exprprod, expr2) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
+
+      varvals[0][i] = i;
+   }
+
+   SCIP_CALL( SCIPappendExprSumExpr(scip, exprsum, exprprod, -1.0) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &exprprod) );
+
+   checkAD(exprsum, nvars, 2);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &exprsum) );
+}
