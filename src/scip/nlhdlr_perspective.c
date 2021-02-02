@@ -134,7 +134,8 @@ SCIP_RETCODE freeNlhdlrExprData(
 
 /* remove an indicator from nlhdlr expression data */
 static
-void removeIndicator(
+SCIP_RETCODE removeIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlexprdata,         /**< nlhdlr expression data */
    int                   pos                 /**< position of the indicator */
    )
@@ -143,12 +144,15 @@ void removeIndicator(
 
    assert(pos >= 0 && pos < nlexprdata->nindicators);
 
+   SCIP_CALL( SCIPreleaseVar(scip, &nlexprdata->indicators[pos]) );
    for( i = pos; i < nlexprdata->nindicators - 1; ++i )
    {
       nlexprdata->indicators[i] = nlexprdata->indicators[i+1];
    }
 
    --nlexprdata->nindicators;
+
+   return SCIP_OKAY;
 }
 
 /** adds an auxiliary variable to the vars array in nlhdlrexprdata */
@@ -701,7 +705,7 @@ SCIP_RETCODE computeOffValues(
                              (void*)expr, SCIPvarGetName(nlhdlrexprdata->indicators[i]));
          /* TODO should we fix the indicator variable to 1? */
          /* since the loop is backwards, this only modifies the already processed part of nlhdlrexprdata->indicators */
-         removeIndicator(nlhdlrexprdata, i);
+         SCIP_CALL( removeIndicator(scip, nlhdlrexprdata, i) );
          continue;
       }
 
