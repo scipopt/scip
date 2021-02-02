@@ -408,3 +408,40 @@ Test(exprint, value)
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
+
+Test(exprint, quad)
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPR* term;
+   SCIP_Real coef;
+   int i, j;
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &expr, 0, NULL, NULL, 1.0, NULL, NULL) );
+   /* make up some sparse matrix and two nonzero points */
+   for( i = 0; i < nvars; ++i )
+   {
+      for( j = 0; j < nvars; ++j )
+      {
+         coef = (SCIP_Real)(i%4 - j%2) * (i%5 - j%3);
+         if( coef == 0.0 )
+            continue;
+         if( i == j )
+         {
+            SCIP_CALL( SCIPcreateExprPow(scip, &term, varexprs[i], 2.0, NULL, NULL) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateExprProduct(scip, &term, 2, (SCIP_EXPR*[2]){varexprs[i], varexprs[j]}, 1.0, NULL, NULL) );
+         }
+         SCIP_CALL( SCIPappendExprSumExpr(scip, expr, term, coef) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &term) );
+      }
+      varvals[0][i] = i+1.0;
+      varvals[1][i] = nvars-i;
+   }
+
+   /* 3rd point is 0 */
+   checkAD(expr, nvars, 3);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
