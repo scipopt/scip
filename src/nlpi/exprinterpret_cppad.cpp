@@ -824,16 +824,25 @@ void evalSignPower(
    SCIP_EXPR*            expr                /**< expression that holds the exponent */
    )
 {
+   AD<double> adzero(0.);
    SCIP_Real exponent;
 
    exponent = SCIPgetExponentExprPow(expr);
+   assert(exponent >= 1.0);
 
-   if( arg == 0.0 )
-      resultant = 0.0;
-   else if( arg > 0.0 )
-      resultant =  pow( arg, exponent);
+   if( EPSISINT(exponent, 0.0) )
+   {
+      // TODO or use powintpower()?
+      resultant = CppAD::CondExpGe(arg, adzero, pow(arg, (int)exponent), -pow(-arg, (int)exponent));
+   }
    else
-      resultant = -pow(-arg, exponent);
+   {
+      /* pow(0,fractional>1) is not differential in the CppAD world (https://github.com/coin-or/CppAD/discussions/93)
+       * this works around this by evaluating pow(eps,exponent) in this case
+       */
+      resultant = CppAD::CondExpEq(arg, adzero, pow(arg+std::numeric_limits<SCIP_Real>::epsilon(), exponent)-pow(std::numeric_limits<SCIP_Real>::epsilon(), exponent),
+         CppAD::CondExpGe(arg, adzero, pow(arg, exponent), -pow(-arg, exponent)));
+   }
 }
 
 #endif
@@ -1586,12 +1595,8 @@ SCIP_RETCODE SCIPexprintCompile(
       if( SCIPisExprVaridx(scip, expr) )
          varidxs.insert(SCIPgetIndexExprVaridx(expr));
 
-      if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs") == 0
-         || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "min") == 0
+      if(  strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "min") == 0
          || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "max") == 0
-#ifdef NO_CPPAD_USER_ATOMIC
-         || SCIPisExprSignpower(scip, expr)
-#endif
          )
          (*exprintdata)->need_retape_always = true;
 
