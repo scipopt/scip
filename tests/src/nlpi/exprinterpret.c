@@ -272,9 +272,8 @@ Test(exprint, entropy)
 
    SCIP_CALL( SCIPcreateExprEntropy(scip, &expr, varexprs[0], NULL, NULL) );
 
-   // FIXME CppAD gives 0 as derivative at the moment, see FIXME there
-//   varvals[0] = 0.0;
-//   checkAD(expr, 1);
+   varvals[0] = 0.0;
+   checkAD(expr, 1);
 
    varvals[0] = 1.0;
    checkAD(expr, 1);

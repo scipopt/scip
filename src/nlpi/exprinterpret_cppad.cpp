@@ -939,6 +939,15 @@ private:
       }
 
       Type* x = new Type[n];
+      for( size_t i = 0; i < n; ++i )
+         x[i] = tx[i * (p+1) + 0];  /*lint !e835*/
+
+      if( SCIPcallExprEval(scip, expr, x, &ty[0]) != SCIP_OKAY )
+      {
+         delete[] x;
+         return false;
+      }
+
       Type* gradient = NULL;
       Type* hessian = NULL;
 
@@ -946,9 +955,6 @@ private:
          gradient = new Type[n];
       if( q <= 2 && 2 <= p )
          hessian = new Type[n*n];
-
-      for( size_t i = 0; i < n; ++i )
-         x[i] = tx[i * (p+1) + 0];  /*lint !e835*/
 
       if( exprEvalUser(expr, x, ty[0], gradient, hessian) != SCIP_OKAY )
       {
@@ -1453,11 +1459,12 @@ SCIP_RETCODE eval(
    }
    else if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "entropy") == 0 )
    {
-      // TODO atomic entropy or use of exprhdlr implementation (exprEvaluser)
-      if( buf[0] == 0.0 )
-         val = 0.0;
-      else
-         val = -buf[0] * log(buf[0]);
+      /* -x*log(x) if x > 0, else 0
+       * https://coin-or.github.io/CppAD/doc/cond_exp.cpp.htm suggest to use 0 for the x=0 case
+       * but then derivatives at 0 are 0, while they are actually infinite (see expr_entropy.c:bwdiff)
+       * so we use -sqrt(x) for the x=0 case, as this also has value 0 and first derivative -inf at 0
+       */
+      val = CppAD::CondExpGt(buf[0], AD<double>(0.), -buf[0] * log(buf[0]), -sqrt(buf[0]));
    }
    else
    {
@@ -1580,7 +1587,6 @@ SCIP_RETCODE SCIPexprintCompile(
          varidxs.insert(SCIPgetIndexExprVaridx(expr));
 
       if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs") == 0
-         || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "entropy") == 0
          || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "min") == 0
          || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "max") == 0
 #ifdef NO_CPPAD_USER_ATOMIC
