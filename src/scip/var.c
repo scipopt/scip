@@ -69,6 +69,41 @@
                               *   in implication graph */
 #define MAXABSVBCOEF    1e+5 /**< maximal absolute coefficient in variable bounds added due to implications */
 
+
+/*
+ * Debugging variable release and capture
+ *
+ * Define DEBUGUSES_VARNAME to the name of the variable for which to print
+ * a backtrace when it is captured and released.
+ * Optionally define DEBUGUSES_PROBNAME to the name of a SCIP problem to consider.
+ */
+/* #define DEBUGUSES_VARNAME "t_t_b7" */
+/* #define DEBUGUSES_PROBNAME "t_st_e35_rens" */
+
+#ifdef DEBUGUSES_VARNAME
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "scip/struct_scip.h"
+
+/** obtains a backtrace and prints it to stdout. */
+static
+void print_backtrace(void)
+{
+  void* array[10];
+  char** strings;
+  int size, i;
+
+  size = backtrace(array, 10);
+  strings = backtrace_symbols(array, size);
+  if( strings != NULL )
+    for( i = 0; i < size; ++i )
+      printf("  %s\n", strings[i]);
+
+  free(strings);
+}
+#endif
+
 /*
  * hole, holelist, and domain methods
  */
@@ -2779,6 +2814,19 @@ void SCIPvarCapture(
 
    SCIPdebugMessage("capture variable <%s> with nuses=%d\n", var->name, var->nuses);
    var->nuses++;
+
+#ifdef DEBUGUSES_VARNAME
+   if( strcmp(var->name, DEBUGUSES_VARNAME) == 0
+#ifdef DEBUGUSES_PROBNAME
+      && ((var->scip->transprob != NULL && strcmp(SCIPprobGetName(var->scip->transprob), DEBUGUSES_PROBNAME) == 0) ||
+          strcmp(SCIPprobGetName(var->scip->origprob), DEBUGUSES_PROBNAME) == 0)
+#endif
+   )
+   {
+      printf("Captured variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; captured at\n", (void*)var->scip, var->nuses);
+      print_backtrace();
+   }
+#endif
 }
 
 /** decreases usage counter of variable, and frees memory if necessary */
@@ -2798,6 +2846,20 @@ SCIP_RETCODE SCIPvarRelease(
 
    SCIPsetDebugMsg(set, "release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
    (*var)->nuses--;
+
+#ifdef DEBUGUSES_VARNAME
+   if( strcmp((*var)->name, DEBUGUSES_VARNAME) == 0
+#ifdef DEBUGUSES_PROBNAME
+      && (((*var)->scip->transprob != NULL && strcmp(SCIPprobGetName((*var)->scip->transprob), DEBUGUSES_PROBNAME) == 0) ||
+          strcmp(SCIPprobGetName((*var)->scip->origprob), DEBUGUSES_PROBNAME) == 0)
+#endif
+   )
+   {
+      printf("Released variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; released at\n", (void*)(*var)->scip, (*var)->nuses);
+      print_backtrace();
+   }
+#endif
+
    if( (*var)->nuses == 0 )
    {
       SCIP_CALL( varFree(var, blkmem, set, eventqueue, lp) );
