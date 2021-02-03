@@ -908,6 +908,7 @@ int reduceWithEdgeFixingBounds(
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
    assert(!solgiven || SCIPisEQ(scip, upperbound, getSolObj(scip, graph, result)));
+   assert(!solgiven || solstp_isValid(scip, graph, result));
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1855,16 +1856,12 @@ SCIP_RETCODE daRoundInit(
    GRAPH*                graph,              /**< graph structure */
    REDCOST*              redcostdata,         /**< reduced cost data */
    STP_Bool*             arcsdeleted,
-   SCIP_Real*            cutoffbound,
-   SCIP_Bool*            useExtRed
+   SCIP_Real*            cutoffbound
 )
 {
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
 
    redcosts_setAndReturnCutoffFromBoundTop(upperbound, redcostdata, cutoffbound);
-
-   if( SCIPisZero(scip, *cutoffbound) )
-      *useExtRed = FALSE;
 
    if( isRpcmw )
       graph_pc_2org(scip, graph);
@@ -2755,7 +2752,7 @@ SCIP_RETCODE reduce_da(
 
          SCIPdebugMessage("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
 
-         SCIP_CALL( daRoundInit(scip, upperbound, graph, redcostdata, arcsdeleted, &cutoffbound, &useExtRed) );
+         SCIP_CALL( daRoundInit(scip, upperbound, graph, redcostdata, arcsdeleted, &cutoffbound) );
 
          updateNodeFixingBounds(nodefixingbounds, graph, redcosts_getRootToNodeDistTop(redcostdata),
                redcosts_getNodeToTermsPathsTop(redcostdata), redcosts_getDualBoundTop(redcostdata), (run == 0));
@@ -2764,13 +2761,9 @@ SCIP_RETCODE reduce_da(
                nedges, (run == 0), TRUE);
 
          SCIP_CALL( reduceRootedProb(scip, graph, arcsdeleted, redcostdata, bestresult, havebestsol, &ndeletions_run) );
-
-         if( !SCIPisZero(scip, cutoffbound) )
-         {
-            ndeletions_run += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
-            havebestsol = havebestsol && solstp_isUnreduced(scip, graph, bestresult);
-            ndeletions_run += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havebestsol ? bestresult : NULL), upperbound);
-         }
+         ndeletions_run += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
+         havebestsol = havebestsol && solstp_isUnreduced(scip, graph, bestresult);
+         ndeletions_run += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havebestsol ? bestresult : NULL), upperbound);
 
          if( useExtRed )
             redcosts_increaseOnDeletedArcsTop(graph, arcsdeleted, redcostdata);
@@ -2786,7 +2779,7 @@ SCIP_RETCODE reduce_da(
 
             SCIP_CALL( reduceWithEdgeExtReds(scip, upperbound, extpermanent, graph, &ndeletions_run) );
          }
-         else if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
+         else if( !isDirected && nodereplacing )
          {
             SCIP_CALL( updateNodeReplaceBounds(scip, redcostdata, graph, nodereplacebounds, upperbound, (run == 0), FALSE));
          }
@@ -2847,7 +2840,6 @@ SCIP_RETCODE reduce_da(
 
       if( extpermanent )
       {
-         assert(useExtRed);
          extreduce_exit(scip, graph, &extpermanent);
       }
 
