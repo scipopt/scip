@@ -86,6 +86,11 @@ using std::vector;
 #endif
 #endif
 
+// MS compiler doesn't have log2() - define an expensive workaround
+#ifdef _MSC_VER
+#define log2(x) (log((double)x) / log(2.0))
+#endif
+
 #include <cppad/cppad.hpp>
 #include <cppad/utility/error_handler.hpp>
 
@@ -1962,7 +1967,7 @@ SCIP_RETCODE SCIPexprintHessian(
       // going through all n*n entries to fill hesvalues takes about about n*n time
       // using the sparsity in hesrowidx/hescolidx takes nnz*2*log2(n) time, because getVarPos() takes about log2(n) time
       // so we go through all n*n entries for denser matrices
-      if( nn < exprintdata->hesnnz*2*std::log2(n) )
+      if( nn < exprintdata->hesnnz*2*log2(n) )
       {
          int j = 0;
          for( size_t i = 0; i < hess.size(); ++i )
