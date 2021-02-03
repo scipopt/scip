@@ -73,11 +73,15 @@ using std::vector;
 #endif
 
 /* disable -Wshadow warnings for upcoming includes of CppAD if using some old GCC
- * -Wshadow was too strict with some versions of GCC 4 (https://stackoverflow.com/questions/2958457/gcc-wshadow-is-too-strict)
+ *  -Wshadow was too strict with some versions of GCC 4 (https://stackoverflow.com/questions/2958457/gcc-wshadow-is-too-strict)
+ * disable -Wimplicit-fallthrough as I don't want to maintain extra comments in CppAD code to suppress these
  */
 #ifdef __GNUC__
 #if __GNUC__ == 4
 #pragma GCC diagnostic ignored "-Wshadow"
+#endif
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 #endif
 #endif
 
@@ -1647,7 +1651,8 @@ SCIP_RETCODE SCIPexprintEval(
       // the following is required if the gradient shall be computed by a reverse sweep later
       // exprintdata->val = exprintdata->f.Forward(0, exprintdata->x)[0];
 
-      //TODO exprintdata->f.optimize();
+      // https://coin-or.github.io/CppAD/doc/optimize.htm
+      exprintdata->f.optimize();
 
       exprintdata->need_retape = false;
    }
