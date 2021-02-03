@@ -25,7 +25,6 @@
 
 /*lint -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h) */
-
 #include <assert.h>
 #include "graph.h"
 #include "portab.h"
@@ -645,6 +644,41 @@ SCIP_Bool blockedAncestors_isValid(
 }
 
 
+/** checks */
+static
+SCIP_Bool fixedPseudoAncestorsAreValid(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   int *hasharr;
+   const int *fixednodes = graph_get_fixpseudonodes(scip, g);
+   const int arrsize = graph_pseudoAncestorsGetHashArraySize(g->pseudoancestors);
+   const int nfixednodes = graph_get_nFixpseudonodes(g);
+   SCIP_Bool isValid = TRUE;
+
+   assert(arrsize >= nfixednodes);
+   SCIP_CALL_ABORT( SCIPallocClearMemoryArray(scip, &hasharr, arrsize) );
+
+   for( int k = 0; k < nfixednodes; k++ )
+   {
+      const int node = fixednodes[k];
+      assert(node >= 0 && node < arrsize);
+
+      if( hasharr[node] != 0 )
+      {
+         isValid = FALSE;
+         break;
+      }
+
+      hasharr[node] = 1;
+   }
+
+   SCIPfreeMemoryArray(scip, &hasharr);
+
+   return isValid;
+}
+
 /** initializes singleton edge ancestors */
 SCIP_RETCODE graph_singletonAncestors_init(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -755,6 +789,9 @@ SCIP_Bool graph_valid_ancestors(
    }
 
    SCIPfreeBufferArray(scip, &edgemark);
+
+   if( isValid )
+      isValid = fixedPseudoAncestorsAreValid(scip, g);
 
    return isValid;
 }
@@ -1624,8 +1661,9 @@ SCIP_RETCODE graph_fixed_add(
          fixedcomponents->fixpseudonodes[nfixnnodes++] = pseudonodes[i];
 
       assert(nfixnnodes == nfixnnodes_new);
-
       fixedcomponents->nfixnodes = nfixnnodes_new;
+
+      assert(fixedPseudoAncestorsAreValid(scip, g));
    }
 
    return SCIP_OKAY;
