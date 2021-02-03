@@ -171,7 +171,8 @@ public:
         hesrowidxs(NULL),
         hescolidxs(NULL),
         hesvalues(NULL),
-        hesnnz(0)
+        hesnnz(0),
+        hesconstant(false)
    { }
 
    /** destructor */
@@ -204,6 +205,7 @@ public:
    int*                  hescolidxs;         /**< column indices of Hessian sparsity */
    SCIP_Real*            hesvalues;          /**< values of Hessian */
    int                   hesnnz;             /**< number of nonzeros in Hessian */
+   SCIP_Bool             hesconstant;        /**< whether Hessian is constant (because expr is at most quadratic) */
 };
 
 #ifndef NO_CPPAD_USER_ATOMIC
@@ -1563,6 +1565,34 @@ SCIP_RETCODE SCIPexprintCompile(
    (*exprintdata)->x.resize(n);
    (*exprintdata)->Y.resize(1);
 
+   // check whether we are quadratic (or linear), so we can save on Hessian time (so
+   // assumes simplified and skips over x^2 and x*y cases
+   // not using SCIPcheckExprQuadratic(), because we don't need the quadratic form
+   if( SCIPisExprSum(scip, rootexpr) )
+   {
+      int i;
+
+      (*exprintdata)->hesconstant = true;
+      for( i = 0; i < SCIPexprGetNChildren(rootexpr); ++i )
+      {
+         SCIP_EXPR* child;
+         child = SCIPexprGetChildren(rootexpr)[i];
+         /* linear term is ok */
+         if( SCIPisExprVaridx(scip, child) )
+            continue;
+         /* square term is ok */
+         if( SCIPisExprPower(scip, child) && SCIPgetExponentExprPow(child) == 2.0 && SCIPisExprVaridx(scip, SCIPexprGetChildren(child)[0]) )
+            continue;
+         /* bilinear term is ok */
+         if( SCIPisExprProduct(scip, child) && SCIPexprGetNChildren(child) == 2 && SCIPisExprVaridx(scip, SCIPexprGetChildren(child)[0]) && SCIPisExprVaridx(scip, SCIPexprGetChildren(child)[1]) )
+            continue;
+         /* everything else means not quadratic (or not simplified) */
+         (*exprintdata)->hesconstant = false;
+         break;
+      }
+      SCIPdebugMsg(scip, "Hessian found %sconstant\n", (*exprintdata)->hesconstant ? "" : "not ");
+   }
+
    return SCIP_OKAY;
 }
 
@@ -1632,6 +1662,12 @@ SCIP_RETCODE SCIPexprintEval(
 
    if( exprintdata->need_retape_always || exprintdata->need_retape )
    {
+      /* free old Hessian data, if any */
+      SCIPfreeBlockMemoryArrayNull(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz);
+      SCIPfreeBlockMemoryArrayNull(scip, &exprintdata->hescolidxs, exprintdata->hesnnz);
+      SCIPfreeBlockMemoryArrayNull(scip, &exprintdata->hesvalues, exprintdata->hesnnz);
+      exprintdata->hesnnz = 0;
+
       for( size_t i = 0; i < n; ++i )
       {
          int idx = exprintdata->varidxs[i];
@@ -1772,7 +1808,6 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
          exprintdata->hesnnz = (n * (n+1))/2;
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesvalues, exprintdata->hesnnz) );
 
          int k = 0;
          for( size_t i = 0; i < n; ++i )
@@ -1828,7 +1863,6 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
 
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesvalues, exprintdata->hesnnz) );
 
       int j = 0;
       for( size_t i = 0; i < nn; ++i )
@@ -1908,10 +1942,16 @@ SCIP_RETCODE SCIPexprintHessian(
 
    size_t n = exprintdata->varidxs.size();
 
-   if( n > 0 )
+   // eval hessian; if constant, then only if not evaluated yet (hesvalues is NULL
+   if( n > 0 && (!exprintdata->hesconstant || exprintdata->hesvalues == NULL) )
    {
       vector<double> hess;
       size_t nn = n*n;
+
+      if( exprintdata->hesvalues == NULL )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesvalues, exprintdata->hesnnz) );
+      }
 
       // use dense Hessian if there are many nonzero elements (approx more than half (recall only lower (or upper)-triangular is considered))
       // because it seems faster than the sparse Hessian if there isn't actually much sparsity
@@ -1941,21 +1981,25 @@ SCIP_RETCODE SCIPexprintHessian(
          for( int i = 0; i < exprintdata->hesnnz; ++i )
             exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
    }
+   else if( exprintdata->hesvalues == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesvalues, 0) );
+   }
 
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "Hessian for ");
-      SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, "\nat x = ");
-      for( size_t i = 0; i < n; ++i )
-      {
-         SCIPinfoMessage(scip, NULL, "\t %g", exprintdata->x[i]);
-      }
-      SCIPinfoMessage(scip, NULL, "\nis ");
-      for( int i = 0; i < exprintdata->hesnnz; ++i )
-      {
-         SCIPinfoMessage(scip, NULL, " (%d,%d)=%g", exprintdata->hesrowidxs[i], exprintdata->hescolidxs[i], exprintdata->hesvalues[i]);
-      }
-      SCIPinfoMessage(scip, NULL, "\n");
+   SCIPinfoMessage(scip, NULL, "Hessian for ");
+   SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\nat x = ");
+   for( size_t i = 0; i < n; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "\t %g", exprintdata->x[i]);
+   }
+   SCIPinfoMessage(scip, NULL, "\nis ");
+   for( int i = 0; i < exprintdata->hesnnz; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, " (%d,%d)=%g", exprintdata->hesrowidxs[i], exprintdata->hescolidxs[i], exprintdata->hesvalues[i]);
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
    *rowidxs = exprintdata->hesrowidxs;
