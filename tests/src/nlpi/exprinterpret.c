@@ -37,7 +37,7 @@ static unsigned int soltag = 0L;
 #define TOL 1e-12
 
 static
-void setup(void)
+void checkad_setup(void)
 {
    char name[SCIP_MAXSTRLEN];
    int i;
@@ -65,7 +65,7 @@ void setup(void)
 }
 
 static
-void teardown(void)
+void checkad_teardown(void)
 {
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIPexprintFree(scip, &exprint);
@@ -238,9 +238,9 @@ void checkAD(
    SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
 }
 
-TestSuite(exprint, .init = setup, .fini = teardown);
+TestSuite(checkad, .init = checkad_setup, .fini = checkad_teardown);
 
-Test(exprint, abs)
+Test(checkad, abs)
 {
    SCIP_EXPR* expr;
 
@@ -253,7 +253,7 @@ Test(exprint, abs)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(exprint, cos)
+Test(checkad, cos)
 {
    SCIP_EXPR* expr;
 
@@ -266,7 +266,7 @@ Test(exprint, cos)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(exprint, entropy)
+Test(checkad, entropy)
 {
    SCIP_EXPR* expr;
 
@@ -280,7 +280,7 @@ Test(exprint, entropy)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(exprint, exp)
+Test(checkad, exp)
 {
    SCIP_EXPR* expr;
 
@@ -293,7 +293,7 @@ Test(exprint, exp)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(exprint, log)
+Test(checkad, log)
 {
    SCIP_EXPR* expr;
 
@@ -307,7 +307,7 @@ Test(exprint, log)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(exprint, pow)
+Test(checkad, pow)
 {
    SCIP_EXPR* expr;
    SCIP_Real exponents[] = { 2.0, 3.0, 1.0, -1.0, 0.5, 1.875 };
@@ -327,7 +327,7 @@ Test(exprint, pow)
    }
 }
 
-Test(exprint, signpow)
+Test(checkad, signpow)
 {
    SCIP_EXPR* expr;
    SCIP_Real exponents[] = { 1.0, 1.875, 2.0 };
@@ -346,7 +346,7 @@ Test(exprint, signpow)
    }
 }
 
-Test(exprint, product)
+Test(checkad, product)
 {
    SCIP_EXPR* expr;
 
@@ -369,7 +369,7 @@ Test(exprint, product)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(exprint, sin)
+Test(checkad, sin)
 {
    SCIP_EXPR* expr;
 
@@ -382,7 +382,7 @@ Test(exprint, sin)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(exprint, sum)
+Test(checkad, sum)
 {
    SCIP_EXPR* expr;
    SCIP_Real coefs[] = { 0.0, 1.0, 2.0, 4.0 };
@@ -398,7 +398,7 @@ Test(exprint, sum)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(exprint, value)
+Test(checkad, value)
 {
    SCIP_EXPR* expr;
 
@@ -409,7 +409,7 @@ Test(exprint, value)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(exprint, quad)
+Test(checkad, quad)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* term;
@@ -447,7 +447,7 @@ Test(exprint, quad)
 }
 
 /* https://en.wikipedia.org/wiki/Griewank_function should be there if we test AD */
-Test(exprint, griewank)
+Test(checkad, griewank)
 {
    SCIP_EXPR* exprsum;
    SCIP_EXPR* exprprod;
