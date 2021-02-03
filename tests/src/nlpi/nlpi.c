@@ -344,7 +344,6 @@ SCIP_RETCODE solveQP(
    SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
 
    /* set parameters */
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
    SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelim) );
    SCIP_CALL( SCIPnlpiSetIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlim) );
 
@@ -394,8 +393,7 @@ Test(nlpi, interface, .init = setup, .fini = teardown,
    }
 }
 
-// TODO this was 100 originally, but that seems pretty slow (maybe CppAD on large quadratics...)
-#define DIM 10
+#define DIM 50
 
 Test(nlpi, solveQP, .init = setup, .fini = teardown,
    .description = "solves convex QP with different NLPIs"
@@ -412,7 +410,7 @@ Test(nlpi, solveQP, .init = setup, .fini = teardown,
    SCIP_Real worhpsqpval;
    int i;
 
-   for( i = 0; i < 10; ++i )
+   for( i = 0; i < 3; ++i )
    {
       /* solve QP with Ipopt */
       if( ipopt != NULL )
