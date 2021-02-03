@@ -566,6 +566,7 @@ Test(performance, quad)
       SCIP_Real hessiansparsitytime = 0.0;
       SCIP_Real hessiantime = 0.0;
       SCIP_Real sparsity = 1.0/DIM + sparse/10.0 * (1/sqrt(DIM) - 1/DIM);
+      /* SCIP_Real sparsity = sparse/10.0; */
       int nterms = 0;
 
       for( rnd = 1; rnd <= NROUNDS; ++rnd )

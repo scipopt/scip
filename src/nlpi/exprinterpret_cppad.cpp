@@ -1905,20 +1905,21 @@ SCIP_RETCODE SCIPexprintHessian(
 
    if( n > 0 )
    {
-#ifdef SCIP_DISABLED_CODE
-      // dense Hessian:
-      /* this one uses reverse mode */
-      vector<double> hess(exprintdata->f.Hessian(exprintdata->x, 0));
-      for( int i = 0; i < exprintdata->hesnnz; ++i )
-         exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
-#else
-      // sparse Hessian:
-      vector<double> hess(exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity));
+      vector<double> hess;
+      size_t nn = n*n;
+
+      // use dense Hessian if there are many nonzero elements (approx more than half (recall only lower (or upper)-triangular is considered))
+      // because it seems faster than the sparse Hessian if there isn't actually much sparsity
+      // these use reverse mode
+      if( (size_t)exprintdata->hesnnz > nn/4 )
+         hess = exprintdata->f.Hessian(exprintdata->x, 0);
+      else
+         hess = exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity);
 
       // going through all n*n entries to fill hesvalues takes about about n*n time
       // using the sparsity in hesrowidx/hescolidx takes nnz*2*log2(n) time, because getVarPos() takes about log2(n) time
       // so we go through all n*n entries for denser matrices
-      if( n*n < exprintdata->hesnnz*2*log2(n) )
+      if( nn < exprintdata->hesnnz*2*log2(n) )
       {
          int j = 0;
          for( size_t i = 0; i < hess.size(); ++i )
@@ -1934,7 +1935,6 @@ SCIP_RETCODE SCIPexprintHessian(
       else
          for( int i = 0; i < exprintdata->hesnnz; ++i )
             exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
-#endif
    }
 
 #ifdef SCIP_DEBUG
