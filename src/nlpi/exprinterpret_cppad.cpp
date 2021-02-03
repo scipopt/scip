@@ -1962,7 +1962,7 @@ SCIP_RETCODE SCIPexprintHessian(
       // going through all n*n entries to fill hesvalues takes about about n*n time
       // using the sparsity in hesrowidx/hescolidx takes nnz*2*log2(n) time, because getVarPos() takes about log2(n) time
       // so we go through all n*n entries for denser matrices
-      if( nn < exprintdata->hesnnz*2*log2(n) )
+      if( nn < exprintdata->hesnnz*2*std::log2(n) )
       {
          int j = 0;
          for( size_t i = 0; i < hess.size(); ++i )
