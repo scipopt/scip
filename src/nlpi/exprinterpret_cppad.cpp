@@ -195,6 +195,7 @@ public:
    bool                  need_retape_always; /**< will retaping be always required? */
    SCIP_EXPRINTCAPABILITY userevalcapability; /**< (intersection of) capabilities of evaluation rountines of user expressions */
 
+   vector<bool>          hessparsity;        /**< sparsity pattern of Hessian as given by CppAD */
    int*                  hesrowidxs;         /**< row indices of Hessian sparsity */
    int*                  hescolidxs;         /**< column indices of Hessian sparsity */
    SCIP_Real*            hesvalues;          /**< values of Hessian */
@@ -1646,6 +1647,8 @@ SCIP_RETCODE SCIPexprintEval(
       // the following is required if the gradient shall be computed by a reverse sweep later
       // exprintdata->val = exprintdata->f.Forward(0, exprintdata->x)[0];
 
+      //TODO exprintdata->f.optimize();
+
       exprintdata->need_retape = false;
    }
    else
@@ -1794,6 +1797,8 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
          SCIP_CALL( SCIPexprintEval(scip, exprint, expr, exprintdata, varvals, &val) );
       }  /*lint !e438*/
 
+      // following https://github.com/coin-or/CppAD/blob/20180000.0/cppad_ipopt/src/vec_fun_pattern.cpp
+
       SCIPdebugMessage("calling ForSparseJac\n");
 
       vector<bool> r(nn, false);
@@ -1803,12 +1808,11 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
 
       SCIPdebugMessage("calling RevSparseHes\n");
 
-      // TODO check whether CppADs sparse hessian can be useful
       vector<bool> s(1, true);
-      vector<bool> sparsehes(exprintdata->f.RevSparseHes(n, s));
+      exprintdata->hessparsity = exprintdata->f.RevSparseHes(n, s);
 
       for( size_t i = 0; i < nn; ++i )
-         if( sparsehes[i] )
+         if( exprintdata->hessparsity[i] )
          {
             size_t row = i / n;
             size_t col = i % n;
@@ -1823,7 +1827,7 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
 
       int j = 0;
       for( size_t i = 0; i < nn; ++i )
-         if( sparsehes[i] )
+         if( exprintdata->hessparsity[i] )
          {
             size_t row = i / n;
             size_t col = i % n;
@@ -1901,14 +1905,36 @@ SCIP_RETCODE SCIPexprintHessian(
 
    if( n > 0 )
    {
-      // TODO check whether CppADs sparse hessian can be useful
+#ifdef SCIP_DISABLED_CODE
+      // dense Hessian:
       /* this one uses reverse mode */
       vector<double> hess(exprintdata->f.Hessian(exprintdata->x, 0));
-
       for( int i = 0; i < exprintdata->hesnnz; ++i )
-      {
          exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
+#else
+      // sparse Hessian:
+      vector<double> hess(exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity));
+
+      // going through all n*n entries to fill hesvalues takes about about n*n time
+      // using the sparsity in hesrowidx/hescolidx takes nnz*2*log2(n) time, because getVarPos() takes about log2(n) time
+      // so we go through all n*n entries for denser matrices
+      if( n*n < exprintdata->hesnnz*2*log2(n) )
+      {
+         int j = 0;
+         for( size_t i = 0; i < hess.size(); ++i )
+            if( exprintdata->hessparsity[i] )
+            {
+               size_t row = i / n;
+               size_t col = i % n;
+               if( col > row )
+                  continue;
+               exprintdata->hesvalues[j++] = hess[i];
+            }
       }
+      else
+         for( int i = 0; i < exprintdata->hesnnz; ++i )
+            exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
+#endif
    }
 
 #ifdef SCIP_DEBUG

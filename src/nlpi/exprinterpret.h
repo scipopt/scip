@@ -73,6 +73,9 @@ SCIP_RETCODE SCIPexprintFree(
 
 /** compiles an expression and returns interpreter-specific data for expression
  *
+ * can be called again with existing exprintdata if expression has been changed
+ *
+ * @attention *exprintdata needs to be initialized to NULL at first call
  * @attention the expression is assumed to use varidx expressions but no var expressions
  */
 SCIP_EXPORT
