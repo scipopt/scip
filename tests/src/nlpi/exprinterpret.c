@@ -744,3 +744,87 @@ Test(performance, griewank)
       SCIP_CALL( SCIPreleaseExpr(scip, &exprsum) );
    }
 }
+
+Test(performance, signpower)
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPR* term;
+   SCIP_EXPRINTDATA* exprintdata = NULL;
+   SCIP_Real val;
+   int* rowidxs;
+   int* colidxs;
+   SCIP_Real* hessianvals;
+   int nnz;
+   int i;
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &expr, 0, NULL, NULL, 0.0, NULL, NULL) );
+
+   for( i = 0; i < DIM; ++i )
+   {
+      SCIP_CALL( SCIPcreateExprSignpower(scip, &term, vexprs[i], i+1.0, NULL, NULL) );
+      SCIP_CALL( SCIPappendExprChild(scip, expr, term) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &term) );
+   }
+
+   SCIPresetClock(scip, clock);
+   SCIPstartClock(scip, clock);
+
+   SCIP_CALL( SCIPexprintCompile(scip, exprint, expr, &exprintdata) );
+   SCIP_CALL( SCIPexprintHessianSparsity(scip, exprint, expr, exprintdata, vvals, &rowidxs, &colidxs, &nnz) );
+
+   for( i = 0; i < NROUNDS; ++i )
+   {
+      for( int j = 0; j < DIM; ++j )
+         vvals[j] = (j%10) * (i*j % 3 ? 1 : -1);
+      SCIP_CALL( SCIPexprintEval(scip, exprint, expr, exprintdata, vvals, &val) );
+      SCIP_CALL( SCIPexprintGrad(scip, exprint, expr, exprintdata, vvals, FALSE, &val, grad) );
+      SCIP_CALL( SCIPexprintHessian(scip, exprint, expr, exprintdata, vvals, FALSE, &val, &rowidxs, &colidxs, &hessianvals, &nnz) );
+   }
+
+   printf("time: %g\n", SCIPgetClockTime(scip, clock));
+
+   SCIP_CALL( SCIPexprintFreeData(scip, exprint, expr, &exprintdata) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+Test(performance, intpower)
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPR* term;
+   SCIP_EXPRINTDATA* exprintdata = NULL;
+   SCIP_Real val;
+   int* rowidxs;
+   int* colidxs;
+   SCIP_Real* hessianvals;
+   int nnz;
+   int i;
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &expr, 0, NULL, NULL, 0.0, NULL, NULL) );
+
+   for( i = 0; i < DIM; ++i )
+   {
+      SCIP_CALL( SCIPcreateExprPow(scip, &term, vexprs[i], i+1.0, NULL, NULL) );
+      SCIP_CALL( SCIPappendExprChild(scip, expr, term) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &term) );
+   }
+
+   SCIPresetClock(scip, clock);
+   SCIPstartClock(scip, clock);
+
+   SCIP_CALL( SCIPexprintCompile(scip, exprint, expr, &exprintdata) );
+   SCIP_CALL( SCIPexprintHessianSparsity(scip, exprint, expr, exprintdata, vvals, &rowidxs, &colidxs, &nnz) );
+
+   for( i = 0; i < NROUNDS; ++i )
+   {
+      for( int j = 0; j < DIM; ++j )
+         vvals[j] = (j%10) * (i*j % 3 ? 1 : -1);
+      SCIP_CALL( SCIPexprintEval(scip, exprint, expr, exprintdata, vvals, &val) );
+      SCIP_CALL( SCIPexprintGrad(scip, exprint, expr, exprintdata, vvals, FALSE, &val, grad) );
+      SCIP_CALL( SCIPexprintHessian(scip, exprint, expr, exprintdata, vvals, FALSE, &val, &rowidxs, &colidxs, &hessianvals, &nnz) );
+   }
+
+   printf("time: %g\n", SCIPgetClockTime(scip, clock));
+
+   SCIP_CALL( SCIPexprintFreeData(scip, exprint, expr, &exprintdata) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}

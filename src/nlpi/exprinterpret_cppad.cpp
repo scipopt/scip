@@ -47,8 +47,9 @@ using std::vector;
 /* defining NO_CPPAD_USER_ATOMIC disables the use of our own implementation of derivatives of power operators
  * via CppAD's user-atomic function feature
  * our customized implementation should give better results (tighter intervals) for the interval data type
+ * but we don't use interval types here anymore and the atomic operator does not look threadsafe (might be better in newer CppAD version)
  */
-/* #define NO_CPPAD_USER_ATOMIC */
+#define NO_CPPAD_USER_ATOMIC
 
 /* fallback to non-thread-safe version if C++ is too old to have std::atomic */
 #if __cplusplus < 201103L && defined(SCIP_THREADSAFE)
@@ -839,7 +840,6 @@ void evalSignPower(
 
    if( EPSISINT(exponent, 0.0) )
    {
-      // TODO or use powintpower()?
       resultant = CppAD::CondExpGe(arg, adzero, pow(arg, (int)exponent), -pow(-arg, (int)exponent));
    }
    else
@@ -1803,8 +1803,6 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
       if( exprintdata->need_retape_always )
       {
          // pretend dense
-         // @todo can we do something better here, e.g., by looking at the expression tree by ourself?
-
          exprintdata->hesnnz = (n * (n+1))/2;
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
