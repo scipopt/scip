@@ -60,25 +60,26 @@ void checkad_setup(void)
    for( i = 0; i < 10; ++i )
       BMSclearMemoryArray(varvals[i], nvars);
 
-   SCIP_CALL( SCIPexprintCreate(scip, &exprint) );
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   SCIP_CALL_ABORT( SCIPexprintCreate(scip, &exprint) );
+   SCIP_CALL_ABORT( SCIPcreateSol(scip, &sol, NULL) );
 }
 
 static
 void checkad_teardown(void)
 {
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   int i;
+
+   SCIP_CALL_ABORT( SCIPfreeSol(scip, &sol) );
    SCIPexprintFree(scip, &exprint);
 
-   int i;
    for( i = nvars-1; i >= 0; --i )
    {
-      SCIP_CALL( SCIPreleaseExpr(scip, &varidxexprs[i]) );
-      SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
-      SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
+      SCIP_CALL_ABORT( SCIPreleaseExpr(scip, &varidxexprs[i]) );
+      SCIP_CALL_ABORT( SCIPreleaseExpr(scip, &varexprs[i]) );
+      SCIP_CALL_ABORT( SCIPreleaseVar(scip, &vars[i]) );
    }
 
-   SCIP_CALL( SCIPfree(&scip) );
+   SCIP_CALL_ABORT( SCIPfree(&scip) );
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
@@ -482,4 +483,172 @@ Test(checkad, griewank)
    checkAD(exprsum, nvars, 2);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &exprsum) );
+}
+
+/* for testing, keep these numbers down
+ * but to check timing, set these numbers higher
+ */
+#define DIM 10      /**< dimension of quadratic coef matrix */
+#define NROUNDS 1   /**< number of times to run for the same sparsity (with different sparsity pattern) */
+static SCIP_EXPR* vexprs[DIM];
+static SCIP_Real vvals[DIM];
+static SCIP_Real grad[DIM];
+static SCIP_CLOCK* clock;
+
+static
+void performance_setup(void)
+{
+   int i;
+
+   SCIP_CALL_ABORT( SCIPcreate(&scip) );
+   SCIP_CALL_ABORT( SCIPincludeDefaultPlugins(scip) );
+
+   /* need a problem to have stat created, which is used by expr iterators */
+   SCIP_CALL_ABORT( SCIPcreateProbBasic(scip, "dummy") );
+
+   SCIP_CALL_ABORT( SCIPexprintCreate(scip, &exprint) );
+
+   for( i = 0; i < DIM; ++i )
+   {
+      SCIP_CALL_ABORT( SCIPcreateExprVaridx(scip, &vexprs[i], i, NULL, NULL) );
+   }
+
+   SCIP_CALL_ABORT( SCIPcreateCPUClock(scip, &clock) );
+}
+
+static
+void performance_teardown(void)
+{
+   int i;
+
+   SCIP_CALL_ABORT( SCIPfreeClock(scip, &clock) );
+
+   for( i = DIM-1; i >= 0; --i )
+   {
+      SCIP_CALL_ABORT( SCIPreleaseExpr(scip, &vexprs[i]) );
+   }
+
+   SCIPexprintFree(scip, &exprint);
+
+   SCIP_CALL_ABORT( SCIPfree(&scip) );
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+}
+
+
+TestSuite(performance, .init = performance_setup, .fini = performance_teardown);
+
+Test(performance, quad)
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPRINTDATA* exprintdata = NULL;
+   SCIP_EXPR* term;
+   SCIP_Real coef;
+   int i, j;
+   SCIP_Real val;
+   int* rowidxs;
+   int* colidxs;
+   SCIP_Real* hessianvals;
+   int nnz;
+   SCIP_RANDNUMGEN* randnumgen;
+   SCIP_Real fullhessian[DIM*DIM];
+   int rnd;
+   int sparse;
+
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 42, FALSE) );
+
+   printf("%5s %.6s %10.10s %6.6s %6.6s %6.6s %6.6s %6.6s\n", "DIM", "sparsity", "nterms", "compile", "eval", "grad", "hesssparsity", "hessian");
+
+   for( sparse = 0; sparse <= 10; ++sparse )
+   {
+      SCIP_Real compiletime = 0.0;
+      SCIP_Real evaltime = 0.0;
+      SCIP_Real gradtime = 0.0;
+      SCIP_Real hessiansparsitytime = 0.0;
+      SCIP_Real hessiantime = 0.0;
+      SCIP_Real sparsity = 1.0/DIM + sparse/10.0 * (1/sqrt(DIM) - 1/DIM);
+      int nterms = 0;
+
+      for( rnd = 1; rnd <= NROUNDS; ++rnd )
+      {
+         BMSclearMemoryArray(fullhessian, DIM*DIM);
+
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr, 0, NULL, NULL, 1.0, NULL, NULL) );
+         /* make up some sparse matrix and a nonzero point */
+         for( i = 0; i < DIM; ++i )
+         {
+            for( j = 0; j < DIM; ++j )
+            {
+               if( SCIPrandomGetReal(randnumgen, 0.0, 1.0) > sparsity )
+                  continue;
+               coef = ABS(i - j) + 1.0;
+               if( i == j )
+               {
+                  SCIP_CALL( SCIPcreateExprPow(scip, &term, vexprs[i], 2.0, NULL, NULL) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPcreateExprProduct(scip, &term, 2, (SCIP_EXPR*[2]){vexprs[i], vexprs[j]}, 1.0, NULL, NULL) );
+               }
+               SCIP_CALL( SCIPappendExprSumExpr(scip, expr, term, coef) );
+               SCIP_CALL( SCIPreleaseExpr(scip, &term) );
+
+               fullhessian[MIN(i,j)*DIM+MAX(i,j)] += (i == j) ? 2*coef : coef;
+            }
+            vvals[i] = i+1.0;
+         }
+         nterms += SCIPexprGetNChildren(expr);
+         /* for( i = 0; i < DIM; ++i )
+         {
+            for( j = 0; j < DIM; ++j )
+               printf(" %5g", fullhessian[i*DIM+j]);
+            printf("\n");
+          } */
+
+         SCIPresetClock(scip, clock);
+         SCIPstartClock(scip, clock);
+         SCIP_CALL( SCIPexprintCompile(scip, exprint, expr, &exprintdata) );
+         SCIPstopClock(scip, clock);
+         compiletime += SCIPgetClockTime(scip, clock);
+
+         SCIPresetClock(scip, clock);
+         SCIPstartClock(scip, clock);
+         SCIP_CALL( SCIPexprintEval(scip, exprint, expr, exprintdata, vvals, &val) );
+         SCIPstopClock(scip, clock);
+         evaltime += SCIPgetClockTime(scip, clock);
+
+         SCIPresetClock(scip, clock);
+         SCIPstartClock(scip, clock);
+         SCIP_CALL( SCIPexprintGrad(scip, exprint, expr, exprintdata, vvals, FALSE, &val, grad) );
+         SCIPstopClock(scip, clock);
+         gradtime += SCIPgetClockTime(scip, clock);
+
+         SCIPresetClock(scip, clock);
+         SCIPstartClock(scip, clock);
+         SCIP_CALL( SCIPexprintHessianSparsity(scip, exprint, expr, exprintdata, vvals, &rowidxs, &colidxs, &nnz) );
+         SCIPstopClock(scip, clock);
+         hessiansparsitytime += SCIPgetClockTime(scip, clock);
+
+         SCIPresetClock(scip, clock);
+         SCIPstartClock(scip, clock);
+         SCIP_CALL( SCIPexprintHessian(scip, exprint, expr, exprintdata, vvals, FALSE, &val, &rowidxs, &colidxs, &hessianvals, &nnz) );
+         SCIPstopClock(scip, clock);
+         hessiantime += SCIPgetClockTime(scip, clock);
+
+         /* check that Hessian is correct */
+         for( i = 0; i < nnz; ++i )
+         {
+            /* printf("  %d %d = %g\n", colidxs[i], rowidxs[i], hessianvals[i]); */
+            fullhessian[colidxs[i]*DIM+rowidxs[i]] -= hessianvals[i];
+         }
+         for( i = 0; i < DIM*DIM; ++i )
+            cr_assert_float_eq(fullhessian[i], 0.0, TOL);
+
+         SCIP_CALL( SCIPexprintFreeData(scip, exprint, expr, &exprintdata) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+      }
+
+      printf("%5d %6.2g %10d %6.4f %6.4f %6.4f %6.4f %6.4f\n", DIM, sparsity, nterms/rnd, compiletime/rnd, evaltime/rnd, gradtime/rnd, hessiansparsitytime/rnd, hessiantime/rnd);
+   }
+
+   SCIPfreeRandom(scip, &randnumgen);
 }
