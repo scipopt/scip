@@ -288,7 +288,7 @@ SCIP_RETCODE initConcsolver(
 
       SCIPfreeBufferArray(data->solverscip, &solvals);
 
-      SCIP_CALL( SCIPaddSolFree(data->solverscip, solversol, &stored) );
+      SCIP_CALL( SCIPaddSolFree(data->solverscip, &solversol, &stored) );
 
       assert(stored);
    }
