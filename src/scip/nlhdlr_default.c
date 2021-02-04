@@ -459,10 +459,13 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
    SCIP_CALL( SCIPcallExprReverseprop(scip, expr, bounds, childrenbounds, infeasible) );
 
    if( !*infeasible )
+   {
       for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
       {
          SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[c], childrenbounds[c], infeasible, nreductions) );
       }
+      SCIPexprhdlrIncrementNDomainReductions(SCIPexprGetHdlr(expr), *nreductions);
+   }
 
    SCIPfreeBufferArray(scip, &childrenbounds);
 

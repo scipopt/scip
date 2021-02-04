@@ -659,6 +659,17 @@ void SCIPexprhdlrIncrementNBranchScore(
    ++exprhdlr->nbranchscores;
 }
 
+/** increments the domain reductions count of an expression handler */
+void SCIPexprhdlrIncrementNDomainReductions(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   int                   nreductions         /**< number of reductions to add to counter */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(nreductions >= 0);
+
+   exprhdlr->ndomreds += nreductions;
+}
 
 /** copies the given expression handler to a new scip */
 SCIP_RETCODE SCIPexprhdlrCopyInclude(
@@ -1379,10 +1390,6 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
       if( *infeasible )
          ++expr->exprhdlr->ncutoffs;
       ++expr->exprhdlr->npropcalls;
-
-      //TODO move into nlhldr_default:
-      //assert(*nreductions >= 0);
-      //exprhdlr->ndomreds += *nreductions;
    }
 
    return SCIP_OKAY;

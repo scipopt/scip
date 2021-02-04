@@ -226,6 +226,13 @@ void SCIPexprhdlrIncrementNBranchScore(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
+/** increments the domain reductions count of an expression handler */
+SCIP_EXPORT
+void SCIPexprhdlrIncrementNDomainReductions(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   int                   nreductions         /**< number of reductions to add to counter */
+   );
+
 /** @} */
 
 
