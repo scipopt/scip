@@ -157,8 +157,8 @@ Test(separation, cosine_x,
 }
 
 /* tests for interval [-6,-3] */
-//TODO: reenable test. the problem is that the left tangent is not computed because it is wrongly indetified as nonoverestimating
-// see computeRightTangentSin
+//TODO: reenable test. the problem is that the left tangent is not computed because it is wrongly identified as nonoverestimating
+// see TODO in expr_sin.c:computeRightTangentSin
 Test(separation, cosine_y,
    .description = "test separation for a cosine expression in mid size range", .disabled = TRUE
 )
