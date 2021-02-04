@@ -320,7 +320,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    changed = FALSE;
 
    /* TODO: maybe have a flag to know if it is simplified ? */
-   // FIXME should this be a shallow duplicate + copy of children pointer?
+   /* TODO: can we do this with a shallow duplicate + copy of children pointer? currently simplifyTerm may modify children, so one would need to be careful */
    SCIP_CALL( SCIPduplicateExpr(scip, expr, &duplicate, NULL, NULL, ownercreate, ownercreatedata) );
    assert(duplicate != NULL);
 
