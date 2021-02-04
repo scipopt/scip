@@ -804,8 +804,10 @@ SCIP_RETCODE nlrowRemoveFixedVar(
       SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, pos) );
    }
 
-   /* search for variable in nonlinear part and remove all fixed variables in expression tree if existing */
-   if( nlrow->expr != NULL /* && SCIPexprtreeFindVar(nlrow->expr, var) >= 0 */ )  // FIXME?
+   /* search for variable in nonlinear part and remove all fixed variables in expression if existing
+    * TODO only call simplify if var appears in expr, but currently we don't store the vars in a separate array
+    */
+   if( nlrow->expr != NULL )
    {
       SCIP_CALL( nlrowSimplifyExpr(nlrow, blkmem, set, stat, nlp) );
    }
@@ -1879,13 +1881,13 @@ SCIP_RETCODE nlpRowChanged(
     */
    if( nlp->solstat <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
-      /* FIXME?
+      /* TODO bring this back? then everything that may call nlpRowChanged will need to pass on blkmem, primal, tree as well
       SCIP_Real feasibility;
       SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, blkmem, set, stat, primal, tree, nlp, &feasibility) );
       if( !SCIPsetIsFeasNegative(set, feasibility) )
          nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
       else */
-         nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
    }
    else
    {
@@ -1961,14 +1963,14 @@ SCIP_RETCODE nlpAddNlRows(
        */
       if( nlp->solstat <= SCIP_NLPSOLSTAT_FEASIBLE )
       {
-         /* FIXME?
+         /* TODO bring this back? then everything that may call nlpAddNlRows will need to pass on primal, tree as well
          SCIP_Real feasibility;
          SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, blkmem, set, stat, primal, tree, nlp, &feasibility) );
          if( !SCIPsetIsFeasNegative(set, feasibility) )
             nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
          */
-            nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       }
       else if( nlp->solstat == SCIP_NLPSOLSTAT_UNBOUNDED )
       {
@@ -2304,6 +2306,7 @@ SCIP_RETCODE nlpDelVarPos(
    SCIP_NLP*             nlp,                /**< NLP data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< SCIP LP, needed if a column-variable is freed */
    int                   pos                 /**< position of nonlinear row that is to be removed */
@@ -2342,7 +2345,16 @@ SCIP_RETCODE nlpDelVarPos(
          for( j = 0; j < nlrow->nlinvars; ++j )
             assert( nlrow->linvars[j] != var );
 
-//FIXME?      assert(nlrow->expr == NULL || SCIPexprtreeFindVar(nlrow->expr, var) == -1);
+      if( nlrow->expr != NULL )
+      {
+         SCIP_EXPRITER* it;
+         SCIP_EXPR* expr;
+         SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
+         SCIP_CALL( SCIPexpriterInit(it, nlrow->expr, SCIP_EXPRITER_DFS, TRUE) );
+         for( expr = nlrow->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+            assert(!SCIPexprIsVar(set, expr) || SCIPgetVarExprVar(expr) != var);
+         SCIPexpriterFree(&it);
+      }
    }
 #endif
 
@@ -2409,7 +2421,7 @@ SCIP_RETCODE nlpRemoveFixedVar(
    }
 
    /* remove variable from NLP */
-   SCIP_CALL( SCIPnlpDelVar(nlp, blkmem, set, eventqueue, lp, var) );
+   SCIP_CALL( SCIPnlpDelVar(nlp, blkmem, set, stat, eventqueue, lp, var) );
 
    return SCIP_OKAY;
 }
@@ -3342,11 +3354,12 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    else if( SCIP_EVENTTYPE_VARDELETED & etype )
    {
       SCIPdebugMessage("-> handling vardel event, variable <%s>\n", SCIPvarGetName(var) );
-      SCIP_CALL( SCIPnlpDelVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->lp, var) );
+      SCIP_CALL( SCIPnlpDelVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
    }
    else if( SCIP_EVENTTYPE_VARFIXED & etype )
    {
       /* variable was fixed, aggregated, or multi-aggregated */
+      /* TODO is this ever happening? that is, can we have changes in a variable status during solve? */
       SCIPdebugMessage("-> handling variable fixation event, variable <%s>\n", SCIPvarGetName(var) );
       SCIP_CALL( nlpRemoveFixedVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
    }
@@ -3615,7 +3628,7 @@ SCIP_RETCODE SCIPnlpReset(
 
    for(i = nlp->nvars - 1; i >= 0; --i)
    {
-      SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, eventqueue, lp, i) );
+      SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, stat, eventqueue, lp, i) );
    }
 
    SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set, stat) );
@@ -3722,6 +3735,7 @@ SCIP_RETCODE SCIPnlpDelVar(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< SCIP LP, needed to release variable */
    SCIP_VAR*             var                 /**< variable */
@@ -3748,7 +3762,7 @@ SCIP_RETCODE SCIPnlpDelVar(
 
    varpos = SCIPhashmapGetImageInt(nlp->varhash, var);
 
-   SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, eventqueue, lp, varpos) );
+   SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, stat, eventqueue, lp, varpos) );
 
    return SCIP_OKAY;
 }

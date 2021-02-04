@@ -387,6 +387,7 @@ SCIP_RETCODE SCIPnlpDelVar(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp,                 /**< SCIP LP, needed to release variable */
    SCIP_VAR*             var                 /**< variable */
