@@ -201,7 +201,6 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
       SCIP_CALL( SCIPevalExpr(scip, sinexpr, sol, 0) );
-      //SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
       SCIP_CALL( SCIPevalExprActivity(scip, sinexpr) );
       interval = SCIPexprGetActivity(sinexpr);
 
@@ -215,7 +214,6 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
       SCIP_CALL( SCIPevalExpr(scip, sinexpr, sol, 0) );
-      //SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
       SCIP_CALL( SCIPevalExprActivity(scip, sinexpr) );
       interval = SCIPexprGetActivity(sinexpr);
 

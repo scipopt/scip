@@ -571,7 +571,7 @@ Test(evalexprInterval, complicated_interval, .description = "Tests expression in
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-//   SCIP_CALL( SCIPsetRealParam(scip, "expr/log/minzerodistance", 0.0) );
+   SCIP_CALL( SCIPsetRealParam(scip, "expr/log/minzerodistance", 0.0) );
    SCIP_CALL( SCIPsetRealParam(scip, "expr/pow/minzerodistance", 0.0) );
 
    /* create problem */
