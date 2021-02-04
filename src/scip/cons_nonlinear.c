@@ -11272,14 +11272,13 @@ SCIP_RETCODE SCIPinsertBilinearTermExistingNonlinear(
 
    term = &conshdlrdata->bilinterms[idx];
    assert(term != NULL);
+   assert(term->nauxexprs == 0);  /* existing terms should be added before implicit terms */
+   assert(term->aux.var == NULL); /* there should not already be an auxvar, that is, existing terms should exist only once (common subexprs should have been eliminated) */
 
-   /* store the auxiliary variable */
-   assert(term->nauxexprs == 0); /* existing terms should be added before implicit terms */
-   term->aux.var = auxvar;
-
-   /* capture auxiliary variable */
+   /* store and capture auxiliary variable */
    if( auxvar != NULL )
    {
+      term->aux.var = auxvar;
       SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
    }
 
