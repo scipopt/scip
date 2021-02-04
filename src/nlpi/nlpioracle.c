@@ -2416,7 +2416,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    for( i = 0; i < oracle->nvars; ++i )
    {
       if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
-         SCIPinfoMessage(scip, file, "%10s (x%d)", oracle->varnames[i], i);  // give also name x%d as it will be by expression-print (printFunction)
+         SCIPinfoMessage(scip, file, "%10s (x%d)", oracle->varnames[i], i);  /* give also name x%d as it will be by expression-print (printFunction) */
       else
          SCIPinfoMessage(scip, file, "x%09d", i);
       SCIPinfoMessage(scip, file, ": [%8g, %8g]", oracle->varlbs[i], oracle->varubs[i]);

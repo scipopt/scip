@@ -173,7 +173,7 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    SCIP_Real detreslb[4] = {0.0, 0.0, 0.0, -2.0 * log(2.0)};
    SCIP_Real detresub[4] = {exp(-1.0), exp(-1.0), exp(-1.0), 0.0};
 
-   /* create 5 random cases within specific bounds that have non-trivial resulsts */
+   /* create 5 random cases within specific bounds that have non-trivial results */
    rndlb[0]    = SCIPrandomGetReal(rndgen, 0.0, exp(-1.0));
    rndub[0]    = SCIPrandomGetReal(rndgen, exp(-1.0), 1.0);
    rndreslb[0] = MIN(-rndlb[0] * log(rndlb[0]), -rndub[0] * log(rndub[0]));
