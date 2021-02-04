@@ -914,30 +914,9 @@ SCIP_RETCODE printFunction(
 
    if( cons->expr != NULL )
    {
+      /* TODO SCIPprintExpr does not use the variable names in oracle->varnames, probably that should be changed */
       SCIPinfoMessage(scip, file, " +");
       SCIP_CALL( SCIPprintExpr(scip, cons->expr, file) );
-#if !1 // FIXME make use of oracle->varnames and printName; messagehdlr?
-      char** varnames;
-      SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(cons->expr)) );  /*lint !e666*/
-
-      /* setup variable names */
-      for( i = 0; i < SCIPexprtreeGetNVars(cons->expr); ++i )
-      {
-         assert(cons->exprvaridxs[i] < 1e+20);
-         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &varnames[i], 70) );  /*lint !e866 !e506 !e644*/
-         printName(varnames[i], oracle->varnames != NULL ? oracle->varnames[cons->exprvaridxs[i]] : NULL, cons->exprvaridxs[i], 'x', NULL, longvarnames);
-      }
-
-      SCIPinfoMessage(scip, file, " +");
-
-      SCIPexprtreePrint(cons->expr, messagehdlr, file, (const char**)varnames, NULL);
-
-      for( i = 0; i < SCIPexprtreeGetNVars(cons->expr); ++i )
-      {
-         BMSfreeBlockMemoryArray(oracle->blkmem, &varnames[i], 70);  /*lint !e866*/
-      }
-      BMSfreeBlockMemoryArray(oracle->blkmem, &varnames, SCIPexprtreeGetNVars(cons->expr));
-#endif
    }
 
    return SCIP_OKAY;
@@ -2437,7 +2416,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    for( i = 0; i < oracle->nvars; ++i )
    {
       if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
-         SCIPinfoMessage(scip, file, "%10s", oracle->varnames[i]);
+         SCIPinfoMessage(scip, file, "%10s (x%d)", oracle->varnames[i], i);  // give also name x%d as it will be by expression-print (printFunction)
       else
          SCIPinfoMessage(scip, file, "x%09d", i);
       SCIPinfoMessage(scip, file, ": [%8g, %8g]", oracle->varlbs[i], oracle->varubs[i]);
