@@ -164,7 +164,7 @@ do
 	    for SETNAME in ${SETTINGSLIST[@]}
 	    do
 		# infer the names of all involved files from the arguments
-		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
+		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, CHECKSETFILE, OBJECTIVEVAL, SHORTPROBNAME,
 		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
 		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE \
 		                              $p $s $THREADS $GLBSEEDSHIFT $STARTPERM
@@ -211,6 +211,19 @@ do
 		export TIMELIMIT
                 export EXECNAME
 
+		WRITESETTINGS="false"
+		if test "$INIT" = "true"
+		then
+			if test "$SOLVER" = "scip"
+			then
+				WRITESETTINGS="true"
+			fi
+		fi
+		if test "$WRITESETTINGS" = "true"
+		then
+			echo -e "#!/usr/bin/env bash \n $EXECNAME -s $SETTINGS -c 'set save $CHECKSETFILE quit'" > write-settings.sh
+		fi
+
                 # check queue type
 		if test  "$QUEUETYPE" = "srun"
 		then
@@ -225,6 +238,16 @@ do
 			SLURMACCOUNT=$ACCOUNT
                     fi
 
+			if test "$WRITESETTINGS" = "true"
+			then
+				if test "$CLUSTERNODES" = "all"
+				then
+					sbatch --job-name=write-settings --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null write-settings.sh
+				else
+					sbatch --job-name=write-settings --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null write-settings.sh
+				fi
+			fi
+
                     if test "$CLUSTERNODES" = "all"
 		    then
 			sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
@@ -235,8 +258,18 @@ do
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
 			 -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
+
+			if test "$WRITESETTINGS" = "true"
+			then
+				qsub -l walltime=$HARDTIMELIMIT -l nodes=1:ppn=$PPN -N write-settings \
+				-V -q $CLUSTERQUEUE -o /dev/null -e /dev/null write-settings.sh
+			fi
 		fi
-	    done # end for SETNAME
+		if test "$WRITESETTINGS" = "true"
+		then
+			rm write-settings.sh
+		fi
+		done # end for SETNAME
 	done # end for PERMUTE
     done #end for SEEDS
 

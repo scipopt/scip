@@ -149,7 +149,10 @@ do
         FILE=$i.set
         if test -e $FILE
         then
-            cp $FILE $SETFILE
+            if ! test -e $SETFILE
+            then
+               cp $FILE $SETFILE
+            fi
             if test "$REMOVE" = "1"
             then
                 rm -f $FILE

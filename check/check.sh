@@ -141,7 +141,7 @@ do
 
 
 		# infer the names of all involved files from the arguments
-		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
+		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, CHECKSETFILE, OBJECTIVEVAL, SHORTPROBNAME,
 		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
 
 		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s \
@@ -188,6 +188,29 @@ do
 		export EXECNAME
 		export CHECKERPATH=$SCIPPATH/solchecker
 
+		WRITESETTINGS="false"
+		if test "$INIT" = "true"
+		then
+			if test "$SOLVER" = "scip"
+			then
+				WRITESETTINGS="true"
+			fi
+		fi
+		if test "$WRITESETTINGS" = "true"
+		then
+			echo -e "#!/usr/bin/env bash \n $EXECNAME -s $SETTINGS -c 'set save $CHECKSETFILE quit'" > write-settings.sh
+		fi
+
+		if test "$WRITESETTINGS" = "true"
+		then
+			if [ $MAXJOBS -eq 1 ]
+			then
+				bash write-settings.sh
+			else
+				bash write-settings.sh &
+			fi
+		fi
+
 		echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
 		if [ $MAXJOBS -eq 1 ]
 		then
@@ -195,7 +218,10 @@ do
 		else
 		    bash -c "ulimit -t $HARDTIMELIMIT s; $ULIMITMEM ulimit -f 200000; ./run.sh" &
 		fi
-		#./run.sh
+		if test "$WRITESETTINGS" = "true"
+		then
+			rm write-settings.sh
+		fi
 	    done # end for SETNAME
 	done # end for PERMUTE
     done # end for SEEDS

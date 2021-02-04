@@ -23,6 +23,7 @@
 ### OUTFILE - the name of the (sticked together) output file
 ### ERRFILE - the name of the (sticked together) error file
 ### EVALFILE - evaluation file to glue single output and error files together
+### CHECKSETFILE  - the name of the basic settings file starting with 'check.'
 ### OBJECTIVEVAL - the optimal or best-know objective value for this instance
 ### SHORTPROBNAME - the basename of $INSTANCE without file extension
 ### FILENAME - the basename of the local files (.out, .tmp, and .err)
@@ -49,33 +50,32 @@ GLBSEEDSHIFT=${14} # the global seed shift
 STARTPERM=${15} # the starting permutation
 
 # common naming scheme for eval files
-EVALFILE=$SCIPPATH/$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME
+CHECKBASENAME=$SCIPPATH/$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME
 
 # if number of threads is larger than 1, add postfix
 if test $THREADS -gt 1
 then
-    EVALFILE=$EVALFILE"-t"$THREADS
+    CHECKBASENAME=$CHECKBASENAME"-t"$THREADS
 fi
 
 # if seed is positive, add postfix
 SEED=`expr $s + $GLBSEEDSHIFT`
 if test $SEED -gt 0
 then
-    EVALFILE=$EVALFILE"-s"$SEED
+    CHECKBASENAME=$CHECKBASENAME"-s"$SEED
 fi
 
 # if permutation is positive, add postfix
 PERM=`expr $p + $STARTPERM`
 if test $PERM -gt 0
 then
-    EVALFILE=$EVALFILE"-p"$PERM
+    CHECKBASENAME=$CHECKBASENAME"-p"$PERM
 fi
 
-OUTFILE=$EVALFILE.out
-ERRFILE=$EVALFILE.err
-
-# add .eval extension to evalfile
-EVALFILE=$EVALFILE.eval
+OUTFILE=$CHECKBASENAME.out
+ERRFILE=$CHECKBASENAME.err
+CHECKSETFILE=$CHECKBASENAME.set
+EVALFILE=$CHECKBASENAME.eval
 
 # create meta file
 if test -e $EVALFILE
@@ -120,7 +120,7 @@ then
         MVORCP=mv
     fi
     DATEINT=`date +"%s"`
-    for FILE in OUTFILE ERRFILE
+    for FILE in OUTFILE ERRFILE CHECKSETFILE
     do
         if test -e $FILE
         then
