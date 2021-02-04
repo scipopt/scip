@@ -1467,9 +1467,6 @@ SCIP_RETCODE SCIPexprAppendChild(
    assert(set != NULL);
    assert(blkmem != NULL);
    assert(child != NULL);
-//   assert(expr->monotonicitysize == 0);  /* should not append child while monotonicity is stored in expr (not updated here) */
-//   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
-//   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
    assert(expr->nchildren <= expr->childrensize);
 
    if( expr->nchildren == expr->childrensize )
@@ -1506,9 +1503,6 @@ SCIP_RETCODE SCIPexprReplaceChild(
    assert(newchild != NULL);
    assert(childidx >= 0);
    assert(childidx < expr->nchildren);
-//   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
-//   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
-//   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
 
    /* do nothing if child is not changing */
    if( newchild == expr->children[childidx] )
@@ -2724,7 +2718,6 @@ SCIP_RETCODE SCIPexprEvalActivity(
             {
                SCIPsetDebugMsg(set, "treat activity [%g,%g] as empty as beyond infinity\n", expr->activity.inf, expr->activity.sup);
                SCIPintervalSetEmpty(&expr->activity);
-               //TODO set rootexpr->activity to empty? exit?
             }
 
             /* remember that activity is uptodate now */
