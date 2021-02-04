@@ -213,6 +213,7 @@ Fixed bugs
 - Fixed invalid initialization of limits/softtime parameter in cons_components
 - Fixed MIN macro not defined in some cases.
 - Safeguard some API methods for querying solving statistics against segmentation faults after SCIPpresolve()
+- Fixed unfreed solution in concurrent solving
 
 Miscellaneous
 -------------
