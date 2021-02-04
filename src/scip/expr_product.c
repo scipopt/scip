@@ -44,8 +44,6 @@
 #define EXPRHDLR_PRECEDENCE   50000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(54949.0)
 
-#define DEFAULT_RANDSEED      101  /**< initial random seed */
-
 /** macro to activate/deactivate debugging information of simplify method */
 /*lint -emacro(681,debugSimplify) */
 /*lint -emacro(506,debugSimplify) */
@@ -71,10 +69,7 @@ struct SCIP_ExprData
 
 struct SCIP_ExprHdlrData
 {
-   SCIP_LPI*             multilinearseparationlp; /**< lp to separate product expressions */
-   int                   lpsize;             /**< number of rows - 1 of multilinearseparationlp */
-
-   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   SCIP_CONSHDLR*        conshdlr;           /**< nonlinear constraint handler (to compute estimates for > 2-dim products) */
 };
 
 /** node for linked list of expressions */
@@ -1317,18 +1312,6 @@ SCIP_DECL_EXPRFREEHDLR(freehdlrProduct)
    assert(exprhdlrdata != NULL);
    assert(*exprhdlrdata != NULL);
 
-   /* free lp to separate product expressions */
-   if( (*exprhdlrdata)->lpsize > 0 )
-   {
-      SCIP_CALL( SCIPlpiFree(&((*exprhdlrdata)->multilinearseparationlp)) );
-      (*exprhdlrdata)->lpsize = 0;
-   }
-   assert((*exprhdlrdata)->lpsize == 0);
-   assert((*exprhdlrdata)->multilinearseparationlp == NULL);
-
-   /* free random number generator */
-   SCIPfreeRandom(scip, &(*exprhdlrdata)->randnumgen);
-
    SCIPfreeBlockMemory(scip, exprhdlrdata);
    assert(*exprhdlrdata == NULL);
 
@@ -1678,6 +1661,7 @@ SCIP_DECL_EXPRINTEVAL(intevalProduct)
 static
 SCIP_RETCODE estimateVertexPolyhedralProduct(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    int                   nfactors,           /**< number of factors */
    SCIP_INTERVAL*        bounds,             /**< bound for each factor */
    SCIP_Real             constantfactor,     /**< another constant factor */
@@ -1694,6 +1678,7 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
    int nfixed;
    int i;
 
+   assert(conshdlr != NULL);
    assert(nfactors > 0);
    assert(bounds != NULL);
    assert(constantfactor != 0.0);
@@ -1727,8 +1712,7 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
 
    if( nfixed < nfactors && nfactors - nfixed <= SCIP_MAXVERTEXPOLYDIM )
    {
-      // FIXME store conshdlr in exprhdlrdata and handle case that it isn't available
-      SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"),
+      SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, conshdlr,
          overestimate, prodfunction, &constantfactor, xstar, box, nfactors, targetvalue, success, coefs, constant) );
    }
 
@@ -1826,8 +1810,20 @@ SCIP_DECL_EXPRESTIMATE(estimateProduct)
    }
    else
    {
-      SCIP_CALL( estimateVertexPolyhedralProduct(scip, nchildren, localbounds, exprdata->coefficient, refpoint, overestimate,
-         targetvalue, coefs, constant, success) );
+      SCIP_EXPRHDLRDATA* exprhdlrdata;
+
+      exprhdlrdata = SCIPexprhdlrGetData(SCIPexprGetHdlr(expr));
+      assert(exprhdlrdata != NULL);
+
+      if( exprhdlrdata->conshdlr != NULL )
+      {
+         SCIP_CALL( estimateVertexPolyhedralProduct(scip, exprhdlrdata->conshdlr, nchildren, localbounds, exprdata->coefficient, refpoint, overestimate,
+            targetvalue, coefs, constant, success) );
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "no cons_nonlinear included in SCIP, cannot estimate vertex-polyhedral product function\n");
+      }
    }
 
    return SCIP_OKAY;
@@ -1867,8 +1863,20 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesProduct)
    }
    else
    {
-      SCIP_CALL( estimateVertexPolyhedralProduct(scip, nchildren, bounds, exprdata->coefficient, NULL, overestimate,
-         overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), coefs[0], constant, &success) );
+      SCIP_EXPRHDLRDATA* exprhdlrdata;
+
+      exprhdlrdata = SCIPexprhdlrGetData(SCIPexprGetHdlr(expr));
+      assert(exprhdlrdata != NULL);
+
+      if( exprhdlrdata->conshdlr != NULL )
+      {
+         SCIP_CALL( estimateVertexPolyhedralProduct(scip, exprhdlrdata->conshdlr, nchildren, bounds, exprdata->coefficient, NULL, overestimate,
+            overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), coefs[0], constant, &success) );
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "no cons_nonlinear included in SCIP, cannot estimate vertex-polyhedral product function\n");
+      }
    }
 
    if( success )
@@ -2066,16 +2074,8 @@ SCIP_RETCODE SCIPincludeExprHdlrProduct(
    SCIP_EXPRHDLR* exprhdlr;
 
    /* allocate expression handler data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &exprhdlrdata) );
-
-   /* initialize all data in exprhdlrdata to 0/NULL */
-   BMSclearMemory(exprhdlrdata);
-
-   /* create/initialize random number generator */
-   /* TODO FIXME: we need an INITSOL callback so that calls like SCIPsolve() SCIPfreeTransform() and then SCIPsolve()
-    * again behave the same; right now, the initial seed is set when SCIP include the plugin, but this happens only once
-    */
-   SCIP_CALL( SCIPcreateRandom(scip, &exprhdlrdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprhdlrdata) );
+   exprhdlrdata->conshdlr = SCIPfindConshdlr(scip, "nonlinear");
 
    SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalProduct, exprhdlrdata) );
    assert(exprhdlr != NULL);
