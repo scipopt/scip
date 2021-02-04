@@ -178,12 +178,13 @@ SCIP_Bool computeLeftTangentSin(
    return TRUE;
 }
 
+/* TODO: fix this, more cases can be considered, see at unit test
+   the underestimating of the tangents depends not only on the ub but also on the lower bound.
+   right now, this function is only checking whether the tangent underestimates independenly of the lower bound!
+ */
 /** helper function to compute the tangent at upper bound if it is an underestimator
  *  returns true if the underestimator was computed successfully
  */
-// TODO: fix this, more cases can be considered, see at unit test
-// the underestimating of the tangents depends not only on the ub but also on the lower bound.
-// right now, this function is only checking whether the tangent underestimates independenly of the lower bound!
 static
 SCIP_Bool computeRightTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
