@@ -73,7 +73,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(<x> + <y> + 2)^2", "sum"},
       {"(<x> + <y>)*(<x> + 1)^2 - <x>^3 - <x>^2*<y> - 2*<x>^2 - 2*<y>*<x> -<y> -<x>", "val"},
       {"(<x> + <y>)^2 - <x>^2 - 2*<x>*<y>", "pow"},
-      //{"-<x>^2 + (<x> + <y>)^2 - 2*<x>*<y> - <y>^2", "val"}, // order is important to test the internal algorithms
+      {"-<x>^2 + (<x> + <y>)^2 - 2*<x>*<y> - <y>^2", "val"}, // order is important to test the internal algorithms
       {"<x>^2 * (1.0 / (<x>^2 * <y>)) * <y>", "val"}, // order is important to test the internal algorithms
       {"(<x> + <y> + <fixvar>)^2 - <x>^2 - 2*<x>*<y> - <y>^2 - <fixvar>^2 -2*<x>*<fixvar> - 2*<fixvar>*<y>", "val"},
       {"(1 + (<x>*<y>^2)^0.5)^2 - 1 - 2*(<x>*<y>^2)^0.5 -<y>^2*<x>", "val"},
