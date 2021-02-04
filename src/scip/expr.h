@@ -533,6 +533,9 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
  * If the expr owner provided a evalactivity-callback, then call this.
  * Otherwise, loop over descendants and compare activitytag with stat's domchgcount, i.e.,
  * whether some bound was changed since last evaluation, to check whether exprhdlrs INTEVAL should be called.
+ *
+ * @note If expression is set to be integral, then activities are tightened to integral values.
+ *   Thus, ensure that the integrality information is valid (if set to TRUE; the default (FALSE) is always ok).
  */
 SCIP_RETCODE SCIPexprEvalActivity(
    SCIP_SET*             set,                /**< global SCIP settings */

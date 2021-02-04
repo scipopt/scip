@@ -2609,6 +2609,9 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
  * If the expr owner provided a evalactivity-callback, then call this.
  * Otherwise, loop over descendants and compare activitytag with stat's domchgcount, i.e.,
  * whether some bound was changed since last evaluation, to check whether exprhdlrs INTEVAL should be called.
+ *
+ * @note If expression is set to be integral, then activities are tightened to integral values.
+ *   Thus, ensure that the integrality information is valid (if set to TRUE; the default (FALSE) is always ok).
  */
 SCIP_RETCODE SCIPexprEvalActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2690,15 +2693,13 @@ SCIP_RETCODE SCIPexprEvalActivity(
             SCIPsetDebugMsg(set, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
 #endif
 
-#if !1  // TODO?  (should we assume that isintegral is valid? the default false is always ok)
             /* if expression is integral, then we try to tighten the interval bounds a bit
              * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
              * it would be ok to use ceil() and floor(), but for safety we use SCIPceil and SCIPfloor for now
-             * do this only if using boundtightening-inteval and not in redundancy check (there we really want to relax all variables)
-             * boundtightening-inteval does not relax integer variables, so can omit expressions without children
+             * the default intevalVar does not relax variables, so can omit expressions without children
              * (constants should be ok, too)
              */
-            if( expr->isintegral && conshdlrdata->intevalvar == intEvalVarBoundTightening && expr->nchildren > 0 )
+            if( expr->isintegral && expr->nchildren > 0 )
             {
                if( expr->activity.inf > -SCIP_INTERVAL_INFINITY )
                   expr->activity.inf = SCIPsetCeil(set, expr->activity.inf);
@@ -2708,7 +2709,6 @@ SCIP_RETCODE SCIPexprEvalActivity(
                SCIPsetDebugMsg(set, " applying integrality: [%.20g, %.20g]\n", expr->activity.inf, expr->activity.sup);
 #endif
             }
-#endif
 
             /* mark activity as empty if either the lower/upper bound is above/below +/- SCIPinfinity()
              * TODO this is a problem if dual-presolve fixed a variable to +/- infinity

@@ -522,6 +522,9 @@ SCIP_RETCODE SCIPevalExprHessianDir(
  * including whether the local or global domain of variables is used.
  * By default (no owner, or owner doesn't overwrite activity evaluation),
  * the local domain of variables is used.
+ *
+ * @note If expression is set to be integral, then activities are tightened to integral values.
+ *   Thus, ensure that the integrality information is valid (if set to TRUE; the default (FALSE) is always ok).
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprActivity(
