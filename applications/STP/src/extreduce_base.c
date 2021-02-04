@@ -1643,7 +1643,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    {
       int sepanelims = 0;
       SCIP_CALL( reduce_sepaDualAscentWithExperma(scip, graph, extperma, NULL, &sepanelims) );
-      printf("sepanelims=%d \n", sepanelims);
+   //   printf("sepanelims=%d \n", sepanelims);
       *nelims += sepanelims;
       graph_mark(graph);
    }

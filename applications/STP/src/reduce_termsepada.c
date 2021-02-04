@@ -1249,9 +1249,7 @@ SCIP_RETCODE processComponent(
    /* NOTE: we might fail because the separator is not connected anymore one one side */
    if( success )
    {
-      // todo, also mark pseudo-eliminaitons
       SCIP_CALL( termcompReduce(scip, g, extperma, termcomp, pseudoDelNodes, nelims) );
-   //   printf("nelims=%d \n", *nelims);
    }
 
    termcompFree(scip, &termcomp);
@@ -1365,7 +1363,7 @@ SCIP_RETCODE initHelpers(
       maxncompchecks = mincheckbound;
    }
 
-   printf("maxncompchecks=%d \n", maxncompchecks);
+  // printf("maxncompchecks=%d \n", maxncompchecks);
 
    /* NOTE: we want to allow a few more terminal separators to be able to choose small ones */
    SCIP_CALL( mincut_termsepasInit(scip, g, (int) (1.5 * maxncompchecks), maxsepasize, termsepas) );

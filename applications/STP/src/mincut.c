@@ -2307,7 +2307,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    assert(nodes_wakeState);
    assert(termsepas->nsepas_all == 0);
 
-   printf("ntermcands=%d \n",  mincut->ntermcands );
+   SCIPdebugMessage("number of terminal separation candidates: %d \n",  mincut->ntermcands );
 
    // todo probably want to bound the maximum number of iterations!
    while( mincut->ntermcands > 0 && termsepas->nsepas_all < termsepas->maxnsepas )
@@ -2338,7 +2338,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
       }
       else
       {
-         printf("cut is trivial \n");
+         SCIPdebugMessage("cut is trivial \n");
 
          assert(wasRerun);
       }
@@ -2346,7 +2346,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
       wasRerun = TRUE;
    }
 
-   printf("number of separators: %d \n", termsepas->nsepas_all);
+   SCIPdebugMessage("number of separators: %d \n", termsepas->nsepas_all);
 
    mincutFree(scip, &mincut);
 
