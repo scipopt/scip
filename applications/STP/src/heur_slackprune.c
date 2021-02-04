@@ -502,12 +502,14 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( abortSlackPruneEarly(scip, graph, heurdata) )
-	  return SCIP_OKAY;
-
    bestsol = SCIPgetBestSol(scip);
+
+   /* NOTE: might be the case for UG that no feasible solution is available */
    if( bestsol == NULL )
       return SCIP_OKAY;
+
+   if( abortSlackPruneEarly(scip, graph, heurdata) )
+	  return SCIP_OKAY;
 
    xval = SCIPprobdataGetXval(scip, bestsol);
    if( xval == NULL )
