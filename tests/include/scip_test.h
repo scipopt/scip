@@ -11,6 +11,9 @@
  */
 SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP);
 
+/* Include the .c file here because the plugins implemented in scip_test.c should
+ * be available every test.
+ * */
 #include "scip_test.c"
 #include "locale.h"
 

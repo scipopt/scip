@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="7.0.2"
+VERSION="7.0.3"
 NAME="scip-$VERSION"
 if test ! -e release
 then
