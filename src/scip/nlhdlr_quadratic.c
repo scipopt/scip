@@ -3285,10 +3285,10 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
       SCIP_ROW* row;
       SCIP_Bool infeasible;
 
-      //(void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_intersection_quadratic%p_lp%d",
-      //   overestimate ? "over" : "under",
-      //   (void*)expr,
-      //   SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%s_intersection_quadratic%p_lp%d",
+         overestimate ? "over" : "under",
+         (void*)expr,
+         SCIPgetNLPs(scip));
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
