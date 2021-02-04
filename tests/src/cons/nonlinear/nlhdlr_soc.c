@@ -136,7 +136,6 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    BMSdisplayMemory();
-   //BMScheckEmptyMemory();
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
@@ -740,14 +739,16 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
 }
 
 /* detects x^2 + 5xy + 5xz + 2y^2 + 2yz + 3z^2 + 8 <= 0 as soc expression */
-//TODO reenable test when i can test with ipopt
-Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic constraint", .disabled = 1)
+Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic constraint")
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
+
+   if( !SCIPisIpoptAvailableIpopt() )
+      return;
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
@@ -794,14 +795,16 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
 }
 
 /* detects -x^2 - 5xy - 5xz - 2y^2 - 2yz - 3z^2 - 8 >= 0 as soc expression */
-//TODO reenable test when i can test with ipopt
-Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic constraint", .disabled = 1)
+Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic constraint")
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
+
+   if( !SCIPisIpoptAvailableIpopt() )
+      return;
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
