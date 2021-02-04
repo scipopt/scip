@@ -859,7 +859,7 @@ void evalSignPower(
 
 #endif
 
-#if !1  // FIXME
+// FIXME adapt this code to work with differentiation methods of exprhdlrs and then reenable
 #ifndef NO_CPPAD_USER_ATOMIC
 
 template<class Type>
@@ -1274,13 +1274,13 @@ void evalUser(
    SCIP_EXPR*            expr                /**< expression that holds the user expression */
    )
 {
+   SCIPerrorMessage("using derivative methods of exprhdlr %s in CppAD is not implemented yet", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
    CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
       "evalUser()",
       "Error: user expressions in CppAD not possible without CppAD user atomic facility"
       );
 }
 
-#endif
 #endif
 
 /** integer power operation for arbitrary integer exponents */
@@ -1436,8 +1436,7 @@ SCIP_RETCODE eval(
    }
    else
    {
-      // FIXME evalUser(val, buf, expr);
-      SCIPerrorMessage("exprint using expr derivative callbacks not yet implemented, (hdlr %s)\n", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
+      evalUser(val, buf, expr);
       SCIPfreeBufferArrayNull(scip, &buf);
       return SCIP_ERROR;
    }
