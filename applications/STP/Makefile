@@ -149,6 +149,7 @@ CMAINOBJ	=	cmain.o \
 			stptest_reducesd.o \
 			stptest_reducesepa.o \
 			stptest_reduceutils.o \
+			substpsolver.o \
 			prop_stp.o \
 			branch_stp.o \
 			validate.o

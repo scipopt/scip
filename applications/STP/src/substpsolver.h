@@ -13,54 +13,45 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_stpcomponents.h
- * @brief  Components constraint handler for Steiner problems
+/**@file   substpsolver.h
+ * @brief  Solver for Steiner tree (sub-) problems
  * @author Daniel Rehfeldt
  *
- * This file checks solutions for feasibility and separates violated model constraints. For more details see \ref STP_CONS page.
+ * This file implements methods to solve Steiner tree subproblems to optimality, and to obtain an optimal Steiner tree.
+ * Branch-and-cut or dynamic programming is used for solving the subproblems.
+ *
  */
-
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#ifndef APPLICATIONS_STP_SRC_CONS_STPCOMPONENTS_H_
-#define APPLICATIONS_STP_SRC_CONS_STPCOMPONENTS_H_
+#ifndef APPLICATIONS_STP_SRC_SUBSTPSOLVER_H_
+#define APPLICATIONS_STP_SRC_SUBSTPSOLVER_H_
 
 
 #include "scip/scip.h"
 #include "graph.h"
+#include "probdata_stp.h"
+
+
+/** Steiner tree sub-problem */
+typedef struct sub_steiner_tree_problem SUBSTP;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-/** creates the handler for element constraints and includes it in SCIP */
-extern
-SCIP_RETCODE SCIPincludeConshdlrStpcomponents(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-
-/** sets the data for decomposition up  */
-extern
-SCIP_RETCODE SCIPStpcomponentsSetUp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph               /**< graph data */
-   );
-
-
-/** is a promising decomposition available? */
-extern
-SCIP_Bool SCIPStpcomponentsAllowsDecomposition(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+extern SCIP_RETCODE substpsolver_init(SCIP*, GRAPH*, SUBSTP**);
+extern void         substpsolver_free(SCIP*, SUBSTP**);
+extern SCIP_RETCODE substpsolver_transferHistory(const int*, GRAPH*, SUBSTP*);
+extern SCIP_RETCODE substpsolver_solve(SCIP*, SUBSTP*, SCIP_Bool*);
+extern int          substpsolver_getNsubedges(const SUBSTP*);
+extern SCIP_RETCODE substpsolver_getSolution(SUBSTP*, int*);
 
 
 #ifdef __cplusplus
 }
 #endif
 
-
-#endif /* APPLICATIONS_STP_SRC_CONS_STPCOMPONENTS_H_ */
+#endif /* APPLICATIONS_STP_SRC_SUBSTPSOLVER_H_ */

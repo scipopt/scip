@@ -2292,7 +2292,6 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    }
 
    SCIP_CALL( reduce_unconnected(scip, g) );
-   graph_printInfoReduced(g);
 
    SCIP_CALL( mincutInit(scip, randnumgen, FALSE, g, &mincut) );
    termsepas->root = mincut->root;
@@ -2307,7 +2306,10 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    assert(nodes_wakeState);
    assert(termsepas->nsepas_all == 0);
 
+#ifdef SCIP_DEBUG
+   graph_printInfoReduced(g);
    SCIPdebugMessage("number of terminal separation candidates: %d \n",  mincut->ntermcands );
+#endif
 
    // todo probably want to bound the maximum number of iterations!
    while( mincut->ntermcands > 0 && termsepas->nsepas_all < termsepas->maxnsepas )

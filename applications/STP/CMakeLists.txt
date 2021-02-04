@@ -103,6 +103,7 @@ add_executable(scipstp
     src/solhistory.c
     src/solpool.c
     src/solstp.c
+    src/substpsolver.c
     src/validate.c
 )
 

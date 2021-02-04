@@ -30,24 +30,9 @@
 
 #include "cons_stpcomponents.h"
 #include "scip/scip.h"
-#include "scip/scipdefplugins.h"
 #include "bidecomposition.h"
-#include "cons_stp.h"
-#include "reduce.h"
-#include "heur_tm.h"
-#include "reader_stp.h"
-#include "heur_local.h"
-#include "heur_prune.h"
-#include "heur_ascendprune.h"
-#include "heur_slackprune.h"
-#include "heur_lurkprune.h"
-#include "heur_rec.h"
-#include "pricer_stp.h"
-#include "probdata_stp.h"
-#include "dialog_stp.h"
 #include "prop_stp.h"
-#include "branch_stp.h"
-#include "solhistory.h"
+#include "substpsolver.h"
 #include "graph.h"
 #include "solstp.h"
 
@@ -98,14 +83,12 @@ struct SCIP_ConshdlrData
 };
 
 
-/** representation of a biconnected component */
-typedef struct sub_component
+/** sub-solution */
+typedef struct sub_solution
 {
    int*                  subedgesSol;        /**< solution: UNKNOWN/CONNECT */
-   int                   subroot;            /**< root for orientation of solution */
-   int                   nsubedges;          /**< number of edges */
-   int                   nsubnodes;          /**< number of nodes */
-} SUBCOMP;
+   int                   nsubedges;          /**< number of edges of subproblem */
+} SUBSOL;
 
 
 /*
@@ -117,40 +100,11 @@ typedef struct sub_component
 /** gets optimal sub-problem solution */
 static
 SCIP_RETCODE subsolGet(
-   SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SUBCOMP*              subcomp             /**< component */
+   SUBSTP*               substp,
+   SUBSOL*               subcomp             /**< component */
    )
 {
-
-   SOLHISTORY* solhistory;
-   SCIP_SOL* subsol = SCIPgetBestSol(subscip);
-   GRAPH* subgraph = SCIPprobdataGetGraph2(subscip);
-   const STP_Bool* edges_isInSol;
-   int* subedgesSol = subcomp->subedgesSol;
-   const int nsubedges = subcomp->nsubedges;
-
-   assert(subgraph && subsol);
-   assert(nsubedges > 0);
-
-   SCIP_CALL( solhistory_init(subscip, subgraph, &solhistory) );
-   SCIP_CALL( solhistory_computeHistory(subscip, subsol, subgraph, solhistory) );
-
-   assert(nsubedges == solhistory->norgedges);
-   edges_isInSol = solhistory->orgedges_isInSol;
-
-   for( int i = 0; i < nsubedges; i++ )
-   {
-      if( edges_isInSol[i] )
-      {
-         subedgesSol[i] = CONNECT;
-      }
-      else
-      {
-         subedgesSol[i] = UNKNOWN;
-      }
-   }
-
-   solhistory_free(subscip, &solhistory);
+   SCIP_CALL( substpsolver_getSolution(substp, subcomp->subedgesSol) );
 
    return SCIP_OKAY;
 }
@@ -160,15 +114,14 @@ SCIP_RETCODE subsolGet(
 static
 SCIP_RETCODE subsolFixOrgEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SUBINOUT*       subinout,
-   SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SUBCOMP*              subcomp             /**< component */
+   const SUBINOUT*       subinout,           /**< helper for problem mapping */
+   SUBSOL*               subsol              /**< solution */
    )
 {
    SCIP_VAR** orgvars = SCIPprobdataGetVars(scip);
-   const int* const subedgesSol = subcomp->subedgesSol;
+   const int* const subedgesSol = subsol->subedgesSol;
    const int* const subedgesToOrg = graph_subinoutGetSubToOrgEdgeMap(subinout);
-   const int nsubedges = subcomp->nsubedges;
+   const int nsubedges = subsol->nsubedges;
    SCIP_Bool success;
 #ifndef NDEBUG
    GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
@@ -208,31 +161,43 @@ SCIP_RETCODE subsolFixOrgEdges(
 
 /** initializes */
 static
-SCIP_RETCODE subcompInit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SUBCOMP**             subcomponent        /**< to initialize */
+SCIP_RETCODE subsolInit(
+   SCIP*                 scip,               /**< sub-SCIP data structure */
+   const SUBSTP*         substp,             /**< sub problem */
+   SUBSOL**              subsolution        /**< to initialize */
    )
 {
-   SUBCOMP* subcomp;
-   const GRAPH* const subgraph = SCIPprobdataGetGraph2(subscip);
-   const int nsubnodes = graph_get_nNodes(subgraph);
-   const int nsubedges = graph_get_nEdges(subgraph);
+   SUBSOL* subsol;
 
-   assert(scip && subscip);
-   assert(nsubnodes > 0);
-   assert(nsubedges > 0);
+   assert(scip && substp);
 
-   SCIP_CALL( SCIPallocMemory(subscip, subcomponent) );
-   subcomp = *subcomponent;
+   SCIP_CALL( SCIPallocMemory(scip, subsolution) );
+   subsol = *subsolution;
 
-   SCIP_CALL( SCIPallocMemoryArray(subscip, &(subcomp->subedgesSol), nsubedges) );
+   subsol->nsubedges = substpsolver_getNsubedges(substp);
+   assert(subsol->nsubedges >= 2);
 
-   subcomp->nsubnodes = nsubnodes;
-   subcomp->nsubedges = nsubedges;
-   subcomp->subroot = subgraph->source;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(subsol->subedgesSol), subsol->nsubedges) );
 
    return SCIP_OKAY;
+}
+
+
+/** exits */
+static
+void subsolFree(
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SUBSOL**              subsolution         /**< to initialize */
+   )
+{
+   SUBSOL* subsol;
+
+   assert(subsolution);
+   subsol = *subsolution;
+   assert(subsol);
+
+   SCIPfreeMemoryArray(subscip, &(subsol->subedgesSol));
+   SCIPfreeMemory(subscip, subsolution);
 }
 
 
@@ -241,128 +206,21 @@ static
 SCIP_RETCODE subcompFixOrgEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    const SUBINOUT*       subinout,
-   SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SUBCOMP*              subcomp             /**< component */
+   SUBSTP*               substp
    )
 {
-   assert(scip && subscip && subcomp);
+   SUBSOL* subcomp;
 
-   SCIP_CALL( subsolGet(subscip, subcomp) );
-   SCIP_CALL( subsolFixOrgEdges(scip, subinout, subscip, subcomp) );
+   assert(scip && subinout && substp);
+
+   SCIP_CALL( subsolInit(scip, substp, &subcomp) );
+   SCIP_CALL( subsolGet(substp, subcomp) );
+   SCIP_CALL( subsolFixOrgEdges(scip, subinout, subcomp) );
+
+   subsolFree(scip, &subcomp);
 
    return SCIP_OKAY;
 }
-
-
-/** exits */
-static
-void subcompFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SUBCOMP**             subcomponent        /**< to initialize */
-   )
-{
-   SUBCOMP* subcomp;
-
-   assert(scip && subcomponent);
-   subcomp = *subcomponent;
-   assert(subcomp);
-
-   SCIPfreeMemoryArray(subscip, &(subcomp->subedgesSol));
-   SCIPfreeMemory(subscip, subcomponent);
-}
-
-
-/** helper */
-static
-SCIP_RETCODE subScipSetupCallbacks(
-   SCIP*                 subscip             /**< sub-SCIP data structure */
-   )
-{
-   SCIP_CALL( SCIPincludePricerStp(subscip) );
-
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-   SCIP_CALL( SCIPincludeReaderStp(subscip) );
-
-   SCIP_CALL( SCIPincludeDialogStp(subscip) );
-
-   SCIP_CALL( SCIPincludeConshdlrStp(subscip) );
-
-   SCIP_CALL( SCIPStpIncludeHeurTM(subscip) );
-
-   SCIP_CALL( SCIPStpIncludeHeurLocal(subscip) );
-
-   SCIP_CALL( SCIPStpIncludeHeurRec(subscip) );
-
-   SCIP_CALL( SCIPStpIncludeHeurPrune(subscip) );
-
-   SCIP_CALL( SCIPStpIncludeHeurAscendPrune(subscip) );
-
-   SCIP_CALL( SCIPStpIncludeHeurSlackPrune(subscip) );
-
-   SCIP_CALL( SCIPStpIncludeHeurLurkPrune(subscip) );
-
-   SCIP_CALL( SCIPincludeBranchruleStp(subscip) );
-
-   SCIP_CALL( SCIPincludePropStp(subscip) );
-
-   return SCIP_OKAY;
-}
-
-
-/** helper */
-static
-SCIP_RETCODE subScipSetupParameters(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 subscip             /**< sub-SCIP data structure */
-   )
-{
-   SCIP_Real timelimit;
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   timelimit -= SCIPgetSolvingTime(scip);
-
-   assert(GT(timelimit, 0.0));
-
-
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-   /* disable output to console */
-   //SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-   /* disable statistic timing inside sub SCIP */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
-   /* disable expensive resolving */
-   // SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-   /* disable STP presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "stp/reduction", 0) );
-
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-
-   /* set hard-coded default parameters */
-   SCIP_CALL( SCIPprobdataSetDefaultParams(subscip) );
-
-   return SCIP_OKAY;
-}
-
-
-/** sets up the sub-SCIP */
-static
-SCIP_RETCODE subScipSetup(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 subscip             /**< sub-SCIP data structure */
-   )
-{
-   SCIP_CALL( subScipSetupCallbacks(subscip) );
-
-   SCIP_CALL( subScipSetupParameters(scip, subscip) );
-
-   return SCIP_OKAY;
-}
-
 
 /** is promising? */
 static
@@ -433,13 +291,15 @@ SCIP_RETCODE decomposeSolveSub(
    SCIP_Bool*            success             /**< solved? */
    )
 {
-   SCIP* subscip;
-   SUBCOMP* subcomp;
+   SUBINOUT* subinout;
+   SUBSTP* substp;
    GRAPH* subgraph;
 
    assert(scip && orggraph && bidecomp && success);
+   assert(graph_subinoutUsesNewHistory(bidecomp->subinout));
 
    *success = TRUE;
+   subinout = bidecomp->subinout;
 
    if( bidecomposition_componentIsTrivial(bidecomp, compindex) )
    {
@@ -451,32 +311,21 @@ SCIP_RETCODE decomposeSolveSub(
 
    SCIP_CALL( decomposeGetSubgraph(scip, bidecomp, compindex, orggraph, &subgraph) );
 
-   SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( subScipSetup(scip, subscip) );
-   SCIP_CALL( graph_subinoutCompleteNewHistory(subscip, bidecomp->subinout, orggraph, subgraph) );
-   /* NOTE: subgraph will be moved into subscip probdata! */
-   SCIP_CALL( SCIPprobdataCreateFromGraph(subscip, 0.0, "subproblem", TRUE, subgraph) );
-   SCIP_CALL( subcompInit(scip, subscip, &subcomp) );
-   SCIP_CALL( SCIPsolve(subscip) );
+   /* NOTE: subgraph will be moved into substp! */
+   SCIP_CALL( substpsolver_init(scip, subgraph, &substp) );
+   SCIP_CALL( substpsolver_transferHistory(graph_subinoutGetSubToOrgEdgeMap(subinout),
+      orggraph, substp) );
 
-   SCIPdebugMessage("subproblem has been solved \n");
+   SCIP_CALL( substpsolver_solve(scip, substp, success) );
 
-   if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
+   if( *success )
    {
-      /* here we basically solve the entire problem */
-      SCIP_CALL( subcompFixOrgEdges(scip, bidecomp->subinout, subscip, subcomp) );
-   }
-   else
-   {
-      *success = FALSE;
-
-      printf("solving of sub-problem interrupted (status=%d, time=%.2f)\n",
-          SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip));
+      /* here we basically fix the entire sub-problem */
+      SCIP_CALL( subcompFixOrgEdges(scip, subinout, substp) );
    }
 
-   graph_subinoutClean(scip, bidecomp->subinout);
-   subcompFree(scip, subscip, &subcomp);
-   SCIP_CALL( SCIPfree(&subscip) );
+   graph_subinoutClean(scip, subinout);
+   substpsolver_free(scip, &substp);
 
    return SCIP_OKAY;
 }

@@ -796,32 +796,138 @@ const int* graph_subinoutGetSubToOrgNodeMap(
 }
 
 
+/** gets edge map */
+const int* graph_subinoutGetSubToOrgEdgeMap(
+  const SUBINOUT*       subinout
+  )
+{
+   assert(subinout);
+   assert(subinout->useEdgeMap);
+   assert(subinout->edgemap_subToOrg);
+
+   return subinout->edgemap_subToOrg;
+}
+
+
+/** gets nodes map */
+const int* graph_subinoutGetOrgToSubNodeMap(
+  const SUBINOUT*       subinout
+  )
+{
+   assert(subinout);
+   assert(subinout->nodemap_orgToSub);
+
+   return subinout->nodemap_orgToSub;
+}
+
+
+/** get contraction record for cut nodes (-1 if no contraction) */
+const int* graph_subinoutGetContractionRecord(
+  const SUBINOUT*       subinout
+  )
+{
+   assert(subinout);
+
+   return subinout->org_contractRecord;
+}
+
+
+/** new history per subproblem is being used? */
+SCIP_Bool graph_subinoutUsesNewHistory(
+  const SUBINOUT*       subinout
+  )
+{
+   assert(subinout);
+
+   return subinout->useNewHistory;
+}
+
+
+/** frees */
+void graph_subinoutFree(
+  SCIP*                 scip,               /**< SCIP data structure */
+  SUBINOUT**            subinout
+  )
+{
+   SUBINOUT* sub;
+
+   assert(scip && subinout);
+
+   sub = *subinout;
+
+   StpVecFree(scip, sub->org_bordernodes);
+   StpVecFree(scip, sub->org_spareedges);
+   SCIPfreeMemoryArrayNull(scip, &(sub->edgemap_subToOrg));
+   SCIPfreeMemoryArray(scip, &(sub->nodemap_orgToSub));
+   SCIPfreeMemoryArray(scip, &(sub->nodemap_subToOrg));
+   SCIPfreeMemoryArray(scip, &(sub->org_contractRecord));
+
+   SCIPfreeMemory(scip, subinout);
+}
+
+
+/** cleans */
+void graph_subinoutClean(
+  SCIP*                 scip,               /**< SCIP data structure */
+  SUBINOUT*             subinout
+  )
+{
+   assert(scip && subinout);
+
+   if( subinout->org_bordernodes )
+      StpVecClear(subinout->org_bordernodes);
+}
+
+
+/** gets ancestor */
+int graph_knot_getContractionRecordAncestor(
+  int                   node,
+  const SUBINOUT*       subinout
+  )
+{
+   int ancestor;
+   const int* record;
+
+   assert(subinout);
+   assert(subinout->org_contractRecord);
+   assert(0 <= node && node < subinout->org_nnodes);
+
+   record = subinout->org_contractRecord;
+
+   for( ancestor = node; record[ancestor] != -1; ancestor = record[ancestor] )
+   {
+      assert(0 <= ancestor && ancestor < subinout->org_nnodes);
+   }
+
+   return ancestor;
+}
+
+
 /** completes history
  *  NOTE: necessary to allocate block memory on subscip */
-SCIP_RETCODE graph_subinoutCompleteNewHistory(
+SCIP_RETCODE graph_subgraphCompleteNewHistory(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SUBINOUT*       subinout,           /**< helper */
+   const int*            edgemap_subToOrg,   /**< maps edges of subgraph to original graph */
    GRAPH*                orggraph,           /**< original graph */
    GRAPH*                subgraph            /**< graph to fill */
    )
 {
    const int nedges = graph_get_nEdges(subgraph);
    IDX** ancestors;
-   const int* edgemap_subToOrg = subinout->edgemap_subToOrg;
    const int* tail = subgraph->tail;
    const int* head = subgraph->head;
    int* orgtail;
    int* orghead;
+   SCIP_Bool moveFixedEdges;
 
    assert(scip);
    assert(!subgraph->orgtail && !subgraph->orghead);
    assert(!subgraph->pseudoancestors);
-   assert(subgraph->edges >= 2);
-   assert(nedges > 0);
-   assert(subinout->useNewHistory);
+   assert(nedges >= 2);
    assert(edgemap_subToOrg);
 
-   SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, FALSE, subgraph) );
+   moveFixedEdges = FALSE;
+   SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, moveFixedEdges, subgraph) );
    /* NOTE we want to have only the fixed pseudo-ancestor, or we get into trouble with the retransformation */
    graph_free_fixedEdgesOnly(scip, subgraph);
 
@@ -864,104 +970,6 @@ SCIP_RETCODE graph_subinoutCompleteNewHistory(
    }
 
    return SCIP_OKAY;
-}
-
-
-/** gets edge map */
-const int* graph_subinoutGetSubToOrgEdgeMap(
-  const SUBINOUT*       subinout
-  )
-{
-   assert(subinout);
-   assert(subinout->useEdgeMap);
-   assert(subinout->edgemap_subToOrg);
-
-   return subinout->edgemap_subToOrg;
-}
-
-
-/** gets nodes map */
-const int* graph_subinoutGetOrgToSubNodeMap(
-  const SUBINOUT*       subinout
-  )
-{
-   assert(subinout);
-   assert(subinout->nodemap_orgToSub);
-
-   return subinout->nodemap_orgToSub;
-}
-
-
-/** get contraction record for cut nodes (-1 if no contraction) */
-const int* graph_subinoutGetContractionRecord(
-  const SUBINOUT*       subinout
-  )
-{
-   assert(subinout);
-
-   return subinout->org_contractRecord;
-}
-
-
-
-/** gets ancestor */
-int graph_knot_getContractionRecordAncestor(
-  int                   node,
-  const SUBINOUT*       subinout
-  )
-{
-   int ancestor;
-   const int* record;
-
-   assert(subinout);
-   assert(subinout->org_contractRecord);
-   assert(0 <= node && node < subinout->org_nnodes);
-
-   record = subinout->org_contractRecord;
-
-   for( ancestor = node; record[ancestor] != -1; ancestor = record[ancestor]  )
-   {
-      assert(0 <= ancestor && ancestor < subinout->org_nnodes);
-   }
-
-   return ancestor;
-}
-
-
-
-/** frees */
-void graph_subinoutFree(
-  SCIP*                 scip,               /**< SCIP data structure */
-  SUBINOUT**            subinout
-  )
-{
-   SUBINOUT* sub;
-
-   assert(scip && subinout);
-
-   sub = *subinout;
-
-   StpVecFree(scip, sub->org_bordernodes);
-   StpVecFree(scip, sub->org_spareedges);
-   SCIPfreeMemoryArrayNull(scip, &(sub->edgemap_subToOrg));
-   SCIPfreeMemoryArray(scip, &(sub->nodemap_orgToSub));
-   SCIPfreeMemoryArray(scip, &(sub->nodemap_subToOrg));
-   SCIPfreeMemoryArray(scip, &(sub->org_contractRecord));
-
-   SCIPfreeMemory(scip, subinout);
-}
-
-
-/** cleans */
-void graph_subinoutClean(
-  SCIP*                 scip,               /**< SCIP data structure */
-  SUBINOUT*             subinout
-  )
-{
-   assert(scip && subinout);
-
-   if( subinout->org_bordernodes )
-      StpVecClear(subinout->org_bordernodes);
 }
 
 
