@@ -9241,6 +9241,7 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    conshdlrdata->ndesperatetightenlp = 0;
    conshdlrdata->nforcelp = 0;
    SCIP_CALL( SCIPresetClock(scip, conshdlrdata->canonicalizetime) );
+   conshdlrdata->ncanonicalizecalls = 0;
 
 #ifdef ENFOLOGFILE
    ENFOLOG( enfologfile = fopen(ENFOLOGFILE, "w"); )
