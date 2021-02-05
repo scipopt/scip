@@ -2444,14 +2444,13 @@ SCIP_RETCODE SCIPStpPropCheckForInfeas(
    SCIP_Bool*            probisinfeas        /**< is infeasible? */
 )
 {
-   SCIP_PROPDATA* propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
    const GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
    int* nodestate;
    int* edgestate;
    const int nnodes = graph_get_nNodes(orggraph);
    const int nedges = graph_get_nEdges(orggraph);
 
-   assert(probisinfeas && orggraph && propdata);
+   assert(probisinfeas && orggraph);
 
    *probisinfeas = FALSE;
 
