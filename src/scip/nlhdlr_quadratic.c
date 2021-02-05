@@ -60,7 +60,7 @@
 /* properties of the quadratic nlhdlr statistics table */
 #define TABLE_NAME_QUADRATIC                 "quadratic_nlhdlr_table"
 #define TABLE_DESC_QUADRATIC                 "quadratic nlhdlr statistics table"
-#define TABLE_POSITION_QUADRATIC             12500                  /**< the position of the statistics table */
+#define TABLE_POSITION_QUADRATIC             14700                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_QUADRATIC       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 /* some default values */
@@ -168,7 +168,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    /* print statistics */
    SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
          "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "AveCutcoef");
-   SCIPinfoMessage(scip, file, "  %-17s:", "Quadratic Nlhdlr");
+   SCIPinfoMessage(scip, file, "  %-17s:", "separation");
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsgenerated);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsadded);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncouldimprovedcoef);

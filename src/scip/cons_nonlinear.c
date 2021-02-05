@@ -84,7 +84,7 @@
 /* properties of the nonlinear constraint handler statistics table */
 #define TABLE_NAME_NONLINEAR           "nonlinear"
 #define TABLE_DESC_NONLINEAR           "nonlinear constraint handler statistics"
-#define TABLE_POSITION_NONLINEAR       12500                  /**< the position of the statistics table */
+#define TABLE_POSITION_NONLINEAR       14600                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NONLINEAR SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 #define VERTEXPOLY_MAXPERTURBATION      1e-3 /**< maximum perturbation */
@@ -8326,37 +8326,6 @@ SCIP_RETCODE bilinearTermsFree(
    return SCIP_OKAY;
 }
 
-/** print statistics for constraint handlers */
-static
-void printConshdlrStatistics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   FILE*                 file                /**< file handle, or NULL for standard out */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   SCIPinfoMessage(scip, file, "Enforce            : %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP");
-   SCIPinfoMessage(scip, file, "  consexpr%-9s:", "");
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nweaksepa);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ntightenlp);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatetightenlp);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatebranch);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
-   SCIPinfoMessage(scip, file, "\n");
-   SCIPinfoMessage(scip, file, "Presolve           : %10s\n", "CanonTime");
-   SCIPinfoMessage(scip, file, "  consexpr%-9s:", "");
-   SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));
-   SCIPinfoMessage(scip, file, "\n");
-}
-
 /*
  * vertex polyhedral separation
  */
@@ -10358,11 +10327,22 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* print statistics for constraint handler */
+   SCIPinfoMessage(scip, file, "Nonlinear Conshdlr : %10s %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP", "CanonTime");
+   SCIPinfoMessage(scip, file, "  enforce%-10s:", "");
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nweaksepa);
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ntightenlp);
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatetightenlp);
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatebranch);
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
+   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
+   SCIPinfoMessage(scip, file, "\n");
+   SCIPinfoMessage(scip, file, "  presolve%-9s: %-65s", "", "");
+   SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));
+   SCIPinfoMessage(scip, file, "\n");
+
    /* print statistics for nonlinear handlers */
    SCIPnlhdlrPrintStatistics(scip, conshdlrdata->nlhdlrs, conshdlrdata->nnlhdlrs, file);
-
-   /* print statistics for constraint handler */
-   printConshdlrStatistics(scip, conshdlr, file);
 
    return SCIP_OKAY;
 }
