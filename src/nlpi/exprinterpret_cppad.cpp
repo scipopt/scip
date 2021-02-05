@@ -1694,8 +1694,8 @@ SCIP_RETCODE SCIPexprintEval(
       }
 
       // delete old atomic_userexprs before we start collecting new ones
-      for( auto& ue : exprintdata->userexprs )
-         delete ue;
+      for( vector<atomic_userexpr*>::iterator it(exprintdata->userexprs.begin()); it != exprintdata->userexprs.end(); ++it )
+         delete *it;
       exprintdata->userexprs.clear();
 
       CppAD::Independent(exprintdata->X);
