@@ -62,12 +62,6 @@ using std::vector;
 #undef SCIP_THREADSAFE
 #endif
 
-/** sign of a value (-1 or +1)
- * 
- * 0.0 has sign +1
- */
-#define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
-
 /* CppAD needs to know a fixed upper bound on the number of threads at compile time.
  * It is wise to set it to a power of 2, so that if the tape id overflows, it is likely to start at 0 again, which avoids difficult to debug errors.
  */
@@ -558,6 +552,12 @@ void posintpower(
 
 #ifndef NO_CPPAD_USER_ATOMIC
 
+/** sign of a value (-1 or +1)
+ *
+ * 0.0 has sign +1
+ */
+#define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
+
 /** Automatic differentiation of x -> sign(x)abs(x)^p, p>=1, as CppAD user-atomic function.
  *
  *  This class implements forward and reverse operations for the function x -> sign(x)abs(x)^p for use within CppAD.
@@ -819,33 +819,16 @@ void evalSignPower(
 
 #else
 
-/** template for evaluation for signpower operator
- *
- *  Only implemented for real numbers, thus gives error by default.
- */
+/** specialization of signpower evaluation for real numbers */
 template<class Type>
 static
 void evalSignPower(
-   Type&                 resultant,          /**< resultant */
-   const Type&           arg,                /**< operand */
-   SCIP_EXPR*            expr                /**< expression that holds the exponent */
-   )
-{  /*lint --e{715}*/
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
-      "evalSignPower()",
-      "Error: SignPower not implemented for this value type"
-      );
-}
-
-/** specialization of signpower evaluation for real numbers */
-template<>
-void evalSignPower(
-   CppAD::AD<double>&    resultant,          /**< resultant */
-   const CppAD::AD<double>& arg,             /**< operand */
+   CppAD::AD<Type>&      resultant,          /**< resultant */
+   const CppAD::AD<Type>& arg,               /**< operand */
    SCIP_EXPR*            expr                /**< expression that holds the exponent */
    )
 {
-   AD<double> adzero(0.);
+   AD<Type> adzero(0.);
    SCIP_Real exponent;
 
    exponent = SCIPgetExponentExprPow(expr);
