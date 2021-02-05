@@ -1616,6 +1616,7 @@ SCIP_RETCODE fixVarsDualcost(
    const SCIP_Real cutoffgap = cutoffbound - lpobjval;
    int* vbase;
    int* state;
+   int* termorg = NULL;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
 
@@ -1657,6 +1658,29 @@ SCIP_RETCODE fixVarsDualcost(
    SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
 
+   if( SCIPgetDepth(scip) > 0 && SCIPStpBranchruleIsActive(scip) )
+   {
+      int* nodestatenew;
+      SCIP_Bool conflict = FALSE;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &termorg, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodestatenew, nnodes) );
+
+      BMScopyMemoryArray(termorg, graph->term, nnodes);
+      SCIPStpBranchruleInitNodeState(graph, nodestatenew);
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestatenew, &conflict) );
+      assert(!conflict);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( nodestatenew[k] == BRANCH_STP_VERTEX_TERM && !Is_term(graph->term[k]) )
+            graph_knot_chg(graph, k, STP_TERM);
+
+      }
+
+      SCIPfreeBufferArray(scip, &nodestatenew);
+   }
+
    graph_mark(graph);
 
    redcosts_forLPget(scip, vars, graph, redcost);
@@ -1681,6 +1705,16 @@ SCIP_RETCODE fixVarsDualcost(
                SCIP_CALL( fixEdgeVar(scip, e, vars, propdata) );
          }
       }
+   }
+
+   if( termorg )
+   {
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( graph->term[k] != termorg[k] )
+            graph_knot_chg(graph, k, termorg[k]);
+      }
+      SCIPfreeBufferArray(scip, &termorg);
    }
 
    /* at root? */
