@@ -53,6 +53,7 @@
 #include "scip/pub_compr.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_cutpool.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_history.h"
 #include "scip/pub_message.h"
@@ -3842,6 +3843,56 @@ void SCIPprintTimingStatistics(
       }
       else
 	 SCIPmessageFPrintInfo(scip->messagehdlr, file, "  copying          : %10.2f %s\n", 0.0, "(0 times copied the problem)");
+   }
+}
+
+/** outputs expression handler statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintExpressionHandlerStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintExpressionHandlerStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file,
+      "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "#IntEval", "IntEvalTi", "#RevProp", "RevPropTi", "DomReds", "Cutoffs", "#Estimate", "EstimTime", "Branching", "#Simplify", "SimplifyTi", "Simplified");
+
+   for( i = 0; i < scip->set->nexprhdlrs; ++i )
+   {
+      SCIP_EXPRHDLR* exprhdlr = scip->set->exprhdlrs[i];
+      assert(exprhdlr != NULL);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:", SCIPexprhdlrGetName(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNIntevalCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetIntevalTime(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNReversepropCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetReversepropTime(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNDomainReductions(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNCutoffs(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNEstimateCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetEstimateTime(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNBranchings(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNSimplifyCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetSimplifyTime(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNSimplifications(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
    }
 }
 

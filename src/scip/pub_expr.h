@@ -220,9 +220,42 @@ SCIP_Bool SCIPexprhdlrHasReverseProp(
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPexprhdlrComp);
 
-/** increments the branching score count of an expression handler */
+/**@name Statistics */
+/**@{ */
+
+/** gets number of times, the interval evaluation callback was called */
 SCIP_EXPORT
-void SCIPexprhdlrIncrementNBranchScore(
+SCIP_Longint SCIPexprhdlrGetNIntevalCalls(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets time spend in interval evaluation callback */
+SCIP_EXPORT
+SCIP_Real SCIPexprhdlrGetIntevalTime(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets number of times, the reverse propagation callback was called */
+SCIP_EXPORT
+SCIP_Longint SCIPexprhdlrGetNReversepropCalls(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets time spend in reverse propagation callback */
+SCIP_EXPORT
+SCIP_Real SCIPexprhdlrGetReversepropTime(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets number of times, an empty interval was found in reverse propagation */
+SCIP_EXPORT
+SCIP_Longint SCIPexprhdlrGetNCutoffs(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets number of times, a bound reduction was found in reverse propagation (and accepted by caller) */
+SCIP_EXPORT
+SCIP_Longint SCIPexprhdlrGetNDomainReductions(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
@@ -233,7 +266,54 @@ void SCIPexprhdlrIncrementNDomainReductions(
    int                   nreductions         /**< number of reductions to add to counter */
    );
 
+/** gets number of times, the estimation callback was called */
+SCIP_EXPORT
+SCIP_Longint SCIPexprhdlrGetNEstimateCalls(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets time spend in estimation callback */
+SCIP_EXPORT
+SCIP_Real SCIPexprhdlrGetEstimateTime(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets number of times, branching candidates reported by of this expression handler were used to assemble branching candidates
+ *
+ * that is, how often did we consider branching on a children of this expression
+ */
+SCIP_EXPORT
+SCIP_Longint SCIPexprhdlrGetNBranchings(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** increments the branching candidates count of an expression handler */
+SCIP_EXPORT
+void SCIPexprhdlrIncrementNBranchings(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets number of times, the simplify callback was called */
+SCIP_EXPORT
+SCIP_Longint SCIPexprhdlrGetNSimplifyCalls(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets time spend in simplify callback */
+SCIP_EXPORT
+SCIP_Real SCIPexprhdlrGetSimplifyTime(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets number of times the simplify callback found a simplification */
+SCIP_EXPORT
+SCIP_Longint SCIPexprhdlrGetNSimplifications(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
 /** @} */
+
+/** @} */ /* expression handler methods */
 
 
 

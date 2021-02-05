@@ -414,7 +414,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
          /* count this branchscore as belonging to the exprhdlr, too
           * thus, it will be counted for the default nlhdlr, but also for this exprhdlr
           */
-         SCIPexprhdlrIncrementNBranchScore(SCIPexprGetHdlr(expr));
+         SCIPexprhdlrIncrementNBranchings(SCIPexprGetHdlr(expr));
       }
    }
 

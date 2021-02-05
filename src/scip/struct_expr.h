@@ -59,10 +59,9 @@ struct SCIP_ExprHdlr
    SCIP_DECL_EXPRINTEGRALITY((*integrality));/**< integrality detection callback (can be NULL) */
 
    /* statistics */
-   SCIP_Longint          nestimatecalls;     /**< number of times, the estimation callback were called */
+   SCIP_Longint          nestimatecalls;     /**< number of times, the estimation callback was called */
    SCIP_Longint          nintevalcalls;      /**< number of times, the interval evaluation callback was called */
    SCIP_Longint          npropcalls;         /**< number of times, the propagation callback was called */
-   SCIP_Longint          ncutsfound;         /**< number of cuts added by this expression handler */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this expression handler */
    SCIP_Longint          ndomreds;           /**< number of domain reductions found so far by this expression handler */
    SCIP_Longint          nsimplifycalls;     /**< number of times, the simplification callback was called */
@@ -70,8 +69,8 @@ struct SCIP_ExprHdlr
    SCIP_Longint          nbranchscores;      /**< number of times, branching scores were added by (or for) this expression handler */
 
    SCIP_CLOCK*           estimatetime;       /**< time used for estimation */
-   SCIP_CLOCK*           proptime;           /**< time used for propagation */
    SCIP_CLOCK*           intevaltime;        /**< time used for interval evaluation */
+   SCIP_CLOCK*           proptime;           /**< time used for propagation */
    SCIP_CLOCK*           simplifytime;       /**< time used for expression simplification */
 };
 

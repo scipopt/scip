@@ -239,47 +239,6 @@ SCIP_RETCODE evalAndDiff(
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_DISABLED_CODE
-/** print statistics for expression handlers */
-static
-void printExprHdlrStatistics(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< file handle, or NULL for standard out */
-   )
-{
-   int i;
-
-   assert(set != NULL);
-
-   SCIPmessageFPrintInfo(messagehdlr, file,
-      "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "SimplCalls", "Simplified", "EstimCalls", "#IntEval", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "EstimTime", "PropTime", "IntEvalTi", "SimplifyTi");
-
-   for( i = 0; i < set->nexprhdlrs; ++i )
-   {
-      SCIP_EXPRHDLR* exprhdlr = set->exprhdlrs[i];
-      assert(exprhdlr != NULL);
-
-      SCIPmessageFPrintInfo(messagehdlr, file, "  %-17s:", exprhdlr->name);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nsimplifycalls);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nsimplified);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nestimatecalls);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nintevalcalls);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->npropcalls);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->ncutsfound);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->ncutoffs);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->ndomreds);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nbranchscores);
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10.2f", SCIPclockGetTime(exprhdlr->estimatetime));
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10.2f", SCIPclockGetTime(exprhdlr->proptime));
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10.2f", SCIPclockGetTime(exprhdlr->intevaltime));
-      SCIPmessageFPrintInfo(messagehdlr, file, " %10.2f", SCIPclockGetTime(exprhdlr->simplifytime));
-      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
-   }
-}
-#endif
-
 
 /*
  * Public methods
@@ -316,8 +275,8 @@ SCIP_RETCODE SCIPexprhdlrCreate(
 
    /* create clocks */
    SCIP_CALL( SCIPclockCreate(&(*exprhdlr)->estimatetime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*exprhdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*exprhdlr)->intevaltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*exprhdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*exprhdlr)->simplifytime, SCIP_CLOCKTYPE_DEFAULT) );
 
    return SCIP_OKAY;
@@ -649,14 +608,64 @@ SCIP_DECL_SORTPTRCOMP(SCIPexprhdlrComp)
    return strcmp(((SCIP_EXPRHDLR*)elem1)->name, ((SCIP_EXPRHDLR*)elem2)->name);
 }
 
-/** increments the branching score count of an expression handler */
-void SCIPexprhdlrIncrementNBranchScore(
+/** gets number of times, the interval evaluation callback was called */
+SCIP_Longint SCIPexprhdlrGetNIntevalCalls(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    )
 {
    assert(exprhdlr != NULL);
 
-   ++exprhdlr->nbranchscores;
+   return exprhdlr->nintevalcalls;
+}
+
+/** gets time spend in interval evaluation callback */
+SCIP_Real SCIPexprhdlrGetIntevalTime(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return SCIPclockGetTime(exprhdlr->intevaltime);
+}
+
+/** gets number of times, the reverse propagation callback was called */
+SCIP_Longint SCIPexprhdlrGetNReversepropCalls(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->npropcalls;
+}
+
+/** gets time spend in reverse propagation callback */
+SCIP_Real SCIPexprhdlrGetReversepropTime(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return SCIPclockGetTime(exprhdlr->proptime);
+}
+
+/** gets number of times, an empty interval was found in reverse propagation */
+SCIP_Longint SCIPexprhdlrGetNCutoffs(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->ncutoffs;
+}
+
+/** gets number of times, a bound reduction was found in reverse propagation (and accepted by caller) */
+SCIP_Longint SCIPexprhdlrGetNDomainReductions(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->ndomreds;
 }
 
 /** increments the domain reductions count of an expression handler */
@@ -669,6 +678,79 @@ void SCIPexprhdlrIncrementNDomainReductions(
    assert(nreductions >= 0);
 
    exprhdlr->ndomreds += nreductions;
+}
+
+/** gets number of times, the estimation callback was called */
+SCIP_Longint SCIPexprhdlrGetNEstimateCalls(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->nestimatecalls;
+}
+
+/** gets time spend in estimation callback */
+SCIP_Real SCIPexprhdlrGetEstimateTime(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return SCIPclockGetTime(exprhdlr->estimatetime);
+}
+
+/** gets number of times, branching candidates reported by of this expression handler were used to assemble branching candidates
+ *
+ * that is, how often did we consider branching on a children of this expression
+ */
+SCIP_Longint SCIPexprhdlrGetNBranchings(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->nbranchscores;
+}
+
+/** increments the branching candidates count of an expression handler */
+void SCIPexprhdlrIncrementNBranchings(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   ++exprhdlr->nbranchscores;
+}
+
+/** gets number of times, the simplify callback was called */
+SCIP_Longint SCIPexprhdlrGetNSimplifyCalls(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->nsimplifycalls;
+}
+
+/** gets time spend in simplify callback */
+SCIP_Real SCIPexprhdlrGetSimplifyTime(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return SCIPclockGetTime(exprhdlr->simplifytime);
+}
+
+/** gets number of times the simplify callback found a simplification */
+SCIP_Longint SCIPexprhdlrGetNSimplifications(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->nsimplified;
 }
 
 /** copies the given expression handler to a new scip */
@@ -707,7 +789,6 @@ void SCIPexprhdlrInit(
       exprhdlr->nestimatecalls = 0;
       exprhdlr->nintevalcalls = 0;
       exprhdlr->npropcalls = 0;
-      exprhdlr->ncutsfound = 0;
       exprhdlr->ncutoffs = 0;
       exprhdlr->ndomreds = 0;
       exprhdlr->nbranchscores = 0;
@@ -715,8 +796,8 @@ void SCIPexprhdlrInit(
       exprhdlr->nsimplified = 0;
 
       SCIPclockReset(exprhdlr->estimatetime);
-      SCIPclockReset(exprhdlr->proptime);
       SCIPclockReset(exprhdlr->intevaltime);
+      SCIPclockReset(exprhdlr->proptime);
       SCIPclockReset(exprhdlr->simplifytime);
    }
 }
