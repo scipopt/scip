@@ -1663,10 +1663,12 @@ SCIP_RETCODE graph_fixed_add(
 
       assert(nfixnnodes == nfixnnodes_new);
       fixedcomponents->nfixnodes = nfixnnodes_new;
-      {
-         int todo; // activate again
-      }
-     // assert(fixedPseudoAncestorsAreValid(scip, g));
+
+      /* todo the assert does not have to be true if this method is called from the prune heuristic!
+       * we should somehow check whether that is the case...maybe save the info in the graph? */
+#ifdef SCIP_DISABLED
+      assert(fixedPseudoAncestorsAreValid(scip, g));
+#endif
    }
 
    return SCIP_OKAY;
