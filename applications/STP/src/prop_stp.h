@@ -38,6 +38,7 @@ extern "C" {
 #endif
 
 /** creates the stp propagator and includes it in SCIP */
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -62,12 +63,21 @@ SCIP_RETCODE SCIPStpFixEdgeVarTo1(
 
 
 /** return total number of arcs fixed by 'fixedgevar' method of this propagator */
+SCIP_EXPORT
 int SCIPStpNfixedEdges(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
+/** checks whether problem has become infeasible at current node */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpPropCheckForInfeas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            probisinfeas        /**< is infeasible? */
+   );
+
 /** gets propagator graph  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPStpPropGetGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data */

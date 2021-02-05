@@ -46,7 +46,7 @@
 #define PROP_NAME              "stp"
 #define PROP_DESC              "stp propagator"
 #define PROP_TIMING            SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP
-#define PROP_PRIORITY          1000000 /**< propagator priority */
+#define PROP_PRIORITY           1000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
@@ -87,7 +87,8 @@ struct SCIP_PropData
    SCIP_Longint          ncalls;             /**< number of calls */
    SCIP_Longint          nlastcall;          /**< number of last call */
    SCIP_Longint          nlastnlpiter;       /**< number of last LP iterations */
-   SCIP_Longint          lastnodenumber;     /**< number of last call */
+   SCIP_Longint          lastnodenumber_red; /**< number for last reduction call */
+   SCIP_Longint          lastnodenumber;     /**< number nodes for last propagator call */
    SCIP_Longint          propgraphnodenumber;/**< B&B node number at which propgraph was updated */
    SCIP_Real             lpobjval;           /**< value of current LP */
    SCIP_Real             lpobjval_last;      /**< value of last LP */
@@ -354,6 +355,146 @@ SCIP_RETCODE getBoundchanges(
       if( conflict )
          *probisinfeas = TRUE;
    }
+
+   return SCIP_OKAY;
+}
+
+
+
+/** gets state of graph at current B&B node, including bound changes;
+ *  takes direction of edges into account! */
+static
+SCIP_RETCODE getGraphStatesDirected(
+   SCIP*                 scip,               /**< SCIP structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int*                  nodestate,          /**< node state (uninitialized) */
+   int*                  edgestate,          /**< edge state (uninitialized) */
+   SCIP_Bool*            probisinfeas        /**< is problem infeasible? */
+)
+{
+   SCIP_VAR** vars = SCIPprobdataGetVars(scip);
+   const int nedges = graph_get_nEdges(graph);
+   const SCIP_Bool isPcMw = graph_pc_isPcMw(graph);
+
+   assert(vars);
+   assert(!isPcMw || graph->extended);
+   assert(!(*probisinfeas));
+
+   SCIPStpBranchruleInitNodeState(graph, nodestate);
+
+   for( int e = 0; e < nedges; e++ )
+      edgestate[e] = PROP_STP_EDGE_UNSET;
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( isPcMw && graph_pc_edgeIsExtended(graph, e) )
+         continue;
+
+      if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
+      {
+         assert(SCIPvarGetUbLocal(vars[e]) > 0.5);
+         edgestate[e] = PROP_STP_EDGE_FIXED;
+         nodestate[graph->tail[e]] = BRANCH_STP_VERTEX_TERM;
+         nodestate[graph->head[e]] = BRANCH_STP_VERTEX_TERM;
+      }
+      else if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
+      {
+         assert(SCIPvarGetLbLocal(vars[e]) < 0.5);
+         edgestate[e] = PROP_STP_EDGE_KILLED;
+      }
+   }
+
+   if( isPcMw )
+   {
+      SCIP_Bool conflict = FALSE;
+
+      getBoundchangesPcMW(scip, vars, graph, nodestate, &conflict);
+
+      if( conflict )
+         *probisinfeas = TRUE;
+   }
+
+   /* not at root? */
+   if( SCIPgetDepth(scip) > 0 && !(*probisinfeas) && SCIPStpBranchruleIsActive(scip) )
+   {
+      SCIP_Bool conflict = FALSE;
+
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgs(scip, nodestate, &conflict) );
+
+      if( conflict )
+         *probisinfeas = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+/** trails graph and checks for infeasibility */
+static
+SCIP_RETCODE trailGraphWithStates(
+   SCIP*                 scip,               /**< SCIP structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const int*            nodestate,          /**< node state  */
+   const int*            edgestate,          /**< edge state  */
+   SCIP_Bool*            probisinfeas        /**< is problem infeasible? */
+)
+{
+   STP_Vectype(int) queue = NULL;
+   SCIP_Bool* nodes_isVisited;
+   int termcount = 0;
+   const int nnodes = graph_get_nNodes(graph);
+   const int root = graph->source;
+
+   assert(!(*probisinfeas));
+   assert(nodestate[graph->source] == BRANCH_STP_VERTEX_TERM);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( nodestate[i] == BRANCH_STP_VERTEX_TERM )
+         termcount++;
+   }
+
+   assert(termcount >= graph->terms);
+
+   /* now do a BFS from the root */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nodes_isVisited, nnodes) );
+
+   assert(!nodes_isVisited[root]);
+   nodes_isVisited[root] = TRUE;
+   StpVecReserve(scip, queue, nnodes);
+   StpVecPushBack(scip, queue, root);
+
+   /* BFS loop stopping at roots */
+   for( int i = 0; i < StpVecGetSize(queue); i++ )
+   {
+      const int node = queue[i];
+      assert(nodes_isVisited[node]);
+
+      if( nodestate[node] == BRANCH_STP_VERTEX_TERM )
+         termcount--;
+
+      for( int e = graph->outbeg[node]; e >= 0; e = graph->oeat[e] )
+      {
+         const int head = graph->head[e];
+         if( !nodes_isVisited[head] && edgestate[e] != PROP_STP_EDGE_KILLED )
+         {
+            nodes_isVisited[head] = TRUE;
+            StpVecPushBack(scip, queue, head);
+            assert(nodestate[head] != BRANCH_STP_VERTEX_KILLED);
+         }
+      }
+   }
+
+   assert(termcount >= 0);
+
+   if( termcount != 0 )
+   {
+      *probisinfeas = TRUE;
+   }
+
+   StpVecFree(scip, queue);
+   SCIPfreeBufferArray(scip, &nodes_isVisited);
 
    return SCIP_OKAY;
 }
@@ -1488,7 +1629,6 @@ SCIP_RETCODE fixVarsDualcost(
       return SCIP_OKAY;
    }
 
-
    if( propdata->fixingbounds == NULL )
    {
       assert(propdata->deg2bounds == NULL && propdata->deg2bounded == NULL);
@@ -1842,9 +1982,9 @@ SCIP_Bool fixVarsRedbasedIsPromising(
          SCIP_NODE* const currnode = SCIPgetCurrentNode(scip);
          const SCIP_Longint nodenumber = SCIPnodeGetNumber(currnode);
 
-         if( nodenumber != propdata->lastnodenumber || propdata->aggressive )
+         if( nodenumber != propdata->lastnodenumber_red || propdata->aggressive )
          {
-            propdata->lastnodenumber = nodenumber;
+            propdata->lastnodenumber_red = nodenumber;
             callreduce = TRUE;
          }
       }
@@ -1973,6 +2113,40 @@ SCIP_RETCODE initPropAtFirstCall(
 }
 
 
+
+/** applies vertex branching changes.
+ *  NOTE: this is necessary, because SCIP is crazy slow in propagating constraints,
+ *  so we do it ourselves */
+static
+SCIP_RETCODE applyLastVertexBranch(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure to use for the update */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   assert(SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0);
+
+   if( SCIPStpBranchruleIsActive(scip) )
+   {
+      int branchvertex;
+      SCIP_Bool isDeleted = FALSE;
+      SCIP_CALL( SCIPStpBranchruleGetVertexChgLast(scip, &branchvertex, &isDeleted) );
+
+      if( isDeleted )
+      {
+         for( int e = graph->outbeg[branchvertex]; e != EAT_LAST; e = graph->oeat[e] )
+         {
+            SCIP_CALL( fixEdgeVar(scip, e, vars, propdata) );
+            SCIP_CALL( fixEdgeVar(scip, flipedge(e), vars, propdata) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /**@} */
 
 /**@name Callback methods of propagator
@@ -2024,6 +2198,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_VAR** vars;
    GRAPH* graph;
    SCIP_Bool probisinfeas = FALSE;
+   SCIP_NODE* currnode;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -2038,26 +2213,25 @@ SCIP_DECL_PROPEXEC(propExecStp)
    assert(vars);
 
    propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
-
    graph = SCIPprobdataGetGraph(probdata);
-   assert(graph != NULL);
+   assert(graph);
 
-   // todo extra method
-   if( SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) > 0 && SCIPStpBranchruleIsActive(scip) )
+   currnode = SCIPgetCurrentNode(scip);
+
+   if( SCIPnodeGetDepth(currnode) > 0 && propdata->lastnodenumber != SCIPnodeGetNumber(currnode) )
    {
-      int branchvertex;
-      SCIP_Bool isDeleted = FALSE;
-      SCIP_CALL( SCIPStpBranchruleGetVertexChgLast(scip, &branchvertex, &isDeleted) );
+      /* propagate based on last vertex branching decision */
+      SCIP_CALL( applyLastVertexBranch(scip, graph, vars, propdata) );
 
-      if( isDeleted )
-      {
-         for( int e = graph->outbeg[branchvertex]; e != EAT_LAST; e = graph->oeat[e] )
-         {
-            SCIP_CALL( fixEdgeVar(scip, e, vars, propdata) );
-            SCIP_CALL( fixEdgeVar(scip, flipedge(e), vars, propdata) );
-         }
-      }
+      SCIP_CALL( SCIPStpPropCheckForInfeas(scip, &probisinfeas) );
+
+      propdata->lastnodenumber = SCIPnodeGetNumber(currnode);
+   }
+
+   if( probisinfeas )
+   {
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
    }
 
    /* check if all integral variables are fixed */
@@ -2142,6 +2316,7 @@ SCIP_DECL_PROPINITSOL(propInitsolStp)
    propdata->ncalls = 0;
    propdata->nlastcall = 0;
    propdata->nlastnlpiter = 0;
+   propdata->lastnodenumber_red = -1;
    propdata->lastnodenumber = -1;
    propdata->nfixededges_all = 0;
    propdata->redwaitratio = REDUCTION_WAIT_RATIO_INITIAL;
@@ -2259,6 +2434,43 @@ int SCIPStpNfixedEdges(
 
    return (propdata->nfixededges_all);
 }
+
+
+/** checks whether problem has become infeasible at current node
+ *  NOTE: we basically check whether all terminals (at given B&B node) are reachable from root,
+ *  taking bound changes into account */
+SCIP_RETCODE SCIPStpPropCheckForInfeas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            probisinfeas        /**< is infeasible? */
+)
+{
+   SCIP_PROPDATA* propdata = SCIPpropGetData(SCIPfindProp(scip, "stp"));
+   const GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
+   int* nodestate;
+   int* edgestate;
+   const int nnodes = graph_get_nNodes(orggraph);
+   const int nedges = graph_get_nEdges(orggraph);
+
+   assert(probisinfeas && orggraph && propdata);
+
+   *probisinfeas = FALSE;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodestate, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgestate, nedges) );
+
+   SCIP_CALL( getGraphStatesDirected(scip, orggraph, nodestate, edgestate, probisinfeas) );
+
+   if( *probisinfeas == FALSE )
+   {
+      SCIP_CALL( trailGraphWithStates(scip, orggraph, nodestate, edgestate, probisinfeas) );
+   }
+
+   SCIPfreeBufferArray(scip, &edgestate);
+   SCIPfreeBufferArray(scip, &nodestate);
+
+   return SCIP_OKAY;
+}
+
 
 /** gives propagator graph  */
 SCIP_RETCODE SCIPStpPropGetGraph(
