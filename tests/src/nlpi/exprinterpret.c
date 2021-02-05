@@ -136,6 +136,8 @@ void checkAD(
    SCIP_CALL( SCIPduplicateExpr(scip, expr, &expr2, mapvar, NULL, NULL, NULL) );
    /* let exprint get familiar with expr */
    SCIP_CALL( SCIPexprintCompile(scip, exprint, expr2, &exprintdata) );
+   /* if exprint itself has eval capabilities, then should also have this capabilities for a specific expr since every exprhdlr has to implement eval */
+   cr_expect_eq(SCIPexprintGetExprCapability(scip, exprint, expr2, exprintdata) & SCIP_EXPRINTCAPABILITY_FUNCVALUE, SCIP_EXPRINTCAPABILITY_FUNCVALUE);
 
    for( p = 0; p < npoints; ++p )
    {
@@ -158,7 +160,7 @@ void checkAD(
       cr_expect_float_eq(val, SCIPexprGetEvalValue(expr), TOL);
 
 
-      if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_GRADIENT) )
+      if( !(SCIPexprintGetExprCapability(scip, exprint, expr2, exprintdata) & SCIP_EXPRINTCAPABILITY_GRADIENT) )
          continue;
 
       /* evaluate gradient with expr and expr2 and compare */
@@ -178,7 +180,7 @@ void checkAD(
       }
 
 
-      if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_HESSIAN) )
+      if( !(SCIPexprintGetExprCapability(scip, exprint, expr2, exprintdata) & SCIP_EXPRINTCAPABILITY_HESSIAN) )
          continue;
 
       /* evaluate Hessian with expr by dim times Hessian*vector-evaluation */
