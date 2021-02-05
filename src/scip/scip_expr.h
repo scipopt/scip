@@ -806,6 +806,26 @@ SCIP_RETCODE SCIPcallExprEval(
    SCIP_Real*            val                 /**< buffer to store evaluated value */
    );
 
+/** calls the eval and fwdiff callback of an expression with given values for children
+ *
+ * Does not iterates over expressions, but requires values for children and direction to be given.
+ *
+ * Value is not stored in expression, but returned in @par val.
+ * If an evaluation error (division by zero, ...) occurs, this value will be set to SCIP_INVALID.
+ *
+ * Direction is not stored in expression, but returned in @par dot.
+ * If an differentiation error (division by zero, ...) occurs, this value will be set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcallExprEvalFwdiff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_Real*            childrenvalues,     /**< values for children */
+   SCIP_Real*            direction,          /**< direction in which to differentiate */
+   SCIP_Real*            val,                /**< buffer to store evaluated value */
+   SCIP_Real*            dot                 /**< buffer to store derivative value */
+   );
+
 /** calls the interval evaluation callback for an expression
  *
  * @see SCIP_DECL_EXPRMONOTONICITY

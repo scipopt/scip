@@ -174,6 +174,12 @@ SCIP_Bool SCIPexprhdlrHasBwdiff(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
+/** returns whether expression handler implements the forward differentiation callback */
+SCIP_EXPORT
+SCIP_Bool SCIPexprhdlrHasFwdiff(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
 /** returns whether expression handler implements the interval evaluation callback */
 SCIP_EXPORT
 SCIP_Bool SCIPexprhdlrHasIntEval(

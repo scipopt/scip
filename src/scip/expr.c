@@ -532,6 +532,16 @@ SCIP_Bool SCIPexprhdlrHasBwdiff(
    return exprhdlr->bwdiff != NULL;
 }
 
+/** returns whether expression handler implements the forward differentiation callback */
+SCIP_Bool SCIPexprhdlrHasFwdiff(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+)
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->fwdiff != NULL;
+}
+
 /** returns whether expression handler implements the interval evaluation callback */
 SCIP_Bool SCIPexprhdlrHasIntEval(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
@@ -1250,6 +1260,114 @@ SCIP_RETCODE SCIPexprhdlrFwDiffExpr(
    /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
    if( !SCIPisFinite(*dot) )
       *dot = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
+/** calls the evaluation and forward-differentiation callback of an expression handler
+ *
+ * The method evaluates an expression by taking the values of its children into account.
+ * The method differentiates an expression by taking the values and directional derivatives of its children into account.
+ *
+ * Further, allows to evaluate and differentiate w.r.t. given values for children instead of those stored in children expressions.
+ *
+ * It probably doesn't make sense to call this function for a variable-expression if sol and/or direction are not given.
+ */
+SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory, can be NULL if childrenvals is NULL */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_Real*            val,                /**< buffer to store value of expression */
+   SCIP_Real*            dot,                /**< buffer to store derivative value */
+   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
+   SCIP_SOL*             sol,                /**< solution that is evaluated (can be NULL) */
+   SCIP_Real*            childrendirs,       /**< directional derivatives for children, or NULL if dot-values stored in children should be used */
+   SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions, can be NULL if childrendirs is given) */
+)
+{
+   SCIP_Real origval;
+   SCIP_Real* origvals = NULL;
+   SCIP_Real* origdots = NULL;
+
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(exprhdlr->eval != NULL);
+   assert(val != NULL);
+   assert(dot != NULL);
+
+   /* temporarily overwrite the evalvalue in all children with values from childrenvals */
+   if( childrenvals != NULL && expr->nchildren > 0 )
+   {
+      int c;
+
+      assert(bufmem != NULL);
+
+      SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &origvals, expr->nchildren) );
+
+      for( c = 0; c < expr->nchildren; ++c )
+      {
+         origvals[c] = expr->children[c]->evalvalue;
+         expr->children[c]->evalvalue = childrenvals[c];
+      }
+   }
+
+   /* temporarily overwrite the dot in all children with values from childrendirs */
+   if( childrendirs != NULL && expr->nchildren > 0 )
+   {
+      int c;
+
+      assert(bufmem != NULL);
+
+      SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &origdots, expr->nchildren) );
+
+      for( c = 0; c < expr->nchildren; ++c )
+      {
+         origdots[c] = expr->children[c]->dot;
+         expr->children[c]->dot = childrendirs[c];
+      }
+   }
+
+   /* remember original value */
+   origval = expr->evalvalue;
+
+   /* call expression eval callback */
+   SCIP_CALL( exprhdlr->eval(set->scip, expr, val, sol) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*val) )
+      *val = SCIP_INVALID;
+
+   /* temporarily overwrite evalvalue of expr, since some exprhdlr (e.g., product) access this value in fwdiff */
+   expr->evalvalue = *val;
+
+   /* call forward-differentiation callback (if available) */
+   SCIP_CALL( SCIPexprhdlrFwDiffExpr(exprhdlr, set, expr, dot, direction) );
+
+   /* restore original value */
+   expr->evalvalue = origval;
+
+   /* restore original dots in children */
+   if( origdots != NULL )
+   {
+      int c;
+      for( c = 0; c < expr->nchildren; ++c )
+         expr->children[c]->dot = origdots[c];
+
+      BMSfreeBufferMemoryArray(bufmem, &origdots);
+   }
+
+   /* restore original evalvalues in children */
+   if( origvals != NULL )
+   {
+      int c;
+      for( c = 0; c < expr->nchildren; ++c )
+         expr->children[c]->evalvalue = origvals[c];
+
+      BMSfreeBufferMemoryArray(bufmem, &origvals);
+   }
 
    return SCIP_OKAY;
 }

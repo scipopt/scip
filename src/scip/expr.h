@@ -205,6 +205,28 @@ SCIP_RETCODE SCIPexprhdlrFwDiffExpr(
    SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions) */
    );
 
+/** calls the evaluation and forward-differentiation callback of an expression handler
+ *
+ * The method evaluates an expression by taking the values of its children into account.
+ * The method differentiates an expression by taking the values and directional derivatives of its children into account.
+ *
+ * Further, allows to evaluate and differentiate w.r.t. given values for children instead of those stored in children expressions.
+ *
+ * It probably doesn't make sense to call this function for a variable-expression if sol and/or direction are not given.
+ */
+SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory, can be NULL if childrenvals is NULL */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_Real*            val,                /**< buffer to store value of expression */
+   SCIP_Real*            dot,                /**< buffer to store derivative value */
+   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
+   SCIP_SOL*             sol,                /**< solution that is evaluated (can be NULL) */
+   SCIP_Real*            childrendirs,       /**< directional derivatives for children, or NULL if dot-values stored in children should be used */
+   SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions, can be NULL if childrendirs is given) */
+);
+
 /** calls the evaluation callback for Hessian directions (backward over forward) of an expression handler
  *
  * See @ref SCIP_DECL_EXPRBWFWDIFF for details.

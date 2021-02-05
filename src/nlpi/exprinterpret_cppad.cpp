@@ -44,6 +44,12 @@ using std::vector;
  * vector<*>::operator[] only. */
 /*lint --e{747,732}*/
 
+/* defining EVAL_USE_EXPRHDLR_ALWAYS uses the exprhdlr methods for the evaluation and differentiation of all expression (except for var and value)
+ * instead of only those that are not recognized in this code
+ * this is incomplete (no hessians) and slow (only forward-mode gradients), but can be useful for testing
+ */
+// #define EVAL_USE_EXPRHDLR_ALWAYS
+
 /* defining NO_CPPAD_USER_ATOMIC disables the use of our own implementation of derivatives of power operators
  * via CppAD's user-atomic function feature
  * our customized implementation should give better results (tighter intervals) for the interval data type
@@ -174,6 +180,7 @@ public:
         need_retape(true),
         need_retape_always(false),
         userevalcapability(SCIP_EXPRINTCAPABILITY_ALL),
+        usinguserexpr(false),
         hesrowidxs(NULL),
         hescolidxs(NULL),
         hesvalues(NULL),
@@ -204,7 +211,8 @@ public:
    double                val;                /**< current function value */
    bool                  need_retape;        /**< will retaping be required for the next point evaluation? */
    bool                  need_retape_always; /**< will retaping be always required? */
-   SCIP_EXPRINTCAPABILITY userevalcapability; /**< (intersection of) capabilities of evaluation rountines of user expressions */
+   SCIP_EXPRINTCAPABILITY userevalcapability;/**< (intersection of) capabilities of evaluation routines of user expressions */
+   bool                  usinguserexpr;      /**< whether we will use atomic_userexpr in eval() */
 
    vector<bool>          hessparsity;        /**< sparsity pattern of Hessian as given by CppAD */
    int*                  hesrowidxs;         /**< row indices of Hessian sparsity */
@@ -856,23 +864,7 @@ void evalSignPower(
          CppAD::CondExpGe(arg, adzero, pow(arg, exponent), -pow(-arg, exponent)));
    }
 }
-
 #endif
-
-// FIXME adapt this code to work with differentiation methods of exprhdlrs and then reenable
-#ifndef NO_CPPAD_USER_ATOMIC
-
-template<class Type>
-SCIP_RETCODE exprEvalUser(
-   SCIP_EXPR* expr,
-   Type* x,
-   Type& funcval,
-   Type* gradient,
-   Type* hessian
-   )
-{
-   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian); /*lint !e429*/
-}
 
 /** Automatic differentiation of user expression as CppAD user-atomic function.
  *
@@ -882,8 +874,9 @@ template<class Type>
 class atomic_userexpr : public CppAD::atomic_base<Type>
 {
 public:
-   atomic_userexpr()
+   atomic_userexpr(SCIP* scip_)
    : CppAD::atomic_base<Type>("userexpr"),
+     scip(scip_),
      expr(NULL)
    {
       /* indicate that we want to use bool-based sparsity pattern */
@@ -891,6 +884,9 @@ public:
    }
 
 private:
+   /** SCIP data structure */
+   SCIP* scip;
+
    /** user expression */
    SCIP_EXPR* expr;
 
@@ -902,7 +898,6 @@ private:
    virtual void set_old(size_t id)
    {
       expr = (SCIP_EXPR*)(void*)id;
-      assert(SCIPexprGetOperator(expr) == SCIP_EXPR_USER);
    }
 
    /** forward sweep of userexpr
@@ -935,6 +930,7 @@ private:
       CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
    )
    {
+      assert(scip != NULL);
       assert(expr != NULL);
       assert(ty.size() == p+1);
       assert(q <= p);
@@ -942,6 +938,8 @@ private:
       size_t n = tx.size() / (p+1);
       assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
       assert(n >= 1);
+
+      SCIPdebugMsg(scip, "expr_%s:forward, q=%d, p=%d\n", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), q, p);
 
       if( vx.size() > 0 )
       {
@@ -959,16 +957,53 @@ private:
             }
       }
 
-      Type* x = new Type[n];
-      for( size_t i = 0; i < n; ++i )
-         x[i] = tx[i * (p+1) + 0];  /*lint !e835*/
-
-      if( SCIPcallExprEval(scip, expr, x, &ty[0]) != SCIP_OKAY )
+      if( p == 0 )
       {
-         delete[] x;
-         return false;
+         /* only eval requested
+          * arguments are in tx[i * (p+1) + 0], i == 0..n-1, that is tx[0]..tx[n-1]
+          */
+         if( SCIPcallExprEval(scip, expr, const_cast<double*>(tx.data()), &ty[0]) != SCIP_OKAY )
+            return false;
+
+         if( ty[0] == SCIP_INVALID )
+            ty[0] = std::numeric_limits<double>::infinity();
+
+         return true;
       }
 
+      if( p == 1 )
+      {
+         /* eval and forward-diff requested
+          *
+          * point to eval is in tx[i * (p+1) + 0], i == 0..n-1
+          * direction is in tx[i * (p+1) + 1], i == 0..n-1
+          */
+         Type* x = new Type[n];
+         Type* dir = new Type[n];
+         for( size_t i = 0; i < n; ++i )
+         {
+            x[i] = tx[i * (p+1) + 0];  /*lint !e835*/
+            dir[i] = tx[i * (p+1) + 1];  /*lint !e835*/
+         }
+
+         SCIP_RETCODE rc = SCIPcallExprEvalFwdiff(scip, expr, x, dir, &ty[0], &ty[1]);
+
+         if( ty[0] == SCIP_INVALID )
+            ty[0] = std::numeric_limits<double>::infinity();
+         if( ty[1] == SCIP_INVALID )
+            ty[1] = std::numeric_limits<double>::infinity();
+
+         delete[] dir;
+         delete[] x;
+
+         return rc == SCIP_OKAY;
+      }
+
+      /* higher order derivatives not implemented yet (TODO) */
+      SCIPABORT();
+      return false;
+
+#if SCIP_DISABLED_CODE
       Type* gradient = NULL;
       Type* hessian = NULL;
 
@@ -1015,6 +1050,7 @@ private:
          return false;
 
       return true;
+#endif
    }
 
    /** reverse sweep of userexpr
@@ -1085,6 +1121,11 @@ private:
       assert(px.size() == tx.size());
       assert(py.size() == p+1);
 
+      // TODO implement this again and then change SCIPexprintGrad and remove usinguserexpr
+      SCIPABORT();
+      return false;
+
+#ifdef SCIP_DISABLED_CODE
       size_t n = tx.size() / (p+1);
       assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
       assert(n >= 1);
@@ -1135,6 +1176,7 @@ private:
       }
 
       return true;
+#endif
    } /*lint !e715*/
 
    using CppAD::atomic_base<Type>::for_sparse_jac;
@@ -1242,46 +1284,8 @@ private:
 
       return true;
    }
-
 };
 
-template<class Type>
-static
-void evalUser(
-   Type&                 resultant,          /**< resultant */
-   const Type*           args,               /**< operands */
-   SCIP_EXPR*            expr                /**< expression that holds the user expression */
-   )
-{
-   assert( args != 0 );
-   vector<Type> in(args, args + SCIPexprGetNChildren(expr));
-   vector<Type> out(1);
-
-   static atomic_userexpr<typename Type::value_type> u;
-   u(in, out, (size_t)(void*)expr);
-
-   resultant = out[0];
-   return;
-}
-
-#else
-
-template<class Type>
-static
-void evalUser(
-   Type&                 resultant,          /**< resultant */
-   const Type*           args,               /**< operands */
-   SCIP_EXPR*            expr                /**< expression that holds the user expression */
-   )
-{
-   SCIPerrorMessage("using derivative methods of exprhdlr %s in CppAD is not implemented yet", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
-      "evalUser()",
-      "Error: user expressions in CppAD not possible without CppAD user atomic facility"
-      );
-}
-
-#endif
 
 /** integer power operation for arbitrary integer exponents */
 template<class Type>
@@ -1367,6 +1371,7 @@ SCIP_RETCODE eval(
       SCIP_CALL( eval(scip, SCIPexprGetChildren(expr)[i], exprintdata, x, buf[i]) );
    }
 
+#ifndef EVAL_USE_EXPRHDLR_ALWAYS
    if( SCIPisExprSum(scip, expr) )
    {
       val = SCIPgetConstantExprSum(expr);
@@ -1435,10 +1440,17 @@ SCIP_RETCODE eval(
       val = CppAD::CondExpGt(buf[0], AD<double>(0.), -buf[0] * log(buf[0]), -sqrt(buf[0]));
    }
    else
+#endif
    {
-      evalUser(val, buf, expr);
-      SCIPfreeBufferArrayNull(scip, &buf);
-      return SCIP_ERROR;
+      //SCIPerrorMessage("using derivative methods of exprhdlr %s in CppAD is not implemented yet", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
+      //CppAD::ErrorHandler::Call(true, __LINE__, __FILE__, "evalUser()", "Error: user expressions in CppAD not possible without CppAD user atomic facility");
+      vector<Type> in(buf, buf + SCIPexprGetNChildren(expr));
+      vector<Type> out(1);
+
+      static atomic_userexpr<typename Type::value_type> u(scip);
+      u(in, out, (size_t)(void*)expr);
+
+      val = out[0];
    }
 
    SCIPfreeBufferArray(scip, &buf);
@@ -1539,6 +1551,9 @@ SCIP_RETCODE SCIPexprintCompile(
    else
    {
       (*exprintdata)->need_retape = true;
+      (*exprintdata)->need_retape_always = false;
+      (*exprintdata)->usinguserexpr = false;
+      (*exprintdata)->hesconstant = false;
    }
 
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
@@ -1551,12 +1566,42 @@ SCIP_RETCODE SCIPexprintCompile(
       assert(!SCIPisExprVar(scip, expr));
 
       if( SCIPisExprVaridx(scip, expr) )
+      {
          varidxs.insert(SCIPgetIndexExprVaridx(expr));
+         continue;
+      }
+
+      /* check whether expr is of a type we don't recognize */
+#ifndef EVAL_USE_EXPRHDLR_ALWAYS
+      if( !SCIPisExprSum(scip, expr) &&
+          !SCIPisExprProduct(scip, expr) &&
+          !SCIPisExprPower(scip, expr) &&
+          !SCIPisExprSignpower(scip, expr) &&
+          !SCIPisExprExp(scip, expr) &&
+          !SCIPisExprLog(scip, expr) &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs") != 0 &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sin") != 0 &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") != 0 &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "entropy") != 0 &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "erf") != 0 &&
+          !SCIPisExprValue(scip, expr) )
+#endif
+      {
+         (*exprintdata)->usinguserexpr = true;
+
+         /* an expression for which we have no taping implemented in eval()
+          * so we will try to use CppAD's atomic operand and the expression handler methods
+          * however, only atomic_userexpr:forward() is implemented for p=0,1 at the moment, so we cannot do Hessians
+          * also the exprhdlr needs to implement the fwdiff callback for derivatives
+          */
+         if( SCIPexprhdlrHasFwdiff(SCIPexprGetHdlr(expr)) )
+            (*exprintdata)->userevalcapability &= SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT;
+         else
+            (*exprintdata)->userevalcapability &= SCIP_EXPRINTCAPABILITY_FUNCVALUE;
+      }
 
       //if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "xyz") == 0 )
       //   (*exprintdata)->need_retape_always = true;
-
-      // FIXME data->userevalcapability &= SCIPexprGetUserEvalCapability(expr);
    }
 
    SCIPfreeExpriter(&it);
@@ -1574,10 +1619,8 @@ SCIP_RETCODE SCIPexprintCompile(
    // not using SCIPcheckExprQuadratic(), because we don't need the quadratic form
    if( SCIPisExprSum(scip, rootexpr) )
    {
-      int i;
-
       (*exprintdata)->hesconstant = true;
-      for( i = 0; i < SCIPexprGetNChildren(rootexpr); ++i )
+      for( int i = 0; i < SCIPexprGetNChildren(rootexpr); ++i )
       {
          SCIP_EXPR* child;
          child = SCIPexprGetChildren(rootexpr)[i];
@@ -1741,7 +1784,17 @@ SCIP_RETCODE SCIPexprintGrad(
    if( n == 0 )
       return SCIP_OKAY;
 
-   vector<double> jac(exprintdata->f.Jacobian(exprintdata->x));
+   vector<double> jac;
+   if( !exprintdata->usinguserexpr )
+      jac = exprintdata->f.Jacobian(exprintdata->x);
+   else
+   {
+      // atomic_userexpr:reverse not implemented yet (even for p=0)
+      // so force use of forward-eval for gradient (though that seems pretty inefficient)
+      exprintdata->f.Forward(0, exprintdata->x);
+      jac.resize(n);
+      CppAD::JacobianFor(exprintdata->f, exprintdata->x, jac);
+   }
 
    for( size_t i = 0; i < n; ++i )
       gradient[exprintdata->varidxs[i]] = jac[i];

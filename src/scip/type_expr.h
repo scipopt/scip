@@ -402,7 +402,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 
 /** backward derivative evaluation callback
  *
- * The method should compute the partial derivative of expr w.r.t its child at childidx.
+ * The method should compute the partial derivative of expr w.r.t. its child at childidx.
  * That is, it should return
  * \f[
  *   \frac{\partial \text{expr}}{\partial \text{child}_{\text{childidx}}}
