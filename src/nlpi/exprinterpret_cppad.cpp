@@ -164,6 +164,8 @@ static char init_parallel_return = SCIPexprintCppADInitParallel();
 
 using CppAD::AD;
 
+class atomic_userexpr;
+
 /** expression specific interpreter data */
 struct SCIP_ExprIntData
 {
@@ -174,7 +176,6 @@ public:
         need_retape(true),
         need_retape_always(false),
         userevalcapability(SCIP_EXPRINTCAPABILITY_ALL),
-        usinguserexpr(false),
         hesrowidxs(NULL),
         hescolidxs(NULL),
         hesvalues(NULL),
@@ -205,8 +206,9 @@ public:
    double                val;                /**< current function value */
    bool                  need_retape;        /**< will retaping be required for the next point evaluation? */
    bool                  need_retape_always; /**< will retaping be always required? */
+
+   vector<atomic_userexpr*> userexprs;       /**< vector of atomic_userexpr that are created during eval() and need to be kept as long as the tape exists */
    SCIP_EXPRINTCAPABILITY userevalcapability;/**< (intersection of) capabilities of evaluation routines of user expressions */
-   bool                  usinguserexpr;      /**< whether we will use atomic_userexpr in eval() */
 
    vector<bool>          hessparsity;        /**< sparsity pattern of Hessian as given by CppAD */
    int*                  hesrowidxs;         /**< row indices of Hessian sparsity */
@@ -321,7 +323,7 @@ private:
    /** stores exponent value corresponding to next call to forward or reverse
     *
     * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
-    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
+    * TODO using this function is deprecated, do as with atomic_userexpr instead
     */
    virtual void set_old(size_t id)
    {
@@ -585,7 +587,7 @@ private:
    /** stores exponent corresponding to next call to forward or reverse
     *
     * How is this supposed to be threadsafe? (we use only one global instantiation of this class)
-    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
+    * TODO using this function is deprecated, do as with atomic_userexpr instead
     */
    virtual void set_old(size_t id)
    {
@@ -853,35 +855,24 @@ void evalSignPower(
  *
  * This class implements forward and reverse operations for a function given by a user expression for use within CppAD.
  */
-template<class Type>
-class atomic_userexpr : public CppAD::atomic_base<Type>
+class atomic_userexpr : public CppAD::atomic_base<SCIP_Real>
 {
 public:
-   atomic_userexpr(SCIP* scip_)
-   : CppAD::atomic_base<Type>("userexpr"),
+   atomic_userexpr(
+      SCIP*              scip_,              /**< SCIP data structure */
+      SCIP_EXPR*         expr_               /**< expression to use */
+      )
+   : CppAD::atomic_base<SCIP_Real>(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr_)), CppAD::atomic_base<SCIP_Real>::bool_sparsity_enum),
      scip(scip_),
-     expr(NULL)
-   {
-      /* indicate that we want to use bool-based sparsity pattern */
-      this->option(CppAD::atomic_base<Type>::bool_sparsity_enum);
-   }
+     expr(expr_)
+   { }
 
 private:
    /** SCIP data structure */
    SCIP* scip;
 
-   /** user expression */
+   /** expression */
    SCIP_EXPR* expr;
-
-   /** stores user expression corresponding to next call to forward or reverse
-    *
-    * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
-    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
-    */
-   virtual void set_old(size_t id)
-   {
-      expr = (SCIP_EXPR*)(void*)id;
-   }
 
    /** forward sweep of userexpr
     *
@@ -909,8 +900,8 @@ private:
       size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
       const CppAD::vector<bool>&  vx,           /**< indicates whether argument is a variable, or empty vector */
       CppAD::vector<bool>&        vy,           /**< vector to store which function values depend on variables, or empty vector */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
+      const CppAD::vector<SCIP_Real>& tx,       /**< values for taylor coefficients of x */
+      CppAD::vector<SCIP_Real>&   ty            /**< vector to store taylor coefficients of y */
    )
    {
       assert(scip != NULL);
@@ -961,8 +952,8 @@ private:
           * point to eval is in tx[i * (p+1) + 0], i == 0..n-1
           * direction is in tx[i * (p+1) + 1], i == 0..n-1
           */
-         Type* x = new Type[n];
-         Type* dir = new Type[n];
+         SCIP_Real* x = new SCIP_Real[n];
+         SCIP_Real* dir = new SCIP_Real[n];
          for( size_t i = 0; i < n; ++i )
          {
             x[i] = tx[i * (p+1) + 0];  /*lint !e835*/
@@ -987,13 +978,13 @@ private:
       return false;
 
 #if SCIP_DISABLED_CODE
-      Type* gradient = NULL;
-      Type* hessian = NULL;
+      SCIP_Real* gradient = NULL;
+      SCIP_Real* hessian = NULL;
 
       if( q <= 2 && 1 <= p )
-         gradient = new Type[n];
+         gradient = new SCIP_Real[n];
       if( q <= 2 && 2 <= p )
-         hessian = new Type[n*n];
+         hessian = new SCIP_Real[n*n];
 
       if( exprEvalUser(expr, x, ty[0], gradient, hessian) != SCIP_OKAY )
       {
@@ -1093,18 +1084,18 @@ private:
     *   px[i*2+1] = (px^1)_i = py[1] * grad[i]
     */
    bool reverse(
-      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
-      const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
-      CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
-      const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
+      size_t             p,                  /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<SCIP_Real>& tx,    /**< values for taylor coefficients of x */
+      const CppAD::vector<SCIP_Real>& ty,    /**< values for taylor coefficients of y */
+      CppAD::vector<SCIP_Real>& px,          /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+      const CppAD::vector<SCIP_Real>& py     /**< values for partial derivatives of g(x) w.r.t. y */
       )
    {
       assert(expr != NULL);
       assert(px.size() == tx.size());
       assert(py.size() == p+1);
 
-      // TODO implement this again and then change SCIPexprintGrad and remove usinguserexpr
+      // TODO implement this again and then remove check for userexprs in SCIPexprintGrad
       SCIPABORT();
       return false;
 
@@ -1113,13 +1104,13 @@ private:
       assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
       assert(n >= 1);
 
-      Type* x = new Type[n];
-      Type funcval;
-      Type* gradient = new Type[n];
-      Type* hessian = NULL;
+      SCIP_Real* x = new SCIP_Real[n];
+      SCIP_Real funcval;
+      SCIP_Real* gradient = new SCIP_Real[n];
+      SCIP_Real* hessian = NULL;
 
       if( p == 1 )
-         hessian = new Type[n*n];
+         hessian = new SCIP_Real[n*n];
 
       for( size_t i = 0; i < n; ++i )
          x[i] = tx[i * (p+1) + 0]; /*lint !e835*/
@@ -1162,7 +1153,7 @@ private:
 #endif
    } /*lint !e715*/
 
-   using CppAD::atomic_base<Type>::for_sparse_jac;
+   using CppAD::atomic_base<SCIP_Real>::for_sparse_jac;
 
    /** computes sparsity of jacobian during a forward sweep
     * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
@@ -1191,7 +1182,7 @@ private:
       return true;
    }
 
-   using CppAD::atomic_base<Type>::rev_sparse_jac;
+   using CppAD::atomic_base<SCIP_Real>::rev_sparse_jac;
 
    /** computes sparsity of jacobian during a reverse sweep
     * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
@@ -1217,7 +1208,7 @@ private:
       return true;
    }
 
-   using CppAD::atomic_base<Type>::rev_sparse_hes;
+   using CppAD::atomic_base<SCIP_Real>::rev_sparse_hes;
 
    /** computes sparsity of hessian during a reverse sweep
     * Assume V(x) = (g(f(x)))'' R  for a function g:R->R and a matrix R.
@@ -1430,8 +1421,8 @@ SCIP_RETCODE eval(
       vector<Type> in(buf, buf + SCIPexprGetNChildren(expr));
       vector<Type> out(1);
 
-      static atomic_userexpr<typename Type::value_type> u(scip);
-      u(in, out, (size_t)(void*)expr);
+      exprintdata->userexprs.push_back(new atomic_userexpr(scip, expr));
+      (*exprintdata->userexprs.back())(in, out);
 
       val = out[0];
    }
@@ -1535,7 +1526,6 @@ SCIP_RETCODE SCIPexprintCompile(
    {
       (*exprintdata)->need_retape = true;
       (*exprintdata)->need_retape_always = false;
-      (*exprintdata)->usinguserexpr = false;
       (*exprintdata)->hesconstant = false;
    }
 
@@ -1570,8 +1560,6 @@ SCIP_RETCODE SCIPexprintCompile(
           !SCIPisExprValue(scip, expr) )
 #endif
       {
-         (*exprintdata)->usinguserexpr = true;
-
          /* an expression for which we have no taping implemented in eval()
           * so we will try to use CppAD's atomic operand and the expression handler methods
           * however, only atomic_userexpr:forward() is implemented for p=0,1 at the moment, so we cannot do Hessians
@@ -1705,6 +1693,11 @@ SCIP_RETCODE SCIPexprintEval(
          exprintdata->x[i] = varvals[idx];  /* need this for a following grad or hessian eval with new_x = false */
       }
 
+      // delete old atomic_userexprs before we start collecting new ones
+      for( auto& ue : exprintdata->userexprs )
+         delete ue;
+      exprintdata->userexprs.clear();
+
       CppAD::Independent(exprintdata->X);
 
       SCIP_CALL( eval(scip, expr, exprintdata, exprintdata->X, exprintdata->Y[0]) );
@@ -1768,7 +1761,7 @@ SCIP_RETCODE SCIPexprintGrad(
       return SCIP_OKAY;
 
    vector<double> jac;
-   if( !exprintdata->usinguserexpr )
+   if( exprintdata->userexprs.empty() )
       jac = exprintdata->f.Jacobian(exprintdata->x);
    else
    {
