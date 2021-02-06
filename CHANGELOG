@@ -62,6 +62,8 @@ Fixed bugs
 - Safeguard some API methods for querying solving statistics against segmentation faults after SCIPpresolve()
 - Fixed unfreed solution in concurrent solving
 - Make sure that logicor constraints are enforced/separated if genlogicor is true in cons_indicator.
+  Thus, do not change constraints/logicor/sepafreq anymore, but output warning.
+
 
 Miscellaneous
 -------------

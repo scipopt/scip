@@ -5264,7 +5264,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          int logicorsepafreq;
          int sepafreq;
 
-         /* If we generate logicor constraints, make sure that we separate them with the same frequency */
+         /* If we generate logicor constraints, but the separation frequency is not 1, output warning */
          logicorconshdlr = SCIPfindConshdlr(scip, "logicor");
          if ( logicorconshdlr == NULL )
          {
@@ -5273,10 +5273,9 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          }
          logicorsepafreq = SCIPconshdlrGetSepaFreq(logicorconshdlr);
          sepafreq = SCIPconshdlrGetSepaFreq(conshdlr);
-         if ( sepafreq != -1 && ((logicorsepafreq == 0 && sepafreq > 0) || sepafreq < logicorsepafreq) )
+         if ( (sepafreq != -1 || conshdlrdata->enforcecuts) && logicorsepafreq != 1 )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Set sepafreq of logicor constraint handler to %d.\n", sepafreq);
-            SCIP_CALL( SCIPsetIntParam(scip, "constraints/logicor/sepafreq", sepafreq) );
+            SCIPwarningMessage(scip, "For better performance set parameter 'constraints/logicor/sepafreq' to 1 if 'constraints/included/genlogicor' is true.\n", sepafreq);
          }
       }
    }
