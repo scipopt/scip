@@ -1646,6 +1646,9 @@ SCIP_RETCODE extreduce_deleteEdges(
    //   printf("sepanelims=%d \n", sepanelims);
       *nelims += sepanelims;
       graph_mark(graph);
+
+      if( sepanelims > 0 && extperma->solIsValid )
+         extperma->solIsValid = solstp_isUnreduced(scip, graph, result);
    }
 
    if( extperma->mode == extred_full && !graph_pc_isPc(graph) )
