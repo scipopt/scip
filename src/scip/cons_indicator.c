@@ -416,7 +416,7 @@ enum SCIP_enfosepatype
    SCIP_TYPE_ENFORELAX   = 2,                /**< enforce relaxation solution */
    SCIP_TYPE_SEPALP      = 3,                /**< separate LP */
    SCIP_TYPE_SEPARELAX   = 4,                /**< separate relaxation solution */
-   SCIP_TYPE_SEPASOL     = 5,                /**< separate relaxation solution */
+   SCIP_TYPE_SEPASOL     = 5                 /**< separate relaxation solution */
 };
 typedef enum SCIP_enfosepatype SCIP_ENFOSEPATYPE;
 
