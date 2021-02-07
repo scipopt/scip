@@ -17,6 +17,7 @@
  * @ingroup DEFPLUGINS_SEPA
  * @brief  mixing/star inequality separator
  * @author Weikun Chen
+ * @author Marc Pfetsch
  *
  * This separator generates cuts based on the mixing set
  * \f[
@@ -96,7 +97,7 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_USELOACLBOUNDS    FALSE /**< should local bounds be used? */
+#define DEFAULT_USELOCALBOUNDS    FALSE /**< should local bounds be used? */
 #define DEFAULT_ISCUTSONINTS      FALSE /**< should general/implied integer variables be used to generate cuts? */
 
 /** separator-specific data for the mixing separator */
@@ -844,7 +845,7 @@ SCIP_RETCODE SCIPincludeSepaMixing(
    /* add separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/mixing/uselocalbounds",
          "Should local bounds be used?",
-         &sepadata->uselocalbounds, TRUE, DEFAULT_USELOACLBOUNDS, NULL, NULL) );
+         &sepadata->uselocalbounds, TRUE, DEFAULT_USELOCALBOUNDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/mixing/iscutsonints",
          "Should general integer variables be used to generate cuts?",
