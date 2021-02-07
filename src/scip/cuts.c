@@ -1384,6 +1384,8 @@ SCIP_RETCODE cutTightenCoefs(
 
 /** perform activity based coefficient tightening on the given cut; returns TRUE if the cut was detected
  *  to be redundant due to activity bounds
+ *
+ *  See also cons_linear.c:consdataTightenCoefs().
  */
 SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP*                 scip,               /**< SCIP data structure */
