@@ -64,6 +64,9 @@ typedef struct reduction_solution_storage REDSOL;
 /** INTERNAL primal solution data retained during reduction loop */
 typedef struct reduction_local_solution_storage REDSOLLOCAL;
 
+/** terminal separator tree bottleneck structure */
+typedef struct terminal_separator_tree_bottleneck TBOTTLENECK;
+
 
 enum EXTRED_MODE { extred_none = 0, extred_fast = 1, extred_full = 2 };
 
@@ -151,6 +154,42 @@ typedef struct reduce_costs_reduction_parameters
    SCIP_Bool             pcmw_markroots;     /**< should terminals proven to be part of an opt. sol. be marked as such? */
    SCIP_Bool             pcmw_fastDa;        /**< run dual ascent heuristic in fast mode? */
 } RPDA;
+
+
+/** separator data needed to build component */
+typedef struct terminial_component_initializer
+{
+   SCIP_Real*            nodes_bdist;        /**< bottleneck computation distance for each node, always reset to -1.0 */
+   const int*            sepaterms;          /**< separator terminals NON OWNED */
+   int                   sourceterm;         /**< source terminal NOTE: we eliminate the associated sub-graph! */
+   int                   nsepatterms;        /**< size of separator */
+   int                   ncomponentnodes;    /**< NOTE: possibly overestimate */
+   int                   componentnumber;    /**< number of component (0,1,...)*/
+   int                   ngraphnodes;        /**< number of nodes of underlying graph, not counting degree 0 nodes */
+   int                   maxncompchecks;     /**< maximum number of components to check */
+   int                   maxsepasize;        /**< maximum allowed size of a separator */
+   SCIP_Bool             rootcompIsProcessed;/**< already processed root component? */
+} COMPBUILDER;
+
+
+#include "stpvector.h"
+
+/** (extended) terminal component */
+typedef struct terminal_separator_component
+{
+   COMPBUILDER*          builder;            /**< initializer; NON-OWNED */
+   GRAPH*                subgraph;           /**< graph for (extended) component */
+   TBOTTLENECK*          subsolbottleneck;   /**< tree bottleneck on sub-solution */
+   int*                  subsolution;        /**< primal solution for (extended) component (CONNECTED/UNKNOWN) */
+   int*                  nodemap_orgToSub;   /**< map */
+   int*                  nodemap_subToOrg;   /**< map */
+   int*                  edgemap_subToOrg;   /**< map */
+   int*                  nodes_mark;         /**< marker for nodes of component */
+   STP_Vectype(int)      bfsqueue;           /**< queue for BFS */
+   SCIP_Real             subprimalobj;
+   int                   subnnodes;
+   int                   subnedges;
+} TERMCOMP;
 
 
 

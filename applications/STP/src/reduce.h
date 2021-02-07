@@ -27,6 +27,7 @@
 
 #include "scip/scip.h"
 #include "graph.h"
+#include "mincut.h"
 #include "bidecomposition.h"
 #include "stpvector.h"
 #include "redcosts.h"
@@ -289,10 +290,26 @@ extern void             reduce_sdgraphInsertEdge(SCIP*, int, int, SCIP_Real, int
 extern SCIP_RETCODE     reduce_sdgraphMstBuild(SCIP*, const GRAPH*, SDGRAPH*);
 extern void             reduce_sdgraphMstSortCosts(SDGRAPH*);
 
+
+/* reduce_termsepa.c
+ */
+
+extern SCIP_RETCODE     reduce_termcompInit(SCIP*, const GRAPH*, COMPBUILDER*, TERMCOMP**);
+void                    reduce_termcompFree(SCIP*, TERMCOMP**);
+extern SCIP_RETCODE     reduce_termcompInitTbottleneck(SCIP*, const int*, TERMCOMP*);
+extern SCIP_RETCODE     reduce_termcompBuildSubgraph(SCIP*, GRAPH*, TERMCOMP*);
+extern SCIP_RETCODE     reduce_termcompBuildSubgraphWithSds(SCIP*, GRAPH*, EXTPERMA*, TERMCOMP*);
+extern SCIP_RETCODE     reduce_termcompChangeSubgraphToBottleneck(SCIP*, GRAPH*, TERMCOMP*, SCIP_Bool*);
+extern void             reduce_termsepaGetNextComp(SCIP*, const GRAPH*, TERMSEPAS*, COMPBUILDER*, SCIP_Bool*);
+extern SCIP_RETCODE     reduce_compbuilderInit(SCIP*, const GRAPH*, COMPBUILDER**);
+void                    reduce_compbuilderFree(SCIP*, COMPBUILDER**);
+SCIP_Real               reduce_compbuilderGetSubNodesRatio(const COMPBUILDER*);
+
+
 /* reduce_termsepada.c
  */
-extern SCIP_RETCODE     reduce_sepaDualAscentWithExperma(SCIP*, GRAPH*, EXTPERMA*, SCIP_Bool*, int*);
-extern SCIP_RETCODE     reduce_sepaDualAscent(SCIP*, GRAPH*, int*);
+extern SCIP_RETCODE     reduce_termsepaDaWithExperma(SCIP*, GRAPH*, EXTPERMA*, SCIP_Bool*, int*);
+extern SCIP_RETCODE     reduce_termsepaDa(SCIP*, GRAPH*, int*);
 
 
 #ifdef __cplusplus
