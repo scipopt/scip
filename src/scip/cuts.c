@@ -1475,13 +1475,11 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    SCIPfreeBufferArray(scip, &absvals);
 
    /* loop over the integral variables and try to tighten the coefficients; see cons_linear for more details */
-   for( i = 0; i < *cutnnz;)
+   for( i = 0; i < *cutnnz; ++i )
    {
+      /* due to sorting, we can exit if we reached a continuous variable: all further integral variables have 0 coefficents anyway */
       if( cutinds[i] >= nintegralvars )
-      {
-         ++i;
-         continue;
-      }
+         break;
 
       assert(SCIPvarIsIntegral(vars[cutinds[i]]));
 
