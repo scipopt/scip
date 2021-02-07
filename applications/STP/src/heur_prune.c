@@ -786,6 +786,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    SCIPdebugMessage("initially reduced graph: |V| = %d, |E| = %d, |T| = %d  \n", annodes, anedges, anterms);
    SCIPdebugMessage("entering prune \n\n");
 
+   prunegraph->withInexactReductions = TRUE;
    if( annodes > 0 )
    {
       /* main prune reduction loop */

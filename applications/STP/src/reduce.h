@@ -176,7 +176,7 @@ extern void    reduce_simple_dc(SCIP*, GRAPH*);
 extern SCIP_RETCODE    reduce_simple_hc(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_deleteMultiedges(SCIP*, GRAPH*);
-extern SCIP_RETCODE    reduce_contract0Edges(SCIP*, GRAPH*, SCIP_Bool);
+extern SCIP_RETCODE    reduce_contract0Edges(SCIP*, GRAPH*, int*, SCIP_Bool);
 extern SCIP_RETCODE    reduce_fixedConflicts(SCIP*, const int*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_cutEdgeTryPrune(SCIP*, int, GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
@@ -189,7 +189,7 @@ extern SCIP_RETCODE reduce_unconnectedInfeas(SCIP*, SCIP_Bool, GRAPH*, SCIP_Bool
 /* reduce_sepa.c
  */
 extern SCIP_RETCODE    reduce_articulations(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern SCIP_RETCODE    reduce_bidecomposition(SCIP*, GRAPH*, REDBASE*, SCIP_Bool*);
+extern SCIP_RETCODE    reduce_bidecomposition(SCIP*, GRAPH*, REDBASE*, int*, SCIP_Bool*);
 extern SCIP_RETCODE    reduce_nonTerminalComponents(SCIP*, const CUTNODES*, GRAPH*, SCIP_Real*, int*);
 
 

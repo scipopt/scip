@@ -717,6 +717,7 @@ SCIP_RETCODE reduce_simple_hc(
 SCIP_RETCODE reduce_contract0Edges(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
+   int*                  solnode,            /**< solution node mark or NULL */
    SCIP_Bool             savehistory         /**< save the history? */
    )
 {
@@ -750,7 +751,7 @@ SCIP_RETCODE reduce_contract0Edges(
 
             }
 
-            SCIP_CALL( graph_knot_contract(scip, g, NULL, g->tail[e], g->head[e]) );
+            SCIP_CALL( graph_knot_contract(scip, g, solnode, g->tail[e], g->head[e]) );
             count++;
          }
       }

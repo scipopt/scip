@@ -48,6 +48,8 @@ extern SCIP_RETCODE substpsolver_transferHistory(const int*, GRAPH*, SUBSTP*);
 extern SCIP_RETCODE substpsolver_solve(SCIP*, SUBSTP*, SCIP_Bool*);
 extern int          substpsolver_getNsubedges(const SUBSTP*);
 extern SCIP_RETCODE substpsolver_getSolution(SUBSTP*, int*);
+extern SCIP_RETCODE substpsolver_setMute(SUBSTP*);
+extern void         substpsolver_setProbIsIndependent(SUBSTP*);
 
 
 #ifdef __cplusplus

@@ -260,6 +260,7 @@ typedef struct
    /* Global information */
    int                   stp_type;           /**< Steiner problem variant  */
    SCIP_Bool             is_packed;          /**< graph already packed?    */
+   SCIP_Bool             withInexactReductions;
    SCIP_Bool             extended;           /**< For (R)PCSTP and (R)MWCSP: signifies whether problem is in extended
                                                  form (TRUE) or not (FALSE) */
    /* other adjacency storages */

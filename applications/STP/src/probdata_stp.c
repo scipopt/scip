@@ -388,11 +388,13 @@ SCIP_RETCODE presolveStp(
    exit(1);
 #endif
 
-#ifdef WITH_UG
-   SCIP_CALL( graph_pack(scip, graph, &packedgraph, redsol, FALSE) );
-#else
-   SCIP_CALL( graph_pack(scip, graph, &packedgraph, redsol, TRUE) );
+   {
+      int verblvl = 0;
+#ifndef WITH_UG
+      SCIPgetIntParam(scip, "display/verblevel", &verblvl);
 #endif
+      SCIP_CALL( graph_pack(scip, graph, &packedgraph, redsol, (verblvl > 0)) );
+   }
 
    graph = packedgraph;
    assert(graph);

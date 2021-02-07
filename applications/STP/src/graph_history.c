@@ -667,7 +667,7 @@ SCIP_Bool fixedPseudoAncestorsAreValid(
 
       if( hasharr[node] != 0 )
       {
-   //     printf("fail for ancestor node %d \n", node);
+         SCIPerrorMessage("fail for ancestor node %d (hashed twice) \n", node);
          isValid = FALSE;
          break;
       }
@@ -791,7 +791,7 @@ SCIP_Bool graph_valid_ancestors(
 
    SCIPfreeBufferArray(scip, &edgemark);
 
-   if( isValid )
+   if( isValid && !g->withInexactReductions )
       isValid = fixedPseudoAncestorsAreValid(scip, g);
 
    return isValid;
@@ -1605,6 +1605,9 @@ void graph_free_fixedEdgesOnly(
       SCIPfreeBlockMemory(scip, &(curr));
 
       curr = fixedcomponents->fixedges;
+
+      assert(0 && "todo should not happen");
+
    }
 }
 
@@ -1664,11 +1667,7 @@ SCIP_RETCODE graph_fixed_add(
       assert(nfixnnodes == nfixnnodes_new);
       fixedcomponents->nfixnodes = nfixnnodes_new;
 
-      /* todo the assert does not have to be true if this method is called from the prune heuristic!
-       * we should somehow check whether that is the case...maybe save the info in the graph? */
-#ifdef SCIP_DISABLED
-      assert(fixedPseudoAncestorsAreValid(scip, g));
-#endif
+      assert(g->withInexactReductions || fixedPseudoAncestorsAreValid(scip, g));
    }
 
    return SCIP_OKAY;

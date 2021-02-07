@@ -28,6 +28,7 @@
 #include "probdata_stp.h"
 #include "cons_stp.h"
 #include "reduce.h"
+#include "cons_stpcomponents.h"
 #include "heur_tm.h"
 #include "reader_stp.h"
 #include "heur_local.h"
@@ -52,6 +53,8 @@ struct sub_steiner_tree_problem
    SCIP*                 subscip;            /**< SCIP or NULL (if dynamic programming is used) */
    GRAPH*                subgraph;           /**< subgraph; OWNED! */
    int                   nsubedges;          /**< number of edges */
+   SCIP_Bool             useOutput;
+   SCIP_Bool             subprobIsIndependent;
 };
 
 
@@ -76,6 +79,8 @@ SCIP_RETCODE subscipSetupCallbacks(
    SCIP_CALL( SCIPincludeDialogStp(subscip) );
 
    SCIP_CALL( SCIPincludeConshdlrStp(subscip) );
+
+   SCIP_CALL( SCIPincludeConshdlrStpcomponents(subscip) );
 
    SCIP_CALL( SCIPStpIncludeHeurTM(subscip) );
 
@@ -103,6 +108,7 @@ SCIP_RETCODE subscipSetupCallbacks(
 static
 SCIP_RETCODE subscipSetupParameters(
    SCIP*                 scip,               /**< SCIP data structure */
+   const SUBSTP*         substp,             /**< sub-problem */
    SCIP*                 subscip             /**< sub-SCIP data structure */
    )
 {
@@ -112,21 +118,28 @@ SCIP_RETCODE subscipSetupParameters(
 
    assert(GT(timelimit, 0.0));
 
-
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable output to console */
-   //SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   /* disable output to console? */
+   if( !substp->useOutput )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   }
 
-   /* disable statistic timing inside sub SCIP */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+   if( substp->subprobIsIndependent )
+   {
+      /* disable statistic timing inside sub SCIP */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+   }
+   else
+   {
+      /* disable STP presolving */
+      SCIP_CALL( SCIPsetIntParam(subscip, "stp/reduction", 0) );
+   }
 
    /* disable expensive resolving */
    // SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-
-   /* disable STP presolving */
-   SCIP_CALL( SCIPsetIntParam(subscip, "stp/reduction", 0) );
 
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
 
@@ -141,12 +154,13 @@ SCIP_RETCODE subscipSetupParameters(
 static
 SCIP_RETCODE subscipSetup(
    SCIP*                 scip,               /**< SCIP data structure */
+   const SUBSTP*         substp,             /**< sub-problem */
    SCIP*                 subscip             /**< sub-SCIP data structure */
    )
 {
    SCIP_CALL( subscipSetupCallbacks(subscip) );
 
-   SCIP_CALL( subscipSetupParameters(scip, subscip) );
+   SCIP_CALL( subscipSetupParameters(scip, substp, subscip) );
 
    return SCIP_OKAY;
 }
@@ -162,13 +176,14 @@ SCIP_RETCODE subscipSolve(
 {
    SCIP* subscip = substp->subscip;
    GRAPH* subgraph = substp->subgraph;
+   const SCIP_Bool isSubProb = !substp->subprobIsIndependent;
 
    assert(subscip);
    assert(subgraph);
 
    *success = TRUE;
 
-   SCIP_CALL( SCIPprobdataCreateFromGraph(subscip, 0.0, "subproblem", TRUE, subgraph) );
+   SCIP_CALL( SCIPprobdataCreateFromGraph(subscip, 0.0, "subproblem", isSubProb, subgraph) );
    SCIP_CALL( SCIPsolve(subscip) );
 
    if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
@@ -255,12 +270,14 @@ SCIP_RETCODE substpsolver_init(
    sub->subscip = NULL;
    sub->subgraph = subgraph;
    sub->nsubedges = subgraph->edges;
+   sub->useOutput = TRUE;
+   sub->subprobIsIndependent = FALSE;
 
    /* todo check whether to do dynamic programming or branch-and-cut */
    if( 1 )
    {
       SCIP_CALL( SCIPcreate(&(sub->subscip)) );
-      SCIP_CALL( subscipSetup(scip, sub->subscip) );
+      SCIP_CALL( subscipSetup(scip, sub, sub->subscip) );
    }
 
    return SCIP_OKAY;
@@ -358,4 +375,31 @@ SCIP_RETCODE substpsolver_getSolution(
    }
 
    return SCIP_OKAY;
+}
+
+
+/** sets to no output */
+SCIP_RETCODE substpsolver_setMute(
+   SUBSTP*               substp              /**< sub-problem */
+)
+{
+   assert(substp);
+   substp->useOutput = FALSE;
+
+   if( substp->subscip )
+   {
+      SCIP_CALL( SCIPsetIntParam(substp->subscip, "display/verblevel", 0) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** sets to independent problem */
+void substpsolver_setProbIsIndependent(
+   SUBSTP*               substp              /**< sub-problem */
+)
+{
+   assert(substp);
+   substp->subprobIsIndependent = TRUE;
 }

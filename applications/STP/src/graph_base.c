@@ -634,6 +634,7 @@ SCIP_RETCODE graph_init(
    p->extended = FALSE;
    p->source = -1;
    p->is_packed = FALSE;
+   p->withInexactReductions = FALSE;
    p->cost_org_pc = NULL;
    p->contracttrace = NULL;
 
@@ -983,6 +984,7 @@ SCIP_RETCODE graph_copyData(
    g_copy->extended = g_org->extended;
    g_copy->budget = g_org->budget;
    g_copy->is_packed = g_org->is_packed;
+   g_copy->withInexactReductions = g_org->withInexactReductions;
 
    BMScopyMemoryArray(g_copy->term, g_org->term, ksize);
    BMScopyMemoryArray(g_copy->mark, g_org->mark, ksize);

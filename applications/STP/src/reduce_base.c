@@ -606,7 +606,7 @@ SCIP_RETCODE redLoopInnerStp(
       if( bidecompparams && bidecompparams->depth < bidecompparams->maxdepth )
       {
          SCIPdebugMessage("go with depth %d \n", bidecompparams->depth);
-         SCIP_CALL( reduce_bidecomposition(scip, g, redbase, wasDecomposed) );
+         SCIP_CALL( reduce_bidecomposition(scip, g, redbase, redbaseGetSolnode(redsollocal, redbase), wasDecomposed) );
          SCIPdebugMessage("wasDecomposed=%d \n", *wasDecomposed);
 
          if( *wasDecomposed )
@@ -1982,7 +1982,7 @@ SCIP_RETCODE redLoopStp(
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   SCIP_CALL( reduce_contract0Edges(scip, g, TRUE) );
+   SCIP_CALL( reduce_contract0Edges(scip, g, redbaseGetSolnode(redsollocal, redbase), TRUE) );
    SCIP_CALL( reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &dummy, NULL) );
 
    /* reduction loop */

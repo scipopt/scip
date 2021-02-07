@@ -26,21 +26,30 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 //#define SCIP_DEBUG
-
+//#define BENCH_SEPA_PARTIAL
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include "graph.h"
 #include "reduce.h"
+#include "substpsolver.h"
 #include "bidecomposition.h"
 #include "portab.h"
 #include "stpvector.h"
 #include "scip/scip.h"
 
+#ifdef BENCH_SEPA_PARTIAL
+#include "time.h"
+#endif
+
 #define BIDECOMP_MINRED_MULTIPLIER 2
-#define BIDECOMP_MINCOMPRATIO_FIRST     0.95
-#define BIDECOMP_MINCOMPRATIO           0.80
+#define BIDECOMP_MINMAXCOMPRATIO_FIRST     0.95
+#define BIDECOMP_MINMAXCOMPRATIO           0.80
+#define BIDECOMP_MINMAXCOMPRATIO_PARTIAL   0.99
+#define BIDECOMP_MAXCOMPRATIO_PARTIAL      0.05
+#define BIDECOMP_MINNODES                  10
+
 //#define CUTTREE_PRINT_STATISTICS
 
 
@@ -628,6 +637,153 @@ SCIP_RETCODE decomposeReduceSub(
 }
 
 
+/** fixes original edges */
+static
+SCIP_RETCODE decomposeExactFixSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const SUBINOUT*       subinout,           /**< helper for problem mapping */
+   SUBSTP*               substp,             /**< sub-problem */
+   GRAPH*                orggraph,           /**< original graph */
+   REDBASE*              redbase             /**< reduction stuff */
+   )
+{
+   SCIP_Real* offset = reduce_solGetOffsetPointer(redbase->redsol);
+   int* subedges_sol;
+   const int* const subedgesToOrg = graph_subinoutGetSubToOrgEdgeMap(subinout);
+   const int nsubedges = substpsolver_getNsubedges(substp);
+
+   assert(nsubedges > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subedges_sol, nsubedges) );
+   SCIP_CALL( substpsolver_getSolution(substp, subedges_sol) );
+
+   for( int i = 0; i < nsubedges; i += 2 )
+   {
+      const int orgedge = subedgesToOrg[i];
+      assert(graph_edge_isInRange(orggraph, orgedge));
+
+      if( subedges_sol[i] == CONNECT || subedges_sol[i + 1] == CONNECT  )
+      {
+         SCIPdebugMessage("fix edge %d \n", orgedge);
+
+         *offset += orggraph->cost[orgedge];
+
+         /* NOTE: edge will be automatically contracted later; we avoid trouble with other
+          * connected components markers in this way */
+         orggraph->cost[orgedge] = 0.0;
+         orggraph->cost[flipedge(orgedge)] = 0.0;
+      }
+      else
+      {
+         SCIPdebugMessage("delete edge %d \n", orgedge);
+
+         assert(subedges_sol[i] == UNKNOWN && subedges_sol[i + 1] == UNKNOWN);
+         graph_edge_del(scip, orggraph, orgedge, TRUE);
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &subedges_sol);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** solves subproblems */
+static
+SCIP_RETCODE decomposeExactSubDoIt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   GRAPH*                orggraph,           /**< graph data structure */
+   GRAPH*                subgraph,           /**< sub-graph */
+   REDBASE*              redbase             /**< reduction stuff */
+   )
+{
+   SUBINOUT* subinout = bidecomp->subinout;
+   SUBSTP* substp;
+   SCIP_Bool success;
+
+   /* NOTE: subgraph will be moved into substp! */
+   SCIP_CALL( substpsolver_init(scip, subgraph, &substp) );
+   SCIP_CALL( substpsolver_transferHistory(graph_subinoutGetSubToOrgEdgeMap(subinout),
+      orggraph, substp) );
+
+   SCIP_CALL( substpsolver_setMute(substp) );
+   substpsolver_setProbIsIndependent(substp);
+
+#ifdef SCIP_DEBUG
+   printf("subgraph: ");
+   graph_printInfo(subgraph);
+#endif
+
+   SCIP_CALL( substpsolver_solve(scip, substp, &success) );
+   assert(success);
+
+   /* fix solution in original graph */
+   SCIP_CALL( decomposeExactFixSol(scip, subinout, substp, orggraph, redbase) );
+
+   graph_subinoutClean(scip, subinout);
+   substpsolver_free(scip, &substp);
+
+   return SCIP_OKAY;
+}
+
+
+/** tries to solve subproblem */
+static
+SCIP_RETCODE decomposeExactSubTry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   int                   compindex,          /**< component index */
+   GRAPH*                g,                  /**< graph data structure */
+   REDBASE*              redbase             /**< reduction stuff */
+   )
+{
+   GRAPH* subgraph;
+   SUBINOUT* subinout = bidecomp->subinout;
+   const SCIP_Real nodesratio = bidecomposition_getCompNodeRatio(bidecomp, compindex);
+   int subroot;
+
+   assert(redbase->bidecompparams);
+
+   SCIPdebugMessage("nodes ratio of component %d: %f \n", compindex, nodesratio);
+
+   if( nodesratio > BIDECOMP_MAXCOMPRATIO_PARTIAL )
+   {
+      SCIPdebugMessage("component is too large, returning \n");
+      return SCIP_OKAY;
+   }
+
+   if( bidecomposition_componentIsTrivial(bidecomp, compindex) )
+   {
+      SCIPdebugMessage("component is trivial, returning \n");
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("(depth %d) solve component %d to optimality \n", redbase->bidecompparams->depth, compindex);
+
+   bidecomposition_markSub(bidecomp, compindex, g);
+   SCIP_CALL( graph_subgraphExtract(scip, g, subinout, &subgraph) );
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("original nodes of connected components: \n");
+
+   for( int i = 0; i < orggraph->knots; i++ )
+   {
+      if( orggraph->mark[i] )
+         graph_knot_printInfo(orggraph, i);
+   }
+   #endif
+
+   SCIP_CALL( bidecomposition_getMarkedSubRoot(scip, bidecomp, g, subgraph, &subroot) );
+   subgraph->source = subroot;
+
+   SCIP_CALL( decomposeExactSubDoIt(scip, bidecomp, g, subgraph, redbase) );
+
+   return SCIP_OKAY;
+}
+
+
 /** is promising? */
 static
 SCIP_Bool decomposeIsPromising(
@@ -636,31 +792,125 @@ SCIP_Bool decomposeIsPromising(
    const BIDECOMP*       bidecomp
    )
 {
-   const SCIP_Real mincompratio = bidecompparams->depth == 0 ? BIDECOMP_MINCOMPRATIO_FIRST : BIDECOMP_MINCOMPRATIO;
+   const SCIP_Real mincompratio = bidecompparams->depth == 0 ? BIDECOMP_MINMAXCOMPRATIO_FIRST : BIDECOMP_MINMAXCOMPRATIO;
    const SCIP_Real maxratio = bidecomposition_getMaxcompNodeRatio(bidecomp);
 
    assert(GT(maxratio, 0.0));
 
-   // todo
-   if( bidecompparams->depth > 1 && g->knots < 10 )
+   if( bidecompparams->depth > 1 && g->knots < BIDECOMP_MINNODES )
       return FALSE;
 
    return (maxratio < mincompratio);
 }
 
 
-/** solves biconnected components separately */
+/** is decomposition with (exact) solution of small components promising? */
+static
+SCIP_Bool decomposePartialIsPromising(
+   const GRAPH*          g,                  /**< graph data structure */
+   const REDBASE*        redbase,            /**< reduction stuff */
+   const BIDECOMP*       bidecomp
+   )
+{
+   const BIDECPARAMS* const bidecompparams = redbase->bidecompparams;
+   SCIP_Real maxratio;
+
+   /* NOTE: we don't want to solve exactly in recombination heuristic etc. */
+   if( !redbase->redparameters->userec )
+      return FALSE;
+
+   maxratio = bidecomposition_getMaxcompNodeRatio(bidecomp);
+   assert(GT(maxratio, 0.0));
+
+   if( bidecompparams->depth > 1 && g->knots < BIDECOMP_MINNODES )
+      return FALSE;
+
+   return (maxratio < BIDECOMP_MINMAXCOMPRATIO_PARTIAL);
+}
+
+
+/** reduced biconnected components separately */
+static
+SCIP_RETCODE decomposeReduce(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   BIDECOMP*             bidecomp,
+   REDBASE*              redbase             /**< reduction stuff */
+   )
+{
+   REDSOL* redsol = redbase->redsol;
+
+   SCIP_CALL( bidecomposition_initSubInOut(scip, g, bidecomp) );
+   SCIP_CALL( reduce_solLevelAdd(scip, g, redsol) );
+   redbase->bidecompparams->depth++;
+
+   /* reduce each biconnected component individually */
+   for( int i = 0; i < bidecomp->nbicomps; i++ )
+   {
+      SCIP_CALL( decomposeReduceSub(scip, bidecomp, i, g, redbase) );
+   }
+
+   redbase->bidecompparams->depth--;
+   /* NOTE: also removes level */
+   reduce_solLevelTopFinalize(scip, g, redsol);
+
+   return SCIP_OKAY;
+}
+
+
+/** solves smaller biconnected components to optimality */
+static
+SCIP_RETCODE decomposePartialExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   BIDECOMP*             bidecomp,
+   int*                  solnode,            /**< solution nodes or NULL */
+   REDBASE*              redbase             /**< reduction stuff */
+   )
+{
+#ifdef BENCH_SEPA_PARTIAL
+   static double totalTime = 0.0;
+   const double startTime = (double) clock() / (double) CLOCKS_PER_SEC;
+   double endTime;
+#endif
+
+   SCIP_CALL( bidecomposition_initSubInOut(scip, g, bidecomp) );
+   SCIP_CALL( graph_subinoutActivateEdgeMap(g, bidecomp->subinout) );
+   graph_subinoutActivateNewHistory(bidecomp->subinout);
+
+   SCIPdebugMessage("solving problem by partial exact decomposition at depth %d (%d components) \n",
+         redbase->bidecompparams->depth, bidecomp->nbicomps);
+
+   /* solve small biconnected component individually */
+   for( int i = 0; i < bidecomp->nbicomps; i++ )
+   {
+      SCIP_CALL( decomposeExactSubTry(scip, bidecomp, i, g, redbase) );
+   }
+
+   /* NOTE: solution edges have been fixed to 0 before */
+   SCIP_CALL( reduce_contract0Edges(scip, g, solnode, TRUE) );
+
+#ifdef BENCH_SEPA_PARTIAL
+   endTime = (double) clock() / (double) CLOCKS_PER_SEC;
+   totalTime += endTime - startTime;
+   printf("TIME FOR PARTIAL EXACT DECOMPISITION: %f (total: %f) \n", endTime - startTime, totalTime);
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** tries to solve or reduce biconnected components separately */
 static
 SCIP_RETCODE decomposeExec(
    SCIP*                 scip,               /**< SCIP data structure */
    const CUTNODES*       cutnodes,           /**< cut nodes */
    GRAPH*                g,                  /**< graph data structure */
    REDBASE*              redbase,            /**< reduction stuff */
+   int*                  solnode,            /**< solution nodes or NULL */
    SCIP_Bool*            wasDecomposed       /**< performed recursive reduction? */
-
    )
 {
-   REDSOL* redsol = redbase->redsol;
    BIDECOMP* bidecomp;
 
    /* NOTE: does not work because we do node contractions when reinserting the subgraph,
@@ -675,25 +925,15 @@ SCIP_RETCODE decomposeExec(
 
    if( decomposeIsPromising(g, redbase->bidecompparams, bidecomp) )
    {
-      SCIP_CALL( bidecomposition_initSubInOut(scip, g, bidecomp) );
-      SCIP_CALL( reduce_solLevelAdd(scip, g, redsol) );
-      redbase->bidecompparams->depth++;
-
-      /* reduce each biconnected component individually */
-      for( int i = 0; i < bidecomp->nbicomps; i++ )
-      {
-         SCIP_CALL( decomposeReduceSub(scip, bidecomp, i, g, redbase) );
-      }
-
+      SCIP_CALL( decomposeReduce(scip, g, bidecomp, redbase) );
       *wasDecomposed = TRUE;
-
-      redbase->bidecompparams->depth--;
-      /* NOTE: also removes level */
-      reduce_solLevelTopFinalize(scip, g, redsol);
+   }
+   else if( decomposePartialIsPromising(g, redbase, bidecomp) )
+   {
+      SCIP_CALL( decomposePartialExact(scip, g, bidecomp, solnode, redbase) );
    }
 
    bidecomposition_free(scip, &bidecomp);
-
    assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
@@ -745,6 +985,7 @@ SCIP_RETCODE reduce_bidecomposition(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    REDBASE*              redbase,            /**< reduction base */
+   int*                  solnode,            /**< solution nodes or NULL */
    SCIP_Bool*            wasDecomposed       /**< performed recursive reduction? */
    )
 {
@@ -776,7 +1017,7 @@ SCIP_RETCODE reduce_bidecomposition(
       SCIP_CALL( reduce_nonTerminalComponents(scip, cutnodes, g, reduce_solGetOffsetPointer(redbase->redsol), &dummy) );
 
       /* decompose and reduce recursively? */
-      SCIP_CALL( decomposeExec(scip, cutnodes, g, redbase, wasDecomposed) );
+      SCIP_CALL( decomposeExec(scip, cutnodes, g, redbase, solnode, wasDecomposed) );
    }
 
    bidecomposition_cutnodesFree(scip, &cutnodes);

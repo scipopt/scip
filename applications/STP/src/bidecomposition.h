@@ -79,6 +79,7 @@ extern void         bidecomposition_markSub(const BIDECOMP*, int, GRAPH*);
 extern SCIP_Bool    bidecomposition_componentIsTrivial(const BIDECOMP*, int);
 extern SCIP_Bool    bidecomposition_isPossible(const GRAPH*);
 extern SCIP_RETCODE bidecomposition_getMarkedSubRoot(SCIP*, const BIDECOMP*, const GRAPH*, const GRAPH*, int*);
+extern SCIP_Real    bidecomposition_getCompNodeRatio(const BIDECOMP*, int);
 extern SCIP_Real    bidecomposition_getMaxcompNodeRatio(const BIDECOMP*);
 
 

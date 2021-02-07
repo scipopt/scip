@@ -712,6 +712,7 @@ SCIP_RETCODE graph_subgraphExtract(
    SCIP_CALL( extractSubgraphBuild(scip, orggraph, subinout, subgraph) );
 
    borderNodesCollect(scip, orggraph, *subgraph, subinout);
+   (*subgraph)->withInexactReductions = orggraph->withInexactReductions;
 
    return SCIP_OKAY;
 }
@@ -929,7 +930,9 @@ SCIP_RETCODE graph_subgraphCompleteNewHistory(
    moveFixedEdges = FALSE;
    SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, moveFixedEdges, subgraph) );
    /* NOTE we want to have only the fixed pseudo-ancestor, or we get into trouble with the retransformation */
-   graph_free_fixedEdgesOnly(scip, subgraph);
+
+   if( orggraph->fixedcomponents )
+      graph_free_fixedEdgesOnly(scip, subgraph);
 
    ancestors = subgraph->ancestors;
    assert(ancestors);

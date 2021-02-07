@@ -760,12 +760,39 @@ SCIP_Bool bidecomposition_isPossible(
    return (nnodes_real < 100000);
 }
 
+
+/** returns nodes ratio of component and the remaining graph */
+SCIP_Real bidecomposition_getCompNodeRatio(
+   const BIDECOMP*       bidecomp,
+   int                   compindex           /**< component index */
+   )
+{
+   const int* const starts = bidecomp->starts;
+   SCIP_Real ratio;
+   const int ncomps = bidecomp->nbicomps;
+   const int nallnodes = starts[ncomps] - starts[0];
+   int compnnodes;
+
+   assert(bidecomp);
+   assert(0 <= compindex && compindex < ncomps);
+   assert(nallnodes > 0);
+
+   compnnodes = starts[compindex + 1] - starts[compindex];
+   ratio = (SCIP_Real) compnnodes / (SCIP_Real) nallnodes;
+
+   SCIPdebugMessage("component nodes ratio: %f \n", ratio);
+   assert(GE(ratio, 0.0));
+
+   return (ratio);
+}
+
+
 /** returns ratio of nodes of maximum component and the remaining graph */
 SCIP_Real bidecomposition_getMaxcompNodeRatio(
    const BIDECOMP*       bidecomp
    )
 {
-   const int* starts = bidecomp->starts;
+   const int* const starts = bidecomp->starts;
    SCIP_Real maxratio;
    const int ncomps = bidecomp->nbicomps;
    const int ncompnodes = starts[ncomps] - starts[0];
