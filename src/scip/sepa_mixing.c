@@ -304,8 +304,14 @@ SCIP_RETCODE separateCuts(
       if( SCIPvarGetProbindex(var) < 0 )
          continue;
 
-      lb = SCIPvarGetLbGlobal(var);
-      ub = SCIPvarGetUbGlobal(var);
+      nvlb = SCIPvarGetNVlbs(var);
+      nvub = SCIPvarGetNVubs(var);
+
+      if ( nvub == 0 && nvub == 0 )
+         continue;
+
+      if( nvlb == 0 )
+         goto VUB;
 
       /* skip lower bound if the LP solution value is equal to the upper bound of the continuous variable */
       varsolval = SCIPgetSolVal(scip, sol, var);
@@ -313,10 +319,6 @@ SCIP_RETCODE separateCuts(
          goto VUB;
 
       /* get variable lower variable bounds information */
-      nvlb = SCIPvarGetNVlbs(var);
-      if( nvlb == 0 )
-         goto VUB;
-
       vlbvars = SCIPvarGetVlbVars(var);
       vlbcoefs = SCIPvarGetVlbCoefs(var);
       vlbconsts = SCIPvarGetVlbConstants(var);
@@ -325,6 +327,7 @@ SCIP_RETCODE separateCuts(
       maxabsind = -1;
       maxabssign = 0;
 
+      lb = SCIPvarGetLbGlobal(var);
       if( sepadata->uselocalbounds && SCIPisLT(scip, lb, SCIPvarGetLbLocal(var)) )
       {
          /* this is a lcoal cut */
@@ -462,11 +465,10 @@ SCIP_RETCODE separateCuts(
       }
 
    VUB:
-      /* get variable upper bounds information */
-      nvub = SCIPvarGetNVubs(var);
       if( nvub == 0 )
          goto CONFLICT;
 
+      /* get variable upper bounds information */
       vubvars = SCIPvarGetVubVars(var);
       vubcoefs = SCIPvarGetVubCoefs(var);
       vubconsts = SCIPvarGetVubConstants(var);
@@ -479,6 +481,7 @@ SCIP_RETCODE separateCuts(
       if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), varsolval) )
          goto CONFLICT;
 
+      ub = SCIPvarGetUbGlobal(var);
       if( sepadata->uselocalbounds && SCIPisGT(scip, ub, SCIPvarGetUbLocal(var)) )
       {
          /* this is a lcoal cut */
