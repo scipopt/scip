@@ -10,6 +10,8 @@ Features
   are now deleted when during a restart.
 - New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
   which is able to handle symmetries of arbitrary kinds of variables.
+- The symmetry code can now heuristically search for orbitopes that do not completely handle
+  a symmetry component and add certain Schreier Sims cuts to such components.
 - The LPIs for Gurobi and Mosek are thread-safe now.
 - The complete code is now thread-safe by default.
 
@@ -24,6 +26,8 @@ Performance improvements
 
 Examples and applications
 -------------------------
+
+- Add c++ Sudoku example
 
 Interface changes
 -----------------
@@ -40,6 +44,13 @@ Interface changes
 - SCIPcomputeOrbitsFilterSym() and SCIPcomputeComponentsSym(): Type of argument componentblocked
   changed from SCIP_Shortbool* to unsigned*.
 - removed SCIPsetParam()
+- SCIPcreateConsOrbitope() and SCIPcreateConsBasicOrbitope() have two new arguments "usedynamicprop"
+  and "mayinteract" to encode whether a dynamic reordering of the orbitope rows shall be used in
+  full orbitope propagation and whether the orbitope might interact with other symmetry handling
+  methods, respectively.
+- internal function SCIPgetPropertiesPerm() has been replaced by SCIPisInvolutionPerm()
+- internal function SCIPgenerateOrbitopeVarsMatrix() has new arguments "storelexorder", "lexorder",
+  "nvarsorder", "maxnvarsorder" to compute and store the lexicographic order defined by an orbitope
 - renamed SCIPcomputeArraysIntersection() and SCIPcomputeArraysSetminus() to
   SCIPcomputeArraysIntersectionInt() and SCIPcomputeArraysSetminusInt(), respectively, and changed
   their return type from SCIP_RETCODE (which _always_ was SCIP_OKAY) to void
@@ -55,6 +66,7 @@ Interface changes
     SCIPparamSetDefaultString()
 - new internal function SCIPisPackingPartitioningOrbitope() to check whether an orbitope is of
   packing or partitioning type
+- new internal function SCIPcomputeOrbitVar() to compute the symmetry orbit of a variable
 - added SCIPcalcFibHash(SCIP_Real) to hash a floating-point value to an unsigned integer
 - added SCIPcomputeArraysIntersectionPtr() to compute intersection of two sorted arrays of pointers
 
@@ -67,7 +79,8 @@ Interface changes
 
 ### Changed parameters
 
-- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 5
+- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 7
+- deleted parameter "constraints/orbitope/usedynamicprop"
 
 ### New parameters
 
@@ -86,6 +99,17 @@ Interface changes
 - new parameter "propagating/symmetry/sstaddcuts" to control whether SST cuts are added
 - new parameter "propagating/symmetry/sstmixedcomponents" to control whether SST cuts are added
   if a symmetry component contains variables of different types
+- new parameter "propagating/symmetry/detectsubgroups" to search for orbitopes defined by subgroups
+- new parameter "propagating/symmetry/addweaksbcs" to add Schreier Sims cuts for a single
+  variable orbit in case an orbitope subgroup is detected
+- new parameter "propagating/symmetry/addstrongsbcs" to add symretope facets for a single
+  variable orbit on which the symmetry group acts like a symmetric group
+- new parameter "propagating/symmetry/maxnconsssubgroup" to control up to which number of
+  constraints subgroups are detected
+- new parameter "propagating/symmetry/preferlessrows" to control whether orbitopes with
+  smallest number of rows shall be computed by the subgroup detection heuristic
+- new parameter "propagating/symmetry/usedynamicprop" to control if rows of full orbitope
+  shall be ordered dynamically in propagation
 
 
 
@@ -129,7 +153,77 @@ Known bugs
 
 @page RN70 Release notes for SCIP 7.0
 
-@section RN000 SCIP 7.0.2
+@section RN703 SCIP 7.0.3
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+- Compilation will now also work in a raw tarball of the scip git repository
+
+### Cmake
+
+- Make find_package more verbose and require packages to be found. Now enabled packages that are not found result in an error.
+
+### Makefile
+
+Fixed bugs
+----------
+
+- Fixed numerical bug by creating and checking the empty solution when problem vanishes in presolving.
+- Replace wrong usage of CMAKE_BINARY_DIR by PROJECT_BINARY_DIR in CMake system
+- Fixed lpi_glop to use absl flag instead of GFlags
+- Fixed invalid initialization of limits/softtime parameter in cons_components
+- Fixed MIN macro not defined in some cases.
+- Safeguard some API methods for querying solving statistics against segmentation faults after SCIPpresolve()
+- Fixed unfreed solution in concurrent solving
+
+Miscellaneous
+-------------
+
+- Added workaround for bug in MSVS 2019 when compiling CppAD source.
+
+Known bugs
+----------
+
+@section RN702 SCIP 7.0.2
 *************************
 
 Features
@@ -146,6 +240,8 @@ Performance improvements
 
 Examples and applications
 -------------------------
+
+- Add c++ Sudoku example
 
 Interface changes
 -----------------
@@ -208,6 +304,9 @@ Fixed bugs
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
+- Fixed issues with scip statistics
+- Fixed issue with multi-aggregated variables
+- Fixed issue in with buffer memory in cons_cumulative
 
 Miscellaneous
 -------------

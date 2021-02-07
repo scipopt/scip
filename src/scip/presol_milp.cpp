@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -492,6 +492,30 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          assert(fixed);
          break;
       }
+#if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
+#else
+      case ReductionType::kFixedInfCol: {
+          SCIP_Bool infeas;
+          SCIP_Bool fixed;
+          SCIP_Real value = SCIPinfinity(scip);
+
+          int column = res.postsolve.indices[first];
+          bool is_negative_infinity = res.postsolve.values[first] < 0;
+          SCIP_VAR* column_variable = SCIPmatrixGetVar(matrix, column);
+
+          if( is_negative_infinity )
+          {
+              value = -SCIPinfinity(scip);
+          }
+
+          SCIP_CALL( SCIPfixVar(scip, column_variable, value, &infeas, &fixed) );
+          *nfixedvars += 1;
+
+          assert(!infeas);
+          assert(fixed);
+          break;
+      }
+#endif
       case ReductionType::kSubstitutedCol:
       {
          int col = res.postsolve.indices[first];
