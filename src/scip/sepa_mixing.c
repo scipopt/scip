@@ -793,7 +793,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecSolMixing)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-   ncalls = SCIPsepaGetNCallsAtNode(sepa);
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
@@ -802,12 +801,14 @@ SCIP_DECL_SEPAEXECSOL(sepaExecSolMixing)
       return SCIP_OKAY;
 
    /* only call the mixing cut separator a given number of times at each node */
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
    if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
    /* gets numver of active problem variables and number of binary variables */
-   SCIP_CALL( SCIPgetVarsData(scip, NULL, &nvars, &nbinvars, NULL, NULL, NULL) );
+   nvars = SCIPgetNVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
 
    /* if all the active problem variables are binary, stop */
    if( nvars == nbinvars )
