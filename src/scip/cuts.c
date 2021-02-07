@@ -643,6 +643,8 @@ SCIP_Bool chgQuadCoeffWithBound(
 
 /** scales the cut and then tightens the coefficients of the given cut based on the maximal activity;
  *  see cons_linear.c consdataTightenCoefs() for details; the cut is given in a semi-sparse quad precision array;
+ *
+ *  This is the quad precision version of cutTightenCoefs() below.
  */
 static
 SCIP_RETCODE cutTightenCoefsQuad(
@@ -672,7 +674,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
    assert(redundant != NULL);
    *redundant = FALSE;
 
-   /* compute the maximum activity and maximum absolute coefficient values for all and for integral variables in the cut */
+   /* compute maximal activity and maximal absolute coefficient values for all and for integral variables in the cut */
    for( i = 0; i < *cutnnz; ++i )
    {
       SCIP_Real QUAD(val);
@@ -698,7 +700,6 @@ SCIP_RETCODE cutTightenCoefsQuad(
          }
 
          SCIPquadprecProdQD(val, val, lb);
-
          SCIPquadprecSumQQ(maxacttmp, maxacttmp, val);
       }
       else
@@ -717,7 +718,6 @@ SCIP_RETCODE cutTightenCoefsQuad(
          }
 
          SCIPquadprecProdQD(val, val, ub);
-
          SCIPquadprecSumQQ(maxacttmp, maxacttmp, val);
       }
    }
@@ -942,7 +942,6 @@ SCIP_RETCODE cutTightenCoefsQuad(
             SCIPquadprecProdQD(delta, delta, lb);
 
             SCIPquadprecSumQQ(tmp, delta, *cutrhs);
-
             SCIPdebugPrintf("tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
                QUAD_TO_DBL(val), QUAD_TO_DBL(coef), QUAD_TO_DBL(*cutrhs), QUAD_TO_DBL(tmp), lb,
                cutislocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]));
@@ -990,7 +989,6 @@ SCIP_RETCODE cutTightenCoefsQuad(
             SCIPquadprecProdQD(delta, delta, ub);
 
             SCIPquadprecSumQQ(tmp, delta, *cutrhs);
-
             SCIPdebugPrintf("tightened coefficient from %g to %g; rhs changed from %g to %g; the bounds are [%g,%g]\n",
                QUAD_TO_DBL(val), QUAD_TO_DBL(coef), QUAD_TO_DBL(*cutrhs), QUAD_TO_DBL(tmp),
                cutislocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]), ub);
@@ -998,6 +996,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
             QUAD_ASSIGN_Q(*cutrhs, tmp);
 
             assert(SCIPisGE(scip, QUAD_TO_DBL(coef), 0.0));
+
             if( SCIPisPositive(scip, QUAD_TO_DBL(coef)) )
             {
                SCIPquadprecSumQQ(maxacttmp, maxacttmp, delta);
@@ -1054,6 +1053,7 @@ SCIP_RETCODE cutTightenCoefs(
    assert(redundant != NULL);
    *redundant = FALSE;
 
+   /* compute maximal activity and maximal absolute coefficient values for all and for integral variables in the cut */
    for( i = 0; i < *cutnnz; ++i )
    {
       SCIP_Real val;
@@ -1122,14 +1122,11 @@ SCIP_RETCODE cutTightenCoefs(
 
       for( i = 0; i < *cutnnz; ++i )
       {
-         SCIP_Real scaleval;
          SCIP_Real val;
 
-         val = cutcoefs[cutinds[i]];
+         val = equiscale * cutcoefs[cutinds[i]];
 
-         scaleval = val * equiscale;
-
-         intcoeffs[i] = scaleval;
+         intcoeffs[i] = val;
       }
 
       SCIP_CALL( SCIPcalcIntegralScalar(intcoeffs, *cutnnz, -SCIPsumepsilon(scip), SCIPepsilon(scip),
