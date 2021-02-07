@@ -1465,7 +1465,7 @@ SCIP_Bool SCIPcutsTightenCoefficients(
       goto TERMINATE;
    }
 
-   /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */
+   /* terminate, because coefficient tightening cannot be performed; also excludes the case in which no integral variable is present */
    if( SCIPisGT(scip, maxact - maxabsval, *cutrhs) )
       goto TERMINATE;
 
