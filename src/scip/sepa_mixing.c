@@ -99,6 +99,7 @@
 
 #define DEFAULT_USELOCALBOUNDS    FALSE /**< should local bounds be used? */
 #define DEFAULT_ISCUTSONINTS      FALSE /**< should general/implied integer variables be used to generate cuts? */
+#define DEFAULT_MAXNUNSUCCESSFUL     10 /**< maximal number of consecutive unsuccessful iterations */
 
 /** separator-specific data for the mixing separator */
 struct SCIP_SepaData
@@ -107,6 +108,8 @@ struct SCIP_SepaData
    SCIP_Bool             iscutsonints;       /**< should general/implied integer variables be used to generate cuts? */
    int                   maxrounds;          /**< maximal number of mixing separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of mixing separation rounds in the root node (-1: unlimited) */
+   int                   nunsuccessful;      /**< number of consecutive unsuccessful iterations */
+   int                   maxnunsuccessful;   /**< maximal number of consecutive unsuccessful iterations */
 };
 
 /*
@@ -794,6 +797,10 @@ SCIP_DECL_SEPAEXECSOL(sepaExecSolMixing)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
+   /* do not run if we have reached the maximal number of consecutive unsuccessful calls */
+   if ( sepadata->nunsuccessful >= sepadata->maxnunsuccessful )
+      return SCIP_OKAY;
+
    /* only call the mixing cut separator a given number of times at each node */
    if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
@@ -811,14 +818,21 @@ SCIP_DECL_SEPAEXECSOL(sepaExecSolMixing)
 
    /* adjust result code */
    if( cutoff )
+   {
+      sepadata->nunsuccessful = 0;
       *result = SCIP_CUTOFF;
+   }
    else if( ncuts > 0 )
    {
       SCIPdebugMsg(scip, "mixing separator generated %d cuts.\n", ncuts);
+      sepadata->nunsuccessful = 0;
       *result = SCIP_SEPARATED;
    }
    else
+   {
+      ++sepadata->nunsuccessful;
       *result = SCIP_DIDNOTFIND;
+   }
 
    return SCIP_OKAY;
 }
@@ -839,6 +853,7 @@ SCIP_RETCODE SCIPincludeSepaMixing(
    /* create mixing separator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    assert(sepadata != NULL);
+   sepadata->nunsuccessful = 0;
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
@@ -867,6 +882,10 @@ SCIP_RETCODE SCIPincludeSepaMixing(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/mixing/maxroundsroot",
          "maximal number of mixing separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/mixing/maxnunsuccessful",
+         "maximal number of consecutive unsuccessful iterations",
+         &sepadata->maxnunsuccessful, FALSE, DEFAULT_MAXNUNSUCCESSFUL, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
