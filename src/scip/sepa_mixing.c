@@ -246,7 +246,7 @@ SCIP_RETCODE separateCuts(
    /* get the index of the first considered variable */
    if( sepadata->iscutsonints )
    {
-      /* generate cuts based on all nonbinary variabls */
+      /* generate cuts based on all nonbinary variabels */
       firstvar = SCIPgetNBinVars(scip);
    }
    else
