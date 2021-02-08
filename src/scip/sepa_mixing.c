@@ -632,8 +632,8 @@ SCIP_RETCODE separateCuts(
       if( vlbmixsize == 0 || vubmixsize == 0 )
          continue;
 
-      assert( lb != SCIP_INVALID );
-      assert( ub != SCIP_INVALID );
+      assert( lb != SCIP_INVALID ); /*lint !e777*/
+      assert( ub != SCIP_INVALID ); /*lint !e777*/
 
       cutislocal = islocallb || islocalub;
       for( j = 0; j < vlbmixsize; j++ )
