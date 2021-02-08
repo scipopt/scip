@@ -1747,12 +1747,12 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    aggrrow->rowsinds[i] = SCIProwGetLPPos(row);
    aggrrow->rowweights[i] = weight;
 
-   if ( sidetype == -1 )
+   if( sidetype == -1 )
    {
       assert( ! SCIPisInfinity(scip, -row->lhs) );
       uselhs = TRUE;
    }
-   else if ( sidetype == 1 )
+   else if( sidetype == 1 )
    {
       assert( ! SCIPisInfinity(scip, row->rhs) );
       uselhs = FALSE;
@@ -5427,7 +5427,7 @@ SCIP_RETCODE determineBoundForSNF(
       vlbvarprobidx = SCIPvarGetProbindex(vlbvars[bestlbtype[varposinrow]]);
       binvarused[vlbvarprobidx] = 1;
    }
-   else if ( selectedbounds[varposinrow] == SCIP_BOUNDTYPE_UPPER && bestubtype[varposinrow] >= 0 )
+   else if( selectedbounds[varposinrow] == SCIP_BOUNDTYPE_UPPER && bestubtype[varposinrow] >= 0 )
    {
       int vubvarprobidx;
       SCIP_VAR** vubvars = SCIPvarGetVubVars(var);
