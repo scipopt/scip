@@ -289,8 +289,8 @@ SCIP_RETCODE separateCuts(
       SCIP_Real activity;
       SCIP_Real lastcoef;
       SCIP_Real varsolval;
-      SCIP_Real lb;
-      SCIP_Real ub;
+      SCIP_Real lb = SCIP_INVALID;
+      SCIP_Real ub = SCIP_INVALID;
       SCIP_Bool islocallb = FALSE;  /* Is it a local lower bound or global lower bound? */
       SCIP_Bool islocalub = FALSE;  /* Is it a local upper bound or global upper bound? */
       SCIP_Bool cutislocal; /* Is it a local cut or global cut? */
@@ -312,15 +312,15 @@ SCIP_RETCODE separateCuts(
       nvlb = SCIPvarGetNVlbs(var);
       nvub = SCIPvarGetNVubs(var);
 
-      if ( nvub == 0 && nvub == 0 )
+      if ( nvlb == 0 && nvub == 0 )
          continue;
-
-      if( nvlb == 0 )
-         goto VUB;
 
       /* skip lower bound if the LP solution value is equal to the upper bound of the continuous variable */
       varsolval = SCIPgetSolVal(scip, sol, var);
       if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), varsolval) )
+         goto VUB;
+
+      if( nvlb == 0 )
          goto VUB;
 
       /* get variable lower variable bounds information */
@@ -631,6 +631,9 @@ SCIP_RETCODE separateCuts(
       /* stop if no useful variable lower (or upper) bounds information exists */
       if( vlbmixsize == 0 || vubmixsize == 0 )
          continue;
+
+      assert( lb != SCIP_INVALID );
+      assert( ub != SCIP_INVALID );
 
       cutislocal = islocallb || islocalub;
       for( j = 0; j < vlbmixsize; j++ )
