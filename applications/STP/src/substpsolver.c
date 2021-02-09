@@ -323,6 +323,21 @@ SCIP_RETCODE substpsolver_transferHistory(
 }
 
 
+/** initializes history, but does not transfer any information! */
+SCIP_RETCODE substpsolver_initHistory(
+   SUBSTP*               substp              /**< sub-problem*/
+)
+{
+   assert(substp);
+   assert(substp->subgraph);
+   assert(substp->subscip);
+
+   SCIP_CALL( graph_initHistory(substp->subscip, substp->subgraph) );
+
+   return SCIP_OKAY;
+}
+
+
 /** solves sub-problem */
 SCIP_RETCODE substpsolver_solve(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -49,6 +49,8 @@
 #define BIDECOMP_MINMAXCOMPRATIO_PARTIAL   0.99
 #define BIDECOMP_MAXCOMPRATIO_PARTIAL      0.05
 #define BIDECOMP_MINNODES                  10
+#define BIDECOMP_MINNODES_PARTIAL          10
+
 
 //#define CUTTREE_PRINT_STATISTICS
 
@@ -814,7 +816,6 @@ SCIP_Bool decomposePartialIsPromising(
    const BIDECOMP*       bidecomp
    )
 {
-   const BIDECPARAMS* const bidecompparams = redbase->bidecompparams;
    SCIP_Real maxratio;
 
    /* NOTE: we don't want to solve exactly in recombination heuristic etc. */
@@ -824,7 +825,7 @@ SCIP_Bool decomposePartialIsPromising(
    maxratio = bidecomposition_getMaxcompNodeRatio(bidecomp);
    assert(GT(maxratio, 0.0));
 
-   if( bidecompparams->depth > 1 && g->knots < BIDECOMP_MINNODES )
+   if( g->knots < BIDECOMP_MINNODES_PARTIAL )
       return FALSE;
 
    return (maxratio < BIDECOMP_MINMAXCOMPRATIO_PARTIAL);

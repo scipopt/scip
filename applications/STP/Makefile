@@ -130,6 +130,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_sol.o \
 			reduce_termsepa.o \
 			reduce_termsepada.o \
+			reduce_termsepafull.o \
 			reduce_util.o \
 			relax_stp.o \
 			sepaspecial.o \

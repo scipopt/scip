@@ -36,6 +36,7 @@
 #define STP_RED_MWTERMBOUND 400
 #define STP_RED_MAXNROUNDS 15
 #define STP_RED_EXPENSIVEFACTOR   2
+#define STP_RED_FULLSEPAFACTOR   10
 #define STP_RED_GLBFACTOR  3
 #define STP_RED_EDGELIMIT 100000
 #define STP_BND_THRESHOLD 0.03
@@ -2032,21 +2033,18 @@ SCIP_RETCODE redLoopStp(
             rerun = TRUE;
          }
 
-
-#ifdef XXX_XXX
+#ifdef XXX_XX
          if( !rerun )
          {
             int sepanelims = 0;
 
-            // to exact sepa stuff
-            // think of sub-solution? needs to be retained?
-            TERMSEPAS* termsepas;
-            SCIP_CALL( mincut_termsepasInit(scip, g, &termsepas) );
-            SCIP_CALL( mincut_findTerminalSeparators(scip, g, termsepas) );
-            mincut_termsepasFree(scip, &termsepas);
+            SCIP_CALL( reduce_termsepaFull(scip, g, &sepanelims) );
 
-            if( sepanelims > 10.0 * reductbound )
+            if( sepanelims > STP_RED_FULLSEPAFACTOR * reductbound )
                rerun = TRUE;
+            else if( sepanelims > STP_RED_EXPENSIVEFACTOR * reductbound )
+               SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &dummy, NULL));
+               //SCIP_CALL( redLoopInnerStp(scip, randnumgen, g, redsollocal, redbase, &wasDecomposed) );
          }
 #endif
       }

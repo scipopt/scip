@@ -429,7 +429,7 @@ SCIP_RETCODE subgraphBuild(
 
    assert(nsepaterms >= 2 && nsepaterms < orggraph->terms);
    assert(nnodes_sub > 0 && nedges_sub > 0);
-   assert(nodemap_orgToSub && sepaterms && distdata);
+   assert(nodemap_orgToSub && sepaterms);
    assert(!termcomp->subgraph);
    assert((extperma != NULL) == useSd);
 
@@ -504,7 +504,7 @@ SCIP_RETCODE subgraphBuild(
          const int orgsepaterm2 = sepaterms[subsepaterm2];
          const SCIP_Real sd = useSd ?
                extreduce_distDataGetSdDouble(scip, orggraph, orgsepaterm, orgsepaterm2, distdata)
-             : FARAWAY;
+             : BLOCKED;
 
          assert(GE(sd, 0.0));
 
@@ -594,6 +594,7 @@ SCIP_RETCODE subgraphBuild(
 
    assert(graph_knot_isInRange(orggraph, builder->sourceterm));
    assert(graph_knot_isInRange(orggraph, nodemap_orgToSub[builder->sourceterm]));
+   assert(orggraph->stp_type != UNKNOWN);
 
    subgraph->source = nodemap_orgToSub[builder->sourceterm];
    subgraph->stp_type = orggraph->stp_type;
@@ -703,8 +704,6 @@ SCIP_Real getExtBottleneckDist(
    if( subsolbottleneck )
       tbottleneckGetMax(term1_sub, term2_sub, subsolbottleneck, &bdist);
 
-   assert(subsolbottleneck && "remove me");
-
    return bdist;
 }
 
@@ -779,6 +778,26 @@ SCIP_Real reduce_compbuilderGetSubNodesRatio(
 }
 
 
+/** prints */
+void reduce_compbuilderPrintSeparators(
+   const GRAPH*          orggraph,           /**< graph data structure */
+   const COMPBUILDER*    compbuilder         /**< builder */
+   )
+{
+   assert(orggraph && compbuilder);
+
+   printf("number of separator nodes=%d, nodes: \n", compbuilder->nsepatterms);
+
+   for( int i = 0; i < compbuilder->nsepatterms; i++ )
+   {
+      const int sepaterm = compbuilder->sepaterms[i];
+      assert(graph_knot_isInRange(orggraph, sepaterm));
+
+      graph_knot_printInfo(orggraph, sepaterm);
+   }
+}
+
+
 /** builds extended subgraph with SD weighted edges between terminal-separator nodes */
 SCIP_RETCODE reduce_termcompBuildSubgraphWithSds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -798,7 +817,7 @@ SCIP_RETCODE reduce_termcompBuildSubgraphWithSds(
 }
 
 
-/** builds extended subgraph with FARAWAY weighted edges between terminal-separator nodes */
+/** builds extended subgraph with BLOCKED weighted edges between terminal-separator nodes */
 SCIP_RETCODE reduce_termcompBuildSubgraph(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                orggraph,           /**< graph data structure */
@@ -816,7 +835,8 @@ SCIP_RETCODE reduce_termcompBuildSubgraph(
 }
 
 
-/** changes weights between terminal separator nodes to bottlenecks */
+/** Changes weights between terminal separator nodes to bottlenecks.
+ *  NOTE: also computes the bottleneck distances, so potentially expensive! */
 SCIP_RETCODE reduce_termcompChangeSubgraphToBottleneck(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
@@ -909,6 +929,56 @@ SCIP_RETCODE reduce_termcompChangeSubgraphToBottleneck(
 }
 
 
+/** changes weights between terminal separator nodes to original costs (or BLOCKED) */
+void reduce_termcompChangeSubgraphToOrgCosts(
+   const GRAPH*          orggraph,           /**< graph data structure */
+   TERMCOMP*             termcomp            /**< component */
+   )
+{
+   GRAPH* subgraph = termcomp->subgraph;
+   const COMPBUILDER* const builder = termcomp->builder;
+   const int* const edgemap_subToOrg = termcomp->edgemap_subToOrg;
+   const int nsepaterms = builder->nsepatterms;
+
+   assert(subgraph && orggraph);
+   assert(nsepaterms > 0);
+
+   /*  NOTE: we exploit the fact that the first nodes of subgraph are the separator terminals */
+
+   for( int subsepaterm = 0; subsepaterm < nsepaterms; subsepaterm++ )
+   {
+      for( int sube = subgraph->outbeg[subsepaterm]; sube != EAT_LAST; sube = subgraph->oeat[sube] )
+      {
+         const int subhead = subgraph->head[sube];
+         if( subhead < nsepaterms )
+         {
+            const int orge = edgemap_subToOrg[sube];
+
+            assert(Is_term(subgraph->term[subsepaterm]));
+            assert(Is_term(subgraph->term[subhead]));
+
+            if( orge >= 0 )
+            {
+               assert(Is_term(orggraph->term[orggraph->head[orge]]));
+               assert(Is_term(orggraph->term[orggraph->tail[orge]]));
+
+               subgraph->cost[sube] = orggraph->cost[orge];
+            }
+            else
+            {
+               subgraph->cost[sube] = BLOCKED;
+            }
+         }
+      }
+   }
+
+#ifndef NDEBUG
+   for( int e = 0; e < subgraph->edges; e += 2 )
+   {
+      assert(EQ(subgraph->cost[e], subgraph->cost[e + 1]));
+   }
+#endif
+}
 
 
 /** initializes */
@@ -977,9 +1047,11 @@ void reduce_termcompFree(
    TERMCOMP* comp;
    comp = *termcomp;
 
-   assert(comp->subsolbottleneck && comp->nodemap_subToOrg && comp->edgemap_subToOrg);
+   assert(comp->nodemap_subToOrg && comp->edgemap_subToOrg);
 
-   tbottleneckFree(scip, &(comp->subsolbottleneck));
+
+   if( comp->subsolbottleneck )
+      tbottleneckFree(scip, &(comp->subsolbottleneck));
    StpVecFree(scip, comp->bfsqueue);
 
    SCIPfreeMemoryArrayNull(scip, &(comp->subsolution));

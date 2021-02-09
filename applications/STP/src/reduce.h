@@ -33,6 +33,7 @@
 #include "redcosts.h"
 #include "reducedefs.h"
 #include "extreducedefs.h"
+#include "termsepadefs.h"
 
 
 #ifdef __cplusplus
@@ -293,7 +294,6 @@ extern void             reduce_sdgraphMstSortCosts(SDGRAPH*);
 
 /* reduce_termsepa.c
  */
-
 extern SCIP_RETCODE     reduce_termcompInit(SCIP*, const GRAPH*, COMPBUILDER*, TERMCOMP**);
 void                    reduce_termcompFree(SCIP*, TERMCOMP**);
 extern SCIP_RETCODE     reduce_termcompInitTbottleneck(SCIP*, const int*, TERMCOMP*);
@@ -304,6 +304,8 @@ extern void             reduce_termsepaGetNextComp(SCIP*, const GRAPH*, TERMSEPA
 extern SCIP_RETCODE     reduce_compbuilderInit(SCIP*, const GRAPH*, COMPBUILDER**);
 void                    reduce_compbuilderFree(SCIP*, COMPBUILDER**);
 SCIP_Real               reduce_compbuilderGetSubNodesRatio(const COMPBUILDER*);
+void                    reduce_compbuilderPrintSeparators(const GRAPH*, const COMPBUILDER*);
+void                    reduce_termcompChangeSubgraphToOrgCosts(const GRAPH*, TERMCOMP*);
 
 
 /* reduce_termsepada.c
@@ -311,6 +313,10 @@ SCIP_Real               reduce_compbuilderGetSubNodesRatio(const COMPBUILDER*);
 extern SCIP_RETCODE     reduce_termsepaDaWithExperma(SCIP*, GRAPH*, EXTPERMA*, SCIP_Bool*, int*);
 extern SCIP_RETCODE     reduce_termsepaDa(SCIP*, GRAPH*, int*);
 
+
+/* reduce_termsepafull.c
+ */
+extern SCIP_RETCODE     reduce_termsepaFull(SCIP*, GRAPH*, int*);
 
 #ifdef __cplusplus
 }
