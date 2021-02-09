@@ -316,6 +316,13 @@ SCIP_RETCODE decomposeSolveSub(
    SCIP_CALL( substpsolver_transferHistory(graph_subinoutGetSubToOrgEdgeMap(subinout),
       orggraph, substp) );
 
+   {
+      int verblevel;
+      SCIP_CALL( SCIPgetIntParam(scip, "display/verblevel", &verblevel) );
+      if( verblevel == 0 )
+         SCIP_CALL( substpsolver_setMute(substp) );
+   }
+
    SCIP_CALL( substpsolver_solve(scip, substp, success) );
 
    if( *success )

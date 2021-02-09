@@ -627,6 +627,7 @@ SCIP_RETCODE graph_init(
    p->orgedges = 0;
    p->knots  = 0;
    p->terms  = 0;
+   p->grid_dim = -1;
    p->orgsource = UNKNOWN;
    p->stp_type = UNKNOWN;
    p->layers = layers;
@@ -1059,6 +1060,7 @@ SCIP_RETCODE graph_copyData(
    {
       assert(g_org->grid_ncoords != NULL);
       assert(g_org->grid_coordinates != NULL);
+      assert(g_org->grid_dim > 0);
 
       SCIP_CALL(SCIPallocMemoryArray(scip, &(g_copy->grid_coordinates), g_org->grid_dim));
 
