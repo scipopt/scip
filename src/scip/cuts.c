@@ -2561,7 +2561,7 @@ SCIP_RETCODE SCIPselectCuts(
          SCIP_Real efficacy;
 
          intsupport = intsupportweight != 0.0 ?
-         intsupportweight * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) : 0.0;
+            intsupportweight * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) : 0.0;
 
          objparallelism = objparalweight != 0.0 ? objparalweight * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
 
@@ -2602,12 +2602,12 @@ SCIP_RETCODE SCIPselectCuts(
          SCIP_Real efficacy;
 
          intsupport = intsupportweight > 0.0 ?
-         intsupportweight * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) : 0.0;
+            intsupportweight * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) : 0.0;
 
          objparallelism = objparalweight > 0.0 ? objparalweight * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
 
          efficacy = efficacyfac > 0.0 ?
-         efficacyfac * SCIProwGetLPEfficacy(cuts[i], scip->set, scip->stat, scip->lp) : 0.0;
+            efficacyfac * SCIProwGetLPEfficacy(cuts[i], scip->set, scip->stat, scip->lp) : 0.0;
 
          scores[i] = objparallelism + intsupport + efficacy;
 
