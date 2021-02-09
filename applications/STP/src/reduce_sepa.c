@@ -672,6 +672,8 @@ SCIP_RETCODE decomposeExactFixSol(
           * connected components markers in this way */
          orggraph->cost[orgedge] = 0.0;
          orggraph->cost[flipedge(orgedge)] = 0.0;
+         graph_knot_chg(orggraph, orggraph->tail[orgedge], STP_TERM);
+         graph_knot_chg(orggraph, orggraph->head[orgedge], STP_TERM);
       }
       else
       {
