@@ -568,22 +568,19 @@ SCIP_RETCODE subgraphBuild(
             const int subhead = nodemap_orgToSub[orghead];
             assert(subhead >= 0);
 
+            /* find and update the corresponding edge in subgraph */
             for( int e = subgraph->outbeg[subsepaterm]; e != EAT_LAST; e = subgraph->oeat[e] )
             {
                if( subgraph->head[e] == subhead )
                {
+                  const SCIP_Real newcost = MIN(orggraph->cost[orge], subgraph->cost[e]);
                   assert(edgemap_subToOrg[e] == -1);
-                  /* assert that bottleneck distance <= edge-cost */
-                  assert(!useSd || LE(orggraph->cost[orge], subgraph->cost[e]));
 
                   edgemap_subToOrg[e] = orge;
                   edgemap_subToOrg[flipedge(e)] = flipedge(orge);
 
-                  if( useSd )
-                     break;
-
-                  subgraph->cost[e] = orggraph->cost[orge];
-                  subgraph->cost[flipedge(e)] = orggraph->cost[orge];
+                  subgraph->cost[e] = newcost;
+                  subgraph->cost[flipedge(e)] = newcost;
 
                   break;
                }

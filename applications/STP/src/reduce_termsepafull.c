@@ -137,8 +137,6 @@ void sepafullFree(
    TSEPAFULL* tfull;
    tfull = *tsepafull;
 
-   assert(tfull->subdistdata);
-
    for( int i = StpVecGetSize(tfull->subsols) - 1; i >= 0; i-- )
    {
       assert(tfull->subsols[i]);
