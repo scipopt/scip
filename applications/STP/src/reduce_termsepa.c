@@ -549,6 +549,49 @@ SCIP_RETCODE subgraphBuild(
       }
    }
 
+   /* finally, we need to update the edge map on sepa-sepa edges */
+   for( int subsepaterm = 0; subsepaterm < nsepaterms; subsepaterm++ )
+   {
+      const int orgsepaterm = sepaterms[subsepaterm];
+
+      assert(orgmark[orgsepaterm]);
+      assert(nodemap_subToOrg[subsepaterm] == orgsepaterm);
+
+      for( int orge = orggraph->outbeg[orgsepaterm]; orge != EAT_LAST; orge = orggraph->oeat[orge] )
+      {
+         const int orghead = orggraph->head[orge];
+         if( orghead < orgsepaterm )
+            continue;
+
+         if( orgmark[orghead] == MARK_SEPARATOR )
+         {
+            const int subhead = nodemap_orgToSub[orghead];
+            assert(subhead >= 0);
+
+            for( int e = subgraph->outbeg[subsepaterm]; e != EAT_LAST; e = subgraph->oeat[e] )
+            {
+               if( subgraph->head[e] == subhead )
+               {
+                  assert(edgemap_subToOrg[e] == -1);
+                  /* assert that bottleneck distance <= edge-cost */
+                  assert(!useSd || LE(orggraph->cost[orge], subgraph->cost[e]));
+
+                  edgemap_subToOrg[e] = orge;
+                  edgemap_subToOrg[flipedge(e)] = flipedge(orge);
+
+                  if( useSd )
+                     break;
+
+                  subgraph->cost[e] = orggraph->cost[orge];
+                  subgraph->cost[flipedge(e)] = orggraph->cost[orge];
+
+                  break;
+               }
+            }
+         }
+      }
+   }
+
    assert(graph_knot_isInRange(orggraph, builder->sourceterm));
    assert(graph_knot_isInRange(orggraph, nodemap_orgToSub[builder->sourceterm]));
 
@@ -781,7 +824,6 @@ SCIP_RETCODE reduce_termcompChangeSubgraphToBottleneck(
    SCIP_Bool*            success
    )
 {
-   int todo; // mark the edges for which bottleneck distance should be computed!
    GRAPH* subgraph = termcomp->subgraph;
    PATH* mst;
    COMPBUILDER* const builder = termcomp->builder;

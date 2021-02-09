@@ -326,15 +326,16 @@ SCIP_Bool termcompIsPromising(
    }
    else
    {
-      if( COMPONENT_NODESRATIO_MIN < noderatio && noderatio < COMPONENT_NODESRATIO_MAX )
+      if( noderatio < COMPONENT_NODESRATIO_MAX )
       {
          SCIPdebugMessage("...component is promising \n");
          return TRUE;
       }
    }
 
-   SCIPdebugMessage("...component is NOT promising! \n");
+   // todo correct currently, we always give true, but seems to be no problem....
 
+   SCIPdebugMessage("...component is NOT promising! \n");
    return TRUE;
 }
 
