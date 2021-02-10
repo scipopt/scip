@@ -49,6 +49,7 @@
 #define COMPONENT_MAXNODESRATIO_3SEPA 0.05
 #define COMPONENT_MAXNODESRATIO_4SEPA 0.025
 
+#define COMPONENT_MAXNODESRATIO_1CANDS 0.8
 #define COMPONENT_MAXNODESRATIO_2CANDS 0.4
 #define COMPONENT_MAXNODESRATIO_3CANDS 0.2
 #define COMPONENT_MAXNODESRATIO_4CANDS 0.1
@@ -210,27 +211,48 @@ SCIP_RETCODE sepafullBuildSolcands(
    StpVecPushBack(scip, tsepafull->solcands_sepaedges, NULL);
    tsepafull->nsolcands++;
 
-   StpVecPushBack(scip, tsepafull->solcands_sepaedges, NULL);
-
-   for( int subsepaterm = 0; subsepaterm < nsepaterms; subsepaterm++ )
    {
-      for( int e = subgraph->outbeg[subsepaterm]; e != EAT_LAST; e = subgraph->oeat[e] )
-      {
-         const int head = subgraph->head[e];
-         if( head < subsepaterm )
-         {
-            const SCIP_Real bdist = tsepafull->subgraph_bcosts[e];
-            const SCIP_Real sd =
-               extreduce_distDataGetSdDouble(scip, subgraph, subsepaterm, head, tsepafull->subdistdata);
-            StpVecPushBack(scip, tsepafull->solcands_sepaedges[1], e);
+      SCIP_Bool isRuledOut = FALSE;
 
-            printf("%d->%d bdist=%f, sd=%f \n", subsepaterm, head, bdist, sd);
-            assert(LE(sd, BLOCKED));
+      StpVecPushBack(scip, tsepafull->solcands_sepaedges, NULL);
+
+      for( int subsepaterm = 0; subsepaterm < nsepaterms && !isRuledOut; subsepaterm++ )
+      {
+         for( int e = subgraph->outbeg[subsepaterm]; e != EAT_LAST; e = subgraph->oeat[e] )
+         {
+            const int head = subgraph->head[e];
+            if( head < subsepaterm )
+            {
+               const SCIP_Real bdist = tsepafull->subgraph_bcosts[e];
+               const SCIP_Real sd =
+                  extreduce_distDataGetSdDouble(scip, subgraph, subsepaterm, head, tsepafull->subdistdata);
+               StpVecPushBack(scip, tsepafull->solcands_sepaedges[tsepafull->nsolcands], e);
+
+               printf("%d->%d bdist=%f, sd=%f \n", subsepaterm, head, bdist, sd);
+
+               if( SCIPisGE(scip, bdist, sd) )
+               {
+                  isRuledOut = TRUE;
+                  break;
+               }
+
+               assert(LE(sd, BLOCKED));
+            }
          }
       }
+
+      if( isRuledOut )
+      {
+         StpVecFree(scip, tsepafull->solcands_sepaedges[tsepafull->nsolcands]);
+         StpVecPopBack(tsepafull->solcands_sepaedges);
+      }
+      else
+      {
+         tsepafull->nsolcands++;
+      }
+
    }
 
-   tsepafull->nsolcands++;
 
    return SCIP_OKAY;
 }
@@ -251,7 +273,11 @@ SCIP_Bool sepafullSolcandsArePromising(
    assert(nsolcands > 0);
    assert(GT(noderatio, 0.0));
 
-   if( nsolcands == 2 )
+   if( nsolcands == 1 )
+   {
+      maxratio = COMPONENT_MAXNODESRATIO_1CANDS;
+   }
+   else if( nsolcands == 2 )
    {
       maxratio = COMPONENT_MAXNODESRATIO_2CANDS;
    }
