@@ -869,7 +869,10 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    *result = SCIP_DIDNOTFIND;
    cutpool->ncalls++;
    found = FALSE;
-   minefficacy = stat->bestefficacy * stat->minefficacyfac;
+   if( set->sepa_usecutpoolfilter )
+      minefficacy = stat->bestefficacy * stat->minefficacyfac;
+   else
+      minefficacy = root ? set->sepa_minefficacyroot : set->sepa_minefficacy;
 
    if( sol == NULL )
    {
@@ -1014,17 +1017,20 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       }
    }
 
-   if( stat->ncutpoolfails == (root ? 2 : 10) )
+   if( set->sepa_usecutpoolfilter )
    {
-      cutpool->firstunprocessed = 0;
-      cutpool->firstunprocessedsol = 0;
-      stat->minefficacyfac *= 0.5;
-      stat->ncutpoolfails = 0;
-   }
-   else if( stat->ncutpoolfails == -2 )
-   {
-      stat->minefficacyfac *= 1.2;
-      stat->ncutpoolfails = 0;
+      if( stat->ncutpoolfails == (root ? 2 : 10) )
+      {
+         cutpool->firstunprocessed = 0;
+         cutpool->firstunprocessedsol = 0;
+         stat->minefficacyfac *= 0.5;
+         stat->ncutpoolfails = 0;
+      }
+      else if( stat->ncutpoolfails == -2 )
+      {
+         stat->minefficacyfac *= 1.2;
+         stat->ncutpoolfails = 0;
+      }
    }
 
    /* stop timing */

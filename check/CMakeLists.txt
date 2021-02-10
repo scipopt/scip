@@ -112,6 +112,7 @@ set(settings_fastMIP
     "lookahead-addclique-scaledcutoffscore"
     "presolving_off"
     "separating_off"
+    "separating_misc"
     "vbcvisualization"
     "enable_treeprofile_regression_forest"
     "../../../scripts/trainEstimation/periodic_report"
