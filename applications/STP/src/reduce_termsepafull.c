@@ -46,7 +46,7 @@
 #define SEPARATOR_MAXNCHECKS 75
 #define SEPARATOR_MINTERMRATIO 0.1
 #define COMPONENT_MAXNODESRATIO_2SEPA 0.5
-#define COMPONENT_MAXNODESRATIO_3SEPA 0.05
+#define COMPONENT_MAXNODESRATIO_3SEPA 0.1
 #define COMPONENT_MAXNODESRATIO_4SEPA 0.025
 
 #define COMPONENT_MAXNODESRATIO_1CANDS 0.8
@@ -73,22 +73,229 @@ typedef struct terminal_separator_full
 } TSEPAFULL;
 
 
+/** for computing all partitions of a given ground set */
+typedef struct bell_parititioner
+{
+   STP_Vectype(int*)     partitions;         /**< all partitions; each stores as array with mark 0,1,..., according to subset membership
+                                                  of each element 0,...,nelems - 1*/
+   int                   nelems;             /**< number of elements of ground set */
+   int                   npartitions;        /**< number of partitions */
+} BPARTITIONS;
+
 
 /*
  * Local methods
  */
 
 
+/** prints top partition */
+static
+void bpartitionsPrintTop(
+   const BPARTITIONS*    bparitions          /**< to print for */
+   )
+{
+   assert(bparitions);
+   assert(StpVecGetSize(bparitions->partitions) > 0);
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("partition: \n");
+   for( int i = 0; i < bparitions->nelems; i++ )
+   {
+      const int* const partition = bparitions->partitions[StpVecGetSize(bparitions->partitions) - 1];
+      printf("%d  ", partition[i]);
+   }
+   printf("\n");
+#endif
+}
+
+
+/** recursive add
+ *  NOTE: not extremely efficient, only meant for small sizes */
+static
+SCIP_RETCODE bsubpartAdd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   subsize,            /**< size of subgroup */
+   int                   maxgroupid,         /**< maximum id for partition subset, also marks subset
+                                                  which will be further parititioned */
+   BPARTITIONS*          bparts              /**< bell partitions */
+   )
+{
+
+   assert(0 < subsize && subsize <= bparts->nelems);
+   assert(maxgroupid >= 0);
+   assert(StpVecGetSize(bparts->partitions) > 0);
+
+   if( subsize >= 2 )
+   {
+      const int* const basepartition = bparts->partitions[StpVecGetSize(bparts->partitions) - 1];
+      const int length = subsize - 1;
+      const uint32_t powsize = (uint32_t) pow(2.0, length);
+      const int nelems = bparts->nelems;
+      const int id0 = maxgroupid;
+      const int id1 = maxgroupid + 1;
+
+      assert(basepartition);
+
+      for( uint32_t counter = powsize - 1; counter >= 1; counter-- )
+      {
+         int* partition;
+         int pos;
+         int subsubsize = 0;
+
+         /* we get the previous partition, and split the group with the highest ID further */
+         SCIP_CALL( SCIPallocMemoryArray(scip, &partition, nelems) );
+         BMScopyMemoryArray(partition, basepartition, nelems);
+
+         for( pos = 0; pos < nelems; pos++ )
+         {
+            if( partition[pos] == maxgroupid )
+            {
+               partition[pos] = id0;
+               break;
+            }
+         }
+         assert(pos != nelems);
+
+         for( uint32_t j = 0; j < (uint32_t) length; j++ )
+         {
+            pos++;
+            for( ; pos < nelems; pos++ )
+               if( partition[pos] == maxgroupid )
+                  break;
+
+            assert(pos != nelems);
+
+            /* Check if jth bit in counter is set */
+            if( counter & ((uint32_t) 1 << j) )
+            {
+               partition[pos] = id1;
+               subsubsize++;
+            }
+            else
+            {
+               partition[pos] = id0;
+            }
+         }
+
+         StpVecPushBack(scip, bparts->partitions, partition);
+         bpartitionsPrintTop(bparts);
+
+         SCIP_CALL( bsubpartAdd(scip, subsubsize, id1, bparts) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** computes partitions */
+static
+SCIP_RETCODE bpartitionsCompute(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BPARTITIONS*          bparts              /**< bell partitions */
+   )
+{
+   int* part0;
+   const int maxgroupid = 0;
+   const int nelems = bparts->nelems;
+
+   assert(nelems >= 2);
+   assert(StpVecGetSize(bparts->partitions) == 0);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &part0, nelems) );
+   for( int i = 0; i < bparts->nelems; i++ )
+      part0[i] = maxgroupid;
+
+   StpVecPushBack(scip, bparts->partitions, part0);
+   bpartitionsPrintTop(bparts);
+
+   /* start the recursion */
+   SCIP_CALL( bsubpartAdd(scip, nelems, maxgroupid, bparts) );
+
+   bparts->npartitions = StpVecGetSize(bparts->partitions);
+   assert(bparts->npartitions >= 2);
+
+#ifndef NDEBUG
+   if( bparts->nelems == 2 )
+   {
+      assert(bparts->npartitions == 2);
+   }
+   else if( bparts->nelems == 3 )
+   {
+      assert(bparts->npartitions == 5);
+   }
+   else if( bparts->nelems == 4 )
+   {
+      assert(bparts->npartitions == 15);
+   }
+#endif
+
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes */
+static
+SCIP_RETCODE bpartitionsInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nelems,             /**< number of elements of ground set */
+   BPARTITIONS**         bparitions          /**< to initialize */
+   )
+{
+   BPARTITIONS* bparts;
+
+   assert(scip);
+   assert(nelems >= 2);
+
+   SCIP_CALL( SCIPallocMemory(scip, bparitions) );
+   bparts = *bparitions;
+
+   bparts->partitions = NULL;
+   bparts->nelems = nelems;
+   bparts->npartitions = 0;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+static
+void bpartitionsFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BPARTITIONS**         bparitions          /**< to initialize */
+   )
+{
+   BPARTITIONS* bparts;
+   bparts = *bparitions;
+
+   assert(scip);
+
+   for( int i = StpVecGetSize(bparts->partitions) - 1; i >= 0; i-- )
+   {
+      assert(bparts->partitions[i]);
+      SCIPfreeMemoryArray(scip, &(bparts->partitions[i]));
+   }
+   StpVecFree(scip, bparts->partitions);
+
+   SCIPfreeMemory(scip, bparitions);
+}
+
+
+
 /** sets up distance data for subgraph */
 static
 SCIP_RETCODE sepafullInitDistdata(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                subgraph,           /**< graph data structure */
+   TERMCOMP*             termcomp,           /**< component */
    TSEPAFULL*            tsepafull           /**< to initialize for */
    )
 {
+   int todo; // really ok to use biased SD here??? or maybe in general no
+   // equality if more than 2?
+   GRAPH* subgraph = termcomp->subgraph;
    const SCIP_Bool useSd = TRUE;
-   const SCIP_Bool useBias = TRUE;
+   const SCIP_Bool useBias = (termcomp->builder->nsepatterms == 2);;
 
    assert(tsepafull);
    assert(!tsepafull->subdistdata);
@@ -162,6 +369,116 @@ void sepafullFree(
    SCIPfreeMemory(scip, tsepafull);
 }
 
+/** add solution candidate edges from fiven partition */
+static
+void sepafullAddSingleSolcandEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            partition,          /**< partition of separation terminals in groups with index
+                                                  0,1,... */
+   const TERMCOMP*       termcomp,           /**< component */
+   TSEPAFULL*            tsepafull           /**< full separator */
+   )
+{
+   const GRAPH* subgraph = termcomp->subgraph;
+   const COMPBUILDER* const builder = termcomp->builder;
+   SCIP_Bool isRuledOut = FALSE;
+   const int nsepaterms = builder->nsepatterms;
+   const int nsolcands = tsepafull->nsolcands;
+
+   SCIPdebugMessage("checking next solution candidate (number %d) \n", nsolcands);
+
+   StpVecPushBack(scip, tsepafull->solcands_sepaedges, NULL);
+   assert(nsolcands == StpVecGetSize(tsepafull->solcands_sepaedges) - 1);
+
+   for( int subsepaterm = 0; subsepaterm < nsepaterms && !isRuledOut; subsepaterm++ )
+   {
+      const int groupid = partition[subsepaterm];
+
+      for( int e = subgraph->outbeg[subsepaterm]; e != EAT_LAST; e = subgraph->oeat[e] )
+      {
+         const int head = subgraph->head[e];
+
+         if( head > subsepaterm )
+            continue;
+
+         if( groupid == partition[head] )
+         {
+            const SCIP_Real bdist = tsepafull->subgraph_bcosts[e];
+            const SCIP_Real sd =
+               extreduce_distDataGetSdDouble(scip, subgraph, subsepaterm, head, tsepafull->subdistdata);
+
+            StpVecPushBack(scip, tsepafull->solcands_sepaedges[nsolcands], e);
+
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("%d->%d bdist=%f, sd=%f \n",
+                  termcomp->nodemap_subToOrg[subsepaterm],
+                  termcomp->nodemap_subToOrg[head],
+                  bdist, sd);
+#endif
+
+            if( SCIPisGE(scip, bdist, sd) )
+            {
+               isRuledOut = TRUE;
+               break;
+            }
+
+            assert(LE(sd, BLOCKED));
+         }
+      }
+   }
+
+   if( isRuledOut )
+   {
+      StpVecFree(scip, tsepafull->solcands_sepaedges[tsepafull->nsolcands]);
+      StpVecPopBack(tsepafull->solcands_sepaedges);
+
+      SCIPdebugMessage("...ruled-out! \n");
+   }
+   else
+   {
+      tsepafull->nsolcands++;
+
+      SCIPdebugMessage("...added! \n");
+   }
+}
+
+/** computes artificial edges for each solution candidate (and tries to rule-out some candidates already) */
+static
+SCIP_RETCODE sepafullBuildSolcandsEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   TERMCOMP*             termcomp,           /**< component */
+   TSEPAFULL*            tsepafull           /**< full separator */
+   )
+{
+   BPARTITIONS* bpartitions;
+   const COMPBUILDER* const builder = termcomp->builder;
+   const int nsepaterms = builder->nsepatterms;
+
+   assert(nsepaterms <= 4);
+   assert(tsepafull->nsolcands == 0);
+   assert(!tsepafull->solcands_sepaedges);
+
+#ifdef SCIP_DEBUG
+   for( int i = 0; i < nsepaterms; i++ )
+      SCIPdebugMessage("sepa sub to org: %d->%d \n", i, termcomp->nodemap_subToOrg[i]);
+#endif
+
+   SCIP_CALL( bpartitionsInit(scip, nsepaterms, &bpartitions) );
+   SCIP_CALL( bpartitionsCompute(scip, bpartitions) );
+
+   for( int i = 0; i < bpartitions->npartitions; i++ )
+   {
+      const int* const partition = bpartitions->partitions[i];
+      assert(partition);
+
+      sepafullAddSingleSolcandEdges(scip, partition, termcomp, tsepafull);
+   }
+
+   bpartitionsFree(scip, &bpartitions);
+
+   return SCIP_OKAY;
+}
+
 
 /** builds solution candidates (and tries to rule-out some already) */
 static
@@ -174,9 +491,6 @@ SCIP_RETCODE sepafullBuildSolcands(
    )
 {
    GRAPH* subgraph = termcomp->subgraph;
-   const COMPBUILDER* const builder = termcomp->builder;
-  // const int* const edgemap_subToOrg = termcomp->edgemap_subToOrg;
-   const int nsepaterms = builder->nsepatterms;
    const int nsubedges = graph_get_nEdges(subgraph);
 
    assert(!tsepafull->solcands_sepaedges);
@@ -200,59 +514,10 @@ SCIP_RETCODE sepafullBuildSolcands(
    reduce_termcompChangeSubgraphToOrgCosts(orggraph, termcomp);
    BMScopyMemoryArray(tsepafull->subgraph_orgcosts, subgraph->cost, nsubedges);
 
-   SCIP_CALL( sepafullInitDistdata(scip, subgraph, tsepafull) );
+   SCIP_CALL( sepafullInitDistdata(scip, termcomp, tsepafull) );
 
-   // todo here we want to look at each possible combination and rule out
-   // for testing we just add one and remove the other
-   // todo: also test for ruleout with SDs!
-
-   assert(nsepaterms == 2);
-
-   StpVecPushBack(scip, tsepafull->solcands_sepaedges, NULL);
-   tsepafull->nsolcands++;
-
-   {
-      SCIP_Bool isRuledOut = FALSE;
-
-      StpVecPushBack(scip, tsepafull->solcands_sepaedges, NULL);
-
-      for( int subsepaterm = 0; subsepaterm < nsepaterms && !isRuledOut; subsepaterm++ )
-      {
-         for( int e = subgraph->outbeg[subsepaterm]; e != EAT_LAST; e = subgraph->oeat[e] )
-         {
-            const int head = subgraph->head[e];
-            if( head < subsepaterm )
-            {
-               const SCIP_Real bdist = tsepafull->subgraph_bcosts[e];
-               const SCIP_Real sd =
-                  extreduce_distDataGetSdDouble(scip, subgraph, subsepaterm, head, tsepafull->subdistdata);
-               StpVecPushBack(scip, tsepafull->solcands_sepaedges[tsepafull->nsolcands], e);
-
-               printf("%d->%d bdist=%f, sd=%f \n", subsepaterm, head, bdist, sd);
-
-               if( SCIPisGE(scip, bdist, sd) )
-               {
-                  isRuledOut = TRUE;
-                  break;
-               }
-
-               assert(LE(sd, BLOCKED));
-            }
-         }
-      }
-
-      if( isRuledOut )
-      {
-         StpVecFree(scip, tsepafull->solcands_sepaedges[tsepafull->nsolcands]);
-         StpVecPopBack(tsepafull->solcands_sepaedges);
-      }
-      else
-      {
-         tsepafull->nsolcands++;
-      }
-
-   }
-
+   /* now do the actual work */
+   SCIP_CALL( sepafullBuildSolcandsEdges(scip, termcomp, tsepafull) );
 
    return SCIP_OKAY;
 }
@@ -291,7 +556,7 @@ SCIP_Bool sepafullSolcandsArePromising(
    }
    else
    {
-      assert(builder->nsepatterms >= 5);
+      assert(builder->nsepatterms >= 3);
       maxratio = COMPONENT_MAXNODESRATIO_5PLUSCANDS;
    }
 
@@ -537,6 +802,13 @@ SCIP_Bool termcompIsPromising(
    const SCIP_Real noderatio = reduce_compbuilderGetSubNodesRatio(builder);
 
    assert(GT(noderatio, 0.0));
+   assert(builder->nsepatterms <= SEPARATOR_MAXSIZE);
+
+   if( builder->nsepatterms != 2 )
+   {
+      int todo; // delete!
+      return FALSE;
+   }
 
    if( builder->nsepatterms == 2 )
    {
@@ -550,14 +822,6 @@ SCIP_Bool termcompIsPromising(
    {
       assert(builder->nsepatterms == 4);
       maxratio = COMPONENT_MAXNODESRATIO_4SEPA;
-   }
-
-   if( builder->nsepatterms != 2 )
-   {
-      int todo; // deletme
-      printf("not promising, sepa != 2 \n");
-
-      return FALSE;
    }
 
    printf("noderatio=%f, maxratio=%f\n", noderatio, maxratio);
