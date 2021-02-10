@@ -249,7 +249,7 @@ SCIP_Real sdgraphGetSd(
          break;
    }
 
-   assert(GT(sdist, 0.0));
+   assert(GE(sdist, 0.0));
 
    return sdist;
 }

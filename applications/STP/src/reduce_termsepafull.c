@@ -388,6 +388,7 @@ static
 SCIP_RETCODE sepafullReduceFromSols(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                orggraph,           /**< graph data structure */
+   REDBASE*              redbase,            /**< reduction base */
    TSEPAFULL*            tsepafull,          /**< full separation data  */
    TERMCOMP*             termcomp,           /**< component */
    int*                  nelims              /**< number of eliminations */
@@ -397,6 +398,7 @@ SCIP_RETCODE sepafullReduceFromSols(
    STP_Vectype(int*) subsols = tsepafull->subsols;
    const int* const edgemap_subToOrg = termcomp->edgemap_subToOrg;
    int8_t* edgesolcount;
+   SCIP_Real* offset = reduce_solGetOffsetPointer(redbase->redsol);
    const int nsubedges = graph_get_nEdges(subgraph);
    const int nvalidsols = StpVecGetSize(subsols);
 
@@ -435,30 +437,34 @@ SCIP_RETCODE sepafullReduceFromSols(
 
    for( int e = 0; e < nsubedges / 2; e++ )
    {
-      const int orgeedge = edgemap_subToOrg[e * 2];
+      const int orgedge = edgemap_subToOrg[e * 2];
 
-      if( orgeedge == -1 )
+      if( orgedge == -1 )
          continue;
 
-      assert(graph_edge_isInRange(orggraph, orgeedge));
+      assert(graph_edge_isInRange(orggraph, orgedge));
 
       if( edgesolcount[e] == nvalidsols )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("fix edge TODO! ");
-         graph_edge_printInfo(orggraph, orgeedge);
+         SCIPdebugMessage("fix edge ");
+         graph_edge_printInfo(orggraph, orgedge);
 #endif
-         // todo set to 0, and add offset
-
+         /* NOTE: edge will be automatically contracted later; we avoid trouble other terminal separators */
+         *offset += orggraph->cost[orgedge];
+         orggraph->cost[orgedge] = 0.0;
+         orggraph->cost[flipedge(orgedge)] = 0.0;
+         graph_knot_chg(orggraph, orggraph->tail[orgedge], STP_TERM);
+         graph_knot_chg(orggraph, orggraph->head[orgedge], STP_TERM);
          (*nelims)++;
       }
       else if( edgesolcount[e] == -nvalidsols )
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("delete edge ");
-         graph_edge_printInfo(orggraph, orgeedge);
+         graph_edge_printInfo(orggraph, orgedge);
 #endif
-         graph_edge_del(scip, orggraph, orgeedge, TRUE);
+         graph_edge_del(scip, orggraph, orgedge, TRUE);
          (*nelims)++;
       }
    }
@@ -473,6 +479,7 @@ static
 SCIP_RETCODE sepafullReduce(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                orggraph,           /**< graph data structure */
+   REDBASE*              redbase,            /**< reduction base */
    TSEPAFULL*            tsepafull,          /**< full separation data  */
    TERMCOMP*             termcomp,           /**< component */
    int*                  nelims              /**< number of eliminations*/
@@ -487,7 +494,7 @@ SCIP_RETCODE sepafullReduce(
       SCIP_CALL( sepafullAddSolForCand(scip, i, termcomp, tsepafull) );
    }
 
-   SCIP_CALL( sepafullReduceFromSols(scip, orggraph, tsepafull, termcomp, nelims) );
+   SCIP_CALL( sepafullReduceFromSols(scip, orggraph, redbase, tsepafull, termcomp, nelims) );
 
    return SCIP_OKAY;
 }
@@ -547,6 +554,7 @@ SCIP_RETCODE processComponent(
    SCIP*                 scip,               /**< SCIP data structure */
    COMPBUILDER*          builder,            /**< terminal separator component initializer */
    GRAPH*                g,                  /**< graph data structure */
+   REDBASE*              redbase,            /**< reduction base */
    int*                  nelims              /**< number of eliminations*/
    )
 {
@@ -570,7 +578,7 @@ SCIP_RETCODE processComponent(
 
    if( success && sepafullSolcandsArePromising(termcomp, tsepafull) )
    {
-      SCIP_CALL( sepafullReduce(scip, g, tsepafull, termcomp, nelims) );
+      SCIP_CALL( sepafullReduce(scip, g, redbase, tsepafull, termcomp, nelims) );
    }
 
    sepafullFree(scip, &tsepafull);
@@ -635,6 +643,8 @@ void freeHelpers(
 SCIP_RETCODE reduce_termsepaFull(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
+   int*                  solnode,            /**< solution nodes mark or NULL */
+   REDBASE*              redbase,            /**< reduction base */
    int*                  nelims              /**< number of eliminations*/
    )
 {
@@ -642,7 +652,7 @@ SCIP_RETCODE reduce_termsepaFull(
    COMPBUILDER* builder;
    TERMSEPAS* termsepas;
 
-   assert(scip && g && nelims);
+   assert(scip && g && nelims && redbase);
    *nelims = 0;
 
    if( g->terms == 1 )
@@ -668,10 +678,14 @@ SCIP_RETCODE reduce_termsepaFull(
       if( !termcompIsPromising(g, builder) )
          continue;
 
-      SCIP_CALL( processComponent(scip, builder, g, nelims) );
+      SCIP_CALL( processComponent(scip, builder, g, redbase, nelims) );
 
       builder->componentnumber++;
    }
+
+   /* NOTE: solution edges have been fixed to 0 before */
+   if( *nelims > 0 )
+      SCIP_CALL( reduce_contract0Edges(scip, g, solnode, TRUE) );
 
    SCIPfreeRandom(scip, &randnumgen);
    freeHelpers(scip, &builder, &termsepas);

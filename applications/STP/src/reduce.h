@@ -316,7 +316,7 @@ extern SCIP_RETCODE     reduce_termsepaDa(SCIP*, GRAPH*, int*);
 
 /* reduce_termsepafull.c
  */
-extern SCIP_RETCODE     reduce_termsepaFull(SCIP*, GRAPH*, int*);
+extern SCIP_RETCODE     reduce_termsepaFull(SCIP*, GRAPH*, int*, REDBASE*, int*);
 
 #ifdef __cplusplus
 }

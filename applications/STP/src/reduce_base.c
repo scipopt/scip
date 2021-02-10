@@ -2038,13 +2038,16 @@ SCIP_RETCODE redLoopStp(
          {
             int sepanelims = 0;
 
-            SCIP_CALL( reduce_termsepaFull(scip, g, &sepanelims) );
+            SCIP_CALL( reduce_termsepaFull(scip, g, redbaseGetSolnode(redsollocal, redbase), redbase, &sepanelims) );
 
             if( sepanelims > STP_RED_FULLSEPAFACTOR * reductbound )
                rerun = TRUE;
             else if( sepanelims > STP_RED_EXPENSIVEFACTOR * reductbound )
                SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &dummy, NULL));
                //SCIP_CALL( redLoopInnerStp(scip, randnumgen, g, redsollocal, redbase, &wasDecomposed) );
+
+            printf("sepanelims=%d \n", sepanelims);
+
          }
 #endif
       }
