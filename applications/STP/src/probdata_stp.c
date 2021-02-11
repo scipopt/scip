@@ -371,10 +371,14 @@ SCIP_RETCODE presolveStp(
       graph->orgsource = graph->source;
 
    probdata->norgedges = graph->edges;
+static int count = 0;
 
+if( count++ == 0)
+{
 #ifdef UNIT_TEST_STP
    SCIP_CALL( stptest_testAll(scip) );
 #endif
+}
 
    /* the actual presolving; NOTE: we always want to have userec=TRUE */
    SCIP_CALL( reduce(scip, graph, redsol, reduction, probdata->minelims, TRUE) );
@@ -2949,6 +2953,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
 
       if( SCIPStpcomponentsAllowsDecomposition(scip) )
          usedacuts = STP_CONS_NEVER;
+
    }
 #endif
 

@@ -713,7 +713,8 @@ SCIP_RETCODE decomposeExactSubDoIt(
       orggraph, substp) );
 
    SCIP_CALL( substpsolver_setMute(substp) );
-   substpsolver_setProbIsIndependent(substp);
+   SCIP_CALL( substpsolver_setProbIsIndependent(substp) );
+   SCIP_CALL( substpsolver_setProbFullPresolve(substp) );
 
 #ifdef SCIP_DEBUG
    printf("subgraph: ");

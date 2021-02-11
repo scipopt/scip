@@ -411,10 +411,22 @@ SCIP_RETCODE substpsolver_setMute(
 
 
 /** sets to independent problem */
-void substpsolver_setProbIsIndependent(
+SCIP_RETCODE substpsolver_setProbIsIndependent(
    SUBSTP*               substp              /**< sub-problem */
 )
 {
    assert(substp);
    substp->subprobIsIndependent = TRUE;
+   return SCIP_OKAY;
+}
+
+
+/** sets full presolving */
+SCIP_RETCODE substpsolver_setProbFullPresolve(
+   SUBSTP*               substp              /**< sub-problem */
+)
+{
+   assert(substp);
+   SCIP_CALL( SCIPsetIntParam(substp->subscip, "stp/reduction", 2) );
+   return SCIP_OKAY;
 }

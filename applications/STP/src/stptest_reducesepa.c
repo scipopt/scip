@@ -43,8 +43,8 @@ SCIP_RETCODE testTerminalSeparatorsAreFound(
    const int* sepaterms;
    TERMSEPAS* termsepas;
    GRAPH* graph;
-   int nnodes = 5;
-   int nedges = 10;
+   int nnodes = 200;
+   int nedges = 500;
    int nsinknodes;
    int sinkterm;
 
@@ -56,30 +56,60 @@ SCIP_RETCODE testTerminalSeparatorsAreFound(
    graph_knot_chg(graph, 0, STP_TERM);
    graph_knot_chg(graph, 1, STP_TERM);
    graph_knot_chg(graph, 2, STP_TERM);
+   //graph_knot_chg(graph, 3, STP_TERM);
+
    graph_knot_chg(graph, 4, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+
 
    graph->source = 0;
 
-   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
-   graph_edge_addBi(scip, graph, 0, 2, 1.0); // 2
+   graph_edge_addBi(scip, graph, 0, 1, 1.2); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 1.2); // 2
+   graph_edge_addBi(scip, graph, 0, 5, 2.2); // 2
+
    graph_edge_addBi(scip, graph, 1, 3, 1.0);
    graph_edge_addBi(scip, graph, 2, 3, 1.0);
+   graph_edge_addBi(scip, graph, 5, 3, 1.0);
+
+   graph_edge_addBi(scip, graph, 5, 4, 2.01);
    graph_edge_addBi(scip, graph, 3, 4, 1.0);
+
+   graph_edge_addBi(scip, graph, 1, 6, 0.5);
+   graph_edge_addBi(scip, graph, 6, 4, 0.4);
+
+
+
+   for( int i = 8; i < nnodes; i++ )
+      graph_edge_addBi(scip, graph, 0, i, 1.0);
+
+
+
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
 
-   SCIP_CALL( mincut_termsepasInit(scip, graph, 10, 5, &termsepas) );
-   SCIP_CALL( mincut_findTerminalSeparators(scip, NULL, graph, termsepas) );
-   sepaterms = mincut_termsepasGetFirst(2, termsepas, &sinkterm, &nsinknodes);
+   int nelims = 0;
+   graph->stp_type = STP_SPG;
 
-   STPTEST_ASSERT(sepaterms != NULL);
-   STPTEST_ASSERT(sinkterm == 4);
-   STPTEST_ASSERT(mincut_termsepasGetNall(termsepas) == 1);
+   static int count = 0;
 
-   sepaterms = mincut_termsepasGetNext(2, termsepas, &sinkterm, &nsinknodes);
-   STPTEST_ASSERT(sepaterms == NULL);
+   if( count++ == 0 )
+   {
+      REDSOL* redsol;
+      SCIP_CALL( reduce_solInit(scip, graph, TRUE, &redsol) );
 
-   mincut_termsepasFree(scip, &termsepas);
+   BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 3, .newLevelStarted = FALSE };
+   REDBASE redbase = { .redparameters = NULL, .bidecompparams = &decparameters,
+                       .solnode = NULL, .redsol = redsol,
+                       .vnoi = NULL, .path = NULL, .heap = NULL,
+                       .nodearrreal = NULL,
+                       .state = NULL, .vbase = NULL, .nodearrint = NULL,
+                       .edgearrint = NULL, .nodearrint2 = NULL, .nodearrchar = NULL };
+
+   SCIP_CALL( reduce_termsepaFull(scip, graph, NULL, &redbase, &nelims) );
+   assert(0);
+   }
+
 
    stptest_graphTearDown(scip, graph);
 
@@ -352,7 +382,7 @@ SCIP_RETCODE testBiconnectedComponentsAreFound3(
    graph_edge_addBi(scip, graph, 0, 3, 1.0);
    graph_edge_addBi(scip, graph, 0, 4, 1.0);
    graph_edge_addBi(scip, graph, 3, 4, 1.0);
-   graph_edge_addBi(scip, graph, 4, 5, 1.0);
+   graph_edge_addBi(scip, graph, 4, 5, 1.1);
    graph_edge_addBi(scip, graph, 4, 6, 1.0);
    graph_edge_addBi(scip, graph, 5, 6, 1.0);
 
