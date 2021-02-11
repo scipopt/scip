@@ -69,6 +69,7 @@ typedef struct terminal_separator_full
    SCIP_Real*            subgraph_bcosts;    /**< edge costs with bottleneck distances */
    SCIP_Real*            subgraph_orgcosts;  /**< original edge costs, with artificial edges having cost FARAWAY */
    STP_Vectype(int*)     solcands_sepaedges; /**< bottleneck edges (w.r.t. subgraph) for each solution candidate */
+   STP_Vectype(int*)     solcands_sepapart;  /**< partition of the separator terminals for each solution candidate */
    int                   nsolcands;          /**< number of solution candidates */
 } TSEPAFULL;
 
@@ -88,9 +89,63 @@ typedef struct bell_parititioner
  */
 
 
-/** prints top partition */
+/* gets number of partition groups */
 static
-void bpartitionsPrintTop(
+int getPartitionNgroups(
+   int                   nelems,             /**< number of elements */
+   const int*            partition           /**< group id for each element; 0,1,... */
+   )
+{
+   int ngroups = 0;
+
+   assert(nelems > 0);
+   assert(partition);
+
+   for( int i = 0; i < nelems; i++ )
+   {
+      const int group = partition[i];
+      assert(0 <= group && group < nelems);
+
+      if( group > ngroups )
+         ngroups = group;
+   }
+
+   ngroups++;
+
+   SCIPdebugMessage("number of partition groups: %d \n", ngroups);
+
+   return ngroups;
+}
+
+
+/* gets groups sizes */
+static
+void getPartitionGroupsSizes(
+   int                   nelems,             /**< number of elements */
+   int                   ngroups,
+   const int*            partition,          /**< group id for each element; 0,1,... */
+   int*                  groups_sizes        /**< to be filled: size of each group */
+   )
+{
+   assert(nelems > 0);
+   assert(partition && groups_sizes);
+   assert(ngroups == getPartitionNgroups(nelems, partition));
+
+   BMSclearMemoryArray(groups_sizes, ngroups);
+
+   for( int i = 0; i < nelems; i++ )
+   {
+      const int group = partition[i];
+      assert(0 <= group && group < ngroups);
+
+      groups_sizes[group]++;
+   }
+}
+
+
+/** prints top partition if SCIP_DEBUG is defined */
+static
+void bpartitionsDebugPrintTop(
    const BPARTITIONS*    bparitions          /**< to print for */
    )
 {
@@ -178,7 +233,7 @@ SCIP_RETCODE bsubpartAdd(
          }
 
          StpVecPushBack(scip, bparts->partitions, partition);
-         bpartitionsPrintTop(bparts);
+         bpartitionsDebugPrintTop(bparts);
 
          SCIP_CALL( bsubpartAdd(scip, subsubsize, id1, bparts) );
       }
@@ -207,7 +262,7 @@ SCIP_RETCODE bpartitionsCompute(
       part0[i] = maxgroupid;
 
    StpVecPushBack(scip, bparts->partitions, part0);
-   bpartitionsPrintTop(bparts);
+   bpartitionsDebugPrintTop(bparts);
 
    /* start the recursion */
    SCIP_CALL( bsubpartAdd(scip, nelems, maxgroupid, bparts) );
@@ -273,8 +328,7 @@ void bpartitionsFree(
 
    for( int i = StpVecGetSize(bparts->partitions) - 1; i >= 0; i-- )
    {
-      assert(bparts->partitions[i]);
-      SCIPfreeMemoryArray(scip, &(bparts->partitions[i]));
+      SCIPfreeMemoryArrayNull(scip, &(bparts->partitions[i]));
    }
    StpVecFree(scip, bparts->partitions);
 
@@ -291,11 +345,11 @@ SCIP_RETCODE sepafullInitDistdata(
    TSEPAFULL*            tsepafull           /**< to initialize for */
    )
 {
-   int todo; // really ok to use biased SD here??? or maybe in general no
-   // equality if more than 2?
    GRAPH* subgraph = termcomp->subgraph;
    const SCIP_Bool useSd = TRUE;
-   const SCIP_Bool useBias = (termcomp->builder->nsepatterms == 2);;
+   // todo test the impact of bias. Could be activated again
+   // if the separator terminals are not used for computing profits
+   const SCIP_Bool useBias = FALSE;
 
    assert(tsepafull);
    assert(!tsepafull->subdistdata);
@@ -326,6 +380,7 @@ SCIP_RETCODE sepafullInit(
    tfull->subsols = NULL;
    tfull->subgraph = subgraph;
    tfull->solcands_sepaedges = NULL;
+   tfull->solcands_sepapart = NULL;
    tfull->nsolcands = 0;
    tfull->subgraph_bcosts = NULL;
    tfull->subgraph_orgcosts = NULL;
@@ -352,6 +407,12 @@ void sepafullFree(
    }
    StpVecFree(scip, tfull->subsols);
 
+   for( int i = StpVecGetSize(tfull->solcands_sepapart) - 1; i >= 0; i-- )
+   {
+      SCIPfreeMemoryArray(scip, &(tfull->solcands_sepapart[i]));
+   }
+   StpVecFree(scip, tfull->solcands_sepapart);
+
    for( int i = StpVecGetSize(tfull->solcands_sepaedges) - 1; i >= 0; i-- )
    {
       StpVecFree(scip, tfull->solcands_sepaedges[i]);
@@ -369,13 +430,13 @@ void sepafullFree(
    SCIPfreeMemory(scip, tsepafull);
 }
 
-/** add solution candidate edges from fiven partition */
+/** add solution candidate edges from given partition */
 static
 void sepafullAddSingleSolcandEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   const int*            partition,          /**< partition of separation terminals in groups with index
-                                                  0,1,... */
+   int                   partitionidx,       /**< partition index for bpartitions */
    const TERMCOMP*       termcomp,           /**< component */
+   BPARTITIONS*          bpartitions,        /**< partitions of separation terminals */
    TSEPAFULL*            tsepafull           /**< full separator */
    )
 {
@@ -384,8 +445,12 @@ void sepafullAddSingleSolcandEdges(
    SCIP_Bool isRuledOut = FALSE;
    const int nsepaterms = builder->nsepatterms;
    const int nsolcands = tsepafull->nsolcands;
+   const int* const partition = bpartitions->partitions[partitionidx];
 
    SCIPdebugMessage("checking next solution candidate (number %d) \n", nsolcands);
+
+   assert(partition);
+   assert(StpVecGetSize(tsepafull->solcands_sepaedges) == StpVecGetSize(tsepafull->solcands_sepapart));
 
    StpVecPushBack(scip, tsepafull->solcands_sepaedges, NULL);
    assert(nsolcands == StpVecGetSize(tsepafull->solcands_sepaedges) - 1);
@@ -438,6 +503,9 @@ void sepafullAddSingleSolcandEdges(
    {
       tsepafull->nsolcands++;
 
+      StpVecPushBack(scip, tsepafull->solcands_sepapart, bpartitions->partitions[partitionidx]);
+      bpartitions->partitions[partitionidx] = NULL;
+
       SCIPdebugMessage("...added! \n");
    }
 }
@@ -468,10 +536,7 @@ SCIP_RETCODE sepafullBuildSolcandsEdges(
 
    for( int i = 0; i < bpartitions->npartitions; i++ )
    {
-      const int* const partition = bpartitions->partitions[i];
-      assert(partition);
-
-      sepafullAddSingleSolcandEdges(scip, partition, termcomp, tsepafull);
+      sepafullAddSingleSolcandEdges(scip, i, termcomp, bpartitions, tsepafull);
    }
 
    bpartitionsFree(scip, &bpartitions);
@@ -613,6 +678,105 @@ SCIP_RETCODE solveSub(
 }
 
 
+/** returns TRUE if sub-solution can be ruled out */
+static
+SCIP_Bool subSolIsRedundant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const TERMCOMP*       termcomp,           /**< component */
+   const int*            subsol,             /**< solution */
+   const int*            sepapartition,      /**< partition */
+   STP_Vectype(int)      solcand_sepaedges   /**< bottleneck edges */
+   )
+{
+   const GRAPH* subgraph = termcomp->subgraph;
+   int* groups_size;
+   int* groups_nsolbedges;
+   const int nsepaterms = termcomp->builder->nsepatterms;
+   const int ngroups = getPartitionNgroups(nsepaterms, sepapartition);
+   SCIP_Bool isRedundant = FALSE;
+
+   assert(nsepaterms >= 2);
+   assert(subgraph);
+
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &groups_size, ngroups) );
+   SCIP_CALL_ABORT( SCIPallocClearBufferArray(scip, &groups_nsolbedges, ngroups) );
+
+   getPartitionGroupsSizes(nsepaterms, ngroups, sepapartition, groups_size);
+
+   for( int i = 0; i < StpVecGetSize(solcand_sepaedges); i++ )
+   {
+      const int subedge = solcand_sepaedges[i];
+      const int tail = subgraph->tail[subedge];
+      const int group = sepapartition[tail];
+
+      assert(graph_edge_isInRange(termcomp->subgraph, subedge));
+      assert(tail < nsepaterms);
+      assert(subgraph->head[subedge] < nsepaterms);
+      assert(sepapartition[tail] == sepapartition[subgraph->head[subedge]]);
+      assert(group < ngroups);
+      assert(groups_size[group] >= 2);
+
+      if( subsol[subedge] == CONNECT || subsol[flipedge(subedge)] == CONNECT )
+      {
+         groups_nsolbedges[group]++;
+      }
+   }
+
+   for( int i = 0; i < ngroups; i++ )
+   {
+      const int ngroupnodes = groups_size[i];
+      const int ngroupsoledges = groups_nsolbedges[i];
+
+      assert(ngroupsoledges < ngroupnodes && ngroupnodes <= nsepaterms);
+      assert(0 <= ngroupsoledges);
+
+      /* is there at least one unconnected group node? */
+      if( ngroupsoledges < ngroupnodes - 1 )
+      {
+         SCIPdebugMessage("ruled out: ngroupsoledges=%d ngroupnodes=%d  \n", ngroupsoledges, ngroupnodes);
+         isRedundant = TRUE;
+         break;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &groups_nsolbedges);
+   SCIPfreeBufferArray(scip, &groups_size);
+
+   return isRedundant;
+}
+
+
+
+/** sets weight for artificial bottleneck edges between separator terminals */
+static
+void setSubBottleneckEdges(
+   int                   cand,               /**< candidate number */
+   TERMCOMP*             termcomp,           /**< component */
+   TSEPAFULL*            tsepafull           /**< full separation data  */
+   )
+{
+   GRAPH* subgraph = termcomp->subgraph;
+   const SCIP_Real* const subgraph_bcosts = tsepafull->subgraph_bcosts;
+   STP_Vectype(int) solcand_sepaedges = tsepafull->solcands_sepaedges[cand];
+
+   assert(subgraph_bcosts);
+
+   for( int i = 0; i < StpVecGetSize(solcand_sepaedges); i++ )
+   {
+      const int subedge = solcand_sepaedges[i];
+      assert(graph_edge_isInRange(subgraph, subedge));
+
+      subgraph->cost[subedge] = subgraph_bcosts[subedge];
+      subgraph->cost[flipedge(subedge)] = subgraph_bcosts[flipedge(subedge)];
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("adding artifical subedge (for solcand %d): ", cand);
+      graph_edge_printInfo(subgraph, subedge);
+#endif
+   }
+}
+
+
 /** adds solution for candidate, or rules the solution out */
 static
 SCIP_RETCODE sepafullAddSolForCand(
@@ -624,49 +788,29 @@ SCIP_RETCODE sepafullAddSolForCand(
 {
    int* subsol;
    GRAPH* subgraph = termcomp->subgraph;
-   STP_Vectype(int) solcands_sepaedges = tsepafull->solcands_sepaedges[cand];
-   const SCIP_Real* const subgraph_bcosts = tsepafull->subgraph_bcosts;
+   STP_Vectype(int) solcand_sepaedges = tsepafull->solcands_sepaedges[cand];
+   const int* const solcand_sepapart = tsepafull->solcands_sepapart[cand];
    const SCIP_Real* const subgraph_orgcosts = tsepafull->subgraph_orgcosts;
 
    assert(0 <= cand && cand < tsepafull->nsolcands);
-   assert(subgraph_bcosts && subgraph_orgcosts);
+   assert(StpVecGetSize(tsepafull->solcands_sepaedges) == StpVecGetSize(tsepafull->solcands_sepapart));
+   assert(subgraph_orgcosts && solcand_sepapart);
 
    BMScopyMemoryArray(subgraph->cost, subgraph_orgcosts, subgraph->edges);
+   setSubBottleneckEdges(cand, termcomp, tsepafull);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &subsol, subgraph->edges) );
-
-   for( int i = 0; i < StpVecGetSize(solcands_sepaedges); i++ )
-   {
-      const int subedge = solcands_sepaedges[i];
-      assert(graph_edge_isInRange(subgraph, subedge));
-
-      subgraph->cost[subedge] = subgraph_bcosts[subedge];
-      subgraph->cost[flipedge(subedge)] = subgraph_bcosts[flipedge(subedge)];
-
-#ifdef SCIP_DEBUG
-      SCIPdebugMessage("adding artifical subedge (for solcand %d): ", cand);
-      graph_edge_printInfo(subgraph, subedge);
-#endif
-   }
-
    SCIP_CALL( solveSub(scip, subgraph, subsol) );
    assert(solstp_isValid(scip, subgraph, subsol));
 
-   for( int i = 0; i < StpVecGetSize(solcands_sepaedges); i++ )
+   if( subSolIsRedundant(scip, termcomp, subsol, solcand_sepapart, solcand_sepaedges) )
    {
-      const int subedge = solcands_sepaedges[i];
-
-      if( subsol[subedge] == UNKNOWN && subsol[flipedge(subedge)] == UNKNOWN )
-      {
-         SCIPdebugMessage("bottleneck edge %d not used, discarding solution! \n", subedge);
-         SCIPfreeMemoryArray(scip, &subsol);
-         assert(subsol == NULL);
-         break;
-      }
+      SCIPdebugMessage("DISCARDING sub-solution \n");
+      SCIPfreeMemoryArray(scip, &subsol);
    }
-
-   if( subsol )
+   else
    {
+      SCIPdebugMessage("ADDING sub-solution \n");
       StpVecPushBack(scip, tsepafull->subsols, subsol);
    }
 
@@ -710,11 +854,13 @@ SCIP_RETCODE sepafullReduceFromSols(
          if( subsol[e] == CONNECT || subsol[e + 1] == CONNECT )
          {
 #ifdef SCIP_DEBUG
+            const int* const subToOrg = termcomp->nodemap_subToOrg;
             SCIPdebugMessage("solution %d (original) edge: ", i);
+
             if( edgemap_subToOrg[e] != -1  )
                graph_edge_printInfo(orggraph, edgemap_subToOrg[e]);
             else
-               printf("artifical \n");
+               printf("artificial %d->%d \n", subToOrg[subgraph->tail[e]], subToOrg[subgraph->head[e]]);
 #endif
             edgesolcount[e / 2]++;
          }
@@ -782,6 +928,8 @@ SCIP_RETCODE sepafullReduce(
 
    for( int i = 0; i < nsolcands; i++ )
    {
+      SCIPdebugMessage("---Checking solution candidate %d: \n", i);
+
       SCIP_CALL( sepafullAddSolForCand(scip, i, termcomp, tsepafull) );
    }
 
@@ -803,12 +951,6 @@ SCIP_Bool termcompIsPromising(
 
    assert(GT(noderatio, 0.0));
    assert(builder->nsepatterms <= SEPARATOR_MAXSIZE);
-
-   if( builder->nsepatterms != 2 )
-   {
-      int todo; // delete!
-      return FALSE;
-   }
 
    if( builder->nsepatterms == 2 )
    {
