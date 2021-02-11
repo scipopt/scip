@@ -997,15 +997,16 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       cutpool->firstunprocessedsol = cutpool->ncuts;
    }
 
-   if( nefficaciouscuts > 0 )
+   /* update the number of found cuts */
+   cutpool->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts;
+
+   /* check whether efficacy threshold should be tightened or relaxed */
+   if( set->sepa_usecutpoolfilter && nefficaciouscuts > 0 )
    {
       int maxncuts = SCIPsetGetSepaMaxcuts(set, root);
       int ncuts = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
 
       maxncuts = MIN(maxncuts, nefficaciouscuts);
-
-      /* update the number of found cuts */
-      cutpool->ncutsfound += ncuts;
 
       if( ncuts > (0.5 * maxncuts) )
       {
@@ -1015,10 +1016,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       {
          stat->ncutpoolfails = MAX(stat->ncutpoolfails + 1, 1);
       }
-   }
 
-   if( set->sepa_usecutpoolfilter )
-   {
       if( stat->ncutpoolfails == (root ? 2 : 10) )
       {
          cutpool->firstunprocessed = 0;
