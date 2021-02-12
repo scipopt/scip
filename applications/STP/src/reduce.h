@@ -192,6 +192,7 @@ extern SCIP_RETCODE reduce_unconnectedInfeas(SCIP*, SCIP_Bool, GRAPH*, SCIP_Bool
  */
 extern SCIP_RETCODE    reduce_articulations(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_bidecomposition(SCIP*, GRAPH*, REDBASE*, int*, SCIP_Bool*);
+extern SCIP_RETCODE    reduce_bidecompositionExact(SCIP*, GRAPH*, REDBASE*, int*, int*);
 extern SCIP_RETCODE    reduce_nonTerminalComponents(SCIP*, const CUTNODES*, GRAPH*, SCIP_Real*, int*);
 
 

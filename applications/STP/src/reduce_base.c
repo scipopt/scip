@@ -1956,6 +1956,8 @@ SCIP_RETCODE redLoopPc(
    return SCIP_OKAY;
 }
 
+#define USE_FULLSEPA
+
 /** STP loop */
 SCIP_RETCODE redLoopStp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1973,6 +1975,9 @@ SCIP_RETCODE redLoopStp(
    int dummy = 0;
    int nruns = 0;
    SCIP_Bool rerun = TRUE;
+#ifdef USE_FULLSEPA
+   SCIP_Bool runFullSepa = TRUE;
+#endif
 
    assert(scip && g && redbase);
    assert(reductbound > 0);
@@ -2033,21 +2038,25 @@ SCIP_RETCODE redLoopStp(
             rerun = TRUE;
          }
 
-#ifdef XXX_XX
-         if( !rerun )
+#ifdef USE_FULLSEPA
+        // if( (!rerun || nruns >= 2) && runFullSepa )
+         if( !rerun && runFullSepa )
          {
             int sepanelims = 0;
 
             SCIP_CALL( reduce_termsepaFull(scip, g, redbaseGetSolnode(redsollocal, redbase), redbase, &sepanelims) );
 
+            if( sepanelims > STP_RED_EXPENSIVEFACTOR * reductbound )
+               SCIP_CALL( redLoopInnerStp(scip, randnumgen, g, redsollocal, redbase, &wasDecomposed) );
+
+#ifdef XXX_XXX
             if( sepanelims > STP_RED_FULLSEPAFACTOR * reductbound )
                rerun = TRUE;
             else if( sepanelims > STP_RED_EXPENSIVEFACTOR * reductbound )
                SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &dummy, NULL));
-               //SCIP_CALL( redLoopInnerStp(scip, randnumgen, g, redsollocal, redbase, &wasDecomposed) );
-
-            printf("sepanelims=%d \n", sepanelims);
-
+#endif
+        //    printf("sepanelims=%d, rerun=%d \n", sepanelims, rerun);
+            runFullSepa = FALSE;
          }
 #endif
       }

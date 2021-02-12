@@ -48,6 +48,7 @@
 #define BIDECOMP_MINMAXCOMPRATIO           0.80
 #define BIDECOMP_MINMAXCOMPRATIO_PARTIAL   0.99
 #define BIDECOMP_MAXCOMPRATIO_PARTIAL      0.05
+#define BIDECOMP_MAXCOMPRATIO_AGGRESSIVE   0.5
 #define BIDECOMP_MINNODES                  10
 #define BIDECOMP_MINNODES_PARTIAL          10
 
@@ -646,7 +647,8 @@ SCIP_RETCODE decomposeExactFixSol(
    const SUBINOUT*       subinout,           /**< helper for problem mapping */
    SUBSTP*               substp,             /**< sub-problem */
    GRAPH*                orggraph,           /**< original graph */
-   REDBASE*              redbase             /**< reduction stuff */
+   REDBASE*              redbase,            /**< reduction stuff */
+   int*                  nelims              /**< number of eliminations or NULL */
    )
 {
    SCIP_Real* offset = reduce_solGetOffsetPointer(redbase->redsol);
@@ -681,6 +683,9 @@ SCIP_RETCODE decomposeExactFixSol(
       {
          SCIPdebugMessage("delete edge %d \n", orgedge);
 
+         if( nelims )
+            (*nelims)++;
+
          assert(subedges_sol[i] == UNKNOWN && subedges_sol[i + 1] == UNKNOWN);
          graph_edge_del(scip, orggraph, orgedge, TRUE);
       }
@@ -700,7 +705,8 @@ SCIP_RETCODE decomposeExactSubDoIt(
    const BIDECOMP*       bidecomp,           /**< all-components storage */
    GRAPH*                orggraph,           /**< graph data structure */
    GRAPH*                subgraph,           /**< sub-graph */
-   REDBASE*              redbase             /**< reduction stuff */
+   REDBASE*              redbase,            /**< reduction stuff */
+   int*                  nelims              /**< number of eliminations or NULL */
    )
 {
    SUBINOUT* subinout = bidecomp->subinout;
@@ -725,7 +731,7 @@ SCIP_RETCODE decomposeExactSubDoIt(
    assert(success);
 
    /* fix solution in original graph */
-   SCIP_CALL( decomposeExactFixSol(scip, subinout, substp, orggraph, redbase) );
+   SCIP_CALL( decomposeExactFixSol(scip, subinout, substp, orggraph, redbase, nelims) );
 
    graph_subinoutClean(scip, subinout);
    substpsolver_free(scip, &substp);
@@ -741,23 +747,15 @@ SCIP_RETCODE decomposeExactSubTry(
    const BIDECOMP*       bidecomp,           /**< all-components storage */
    int                   compindex,          /**< component index */
    GRAPH*                g,                  /**< graph data structure */
-   REDBASE*              redbase             /**< reduction stuff */
+   REDBASE*              redbase,            /**< reduction stuff */
+   int*                  nelims              /**< number of eliminations or NULL */
    )
 {
    GRAPH* subgraph;
    SUBINOUT* subinout = bidecomp->subinout;
-   const SCIP_Real nodesratio = bidecomposition_getCompNodeRatio(bidecomp, compindex);
    int subroot;
 
    assert(redbase->bidecompparams);
-
-   SCIPdebugMessage("nodes ratio of component %d: %f \n", compindex, nodesratio);
-
-   if( nodesratio > BIDECOMP_MAXCOMPRATIO_PARTIAL )
-   {
-      SCIPdebugMessage("component is too large, returning \n");
-      return SCIP_OKAY;
-   }
 
    if( bidecomposition_componentIsTrivial(bidecomp, compindex) )
    {
@@ -783,7 +781,7 @@ SCIP_RETCODE decomposeExactSubTry(
    SCIP_CALL( bidecomposition_getMarkedSubRoot(scip, bidecomp, g, subgraph, &subroot) );
    subgraph->source = subroot;
 
-   SCIP_CALL( decomposeExactSubDoIt(scip, bidecomp, g, subgraph, redbase) );
+   SCIP_CALL( decomposeExactSubDoIt(scip, bidecomp, g, subgraph, redbase, nelims) );
 
    return SCIP_OKAY;
 }
@@ -866,10 +864,12 @@ SCIP_RETCODE decomposeReduce(
 static
 SCIP_RETCODE decomposePartialExact(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             maxcompratio,       /**< max nodes ratio */
    GRAPH*                g,                  /**< graph data structure */
-   BIDECOMP*             bidecomp,
+   BIDECOMP*             bidecomp,           /**< bi-decomposition */
    int*                  solnode,            /**< solution nodes or NULL */
-   REDBASE*              redbase             /**< reduction stuff */
+   REDBASE*              redbase,            /**< reduction stuff */
+   int*                  nelims              /**< number of eliminations or NULL */
    )
 {
 #ifdef BENCH_SEPA_PARTIAL
@@ -888,7 +888,16 @@ SCIP_RETCODE decomposePartialExact(
    /* solve small biconnected component individually */
    for( int i = 0; i < bidecomp->nbicomps; i++ )
    {
-      SCIP_CALL( decomposeExactSubTry(scip, bidecomp, i, g, redbase) );
+      const SCIP_Real nodesratio = bidecomposition_getCompNodeRatio(bidecomp, i);
+      SCIPdebugMessage("nodes ratio of component %d: %f \n", i, nodesratio);
+
+      if( nodesratio > maxcompratio )
+      {
+         SCIPdebugMessage("component is too large, skipping component \n");
+         continue;
+      }
+
+      SCIP_CALL( decomposeExactSubTry(scip, bidecomp, i, g, redbase, nelims) );
    }
 
    /* NOTE: solution edges have been fixed to 0 before */
@@ -934,7 +943,41 @@ SCIP_RETCODE decomposeExec(
    }
    else if( decomposePartialIsPromising(g, redbase, bidecomp) )
    {
-      SCIP_CALL( decomposePartialExact(scip, g, bidecomp, solnode, redbase) );
+      SCIP_CALL( decomposePartialExact(scip, BIDECOMP_MAXCOMPRATIO_PARTIAL, g, bidecomp, solnode, redbase, NULL) );
+   }
+
+   bidecomposition_free(scip, &bidecomp);
+   assert(graph_valid(scip, g));
+
+   return SCIP_OKAY;
+}
+
+
+/** solves (not too large) biconnected component separately */
+static
+SCIP_RETCODE decomposeExecExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const CUTNODES*       cutnodes,           /**< cut nodes */
+   GRAPH*                g,                  /**< graph data structure */
+   REDBASE*              redbase,            /**< reduction stuff */
+   int*                  solnode,            /**< solution nodes or NULL */
+   int*                  nelims              /**< number of eliminations */
+   )
+{
+   BIDECOMP* bidecomp;
+
+   /* NOTE: does not work because we do node contractions when reinserting the subgraph,
+    * and because order of nodes is changed in subbgraph */
+   assert(redbase->solnode == NULL && "not supported");
+   assert(redbase->bidecompparams);
+   assert(redbase->bidecompparams->depth < redbase->bidecompparams->maxdepth);
+   assert(graph_valid(scip, g));
+
+   SCIP_CALL( bidecomposition_init(scip, cutnodes, g, &bidecomp) );
+
+   if( decomposePartialIsPromising(g, redbase, bidecomp) )
+   {
+      SCIP_CALL( decomposePartialExact(scip, BIDECOMP_MAXCOMPRATIO_AGGRESSIVE, g, bidecomp, solnode, redbase, nelims) );
    }
 
    bidecomposition_free(scip, &bidecomp);
@@ -1028,6 +1071,51 @@ SCIP_RETCODE reduce_bidecomposition(
 
    return SCIP_OKAY;
 }
+
+
+/** solves smaller connected components to optimality  */
+SCIP_RETCODE reduce_bidecompositionExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   REDBASE*              redbase,            /**< reduction base */
+   int*                  solnode,            /**< solution nodes or NULL */
+   int*                  nelims              /**< number of eliminations */
+   )
+{
+   CUTNODES* cutnodes;
+
+   assert(scip && g && redbase && nelims);
+   assert(graph_typeIsSpgLike(g) && "only SPG decomposition supported yet");
+
+   *nelims = FALSE;
+
+   if( g->terms == 1 )
+      return SCIP_OKAY;
+
+   graph_mark(g);
+
+   if( !bidecomposition_isPossible(g) )
+   {
+      SCIPdebugMessage("graph is too large...don't decompose \n");
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( bidecomposition_cutnodesInit(scip, g, &cutnodes) );
+   bidecomposition_cutnodesCompute(g, cutnodes);
+
+   if( cutnodes->biconn_ncomps > 0 )
+   {
+      /* get rid of non-required biconnected components (without terminals) */
+      SCIP_CALL( reduce_nonTerminalComponents(scip, cutnodes, g, reduce_solGetOffsetPointer(redbase->redsol), nelims) );
+
+      SCIP_CALL( decomposeExecExact(scip, cutnodes, g, redbase, solnode, nelims) );
+   }
+
+   bidecomposition_cutnodesFree(scip, &cutnodes);
+
+   return SCIP_OKAY;
+}
+
 
 
 /** articulation points based, simple reduction */

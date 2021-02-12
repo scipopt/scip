@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,9 +50,9 @@
 #define COMPONENT_MAXNODESRATIO_4SEPA 0.025
 
 #define COMPONENT_MAXNODESRATIO_1CANDS 0.8
-#define COMPONENT_MAXNODESRATIO_2CANDS 0.4
-#define COMPONENT_MAXNODESRATIO_3CANDS 0.2
-#define COMPONENT_MAXNODESRATIO_4CANDS 0.1
+#define COMPONENT_MAXNODESRATIO_2CANDS 0.33
+#define COMPONENT_MAXNODESRATIO_3CANDS 0.15
+#define COMPONENT_MAXNODESRATIO_4CANDS 0.08
 #define COMPONENT_MAXNODESRATIO_5PLUSCANDS 0.02
 
 
@@ -1040,10 +1040,11 @@ SCIP_RETCODE initHelpers(
       maxncompchecks = mincheckbound;
    }
 
-   SCIPdebugMessage("max. number of components to be checked: %d \n", maxncompchecks);
+   graph_printInfoReduced(g);
+   printf("max. number of components to be checked: %d \n", maxncompchecks);
 
    /* NOTE: we want to allow a few more terminal separators to be able to choose small ones */
-   SCIP_CALL( mincut_termsepasInit(scip, g, (int) (1.5 * maxncompchecks), maxsepasize, termsepas) );
+   SCIP_CALL( mincut_termsepasInit(scip, g, (int) (2.0 * maxncompchecks), maxsepasize, termsepas) );
    SCIP_CALL( reduce_compbuilderInit(scip, g, builder) );
 
    (*builder)->maxncompchecks = maxncompchecks;
@@ -1089,6 +1090,15 @@ SCIP_RETCODE reduce_termsepaFull(
    *nelims = 0;
 
    if( g->terms == 1 )
+   {
+      return SCIP_OKAY;
+   }
+
+   /* first, we want to get rid of medium sized connected components */
+   SCIP_CALL( reduce_bidecompositionExact(scip, g, redbase, solnode, nelims) );
+
+   // todo
+   if( 1 )
    {
       return SCIP_OKAY;
    }
