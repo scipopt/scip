@@ -225,18 +225,22 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
             SCIP_CALL( SCIPaggregateVars(scip, var, newvar, 1.0, -1.0, lb, &infeasible, &redundant, &aggregated) );
          }
 
-         assert(!infeasible);
-         assert(redundant);
-         assert(aggregated);
-         SCIPdebugMsg(scip, "var <%s> with bounds [%f,%f] has obj %f\n",
-            SCIPvarGetName(newvar), SCIPvarGetLbGlobal(newvar), SCIPvarGetUbGlobal(newvar), SCIPvarGetObj(newvar));
+         if( infeasible )
+            *result = SCIP_CUTOFF;
+         else
+         {
+            assert(redundant);
+            assert(aggregated);
+            SCIPdebugMsg(scip, "var <%s> with bounds [%f,%f] has obj %f\n",
+               SCIPvarGetName(newvar), SCIPvarGetLbGlobal(newvar), SCIPvarGetUbGlobal(newvar), SCIPvarGetObj(newvar));
+
+            /* take care of statistics */
+            (*naggrvars)++;
+            *result = SCIP_SUCCESS;
+         }
 
          /* release variable */
          SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-
-         /* take care of statistics */
-         (*naggrvars)++;
-         *result = SCIP_SUCCESS;
       }
    }
 
