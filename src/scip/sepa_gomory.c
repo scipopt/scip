@@ -174,6 +174,146 @@ SCIP_RETCODE evaluateCutNumerics(
 }
 
 
+/** add cut */
+static
+SCIP_RETCODE addCut(
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_VAR**            vars,               /**< array of variables */
+   int                   c,                  /**< index of basic variable (< 0 for slack variables) */
+   SCIP_Longint          maxdnom,            /**< maximal denominator to use for scaling */
+   SCIP_Real             maxscale,           /**< maximal scaling factor */
+   int                   cutnnz,             /**< number of nonzeros in cut */
+   int*                  cutinds,            /**< variable indices in cut */
+   SCIP_Real*            cutcoefs,           /**< cut cofficients */
+   SCIP_Real             cutefficacy,        /**< cut efficacy */
+   SCIP_Real             cutrhs,             /**< rhs of cut */
+   SCIP_Bool             cutislocal,         /**< whether cut is local */
+   int                   cutrank,            /**< rank of cut */
+   SCIP_Bool             strongcg,           /**< whether the cut arises from the strong-CG procedure */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff appeared */
+   int*                  naddedcuts          /**< pointer to store number of added cuts */
+   )
+{
+   assert(scip != NULL);
+   assert(cutoff != NULL);
+   assert(naddedcuts != NULL);
+
+   if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) ) /*lint !e644*/
+   {
+      SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %g.\n", cutrhs);
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* Only take efficient cuts, except for cuts with one non-zero coefficients (= bound
+    * changes); the latter cuts will be handled internally in sepastore. */
+   if( SCIPisEfficacious(scip, cutefficacy) )
+   {
+      SCIP_ROW* cut;
+      SCIP_SEPA* cutsepa;
+      char cutname[SCIP_MAXSTRLEN];
+      int v;
+
+      /* construct cut name */
+      if( strongcg )
+      {
+         cutsepa = sepadata->strongcg;
+
+         if( c >= 0 )
+            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), c);
+         else
+            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
+      }
+      else
+      {
+         cutsepa = sepadata->gomory;
+
+         if( c >= 0 )
+            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), c);
+         else
+            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
+      }
+
+      /* create empty cut */
+      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, cutsepa, cutname, -SCIPinfinity(scip), cutrhs,
+            cutislocal, FALSE, sepadata->dynamiccuts) );
+
+      /* set cut rank */
+      SCIProwChgRank(cut, cutrank); /*lint !e644*/
+
+      /* cache the row extension and only flush them if the cut gets added */
+      SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+
+      /* collect all non-zero coefficients */
+      for( v = 0; v < cutnnz; ++v )
+      {
+         SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
+      }
+
+      if( cutnnz == 1 )
+      {
+         /* Add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
+          * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically. */
+
+         /* flush all changes before adding the cut */
+         SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+         SCIP_CALL( SCIPaddRow(scip, cut, TRUE, cutoff) );
+         ++(*naddedcuts);
+      }
+      else
+      {
+         SCIP_Bool useful;
+
+         assert(SCIPisInfinity(scip, -SCIProwGetLhs(cut)));
+         assert(!SCIPisInfinity(scip, SCIProwGetRhs(cut)));
+
+         SCIPdebugMsg(scip, " -> %s cut <%s>: rhs=%f, eff=%f\n", strongcg ? "strong-CG" : "gomory", cutname, cutrhs, cutefficacy);
+
+         SCIP_CALL( evaluateCutNumerics(scip, sepadata, cut, maxdnom, maxscale, &useful) );
+
+         if( useful )
+         {
+            SCIPdebugMsg(scip, " -> found %s cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+               strongcg ? "strong-CG" : "gomory", cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut),
+               SCIProwGetNorm(cut), SCIPgetCutEfficacy(scip, NULL, cut),
+               SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
+               SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
+
+            /* flush all changes before adding the cut */
+            SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+            if( SCIPisCutNew(scip, cut) )
+            {
+               /* add global cuts which are not implicit bound changes to the cut pool */
+               if( !cutislocal )
+               {
+                  if( sepadata->delayedcuts )
+                  {
+                     SCIP_CALL( SCIPaddDelayedPoolCut(scip, cut) );
+                  }
+                  else
+                  {
+                     SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                  }
+               }
+               else
+               {
+                  /* local cuts we add to the sepastore */
+                  SCIP_CALL( SCIPaddRow(scip, cut, FALSE, cutoff) );
+               }
+
+               ++(*naddedcuts);
+            }
+         }
+      }
+      /* release the row */
+      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods
  */
@@ -493,126 +633,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
        *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
        */
 
-      SCIPdebugMsg(scip, " -> success=%u, rhs=%g, efficacy=%g\n", success, cutrhs, cutefficacy);
-
-      /* if successful, convert dense cut into sparse row, and add the row as a cut */
+      /* if successful, add the row as a cut */
       if( success )
       {
          assert(allowlocal || !cutislocal); /*lint !e644*/
-
-         if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) ) /*lint !e644*/
-         {
-            SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
-            cutoff = TRUE;
-         }
-         else if( SCIPisEfficacious(scip, cutefficacy) )
-         {
-            /* Only take efficient cuts, except for cuts with one non-zero coefficients (= bound
-             * changes); the latter cuts will be handled internally in sepastore.
-             */
-            SCIP_ROW* cut;
-            SCIP_SEPA* cutsepa;
-            int v;
-            char cutname[SCIP_MAXSTRLEN];
-
-            /* construct cut name */
-            if( strongcgsuccess )
-            {
-               cutsepa = sepadata->strongcg;
-
-               if( c >= 0 )
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), c);
-               else
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
-            }
-            else
-            {
-               cutsepa = sepadata->gomory;
-
-               if( c >= 0 )
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), c);
-               else
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
-            }
-
-            /* create empty cut */
-            SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, cutsepa, cutname, -SCIPinfinity(scip), cutrhs,
-               cutislocal, FALSE, sepadata->dynamiccuts) );
-
-            /* set cut rank */
-            SCIProwChgRank(cut, cutrank); /*lint !e644*/
-
-            /* cache the row extension and only flush them if the cut gets added */
-            SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-
-            /* collect all non-zero coefficients */
-            for( v = 0; v < cutnnz; ++v )
-            {
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
-            }
-
-            if( cutnnz == 1 )
-            {
-               /* Add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
-                * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically. */
-
-                /* flush all changes before adding the cut */
-               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-               SCIP_CALL( SCIPaddRow(scip, cut, TRUE, &cutoff) );
-               naddedcuts++;
-            }
-            else
-            {
-               SCIP_Bool useful;
-
-               assert(success == TRUE);
-               assert(SCIPisInfinity(scip, -SCIProwGetLhs(cut)));
-               assert(!SCIPisInfinity(scip, SCIProwGetRhs(cut)));
-
-               SCIPdebugMsg(scip, " -> gomory cut for <%s>: rhs=%f, eff=%f\n",
-                  c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
-                  cutrhs, cutefficacy);
-
-               SCIP_CALL( evaluateCutNumerics(scip, sepadata, cut, maxdnom, maxscale, &useful) );
-
-               if( useful )
-               {
-                  SCIPdebugMsg(scip, " -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
-                     cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
-                     SCIPgetCutEfficacy(scip, NULL, cut),
-                     SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
-                     SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-
-                  /* flush all changes before adding the cut */
-                  SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-
-                  if( SCIPisCutNew(scip, cut) )
-                  {
-                     /* add global cuts which are not implicit bound changes to the cut pool */
-                     if( !cutislocal )
-                     {
-                        if( sepadata->delayedcuts )
-                        {
-                           SCIP_CALL( SCIPaddDelayedPoolCut(scip, cut) );
-                        }
-                        else
-                        {
-                           SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-                        }
-                     }
-                     else
-                     {
-                        /* local cuts we add to the sepastore */
-                        SCIP_CALL( SCIPaddRow(scip, cut, FALSE, &cutoff) );
-                     }
-
-                     naddedcuts++;
-                  }
-               }
-            }
-            /* release the row */
-            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-         }
+         SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
+               cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts) );
       }
    }
 
