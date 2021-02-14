@@ -214,6 +214,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
+   SCIP_CALL( SCIPincludeSepaMixing(scip) );
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );

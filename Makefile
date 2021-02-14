@@ -695,6 +695,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
+			scip/sepa_mixing.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \

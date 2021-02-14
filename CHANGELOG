@@ -14,6 +14,7 @@ Features
   a symmetry component and add certain Schreier Sims cuts to such components.
 - The LPIs for Gurobi and Mosek are thread-safe now.
 - The complete code is now thread-safe by default.
+- New separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint).
 
 Performance improvements
 ------------------------
