@@ -1093,9 +1093,6 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
    assert( sourcedata->vars1 != NULL );
    assert( sourcedata->vars2 != NULL );
 
-   if ( !sourcedata->ismodelcons )
-      return SCIP_OKAY;
-
    /* create transformed constraint data (copy data where necessary) */
    nrows = sourcedata->nrows;
 
