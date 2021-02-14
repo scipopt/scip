@@ -94,6 +94,7 @@
 #define DEFAULT_DELAYEDCUTS       FALSE /**< should cuts be added to the delayed cut pool? */
 #define DEFAULT_SIDETYPEBASIS      TRUE /**< choose side types of row (lhs/rhs) based on basis information? */
 #define DEFAULT_TRYSTRONGCG        TRUE /**< try to generate strengthened Chvatal-Gomory cuts? */
+#define DEFAULT_GENBOTHGOMSCG      TRUE /**< should both Gomory and strong CG cuts be generated (otherwise take best) */
 #define DEFAULT_RANDSEED             53 /**< initial random seed */
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
@@ -126,6 +127,7 @@ struct SCIP_SepaData
    SCIP_Bool             delayedcuts;        /**< should cuts be added to the delayed cut pool? */
    SCIP_Bool             sidetypebasis;      /**< choose side types of row (lhs/rhs) based on basis information? */
    SCIP_Bool             trystrongcg;        /**< try to generate strengthened Chvatal-Gomory cuts? */
+   SCIP_Bool             genbothgomscg;      /**< should both Gomory and strong CG cuts be generated (otherwise take best) */
 };
 
 
@@ -610,6 +612,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       {
          SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
             1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &strongcgsuccess) );
+
+         /* if we want to generate both cuts, add cut and reinitialize cutefficacy and strongcgsuccess */
+         if( strongcgsuccess && sepadata->genbothgomscg )
+         {
+            assert(allowlocal || !cutislocal); /*lint !e644*/
+            SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
+                  cutislocal, cutrank, TRUE, &cutoff, &naddedcuts) );
+            cutefficacy = 0.0;
+            strongcgsuccess = FALSE;
+            if( cutoff )
+               break;
+         }
       }
       else
          strongcgsuccess = FALSE;
@@ -784,6 +798,10 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          "separating/gomory/trystrongcg",
          "try to generate strengthened Chvatal-Gomory cuts?",
          &sepadata->trystrongcg, TRUE, DEFAULT_TRYSTRONGCG, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/gomory/genbothgomscg",
+         "Should both Gomory and strong CG cuts be generated (otherwise take best)?",
+         &sepadata->genbothgomscg, TRUE, DEFAULT_GENBOTHGOMSCG, NULL, NULL) );
 
    return SCIP_OKAY;
 }
