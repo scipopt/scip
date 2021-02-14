@@ -586,7 +586,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Real cutefficacy = 0.0;
       SCIP_Bool success;
       SCIP_Bool cutislocal;
-      SCIP_Bool strongcgsuccess;
+      SCIP_Bool strongcgsuccess = FALSE;
       int ninds = -1;
       int cutnnz;
       int cutrank;
@@ -607,13 +607,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       if( !success )
          continue;
 
-      /* create a strong CG cut out of the aggregation row */
+      /* try to create a strong CG cut out of the aggregation row */
       if( separatescg )
       {
          SCIP_CALL( SCIPcalcStrongCG(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, minfrac, maxfrac,
             1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &strongcgsuccess) );
 
-         /* if we want to generate both cuts, add cut and reinitialize cutefficacy and strongcgsuccess */
+         /* if we want to generate both cuts, add cut and reset cutefficacy and strongcgsuccess */
          if( strongcgsuccess && sepadata->genbothgomscg )
          {
             assert(allowlocal || !cutislocal); /*lint !e644*/
@@ -625,34 +625,28 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                break;
          }
       }
-      else
-         strongcgsuccess = FALSE;
-
-      if( separategmi )
-      {
-         /* SCIPcalcMIR will only override the cut if its efficacy is larger than the one of the strongcg cut */
-         SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
-            minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
-      }
-      else
-         success = FALSE;
-
-      if( success )
-         strongcgsuccess = FALSE;   /* Set strongcgsuccess to FALSE, since the MIR cut has overriden the strongcg cut. */
-      else
-         success = strongcgsuccess; /* Use strong CG cut if SCIPcalcStrongCG was successful. */
 
       /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
        *       cut. Alternatively, we could use the direct version (see thesis of Achterberg formula (8.4)) which
        *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
        */
 
-      /* if successful, add the row as a cut */
-      if( success )
+      /* try to create Gomory cut out of the aggregation row */
+      if( separategmi )
       {
-         assert(allowlocal || !cutislocal); /*lint !e644*/
-         SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
-               cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts) );
+         /* SCIPcalcMIR will only override the cut if its efficacy is larger than the one of the strongcg cut */
+         SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
+            minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+
+         if( success || strongcgsuccess )
+         {
+            assert(allowlocal || !cutislocal); /*lint !e644*/
+            if( success )
+               strongcgsuccess = FALSE;   /* Set strongcgsuccess to FALSE, since the MIR cut has overriden the strongcg cut. */
+
+            SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
+                  cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts) );
+         }
       }
    }
 
