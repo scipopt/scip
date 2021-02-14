@@ -12186,7 +12186,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                break;
             }
          }
-         active = TRUE;
+         active = TRUE;  /*lint !e838*/
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
