@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1607,7 +1607,7 @@ SCIP_RETCODE forbidFixation(
    if( nsubbinvars == 0 && nsubintvars == 0 )
    {
       /* If we did not fix any discrete variables but found the "sub"CIP infeasible, then also the CIP is infeasible. */
-      SCIPwarningMessage(scip, "heur_subnlp found subCIP infeasible after fixing no variables, something is strange here...\n");
+      SCIPdebugMsg(scip, "heur_subnlp found subCIP infeasible after fixing no variables, something is strange here...\n");
       return SCIP_OKAY;
    }
 

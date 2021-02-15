@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -62,9 +62,10 @@ SETCUTOFF=${27}
 VISUALIZE=${28}
 CLUSTERNODES=${29}
 SLURMACCOUNT=${30}
+PYTHON=${31}
 
 # check if all variables defined (by checking the last one)
-if test -z $SLURMACCOUNT
+if test -z $PYTHON
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -97,6 +98,7 @@ then
     echo "VISUALIZE     = $VISUALIZE"
     echo "CLUSTERNODES  = $CLUSTERNODES"
     echo "SLURMACCOUNT  = $SLURMACCOUNT"
+    echo "PYTHON        = $PYTHON"
     exit 1;
 fi
 
@@ -183,6 +185,13 @@ do
 		elif type $BINNAME >/dev/null 2>&1
 		then
 		    EXECNAME=${DEBUGTOOLCMD}$BINNAME
+		fi
+
+		# use specified python version if the binary ends with ".py"
+		EXT="${BINNAME##*.}"
+		if test "${EXT}" = "py"
+		then
+		    EXECNAME="${PYTHON} ${BINNAME}"
 		fi
 
 		# find out the solver that should be used
