@@ -237,9 +237,6 @@ Here is what you have to do to get SCIP running:
    - "WORHP=true"      to enable WORHP interface (needs WORHP >= 1.10)
    - "WORHP=false"     to disable WORHP interface (default)
 
-   - "PRESOLLIB=true"  to enable the MILP presolver based on the presolving library
-   - "PRESOLLIB=false" to disable the MILP presolver based on the presolving library (default)
-
    - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
    - "EXPRINT=none"    to use no expressions interpreter
 
@@ -259,8 +256,8 @@ Here is what you have to do to get SCIP running:
    - "TPI=tny"         to use the tinycthreads interface for concurrent solves
    - "TPI=none"        to disable the task processing interface (default)
 
-   - "PRESOL=true"     to use the presolve library and enable the MILP-sepcific presolver
-   - "PRESOL=false"    to disable the presolve library (default)
+   - "PAPILO=true"     to enable the MILP presolver based on the presolving library PaPILO
+   - "PAPILO=false"    to disable the MILP presolver based on the presolving library PaPILO (default)
 
    On some machines, you should use gmake instead of make.
 
