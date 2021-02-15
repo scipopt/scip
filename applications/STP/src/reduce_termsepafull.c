@@ -834,6 +834,8 @@ SCIP_RETCODE sepafullReduceFromSols(
    STP_Vectype(int*) subsols = tsepafull->subsols;
    const int* const edgemap_subToOrg = termcomp->edgemap_subToOrg;
    int8_t* edgesolcount;
+   const SCIP_Real* const subgraph_bcosts = tsepafull->subgraph_bcosts;
+   const SCIP_Real* const subgraph_orgcosts = tsepafull->subgraph_orgcosts;
    SCIP_Real* offset = reduce_solGetOffsetPointer(redbase->redsol);
    const int nsubedges = graph_get_nEdges(subgraph);
    const int nvalidsols = StpVecGetSize(subsols);
@@ -875,12 +877,24 @@ SCIP_RETCODE sepafullReduceFromSols(
 
    for( int e = 0; e < nsubedges / 2; e++ )
    {
-      const int orgedge = edgemap_subToOrg[e * 2];
+      const int subedge = e * 2;
+      const int orgedge = edgemap_subToOrg[subedge];
 
       if( orgedge == -1 )
          continue;
 
       assert(graph_edge_isInRange(orggraph, orgedge));
+
+      /* we want to make sure that we don't modify sepa->sepa edges that got a smaller
+       * bottleneck distance */
+      if( !EQ(subgraph_bcosts[subedge], subgraph_orgcosts[subedge]) )
+      {
+         assert(LT(subgraph_bcosts[subedge], subgraph_orgcosts[subedge]));
+         assert(subgraph->tail[subedge] < termcomp->builder->nsepatterms);
+         assert(subgraph->head[subedge] < termcomp->builder->nsepatterms);
+
+         continue;
+      }
 
       if( edgesolcount[e] == nvalidsols )
       {
@@ -1094,14 +1108,9 @@ SCIP_RETCODE reduce_termsepaFull(
       return SCIP_OKAY;
    }
 
+  // int todo;
    /* first, we want to get rid of medium sized connected components */
    SCIP_CALL( reduce_bidecompositionExact(scip, g, redbase, solnode, nelims) );
-
-   // todo
-   if( 1 )
-   {
-      return SCIP_OKAY;
-   }
 
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, (unsigned) g->terms, TRUE) );
    SCIP_CALL( initHelpers(scip, g, &builder, &termsepas) );
