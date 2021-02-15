@@ -1537,9 +1537,9 @@ SCIP_RETCODE SCIPlpiGetCols(
 
    /* get data from qsopt */
    if ( nnonz != NULL )
-      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, &lcnt, &lbeg, &lind, &lval, 0, lb ? (&llb) : NULL, ub ? (&lub) : NULL, 0);
+      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, &lcnt, &lbeg, &lind, &lval, 0, lb ? (&llb) : NULL, ub ? (&lub) : NULL, NULL);
    else
-      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, NULL, NULL, NULL, NULL, 0, lb ? (&llb) : NULL, ub ? (&lub) : NULL, 0);
+      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, NULL, NULL, NULL, NULL, 0, lb ? (&llb) : NULL, ub ? (&lub) : NULL, NULL);
 
    QS_TESTG(rval, CLEANUP, " ");
 
@@ -1640,9 +1640,9 @@ SCIP_RETCODE SCIPlpiGetRows(
 
    /* get data from qsopt */
    if ( nnonz != NULL )
-      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, &lcnt, &lbeg, &lind, &lval, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, 0);
+      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, &lcnt, &lbeg, &lind, &lval, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, NULL);
    else
-      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, NULL, NULL, NULL, NULL, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, 0);
+      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, NULL, NULL, NULL, NULL, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, NULL);
 
    QS_TESTG(rval, CLEANUP, " ");
 

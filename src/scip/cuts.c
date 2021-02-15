@@ -7235,10 +7235,10 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
       return SCIP_OKAY;
    assert( liftingdata.m != NULL );
    assert( liftingdata.M != NULL );
-   assert( liftingdata.lambda != SCIP_INVALID );
+   assert( liftingdata.lambda != SCIP_INVALID ); /*lint !e777*/
    assert( liftingdata.r >= 0 );
    assert( liftingdata.t >= 0 );
-   assert( liftingdata.mp != SCIP_INVALID );
+   assert( liftingdata.mp != SCIP_INVALID ); /*lint !e777*/
 
    QUAD_ASSIGN(rhs, liftingdata.d1);
 
