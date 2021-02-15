@@ -212,15 +212,16 @@ void F77_FUNC(hessian,HESSIAN)(real *x, fint *n, fint *m, fint *phase, real *lam
     fint *l_hess, fint *li_hess, fint *errflag);
 
 /** common block for problemname */
+/*lint -esym(754,char_l,pname,*::char_l,*::pname) */
 extern struct
 {
    fint char_l;
    char pname[10];
 } F77_FUNC(cpname,CPNAME);
 /*lint -esym(752,cpname_) */
-/*lint -esym(754,char_l,,pname) */
 
 /** common block for Hessian storage set to 0, i.e. NO Hessian */
+/*lint -esym(754,*::phr,*::phc) */
 extern struct
 {
    fint phl, phr, phc;
@@ -240,6 +241,7 @@ extern struct
 } F77_FUNC(nlp_eps_inf,NLP_EPS_INF);
 
 /** common block for printing from QP solver */
+/*lint -esym(754,*::n_bqpd_calls,*::n_bqpd_prfint) */
 extern struct
 {
    fint n_bqpd_calls, n_bqpd_prfint;
@@ -248,6 +250,7 @@ extern struct
 /*lint -esym(754,n_bqpd_calls,n_bqpd_prfint) */
 
 /** common for scaling: scale_mode = 0 (none), 1 (variables), 2 (vars+cons) */
+/*lint -esym(754,*::phe) */
 extern struct
 {
    fint scale_mode, phe;
