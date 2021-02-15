@@ -990,7 +990,10 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
 
          /* check if variable name was parsed */
          if( *endptr == str )
+         {
             state = SCIPPARSEPOLYNOMIAL_STATE_END;
+            break;
+         }
 
          if( var == NULL )
          {
