@@ -2378,6 +2378,7 @@ SCIP_RETCODE prepareReoptimization(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVED
  *
  *  @post After calling this method \SCIP reaches one of the following stages:
  *        - \ref SCIP_STAGE_PRESOLVING if the presolving process was interrupted
@@ -2394,7 +2395,7 @@ SCIP_RETCODE SCIPpresolve(
    SCIP_Bool infeasible;
    SCIP_Bool vanished;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);

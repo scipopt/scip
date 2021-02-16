@@ -39,7 +39,7 @@ uname -a                            > $ERRFILE
 function cleanup {
      mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
      mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
-     if [ -f "${ERRFILE}.rr" ] ;
+     if [ -d "${ERRFILE}.rr" ] ;
      then
          mv -f $ERRFILE.rr $SOLVERPATH/$OUTPUTDIR/$BASENAME.rr
      fi

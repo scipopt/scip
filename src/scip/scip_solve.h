@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPtransformProb(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVED
  *
  *  @post After calling this method \SCIP reaches one of the following stages:
  *        - \ref SCIP_STAGE_PRESOLVING if the presolving process was interrupted

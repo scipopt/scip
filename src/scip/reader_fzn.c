@@ -4030,12 +4030,12 @@ SCIP_RETCODE printRow(
    assert( strcmp(type, "eq") == 0 || strcmp(type, "le") == 0 || strcmp(type, "ge") == 0 );
 
    /* Add a constraint of type float_lin or int_lin, depending on whether there are continuous variables or coefficients */
-   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),"constraint ") );
+   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), "constraint ") );
    if( hasfloats )
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "float_lin_%s([",type);
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "float_lin_%s([", type);
    else
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "int_lin_%s([",type);
-   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "int_lin_%s([", type);
+   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), buffer) );
 
    /* print all coefficients but the last one */
    for( v = 0; v < nvars-1; ++v )
@@ -4087,7 +4087,7 @@ SCIP_RETCODE printRow(
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s",SCIPvarGetName(vars[nvars-1]),
             SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->ndiscretevars ? "_float" : "");  /*lint !e613*/
       else
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",SCIPvarGetName(vars[nvars-1]));  /*lint !e613*/
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s", SCIPvarGetName(vars[nvars-1]));  /*lint !e613*/
 
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
    }
@@ -4101,10 +4101,10 @@ SCIP_RETCODE printRow(
    if( hasfloats )
    {
       flattenFloat(scip, rhs, buffy);
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s);\n",buffy);
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s);\n", buffy);
    }
    else
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f);\n",rhs);
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f);\n", rhs);
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
 
    return SCIP_OKAY;
@@ -4386,16 +4386,16 @@ SCIP_RETCODE writeFzn(
             SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
 
          /* if there is a bound, store the variable and its boundtype for adding a corresponding constraint later-on */
-         if( SCIPisInfinity(scip, ub) )
-         {
-            boundedvars[nboundedvars] = v;
-            boundtypes[nboundedvars] = SCIP_BOUNDTYPE_LOWER;
-            nboundedvars++;
-         }
-         if( SCIPisInfinity(scip, -lb) )
+         if( ! SCIPisInfinity(scip, ub) )
          {
             boundedvars[nboundedvars] = v;
             boundtypes[nboundedvars] = SCIP_BOUNDTYPE_UPPER;
+            nboundedvars++;
+         }
+         if( ! SCIPisInfinity(scip, -lb) )
+         {
+            boundedvars[nboundedvars] = v;
+            boundtypes[nboundedvars] = SCIP_BOUNDTYPE_LOWER;
             nboundedvars++;
          }
       }

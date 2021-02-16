@@ -43,6 +43,8 @@ Testing
 Build system
 ------------
 
+- Compilation will now also work in a raw tarball of the scip git repository
+
 ### Cmake
 
 - Make find_package more verbose and require packages to be found. Now enabled packages that are not found result in an error.
@@ -55,9 +57,19 @@ Fixed bugs
 - Fixed numerical bug by creating and checking the empty solution when problem vanishes in presolving.
 - Replace wrong usage of CMAKE_BINARY_DIR by PROJECT_BINARY_DIR in CMake system
 - Fixed lpi_glop to use absl flag instead of GFlags
+- Fixed invalid initialization of limits/softtime parameter in cons_components
+- Fixed MIN macro not defined in some cases.
+- Safeguard some API methods for querying solving statistics against segmentation faults after SCIPpresolve()
+- Fixed unfreed solution in concurrent solving
+- Make sure that logicor constraints are enforced/separated if genlogicor is true in cons_indicator.
+  Thus, do not change constraints/logicor/sepafreq anymore, but output warning.
+- Fixed assert that assumed infeasibility cannot occur in presol_boundshift.
+
 
 Miscellaneous
 -------------
+
+- Added workaround for bug in MSVS 2019 when compiling CppAD source.
 
 Known bugs
 ----------
