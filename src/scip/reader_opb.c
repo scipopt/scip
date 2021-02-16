@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1601,20 +1601,25 @@ static
 SCIP_RETCODE getMaxAndConsDim(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
-   const char*           filename            /**< name of the input file */
+   const char*           filename,           /**< name of the input file */
+   SCIP_Real*            objoffset           /**< pointer to store objective offset */
    )
 {
    SCIP_Bool stop;
    char* commentstart;
    char* nproducts;
+   char* str;
    int i;
 
    assert(scip != NULL);
    assert(opbinput != NULL);
+   assert(objoffset != NULL);
 
    stop = FALSE;
    commentstart = NULL;
    nproducts = NULL;
+
+   *objoffset = 0.0;
 
    do
    {
@@ -1661,6 +1666,16 @@ SCIP_RETCODE getMaxAndConsDim(
 
                stop = TRUE;
             }
+
+            /* search for "Obj. offset      : <number>" in comment line */
+            str = strstr(opbinput->linebuf, "Obj. offset      : ");
+            if( str != NULL )
+            {
+               str += strlen("Obj. offset      : ");
+               *objoffset = atof(str);
+               break;
+            }
+
             break;
          }
       }
@@ -1688,6 +1703,7 @@ SCIP_RETCODE readOPBFile(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_Real objoffset;
    int nNonlinearConss;
    int i;
 
@@ -1703,16 +1719,22 @@ SCIP_RETCODE readOPBFile(
       return SCIP_NOFILE;
    }
 
-   /* tries to read the first comment line which usually contains information about the max size of "and" products */
-   SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename) );
-
-   /* reading additional information about the number of and constraints in comments to avoid reallocating
+   /* @todo: reading additional information about the number of and constraints in comments to avoid reallocating
     * "opbinput.andconss"
     */
+
+   /* tries to read the first comment line which usually contains information about the max size of "and" products */
+   SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename, &objoffset) );
+
    BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      SCIP_CALL( SCIPaddOrigObjoffset(scip, objoffset) );
+   }
 
    nNonlinearConss = 0;
 
@@ -3224,7 +3246,64 @@ SCIP_RETCODE printPseudobooleanCons(
    return retcode;
 }
 
+/** determine total number of linear constraints split into lhs/rhs */
+static
+void determineTotalNumberLinearConss(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_CONS**const      conss,              /**< array with constraints of the problem */
+   int const             nconss,             /**< number of constraints in the problem */
+   int*                  nlinearconss,       /**< pointer to store the total number of linear constraints */
+   int*                  nsplitlinearconss   /**< pointer to store the total number of linear constraints split into lhs/rhs */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   const char* conshdlrname;
+   SCIP_CONS* cons;
+   int c;
 
+   assert(scip != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(nlinearconss != NULL);
+   assert(nsplitlinearconss != NULL);
+
+   *nlinearconss = 0;
+   *nsplitlinearconss = 0;
+
+   /* loop over all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      cons = conss[c];
+      assert(cons != NULL);
+      conshdlr = SCIPconsGetHdlr(cons); /*lint !e613*/
+      assert(conshdlr != NULL);
+
+      conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+      if( strcmp(conshdlrname, "linear") == 0 )
+      {
+         if( ! SCIPisInfinity(scip, SCIPgetLhsLinear(scip, cons)) )
+            ++(*nsplitlinearconss);
+
+         if( ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, cons)) )
+            ++(*nsplitlinearconss);
+
+         ++(*nlinearconss);
+      }
+
+      if( strcmp(conshdlrname, "varbound") == 0 )
+      {
+         if( ! SCIPisInfinity(scip, SCIPgetLhsVarbound(scip, cons)) )
+            ++(*nsplitlinearconss);
+
+         if( ! SCIPisInfinity(scip, SCIPgetRhsVarbound(scip, cons)) )
+            ++(*nsplitlinearconss);
+
+         ++(*nlinearconss);
+      }
+   }
+}
+
+/** write constraints */
 static
 SCIP_RETCODE writeOpbConstraints(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -4146,6 +4225,8 @@ SCIP_RETCODE writeOpb(
    SCIP_HASHTABLE* printedfixing;
    SCIP_Bool usesymbol;
    SCIP_RETCODE retcode;
+   int nlinearconss;
+   int nsplitlinearconss;
 
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
@@ -4156,11 +4237,14 @@ SCIP_RETCODE writeOpb(
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/multisymbol", &usesymbol) );
    (void) SCIPsnprintf(multisymbol, OPB_MAX_LINELEN, "%s", usesymbol ? " * " : " ");
 
+   /* determine how many linear constraints are split */
+   determineTotalNumberLinearConss(scip, conss, nconss, &nlinearconss, &nsplitlinearconss);
+
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "* SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "*   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "*   Variables        : %d (all binary)\n", nvars);
-   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
+   SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss - nlinearconss + nsplitlinearconss);
 
    /* create a hash table */
    SCIP_CALL( SCIPhashtableCreate(&printedfixing, SCIPblkmem(scip), nvars,

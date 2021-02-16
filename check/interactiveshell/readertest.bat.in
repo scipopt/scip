@@ -4,6 +4,7 @@ presolve
 write transproblem temp/${basename}_trans.${extension}
 read temp/${basename}_trans.${extension}
 optimize
+validatesolve "${optval}" "${optval}"
 read temp/${basename}.${extension}
 optimize
 validatesolve "${optval}" "${optval}"

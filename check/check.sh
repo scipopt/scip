@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -40,9 +40,10 @@ PERMUTE=${23}
 SEEDS=${24}
 GLBSEEDSHIFT=${25}
 STARTPERM=${26}
+PYTHON=${27}
 
 # check if all variables defined (by checking the last one)
-if test -z $STARTPERM
+if test -z $PYTHON
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -72,6 +73,7 @@ then
     echo "SEEDS         = $SEEDS"
     echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
     echo "STARTPERM     = $STARTPERM"
+    echo "PYTHON        = $PYTHON"
     exit 1;
 fi
 
@@ -100,6 +102,13 @@ then
 else
     EXECNAME=$BINNAME
     ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
+fi
+
+# use specified python version if the binary ends with ".py"
+EXT="${BINNAME##*.}"
+if test "${EXT}" = "py"
+then
+   EXECNAME="${PYTHON} ${BINNAME}"
 fi
 
 EXECNAME=${DEBUGTOOLCMD}${EXECNAME}

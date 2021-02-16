@@ -28,6 +28,7 @@ can be one of the following:
 - `relaxator` from example `Relaxator`
 - `scflp` from example `SCFLP`
 - `sciptsp` from example `TSP`
+- `sudoku` from example `Sudoku`
 - `vrp` from example `VRP`
 
 The example can be compiled within the same build directory
@@ -112,6 +113,7 @@ Let `scip_example_binary` be one of the following inside its respective `SCIPExa
 - `scip` from example `Relaxator`
 - `scflp` from example `SCFLP`
 - `sciptsp` from example `TSP`
+- `sudoku` from example `Sudoku`
 - `vrp` from example `VRP`
 
 For example, if you want to install SCIP on a Linux system with a x86 processor

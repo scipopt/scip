@@ -56,7 +56,7 @@ ARCH=`uname -m | \
                   LIBEXT="a"
                fi
 
-               SCIPLIB=../../lib/$TYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LPS.$LIBEXT
+               SCIPLIB=../../lib/$TYPE/libscipsolver.$OSTYPE.$ARCH.gnu.$OPT.$LPS.$LIBEXT
                if test -e $SCIPLIB
                then
                   echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean

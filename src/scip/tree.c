@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4798,6 +4798,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probinglpinorms = NULL;
    (*tree)->pendingbdchgs = NULL;
    (*tree)->probdiverelaxsol = NULL;
+   (*tree)->nprobdiverelaxsol = 0;
    (*tree)->pendingbdchgssize = 0;
    (*tree)->npendingbdchgs = 0;
    (*tree)->focuslpstateforklpcount = -1;
@@ -7025,11 +7026,18 @@ SCIP_RETCODE SCIPtreeStoreRelaxSol(
    nvars = transprob->nvars;
    vars = transprob->vars;
 
-   /* check if memory still needs to be allocated */
+   /* check if memory still needs to be allocated or resized */
    if( tree->probdiverelaxsol == NULL )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&(tree->probdiverelaxsol), nvars) );
+      tree->nprobdiverelaxsol = nvars;
    }
+   else if( nvars > tree->nprobdiverelaxsol )
+   {
+      SCIP_ALLOC( BMSreallocMemoryArray(&tree->probdiverelaxsol, nvars) );
+      tree->nprobdiverelaxsol = nvars;
+   }
+   assert(tree->nprobdiverelaxsol >= nvars);
 
    /* iterate over all variables to save the relaxation solution */
    for( v = 0; v < nvars; ++v )
@@ -7060,6 +7068,7 @@ SCIP_RETCODE SCIPtreeRestoreRelaxSol(
 
    nvars = transprob->nvars;
    vars = transprob->vars;
+   assert( nvars <= tree->nprobdiverelaxsol );
 
    /* iterate over all variables to restore the relaxation solution */
    for( v = 0; v < nvars; ++v )

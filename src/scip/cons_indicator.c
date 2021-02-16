@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -406,6 +406,19 @@ struct SCIP_ConflicthdlrData
    SCIP_CONSHDLR*        conshdlr;           /**< indicator constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< indicator constraint handler data */
 };
+
+
+/** type of enforcing/separation call */
+enum SCIP_enfosepatype
+{
+   SCIP_TYPE_ENFOLP      = 0,                /**< enforce LP */
+   SCIP_TYPE_ENFOPS      = 1,                /**< enforce pseudo solution */
+   SCIP_TYPE_ENFORELAX   = 2,                /**< enforce relaxation solution */
+   SCIP_TYPE_SEPALP      = 3,                /**< separate LP */
+   SCIP_TYPE_SEPARELAX   = 4,                /**< separate relaxation solution */
+   SCIP_TYPE_SEPASOL     = 5                 /**< separate relaxation solution */
+};
+typedef enum SCIP_enfosepatype SCIP_ENFOSEPATYPE;
 
 
 /* macro for parameters */
@@ -2766,6 +2779,7 @@ SCIP_RETCODE extendToCover(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_LPI*             lp,                 /**< LP */
    SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_ENFOSEPATYPE     enfosepatype,       /**< type of enforcing/separating type */
    SCIP_Bool             removable,          /**< whether cuts should be removable */
    SCIP_Bool             genlogicor,         /**< should logicor constraints be generated? */
    int                   nconss,             /**< number of constraints */
@@ -2959,6 +2973,7 @@ SCIP_RETCODE extendToCover(
 
          if ( genlogicor )
          {
+            SCIP_RESULT result;
             SCIP_CONS* cons;
             SCIP_VAR** vars;
             int cnt = 0;
@@ -3001,6 +3016,30 @@ SCIP_RETCODE extendToCover(
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
             SCIPinfoMessage(scip, NULL, ";\n");
 #endif
+
+            /* enforce or separate logicor constraint to make sure that this has an effect in this round */
+            switch ( enfosepatype )
+            {
+            case SCIP_TYPE_ENFOLP:
+               SCIP_CALL( SCIPenfolpCons(scip, cons, FALSE, &result) );
+               break;
+            case SCIP_TYPE_ENFOPS:
+               SCIP_CALL( SCIPenfopsCons(scip, cons, FALSE, FALSE, &result) );
+               break;
+            case SCIP_TYPE_ENFORELAX:
+               SCIP_CALL( SCIPenforelaxCons(scip, cons, sol, FALSE, &result) );
+               break;
+            case SCIP_TYPE_SEPALP:
+               SCIP_CALL( SCIPsepalpCons(scip, cons, &result) );
+               break;
+            case SCIP_TYPE_SEPARELAX:
+            case SCIP_TYPE_SEPASOL:
+               SCIP_CALL( SCIPsepasolCons(scip, cons, sol, &result) );
+               break;
+            default:
+               SCIPerrorMessage("Wrong enforcing/separation type.\n");
+               SCIPABORT();
+            }
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -3917,6 +3956,7 @@ SCIP_RETCODE enforceCuts(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
    SCIP_SOL*             sol,                /**< solution to be enforced */
+   SCIP_ENFOSEPATYPE     enfosepatype,       /**< type of enforcing/separating type */
    SCIP_Bool             genlogicor,         /**< whether logicor constraint should be generated */
    SCIP_Bool*            cutoff,             /**< whether we detected a cutoff by an infeasible inequality */
    int*                  nGen                /**< number of cuts generated */
@@ -3990,7 +4030,7 @@ SCIP_RETCODE enforceCuts(
 
    /* extend set S to a cover and generate cuts */
    error = FALSE;
-   SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &error, cutoff, &nCuts) );
+   SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, enfosepatype, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &error, cutoff, &nCuts) );
    *nGen = nCuts;
 
    /* return with an error if no cuts have been produced and and error occurred in extendToCover() */
@@ -4027,6 +4067,7 @@ SCIP_RETCODE enforceIndicators(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
    SCIP_SOL*             sol,                /**< solution to be enforced (NULL for LP solution) */
+   SCIP_ENFOSEPATYPE     enfosepatype,       /**< type of enforcing/separating type */
    SCIP_Bool             genlogicor,         /**< whether logicor constraint should be generated */
    SCIP_RESULT*          result              /**< result */
    )
@@ -4126,7 +4167,7 @@ SCIP_RETCODE enforceIndicators(
       SCIP_Bool cutoff;
       int ngen;
 
-      SCIP_CALL( enforceCuts(scip, conshdlr, nconss, conss, sol, genlogicor, &cutoff, &ngen) );
+      SCIP_CALL( enforceCuts(scip, conshdlr, nconss, conss, sol, enfosepatype, genlogicor, &cutoff, &ngen) );
       if ( cutoff )
       {
          conshdlrdata->niiscutsgen += ngen;
@@ -4214,6 +4255,7 @@ SCIP_RETCODE separateIISRounding(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_ENFOSEPATYPE     enfosepatype,       /**< type of enforcing/separating type */
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
    int                   maxsepacuts,        /**< maximal number of cuts to be generated */
@@ -4361,7 +4403,8 @@ SCIP_RETCODE separateIISRounding(
       SCIP_CALL( fixAltLPVariables(scip, lp, nconss, conss, S) );
 
       /* extend set S to a cover and generate cuts */
-      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, conshdlrdata->genlogicor, nconss, conss, S, &size, &value, &error, cutoff, &nCuts) );
+      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, enfosepatype, conshdlrdata->removable, conshdlrdata->genlogicor,
+            nconss, conss, S, &size, &value, &error, cutoff, &nCuts) );
 
       /* we ignore errors in extendToCover */
       if ( nCuts > 0 )
@@ -4628,6 +4671,7 @@ SCIP_RETCODE separateIndicators(
    int                   nusefulconss,       /**< number of useful constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
    SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_ENFOSEPATYPE     enfosepatype,       /**< type of enforcing/separating type */
    SCIP_RESULT*          result              /**< result */
    )
 {
@@ -4743,7 +4787,7 @@ SCIP_RETCODE separateIndicators(
          *result = SCIP_DIDNOTFIND;
 
       /* start separation */
-      SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, maxsepacuts, &cutoff, &ncuts) );
+      SCIP_CALL( separateIISRounding(scip, conshdlr, sol, enfosepatype, nconss, conss, maxsepacuts, &cutoff, &ncuts) );
       SCIPdebugMsg(scip, "Separated %d cuts from indicator constraints.\n", ncuts - noldcuts);
 
       if ( cutoff )
@@ -5220,7 +5264,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          int logicorsepafreq;
          int sepafreq;
 
-         /* If we generate logicor constraints, make sure that we separate them with the same frequency */
+         /* If we generate logicor constraints, but the separation frequency is not 1, output warning */
          logicorconshdlr = SCIPfindConshdlr(scip, "logicor");
          if ( logicorconshdlr == NULL )
          {
@@ -5229,10 +5273,9 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          }
          logicorsepafreq = SCIPconshdlrGetSepaFreq(logicorconshdlr);
          sepafreq = SCIPconshdlrGetSepaFreq(conshdlr);
-         if ( sepafreq != -1 && ((logicorsepafreq == 0 && sepafreq > 0) || sepafreq < logicorsepafreq) )
+         if ( (sepafreq != -1 || conshdlrdata->enforcecuts) && logicorsepafreq != 1 )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Set sepafreq of logicor constraint handler to %d.\n", sepafreq);
-            SCIP_CALL( SCIPsetIntParam(scip, "constraints/logicor/sepafreq", sepafreq) );
+            SCIPwarningMessage(scip, "For better performance set parameter 'constraints/logicor/sepafreq' to 1 if 'constraints/included/genlogicor' is true.\n", sepafreq);
          }
       }
    }
@@ -6053,7 +6096,7 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
    assert( result != NULL );
 
    /* perform separation */
-   SCIP_CALL( separateIndicators(scip, conshdlr, nconss, nusefulconss, conss, NULL, result) );
+   SCIP_CALL( separateIndicators(scip, conshdlr, nconss, nusefulconss, conss, NULL, SCIP_TYPE_SEPALP, result) );
 
    return SCIP_OKAY;
 }
@@ -6070,7 +6113,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
    assert( result != NULL );
 
    /* perform separation */
-   SCIP_CALL( separateIndicators(scip, conshdlr, nconss, nusefulconss, conss, sol, result) );
+   SCIP_CALL( separateIndicators(scip, conshdlr, nconss, nusefulconss, conss, sol, SCIP_TYPE_SEPASOL, result) );
 
    return SCIP_OKAY;
 }
@@ -6098,7 +6141,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   SCIP_CALL( enforceIndicators(scip, conshdlr, nconss, conss, NULL, conshdlrdata->genlogicor, result) );
+   SCIP_CALL( enforceIndicators(scip, conshdlr, nconss, conss, NULL, SCIP_TYPE_ENFOLP, conshdlrdata->genlogicor, result) );
 
    return SCIP_OKAY;
 }
@@ -6126,7 +6169,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   SCIP_CALL( enforceIndicators(scip, conshdlr, nconss, conss, sol, conshdlrdata->genlogicor, result) );
+   SCIP_CALL( enforceIndicators(scip, conshdlr, nconss, conss, sol, SCIP_TYPE_ENFORELAX, conshdlrdata->genlogicor, result) );
 
    return SCIP_OKAY;
 }
@@ -6154,7 +6197,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsIndicator)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( enforceIndicators(scip, conshdlr, nconss, conss, NULL, TRUE, result) );
+   SCIP_CALL( enforceIndicators(scip, conshdlr, nconss, conss, NULL, SCIP_TYPE_ENFOPS, TRUE, result) );
 
    return SCIP_OKAY;
 }
@@ -6587,6 +6630,7 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
    assert( consdata->slackvar != NULL );
    assert( consdata->lincons != NULL );
    SCIPinfoMessage(scip, file, " -> <%s> = 0", SCIPvarGetName(consdata->slackvar));
+   SCIPinfoMessage(scip, file, " (<%s>)", SCIPconsGetName(consdata->lincons));
 
    return SCIP_OKAY;
 }
@@ -6724,10 +6768,10 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
 {  /*lint --e{715}*/
    char binvarname[1024];
    char slackvarname[1024];
+   char linconsname[1024];
    SCIP_VAR* binvar;
    SCIP_VAR* slackvar;
    SCIP_CONS* lincons;
-   const char* posstr;
    int zeroone;
    int nargs;
 
@@ -6735,11 +6779,12 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
 
    /* read indicator constraint */
    /* coverity[secure_coding] */
-   nargs = sscanf(str, " <%1023[^>]> = %d -> <%1023[^>]> = 0", binvarname, &zeroone, slackvarname);
+   nargs = sscanf(str, " <%1023[^>]> = %d -> <%1023[^>]> = 0 (<%1023[^>]>)", binvarname, &zeroone, slackvarname, linconsname);
 
-   if ( nargs != 3 )
+   /* downward compatible: accept missing linear constraint at end */
+   if ( nargs != 3 && nargs != 4 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected the following form: <var> = [0|1] -> <var> = 0.\n%s\n", str);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected the following form: <var> = [0|1] -> <var> = 0 (<lincons>).\n%s\n", str);
       *success = FALSE;
       return SCIP_OKAY;
    }
@@ -6772,40 +6817,66 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
       return SCIP_OKAY;
    }
 
-   /* find matching linear constraint */
-   posstr = strstr(slackvarname, "indslack");
-   if ( posstr == NULL )
+   /* determine linear constraint */
+   if ( nargs == 4 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", slackvarname);
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* overwrite binvarname: set up name for linear constraint */
-   (void) SCIPsnprintf(binvarname, 1023, "indlin%s", posstr+8);
-
-   lincons = SCIPfindCons(scip, binvarname);
-   if ( lincons == NULL )
-   {
-      /* if not found - check without indlin */
-      (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+9);
-      lincons = SCIPfindCons(scip, binvarname);
-
+      lincons = SCIPfindCons(scip, linconsname);
       if ( lincons == NULL )
       {
-         /* if not found - check without indrhs or indlhs */
-         (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+16);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown constraint <%s>\n", linconsname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      if ( strncmp(SCIPconshdlrGetName(SCIPconsGetHdlr(lincons)), "linear", 6) != 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "constraint <%s> is not linear\n", linconsname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      const char* posstr;
+
+      /* for backward compability try to determine name of linear constraint from variables names */
+      assert( nargs == 3 );
+
+      /* find matching linear constraint */
+      posstr = strstr(slackvarname, "indslack");
+      if ( posstr == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", slackvarname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      /* overwrite binvarname: set up name for linear constraint */
+      (void) SCIPsnprintf(binvarname, 1023, "indlin%s", posstr+8);
+
+      lincons = SCIPfindCons(scip, binvarname);
+      if ( lincons == NULL )
+      {
+         /* if not found - check without indlin */
+         (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+9);
          lincons = SCIPfindCons(scip, binvarname);
 
-         if( lincons == NULL )
+         if ( lincons == NULL )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s>, <%s> or <%s>.\n",
-               name, posstr+8, posstr+9, posstr+16);
-            *success = FALSE;
-            return SCIP_OKAY;
+            /* if not found - check without indrhs or indlhs */
+            (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+16);
+            lincons = SCIPfindCons(scip, binvarname);
+
+            if( lincons == NULL )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s>, <%s> or <%s>.\n",
+                  name, posstr+8, posstr+9, posstr+16);
+               *success = FALSE;
+               return SCIP_OKAY;
+            }
          }
       }
    }
+   assert( lincons != NULL );
 
    /* check correct linear constraint */
    if ( ! SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) && ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) )

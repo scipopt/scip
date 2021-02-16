@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1093,7 +1093,6 @@ SCIP_RETCODE SCIPlpiCreate(
    int restat;
 
    assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* CPLEX only works with ints as bools */
    assert(lpi != NULL);
    assert(name != NULL);
 

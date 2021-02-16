@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,6 +49,7 @@
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_misc_linear.h"
+#include "scip/pub_misc_nonlinear.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG

@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -437,18 +437,8 @@ READLINESRC	:=	$(shell cat $(READLINEDEP))
 ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
 ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
 
-PARASCIPDEP	:=	$(SRCDIR)/depend.parascip
-PARASCIPSRC	:=	$(shell cat $(PARASCIPDEP))
-
 THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
 THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
-# Gurobi and Mosek LPIs have to be made threadsafe
-ifeq ($(LPS),grb)
-	THREADSAFESRC += $(SRCDIR)/lpi/lpi_grb.c
-endif
-ifeq ($(LPS),msk)
-	THREADSAFESRC += $(SRCDIR)/lpi/lpi_msk.c
-endif
 
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
@@ -1039,7 +1029,7 @@ test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON);
 
 .PHONY: testcount
 testcount:
@@ -1209,7 +1199,7 @@ depend:
 		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
-		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC)` >$(THREADSAFEDEP)
+		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC) src/lpi/lpi*.{c,cpp} src/nlpi/nlpi*.{c,cpp}` >$(THREADSAFEDEP)
 
 # do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
 ifneq ($(DFLAGS),)

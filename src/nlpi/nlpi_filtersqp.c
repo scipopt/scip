@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -258,7 +258,7 @@ extern struct
 /*lint -esym(754,phe) */
 
 #ifdef SCIP_THREADSAFE
-static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER; /*lint !e708*/
 #endif
 
 static
@@ -1920,7 +1920,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
     * NOTE: we need to make sure that we do not return from nlpiSolve before unlocking the mutex
     */
 #ifdef SCIP_THREADSAFE
-   pthread_mutex_lock(&filtersqpmutex);
+   (void) pthread_mutex_lock(&filtersqpmutex);
 #endif
 
    /* initialize global variables from filtersqp */
@@ -2044,7 +2044,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    }
 
 #ifdef SCIP_THREADSAFE
-   pthread_mutex_unlock(&filtersqpmutex);
+   (void) pthread_mutex_unlock(&filtersqpmutex);
 #endif
 
    SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );

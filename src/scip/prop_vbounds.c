@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2024,7 +2024,7 @@ SCIP_RETCODE propagateVbounds(
       }
 
       /* propagate vbounds */
-      if( propdata->usevbounds )
+      if( propdata->usevbounds && ! SCIPisInfinity(scip, REALABS(startbound)) )
       {
          SCIP_VAR* boundedvar;
          SCIP_Real newbound;
