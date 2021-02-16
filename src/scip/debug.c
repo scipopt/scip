@@ -1149,6 +1149,10 @@ SCIP_RETCODE SCIPdebugCheckGlobalLowerbound(
    if( SCIPgetStatus(set->scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(set->scip) == SCIP_STATUS_UNBOUNDED )
       return SCIP_OKAY;
 
+   /* if there are no leaves then SCIPtreeGetLowerbound() will return infintiy */
+   if( SCIPgetNLeaves(set->scip) <= 0 )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
