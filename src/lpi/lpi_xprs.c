@@ -653,9 +653,9 @@ const char* SCIPlpiGetSolverName(
 
    /* get version of Xpress */
    if( XPRSgetversion(version) == 0 )
-      sprintf(xprsname, "Xpress %s", version);
+      (void) sprintf(xprsname, "Xpress %s", version);
    else
-      sprintf(xprsname, "Xpress %d", XPVERSION);
+      (void) sprintf(xprsname, "Xpress %d", XPVERSION);
 
    return xprsname;
 }
@@ -686,6 +686,10 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 { /*lint --e{715}*/
+   assert(lpi != NULL);
+   assert(ncols >= 0);
+   assert(ncols == 0 || intInfo != NULL);
+
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -732,8 +736,8 @@ SCIP_RETCODE SCIPlpiCreate(
 {
    int zero = 0;
 
-   assert(sizeof(SCIP_Real) == sizeof(double)); /* Xpress only works with doubles as floating points */
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* Xpress only works with ints as bools */
+   assert(sizeof(SCIP_Real) == sizeof(double)); /*lint !e506*/ /* Xpress only works with doubles as floating points */
+   assert(sizeof(SCIP_Bool) == sizeof(int));    /*lint !e506*/ /* Xpress only works with ints as bools */
    assert(lpi != NULL);
    assert(name != NULL);
 
@@ -874,6 +878,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    assert(beg != NULL);
    assert(ind != NULL);
    assert(val != NULL);
+   SCIP_UNUSED(colnames);
+   SCIP_UNUSED(rownames);
 
    SCIPdebugMessage("loading LP in column format into Xpress: %d cols, %d rows\n", ncols, nrows);
 
@@ -933,6 +939,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
+   SCIP_UNUSED(colnames);
 
    SCIPdebugMessage("adding %d columns with %d nonzeros to Xpress\n", ncols, nnonz);
 
@@ -1075,6 +1082,7 @@ SCIP_RETCODE SCIPlpiAddRows(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
+   SCIP_UNUSED(rownames);
 
    SCIPdebugMessage("adding %d rows with %d nonzeros to Xpress\n", nrows, nnonz);
 
@@ -1667,6 +1675,8 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol);
+
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1688,6 +1698,8 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow);
+
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -2803,6 +2815,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 {  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(quality != NULL);
+   SCIP_UNUSED(qualityindicator);
 
    *quality = SCIP_INVALID;
 
@@ -2830,6 +2843,7 @@ SCIP_RETCODE SCIPlpiGetBase(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
+   /*lint --e{506}*/
    assert((int) SCIP_BASESTAT_LOWER == 0);
    assert((int) SCIP_BASESTAT_BASIC == 1);
    assert((int) SCIP_BASESTAT_UPPER == 2);
@@ -2878,6 +2892,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert(cstat != NULL || ncols == 0);
    assert(rstat != NULL || nrows == 0);
 
+   /*lint --e{506}*/
    assert((int) SCIP_BASESTAT_LOWER == 0);
    assert((int) SCIP_BASESTAT_BASIC == 1);
    assert((int) SCIP_BASESTAT_UPPER == 2);
@@ -2925,6 +2940,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int r;
 
    /* In the basis methods we assume that xprs basis flags coincide with scip, so assert it */
+   /*lint --e{506}*/
    assert((int) SCIP_BASESTAT_LOWER == 0);
    assert((int) SCIP_BASESTAT_BASIC == 1);
    assert((int) SCIP_BASESTAT_UPPER == 2);
@@ -2979,6 +2995,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED(inds);
 
    SCIPdebugMessage("getting binv-row %d\n", row);
 
@@ -3020,6 +3037,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED(inds);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
 
@@ -3135,6 +3153,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED(inds);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
 
@@ -3411,7 +3430,9 @@ SCIP_RETCODE SCIPlpiSetNorms(
    const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 { /*lint --e{715}*/
+   assert(lpi != NULL);
    assert(lpinorms == NULL);
+   SCIP_UNUSED(blkmem);
 
    /* no work necessary */
    return SCIP_OKAY;
@@ -3424,7 +3445,9 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 { /*lint --e{715}*/
+   assert(lpi != NULL);
    assert(lpinorms == NULL);
+   SCIP_UNUSED(blkmem);
 
    /* no work necessary */
    return SCIP_OKAY;
@@ -3566,7 +3589,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_LPITLIM:
       assert( ival >= 0 );
       /* 0 <= ival, 0 stopping immediately */
-      ival = MIN(ival, XPRS_MAXINT); /*lint !e685*/
+      ival = MIN(ival, XPRS_MAXINT); /*lint !e685*//*lint !e2650*//*lint !e587*/
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_LPITERLIMIT, ival) );
       break;
    case SCIP_LPPAR_THREADS:

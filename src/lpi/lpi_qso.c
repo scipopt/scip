@@ -406,7 +406,8 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
 {  /*lint --e{715}*/
    assert( lpi != NULL );
    assert( ncols >= 0 );
-   assert( intInfo != NULL );
+   assert( ncols == 0 || intInfo != NULL );
+
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
