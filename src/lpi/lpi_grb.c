@@ -475,12 +475,12 @@ void SCIPencodeDualBitNeg(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SCIP_DUALPACKETSIZE == 16);
+   assert(SCIP_DUALPACKETSIZE == 16); /*lint !e506*/
 
    rest = count % (int)SCIP_DUALPACKETSIZE;
    nfull = count - rest;
 
-   for( i = 0; i < nfull; i += (int)SCIP_DUALPACKETSIZE, inp += (int)SCIP_DUALPACKETSIZE )
+   for( i = 0; i < nfull; i += (int)SCIP_DUALPACKETSIZE, inp += (int)SCIP_DUALPACKETSIZE ) /*lint !e679*/
    {
       assert(inp != NULL);
       assert(out != NULL);
@@ -529,7 +529,7 @@ void SCIPdecodeDualBitNeg(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SCIP_DUALPACKETSIZE == 16);
+   assert(SCIP_DUALPACKETSIZE == 16); /*lint !e506*/
 
    rest = count % (int)SCIP_DUALPACKETSIZE;
    nfull = count - rest;
@@ -1259,6 +1259,10 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0. */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( ncols >= 0 );
+   assert( intInfo != NULL );
+
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1307,8 +1311,8 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   assert(sizeof(SCIP_Real) == sizeof(double)); /* Gurobi only works with doubles as floating points */
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* Gurobi only works with ints as bools */
+   assert(sizeof(SCIP_Real) == sizeof(double)); /*lint !e506*/ /* Gurobi only works with doubles as floating points */
+   assert(sizeof(SCIP_Bool) == sizeof(int));    /*lint !e506*/ /* Gurobi only works with ints as bools */
    assert(lpi != NULL);
    assert(name != NULL);
    assert(numlp >= 0);
@@ -3911,7 +3915,7 @@ SCIP_Bool SCIPlpiIsStable(
       SCIP_RETCODE retcode;
 
       retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
-      if ( retcode != SCIP_OKAY )
+      if ( retcode != SCIP_OKAY ) /*lint !e774*/
       {
          SCIPABORT();
          return FALSE; /*lint !e527*/
@@ -4852,6 +4856,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED( binvrow );
 
    SCIPdebugMessage("getting binv-row %d\n", r);
 

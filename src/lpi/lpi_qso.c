@@ -404,6 +404,9 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( ncols >= 0 );
+   assert( intInfo != NULL );
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -453,8 +456,8 @@ SCIP_RETCODE SCIPlpiCreate(
    )
 {
    /* QSopt only works with doubles as floating points and bool as integers */
-   assert(sizeof(SCIP_Real) == sizeof(double));
-   assert(sizeof(SCIP_Bool) == sizeof(int));
+   assert(sizeof(SCIP_Real) == sizeof(double)); /*lint !e506*/
+   assert(sizeof(SCIP_Bool) == sizeof(int)); /*lint !e506*/
    assert(name != NULL);
    assert(lpi != NULL);
 
@@ -1537,9 +1540,9 @@ SCIP_RETCODE SCIPlpiGetCols(
 
    /* get data from qsopt */
    if ( nnonz != NULL )
-      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, &lcnt, &lbeg, &lind, &lval, 0, lb ? (&llb) : NULL, ub ? (&lub) : NULL, NULL);
+      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, &lcnt, &lbeg, &lind, &lval, NULL, lb ? (&llb) : NULL, ub ? (&lub) : NULL, NULL);  /*lint !e826*/
    else
-      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, NULL, NULL, NULL, NULL, 0, lb ? (&llb) : NULL, ub ? (&lub) : NULL, NULL);
+      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, NULL, NULL, NULL, NULL, NULL, lb ? (&llb) : NULL, ub ? (&lub) : NULL, NULL);  /*lint !e826*/
 
    QS_TESTG(rval, CLEANUP, " ");
 
@@ -1568,7 +1571,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    {
       assert( ub != NULL ); /* for lint */
 
-      if( llb == NULL || lub == NULL )
+      if( llb == NULL || lub == NULL ) /*lint !e774*/
       {
          SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
@@ -1584,9 +1587,9 @@ SCIP_RETCODE SCIPlpiGetCols(
  CLEANUP:
    if( lval != NULL )
       QSfree(lval);
-   if( lub != NULL )
+   if( lub != NULL ) /*lint !e831 !e774*/
       QSfree(lub);
-   if( llb != NULL )
+   if( llb != NULL ) /*lint !e831 !e774*/
       QSfree(llb);
    if( lind != NULL )
       QSfree(lind);
@@ -1640,9 +1643,9 @@ SCIP_RETCODE SCIPlpiGetRows(
 
    /* get data from qsopt */
    if ( nnonz != NULL )
-      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, &lcnt, &lbeg, &lind, &lval, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, NULL);
+      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, &lcnt, &lbeg, &lind, &lval, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, NULL);  /*lint !e826*/
    else
-      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, NULL, NULL, NULL, NULL, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, NULL);
+      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, NULL, NULL, NULL, NULL, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, NULL);  /*lint !e826*/
 
    QS_TESTG(rval, CLEANUP, " ");
 
@@ -1669,7 +1672,7 @@ SCIP_RETCODE SCIPlpiGetRows(
 
    if( rhs != NULL )
    {
-      if( lrhs == NULL || lrng == NULL || lsense == NULL )
+      if( lrhs == NULL || lrng == NULL || lsense == NULL ) /*lint !e774*/
       {
          SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
@@ -1706,11 +1709,11 @@ SCIP_RETCODE SCIPlpiGetRows(
    }
 
  CLEANUP:
-   if( lsense != NULL )
+   if( lsense != NULL ) /*lint !e774*/
       QSfree(lsense);
-   if( lrng != NULL )
+   if( lrng != NULL ) /*lint !e774*/
       QSfree(lrng);
-   if( lrhs != NULL )
+   if( lrhs != NULL ) /*lint !e774*/
       QSfree(lrhs);
    if( lval != NULL )
       QSfree(lval);
@@ -1958,6 +1961,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 {  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   SCIP_UNUSED( crossover );
 
    return SCIPlpiSolveDual(lpi);
 }
@@ -2149,6 +2153,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    assert(up != NULL);
    assert(downvalid != NULL);
    assert(upvalid != NULL);
+   SCIP_UNUSED( cols );
 
    SCIPdebugMessage("calling QSopt strong branching on %d variables with integral value (%d it lim)\n", ncols, itlim);
 
@@ -2618,6 +2623,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 {  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(ray != NULL);
 
    SCIPerrorMessage("SCIPlpiGetPrimalRay() not supported by QSopt.\n");
 
@@ -2675,6 +2681,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 {  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(quality != NULL);
+   SCIP_UNUSED( qualityindicator );
 
    *quality = SCIP_INVALID;
 
@@ -2924,6 +2931,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
    assert(coef != NULL);
+   SCIP_UNUSED( inds );
 
    nrows = QSget_rowcount(lpi->prob);
    assert( 0 <= r && r < nrows );
@@ -2967,6 +2975,9 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
    assert(coef != NULL);
+   SCIP_UNUSED( c );
+   SCIP_UNUSED( inds );
+   SCIP_UNUSED( ninds );
 
    SCIPerrorMessage("SCIPlpiGetBInvCol() not supported by QSopt.\n");
 
@@ -2999,6 +3010,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED( binvrow );
+   SCIP_UNUSED( inds );
 
    SCIPdebugMessage("getting binva-row %d\n", r);
 
@@ -3014,7 +3027,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    QS_CONDRET( QSget_tableau_row(lpi->prob, r, lpi->itab) );
 
    /* copy local information to the outside */
-   memcpy(coef, lpi->itab, sizeof(double)*ncols);
+   BMScopyMemoryArray(coef, lpi->itab, ncols);
 
    for (i = 0; i < ncols; ++i)
       coef[i] *= -1.0;
@@ -3042,6 +3055,9 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
    assert(coef != NULL);
+   assert(c >= 0);
+   SCIP_UNUSED( inds );
+   SCIP_UNUSED( ninds );
 
    SCIPerrorMessage("SCIPlpiGetBInvACol() not supported by QSopt.\n");
 
@@ -3413,6 +3429,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
 
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
+   SCIP_UNUSED( blkmem );
 
    if ( lpinorms->norms == NULL )
       return SCIP_OKAY;
@@ -3437,6 +3454,7 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    )
 {  /*lint --e{715} */
    assert( lpinorms != NULL );
+   assert( lpi != NULL );
 
    if ( (*lpinorms)->norms != NULL )
    {
