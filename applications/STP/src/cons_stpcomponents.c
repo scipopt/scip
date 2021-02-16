@@ -56,7 +56,8 @@
 
 
 #define CONSHDLR_PROP_TIMING   SCIP_PROPTIMING_BEFORELP // SCIP_PROPTIMING_DURINGLPLOOP //  SCIP_PROPTIMING_BEFORELP
-#define DAQ_MINCOMPRATIO 0.95
+#define DECOMP_MAXCOMPRATIO 0.95
+#define DECOMP_MINNNODES     10
 
 
 /**@} */
@@ -229,12 +230,19 @@ SCIP_Bool decomposeIsPromising(
    const BIDECOMP*       bidecomp
    )
 {
-   const SCIP_Real mincompratio = DAQ_MINCOMPRATIO;
-   const SCIP_Real maxratio = bidecomposition_getMaxcompNodeRatio(bidecomp);
+   if( g->knots < DECOMP_MINNNODES )
+   {
+      return FALSE;
+   }
+   else
+   {
+      const SCIP_Real maxcompratio = DECOMP_MAXCOMPRATIO;
+      const SCIP_Real maxratio = bidecomposition_getMaxcompNodeRatio(bidecomp);
 
-   assert(GT(maxratio, 0.0));
+      assert(GT(maxratio, 0.0));
 
-   return (maxratio < mincompratio);
+      return (maxratio < maxcompratio);
+   }
 }
 
 

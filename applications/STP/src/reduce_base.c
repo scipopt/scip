@@ -2048,6 +2048,8 @@ SCIP_RETCODE redLoopStp(
 
             if( sepanelims > STP_RED_EXPENSIVEFACTOR * reductbound )
                SCIP_CALL( redLoopInnerStp(scip, randnumgen, g, redsollocal, redbase, &wasDecomposed) );
+            else if( sepanelims > reductbound )
+               SCIP_CALL( reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &dummy, NULL));
 
 #ifdef XXX_XXX
             if( sepanelims > STP_RED_FULLSEPAFACTOR * reductbound )
