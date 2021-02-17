@@ -2,4 +2,4 @@
 
 # should cutpool separation filter for efficacy?
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
-separating/usecutpoolfilter = FALSE
+separating/filtercutpoolrel = FALSE

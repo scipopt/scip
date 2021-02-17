@@ -869,7 +869,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    *result = SCIP_DIDNOTFIND;
    cutpool->ncalls++;
    found = FALSE;
-   if( set->sepa_usecutpoolfilter )
+   if( set->sepa_filtercutpoolrel )
       minefficacy = stat->bestefficacy * stat->minefficacyfac;
    else
       minefficacy = root ? set->sepa_minefficacyroot : set->sepa_minefficacy;
@@ -1001,7 +1001,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    cutpool->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts;
 
    /* check whether efficacy threshold should be tightened or relaxed */
-   if( set->sepa_usecutpoolfilter && nefficaciouscuts > 0 )
+   if( set->sepa_filtercutpoolrel && nefficaciouscuts > 0 )
    {
       int maxncuts = SCIPsetGetSepaMaxcuts(set, root);
       int ncuts = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
