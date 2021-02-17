@@ -568,7 +568,7 @@ SCIP_RETCODE performBranchingSol(
       SCIPgetVarConflictScore(scip, bestaggrcand),  SCIPgetVarAvgInferenceCutoffScore(scip, bestaggrcand, cutoffweight),
       SCIPgetVarAvgInferenceScore(scip, bestaggrcand));
 
-   assert(candsols != NULL)
+   assert(candsols != NULL);
    /* perform the branching */
    SCIP_CALL( SCIPbranchVarVal(scip, bestaggrcand, SCIPgetBranchingPoint(scip, bestaggrcand, bestval), &downchild, &eqchild, &upchild) );
 
