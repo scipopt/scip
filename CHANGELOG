@@ -46,7 +46,11 @@ Testing
 Build system
 ------------
 
+- Compilation will now also work in a raw tarball of the scip git repository
+
 ### Cmake
+
+- Make find_package more verbose and require packages to be found. Now enabled packages that are not found result in an error.
 
 ### Makefile
 
@@ -57,18 +61,28 @@ Fixed bugs
 - Fixed several bugs in reoptimization.
 - Fixed bug in cons_bounddisjunction in which a constraint leads to a cutoff.
 - Fixed bug in reoptimization by avoiding redundant literatl for bound disjunctions.
+- Replace wrong usage of CMAKE_BINARY_DIR by PROJECT_BINARY_DIR in CMake system
+- Fixed lpi_glop to use absl flag instead of GFlags
+- Fixed invalid initialization of limits/softtime parameter in cons_components
+- Fixed MIN macro not defined in some cases.
+- Safeguard some API methods for querying solving statistics against segmentation faults after SCIPpresolve()
+- Fixed unfreed solution in concurrent solving
+- Make sure that logicor constraints are enforced/separated if genlogicor is true in cons_indicator.
+  Thus, do not change constraints/logicor/sepafreq anymore, but output warning.
+- Fixed assert that assumed infeasibility cannot occur in presol_boundshift.
+
 
 Miscellaneous
 -------------
 
 - To avoid performance variablity during reoptimization, the active constraints are now stored in the same order as in the
   original problem.
-
+- Added workaround for bug in MSVS 2019 when compiling CppAD source.
 
 Known bugs
 ----------
 
-@section RN000 SCIP 7.0.2
+@section RN702 SCIP 7.0.2
 *************************
 
 Features
@@ -148,6 +162,9 @@ Fixed bugs
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
+- Fixed issues with scip statistics
+- Fixed issue with multi-aggregated variables
+- Fixed issue in with buffer memory in cons_cumulative
 
 Miscellaneous
 -------------

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -39,7 +39,7 @@ uname -a                            > $ERRFILE
 function cleanup {
      mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
      mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
-     if [ -f "${ERRFILE}.rr" ] ;
+     if [ -d "${ERRFILE}.rr" ] ;
      then
          mv -f $ERRFILE.rr $SOLVERPATH/$OUTPUTDIR/$BASENAME.rr
      fi

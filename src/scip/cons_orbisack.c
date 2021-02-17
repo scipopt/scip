@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1092,9 +1092,6 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
    assert( sourcedata->nrows > 0 );
    assert( sourcedata->vars1 != NULL );
    assert( sourcedata->vars2 != NULL );
-
-   if ( !sourcedata->ismodelcons )
-      return SCIP_OKAY;
 
    /* create transformed constraint data (copy data where necessary) */
    nrows = sourcedata->nrows;

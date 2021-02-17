@@ -44,6 +44,9 @@ applications/*/check/results/
 applications/*/check/*.sh
 applications/*/check/*.awk
 
+.*.swp
+.directory
+
 ###############################
 ## files created by `make lint`
 ################################
