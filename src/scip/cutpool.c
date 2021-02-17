@@ -998,7 +998,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    }
 
    /* update the number of found cuts */
-   cutpool->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint --e{776}*/
+   cutpool->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
 
    /* check whether efficacy threshold should be tightened or relaxed */
    if( set->sepa_filtercutpoolrel && nefficaciouscuts > 0 )
