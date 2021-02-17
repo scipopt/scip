@@ -111,7 +111,8 @@ Interface changes
   smallest number of rows shall be computed by the subgroup detection heuristic
 - new parameter "propagating/symmetry/usedynamicprop" to control if rows of full orbitope
   shall be ordered dynamically in propagation
-
+- new parameter "separating/filtercutpoolrel" to control whether cutpool uses
+  a dynamic strategy to separate only cuts with high relative efficacy
 
 
 ### Data structures
