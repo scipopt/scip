@@ -175,6 +175,30 @@ inline SCIP_Bool stpbitset_haveIntersection(
 }
 
 
+/** is bit at given index set? */
+static
+inline SCIP_Bool stpbitset_bitIsTrue(
+   STP_Bitset           bitset,              /**< bitset */
+   int                  index                /**< bit index */
+   )
+{
+   const uint64_t i = (uint64_t) index;
+
+   assert(bitset);
+   assert(0 <= index && index < stpbitset_getCapacity(bitset));
+
+   if( ((bitset[i / 64] >> ((i & 63)) & (uint64_t) 1)) == 0 )
+   {
+      return FALSE;
+   }
+   else
+   {
+      return TRUE;
+   }
+}
+
+
+
 /** gets number of 1-bits */
 static
 inline int stpbitset_getPopcount(
