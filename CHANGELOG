@@ -10,6 +10,7 @@ Features
   are now deleted when during a restart.
 - New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
   which is able to handle symmetries of arbitrary kinds of variables.
+- Revise way in which external memory (e.g., of LP-solver) is estimated.
 - The symmetry code can now heuristically search for orbitopes that do not completely handle
   a symmetry component and add certain Schreier Sims cuts to such components.
 - The LPIs for Gurobi and Mosek are thread-safe now.
@@ -131,9 +132,9 @@ Build system
 ### Cmake
 
 - replace flag PARASCIP by THREADSAFE
-	
+
 ### Makefile
-	
+
 - replace flag PARASCIP by THREADSAFE
 
 Fixed bugs
@@ -629,7 +630,7 @@ Interface changes
 
 
 ### New API functions
-=======
+
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
   and new arguments to count statistics when doing a clean-up of inactive variables in the constraints before building the matrix
 

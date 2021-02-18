@@ -556,15 +556,8 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->misc_estimexternmem )
    {
-      if( scip->set->limit_memory < (SCIP_Real)SCIP_MEM_NOLIMIT )
-      {
-         SCIP_Longint memused = SCIPgetMemUsed(scip);
-
-         /* if the memory limit is set, we take 1% as the minimum external memory storage */
-         scip->stat->externmemestim = MAX(memused, (SCIP_Longint) (0.01 * scip->set->limit_memory * 1048576.0));
-      }
-      else
-         scip->stat->externmemestim = SCIPgetMemUsed(scip);
+      /* the following formula was estimated empirically using linear regression */
+      scip->stat->externmemestim = (SCIP_Longint) (MAX(1, 8.5e-04 * SCIPgetNConss(scip) + 7.6e-04 * SCIPgetNVars(scip) + 3.5e-05 * scip->stat->nnz) * 1048576.0); /*lint !e666*/
       SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->stat->externmemestim);
    }
 
@@ -1631,6 +1624,14 @@ SCIP_RETCODE initSolve(
       assert(scip->nlp != NULL);
 
       SCIP_CALL( SCIPnlpAddVars(scip->nlp, scip->mem->probmem, scip->set, scip->transprob->nvars, scip->transprob->vars) );
+
+      /* Adjust estimation of external memory: SCIPtransformProb() estimated the memory used for the LP-solver. As a
+       * very crude approximation just double this number. Only do this once in the first run. */
+      if( scip->set->misc_estimexternmem && scip->stat->nruns <= 1 )
+      {
+         scip->stat->externmemestim *= 2;
+         SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->stat->externmemestim);
+      }
    }
 
    /* possibly create visualization output file */
