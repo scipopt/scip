@@ -17,7 +17,7 @@
  * @brief  header only, simple implementation of a bitset
  * @author Daniel Rehfeldt
  *
- * Implements a simple bitset.
+ * Implements a simple bitset. Should be set to NULL if undefined.
  * NOTE: for efficiency reasons the bitset type is based on an STP_Vector and thus
  * uses a non-SCIP-standard allocation method. In this way we avoid indirections, because
  * we directly access the raw array.
@@ -217,6 +217,85 @@ inline int stpbitset_getPopcount(
 
    return popcount;
 }
+
+
+/** gets new AND bitset */
+static
+inline STP_Bitset stpbitset_newAnd(
+   SCIP*                scip,                /**< SCIP data structure */
+   STP_Bitset           bitset1,             /**< bitset */
+   STP_Bitset           bitset2              /**< bitset */
+   )
+{
+   const int vecsize = StpVecGetSize(bitset1);
+   STP_Bitset bitset = stpbitset_new(scip, stpbitset_getCapacity(bitset1));
+
+   assert(bitset1 && bitset2);
+   assert(stpbitset_getCapacity(bitset1) == stpbitset_getCapacity(bitset2));
+   assert(StpVecGetSize(bitset1) == StpVecGetSize(bitset2));
+   assert(StpVecGetSize(bitset) == StpVecGetSize(bitset1));
+   assert(vecsize > 0);
+
+   for( int i = 0; i < vecsize; i++ )
+   {
+      bitset[i] = (bitset1[i] & bitset2[i]);
+   }
+
+   return bitset;
+}
+
+
+/** gets new OR bitset */
+static
+inline STP_Bitset stpbitset_newOr(
+   SCIP*                scip,                /**< SCIP data structure */
+   STP_Bitset           bitset1,             /**< bitset */
+   STP_Bitset           bitset2              /**< bitset */
+   )
+{
+   const int vecsize = StpVecGetSize(bitset1);
+   STP_Bitset bitset = stpbitset_new(scip, stpbitset_getCapacity(bitset1));
+
+   assert(bitset1 && bitset2);
+   assert(stpbitset_getCapacity(bitset1) == stpbitset_getCapacity(bitset2));
+   assert(StpVecGetSize(bitset1) == StpVecGetSize(bitset2));
+   assert(StpVecGetSize(bitset) == StpVecGetSize(bitset1));
+   assert(vecsize > 0);
+
+   for( int i = 0; i < vecsize; i++ )
+   {
+      bitset[i] = (bitset1[i] | bitset2[i]);
+   }
+
+   return bitset;
+}
+
+
+/** gets new XOR bitset */
+static
+inline STP_Bitset stpbitset_newXor(
+   SCIP*                scip,                /**< SCIP data structure */
+   STP_Bitset           bitset1,             /**< bitset */
+   STP_Bitset           bitset2              /**< bitset */
+   )
+{
+   const int vecsize = StpVecGetSize(bitset1);
+   STP_Bitset bitset = stpbitset_new(scip, stpbitset_getCapacity(bitset1));
+
+   assert(bitset1 && bitset2);
+   assert(stpbitset_getCapacity(bitset1) == stpbitset_getCapacity(bitset2));
+   assert(StpVecGetSize(bitset1) == StpVecGetSize(bitset2));
+   assert(StpVecGetSize(bitset) == StpVecGetSize(bitset1));
+   assert(vecsize > 0);
+
+   for( int i = 0; i < vecsize; i++ )
+   {
+      bitset[i] = (bitset1[i] ^ bitset2[i]);
+   }
+
+   return bitset;
+}
+
 
 
 #ifdef __cplusplus
