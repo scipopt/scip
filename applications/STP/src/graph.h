@@ -114,7 +114,7 @@ extern SCIP_RETCODE   graph_findCentralTerminal(SCIP*, const GRAPH*, int, int*);
 extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int, SCIP_Bool*);
 extern SCIP_RETCODE   graph_trail_costAware(SCIP*, const GRAPH*, int, SCIP_Bool*);
 /* Dijkstra heap: */
-extern SCIP_RETCODE graph_heap_create(SCIP*, int capacity, int* position, DENTRY* entries, DHEAP** heap);
+extern SCIP_RETCODE graph_heap_create(SCIP*, int, int*, DENTRY*, DHEAP**);
 extern void   graph_heap_free(SCIP*, SCIP_Bool, SCIP_Bool, DHEAP**);
 extern void   graph_heap_deleteMin(int*, SCIP_Real*, DHEAP*);
 extern void   graph_heap_deleteMinGetNode(int*, DHEAP*);

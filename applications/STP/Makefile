@@ -138,6 +138,7 @@ CMAINOBJ	=	cmain.o \
 			solhistory.o \
 			solpool.o \
 			solstp.o \
+			stpprioqueue.o \
 			stptest_base.o \
 			stptest_da.o \
 			stptest_extreduce.o \

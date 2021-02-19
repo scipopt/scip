@@ -89,6 +89,7 @@ add_executable(scipstp
     src/relax_stp.c
     src/sepaspecial.c
     src/shortestpath.c
+    src/stpprioqueue.c
     src/stptest_base.c
     src/stptest_da.c
     src/stptest_extreduce.c
