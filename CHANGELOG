@@ -220,6 +220,7 @@ Fixed bugs
 - Make sure that logicor constraints are enforced/separated if genlogicor is true in cons_indicator.
   Thus, do not change constraints/logicor/sepafreq anymore, but output warning.
 - Fixed assert that assumed infeasibility cannot occur in presol_boundshift.
+- Fixed sign bug during creation of conflict constraints with almost zero left-hand side.
 
 
 Miscellaneous

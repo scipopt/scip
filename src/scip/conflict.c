@@ -3166,7 +3166,7 @@ SCIP_RETCODE createAndAddProofcons(
          {
             if( SCIPsetIsZero(set, side) )
             {
-               scale = 1.0;
+               scale = -1.0;
             }
             else
             {
