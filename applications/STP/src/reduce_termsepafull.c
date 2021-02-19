@@ -634,6 +634,7 @@ SCIP_Bool sepafullSolcandsArePromising(
    }
 
    printf("...component is finally promising! \n");
+
    return TRUE;
 }
 
@@ -1053,9 +1054,10 @@ SCIP_RETCODE initHelpers(
       SCIPdebugMessage("update nChecks %d->%d \n", maxncompchecks, mincheckbound);
       maxncompchecks = mincheckbound;
    }
-
+#ifndef WITH_UG
    graph_printInfoReduced(g);
    printf("max. number of components to be checked: %d \n", maxncompchecks);
+#endif
 
    /* NOTE: we want to allow a few more terminal separators to be able to choose small ones */
    SCIP_CALL( mincut_termsepasInit(scip, g, (int) (2.0 * maxncompchecks), maxsepasize, termsepas) );
