@@ -1750,14 +1750,18 @@ SCIP_DECL_CONSPRINT(consPrintOrbisack)
 
    SCIPdebugMsg(scip, "Printing method for orbisack constraint handler\n");
 
-   SCIPinfoMessage(scip, file, "orbisack(");
+   SCIPinfoMessage(scip, file, "fullOrbisack(");
 
    for (i = 0; i < nrows; ++i)
    {
-      SCIPinfoMessage(scip, file, "%s,%s", SCIPvarGetName(vars1[i]), SCIPvarGetName(vars2[i]));
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars1[i], TRUE) );
+      SCIPinfoMessage(scip, file, ",");
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars2[i], TRUE) );
       if ( i < nrows-1 )
          SCIPinfoMessage(scip, file, ".");
    }
+
+   SCIPinfoMessage(scip, file, ")");
 
    return SCIP_OKAY;
 }
