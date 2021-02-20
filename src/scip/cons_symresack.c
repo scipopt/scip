@@ -2510,7 +2510,6 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
-   SCIP_Bool* covered;
    int* perm;
    int nvars;
    int i;
@@ -2528,10 +2527,7 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 
    /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
-   {
-      SCIPinfoMessage(scip, file, "symresack()");
       return SCIP_OKAY;
-   }
 
    assert( consdata->vars != NULL );
    assert( consdata->perm != NULL );
@@ -2540,35 +2536,20 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
    nvars = consdata->nvars;
    perm = consdata->perm;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &covered, nvars) );
-   for (i = 0; i < nvars; ++i)
-      covered[i] = FALSE;
+   SCIPinfoMessage(scip, file, "symresack([");
+   SCIP_CALL( SCIPwriteVarName(scip, file, vars[0], TRUE) );
 
-   if ( consdata->ppupgrade )
-      SCIPinfoMessage(scip, file, "ppSymresack(");
-   else
-      SCIPinfoMessage(scip, file, "symresack(");
-
-   for (i = 0; i < nvars; ++i)
+   for (i = 1; i < nvars; ++i)
    {
-      if ( covered[i] )
-         continue;
-
-      /* print cycle of perm containing i */
-      SCIPinfoMessage(scip, file, "[%s", SCIPvarGetName(vars[i]));
-      covered[i] = TRUE;
-      j = perm[i];
-      while ( j != i )
-      {
-         SCIPinfoMessage(scip, file, ",%s", SCIPvarGetName(vars[j]));
-         covered[j] = TRUE;
-         j = perm[j];
-      }
-      SCIPinfoMessage(scip, file, "]");
+      SCIPinfoMessage(scip, file, ",");
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars[i], TRUE) );
    }
-   SCIPinfoMessage(scip, file, ")");
-
-   SCIPfreeBufferArray(scip, &covered);
+   SCIPinfoMessage(scip, file, "],[%d", perm[0]);
+   for (i = 1; i < nvars; ++i)
+   {
+      SCIPinfoMessage(scip, file, ",%d", perm[i]);
+   }
+   SCIPinfoMessage(scip, file, "])");
 
    return SCIP_OKAY;
 }
