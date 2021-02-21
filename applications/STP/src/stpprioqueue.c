@@ -19,6 +19,8 @@
  *
  * Implements a (minimum) priority queue with integer keys.
  * A list of all interface methods can be found in stpprioqueue.h
+ ** todo: if needed for other key type, either use template pattern
+ * or intrusive design with macros...
  *
  */
 

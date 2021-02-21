@@ -21,7 +21,8 @@
  * NOTE: for efficiency reasons we don't want to give a compare callback,
  * as for example done in the SCIP default priority queue.
  * Also, this implementation is faster than the SCIP default priority queue.
- *
+ * todo: if needed for other key type, either use template pattern
+ * or intrusive design with macros...
  */
 
 
