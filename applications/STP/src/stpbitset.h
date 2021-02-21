@@ -44,9 +44,9 @@ extern "C" {
 #define STP_Bitset STP_Vectype(uint64_t)
 
 
-/** todo: more efficiently, currently just a text-book implementation.
+/** todo: do that more efficiently; currently just a text-book implementation.
  *  probably want to have case distinction for compilers and use intrinsics
- *  at least for gcc and intel */
+ *  at least for gcc, clang, and intel */
 static
 inline int bitsetinternalPopcount(
    uint64_t              number              /**< to get popcount for */
@@ -70,7 +70,7 @@ inline int bitsetinternalPopcount(
  * Interface methods
  */
 
-/** initializes clean (all-0) bitset and returns */
+/** initializes clean (all-0) bitset and returns it */
 static
 inline STP_Bitset stpbitset_new(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -93,6 +93,7 @@ inline STP_Bitset stpbitset_new(
 
    return bitset;
 }
+
 
 /** frees */
 static
@@ -238,6 +239,25 @@ inline int stpbitset_getPopcount(
 }
 
 
+/** gets copy */
+static
+inline STP_Bitset stpbitset_newCopy(
+   SCIP*                scip,                /**< SCIP data structure */
+   STP_Bitset           bitsetOrg            /**< bitset */
+   )
+{
+   const int vecsize = StpVecGetSize(bitsetOrg);
+   STP_Bitset bitset = stpbitset_new(scip, stpbitset_getCapacity(bitsetOrg));
+
+   assert(stpbitset_setsAreCompatible(bitsetOrg, bitset));
+   assert(vecsize > 0);
+
+   BMScopyMemoryArray(bitset, bitsetOrg, vecsize);
+
+   return bitset;
+}
+
+
 /** gets new AND bitset */
 static
 inline STP_Bitset stpbitset_newAnd(
@@ -308,6 +328,50 @@ inline STP_Bitset stpbitset_newXor(
    }
 
    return bitset;
+}
+
+
+/** initializes all TRUE bitset and returns it
+ *  todo more efficiently */
+static
+inline STP_Bitset stpbitset_newAllTrue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   maxnbits            /**< size of bitset */
+   )
+{
+   STP_Bitset bitset = stpbitset_new(scip, maxnbits);
+   const int cap = stpbitset_getCapacity(bitset);
+
+   assert(cap > 0);
+
+   for( int i = 0; i < cap; i++ )
+   {
+      assert(!stpbitset_bitIsTrue(bitset, i));
+      stpbitset_setBitTrue(bitset, i);
+   }
+
+   return bitset;
+}
+
+
+/** prints bitset (0,1) ... for debugging */
+static
+inline void stpbitset_print(
+   STP_Bitset           bitset               /**< bitset to print*/
+   )
+{
+   const int cap = stpbitset_getCapacity(bitset);
+
+   assert(cap > 0);
+
+   printf("printing bit-set of size %d: \n", cap);
+
+   for( int i = 0; i < cap; i++ )
+   {
+      printf("%d", stpbitset_bitIsTrue(bitset, i));
+   }
+
+   printf("\n");
 }
 
 

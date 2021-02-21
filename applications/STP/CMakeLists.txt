@@ -19,6 +19,8 @@ add_executable(scipstp
     src/cons_stp.c
     src/cons_stpcomponents.c
     src/dialog_stp.c
+    src/dpterms_base.c
+    src/dpterms_util.c
     src/dualascent.c
     src/enumeration.c
     src/event_bestsol.c

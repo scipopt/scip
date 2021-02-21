@@ -65,6 +65,8 @@ CMAINOBJ	=	cmain.o \
 			completegraph.o \
 			cons_stp.o \
 			cons_stpcomponents.o \
+			dpterms_base.o \
+			dpterms_util.o \
 			dualascent.o \
 			enumeration.o \
 			extreduce_base.o \
