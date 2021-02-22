@@ -2652,6 +2652,8 @@ SCIP_RETCODE SCIPsolve(
             break;
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
+         if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
+            break;
          /*lint -fallthrough*/
 
       case SCIP_STAGE_PRESOLVED:
