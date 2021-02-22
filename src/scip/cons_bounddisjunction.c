@@ -564,7 +564,7 @@ SCIP_RETCODE consdataCreateRedundant(
       }
 #endif
 
-      /* if all literals are infeaisble, we keep the first */
+      /* if all literals are infeasible, we keep the first */
       if( SCIPisConsCompressionEnabled(scip) && nviolated > 0 && nvarsbuffer == 0 )
          nvarsbuffer = 1;
 

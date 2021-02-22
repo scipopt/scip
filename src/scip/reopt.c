@@ -1369,14 +1369,14 @@ SCIP_RETCODE cleanActiveConss(
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "Cleaning %d active conss.\n", reopt->nactiveconss);
-   assert( reopt->activeconss != NULL );
-   assert( reopt->activeconssset != NULL );
-   assert( reopt->nactiveconss <= reopt->nmaxactiveconss );
+   assert(reopt->activeconss != NULL);
+   assert(reopt->activeconssset != NULL);
+   assert(reopt->nactiveconss <= reopt->nmaxactiveconss);
 
    /* loop over all stored constraints and reactivate deactivated constraints */
    for( i = 0; i < reopt->nactiveconss; i++ )
    {
-      assert( reopt->activeconss[i] != NULL );
+      assert(reopt->activeconss[i] != NULL);
       assert(SCIPhashsetExists(reopt->activeconssset, reopt->activeconss[i]));
       SCIP_CALL( SCIPconsRelease(&reopt->activeconss[i], blkmem, set) );
    }
@@ -7758,7 +7758,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       SCIP_CALL( SCIPaddCons(scip, cons) );
 
       /* remember the constraint for re-activation */
-      assert( ! SCIPhashsetExists(reopt->activeconssset, (void*)cons) );
+      assert(!SCIPhashsetExists(reopt->activeconssset, (void*)cons));
       SCIP_CALL( SCIPhashsetInsert(reopt->activeconssset, blkmem, (void*)cons) );
       SCIP_CALL( ensureActiveconssSize(reopt, set, blkmem, reopt->nactiveconss + 1) );
       assert(reopt->nactiveconss < reopt->nmaxactiveconss);
@@ -8263,7 +8263,7 @@ SCIP_RETCODE SCIPreoptSaveActiveConss(
    for( i = 0; i < nconss; i++ )
    {
       assert(SCIPconsIsActive(conss[i]));
-      assert(! SCIPhashsetExists(reopt->activeconssset, (void*)conss[i]));
+      assert(!SCIPhashsetExists(reopt->activeconssset, (void*)conss[i]));
 
       SCIPconsCapture(conss[i]);
       SCIP_CALL( SCIPhashsetInsert(reopt->activeconssset, blkmem, (void*)conss[i]) );
@@ -8378,5 +8378,5 @@ SCIP_Bool SCIPreoptConsCanBeDeleted(
    if( reopt->activeconss == NULL )
       return TRUE;
 
-   return ! SCIPhashsetExists(reopt->activeconssset, (void*)cons);
+   return !SCIPhashsetExists(reopt->activeconssset, (void*)cons);
 }
