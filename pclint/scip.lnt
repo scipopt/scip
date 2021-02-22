@@ -194,6 +194,14 @@
 // previous value assigned to 'retcode' not used
 -emacro(838,SCIP_CALL_TERMINATE)
 
+// indeterminable mutex
+-emacro(2751,SCIPtpiInitLock)
+-emacro(2751,SCIPtpiAcquireLock)
+-emacro(2751,SCIPtpiReleaseLock)
+-emacro(2751,SCIPtpiDestroyLock)
+-emacro(2751,SCIPtpiInitCondition)
+-emacro(2751,SCIPtpiWaitCondition)
+
 // constant out of range for '>' portion of compound comparison operator '>='
 -estring(2650, ">=")
 

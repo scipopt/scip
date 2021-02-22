@@ -255,7 +255,7 @@ SCIP_RETCODE createThreadPool(
    (*thrdpool)->finishedjobs->njobs = 0;
 
    /* initialising the mutex */
-   SCIP_CALL( SCIPtpiInitLock(&(*thrdpool)->poollock) );
+   SCIP_CALL( SCIPtpiInitLock(&(*thrdpool)->poollock) ); /*lint !e2482*/
 
    /* initialising the conditions */
    SCIP_CALL( SCIPtpiInitCondition(&(*thrdpool)->queuenotempty) );
