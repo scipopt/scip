@@ -503,8 +503,8 @@ SCIP_RETCODE consdataCreateRedundant(
             }
          }
 
-         w = v + 1;
-         while( w < nvars && varsbuffer[v] == varsbuffer[w] )
+         /* check subsequent variables with the same variable for redundancy */
+         for( w = v + 1; w < nvars && varsbuffer[v] == varsbuffer[w]; ++w )
          {
             if( boundtypesbuffer[v] == boundtypesbuffer[w] )
             {
@@ -527,10 +527,12 @@ SCIP_RETCODE consdataCreateRedundant(
                      varsbuffer[w] = NULL;  /* remove later bound */
                }
             }
-            ++w;
          }
+
+         /* keep current bound if it is not redundant (possibly redundant variable w is treated later) */
          if( varsbuffer[v] != NULL )
          {
+            /* switch last and current bound */
             varsbuffer[nvarsbuffer] = varsbuffer[v];
             boundtypesbuffer[nvarsbuffer] = boundtypesbuffer[v];
             boundsbuffer[nvarsbuffer] = boundsbuffer[v];
