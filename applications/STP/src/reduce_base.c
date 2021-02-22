@@ -2039,7 +2039,7 @@ SCIP_RETCODE redLoopStp(
          }
 
 #ifdef USE_FULLSEPA
-        // if( (!rerun || nruns >= 2) && runFullSepa )
+         // todo tune!
          if( !rerun && runFullSepa )
          {
             int sepanelims = 0;
@@ -2051,13 +2051,6 @@ SCIP_RETCODE redLoopStp(
             else if( sepanelims > reductbound )
                SCIP_CALL( reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &dummy, NULL));
 
-#ifdef XXX_XXX
-            if( sepanelims > STP_RED_FULLSEPAFACTOR * reductbound )
-               rerun = TRUE;
-            else if( sepanelims > STP_RED_EXPENSIVEFACTOR * reductbound )
-               SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &dummy, NULL));
-#endif
-        //    printf("sepanelims=%d, rerun=%d \n", sepanelims, rerun);
             runFullSepa = FALSE;
          }
 #endif
