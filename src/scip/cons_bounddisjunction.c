@@ -468,7 +468,7 @@ SCIP_RETCODE consdataCreateRedundant(
 
       /* sort variables according to index; this allows us to check for redundancy easily below because duplicate
        * variables must now appear consecutively */
-      SCIPsortPtrRealInt((void*)varsbuffer, boundsbuffer, (int*) boundtypesbuffer, SCIPvarComp, nvars);
+      SCIPsortPtrRealInt((void**)varsbuffer, boundsbuffer, (int*) boundtypesbuffer, SCIPvarComp, nvars);
 
       /* filter out redundant literals */
       for( v = 0; v < nvars; ++v )
