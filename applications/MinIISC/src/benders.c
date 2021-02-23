@@ -169,7 +169,7 @@ SCIP_RETCODE printLongStatistics(
 
    SCIPinfoMessage(masterscip, NULL, "Constraint Timings :  TotalTime  SetupTime   Separate  Propagate     EnfoLP     EnfoPS      Check    ResProp    SB-Prop\n");
    SCIPinfoMessage(masterscip, NULL, "  %-17.17s: %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n", "benders",
-      SCIPgetClockTime(masterscip, oracletimeclock), 0.0, SCIPgetClockTime(masterscip, oracletimeclock), 0.0, 0.0, 0.0, 0.0, 0.0);
+      SCIPgetClockTime(masterscip, oracletimeclock), 0.0, SCIPgetClockTime(masterscip, oracletimeclock), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
    SCIPinfoMessage(masterscip, NULL, "B&B Tree           :\n");
    SCIPinfoMessage(masterscip, NULL, "  number of runs   : %10d\n", niter);
@@ -330,7 +330,14 @@ SCIP_RETCODE runBenders(
       }
 
       /* free solving data in order to add constraints */
-      SCIP_CALL( SCIPfreeTransform(masterscip) );
+      if ( usereopt )
+      {
+         SCIP_CALL( SCIPfreeReoptSolve(masterscip) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPfreeTransform(masterscip) );
+      }
 
       /* check for Benders cuts */
       SCIP_CALL( SCIPstartClock(masterscip, oracletimeclock) );
