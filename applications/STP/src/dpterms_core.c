@@ -13,39 +13,42 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   dpterms.h
- * @brief  Dynamic programming solver for Steiner tree (sub-) problems with small number of terminals
+/**@file   dpterms_core.c
+ * @brief  Core of dynamic programming solver for Steiner tree (sub-) problems with small number of terminals
  * @author Daniel Rehfeldt
  *
- * This file implements a dynamic programming method to solve Steiner tree problems to optimality.
- * FPT with respect to the number of terminals. Based on algorithm by Erickson, Monma and Veinott,
- * which itself is a slight extension of Dryefus-Wagner.
- * This implementation uses several reduction methods to improve the practical performance.
- * It also uses a node-separator technique from "Separator-Based Pruned Dynamic Programming for Steiner Tree"
- * by Iwata and Shigemura.
+ * Contains core methods.
  *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef APPLICATIONS_STP_SRC_DPTERMS_H_
-#define APPLICATIONS_STP_SRC_DPTERMS_H_
+#include "scip/scipdefplugins.h"
+#include "scip/rbtree.h"
+#include "dpterms.h"
+#include "dptermsinterns.h"
+#include "stpbitset.h"
+#include "stpvector.h"
+#include "stpprioqueue.h"
 
-#include "scip/scip.h"
-#include "graph.h"
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-extern SCIP_RETCODE     dpterms_solve(SCIP*, GRAPH*, int*);
-extern SCIP_Bool        dpterms_isPromising(const GRAPH*);
+/*
+ * Local methods
+ */
 
 
-#ifdef __cplusplus
+/*
+ * Interface methods
+ */
+
+
+/** solves problem */
+SCIP_RETCODE dpterms_coreSolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< (compressed) graph */
+   DPSOLVER*             dpsolver            /**< solver */
+)
+{
+   // solve
+
+   return SCIP_OKAY;
 }
-#endif
-
-#endif /* APPLICATIONS_STP_SRC_DPTERMS_H_ */

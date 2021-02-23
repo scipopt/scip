@@ -23,70 +23,11 @@
 #include "scip/scipdefplugins.h"
 #include "scip/rbtree.h"
 #include "dpterms.h"
+#include "dptermsinterns.h"
 #include "stpbitset.h"
 #include "stpvector.h"
 #include "stpprioqueue.h"
 
-
-/*
- * Data structures
- */
-
-
-/** trace for reconstructing a sub-solution */
-typedef struct solution_trace
-{
-   int                   prevs[2];           /**< marker to get ancestor solutions (0,1,2 ancestors possible) */
-   SCIP_Real             cost;               /**< solution cost */
-   int                   root;               /**< solution root*/
-} SOLTRACE;
-
-
-/** sub-solution with extension */
-typedef struct dpsubsol
-{
-   SCIP_RBTREE_HOOKS;                        /**< for red-black tree */
-   STP_Bitset            bitkey;             /**< key marking the terminals in sub-solution */
-   STP_Vectype(SOLTRACE) extensions;         /**< extensions of solution */
-} DPSUBSOL;
-
-
-/** compressed graph with less information */
-typedef struct dynamic_programming_graph
-{
-   int*                  terminals;          /**< array of terminals; in {0,1,...,nnodes - 1} */
-   int*                  nodes_termId;       /**< per node: terminal (0,1,..), or -1 if non-terminal */
-   int*                  edges_mapToOrg;     /**< maps edges to original graph todo nodemap is enough! Do MST later */
-   int                   nnodes;             /**< number of nodes */
-   int                   nedges;             /**< number of edges */
-   int                   nterms;             /**< number of terminals */
-} DPGRAPH;
-
-
-/** solver */
-typedef struct dynamic_programming_solver
-{
-   GRAPH*                graph;              /**< graph; NON-OWNED! */
-   int*                  soledges;           /**< solution; NON-OWNED! */
-   DPGRAPH*              dpgraph;            /**< graph */
-   DPSUBSOL*             soltree_root;       /**< root of solution tree */
-   DPSTREE*              dpstree;            /**< tree for finding solution combinations */
-   STP_Bitset            allTrueBits;        /**< helper; of size nnodes */
-   int                   bla;                /**< number of edges */
-} DPSOLVER;
-
-
-/*
- * Macro hacks
- */
-
-
-/* NOTE: needed to find element in a red-black tree */
-#define SUBSOL_LT(key,subsol)  stpbitset_GT(key, subsol->bitkey)
-#define SUBSOL_GT(key,subsol)  stpbitset_LT(key, subsol->bitkey)
-
-static
-SCIP_DEF_RBTREE_FIND(findSubsol, STP_Bitset, DPSUBSOL, SUBSOL_LT, SUBSOL_GT) /*lint !e123*/
 
 
 
@@ -275,10 +216,13 @@ void dpsolverFreeData(
 static
 SCIP_RETCODE dpsolverSolve(
    SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph of sub-problem */
    DPSOLVER*             dpsolver            /**< solver */
 )
 {
-   // solve
+   // compress...
+
+   SCIP_CALL( dpterms_coreSolve(scip, g, dpsolver) );
 
    return SCIP_OKAY;
 }
@@ -345,7 +289,7 @@ SCIP_RETCODE dpterms_solve(
 
    SCIP_CALL( dpsolverInit(scip, graph, &dpsolver) );
 
-   SCIP_CALL( dpsolverSolve(scip, dpsolver) );
+   SCIP_CALL( dpsolverSolve(scip, graph, dpsolver) );
    SCIP_CALL( dpsolverGetSolution(scip, dpsolver, solution) );
 
    dpsolverFree(scip, &dpsolver);

@@ -66,6 +66,7 @@ CMAINOBJ	=	cmain.o \
 			cons_stp.o \
 			cons_stpcomponents.o \
 			dpterms_base.o \
+			dpterms_core.o \
 			dpterms_util.o \
 			dualascent.o \
 			enumeration.o \

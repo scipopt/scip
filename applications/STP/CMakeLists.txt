@@ -20,6 +20,7 @@ add_executable(scipstp
     src/cons_stpcomponents.c
     src/dialog_stp.c
     src/dpterms_base.c
+    src/dpterms_core.c
     src/dpterms_util.c
     src/dualascent.c
     src/enumeration.c

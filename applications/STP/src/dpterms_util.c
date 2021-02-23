@@ -25,6 +25,8 @@
 //#define SCIP_DEBUG
 #include "scip/scipdefplugins.h"
 #include "dpterms.h"
+#include "dptermsinterns.h"
+
 
 #define CHILD_NONE -1
 #define CHILD_LEFT  0
