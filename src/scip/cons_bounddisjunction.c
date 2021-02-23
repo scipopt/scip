@@ -466,7 +466,8 @@ SCIP_RETCODE consdataCreateRedundant(
       SCIP_CALL( SCIPduplicateBufferArray(scip, &boundtypesbuffer, boundtypes, nvars) );
       SCIP_CALL( SCIPduplicateBufferArray(scip, &boundsbuffer, bounds, nvars) );
 
-      /* sort variables accornding to index */
+      /* sort variables according to index; this allows us to check for redundancy easily below because duplicate
+       * variables must now appear consecutively */
       SCIPsortPtrRealInt((void*)varsbuffer, boundsbuffer, (int*) boundtypesbuffer, SCIPvarComp, nvars);
 
       /* filter out redundant literals */
