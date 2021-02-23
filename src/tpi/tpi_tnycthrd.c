@@ -292,7 +292,7 @@ SCIP_RETCODE createThreadPool(
  */
 static
 void jobQueueAddJob(
-   SCIP_THREADPOOL**     threadpool,           /**< pointer to store threadpool */
+   SCIP_THREADPOOL*      threadpool,           /**< pointer to store threadpool */
    SCIP_JOB*             newjob                /**< pointer to new job */
    )
 {
