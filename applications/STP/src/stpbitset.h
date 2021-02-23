@@ -258,6 +258,50 @@ inline STP_Bitset stpbitset_newCopy(
 }
 
 
+/** sets  AND bitset */
+static
+inline void stpbitset_and(
+   SCIP*                scip,                /**< SCIP data structure */
+   STP_Bitset           bitset1,             /**< bitset */
+   STP_Bitset           bitset2,             /**< bitset */
+   STP_Bitset           bitsetAnd            /**< bitset to set */
+   )
+{
+   const int vecsize = StpVecGetSize(bitsetAnd);
+
+   assert(stpbitset_setsAreCompatible(bitset1, bitset2));
+   assert(stpbitset_setsAreCompatible(bitsetAnd, bitset2));
+   assert(vecsize > 0);
+
+   for( int i = 0; i < vecsize; i++ )
+   {
+      bitsetAnd[i] = (bitset1[i] & bitset2[i]);
+   }
+}
+
+
+/** sets OR bitset */
+static
+inline void stpbitset_or(
+   SCIP*                scip,                /**< SCIP data structure */
+   STP_Bitset           bitset1,             /**< bitset */
+   STP_Bitset           bitset2,             /**< bitset */
+   STP_Bitset           bitsetOr             /**< bitset to set */
+   )
+{
+   const int vecsize = StpVecGetSize(bitsetOr);
+
+   assert(stpbitset_setsAreCompatible(bitset1, bitset2));
+   assert(stpbitset_setsAreCompatible(bitsetOr, bitset2));
+   assert(vecsize > 0);
+
+   for( int i = 0; i < vecsize; i++ )
+   {
+      bitsetOr[i] = (bitset1[i] | bitset2[i]);
+   }
+}
+
+
 /** gets new AND bitset */
 static
 inline STP_Bitset stpbitset_newAnd(
@@ -266,17 +310,11 @@ inline STP_Bitset stpbitset_newAnd(
    STP_Bitset           bitset2              /**< bitset */
    )
 {
-   const int vecsize = StpVecGetSize(bitset1);
    STP_Bitset bitset = stpbitset_new(scip, stpbitset_getCapacity(bitset1));
 
    assert(stpbitset_setsAreCompatible(bitset1, bitset2));
-   assert(StpVecGetSize(bitset) == StpVecGetSize(bitset1));
-   assert(vecsize > 0);
 
-   for( int i = 0; i < vecsize; i++ )
-   {
-      bitset[i] = (bitset1[i] & bitset2[i]);
-   }
+   stpbitset_and(scip, bitset1, bitset2, bitset);
 
    return bitset;
 }
@@ -290,18 +328,11 @@ inline STP_Bitset stpbitset_newOr(
    STP_Bitset           bitset2              /**< bitset */
    )
 {
-   const int vecsize = StpVecGetSize(bitset1);
    STP_Bitset bitset = stpbitset_new(scip, stpbitset_getCapacity(bitset1));
 
    assert(stpbitset_setsAreCompatible(bitset1, bitset2));
-   assert(StpVecGetSize(bitset1) == StpVecGetSize(bitset2));
-   assert(StpVecGetSize(bitset) == StpVecGetSize(bitset1));
-   assert(vecsize > 0);
 
-   for( int i = 0; i < vecsize; i++ )
-   {
-      bitset[i] = (bitset1[i] | bitset2[i]);
-   }
+   stpbitset_or(scip, bitset1, bitset2, bitset);
 
    return bitset;
 }
@@ -364,7 +395,7 @@ inline void stpbitset_print(
 
    assert(cap > 0);
 
-   printf("printing bit-set of size %d: \n", cap);
+   printf("bit-set (cap=%d): ", cap);
 
    for( int i = 0; i < cap; i++ )
    {

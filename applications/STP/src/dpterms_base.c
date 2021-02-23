@@ -69,8 +69,9 @@ typedef struct dynamic_programming_solver
    GRAPH*                graph;              /**< graph; NON-OWNED! */
    int*                  soledges;           /**< solution; NON-OWNED! */
    DPGRAPH*              dpgraph;            /**< graph */
-   STP_Bitset            allTrueBits;        /**< helper; of size nnodes */
    DPSUBSOL*             soltree_root;       /**< root of solution tree */
+   DPSTREE*              dpstree;            /**< tree for finding solution combinations */
+   STP_Bitset            allTrueBits;        /**< helper; of size nnodes */
    int                   bla;                /**< number of edges */
 } DPSOLVER;
 
@@ -144,8 +145,51 @@ SCIP_RETCODE dpsolverInitData(
 {
    DPSUBSOL* soltree_root = NULL;
    DPSUBSOL* soltree_parent;
-   int nterms = 3;
+   const int nterms = 3;
    const int nnodes = 4;
+
+   SCIP_CALL( dpterms_streeInit(scip, nterms, nnodes, &(dpsolver->dpstree)) );
+
+   // test only!
+   {
+      STP_Bitset termsmark = stpbitset_new(scip, nterms);
+      STP_Bitset rootsmark = stpbitset_new(scip, nnodes);
+      stpbitset_setBitTrue(termsmark, 1);
+      stpbitset_setBitTrue(rootsmark, 2);
+      SCIP_CALL( dpterms_streeInsert(scip, termsmark, rootsmark, 0, dpsolver->dpstree) );
+
+      termsmark = stpbitset_new(scip, nterms);
+      rootsmark = stpbitset_new(scip, nnodes);
+      stpbitset_setBitTrue(termsmark, 0);
+      stpbitset_setBitTrue(rootsmark, 0);
+      SCIP_CALL( dpterms_streeInsert(scip, termsmark, rootsmark, 1, dpsolver->dpstree) );
+
+      termsmark = stpbitset_new(scip, nterms);
+      rootsmark = stpbitset_new(scip, nnodes);
+      stpbitset_setBitTrue(termsmark, 2);
+      stpbitset_setBitTrue(rootsmark, 0);
+      SCIP_CALL( dpterms_streeInsert(scip, termsmark, rootsmark, 10, dpsolver->dpstree) );
+
+
+      termsmark = stpbitset_new(scip, nterms);
+      rootsmark = stpbitset_new(scip, nnodes);
+      stpbitset_setBitTrue(termsmark, 1);
+      stpbitset_setBitTrue(rootsmark, 0);
+     // SCIP_CALL( dpterms_streeInsert(scip, termsmark, rootsmark, 1, dpsolver->dpstree) );
+
+      STP_Vectype(int) intersect = dpterms_streeCollectIntersects(scip, termsmark, rootsmark, dpsolver->dpstree);
+
+      printf("size=%d \n", StpVecGetSize(intersect));
+
+      for( int i = 0; i < StpVecGetSize(intersect); i++ )
+      {
+         printf("intersect=%d \n", intersect[i]);
+      }
+
+
+      assert(0);
+
+   }
 
    for( int i = 0; i < nterms; i++ )
    {
@@ -162,8 +206,6 @@ SCIP_RETCODE dpsolverInitData(
 
       SCIPrbtreeInsert(&soltree_root, soltree_parent, pos, singleton);
    }
-
-
 
    // todo delete, just for testing
    {
@@ -212,6 +254,9 @@ void dpsolverFreeData(
 )
 {
    assert(dpsolver->soltree_root == NULL);
+
+   dpterms_streeFree(scip, &(dpsolver->dpstree));
+
 
    // todo should not be necessary, all should be freed anyway
 #ifdef SCIP_DISABLED

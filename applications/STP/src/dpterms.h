@@ -19,9 +19,9 @@
  *
  * This file implements a dynamic programming method to solve Steiner tree problems to optimality.
  * FPT with respect to the number of terminals. Based on algorithm by Erickson, Monma and Veinott,
- * which is a slight extension of Dryefus-Wagner.
- * This implementation uses several reduction methods to imporve the practical performance.
- * Uses also node-separator technique from "Separator-Based Pruned Dynamic Programming for Steiner Tree"
+ * which itself is a slight extension of Dryefus-Wagner.
+ * This implementation uses several reduction methods to improve the practical performance.
+ * It also uses a node-separator technique from "Separator-Based Pruned Dynamic Programming for Steiner Tree"
  * by Iwata and Shigemura.
  *
  */
@@ -33,19 +33,26 @@
 
 #include "scip/scip.h"
 #include "graph.h"
+#include "stpvector.h"
+#include "stpbitset.h"
 
 
-/** Steiner tree sub-problem */
-typedef struct sub_steiner_tree_problem SUBSTP;
+/** dynamic programming search tree */
+typedef struct dynamic_programming_search_tree DPSTREE;
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-extern SCIP_RETCODE    dpterms_solve(SCIP*, GRAPH*, int*);
-extern SCIP_Bool       dpterms_isPromising(const GRAPH*);
+extern SCIP_RETCODE     dpterms_solve(SCIP*, GRAPH*, int*);
+extern SCIP_Bool        dpterms_isPromising(const GRAPH*);
 
+extern SCIP_RETCODE     dpterms_streeInit(SCIP*, int, int, DPSTREE**);
+extern void             dpterms_streeFree(SCIP*, DPSTREE**);
+extern SCIP_RETCODE     dpterms_streeInsert(SCIP*, STP_Bitset, STP_Bitset, int64_t, DPSTREE*);
+extern STP_Vectype(int) dpterms_streeCollectIntersects(SCIP*, STP_Bitset, STP_Bitset, DPSTREE*);
 
 
 #ifdef __cplusplus
