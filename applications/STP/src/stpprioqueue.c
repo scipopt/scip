@@ -245,7 +245,8 @@ SCIP_RETCODE stpprioqueue_insert(
    int parent;
    int parentkey;
 
-   assert(scip && prioqueue && entries);
+   assert(scip && prioqueue);
+   assert(prioqueue->entries);
    assert(newkey > STPPQ_MIN_KEY);
    assert(prioqueue->size <= prioqueue->capacity);
 

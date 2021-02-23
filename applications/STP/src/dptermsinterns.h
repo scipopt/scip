@@ -28,11 +28,11 @@
 #define APPLICATIONS_STP_SRC_DPTERMSINTERNS_H_
 
 #include "scip/scip.h"
+#include "scip/rbtree.h"
 #include "graph.h"
 #include "stpvector.h"
 #include "stpbitset.h"
-#include "scip/rbtree.h"
-
+#include "stpprioqueue.h"
 
 /** dynamic programming search tree */
 typedef struct dynamic_programming_search_tree DPSTREE;
@@ -49,12 +49,12 @@ typedef struct solution_trace
 {
    int                   prevs[2];           /**< marker to get ancestor solutions (0,1,2 ancestors possible) */
    SCIP_Real             cost;               /**< solution cost */
-   int                   root;               /**< solution root*/
+   int                   root;               /**< solution root */
 } SOLTRACE;
 
 
 /** sub-solution with extension */
-typedef struct dpsubsol
+typedef struct dynamic_programming_subsolution
 {
    SCIP_RBTREE_HOOKS;                        /**< for red-black tree */
    STP_Bitset            bitkey;             /**< key marking the terminals in sub-solution */
@@ -67,23 +67,36 @@ typedef struct dynamic_programming_graph
 {
    int*                  terminals;          /**< array of terminals; in {0,1,...,nnodes - 1} */
    int*                  nodes_termId;       /**< per node: terminal (0,1,..), or -1 if non-terminal */
-   int*                  edges_mapToOrg;     /**< maps edges to original graph todo nodemap is enough! Do MST later */
    int                   nnodes;             /**< number of nodes */
    int                   nedges;             /**< number of edges */
    int                   nterms;             /**< number of terminals */
 } DPGRAPH;
 
 
+/** additional data */
+typedef struct dynamic_programming_misc
+{
+   STP_Bitset            allTrueBits;        /**< helper; of size nnodes */
+   STP_Vectype(int)      bits_count;
+   STP_Vectype(int)      bits;
+   STP_Vectype(int)      offsets;
+   STP_Vectype(int)      data;
+   int                   min_prev[2];
+   SCIP_Real             min;
+   int                   min_x;
+   int                   total_size;
+} DPMISC;
+
+
 /** solver */
 typedef struct dynamic_programming_solver
 {
-   GRAPH*                graph;              /**< graph; NON-OWNED! */
    int*                  soledges;           /**< solution; NON-OWNED! */
    DPGRAPH*              dpgraph;            /**< graph */
    DPSUBSOL*             soltree_root;       /**< root of solution tree */
    DPSTREE*              dpstree;            /**< tree for finding solution combinations */
-   STP_Bitset            allTrueBits;        /**< helper; of size nnodes */
-   int                   bla;                /**< number of edges */
+   DPMISC*               dpmisc;             /**< this and that */
+   STP_PQ*               solpqueue;          /**< sub-solutions */
 } DPSOLVER;
 
 

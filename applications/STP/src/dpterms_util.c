@@ -27,7 +27,6 @@
 #include "dpterms.h"
 #include "dptermsinterns.h"
 
-
 #define CHILD_NONE -1
 #define CHILD_LEFT  0
 #define CHILD_RIGHT 1
