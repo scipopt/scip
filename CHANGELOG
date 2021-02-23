@@ -177,6 +177,9 @@ Interface changes
 
 ### New API functions
 
+- New function SCIPcreateConsBounddisjunctionRedundant() and SCIPcreateConsBasicBounddisjunctionRedundant() that allow
+  the input to contain redundant literals.
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -211,6 +214,9 @@ Fixed bugs
 ----------
 
 - Fixed numerical bug by creating and checking the empty solution when problem vanishes in presolving.
+- Fixed several bugs in reoptimization.
+- Fixed bug in cons_bounddisjunction in which a constraint leads to a cutoff.
+- Fixed bug in reoptimization by avoiding redundant literals for bound disjunctions.
 - Replace wrong usage of CMAKE_BINARY_DIR by PROJECT_BINARY_DIR in CMake system
 - Fixed lpi_glop to use absl flag instead of GFlags
 - Fixed invalid initialization of limits/softtime parameter in cons_components
@@ -226,6 +232,8 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- To avoid performance variablity during reoptimization, the active constraints are now stored in the same order as in the
+  original problem.
 - Added workaround for bug in MSVS 2019 when compiling CppAD source.
 
 Known bugs

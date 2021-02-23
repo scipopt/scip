@@ -3936,15 +3936,21 @@ SCIP_RETCODE SCIPprintReoptStatistics(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintReoptStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert(scip != NULL);
+
    /* skip if reoptimization is disabled */
    if( !scip->set->reopt_enable )
+      return SCIP_OKAY;
+
+   /* skip if not problem yet */
+   if( scip->stat == NULL )
       return SCIP_OKAY;
 
    solving = SCIPclockGetTime(scip->stat->solvingtimeoverall);
    presolving = SCIPclockGetTime(scip->stat->presolvingtimeoverall);
    updatetime = SCIPclockGetTime(scip->stat->reoptupdatetime);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finish after %d runs.\n", scip->stat->nreoptruns);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finished after %d runs.\n", scip->stat->nreoptruns);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time         (sec) :\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", solving);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", presolving);
@@ -3954,19 +3960,32 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d %10d %10d\n",
          SCIPreoptGetNTotalFeasNodes(scip->reopt), SCIPreoptGetNTotalInfNodes(scip->reopt),
          SCIPreoptGetNTotalPrunedNodes(scip->reopt), SCIPreoptGetNTotalCutoffReoptnodes(scip->reopt));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n",
+   if( scip->stat->nreoptruns > 0 )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n",
          (SCIP_Real)SCIPreoptGetNTotalFeasNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalInfNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalPrunedNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalCutoffReoptnodes(scip->reopt)/scip->stat->nreoptruns);
-
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10s %10s %10s %10s\n", "--", "--", "--", "--");
+   }
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Restarts           :     global      local\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  first            : %10d         --\n", SCIPreoptGetFirstRestarts(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  last             : %10d         --\n", SCIPreoptGetLastRestarts(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d\n", SCIPreoptGetNRestartsGlobal(scip->reopt),
          SCIPreoptGetNTotalRestartsLocal(scip->reopt));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              :         -- %10.2f\n",
+   if( scip->stat->nreoptruns > 0 )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              :         -- %10.2f\n",
          (SCIP_Real)SCIPreoptGetNTotalRestartsLocal(scip->reopt)/scip->stat->nreoptruns);
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              :         -- %10s\n", "--");
+   }
 
    return SCIP_OKAY;
 }
