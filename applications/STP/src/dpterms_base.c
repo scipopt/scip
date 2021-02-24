@@ -197,6 +197,7 @@ SCIP_RETCODE dpsolverInitData(
    const int* terminals;
    assert(nterms >= 2);
 
+   SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &(dpsolver->dheap) ));
    SCIP_CALL( stpprioqueue_create(scip, nnodes, &(dpsolver->solpqueue)) );
    SCIP_CALL( dpterms_streeInit(scip, nterms, nnodes, &(dpsolver->dpstree)) );
    SCIP_CALL( dpmiscInit(scip, graph,  &(dpsolver->dpmisc)) );
@@ -245,12 +246,8 @@ void dpsolverFreeData(
 )
 {
    assert(dpsolver->dpgraph && dpsolver->dpstree && dpsolver->solpqueue);
+   assert(dpsolver->dheap);
    assert(stpprioqueue_isClean(dpsolver->solpqueue));
-
-   dpgraphFree(scip, &(dpsolver->dpgraph));
-   dpmiscFree(scip, &(dpsolver->dpmisc));
-   dpterms_streeFree(scip, &(dpsolver->dpstree));
-   stpprioqueue_free(scip, &(dpsolver->solpqueue));
 
    if( dpsolver->soltree_root )
    {
@@ -263,6 +260,12 @@ void dpsolverFreeData(
 
       assert(!dpsolver->soltree_root);
    }
+
+   dpgraphFree(scip, &(dpsolver->dpgraph));
+   dpmiscFree(scip, &(dpsolver->dpmisc));
+   dpterms_streeFree(scip, &(dpsolver->dpstree));
+   stpprioqueue_free(scip, &(dpsolver->solpqueue));
+   graph_heap_free(scip, TRUE, TRUE, &(dpsolver->dheap));
 }
 
 
@@ -276,7 +279,12 @@ SCIP_RETCODE dpsolverSolve(
 {
    // todo compress?
 
+
+   SCIP_CALL( graph_init_csr(scip, g) );
+
    SCIP_CALL( dpterms_coreSolve(scip, g, dpsolver) );
+
+   graph_free_csr(scip, g);
 
    return SCIP_OKAY;
 }

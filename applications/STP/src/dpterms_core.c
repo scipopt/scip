@@ -60,12 +60,25 @@ typedef struct dynamic_programming_iterator
    SCIP_Bool*            nodes_isValidRoot;  /**< is node a valid root? */
    int                   nnodes;             /**< number of nodes */
    int                   sol_nterms;         /**< popcount */
+   int                   exterm;             /**< extension terminal */
 } DPITER;
 
 
 /*
  * Local methods
  */
+
+
+/** helper */
+static inline
+SCIP_Bool nodeIsNonSolTerm(
+   STP_Bitset            sol_bitset,         /**< bitset */
+   const int*            nodes_termId,       /**< ID  */
+   int                   node                /**< node to check */
+)
+{
+   return( nodes_termId[node] != -1 && stpbitset_bitIsTrue(sol_bitset, nodes_termId[node]) );
+}
 
 
 /** gets ordered root indices */
@@ -126,6 +139,7 @@ SCIP_RETCODE dpiterInit(
    iter->sol_bitset = NULL;
    iter->nnodes = nnodes;
    iter->sol_nterms = -1;
+   iter->exterm = -1;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_dist), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_ub), nnodes) );
@@ -174,6 +188,8 @@ void dpiterSetDefault(
    SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
    const int nnodes = dpiterator->nnodes;
 
+   dpiterator->exterm = -1;
+
    for( int i = 0; i < nnodes; i++ )
       nodes_dist[i] = FARAWAY;
 
@@ -200,7 +216,7 @@ void dpiterPopSol(
 {
    DPSUBSOL* subsol;
 
-   dpiterator->sol_bitset = stpprioqueue_deleteMinReturnData(dpsolver->solpqueue);
+   stpprioqueue_deleteMin((void**) &(dpiterator->sol_bitset), &(dpiterator->sol_nterms), dpsolver->solpqueue);
 
    if( findSubsol(dpsolver->soltree_root, dpiterator->sol_bitset, &subsol) == 0 )
    {
@@ -217,6 +233,7 @@ void dpiterPopSol(
       assert(0 && "should never happen");
    }
 
+   assert(stpbitset_getPopcount(dpiterator->sol_bitset) == dpiterator->sol_nterms);
    dpiterator->dpsubsol = subsol;
 }
 
@@ -241,7 +258,6 @@ void dpiterGetNextSol(
 }
 
 
-
 /** (Implicitly) constructs sub-Steiner trees */
 static
 SCIP_RETCODE dpiterBuildSubTrees(
@@ -257,16 +273,12 @@ SCIP_RETCODE dpiterBuildSubTrees(
    SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
    STP_Vectype(TTRIPLET) tripletstack = dpiterator->tripletstack;
    STP_Vectype(SOLTRACE) soltraces = dpiterator->sol_traces;
+   STP_Vectype(SOLTRACE) data = dpmisc->data;
    int* nodes_nvisits;
    int* roots_indices;
    const int nsolcands = StpVecGetSize(soltraces);
    const int nnodes = dpiterator->nnodes;
    int nvalidroots = 0;
-
-   STP_Vectype(SOLTRACE) data = dpmisc->data;
-   //STP_Vectype(SOLTRACE) data = NULL;
-
-   // todo at seome test to see that everything works!
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nodes_nvisits, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &roots_indices, nnodes) );
@@ -282,6 +294,9 @@ SCIP_RETCODE dpiterBuildSubTrees(
       // todo GE enough?
       if( GT(sol_trace.cost, nodes_dist[sol_root]) )
          continue;
+
+      SCIPdebugMessage("building solution with root %d and prev0=%d prev1=%d", sol_root,
+            sol_trace.prevs[0], sol_trace.prevs[1]);
 
       nodes_isValidRoot[sol_root] = TRUE;
       nodes_dist[sol_root] = sol_trace.cost;
@@ -322,12 +337,16 @@ SCIP_RETCODE dpiterBuildSubTrees(
 
                StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, bdist_global, previdx0}));
                StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, bdist_global, previdx1}));
+
+               SCIPdebugMessage("...merged solution from prev0=%d prev1=%d", previdx0, previdx1);
             }
             else if( previdx0 != -1 )
             {
                const int curr_root = data[previdx0].root;
                const SCIP_Real curr_bdist_local = bdist_local + parent_trace.cost - data[previdx0].cost;
                const SCIP_Real curr_bdist_global = MAX(bdist_global, curr_bdist_local);
+
+               SCIPdebugMessage("at pred. solution with index=%d root=%d \n", previdx0, data[previdx0].root);
 
                assert(GT(parent_trace.cost - data[previdx0].cost, 0.0));
 
@@ -350,6 +369,113 @@ SCIP_RETCODE dpiterBuildSubTrees(
    SCIPfreeBufferArray(scip, &roots_indices);
    SCIPfreeBufferArray(scip, &nodes_nvisits);
    dpiterator->tripletstack = tripletstack;
+
+   return SCIP_OKAY;
+}
+
+
+/** extends sub-Steiner trees */
+static
+SCIP_RETCODE dpiterExtendSubTrees(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph */
+   DPSOLVER*             dpsolver,           /**< solver */
+   DPITER*               dpiterator          /**< iterator */
+)
+{
+   const CSR* const csr = graph->csr_storage;
+   DHEAP* const dheap = dpsolver->dheap;
+   const SCIP_Real* const cost_csr = csr->cost;
+   const int* const head_csr = csr->head;
+   const int* const start_csr = csr->start;
+   int* RESTRICT nodes_previdx0 = dpiterator->nodes_previdx0;
+   int* RESTRICT nodes_previdx1 = dpiterator->nodes_previdx1;
+   SCIP_Real* RESTRICT nodes_dist = dpiterator->nodes_dist;
+   SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
+   const int nnodes = dpiterator->nnodes;
+   STP_Bitset sol_bitset = dpiterator->sol_bitset;
+   const int* const nodes_termId = dpsolver->dpgraph->nodes_termId;
+   int* terms_adjCount;
+   const SCIP_Bool breakEarly = (graph->terms - dpiterator->sol_nterms > 1);
+
+   assert(nnodes == graph->knots);
+   assert(dpiterator->exterm == -1);
+   assert(dpiterator->sol_nterms > 0 && dpiterator->sol_nterms <= graph->terms);
+
+   graph_heap_clean(TRUE, dheap);
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &terms_adjCount, graph->terms) );
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( LT(nodes_dist[i], FARAWAY) )
+         graph_heap_correct(i, nodes_dist[i], dheap);
+   }
+
+   SCIPdebugMessage("starting Dijkstra with %d roots \n", dheap->size);
+
+   /* run Dijkstra */
+   while( dheap->size > 0 )
+   {
+      int k;
+      SCIP_Real k_dist;
+
+      graph_heap_deleteMin(&k, &k_dist, dheap);
+
+      // todo, really?
+      assert(EQ(nodes_dist[k], k_dist));
+
+      if( nodeIsNonSolTerm(sol_bitset, nodes_termId, k) )
+      {
+         assert(dpiterator->exterm == -1);
+         dpiterator->exterm = k;
+         break;
+      }
+      else
+      {
+         const int k_start = start_csr[k];
+         const int k_end = start_csr[k + 1];
+         const SCIP_Bool k_isValid = nodes_isValidRoot[k];
+
+         for( int e = k_start; e != k_end; e++ )
+         {
+            const int m = head_csr[e];
+            const SCIP_Real distnew = k_dist + cost_csr[e];
+
+            if( LT(distnew, nodes_dist[m]) )
+            {
+               nodes_isValidRoot[m] = k_isValid;
+               nodes_dist[m] = distnew;
+               nodes_previdx0[m] = k;
+               nodes_previdx1[m] = -1;
+
+               graph_heap_correct(m, distnew, dheap);
+            }
+            else if( EQ(distnew, nodes_dist[m]) && !k_isValid )
+            {
+               nodes_isValidRoot[m] = FALSE;
+            }
+
+            if( nodeIsNonSolTerm(sol_bitset, nodes_termId, m) && breakEarly )
+            {
+               assert(nodes_termId[m] >= 0);
+               terms_adjCount[nodes_termId[m]]++;
+
+               /* all neighbors hit? */
+               if( terms_adjCount[nodes_termId[m]] == k_end - k_start )
+               {
+                  graph_heap_clean(FALSE, dheap);
+                  assert(dheap->size == 0);
+                  assert(dpiterator->exterm == -1);
+                  dpiterator->exterm = m;
+                  break;
+               }
+            }
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &terms_adjCount);
 
    return SCIP_OKAY;
 }
@@ -398,6 +524,8 @@ SCIP_RETCODE dpterms_coreSolve(
 
       /*  construct implicit sub-Steiner trees by setting traces */
       SCIP_CALL( dpiterBuildSubTrees(scip, dpmisc, dpiterator) );
+
+      SCIP_CALL( dpiterExtendSubTrees(scip, graph, dpsolver, dpiterator) );
 
 
       // build extended Steiner trees

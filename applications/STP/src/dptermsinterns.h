@@ -97,6 +97,7 @@ typedef struct dynamic_programming_solver
    DPSTREE*              dpstree;            /**< tree for finding solution combinations */
    DPMISC*               dpmisc;             /**< this and that */
    STP_PQ*               solpqueue;          /**< sub-solutions */
+   DHEAP*                dheap;              /**< heap of size nnodes */
 } DPSOLVER;
 
 

@@ -1990,7 +1990,7 @@ SCIP_RETCODE graph_dijkLimited_init(
 
    dijk->node_bias = NULL;
 
-   graph_heap_create(scip, nnodes, NULL, NULL, &(dijk->dheap));
+   SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &(dijk->dheap)) );
 
    dijk->nvisits = -1;
    dijk->edgelimit = -1;
