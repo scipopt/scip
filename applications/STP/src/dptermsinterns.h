@@ -62,25 +62,6 @@ typedef struct dynamic_programming_subsolution
 } DPSUBSOL;
 
 
-
-/** saves some data updated in every iteration */
-typedef struct dynamic_programming_iterator
-{
-   DPSUBSOL*             dpsubsol;
-   STP_Vectype(int)      stack;              /**< general purpose stack */
-   STP_Vectype(SOLTRACE) sol_traces;         /**< traces of current sub-solution */
-   STP_Bitset            sol_bitset;         /**< marks terminals of sub-solution */
-   SCIP_Real*            nodes_dist;         /**< weight of sub-ST rooted at node */
-   SCIP_Real*            nodes_ub;           /**< upper bounds for rule-out */
-   int*                  nodes_pred1;        /**< predecessor NOTE: with shift! */
-   int*                  nodes_pred2;        /**< predecessor */
-   SCIP_Bool*            nodes_isValidRoot;  /**< is node a valid root? */
-   int                   nnodes;             /**< number of nodes */
-   int                   sol_nterms;         /**< popcount */
-} DPITER;
-
-
-
 /** compressed graph with less information */
 typedef struct dynamic_programming_graph
 {
@@ -96,10 +77,10 @@ typedef struct dynamic_programming_graph
 typedef struct dynamic_programming_misc
 {
    STP_Bitset            allTrueBits;        /**< helper; of size nnodes */
+   STP_Vectype(SOLTRACE)  data;
+   STP_Vectype(STP_Bitset) bits;
    STP_Vectype(int)      bits_count;
-   STP_Vectype(int)      bits;
    STP_Vectype(int)      offsets;
-   STP_Vectype(int)      data;
    int                   min_prev[2];
    SCIP_Real             min;
    int                   min_x;

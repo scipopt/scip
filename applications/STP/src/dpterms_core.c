@@ -31,9 +31,80 @@
 #include "stpvector.h"
 #include "stpprioqueue.h"
 
+
+/*
+ * Data structures
+ */
+
+/** helper data */
+typedef struct trace_triplet
+{
+   SCIP_Real             bdist_local;        /**< temporary tree bottleneck distance */
+   SCIP_Real             bdist_global;       /**< tree bottleneck distance */
+   int                   index;              /**< index */
+} TTRIPLET;
+
+
+/** saves some data updated in every iteration */
+typedef struct dynamic_programming_iterator
+{
+   DPSUBSOL*             dpsubsol;
+   STP_Vectype(int)      stack;              /**< general purpose stack */
+   STP_Vectype(TTRIPLET) tripletstack;       /**< special stack */
+   STP_Vectype(SOLTRACE) sol_traces;         /**< traces of current sub-solution */
+   STP_Bitset            sol_bitset;         /**< marks terminals of sub-solution */
+   SCIP_Real*            nodes_dist;         /**< weight of sub-ST rooted at node */
+   SCIP_Real*            nodes_ub;           /**< upper bounds for rule-out */
+   int*                  nodes_previdx0;        /**< predecessor NOTE: with shift! */
+   int*                  nodes_previdx1;        /**< predecessor */
+   SCIP_Bool*            nodes_isValidRoot;  /**< is node a valid root? */
+   int                   nnodes;             /**< number of nodes */
+   int                   sol_nterms;         /**< popcount */
+} DPITER;
+
+
 /*
  * Local methods
  */
+
+
+/** gets ordered root indices */
+static
+SCIP_RETCODE getOrderedRootIndices(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DPITER*               dpiterator,         /**< iterator */
+   int*                  roots_indices       /**< to initialize */
+)
+{
+   const int nnodes = dpiterator->nnodes;
+   SCIP_Real* roots_cost;
+   STP_Vectype(SOLTRACE) soltraces = dpiterator->sol_traces;
+   const int nsolcands = StpVecGetSize(dpiterator->sol_traces);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &roots_cost, nnodes) );
+
+   for( int i = 0; i < nsolcands; i++ )
+   {
+      roots_indices[i] = i;
+      roots_cost[i] = -soltraces[i].cost;
+   }
+
+   SCIPsortDownRealInt(roots_cost, roots_indices, nsolcands);
+
+   SCIPfreeBufferArray(scip, &roots_cost);
+
+#ifndef NDEBUG
+   for( int i = 1; i < nsolcands; i++ )
+   {
+      const int ind = roots_indices[i];
+      const int ind_prev = roots_indices[i - 1];
+      assert(LE(soltraces[ind_prev].cost, soltraces[ind].cost));
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
 
 /** initializes */
 static
@@ -50,6 +121,7 @@ SCIP_RETCODE dpiterInit(
    iter = *dpiterator;
 
    iter->stack = NULL;
+   iter->tripletstack = NULL;
    iter->sol_traces = NULL;
    iter->sol_bitset = NULL;
    iter->nnodes = nnodes;
@@ -57,8 +129,8 @@ SCIP_RETCODE dpiterInit(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_dist), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_ub), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_pred1), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_pred2), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_previdx0), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_previdx1), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_isValidRoot), nnodes) );
 
    return SCIP_OKAY;
@@ -75,11 +147,12 @@ void dpiterFree(
    DPITER* iter = *dpiterator;
 
    assert(!iter->sol_traces && !iter->sol_bitset);
+   StpVecFree(scip, iter->tripletstack);
    StpVecFree(scip, iter->stack);
 
    SCIPfreeMemoryArray(scip, &(iter->nodes_isValidRoot));
-   SCIPfreeMemoryArray(scip, &(iter->nodes_pred2));
-   SCIPfreeMemoryArray(scip, &(iter->nodes_pred1));
+   SCIPfreeMemoryArray(scip, &(iter->nodes_previdx1));
+   SCIPfreeMemoryArray(scip, &(iter->nodes_previdx0));
    SCIPfreeMemoryArray(scip, &(iter->nodes_ub));
    SCIPfreeMemoryArray(scip, &(iter->nodes_dist));
 
@@ -96,8 +169,8 @@ void dpiterSetDefault(
 {
    SCIP_Real* RESTRICT nodes_dist = dpiterator->nodes_dist;
    SCIP_Real* RESTRICT nodes_ub = dpiterator->nodes_ub;
-   int* RESTRICT nodes_pred1 = dpiterator->nodes_pred1;
-   int* RESTRICT nodes_pred2 = dpiterator->nodes_pred2;
+   int* RESTRICT nodes_pred1 = dpiterator->nodes_previdx0;
+   int* RESTRICT nodes_pred2 = dpiterator->nodes_previdx1;
    SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
    const int nnodes = dpiterator->nnodes;
 
@@ -168,6 +241,120 @@ void dpiterGetNextSol(
 }
 
 
+
+/** (Implicitly) constructs sub-Steiner trees */
+static
+SCIP_RETCODE dpiterBuildSubTrees(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DPMISC*               dpmisc,             /**< misc */
+   DPITER*               dpiterator          /**< to update */
+)
+{
+   SCIP_Real* RESTRICT nodes_dist = dpiterator->nodes_dist;
+   SCIP_Real* RESTRICT nodes_ub = dpiterator->nodes_ub;
+   int* RESTRICT nodes_previdx0 = dpiterator->nodes_previdx0;
+   int* RESTRICT nodes_previdx1 = dpiterator->nodes_previdx1;
+   SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
+   STP_Vectype(TTRIPLET) tripletstack = dpiterator->tripletstack;
+   STP_Vectype(SOLTRACE) soltraces = dpiterator->sol_traces;
+   int* nodes_nvisits;
+   int* roots_indices;
+   const int nsolcands = StpVecGetSize(soltraces);
+   const int nnodes = dpiterator->nnodes;
+   int nvalidroots = 0;
+
+   STP_Vectype(SOLTRACE) data = dpmisc->data;
+   //STP_Vectype(SOLTRACE) data = NULL;
+
+   // todo at seome test to see that everything works!
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nodes_nvisits, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &roots_indices, nnodes) );
+   SCIP_CALL( getOrderedRootIndices(scip, dpiterator, roots_indices) );
+
+   SCIPdebugMessage("building Steiner trees from %d candidates \n", nsolcands);
+
+   for( int i = 0; i < nsolcands; i++ )
+   {
+      const SOLTRACE sol_trace = soltraces[roots_indices[i]];
+      const int sol_root = sol_trace.root;
+
+      // todo GE enough?
+      if( GT(sol_trace.cost, nodes_dist[sol_root]) )
+         continue;
+
+      nodes_isValidRoot[sol_root] = TRUE;
+      nodes_dist[sol_root] = sol_trace.cost;
+      nodes_ub[sol_root] = 0.0;
+      nodes_nvisits[sol_root]++;
+      nvalidroots++;
+      nodes_previdx0[sol_root] = sol_trace.prevs[0];
+      nodes_previdx1[sol_root] = sol_trace.prevs[1];
+
+      assert(sol_trace.prevs[0] != -1 || sol_trace.prevs[1] == -1);
+
+      if( sol_trace.prevs[0] != -1 )
+      {
+         assert(StpVecGetSize(tripletstack) == 0);
+
+         StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, 0.0, sol_trace.prevs[0]}));
+
+         if( sol_trace.prevs[1] != -1 )
+            StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, 0.0, sol_trace.prevs[1]}));
+
+         while( StpVecGetSize(tripletstack) > 0 )
+         {
+            TTRIPLET triplet = tripletstack[StpVecGetSize(tripletstack) - 1];
+            SOLTRACE parent_trace = data[triplet.index];
+            const int previdx0 = parent_trace.prevs[0];
+            const int previdx1 = parent_trace.prevs[1];
+            const SCIP_Real bdist_local = triplet.bdist_local;
+            const SCIP_Real bdist_global = triplet.bdist_global;
+
+            StpVecPopBack(tripletstack);
+
+            assert(previdx0 >= 0);
+
+            /* merged solution? */
+            if( previdx1 != -1 )
+            {
+               assert(previdx0 != -1);
+
+               StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, bdist_global, previdx0}));
+               StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, bdist_global, previdx1}));
+            }
+            else if( previdx0 != -1 )
+            {
+               const int curr_root = data[previdx0].root;
+               const SCIP_Real curr_bdist_local = bdist_local + parent_trace.cost - data[previdx0].cost;
+               const SCIP_Real curr_bdist_global = MAX(bdist_global, curr_bdist_local);
+
+               assert(GT(parent_trace.cost - data[previdx0].cost, 0.0));
+
+               nodes_dist[curr_root] = MIN(nodes_dist[curr_root], sol_trace.cost);
+               nodes_nvisits[curr_root]++;
+               nodes_ub[curr_root] = MIN(nodes_ub[curr_root], curr_bdist_global);
+
+               StpVecPushBack(scip, tripletstack, ((TTRIPLET) {curr_bdist_local, curr_bdist_global, previdx0}));
+            }
+         }
+      }
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( nodes_nvisits[i] < nvalidroots )
+         nodes_ub[i] = 0.0;
+   }
+
+   SCIPfreeBufferArray(scip, &roots_indices);
+   SCIPfreeBufferArray(scip, &nodes_nvisits);
+   dpiterator->tripletstack = tripletstack;
+
+   return SCIP_OKAY;
+}
+
+
 /** frees etc. */
 static
 void dpiterFinalizeSol(
@@ -209,7 +396,9 @@ SCIP_RETCODE dpterms_coreSolve(
    {
       dpiterGetNextSol(scip, dpsolver, dpiterator);
 
-      // construct implicit Steiner trees by backtracing
+      /*  construct implicit sub-Steiner trees by setting traces */
+      SCIP_CALL( dpiterBuildSubTrees(scip, dpmisc, dpiterator) );
+
 
       // build extended Steiner trees
 
