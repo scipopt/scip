@@ -29,8 +29,6 @@
 #include "stpprioqueue.h"
 
 
-
-
 /*
  * Local methods
  */
@@ -106,8 +104,8 @@ void dpgraphFree(
    assert(dpg);
    assert(dpg->terminals && dpg->nodes_termId);
 
-   SCIPfreeMemoryArray(scip, dpg->nodes_termId);
-   SCIPfreeMemoryArray(scip, dpg->terminals);
+   SCIPfreeMemoryArray(scip, &(dpg->nodes_termId));
+   SCIPfreeMemoryArray(scip, &(dpg->terminals));
 
    SCIPfreeMemory(scip, dpgraph);
 }
@@ -184,46 +182,6 @@ void dpmiscFree(
 }
 
 
-/** initializes */
-static
-SCIP_RETCODE dpsubsolInit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   DPSUBSOL**            subsol              /**< solution */
-)
-{
-   DPSUBSOL* sub;
-   SCIP_CALL( SCIPallocBlockMemory(scip, subsol) );
-   sub = *subsol;
-   sub->bitkey = NULL;
-   sub->extensions = NULL;
-
-   return SCIP_OKAY;
-}
-
-
-/** frees */
-static
-void dpsubsolFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   DPSUBSOL**            subsol              /**< solution */
-)
-{
-   DPSUBSOL* sub = *subsol;
-
-   if( sub->bitkey )
-      stpbitset_free(scip, &(sub->bitkey));
-
-   if( sub->extensions )
-   {
-      // todo soltree_root is never freed!
-      assert(0); // todo! free every single element
-
-   }
-
-   SCIPfreeBlockMemory(scip, subsol);
-}
-
-
 /** initializes data */
 static
 SCIP_RETCODE dpsolverInitData(
@@ -257,7 +215,7 @@ SCIP_RETCODE dpsolverInitData(
       assert(Is_term(graph->term[term]));
       SCIPdebugMessage("add term %d (index=%d) \n", term, i);
 
-      SCIP_CALL( dpsubsolInit(scip, &singleton_sol) );
+      SCIP_CALL( dpterms_dpsubsolInit(scip, &singleton_sol) );
       singleton_sol->bitkey = stpbitset_new(scip, nnodes);
       stpbitset_setBitTrue(singleton_sol->bitkey, i);
 
@@ -286,7 +244,6 @@ void dpsolverFreeData(
    DPSOLVER*             dpsolver            /**< solver */
 )
 {
-   assert(dpsolver->soltree_root == NULL);
    assert(dpsolver->dpgraph && dpsolver->dpstree && dpsolver->solpqueue);
    assert(stpprioqueue_isClean(dpsolver->solpqueue));
 
@@ -295,16 +252,17 @@ void dpsolverFreeData(
    dpterms_streeFree(scip, &(dpsolver->dpstree));
    stpprioqueue_free(scip, &(dpsolver->solpqueue));
 
-   // todo should not be necessary, all should be freed anyway
-#ifdef SCIP_DISABLED
-   DPSUBSOL* soltree_root = dpsolver->soltree_root;
+   if( dpsolver->soltree_root )
+   {
+      FOR_EACH_NODE(DPSUBSOL*, node, dpsolver->soltree_root,
+      {
+         assert(node);
+         SCIPrbtreeDelete(&(dpsolver->soltree_root), node);
+         dpterms_dpsubsolFree(scip, &node);
+      })
 
-   FOR_EACH_NODE(DPSUBSOL*, node, soltree_root,
-        {
-           assert(node);
-           //delete!
-        })
-#endif
+      assert(!dpsolver->soltree_root);
+   }
 }
 
 
@@ -316,7 +274,7 @@ SCIP_RETCODE dpsolverSolve(
    DPSOLVER*             dpsolver            /**< solver */
 )
 {
-   // compress...
+   // todo compress?
 
    SCIP_CALL( dpterms_coreSolve(scip, g, dpsolver) );
 
@@ -391,6 +349,9 @@ SCIP_RETCODE dpterms_solve(
    SCIP_CALL( dpsolverGetSolution(scip, dpsolver, solution) );
 
    dpsolverFree(scip, &dpsolver);
+
+  // assert(0);
+
 
    return SCIP_OKAY;
 }

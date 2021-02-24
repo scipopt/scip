@@ -195,6 +195,29 @@ inline SCIP_Bool stpbitset_haveIntersection(
 }
 
 
+/** are bitsets the same? */
+static
+inline SCIP_Bool stpbitset_areEqual(
+   STP_Bitset           bitset1,             /**< bitset */
+   STP_Bitset           bitset2              /**< bitset */
+   )
+{
+   const int vecsize = StpVecGetSize(bitset1);
+
+   assert(bitset1 && bitset2);
+   assert(stpbitset_setsAreCompatible(bitset1, bitset2));
+   assert(vecsize > 0);
+
+   if( memcmp(bitset1, bitset2, sizeof(bitset1[0]) * vecsize) != 0 )
+   {
+      return FALSE;
+
+   }
+
+   return TRUE;
+}
+
+
 /** is bit at given index set? */
 static
 inline SCIP_Bool stpbitset_bitIsTrue(

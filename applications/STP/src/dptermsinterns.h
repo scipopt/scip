@@ -62,6 +62,25 @@ typedef struct dynamic_programming_subsolution
 } DPSUBSOL;
 
 
+
+/** saves some data updated in every iteration */
+typedef struct dynamic_programming_iterator
+{
+   DPSUBSOL*             dpsubsol;
+   STP_Vectype(int)      stack;              /**< general purpose stack */
+   STP_Vectype(SOLTRACE) sol_traces;         /**< traces of current sub-solution */
+   STP_Bitset            sol_bitset;         /**< marks terminals of sub-solution */
+   SCIP_Real*            nodes_dist;         /**< weight of sub-ST rooted at node */
+   SCIP_Real*            nodes_ub;           /**< upper bounds for rule-out */
+   int*                  nodes_pred1;        /**< predecessor NOTE: with shift! */
+   int*                  nodes_pred2;        /**< predecessor */
+   SCIP_Bool*            nodes_isValidRoot;  /**< is node a valid root? */
+   int                   nnodes;             /**< number of nodes */
+   int                   sol_nterms;         /**< popcount */
+} DPITER;
+
+
+
 /** compressed graph with less information */
 typedef struct dynamic_programming_graph
 {
@@ -111,6 +130,57 @@ typedef struct dynamic_programming_solver
 
 static inline
 SCIP_DEF_RBTREE_FIND(findSubsol, STP_Bitset, DPSUBSOL, SUBSOL_LT, SUBSOL_GT) /*lint !e123*/
+
+
+
+/*
+ * Inline methods
+ */
+
+
+/** initializes */
+static inline
+SCIP_RETCODE dpterms_dpsubsolInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DPSUBSOL**            subsol              /**< solution */
+)
+{
+   DPSUBSOL* sub;
+   SCIP_CALL( SCIPallocBlockMemory(scip, subsol) );
+   sub = *subsol;
+   sub->bitkey = NULL;
+   sub->extensions = NULL;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+static inline
+void dpterms_dpsubsolFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DPSUBSOL**            subsol              /**< solution */
+)
+{
+   DPSUBSOL* sub = *subsol;
+
+   if( sub->bitkey )
+      stpbitset_free(scip, &(sub->bitkey));
+
+   if( sub->extensions )
+   {
+      StpVecFree(scip, sub->extensions);
+   }
+
+   SCIPfreeBlockMemory(scip, subsol);
+}
+
+
+
+/*
+ *
+ */
+
 
 /* dpterms_util.c
  */
