@@ -362,25 +362,8 @@ SCIP_RETCODE selectBestCands(
    bestval = candsols[0];
 
    /* get aggregated score for the first candidate */
-   /* both prios are equal, so we resort to using the aggregated score */
-   if( conflictweight != 0.0 && inferenceweight != 0.0 && cutoffweight != 0.0 )
-   {
-      bestaggrscore = getAggrScore(scip, cands[0], conflictweight, inferenceweight, cutoffweight, reliablescore);
-   }
+   bestaggrscore = getAggrScore(scip, cands[0], conflictweight, inferenceweight, cutoffweight, reliablescore);
 
-   /* using conflict scores*/
-   else if( conflictweight != 0 )
-   {
-      assert(inferenceweight == 0.0);
-      assert(cutoffweight == 0.0);
-      bestaggrscore = SCIPgetVarConflictScore(scip, bestaggrcand);
-   }
-   /* using cutoff scores */
-   else if( inferenceweight != 0 && cutoffweight != 0 )
-   {
-      assert(conflictweight == 0.0);
-      bestaggrscore = SCIPgetVarAvgInferenceCutoffScore(scip, bestaggrcand, cutoffweight);
-   }
    for( c = 1; c < ncands; ++c )
    {
       SCIP_VAR* cand;
@@ -395,21 +378,7 @@ SCIP_RETCODE selectBestCands(
       val = candsols[c];
 
       /* get score for the candidate */
-      /* using the aggregated score */
-      if( conflictweight != 0.0 && inferenceweight != 0.0 && cutoffweight != 0.0 )
-      {
-         aggrscore = getAggrScore(scip, cand, conflictweight, inferenceweight, cutoffweight, reliablescore);
-      }
-      /* using conflict scores*/
-      else if( conflictweight != 0 )
-      {
-         aggrscore = SCIPgetVarConflictScore(scip, cand);
-      }
-      /* using cutoff scores */
-      else if( inferenceweight != 0 && cutoffweight != 0 )
-      {
-         aggrscore = SCIPgetVarAvgInferenceCutoffScore(scip, cand, cutoffweight);
-      }
+      aggrscore = getAggrScore(scip, cand, conflictweight, inferenceweight, cutoffweight, reliablescore);
 
       /*lint -e777*/
       SCIPdebugMsg(scip, " -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
