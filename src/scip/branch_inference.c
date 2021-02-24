@@ -440,7 +440,7 @@ SCIP_RETCODE performBranchingSol(
          {
             /* select the best candidates w.r.t. the second criterion; we use bestcands and nbestcands as input and
              * output, so the method must make sure to overwrite the last argument only at the very end */
-            tiebreakAggrCand( bestcands, &nbestcands );
+            tiebreakAggrCand(bestcands, &nbestcands);
          }
       }
       else if( conflictprio == cutoffprio )
@@ -453,7 +453,7 @@ SCIP_RETCODE performBranchingSol(
          {
             /* select the best candidates w.r.t. the second criterion; we use bestcands and nbestcands as input and
              * output, so the method must make sure to overwrite the last argument only at the very end */
-            tiebreakAggrCand( bestcands, &nbestcands );
+            tiebreakAggrCand(bestcands, &nbestcands);
          }
       }
       else /* conflictprio < cutoffprio */
@@ -466,7 +466,7 @@ SCIP_RETCODE performBranchingSol(
          {
             /* select the best candidates w.r.t. the second criterion; we use bestcands and nbestcands as input and
              * output, so the method must make sure to overwrite the last argument only at the very end */
-            tiebreakAggrCand( bestcands, &nbestcands );
+            tiebreakAggrCand(bestcands, &nbestcands);
          }
       }
 
