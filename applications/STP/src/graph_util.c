@@ -951,9 +951,9 @@ graph_heap_clean(
    {
       for( int i = 0; i < capacity; i++ )
          position[i] = UNKNOWN;
-   }
 
-   assert(graph_heap_isClean(heap));
+      assert(graph_heap_isClean(heap));
+   }
 }
 
 

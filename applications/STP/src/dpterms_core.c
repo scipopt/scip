@@ -77,7 +77,7 @@ SCIP_Bool nodeIsNonSolTerm(
    int                   node                /**< node to check */
 )
 {
-   return( nodes_termId[node] != -1 && stpbitset_bitIsTrue(sol_bitset, nodes_termId[node]) );
+   return( nodes_termId[node] != -1 && !stpbitset_bitIsTrue(sol_bitset, nodes_termId[node]) );
 }
 
 
@@ -169,6 +169,9 @@ SCIP_RETCODE dpiterInit(
    iter->sol_nterms = -1;
    iter->exterm = -1;
 
+   /* NOTE: could be any positive number */
+   StpVecReserve(scip, iter->stack, 2);
+
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_dist), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_ub), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_previdx0), nnodes) );
@@ -248,8 +251,8 @@ void dpiterPopSol(
 
    if( findSubsol(dpsolver->soltree_root, dpiterator->sol_bitset, &subsol) == 0 )
    {
-      STP_Vectype(SOLTRACE) sol_traces = subsol->extensions; // todo needs to be freed
-      printf("number of traces: %d \n", StpVecGetSize(sol_traces));
+      dpiterator->sol_traces = subsol->extensions;
+      SCIPdebugMessage("number of traces: %d \n", StpVecGetSize(dpiterator->sol_traces));
 
       SCIPrbtreeDelete(&(dpsolver->soltree_root), subsol);
 
@@ -323,7 +326,7 @@ SCIP_RETCODE subtreesBuild(
       if( GT(sol_trace.cost, nodes_dist[sol_root]) )
          continue;
 
-      SCIPdebugMessage("building solution with root %d and prev0=%d prev1=%d", sol_root,
+      SCIPdebugMessage("building solution with root %d and prev0=%d prev1=%d \n", sol_root,
             sol_trace.prevs[0], sol_trace.prevs[1]);
 
       nodes_isValidRoot[sol_root] = TRUE;
@@ -449,9 +452,9 @@ SCIP_RETCODE subtreesExtend(
       SCIP_Real k_dist;
 
       graph_heap_deleteMin(&k, &k_dist, dheap);
-
-      // todo, really?
       assert(EQ(nodes_dist[k], k_dist));
+
+      SCIPdebugMessage("updated node %d: dist=%f \n", k, k_dist);
 
       if( nodeIsNonSolTerm(sol_bitset, nodes_termId, k) )
       {
@@ -502,6 +505,8 @@ SCIP_RETCODE subtreesExtend(
          }
       }
    }
+
+   SCIPdebugMessage("...ending extension with root %d \n", dpiterator->exterm);
 
    SCIPfreeBufferArray(scip, &terms_adjCount);
 
@@ -602,8 +607,11 @@ SCIP_RETCODE subtreesRemoveNonValids(
    }
 
    graph_heap_clean(TRUE, dheap);
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &nodes_mindist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_mindist, nnodes) );
    StpVecClear(stack);
+
+   for( int i = 0; i < nnodes; i++ )
+      nodes_mindist[i] = -1;
 
    nodes_mindist[extterm] = nodes_dist[extterm];
    graph_heap_correct(extterm, -nodes_mindist[extterm], dheap);
@@ -622,6 +630,7 @@ SCIP_RETCODE subtreesRemoveNonValids(
       assert(StpVecGetSize(stack) == 0);
 
       StpVecPushBack(scip, stack, heapnode);
+      SCIPdebugMessage("heapnode=%d dist=%f \n", heapnode, heapnode_dist);
 
       while( StpVecGetSize(stack) > 0 )
       {
@@ -659,6 +668,7 @@ SCIP_RETCODE subtreesRemoveNonValids(
 
                      if( LE(heapnode_dist, nodes_dist[q]) )
                      {
+                        SCIPdebugMessage("update and push-back node %d (dist=%f) \n", q, nodes_dist[q]);
                         StpVecPushBack(scip, stack, q);
                      }
                      else
@@ -695,7 +705,10 @@ void dpiterFinalizeSol(
 )
 {
    stpbitset_free(scip, &(dpiterator->sol_bitset));
+
+   assert(dpiterator->sol_traces == dpiterator->dpsubsol->extensions);
    dpterms_dpsubsolFree(scip, &(dpiterator->dpsubsol));
+   dpiterator->sol_traces = NULL;
 }
 
 
