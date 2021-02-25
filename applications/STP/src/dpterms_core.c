@@ -81,6 +81,34 @@ SCIP_Bool nodeIsNonSolTerm(
 }
 
 
+/** helper */
+static
+SCIP_Bool allExtensionsAreInvalid(
+   const GRAPH*          graph,              /**< graph */
+   DPSOLVER*             dpsolver,           /**< solver */
+   DPITER*               dpiterator          /**< iterator */
+)
+{
+   const SCIP_Real* const nodes_ub = dpiterator->nodes_ub;
+   STP_Bitset sol_bitset = dpiterator->sol_bitset;
+   const int* const terminals = dpsolver->dpgraph->terminals;
+   const int nterms = graph->terms;
+
+   for( int i = 0; i < nterms; i++  )
+   {
+      const int term = terminals[i];
+
+      if( GT(nodes_ub[term], 0.0) && stpbitset_bitIsTrue(sol_bitset, i)  )
+      {
+         SCIPdebugMessage("terminal %d has positive UB, all extension are invalid! \n", term);
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
 /** gets ordered root indices */
 static
 SCIP_RETCODE getOrderedRootIndices(
@@ -260,7 +288,7 @@ void dpiterGetNextSol(
 
 /** (Implicitly) constructs sub-Steiner trees */
 static
-SCIP_RETCODE dpiterBuildSubTrees(
+SCIP_RETCODE subtreesBuild(
    SCIP*                 scip,               /**< SCIP data structure */
    DPMISC*               dpmisc,             /**< misc */
    DPITER*               dpiterator          /**< to update */
@@ -376,7 +404,7 @@ SCIP_RETCODE dpiterBuildSubTrees(
 
 /** extends sub-Steiner trees */
 static
-SCIP_RETCODE dpiterExtendSubTrees(
+SCIP_RETCODE subtreesExtend(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph */
    DPSOLVER*             dpsolver,           /**< solver */
@@ -481,6 +509,184 @@ SCIP_RETCODE dpiterExtendSubTrees(
 }
 
 
+
+/** remove non-valid sub-Steiner trees */
+static
+void propagateUBs(
+   const GRAPH*          graph,              /**< graph */
+   DPSOLVER*             dpsolver,           /**< solver */
+   DPITER*               dpiterator          /**< iterator */
+)
+{
+   const CSR* const csr = graph->csr_storage;
+   DHEAP* const dheap = dpsolver->dheap;
+   const SCIP_Real* const cost_csr = csr->cost;
+   const int* const head_csr = csr->head;
+   const int* const start_csr = csr->start;
+   SCIP_Real* RESTRICT nodes_ub = dpiterator->nodes_ub;
+   const int nnodes = dpiterator->nnodes;
+
+   assert(nnodes == graph->knots);
+
+   graph_heap_clean(TRUE, dheap);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( GT(nodes_ub[i], 0.0) )
+         graph_heap_correct(i, -nodes_ub[i], dheap);
+   }
+
+   /* propagate UBs */
+   while( dheap->size > 0 )
+   {
+      int k;
+      SCIP_Real k_ub;
+
+      graph_heap_deleteMin(&k, &k_ub, dheap);
+      k_ub *= -1.0;
+      assert(EQ(nodes_ub[k], k_ub));
+
+      {
+         const int k_start = start_csr[k];
+         const int k_end = start_csr[k + 1];
+
+         for( int e = k_start; e != k_end; e++ )
+         {
+            const int m = head_csr[e];
+            const SCIP_Real ubnew = k_ub - cost_csr[e];
+
+            if( GT(ubnew, nodes_ub[m]) )
+            {
+               nodes_ub[m] = ubnew;
+               graph_heap_correct(m, -ubnew, dheap);
+            }
+         }
+      }
+   }
+}
+
+
+/** remove non-valid sub-Steiner trees */
+static
+SCIP_RETCODE subtreesRemoveNonValids(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph */
+   DPSOLVER*             dpsolver,           /**< solver */
+   DPITER*               dpiterator          /**< iterator */
+)
+{
+   const CSR* const csr = graph->csr_storage;
+   DHEAP* const dheap = dpsolver->dheap;
+   const int* const head_csr = csr->head;
+   const int* const start_csr = csr->start;
+   const SCIP_Real* const nodes_dist = dpiterator->nodes_dist;
+   const SCIP_Real* const nodes_ub = dpiterator->nodes_ub;
+   SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
+   STP_Bitset sol_bitset = dpiterator->sol_bitset;
+   const int* const nodes_termId = dpsolver->dpgraph->nodes_termId;
+   const int nnodes = dpiterator->nnodes;
+   SCIP_Real* nodes_mindist;
+   SCIP_Real maxvaliddist = -1.0;
+   STP_Vectype(int) stack = dpiterator->stack;
+   const int extterm = dpiterator->exterm;
+   int termcount = graph->terms - dpiterator->sol_nterms;
+
+   assert(nnodes == graph->knots);
+   assert(termcount >= 1);
+   assert(graph_knot_isInRange(graph, extterm));
+
+   if( allExtensionsAreInvalid(graph, dpsolver, dpiterator) )
+   {
+      BMSclearMemoryArray(nodes_isValidRoot, nnodes);
+      return SCIP_OKAY;
+   }
+
+   graph_heap_clean(TRUE, dheap);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nodes_mindist, nnodes) );
+   StpVecClear(stack);
+
+   nodes_mindist[extterm] = nodes_dist[extterm];
+   graph_heap_correct(extterm, -nodes_mindist[extterm], dheap);
+   SCIPdebugMessage("starting to exclude vertices with separators \n");
+
+   /* propagate UBs */
+   while( dheap->size > 0 )
+   {
+      int heapnode;
+      SCIP_Real heapnode_dist;
+
+      graph_heap_deleteMin(&heapnode, &heapnode_dist, dheap);
+      heapnode_dist *= -1.0;
+      assert(EQ(nodes_mindist[heapnode], heapnode_dist));
+      assert(GE(heapnode_dist, 0.0));
+      assert(StpVecGetSize(stack) == 0);
+
+      StpVecPushBack(scip, stack, heapnode);
+
+      while( StpVecGetSize(stack) > 0 )
+      {
+         const int m = stack[StpVecGetSize(stack) - 1];
+         StpVecPopBack(stack);
+
+         if( nodeIsNonSolTerm(sol_bitset, nodes_termId, m) )
+         {
+            if( --termcount == 0 )
+            {
+               maxvaliddist = heapnode_dist;
+               graph_heap_clean(FALSE, dheap);
+               assert(dheap->size == 0);
+               break;
+            }
+            else
+            {
+               const int m_start = start_csr[m];
+               const int m_end = start_csr[m + 1];
+
+               for( int e = m_start; e != m_end; e++ )
+               {
+                  SCIP_Real dist_new;
+                  const int q = head_csr[e];
+
+                  if( GT(nodes_ub[q], 0.0) )
+                     continue;
+
+                  dist_new = MIN(heapnode_dist, nodes_dist[q]);
+                  assert(GE(dist_new, 0.0));
+
+                  if( GT(dist_new, nodes_mindist[q]) )
+                  {
+                     nodes_mindist[q] = dist_new;
+
+                     if( LE(heapnode_dist, nodes_dist[q]) )
+                     {
+                        StpVecPushBack(scip, stack, q);
+                     }
+                     else
+                     {
+                        assert(EQ(dist_new, nodes_dist[q]));
+                        graph_heap_correct(q, -dist_new, dheap);
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( GT(nodes_dist[i], maxvaliddist) )
+         nodes_isValidRoot[i] = FALSE;
+   }
+
+   dpiterator->stack = stack;
+
+   SCIPfreeBufferArray(scip, &nodes_mindist);
+
+   return SCIP_OKAY;
+}
+
+
 /** frees etc. */
 static
 void dpiterFinalizeSol(
@@ -523,14 +729,15 @@ SCIP_RETCODE dpterms_coreSolve(
       dpiterGetNextSol(scip, dpsolver, dpiterator);
 
       /*  construct implicit sub-Steiner trees by setting traces */
-      SCIP_CALL( dpiterBuildSubTrees(scip, dpmisc, dpiterator) );
+      SCIP_CALL( subtreesBuild(scip, dpmisc, dpiterator) );
 
-      SCIP_CALL( dpiterExtendSubTrees(scip, graph, dpsolver, dpiterator) );
+      SCIP_CALL( subtreesExtend(scip, graph, dpsolver, dpiterator) );
 
-
-      // build extended Steiner trees
-
-      // remove non-valid
+      if( graph->terms - dpiterator->sol_nterms > 1 )
+      {
+         propagateUBs(graph, dpsolver, dpiterator);
+         SCIP_CALL( subtreesRemoveNonValids(scip, graph, dpsolver, dpiterator) );
+      }
 
       // merge subtrees
 
