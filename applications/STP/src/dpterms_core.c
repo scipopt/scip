@@ -635,6 +635,9 @@ SCIP_RETCODE subtreesRemoveNonValids(
       while( StpVecGetSize(stack) > 0 )
       {
          const int m = stack[StpVecGetSize(stack) - 1];
+         const int m_start = start_csr[m];
+         const int m_end = start_csr[m + 1];
+
          StpVecPopBack(stack);
 
          if( nodeIsNonSolTerm(sol_bitset, nodes_termId, m) )
@@ -646,38 +649,33 @@ SCIP_RETCODE subtreesRemoveNonValids(
                assert(dheap->size == 0);
                break;
             }
-            else
+         }
+
+         for( int e = m_start; e != m_end; e++ )
+         {
+            SCIP_Real dist_new;
+            const int q = head_csr[e];
+
+            if( GT(nodes_ub[q], 0.0) )
+               continue;
+
+            dist_new = MIN(heapnode_dist, nodes_dist[q]);
+            assert(GE(dist_new, 0.0));
+
+            if( GT(dist_new, nodes_mindist[q]) )
             {
-               const int m_start = start_csr[m];
-               const int m_end = start_csr[m + 1];
-
-               for( int e = m_start; e != m_end; e++ )
+               if( LE(heapnode_dist, nodes_dist[q]) )
                {
-                  SCIP_Real dist_new;
-                  const int q = head_csr[e];
-
-                  if( GT(nodes_ub[q], 0.0) )
-                     continue;
-
-                  dist_new = MIN(heapnode_dist, nodes_dist[q]);
-                  assert(GE(dist_new, 0.0));
-
-                  if( GT(dist_new, nodes_mindist[q]) )
-                  {
-                     nodes_mindist[q] = dist_new;
-
-                     if( LE(heapnode_dist, nodes_dist[q]) )
-                     {
-                        SCIPdebugMessage("update and push-back node %d (dist=%f) \n", q, nodes_dist[q]);
-                        StpVecPushBack(scip, stack, q);
-                     }
-                     else
-                     {
-                        assert(EQ(dist_new, nodes_dist[q]));
-                        graph_heap_correct(q, -dist_new, dheap);
-                     }
-                  }
+                  SCIPdebugMessage("update and push-back node %d (dist=%f) \n", q, nodes_dist[q]);
+                  StpVecPushBack(scip, stack, q);
                }
+               else
+               {
+                  assert(EQ(dist_new, nodes_dist[q]));
+                  graph_heap_correct(q, -dist_new, dheap);
+               }
+
+               nodes_mindist[q] = dist_new;
             }
          }
       }
@@ -689,8 +687,9 @@ SCIP_RETCODE subtreesRemoveNonValids(
          nodes_isValidRoot[i] = FALSE;
    }
 
-   dpiterator->stack = stack;
+   SCIPdebugMessage("maxvaliddist=%f \n", maxvaliddist);
 
+   dpiterator->stack = stack;
    SCIPfreeBufferArray(scip, &nodes_mindist);
 
    return SCIP_OKAY;
