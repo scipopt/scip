@@ -6008,6 +6008,9 @@ void addExprsViolScore(
    if( nexprs == 1 )
    {
       SCIPaddExprViolScoreNonlinear(scip, exprs[0], violscore);
+      SCIPdebug( var = SCIPgetExprAuxVarNonlinear(exprs[i]); )
+      SCIPdebugMsg(scip, "add score %g to <%s>[%g,%g]\n", violscore,
+         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
       *success = TRUE;
       return;
    }
@@ -6036,6 +6039,9 @@ void addExprsViolScore(
          if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
          {
             SCIPaddExprViolScoreNonlinear(scip, exprs[i], violscore / nunbounded);
+            SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violscore / nunbounded,
+               100.0/nunbounded, violscore,
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
             *success = TRUE;
          }
       }
