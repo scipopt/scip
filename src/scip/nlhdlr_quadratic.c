@@ -2045,7 +2045,7 @@ SCIP_RETCODE findRho(
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real*            interpoints,        /**< array to store intersection points for all rays or NULL if nothing
                                                   needs to be stored */
-   SCIP_Real*            rho,                /**< pointer to store the oprimal rho */
+   SCIP_Real*            rho,                /**< pointer to store the optimal rho */
    SCIP_Bool*            success             /**< could we successfully find the right rho? */
    )
 {
@@ -2221,7 +2221,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
       SCIP_CALL( findRho(scip, nlhdlrdata, nlhdlrexprdata, rays, i, sidefactor, iscase4, vb, vzlp, wcoefs, wzlp, kappa,
                interpoints, &rho, success));
 
-      /* compute cut coef */
+      /* compute cut coef */  /* TODO handle rho == 0.0; should findRho start with *success = FALSE  ?? */
       if( ! *success  || SCIPisInfinity(scip, -rho) )
          cutcoef = 0.0;
       else
