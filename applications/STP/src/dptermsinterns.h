@@ -76,7 +76,6 @@ typedef struct dynamic_programming_graph
 /** additional data */
 typedef struct dynamic_programming_misc
 {
-   STP_Bitset            allTrueBits;        /**< helper; of size nnodes */
    STP_Vectype(SOLTRACE)  data;
    STP_Vectype(STP_Bitset) bits;
    STP_Vectype(int)      bits_count;

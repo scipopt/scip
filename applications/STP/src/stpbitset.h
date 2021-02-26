@@ -385,6 +385,30 @@ inline STP_Bitset stpbitset_newXor(
 }
 
 
+/** gets new Not bitset */
+static
+inline STP_Bitset stpbitset_newNot(
+   SCIP*                scip,                /**< SCIP data structure */
+   STP_Bitset           bitset1              /**< bitset */
+   )
+{
+   const int vecsize = StpVecGetSize(bitset1);
+   STP_Bitset bitset = stpbitset_new(scip, stpbitset_getCapacity(bitset1));
+
+   assert(StpVecGetSize(bitset) == StpVecGetSize(bitset1));
+   assert(vecsize > 0);
+
+   for( int i = 0; i < vecsize; i++ )
+   {
+      bitset[i] = ~(bitset1[i]);
+   }
+
+   assert(!stpbitset_haveIntersection(bitset1, bitset));
+
+   return bitset;
+}
+
+
 /** initializes all TRUE bitset and returns it
  *  todo more efficiently */
 static

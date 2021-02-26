@@ -123,7 +123,6 @@ SCIP_RETCODE dpmiscInit(
    SCIP_CALL( SCIPallocMemory(scip, dpmisc) );
    misc = *dpmisc;
 
-   misc->allTrueBits = stpbitset_newAllTrue(scip, graph->knots);
    misc->min = FARAWAY;
    misc->min_x = -1;
    misc->min_prev[0] = -1;
@@ -175,8 +174,6 @@ void dpmiscFree(
    {
       StpVecFree(scip, misc->data);
    }
-
-   stpbitset_free(scip, &(misc->allTrueBits));
 
    SCIPfreeMemory(scip, dpmisc);
 }
