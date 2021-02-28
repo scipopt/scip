@@ -117,21 +117,21 @@ STP_Vectype(int) getSolnodesFinal(
 {
    STP_Vectype(int) solnodes = NULL;
    STP_Vectype(int) stack = dpiterator->stack;
-   STP_Vectype(SOLTRACE) traces_all = dpmisc->data;
+   STP_Vectype(SOLTRACE) traces_all = dpmisc->global_traces;
 
-   assert(dpmisc->min_x);
+   assert(dpmisc->opt_root);
    StpVecClear(stack);
 
-   SCIPdebugMessage("add solution node %d \n", traces_all[dpmisc->min_x].root);
-   StpVecPushBack(scip, solnodes, traces_all[dpmisc->min_x].root);
+   SCIPdebugMessage("add solution node %d \n", traces_all[dpmisc->opt_root].root);
+   StpVecPushBack(scip, solnodes, traces_all[dpmisc->opt_root].root);
 
-   StpVecPushBack(scip, stack, dpmisc->min_x);
+   StpVecPushBack(scip, stack, dpmisc->opt_root);
 
-   if( dpmisc->min_prev[0] != -1 )
-      StpVecPushBack(scip, stack, dpmisc->min_prev[0]);
+   if( dpmisc->opt_prev[0] != -1 )
+      StpVecPushBack(scip, stack, dpmisc->opt_prev[0]);
 
-   if( dpmisc->min_prev[1] != -1 )
-      StpVecPushBack(scip, stack, dpmisc->min_prev[1]);
+   if( dpmisc->opt_prev[1] != -1 )
+      StpVecPushBack(scip, stack, dpmisc->opt_prev[1]);
 
    while( StpVecGetSize(stack) > 0 )
    {
@@ -408,7 +408,7 @@ SCIP_RETCODE subtreesBuild(
    SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
    STP_Vectype(TTRIPLET) tripletstack = dpiterator->tripletstack;
    STP_Vectype(SOLTRACE) soltraces = dpiterator->sol_traces;
-   STP_Vectype(SOLTRACE) data = dpmisc->data;
+   STP_Vectype(SOLTRACE) global_traces = dpmisc->global_traces;
    int* nodes_nvisits;
    int* roots_indices;
    const int nsolcands = StpVecGetSize(soltraces);
@@ -453,7 +453,7 @@ SCIP_RETCODE subtreesBuild(
       while( StpVecGetSize(tripletstack) > 0 )
       {
          TTRIPLET triplet = tripletstack[StpVecGetSize(tripletstack) - 1];
-         SOLTRACE parent_trace = data[triplet.index];
+         SOLTRACE parent_trace = global_traces[triplet.index];
          const int previdx0 = parent_trace.prevs[0];
 
          StpVecPopBack(tripletstack);
@@ -478,13 +478,13 @@ SCIP_RETCODE subtreesBuild(
             }
             else
             {
-               const int curr_root = data[previdx0].root;
-               const SCIP_Real curr_bdist_local = bdist_local + parent_trace.cost - data[previdx0].cost;
+               const int curr_root = global_traces[previdx0].root;
+               const SCIP_Real curr_bdist_local = bdist_local + parent_trace.cost - global_traces[previdx0].cost;
                const SCIP_Real curr_bdist_global = MAX(bdist_global, curr_bdist_local);
 
-               SCIPdebugMessage("at pred. solution with index=%d root=%d \n", previdx0, data[previdx0].root);
+               SCIPdebugMessage("at pred. solution with index=%d root=%d \n", previdx0, global_traces[previdx0].root);
 
-               assert(GT(parent_trace.cost - data[previdx0].cost, 0.0));
+               assert(GT(parent_trace.cost - global_traces[previdx0].cost, 0.0));
 
                nodes_dist[curr_root] = MIN(nodes_dist[curr_root], sol_trace.cost);
                nodes_nvisits[curr_root]++;
@@ -636,7 +636,7 @@ SCIP_RETCODE dpiterAddNewPrepare(
    const int nnodes = dpiterator->nnodes;
    STP_Bitset valid_bits = stpbitset_new(scip, nnodes);
    int* rootmap;
-   const int nall = dpmisc->total_size;
+   const int nall = dpmisc->global_size;
 
    StpVecClear(valid_traces);
 
@@ -814,15 +814,15 @@ SCIP_RETCODE combineWithIntersecting(
 {
    DPSUBSOL* subsol;
    DPMISC* dpmisc = dpsolver->dpmisc;
-   STP_Vectype(int) offsets = dpmisc->offsets;
-   STP_Bitset composite_termbits = dpmisc->bits[index];
-   SOLTRACE* composite_traces = &(dpmisc->data[offsets[index]]);
+   STP_Vectype(int) offsets = dpmisc->global_starts;
+   STP_Bitset composite_termbits = dpmisc->global_termbits[index];
+   SOLTRACE* composite_traces = &(dpmisc->global_traces[offsets[index]]);
    const int composite_ntraces = offsets[index + 1] - offsets[index];
    STP_Bitset combined_termbits = stpbitset_newOr(scip, composite_termbits, dpiterator->sol_termbits);
    int  subsol_pos;
 
    STP_Vectype(SOLTRACE) combined_traces = combineTraces(scip,
-         dpiterator->valid_traces, dpmisc->total_size,
+         dpiterator->valid_traces, dpmisc->global_size,
          composite_traces, composite_ntraces, offsets[index]);
 
    if( (subsol_pos = findSubsol(dpsolver->soltree_root, combined_termbits, &subsol)) == 0 )
@@ -892,13 +892,13 @@ void updateIncumbent(
          if( valid_traces[pos1].root == toggled_traces[pos2].root )
          {
             const SCIP_Real newcost = valid_traces[pos1].cost + toggled_traces[pos2].cost;
-            if( LT(newcost, dpmisc->min) )
+            if( LT(newcost, dpmisc->opt_obj) )
             {
-               SCIPdebugMessage("updating incumbent obj %f->%f \n", dpmisc->min, newcost);
-               dpmisc->min = newcost;
-               dpmisc->min_x = dpmisc->total_size + pos1;
-               dpmisc->min_prev[0] = toggled_traces[pos2].prevs[0];
-               dpmisc->min_prev[1] = toggled_traces[pos2].prevs[1];
+               SCIPdebugMessage("updating incumbent obj %f->%f \n", dpmisc->opt_obj, newcost);
+               dpmisc->opt_obj = newcost;
+               dpmisc->opt_root = dpmisc->global_size + pos1;
+               dpmisc->opt_prev[0] = toggled_traces[pos2].prevs[0];
+               dpmisc->opt_prev[1] = toggled_traces[pos2].prevs[1];
             }
             pos1++;
             pos2++;
@@ -936,7 +936,7 @@ SCIP_RETCODE subtreesAddNewFinalize(
 
    if( 3 * dpiterator->sol_nterms <= graph->terms )
    {
-      const int nsubsets = StpVecGetSize(dpmisc->bits);
+      const int nsubsets = StpVecGetSize(dpmisc->global_termbits);
 
       SCIP_CALL( dpterms_streeInsert(scip, stpbitset_newCopy(scip, dpiterator->sol_termbits),
             dpiterator->valid_bitset, nsubsets, dpsolver->dpstree) );
@@ -948,12 +948,12 @@ SCIP_RETCODE subtreesAddNewFinalize(
 
    for( int i = 0; i < nextensions; i++ )
    {
-      StpVecPushBack(scip, dpmisc->data, dpiterator->valid_traces[i]);
+      StpVecPushBack(scip, dpmisc->global_traces, dpiterator->valid_traces[i]);
    }
-   StpVecPushBack(scip, dpmisc->bits, dpiterator->sol_termbits);
-   StpVecPushBack(scip, dpmisc->bits_count, dpiterator->sol_nterms);
-   dpmisc->total_size += nextensions;
-   StpVecPushBack(scip, dpmisc->offsets, dpmisc->total_size);
+   StpVecPushBack(scip, dpmisc->global_termbits, dpiterator->sol_termbits);
+   StpVecPushBack(scip, dpmisc->global_termbitscount, dpiterator->sol_nterms);
+   dpmisc->global_size += nextensions;
+   StpVecPushBack(scip, dpmisc->global_starts, dpmisc->global_size);
 
    dpiterator->sol_termbits = NULL;
    dpiterator->valid_bitset = NULL;
@@ -988,15 +988,15 @@ SCIP_RETCODE subtreesAddNew(
    for( int i = 0; i < StpVecGetSize(intersections); i++ )
    {
       const int pos = intersections[i];
-      assert(0 <= pos && pos < dpmisc->total_size);
-      assert( stpbitset_getPopcount(dpmisc->bits[pos]) == dpmisc->bits_count[pos]);
+      assert(0 <= pos && pos < dpmisc->global_size);
+      assert( stpbitset_getPopcount(dpmisc->global_termbits[pos]) == dpmisc->global_termbitscount[pos]);
 
-      if( 2 * dpiterator->sol_nterms + dpmisc->bits_count[pos] > nterms )
+      if( 2 * dpiterator->sol_nterms + dpmisc->global_termbitscount[pos] > nterms )
          continue;
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("intersecting bitset: \n");
-      stpbitset_print(dpmisc->bits[pos]);
+      stpbitset_print(dpmisc->global_termbits[pos]);
 #endif
 
       SCIP_CALL( combineWithIntersecting(scip, graph, pos, dpsolver, dpiterator) );
@@ -1258,11 +1258,9 @@ SCIP_RETCODE dpterms_coreSolve(
       dpiterFinalizeSol(scip, dpiterator);
    }
 
-
-   assert(dpsolver->soltree_root == NULL);
    assert(!dpsolver->solnodes);
 
-   SCIPdebugMessage("OBJ=%f \n", dpmisc->min);
+   SCIPdebugMessage("OBJ=%f \n", dpmisc->opt_obj);
    dpsolver->solnodes = getSolnodesFinal(scip, dpmisc, dpiterator);
 
    dpiterFree(scip, &dpiterator);

@@ -76,14 +76,14 @@ typedef struct dynamic_programming_graph
 /** additional data */
 typedef struct dynamic_programming_misc
 {
-   STP_Vectype(SOLTRACE)  data;
-   STP_Vectype(STP_Bitset) bits;
-   STP_Vectype(int)      bits_count;
-   STP_Vectype(int)      offsets;
-   int                   min_prev[2];
-   SCIP_Real             min;
-   int                   min_x;
-   int                   total_size;
+   STP_Vectype(SOLTRACE)  global_traces;
+   STP_Vectype(STP_Bitset) global_termbits;
+   STP_Vectype(int)      global_termbitscount;
+   STP_Vectype(int)      global_starts;
+   int                   opt_prev[2];
+   SCIP_Real             opt_obj;
+   int                   opt_root;
+   int                   global_size;
 } DPMISC;
 
 

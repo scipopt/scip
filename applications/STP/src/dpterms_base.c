@@ -124,17 +124,17 @@ SCIP_RETCODE dpmiscInit(
    SCIP_CALL( SCIPallocMemory(scip, dpmisc) );
    misc = *dpmisc;
 
-   misc->min = FARAWAY;
-   misc->min_x = -1;
-   misc->min_prev[0] = -1;
-   misc->min_prev[1] = -1;
-   misc->bits = NULL;
-   misc->bits_count = NULL;
-   misc->data = NULL;
-   misc->offsets = NULL;
-   misc->total_size = 0;
+   misc->opt_obj = FARAWAY;
+   misc->opt_root = -1;
+   misc->opt_prev[0] = -1;
+   misc->opt_prev[1] = -1;
+   misc->global_termbits = NULL;
+   misc->global_termbitscount = NULL;
+   misc->global_traces = NULL;
+   misc->global_starts = NULL;
+   misc->global_size = 0;
 
-   StpVecPushBack(scip, misc->offsets, 0);
+   StpVecPushBack(scip, misc->global_starts, 0);
 
    return SCIP_OKAY;
 }
@@ -156,28 +156,28 @@ void dpmiscFree(
 
    assert(misc);
 
-   if( misc->bits_count )
+   if( misc->global_termbitscount )
    {
-      StpVecFree(scip, misc->bits_count);
+      StpVecFree(scip, misc->global_termbitscount);
    }
 
-   if( misc->bits )
+   if( misc->global_termbits )
    {
-      const int size = StpVecGetSize(misc->bits);
+      const int size = StpVecGetSize(misc->global_termbits);
       for( int i = 0; i < size; i++ )
-         stpbitset_free(scip, &(misc->bits[i]));
+         stpbitset_free(scip, &(misc->global_termbits[i]));
 
-      StpVecFree(scip, misc->bits);
+      StpVecFree(scip, misc->global_termbits);
    }
 
-   if( misc->offsets )
+   if( misc->global_starts )
    {
-      StpVecFree(scip, misc->offsets);
+      StpVecFree(scip, misc->global_starts);
    }
 
-   if( misc->data )
+   if( misc->global_traces )
    {
-      StpVecFree(scip, misc->data);
+      StpVecFree(scip, misc->global_traces);
    }
 
    SCIPfreeMemory(scip, dpmisc);
