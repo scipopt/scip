@@ -52,7 +52,7 @@ typedef struct dynamic_programming_iterator
    STP_Vectype(int)      stack;              /**< general purpose stack */
    STP_Vectype(TTRIPLET) tripletstack;       /**< special stack */
    STP_Vectype(SOLTRACE) sol_traces;         /**< traces of current sub-solution */
-   STP_Bitset            sol_bitset;         /**< marks terminals of sub-solution */
+   STP_Bitset            sol_termbits;         /**< marks terminals of sub-solution */
    STP_Vectype(SOLTRACE) valid_traces;       /**< traces of valid extension */
    STP_Bitset            valid_bitset;       /**< marks valid roots */
    SCIP_Real*            nodes_dist;         /**< weight of sub-ST rooted at node */
@@ -62,7 +62,7 @@ typedef struct dynamic_programming_iterator
    SCIP_Bool*            nodes_isValidRoot;  /**< is node a valid root? */
    int                   nnodes;             /**< number of nodes */
    int                   sol_nterms;         /**< popcount */
-   int                   exterm;             /**< extension terminal */
+   int                   extterm;             /**< extension terminal */
 } DPITER;
 
 
@@ -130,17 +130,16 @@ SCIP_Bool allExtensionsAreInvalid(
 )
 {
    const SCIP_Real* const nodes_ub = dpiterator->nodes_ub;
-   STP_Bitset sol_bitset = dpiterator->sol_bitset;
+   STP_Bitset sol_termbits = dpiterator->sol_termbits;
    const int* const terminals = dpsolver->dpgraph->terminals;
    const int nterms = graph->terms;
 
    for( int i = 0; i < nterms; i++  )
    {
-      const int term = terminals[i];
-
-      if( GT(nodes_ub[term], 0.0) && stpbitset_bitIsTrue(sol_bitset, i)  )
+      if( !stpbitset_bitIsTrue(sol_termbits, i)
+         && GT(nodes_ub[terminals[i]], 0.0) )
       {
-         SCIPdebugMessage("terminal %d has positive UB, all extension are invalid! \n", term);
+         SCIPdebugMessage("terminal %d has positive UB, all extension are invalid! \n", terminals[i]);
          return TRUE;
       }
    }
@@ -149,7 +148,7 @@ SCIP_Bool allExtensionsAreInvalid(
 }
 
 
-/** gets ordered root indices */
+/** gets ordered root indices according to the solution costs */
 static
 SCIP_RETCODE getOrderedRootIndices(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -204,13 +203,12 @@ SCIP_RETCODE dpiterInit(
    iter->stack = NULL;
    iter->tripletstack = NULL;
    iter->sol_traces = NULL;
-   iter->sol_bitset = NULL;
+   iter->sol_termbits = NULL;
    iter->valid_traces = NULL;
    iter->valid_bitset = NULL;
    iter->nnodes = nnodes;
    iter->sol_nterms = -1;
-   iter->exterm = -1;
-
+   iter->extterm = -1;
 
    /* NOTE: could be any positive number */
    StpVecReserve(scip, iter->stack, 2);
@@ -235,7 +233,7 @@ void dpiterFree(
 {
    DPITER* iter = *dpiterator;
 
-   assert(!iter->sol_traces && !iter->sol_bitset);
+   assert(!iter->sol_traces && !iter->sol_termbits);
    StpVecFree(scip, iter->valid_traces);
    StpVecFree(scip, iter->tripletstack);
    StpVecFree(scip, iter->stack);
@@ -264,7 +262,7 @@ void dpiterSetDefault(
    SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
    const int nnodes = dpiterator->nnodes;
 
-   dpiterator->exterm = -1;
+   dpiterator->extterm = -1;
 
    for( int i = 0; i < nnodes; i++ )
       nodes_dist[i] = FARAWAY;
@@ -292,16 +290,16 @@ void dpiterPopSol(
 {
    DPSUBSOL* subsol;
 
-   stpprioqueue_deleteMin((void**) &(dpiterator->sol_bitset), &(dpiterator->sol_nterms), dpsolver->solpqueue);
+   stpprioqueue_deleteMin((void**) &(dpiterator->sol_termbits), &(dpiterator->sol_nterms), dpsolver->solpqueue);
 
-   if( findSubsol(dpsolver->soltree_root, dpiterator->sol_bitset, &subsol) == 0 )
+   if( findSubsol(dpsolver->soltree_root, dpiterator->sol_termbits, &subsol) == 0 )
    {
-      dpiterator->sol_traces = subsol->extensions;
+      dpiterator->sol_traces = subsol->traces;
       SCIPdebugMessage("number of traces: %d \n", StpVecGetSize(dpiterator->sol_traces));
 
       SCIPrbtreeDelete(&(dpsolver->soltree_root), subsol);
 
-      assert(stpbitset_areEqual(dpiterator->sol_bitset, subsol->bitkey));
+      assert(stpbitset_areEqual(dpiterator->sol_termbits, subsol->bitkey));
       stpbitset_free(scip, &(subsol->bitkey));
    }
    else
@@ -309,7 +307,7 @@ void dpiterPopSol(
       assert(0 && "should never happen");
    }
 
-   assert(stpbitset_getPopcount(dpiterator->sol_bitset) == dpiterator->sol_nterms);
+   assert(stpbitset_getPopcount(dpiterator->sol_termbits) == dpiterator->sol_nterms);
    dpiterator->dpsubsol = subsol;
 }
 
@@ -322,7 +320,7 @@ void dpiterGetNextSol(
    DPITER*               dpiterator          /**< to update */
 )
 {
-   assert(!dpiterator->sol_bitset);
+   assert(!dpiterator->sol_termbits);
    assert(!dpiterator->valid_bitset); /* NOTE: should be moved */
 
    dpiterSetDefault(scip, dpiterator);
@@ -330,7 +328,7 @@ void dpiterGetNextSol(
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("processing solution: \n");
-      stpbitset_print(dpiterator->sol_bitset);
+      stpbitset_print(dpiterator->sol_termbits);
 #endif
 }
 
@@ -385,26 +383,26 @@ SCIP_RETCODE subtreesBuild(
 
       assert(sol_trace.prevs[0] != -1 || sol_trace.prevs[1] == -1);
 
-      if( sol_trace.prevs[0] != -1 )
+      if( sol_trace.prevs[0] == -1 )
+         continue;
+
+      assert(StpVecGetSize(tripletstack) == 0);
+      StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, 0.0, sol_trace.prevs[0]}));
+      StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, 0.0, sol_trace.prevs[1]}));
+
+      while( StpVecGetSize(tripletstack) > 0 )
       {
-         assert(StpVecGetSize(tripletstack) == 0);
+         TTRIPLET triplet = tripletstack[StpVecGetSize(tripletstack) - 1];
+         SOLTRACE parent_trace = data[triplet.index];
+         const int previdx0 = parent_trace.prevs[0];
 
-         StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, 0.0, sol_trace.prevs[0]}));
-
-         if( sol_trace.prevs[1] != -1 )
-            StpVecPushBack(scip, tripletstack, ((TTRIPLET) {0.0, 0.0, sol_trace.prevs[1]}));
-
-         while( StpVecGetSize(tripletstack) > 0 )
+         if( previdx0 != -1 )
          {
-            TTRIPLET triplet = tripletstack[StpVecGetSize(tripletstack) - 1];
-            SOLTRACE parent_trace = data[triplet.index];
-            const int previdx0 = parent_trace.prevs[0];
-            const int previdx1 = parent_trace.prevs[1];
             const SCIP_Real bdist_local = triplet.bdist_local;
             const SCIP_Real bdist_global = triplet.bdist_global;
+            const int previdx1 = parent_trace.prevs[1];
 
             StpVecPopBack(tripletstack);
-
             assert(previdx0 >= 0);
 
             /* merged solution? */
@@ -417,7 +415,7 @@ SCIP_RETCODE subtreesBuild(
 
                SCIPdebugMessage("...merged solution from prev0=%d prev1=%d", previdx0, previdx1);
             }
-            else if( previdx0 != -1 )
+            else
             {
                const int curr_root = data[previdx0].root;
                const SCIP_Real curr_bdist_local = bdist_local + parent_trace.cost - data[previdx0].cost;
@@ -470,13 +468,13 @@ SCIP_RETCODE subtreesExtend(
    SCIP_Real* RESTRICT nodes_dist = dpiterator->nodes_dist;
    SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
    const int nnodes = dpiterator->nnodes;
-   STP_Bitset sol_bitset = dpiterator->sol_bitset;
+   STP_Bitset sol_termbits = dpiterator->sol_termbits;
    const int* const nodes_termId = dpsolver->dpgraph->nodes_termId;
    int* terms_adjCount;
    const SCIP_Bool breakEarly = (graph->terms - dpiterator->sol_nterms > 1);
 
    assert(nnodes == graph->knots);
-   assert(dpiterator->exterm == -1);
+   assert(dpiterator->extterm == -1);
    assert(dpiterator->sol_nterms > 0 && dpiterator->sol_nterms <= graph->terms);
 
    graph_heap_clean(TRUE, dheap);
@@ -502,10 +500,10 @@ SCIP_RETCODE subtreesExtend(
 
       SCIPdebugMessage("updated node %d: dist=%f \n", k, k_dist);
 
-      if( nodeIsNonSolTerm(sol_bitset, nodes_termId, k) )
+      if( nodeIsNonSolTerm(sol_termbits, nodes_termId, k) )
       {
-         assert(dpiterator->exterm == -1);
-         dpiterator->exterm = k;
+         assert(dpiterator->extterm == -1);
+         dpiterator->extterm = k;
          break;
       }
       else
@@ -533,18 +531,18 @@ SCIP_RETCODE subtreesExtend(
                nodes_isValidRoot[m] = FALSE;
             }
 
-            if( nodeIsNonSolTerm(sol_bitset, nodes_termId, m) && breakEarly )
+            if( nodeIsNonSolTerm(sol_termbits, nodes_termId, m) && breakEarly )
             {
                assert(nodes_termId[m] >= 0);
                terms_adjCount[nodes_termId[m]]++;
 
                /* all neighbors hit? */
-               if( terms_adjCount[nodes_termId[m]] == k_end - k_start )
+               if( terms_adjCount[nodes_termId[m]] == (k_end - k_start) )
                {
                   graph_heap_clean(FALSE, dheap);
                   assert(dheap->size == 0);
-                  assert(dpiterator->exterm == -1);
-                  dpiterator->exterm = m;
+                  assert(dpiterator->extterm == -1);
+                  dpiterator->extterm = m;
                   break;
                }
             }
@@ -552,7 +550,7 @@ SCIP_RETCODE subtreesExtend(
       }
    }
 
-   SCIPdebugMessage("...ending extension with root %d \n", dpiterator->exterm);
+   SCIPdebugMessage("...ending extension with root %d \n", dpiterator->extterm);
 
    SCIPfreeBufferArray(scip, &terms_adjCount);
 
@@ -698,7 +696,7 @@ void subsolUpdate(
    DPSUBSOL*             dpsubsol            /**< to be updated */
 )
 {
-   STP_Vectype(SOLTRACE) subsol_traces = dpsubsol->extensions;
+   STP_Vectype(SOLTRACE) subsol_traces = dpsubsol->traces;
    STP_Vectype(SOLTRACE) updated_traces = NULL;
    int pos1 = 0;
    int pos2 = 0;
@@ -736,7 +734,7 @@ void subsolUpdate(
 
    }
    StpVecFree(scip, subsol_traces);
-   dpsubsol->extensions = updated_traces;
+   dpsubsol->traces = updated_traces;
 }
 
 
@@ -753,39 +751,37 @@ SCIP_RETCODE combineWithIntersecting(
    DPSUBSOL* subsol;
    DPMISC* dpmisc = dpsolver->dpmisc;
    STP_Vectype(int) offsets = dpmisc->offsets;
-   STP_Bitset composite_bitset = dpmisc->bits[index];
+   STP_Bitset composite_termbits = dpmisc->bits[index];
    SOLTRACE* composite_traces = &(dpmisc->data[offsets[index]]);
    const int composite_ntraces = offsets[index + 1] - offsets[index];
-   STP_Bitset combined_bitset = stpbitset_newOr(scip, composite_bitset, dpiterator->sol_bitset);
+   STP_Bitset combined_termbits = stpbitset_newOr(scip, composite_termbits, dpiterator->sol_termbits);
    int  subsol_pos;
 
    STP_Vectype(SOLTRACE) combined_traces = combineTraces(scip,
          dpiterator->valid_traces, dpmisc->total_size,
          composite_traces, composite_ntraces, offsets[index]);
 
-   stpprioqueue_deleteMin((void**) &(dpiterator->sol_bitset), &(dpiterator->sol_nterms), dpsolver->solpqueue);
-
-   if( (subsol_pos = findSubsol(dpsolver->soltree_root, combined_bitset, &subsol)) == 0 )
+   if( (subsol_pos = findSubsol(dpsolver->soltree_root, combined_termbits, &subsol)) == 0 )
    {
       assert(subsol);
 
       subsolUpdate(scip, combined_traces, dpiterator, subsol);
       StpVecFree(scip, combined_traces);
-      stpbitset_free(scip, &combined_bitset);
+      stpbitset_free(scip, &combined_termbits);
    }
    else
    {
       DPSUBSOL* newsol;
-      const int ncombinedterms = stpbitset_getPopcount(combined_bitset);
+      const int ncombinedterms = stpbitset_getPopcount(combined_termbits);
       if( 2 * ncombinedterms <= graph->terms )
       {
-         SCIP_CALL( stpprioqueue_insert(scip, stpbitset_newCopy(scip, combined_bitset),
+         SCIP_CALL( stpprioqueue_insert(scip, stpbitset_newCopy(scip, combined_termbits),
                ncombinedterms, dpsolver->solpqueue) );
       }
 
       SCIP_CALL( dpterms_dpsubsolInit(scip, &newsol) );
-      newsol->bitkey = combined_bitset;
-      newsol->extensions = combined_traces;
+      newsol->bitkey = combined_termbits;
+      newsol->traces = combined_traces;
 
       SCIPrbtreeInsert(&(dpsolver->soltree_root), subsol, subsol_pos, newsol);
    }
@@ -803,20 +799,20 @@ void updateIncumbent(
    DPITER*               dpiterator          /**< iterator */
 )
 {
-
    DPSUBSOL* dpsubsol;
    DPMISC* dpmisc = dpsolver->dpmisc;
-   STP_Bitset sol_toggled = stpbitset_newNot(scip, dpiterator->sol_bitset);
+   STP_Bitset sol_termstoggled = stpbitset_newNot(scip, dpiterator->sol_termbits);
 
-   if( findSubsol(dpsolver->soltree_root, sol_toggled, &dpsubsol) == 0 )
+   if( findSubsol(dpsolver->soltree_root, sol_termstoggled, &dpsubsol) == 0 )
    {
       STP_Vectype(SOLTRACE) valid_traces = dpiterator->valid_traces;
-      STP_Vectype(SOLTRACE) toggled_traces = dpsubsol->extensions;
+      STP_Vectype(SOLTRACE) toggled_traces = dpsubsol->traces;
       int pos1 = 0;
       int pos2 = 0;
       const int ntraces1 = StpVecGetSize(valid_traces);
       const int ntraces2 = StpVecGetSize(toggled_traces);
       assert(ntraces1 > 0 && ntraces2 > 0);
+      assert(valid_traces && toggled_traces);
 
       while( pos1 < ntraces1 && pos2 < ntraces2 )
       {
@@ -846,9 +842,8 @@ void updateIncumbent(
             pos2++;
          }
       }
-
    }
-   stpbitset_free(scip, &sol_toggled);
+   stpbitset_free(scip, &sol_termstoggled);
 }
 
 
@@ -865,15 +860,15 @@ SCIP_RETCODE subtreesAddNewFinalize(
    const int nextensions = StpVecGetSize(dpiterator->valid_traces);
 
    assert(nextensions > 0);
-   assert(dpiterator->sol_bitset);
+   assert(dpiterator->sol_termbits);
    assert(dpiterator->valid_bitset);
 
    if( 3 * dpiterator->sol_nterms <= graph->terms )
    {
       const int nsubsets = StpVecGetSize(dpmisc->bits);
 
-      SCIP_CALL( dpterms_streeInsert(scip, stpbitset_newCopy(scip, dpiterator->sol_bitset),
-            dpiterator->valid_bitset, nextensions, dpsolver->dpstree) );
+      SCIP_CALL( dpterms_streeInsert(scip, stpbitset_newCopy(scip, dpiterator->sol_termbits),
+            dpiterator->valid_bitset, nsubsets, dpsolver->dpstree) );
    }
    else
    {
@@ -884,12 +879,12 @@ SCIP_RETCODE subtreesAddNewFinalize(
    {
       StpVecPushBack(scip, dpmisc->data, dpiterator->valid_traces[i]);
    }
-   StpVecPushBack(scip, dpmisc->bits, dpiterator->sol_bitset);
+   StpVecPushBack(scip, dpmisc->bits, dpiterator->sol_termbits);
    StpVecPushBack(scip, dpmisc->bits_count, dpiterator->sol_nterms);
    dpmisc->total_size += nextensions;
    StpVecPushBack(scip, dpmisc->offsets, dpmisc->total_size);
 
-   dpiterator->sol_bitset = NULL;
+   dpiterator->sol_termbits = NULL;
    dpiterator->valid_bitset = NULL;
 
    return SCIP_OKAY;
@@ -905,7 +900,6 @@ SCIP_RETCODE subtreesAddNew(
 )
 {
    DPMISC* dpmisc = dpsolver->dpmisc;
-   const SCIP_Bool* const nodes_isValidRoot = dpiterator->nodes_isValidRoot;
    STP_Vectype(int) intersections;
    const int nterms = graph->terms;
    SCIP_Bool hasExtensions;
@@ -917,13 +911,14 @@ SCIP_RETCODE subtreesAddNew(
       return SCIP_OKAY;
    }
 
-   intersections = dpterms_streeCollectIntersects(scip, dpiterator->sol_bitset,
+   intersections = dpterms_streeCollectIntersects(scip, dpiterator->sol_termbits,
          dpiterator->valid_bitset, dpsolver->dpstree);
 
    for( int i = 0; i < StpVecGetSize(intersections); i++ )
    {
       const int pos = intersections[i];
       assert(0 <= pos && pos < dpmisc->total_size);
+      assert( stpbitset_getPopcount(dpmisc->bits[pos]) == dpmisc->bits_count[pos]);
 
       if( 2 * dpiterator->sol_nterms + dpmisc->bits_count[pos] > nterms )
          continue;
@@ -1016,13 +1011,13 @@ SCIP_RETCODE subtreesRemoveNonValids(
    const SCIP_Real* const nodes_dist = dpiterator->nodes_dist;
    const SCIP_Real* const nodes_ub = dpiterator->nodes_ub;
    SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
-   STP_Bitset sol_bitset = dpiterator->sol_bitset;
+   STP_Bitset sol_bitset = dpiterator->sol_termbits;
    const int* const nodes_termId = dpsolver->dpgraph->nodes_termId;
    const int nnodes = dpiterator->nnodes;
    SCIP_Real* nodes_mindist;
    SCIP_Real maxvaliddist = -1.0;
    STP_Vectype(int) stack = dpiterator->stack;
-   const int extterm = dpiterator->exterm;
+   const int extterm = dpiterator->extterm;
    int termcount = graph->terms - dpiterator->sol_nterms;
 
    assert(nnodes == graph->knots);
@@ -1040,7 +1035,7 @@ SCIP_RETCODE subtreesRemoveNonValids(
    StpVecClear(stack);
 
    for( int i = 0; i < nnodes; i++ )
-      nodes_mindist[i] = -1;
+      nodes_mindist[i] = -1.0;
 
    nodes_mindist[extterm] = nodes_dist[extterm];
    graph_heap_correct(extterm, -nodes_mindist[extterm], dheap);
@@ -1134,8 +1129,8 @@ void dpiterFinalizeSol(
    DPITER*               dpiterator          /**< to update */
 )
 {
-   assert(!dpiterator->sol_bitset);
-   assert(dpiterator->sol_traces == dpiterator->dpsubsol->extensions);
+   assert(!dpiterator->sol_termbits);
+   assert(dpiterator->sol_traces == dpiterator->dpsubsol->traces);
 
    dpterms_dpsubsolFree(scip, &(dpiterator->dpsubsol));
    dpiterator->sol_traces = NULL;

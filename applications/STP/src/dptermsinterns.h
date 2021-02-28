@@ -58,7 +58,7 @@ typedef struct dynamic_programming_subsolution
 {
    SCIP_RBTREE_HOOKS;                        /**< for red-black tree */
    STP_Bitset            bitkey;             /**< key marking the terminals in sub-solution */
-   STP_Vectype(SOLTRACE) extensions;         /**< extensions of solution */
+   STP_Vectype(SOLTRACE) traces;             /**< traces of solution */
 } DPSUBSOL;
 
 
@@ -130,7 +130,7 @@ SCIP_RETCODE dpterms_dpsubsolInit(
    SCIP_CALL( SCIPallocBlockMemory(scip, subsol) );
    sub = *subsol;
    sub->bitkey = NULL;
-   sub->extensions = NULL;
+   sub->traces = NULL;
 
    return SCIP_OKAY;
 }
@@ -148,9 +148,9 @@ void dpterms_dpsubsolFree(
    if( sub->bitkey )
       stpbitset_free(scip, &(sub->bitkey));
 
-   if( sub->extensions )
+   if( sub->traces )
    {
-      StpVecFree(scip, sub->extensions);
+      StpVecFree(scip, sub->traces);
    }
 
    SCIPfreeBlockMemory(scip, subsol);

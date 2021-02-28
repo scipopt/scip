@@ -220,8 +220,8 @@ SCIP_RETCODE dpsolverInitData(
       SCIP_CALL( stpprioqueue_insert(scip, ((void*) stpbitset_newCopy(scip, singleton_sol->bitkey)),
             1, dpsolver->solpqueue) );
 
-      assert(NULL == singleton_sol->extensions);
-      StpVecPushBack(scip, singleton_sol->extensions, trace);
+      assert(NULL == singleton_sol->traces);
+      StpVecPushBack(scip, singleton_sol->traces, trace);
 
       pos = findSubsol(soltree_root, singleton_sol->bitkey, &soltree_parent);
       assert(pos != 0); /* not found */
