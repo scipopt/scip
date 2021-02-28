@@ -107,6 +107,61 @@ void debugPrintSeparator(
 
 
 
+/** assembles final solution nodes */
+static
+STP_Vectype(int) getSolnodesFinal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DPMISC*               dpmisc,             /**< misc */
+   DPITER*               dpiterator          /**< iterator */
+)
+{
+   STP_Vectype(int) solnodes = NULL;
+   STP_Vectype(int) stack = dpiterator->stack;
+   STP_Vectype(SOLTRACE) traces_all = dpmisc->data;
+
+   assert(dpmisc->min_x);
+   StpVecClear(stack);
+
+   SCIPdebugMessage("add solution node %d \n", traces_all[dpmisc->min_x].root);
+   StpVecPushBack(scip, solnodes, traces_all[dpmisc->min_x].root);
+
+   StpVecPushBack(scip, stack, dpmisc->min_x);
+
+   if( dpmisc->min_prev[0] != -1 )
+      StpVecPushBack(scip, stack, dpmisc->min_prev[0]);
+
+   if( dpmisc->min_prev[1] != -1 )
+      StpVecPushBack(scip, stack, dpmisc->min_prev[1]);
+
+   while( StpVecGetSize(stack) > 0 )
+   {
+      const int i = stack[StpVecGetSize(stack) - 1];
+      const int prev0 = traces_all[i].prevs[0];
+
+      StpVecPopBack(stack);
+
+      if( prev0 != -1 )
+      {
+         StpVecPushBack(scip, stack, prev0);
+
+         if( traces_all[i].prevs[1] != -1 )
+         {
+            StpVecPushBack(scip, stack, traces_all[i].prevs[1]);
+         }
+         else
+         {
+            SCIPdebugMessage("add solution node %d \n", traces_all[prev0].root);
+            StpVecPushBack(scip, solnodes, traces_all[prev0].root);
+         }
+      }
+   }
+
+   dpiterator->stack = stack;
+
+   return solnodes;
+}
+
+
 /** helper */
 static inline
 SCIP_Bool nodeIsNonSolTerm(
@@ -1205,9 +1260,13 @@ SCIP_RETCODE dpterms_coreSolve(
 
 
    assert(dpsolver->soltree_root == NULL);
-   dpiterFree(scip, &dpiterator);
+   assert(!dpsolver->solnodes);
 
    SCIPdebugMessage("OBJ=%f \n", dpmisc->min);
+   dpsolver->solnodes = getSolnodesFinal(scip, dpmisc, dpiterator);
+
+   dpiterFree(scip, &dpiterator);
+
 
    assert(0);
    return SCIP_OKAY;

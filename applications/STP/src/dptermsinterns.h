@@ -90,7 +90,7 @@ typedef struct dynamic_programming_misc
 /** solver */
 typedef struct dynamic_programming_solver
 {
-   int*                  soledges;           /**< solution; NON-OWNED! */
+   STP_Vectype(int)      solnodes;           /**< (final) solution nodes */
    DPGRAPH*              dpgraph;            /**< graph */
    DPSUBSOL*             soltree_root;       /**< root of solution tree */
    DPSTREE*              dpstree;            /**< tree for finding solution combinations */

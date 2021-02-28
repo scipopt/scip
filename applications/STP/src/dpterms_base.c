@@ -230,6 +230,7 @@ SCIP_RETCODE dpsolverInitData(
    }
 
    dpsolver->soltree_root = soltree_root;
+   dpsolver->solnodes = NULL;
 
    return SCIP_OKAY;
 }
@@ -245,6 +246,8 @@ void dpsolverFreeData(
    assert(dpsolver->dpgraph && dpsolver->dpstree && dpsolver->solpqueue);
    assert(dpsolver->dheap);
    assert(stpprioqueue_isClean(dpsolver->solpqueue));
+
+   StpVecFree(scip, dpsolver->solnodes);
 
    if( dpsolver->soltree_root )
    {
@@ -295,6 +298,10 @@ SCIP_RETCODE dpsolverGetSolution(
    int*                  solution            /**< to store solution */
 )
 {
+   assert(dpsolver->solnodes);
+
+   // todo get soluton from solnodes
+
 
    return SCIP_OKAY;
 }
@@ -355,8 +362,7 @@ SCIP_RETCODE dpterms_solve(
 
    dpsolverFree(scip, &dpsolver);
 
-  // assert(0);
-
+   assert(solstp_isValid(scip, graph, solution));
 
    return SCIP_OKAY;
 }
