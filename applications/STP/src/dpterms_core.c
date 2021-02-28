@@ -1267,7 +1267,5 @@ SCIP_RETCODE dpterms_coreSolve(
 
    dpiterFree(scip, &dpiterator);
 
-
-   assert(0);
    return SCIP_OKAY;
 }

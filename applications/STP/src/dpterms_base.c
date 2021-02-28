@@ -27,6 +27,7 @@
 #include "stpbitset.h"
 #include "stpvector.h"
 #include "stpprioqueue.h"
+#include "solstp.h"
 
 
 /*
@@ -162,6 +163,10 @@ void dpmiscFree(
 
    if( misc->bits )
    {
+      const int size = StpVecGetSize(misc->bits);
+      for( int i = 0; i < size; i++ )
+         stpbitset_free(scip, &(misc->bits[i]));
+
       StpVecFree(scip, misc->bits);
    }
 
@@ -294,14 +299,30 @@ SCIP_RETCODE dpsolverSolve(
 static
 SCIP_RETCODE dpsolverGetSolution(
    SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph of sub-problem */
    DPSOLVER*             dpsolver,           /**< the solver */
    int*                  solution            /**< to store solution */
 )
 {
-   assert(dpsolver->solnodes);
+   STP_Bool* connected;
+   STP_Vectype(int) solnodes = dpsolver->solnodes;
 
-   // todo get soluton from solnodes
+   assert(solnodes);
 
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &connected, graph->knots) );
+
+   for( int i = 0; i < StpVecGetSize(solnodes); i++ )
+   {
+      const int node = solnodes[i];
+      assert(graph_knot_isInRange(graph, node));
+      assert(!connected[node]);
+
+      connected[node] = TRUE;
+   }
+
+   SCIP_CALL( solstp_pruneFromNodes(scip, graph, solution, connected) );
+
+   SCIPfreeBufferArray(scip, &connected);
 
    return SCIP_OKAY;
 }
@@ -358,7 +379,7 @@ SCIP_RETCODE dpterms_solve(
    SCIP_CALL( dpsolverInit(scip, graph, &dpsolver) );
 
    SCIP_CALL( dpsolverSolve(scip, graph, dpsolver) );
-   SCIP_CALL( dpsolverGetSolution(scip, dpsolver, solution) );
+   SCIP_CALL( dpsolverGetSolution(scip, graph, dpsolver, solution) );
 
    dpsolverFree(scip, &dpsolver);
 
