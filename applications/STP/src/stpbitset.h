@@ -148,7 +148,7 @@ inline void stpbitset_setBitFalse(
    assert(bitset);
    assert(0 <= index && index < stpbitset_getCapacity(bitset));
 
-   bitset[index / 64] &= !((uint64_t) 1 << (((uint64_t) index) & 63));
+   bitset[index / 64] &= ~((uint64_t) 1 << (((uint64_t) index) & 63));
 }
 
 
@@ -389,21 +389,39 @@ inline STP_Bitset stpbitset_newXor(
 static
 inline STP_Bitset stpbitset_newNot(
    SCIP*                scip,                /**< SCIP data structure */
-   STP_Bitset           bitset1              /**< bitset */
+   STP_Bitset           bitset1,             /**< bitset for not */
+   int                  size                 /**< size to apply not operation to */
    )
 {
    const int vecsize = StpVecGetSize(bitset1);
+   const int vecsize_cut = size / 64;
    STP_Bitset bitset = stpbitset_new(scip, stpbitset_getCapacity(bitset1));
 
    assert(StpVecGetSize(bitset) == StpVecGetSize(bitset1));
+   assert(0 <= size && size <= stpbitset_getCapacity(bitset));
    assert(vecsize > 0);
 
-   for( int i = 0; i < vecsize; i++ )
+   for( int i = 0; i < vecsize_cut; i++ )
    {
       bitset[i] = ~(bitset1[i]);
    }
 
-   assert(!stpbitset_haveIntersection(bitset1, bitset));
+   if( (vecsize_cut * 64) != size )
+   {
+      const int nremaining = size - vecsize_cut * 64;
+      assert(nremaining > 0);
+
+      bitset[vecsize_cut] = ~bitset1[vecsize_cut];
+
+      for( int i = nremaining; i < 64; i++ )
+      {
+         bitset[vecsize_cut] &= ~((uint64_t) 1 << ((uint64_t) i));
+      }
+   }
+
+   assert((size == stpbitset_getCapacity(bitset))
+       || !stpbitset_bitIsTrue(bitset, size));
+
 
    return bitset;
 }

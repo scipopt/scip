@@ -589,6 +589,8 @@ SCIP_RETCODE dpiterAddNewPrepare(
    {
       if( nodes_isValidRoot[i] )
       {
+         SCIPdebugMessage("valid trace node %d \n", i);
+
          assert(GE(nodes_dist[i], 0.0) && LT(nodes_dist[i], FARAWAY));
 
          StpVecPushBack(scip, valid_traces,
@@ -808,7 +810,8 @@ void updateIncumbent(
 {
    DPSUBSOL* dpsubsol;
    DPMISC* dpmisc = dpsolver->dpmisc;
-   STP_Bitset sol_termstoggled = stpbitset_newNot(scip, dpiterator->sol_termbits);
+   STP_Bitset sol_termstoggled = stpbitset_newNot(scip, dpiterator->sol_termbits,
+         dpsolver->dpgraph->nterms);
 
    if( findSubsol(dpsolver->soltree_root, sol_termstoggled, &dpsubsol) == 0 )
    {
@@ -821,6 +824,11 @@ void updateIncumbent(
       assert(ntraces1 > 0 && ntraces2 > 0);
       assert(valid_traces && toggled_traces);
 
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("found toggled terminal bits: \n");
+      stpbitset_print(dpiterator->sol_termbits);
+#endif
+
       while( pos1 < ntraces1 && pos2 < ntraces2 )
       {
          assert(pos1 == ntraces1 - 1 || valid_traces[pos1].root < valid_traces[pos1 + 1].root);
@@ -831,6 +839,7 @@ void updateIncumbent(
             const SCIP_Real newcost = valid_traces[pos1].cost + toggled_traces[pos2].cost;
             if( LT(newcost, dpmisc->min) )
             {
+               SCIPdebugMessage("updating incumbent obj %f->%f \n", dpmisc->min, newcost);
                dpmisc->min = newcost;
                dpmisc->min_x = dpmisc->total_size + pos1;
                dpmisc->min_prev[0] = toggled_traces[pos2].prevs[0];
