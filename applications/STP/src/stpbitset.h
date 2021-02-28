@@ -393,13 +393,11 @@ inline STP_Bitset stpbitset_newNot(
    int                  size                 /**< size to apply not operation to */
    )
 {
-   const int vecsize = StpVecGetSize(bitset1);
    const int vecsize_cut = size / 64;
    STP_Bitset bitset = stpbitset_new(scip, stpbitset_getCapacity(bitset1));
 
    assert(StpVecGetSize(bitset) == StpVecGetSize(bitset1));
    assert(0 <= size && size <= stpbitset_getCapacity(bitset));
-   assert(vecsize > 0);
 
    for( int i = 0; i < vecsize_cut; i++ )
    {
@@ -421,7 +419,6 @@ inline STP_Bitset stpbitset_newNot(
 
    assert((size == stpbitset_getCapacity(bitset))
        || !stpbitset_bitIsTrue(bitset, size));
-
 
    return bitset;
 }
