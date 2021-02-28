@@ -148,12 +148,6 @@ void dpmiscFree(
 )
 {
    DPMISC* misc = *dpmisc;
-   int todo; // also free members of Vectors
-   // ALSO RENAME MEMBERS!!!
-   // ALSO RENAME MEMBERS!!!
-   // ALSO RENAME MEMBERS!!!
-
-
    assert(misc);
 
    if( misc->global_termbitscount )
