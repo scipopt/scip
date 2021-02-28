@@ -79,8 +79,6 @@ void debugPrintSeparator(
 )
 {
    assert(dpiterator);
-   assert(GT(maxvaliddist, 0.0));
-
 
 #ifdef SCIP_DEBUG
    {
@@ -603,6 +601,7 @@ SCIP_RETCODE dpiterAddNewPrepare(
    /* no valid extensions? */
    if( 0 == StpVecGetSize(valid_traces) )
    {
+      SCIPdebugMessage("no valid extensions! \n");
       *hasExtension = FALSE;
       stpbitset_free(scip, &valid_bits);
       return SCIP_OKAY;
@@ -1089,7 +1088,9 @@ SCIP_RETCODE subtreesRemoveNonValids(
             const int q = head_csr[e];
 
             if( GT(nodes_ub[q], 0.0) )
+            {
                continue;
+            }
 
             dist_new = MIN(heapnode_dist, nodes_dist[q]);
             assert(GE(dist_new, 0.0));
@@ -1137,8 +1138,12 @@ void dpiterFinalizeSol(
    DPITER*               dpiterator          /**< to update */
 )
 {
-   assert(!dpiterator->sol_termbits);
    assert(dpiterator->sol_traces == dpiterator->dpsubsol->traces);
+
+   if( dpiterator->sol_termbits )
+   {
+      stpbitset_free(scip, &(dpiterator->sol_termbits));
+   }
 
    dpterms_dpsubsolFree(scip, &(dpiterator->dpsubsol));
    dpiterator->sol_traces = NULL;
