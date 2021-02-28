@@ -396,13 +396,14 @@ SCIP_RETCODE subtreesBuild(
          SOLTRACE parent_trace = data[triplet.index];
          const int previdx0 = parent_trace.prevs[0];
 
+         StpVecPopBack(tripletstack);
+
          if( previdx0 != -1 )
          {
             const SCIP_Real bdist_local = triplet.bdist_local;
             const SCIP_Real bdist_global = triplet.bdist_global;
             const int previdx1 = parent_trace.prevs[1];
 
-            StpVecPopBack(tripletstack);
             assert(previdx0 >= 0);
 
             /* merged solution? */
