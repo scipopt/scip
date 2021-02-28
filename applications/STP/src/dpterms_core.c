@@ -329,6 +329,13 @@ void dpiterGetNextSol(
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("processing solution: \n");
       stpbitset_print(dpiterator->sol_termbits);
+      SCIPdebugMessage("terminals: \n");
+      for( int i = 0; i < dpsolver->dpgraph->nterms; i++ )
+      {
+         if( stpbitset_bitIsTrue(dpiterator->sol_termbits, i) )
+            printf("%d  ", dpsolver->dpgraph->terminals[i]);
+      }
+      printf(" \n");
 #endif
 }
 
