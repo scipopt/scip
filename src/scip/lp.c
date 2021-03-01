@@ -13593,7 +13593,10 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
       SCIP_INTERVAL psval;
 
       SCIPintervalSet(&psval, pseudoobjval);
-      SCIPintervalSet(&objint, SCIPvarGetObj(var));
+      if( RatIsFpRepresentable(SCIPvarGetObjExact(var)) )
+         SCIPintervalSet(&objint, SCIPvarGetObj(var));
+      else
+         SCIPintervalSetRational(&objint, SCIPvarGetObjExact(var));
 
       if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
          pseudoobjvalinf--;

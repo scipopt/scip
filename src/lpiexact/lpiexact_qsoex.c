@@ -1596,11 +1596,13 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
       {
          QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'L', RatGetGMP(lbs[i])) );
          RatCheckInfByValue(lbs[i]);
+         RatResetFloatingPointRepresentable(lbs[i]);
       }
       if( ubs != NULL )
       {
          QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'U', RatGetGMP(ubs[i])) );
          RatCheckInfByValue(ubs[i]);
+         RatResetFloatingPointRepresentable(ubs[i]);
       }
    }
 
@@ -1694,6 +1696,7 @@ SCIP_RETCODE SCIPlpiExactGetCoef(
 
    rval = mpq_QSget_coef(lpi->prob, row, col, RatGetGMP(val));
    RatCheckInfByValue(val);
+   RatResetFloatingPointRepresentable(val);
 
    QS_RETURN(rval);
 }
@@ -2068,6 +2071,7 @@ SCIP_RETCODE SCIPlpiExactGetObjval(
 
    rval = mpq_QSget_objval(lpi->prob, RatGetGMP(objval));
    RatCheckInfByValue(objval);
+   RatResetFloatingPointRepresentable(objval);
 
    QS_RETURN(rval);
 }
@@ -2117,7 +2121,10 @@ SCIP_RETCODE SCIPlpiExactGetSol(
       RatSetGMPArray(dualsolgmp, dualsol, nrows);
    }
    if( objval != NULL )
+   {
       objvalgmp = RatGetGMP(objval);
+      RatResetFloatingPointRepresentable(objval);
+   }
    else
       objvalgmp = NULL;
 
@@ -2163,10 +2170,12 @@ SCIP_RETCODE SCIPlpiExactGetSol(
          case 'E':
          case 'G':
             mpq_add(*RatGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
+            RatResetFloatingPointRepresentable(activity[i]);
             RatCheckInfByValue(activity[i]);
             break;
          case 'L':
             mpq_sub(*RatGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
+            RatResetFloatingPointRepresentable(activity[i]);
             RatCheckInfByValue(activity[i]);
             break;
          default:

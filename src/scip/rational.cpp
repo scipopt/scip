@@ -643,6 +643,16 @@ void RatSetReal(
    }
 }
 
+/** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */
+void RatResetFloatingPointRepresentable(
+   SCIP_Rational*        rat                 /**< the number to set flag for */
+   )
+{
+   assert(rat != NULL);
+
+   rat->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+}
+
 /*
  * Computing methods
  */
