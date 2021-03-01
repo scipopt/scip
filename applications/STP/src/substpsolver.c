@@ -41,6 +41,9 @@
 #include "prop_stp.h"
 #include "branch_stp.h"
 #include "dpterms.h"
+#include "relax_stp.h"
+#include "relax_stpdp.h"
+
 
 
 /*
@@ -84,6 +87,10 @@ SCIP_RETCODE subscipSetupCallbacks(
    SCIP_CALL( SCIPincludeConshdlrStp(subscip) );
 
    SCIP_CALL( SCIPincludeConshdlrStpcomponents(subscip) );
+
+   SCIP_CALL( SCIPincludeRelaxStp(subscip) );
+
+   SCIP_CALL( SCIPincludeRelaxStpdp(subscip) );
 
    SCIP_CALL( SCIPStpIncludeHeurTM(subscip) );
 

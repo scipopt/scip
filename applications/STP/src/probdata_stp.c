@@ -60,6 +60,8 @@
 
 #include "heur_tm.h"
 #include "heur_slackprune.h"
+#include "relax_stpdp.h"
+
 
 #define VERSION_SCIPJACK "1.3"
 
@@ -2941,14 +2943,30 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    SCIP_CALL( createModel(scip, probdata) );
 
 #ifndef WITH_UG
-   if( probdata->mode == STP_MODE_CUT && !isSubProb && graph_typeIsSpgLike(graph) )
+   if( graph_typeIsSpgLike(graph) && probdata->mode == STP_MODE_CUT )
    {
-      /* NOTE: for performance reasons we already set the decomposition data up...to be able to skip
-       * cut generation if possible */
-      SCIP_CALL( SCIPStpcomponentsSetUp(scip, graph) );
+      SCIP_Bool useDecompose = FALSE;
+      if( !isSubProb )
+      {
+         /* NOTE: for performance reasons we already set the decomposition data up...to be able to skip
+          * cut generation if possible */
+         SCIP_CALL( SCIPStpcomponentsSetUp(scip, graph) );
 
-      if( SCIPStpcomponentsAllowsDecomposition(scip) )
-         usedacuts = STP_CONS_NEVER;
+         if( SCIPStpcomponentsAllowsDecomposition(scip) )
+         {
+            useDecompose = TRUE;
+            usedacuts = STP_CONS_NEVER;
+         }
+      }
+
+      if( !useDecompose )
+      {
+         if( SCIPStpDpRelaxIsPromising(scip, graph) )
+         {
+            SCIP_CALL( SCIPStpDpRelaxActivate(scip) );
+            usedacuts = STP_CONS_NEVER;
+         }
+      }
    }
 #endif
 

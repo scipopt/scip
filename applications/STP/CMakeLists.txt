@@ -90,6 +90,7 @@ add_executable(scipstp
     src/reduce_termsepafull.c
     src/reduce_util.c
     src/relax_stp.c
+    src/relax_stpdp.c
     src/sepaspecial.c
     src/shortestpath.c
     src/stpprioqueue.c
