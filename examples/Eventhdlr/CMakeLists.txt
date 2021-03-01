@@ -44,7 +44,7 @@ set(instances
     "instances/MIP/gt2.mps\;21166"
     "instances/MINLP/ex1266.mps\;16.3"
     "instances/MINLP/m3.osil\;37.8"
-    "instances/Orbitope/partorb_1-FullIns_3.cip\;4"
+    "instances/Symmetry/partorb_1-FullIns_3.cip\;4"
     )
 
 #

@@ -363,11 +363,13 @@ set(instances_SOS
     )
 
 #
-# Orbitope instances
+# Orbitope/Orbisack/Symresack instances
 #
-set(instances_Orbitope
-    "instances/Orbitope/packorb_1-FullIns_3.cip\;28"
-    "instances/Orbitope/partorb_1-FullIns_3.cip\;4"
+set(instances_SymmetryConss
+    "instances/Symmetry/packorb_1-FullIns_3.cip\;28"
+    "instances/Symmetry/partorb_1-FullIns_3.cip\;4"
+    "instances/Symmetry/packorbisack_1-FullIns_3.cip\;4"
+    "instances/Symmetry/symresack_1-FullIns_3.cip\;28"
     )
 
 #
@@ -542,7 +544,7 @@ add_instancetests(instances_sparsify settings_sparsify "Sparsify")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
-add_instancetests(instances_Orbitope settings_default "Orbitope")
+add_instancetests(instances_SymmetryConss settings_default "SymmetryConss")
 add_instancetests(instances_Symmetry_A settings_Symmetry_A "Symmetry_A")
 add_instancetests(instances_Symmetry_B settings_Symmetry_B "Symmetry_B")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
