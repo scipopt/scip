@@ -350,9 +350,19 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
       {
          assert(i < 3);
          SCIPaddLogLinearization(scip, refpointsover[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
+         if( success )
+         {
+            SCIPdebugMsg(scip, "init overestimate log(x) at x=%g -> %g*x+%g\n", lb, ub, refpointsover[i], overest[i], coefs[*nreturned][0], constant[*nreturned]);
+         }
       }
       else
+      {
          SCIPaddLogSecant(scip, lb, ub, coefs[*nreturned], &constant[*nreturned], &success);
+         if( success )
+         {
+            SCIPdebugMsg(scip, "init underestimate log(x) on x=[%g,%g] -> %g*x+%g\n", lb, ub, overest[i], coefs[*nreturned][0], constant[*nreturned]);
+         }
+      }
 
       if( success )
       {

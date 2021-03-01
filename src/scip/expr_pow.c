@@ -2180,7 +2180,10 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
             coefs[*nreturned], &constant[*nreturned], &success, &islocal, &branchcand) );
 
       if( success )
+      {
+         SCIPdebugMsg(scip, "initestimate x^%g for base in [%g,%g] at ref=%g, over:%d -> %g*x+%g\n", exponent, childlb, childub, refpoint, overest[i], coefs[*nreturned][0], constant[*nreturned]);
          ++*nreturned;
+      }
    }
 
    return SCIP_OKAY;
