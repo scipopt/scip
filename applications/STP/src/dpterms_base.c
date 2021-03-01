@@ -29,6 +29,8 @@
 #include "stpprioqueue.h"
 #include "solstp.h"
 
+#define PROMISING_FULL_MAXNTERMS 20
+
 
 /*
  * Local methods
@@ -213,7 +215,7 @@ SCIP_RETCODE dpsolverInitData(
       SCIPdebugMessage("add term %d (index=%d) \n", term, i);
 
       SCIP_CALL( dpterms_dpsubsolInit(scip, &singleton_sol) );
-      singleton_sol->bitkey = stpbitset_new(scip, nnodes);
+      singleton_sol->bitkey = stpbitset_new(scip, nterms);
       stpbitset_setBitTrue(singleton_sol->bitkey, i);
 
       SCIP_CALL( stpprioqueue_insert(scip, ((void*) stpbitset_newCopy(scip, singleton_sol->bitkey)),
@@ -351,7 +353,6 @@ void dpsolverFree(
 }
 
 
-
 /*
  * Interface methods
  */
@@ -367,8 +368,6 @@ SCIP_RETCODE dpterms_solve(
    DPSOLVER* dpsolver;
 
    assert(scip && graph && solution);
-
-   // todo we might want to pack the graph here...
 
    SCIP_CALL( dpsolverInit(scip, graph, &dpsolver) );
 
@@ -390,6 +389,12 @@ SCIP_Bool dpterms_isPromising(
 {
    assert(graph);
 
-   // todo
+
+   // todo!
+   /*
+   if( graph->terms <= PROMISING_FULL_MAXNTERMS )
+      return TRUE;
+      */
+
    return FALSE;
 }

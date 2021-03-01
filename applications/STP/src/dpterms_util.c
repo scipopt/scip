@@ -75,11 +75,15 @@ SCIP_Bool bitsetsizesAreValid(
 
    if( stpbitset_getCapacity(termsmark) != (((dpstree->nterms + 63) / 64) * 64) )
    {
+      printf("termsmark size is wrong %d!=%d \n", stpbitset_getCapacity(termsmark), (((dpstree->nterms + 63) / 64) * 64));
+
       return FALSE;
    }
 
    if( stpbitset_getCapacity(rootsmark) != (((dpstree->nnodes + 63) / 64) * 64) )
    {
+      printf("rootsmark size is wrong %d!=%d \n", stpbitset_getCapacity(rootsmark), (((dpstree->nnodes + 63) / 64) * 64));
+
       return FALSE;
    }
 
