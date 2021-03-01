@@ -282,8 +282,9 @@ SCIP_RETCODE detectExpr(
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "Expression for numerator: ");
       SCIP_CALL( SCIPprintExpr(scip, xexpr, NULL) );
-      SCIPinfoMessage(scip, NULL, "Expression for denominator: ");
+      SCIPinfoMessage(scip, NULL, "\nExpression for denominator: ");
       SCIP_CALL( SCIPprintExpr(scip, yexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
 #endif
    }
 
