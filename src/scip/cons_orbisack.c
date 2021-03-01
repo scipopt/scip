@@ -1813,6 +1813,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
             newsize = SCIPcalcMemGrowSize(scip, nrows + 1);
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars1, newsize) );
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars2, newsize) );
+            maxnrows = newsize;
          }
          assert( nrows < maxnrows );
       }

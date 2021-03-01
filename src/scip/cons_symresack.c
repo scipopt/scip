@@ -2598,7 +2598,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
                newsize = SCIPcalcMemGrowSize(scip, nvars + 1);
                SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
                SCIP_CALL( SCIPreallocBufferArray(scip, &perm, newsize) );
-
+               maxnvars = newsize;
             }
          }
          while ( *s != ']' );
@@ -2669,7 +2669,6 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
    int* perm;
    int nvars;
    int i;
-   int j;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
