@@ -190,7 +190,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
    SCIP_VAR* auxvar;
    SCIP_ROWPREP* rowprep;
    int nreturned;
-   int i;
+   int i, j;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -242,7 +242,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
          SCIProwprepSetSidetype(rowprep, SCIP_SIDETYPE_LEFT);
       }
 
-      for( --nreturned; nreturned >= 0 && !*infeasible; --nreturned )
+      for( j = 0; j < nreturned && !*infeasible; ++j )
       {
          SCIP_Bool success;
          int v;
@@ -251,10 +251,10 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 
          for( v = 0; v < SCIPexprGetNChildren(expr); ++v )
          {
-            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[v]), coefs[nreturned][v]) );
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[v]), coefs[j][v]) );
          }
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
-         SCIProwprepAddConstant(rowprep, constant[nreturned]);  /*lint !e644*/
+         SCIProwprepAddConstant(rowprep, constant[j]);  /*lint !e644*/
 
          /* straighten out numerics */
          SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
@@ -265,7 +265,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
             /* add the cut */
             SCIP_ROW* row;
 
-            (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "init%sestimate%d_%s", i == 0 ? "under" : "over", nreturned, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
+            (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "init%sestimate%d_%s", i == 0 ? "under" : "over", j, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
 
             SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
