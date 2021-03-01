@@ -39,7 +39,7 @@ if(BLISS_DIR)
 
    if(BLISS_LIBRARY_DIR)
      find_library(BLISS_LIBRARY
-        NAMES libbliss
+        NAMES bliss
         PATHS ${BLISS_LIBRARY_DIR}
         PATH_SUFFIXES lib build
         NO_DEFAULT_PATH
