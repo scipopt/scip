@@ -40,6 +40,7 @@
 #include "dialog_stp.h"
 #include "prop_stp.h"
 #include "branch_stp.h"
+#include "dpterms.h"
 
 
 /*
@@ -52,7 +53,9 @@ struct sub_steiner_tree_problem
 {
    SCIP*                 subscip;            /**< SCIP or NULL (if dynamic programming is used) */
    GRAPH*                subgraph;           /**< subgraph; OWNED! */
+   int*                  dpsubsol;           /**< solution storage for dynamic programming case */
    int                   nsubedges;          /**< number of edges */
+   SCIP_Bool             useDP;
    SCIP_Bool             useOutput;
    SCIP_Bool             subprobIsIndependent;
 };
@@ -272,10 +275,17 @@ SCIP_RETCODE substpsolver_init(
    sub->nsubedges = subgraph->edges;
    sub->useOutput = TRUE;
    sub->subprobIsIndependent = FALSE;
+   sub->dpsubsol = NULL;
 
-   /* todo check whether to do dynamic programming or branch-and-cut */
-   if( 1 )
+   /* decide whether to do dynamic programming or branch-and-cut */
+   if( dpterms_isPromising(subgraph) )
    {
+      sub->useDP = TRUE;
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->dpsubsol), subgraph->edges) );
+   }
+   else
+   {
+      sub->useDP = FALSE;
       SCIP_CALL( SCIPcreate(&(sub->subscip)) );
       SCIP_CALL( subscipSetup(scip, sub, sub->subscip) );
    }
@@ -296,6 +306,8 @@ void substpsolver_free(
 
    sub = *substp;
 
+   SCIPfreeMemoryArrayNull(scip, &(sub->dpsubsol));
+
    if( sub->subscip )
    {
       SCIPfree(&(sub->subscip));
@@ -315,6 +327,15 @@ SCIP_RETCODE substpsolver_transferHistory(
 {
    assert(edgeMapToOrg && orggraph && substp);
    assert(substp->subgraph);
+
+   /* NOTE: no history needed in dynamic programming algorithm
+    * todo might want to change that to exploit ancestor conflicts */
+   if( substp->useDP )
+   {
+      assert(!substp->subscip);
+      return SCIP_OKAY;
+   }
+
    assert(substp->subscip);
 
    SCIP_CALL( graph_subgraphCompleteNewHistory(substp->subscip, edgeMapToOrg, orggraph, substp->subgraph) );
@@ -330,6 +351,13 @@ SCIP_RETCODE substpsolver_initHistory(
 {
    assert(substp);
    assert(substp->subgraph);
+
+   if( substp->useDP )
+   {
+      assert(!substp->subscip);
+      return SCIP_OKAY;
+   }
+
    assert(substp->subscip);
 
    SCIP_CALL( graph_initHistory(substp->subscip, substp->subgraph) );
@@ -348,9 +376,25 @@ SCIP_RETCODE substpsolver_solve(
    assert(scip && substp && success);
    assert(substp->subgraph);
 
-   SCIP_CALL( subscipSolve(scip, substp, success) );
+   if( substp->useDP )
+   {
+      assert(substp->dpsubsol);
+      printf("solve! \n");
 
-   // todo need to free graph for dynamic programming!
+
+      SCIP_CALL( dpterms_solve(scip, substp->subgraph, substp->dpsubsol) );
+
+      assert(0);
+
+
+
+      // todo add an extra flag to avoid deletion of graph in some cases?
+      graph_free(scip, &(substp->subgraph), TRUE);
+   }
+   else
+   {
+      SCIP_CALL( subscipSolve(scip, substp, success) );
+   }
 
    assert(substp->subgraph == NULL);
 
@@ -379,14 +423,16 @@ SCIP_RETCODE substpsolver_getSolution(
    assert(substp && edgesol);
    assert(!substp->subgraph);
 
-   if( substp->subscip )
+   if( !substp->useDP  )
    {
+      assert(substp->subscip);
+
       SCIP_CALL( subscipGetSol(substp, edgesol) );
    }
    else
    {
-      return SCIP_ERROR;
-      // todo different stuff for dynamic pogramming
+      assert(substp->dpsubsol);
+      BMScopyMemoryArray(edgesol, substp->dpsubsol, substp->nsubedges);
    }
 
    return SCIP_OKAY;
