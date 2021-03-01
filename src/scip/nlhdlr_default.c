@@ -37,6 +37,7 @@
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
 /*lint -e666*/
+/*lint -e850*/
 
 /** evaluates an expression w.r.t. the values in the auxiliary variables */
 static
@@ -212,6 +213,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
       auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]);
       assert(auxvar != NULL);
 
+      /*TODO use SCIPgetExprBoundsNonlinear if at root?*/
       SCIPintervalSetBounds(&childrenbounds[i],
          -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(auxvar)),
           infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(auxvar)));
@@ -255,6 +257,43 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
          }
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
          SCIProwprepAddConstant(rowprep, constant[j]);  /*lint !e644*/
+
+         /* special treatment for sums to get equality rows */
+         if( j == 0 && SCIPisExprSum(scip, expr) )
+         {
+            SCIP_Real scalefactor;
+            SCIP_ROW* row;
+
+            /* improve numerics by scaling only (does not relax inequality) */
+            scalefactor = SCIPscaleupRowprep(scip, rowprep, 1.0, &success);
+            if( success && scalefactor == 1.0 && underestimate && overestimate )
+            {
+               /* if the rowprep didn't have to be changed, then turn it into a row, change this to an equality, and add it to the LP */
+               /* TODO do this also if not actually needing both under- and overestimator (should still be valid, but also stronger?) */
+               (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "initestimate_sum", j);
+
+               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+
+               /* since we did not relax the estimator, we can turn the row into an equality */
+               if( SCIPisInfinity(scip, SCIProwGetRhs(row)) )
+               {
+                  SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetLhs(row)) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetRhs(row)) );
+               }
+               SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+
+               SCIPdebug( SCIPinfoMessage(scip, NULL, "  added %scut ", *infeasible ? "infeasible " : "") );
+               SCIPdebug( SCIPprintRow(scip, row, NULL) );
+
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+               i = 2;  /* to break outside loop on i, too */
+               break;
+            }
+         }
 
          /* straighten out numerics */
          SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
@@ -330,6 +369,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[c]);
       assert(auxvar != NULL);
 
+      /*TODO use SCIPgetExprBoundsNonlinear*/
       SCIPintervalSetBounds(&localbounds[c],
          -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbLocal(auxvar)),
           infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbLocal(auxvar)));

@@ -827,6 +827,8 @@ SCIP_DECL_EXPRESTIMATE(estimateSum)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
+   /* NOTE: nlhdlr_default assumes in nlhdlrInitSepaDefault that this estimator can be used for both under- and overestimation */
+
    BMScopyMemoryArray(coefs, exprdata->coefficients, SCIPexprGetNChildren(expr));
    *constant = exprdata->constant;
    *islocal = FALSE;
