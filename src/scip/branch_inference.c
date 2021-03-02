@@ -947,10 +947,14 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
          "branching/inference/reliablescore",
          "weight in score calculations for conflict score",
          &branchruledata->reliablescore, TRUE, DEFAULT_RELIABLESCORE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   /* Parameters for lexicographical ordering */
-   SCIP_CALL( SCIPaddIntParam(scip, "branching/" BRANCHRULE_NAME "/conflictprio", "priority value for using conflict weights in lex. order",
+   /* parameters for lexicographical ordering */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "branching/inference/conflictprio",
+         "priority value for using conflict weights in lex. order",
          &branchruledata->conflictprio, FALSE, DEFAULT_CONFLICTPRIO, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "branching/" BRANCHRULE_NAME "/cutoffprio", "priority value for using cutoff weights in lex. order",
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "branching/inference/cutoffprio",
+         "priority value for using cutoff weights in lex. order",
          &branchruledata->cutoffprio, FALSE, DEFAULT_CUTOFFPRIO, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
