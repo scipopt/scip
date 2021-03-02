@@ -1931,7 +1931,7 @@ SCIP_RETCODE tightenAuxVarBounds(
    {
       if( ntightenings != NULL )
          ++*ntightenings;
-      SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %.15g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var));
+      SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %.15g (forced:%d)\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), force);
    }
    if( *cutoff )
    {
@@ -1945,7 +1945,7 @@ SCIP_RETCODE tightenAuxVarBounds(
    {
       if( ntightenings != NULL )
          ++*ntightenings;
-      SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %.15g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+      SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %.15g (forced:%d)\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var), force);
    }
    if( *cutoff )
    {
@@ -4625,7 +4625,7 @@ SCIP_RETCODE canonicalizeConstraints(
 
    /* reformulate products of binary variables */
    if( conshdlrdata->reformbinprods && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING
-      && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+      && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) )
    {
       int tmpnaddconss = 0;
       int tmpnchgcoefs = 0;
@@ -9717,7 +9717,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    }
 
    /* merge constraints with the same root expression */
-   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+   if( presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
       SCIP_Bool success;
 
@@ -9727,7 +9727,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    }
 
    /* propagate constraints */
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, (presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE)) != 0, result, nchgbds) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE), result, nchgbds) );
    if( *result == SCIP_CUTOFF )
       return SCIP_OKAY;
 
@@ -9779,7 +9779,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    }
 
    /* fix variables that are contained in only one expression constraint to their upper or lower bounds, if possible */
-   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && SCIPisPresolveFinished(scip)
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) && SCIPisPresolveFinished(scip)
       && !conshdlrdata->checkedvarlocks && conshdlrdata->checkvarlocks != 'd' )
    {
       /* run this presolving technique only once because we don't want to generate identical bound disjunction

@@ -1149,6 +1149,8 @@ SCIP_RETCODE solveSubNLP(
       goto CLEANUP;
    }
 
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(heurdata->subscip, NULL) ); )
+
    /* if the refpoint comes from a heuristic, then make it the author of a found solution,
     * otherwise let the subNLP heuristic claim authorship
     */
