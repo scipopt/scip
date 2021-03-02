@@ -9680,7 +9680,7 @@ SCIP_DECL_CONSPROP(consPropNonlinear)
 {  /*lint --e{715}*/
    int nchgbds = 0;
 
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, SCIPgetDepth(scip) == 0, result, &nchgbds) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, FALSE, result, &nchgbds) );
    assert(nchgbds >= 0);
 
    /* TODO would it make sense to check for redundant constraints? */
@@ -9727,7 +9727,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    }
 
    /* propagate constraints */
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE), result, nchgbds) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, FALSE, result, nchgbds) );
    if( *result == SCIP_CUTOFF )
       return SCIP_OKAY;
 
