@@ -129,6 +129,9 @@ set(settings_MINLP
     "nlpdiving4"
     "separating_aggressive"
 )
+set(settings_branch
+    "branch_inference"
+)
 set(settings_Bivariate
     "minlp"
     "bivariate"
@@ -300,6 +303,13 @@ set(instances_MINLP
     "instances/MINLP/m3.osil\;37.8"
     "instances/MINLP/parincQuadratic.osil\;49920.5564"
     "instances/MINLP/tltr.mps\;48.0666666667"
+    )
+set(instances_branch
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/p0033.osil\;3089"
+    "instances/MINLP/circle.cip\;4.57424778"
+    "instances/MINLP/ex1266.mps\;16.3"
     )
 set(instances_Bivariate
     "instances/Bivariate/st_qpk1.osil\;-3"
@@ -535,6 +545,7 @@ add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
+add_instancetests(instances_branch settings_branch "Branch")
 add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
 add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
