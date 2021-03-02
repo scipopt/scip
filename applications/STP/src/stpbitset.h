@@ -476,17 +476,14 @@ inline SCIP_Bool stpbitset_GT(
    )
 {
    const int vecsize = StpVecGetSize(bitset1);
+   int ret;
 
    assert(stpbitset_setsAreCompatible(bitset1, bitset2));
    assert(vecsize > 0);
 
-   for( int i = 0; i < vecsize; i++ )
-   {
-      if( bitset1[i] > bitset2[i] )
-         return TRUE;
-   }
+   ret = memcmp(bitset1, bitset2, sizeof(bitset1[0]) * vecsize);
 
-   return FALSE;
+   return (ret > 0);
 }
 
 
@@ -498,19 +495,15 @@ inline SCIP_Bool stpbitset_LT(
    )
 {
    const int vecsize = StpVecGetSize(bitset1);
+   int ret;
 
    assert(stpbitset_setsAreCompatible(bitset1, bitset2));
    assert(vecsize > 0);
 
-   for( int i = 0; i < vecsize; i++ )
-   {
-      if( bitset1[i] < bitset2[i] )
-         return TRUE;
-   }
+   ret = memcmp(bitset1, bitset2, sizeof(bitset1[0]) * vecsize);
 
-   return FALSE;
+   return (ret < 0);
 }
-
 
 
 #ifdef __cplusplus
