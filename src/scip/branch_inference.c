@@ -662,6 +662,9 @@ SCIP_RETCODE performBranchingNoSol(
       }
    }
 
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &bestcands);
+
    assert(bestaggrcand != NULL);
 
    SCIPdebugMsg(scip, " -> %d candidates, selected variable <%s>[%g,%g] (prio=%d, solval=%.12f, score=%g, conflict=%g cutoff=%g, inference=%g)\n",
