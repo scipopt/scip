@@ -236,7 +236,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - dstats deletion status of vars; 1 if var should be deleted, 0 if not
- *  - size of the dstats array
+ *  - dstatssize size of the dstats array
  * 
  * output:
  *  - dstats new position of var, -1 if var was deleted
@@ -249,8 +249,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - scip SCIP data structure
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  - dstats deletion status of rows; 1 if row should be deleted, 0 if not
- *  - size of the dstats array
+ *  - dstats deletion status of constraints; 1 if constraint should be deleted, 0 if not
+ *  - dstatssize size of the dstats array
  * 
  * output:
  *  - dstats new position of row, -1 if row was deleted

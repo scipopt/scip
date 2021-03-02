@@ -27,6 +27,7 @@
 
 #include "scip/type_nlpi.h"
 #include "scip/type_misc.h"
+#include "scip/type_set.h"
 #include "blockmemshell/memory.h"
 
 #ifdef __cplusplus
@@ -78,110 +79,286 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    );
 
-/** copies an NLPI */
-SCIP_DECL_NLPICOPY(SCIPnlpiCopy);
+/** copies an NLPI and includes it into another SCIP instance */
+SCIP_RETCODE SCIPnlpiCopyInclude(
+   SCIP_NLPI*            sourcenlpi,         /**< the NLP interface to copy */
+   SCIP_SET*             targetset           /**< global SCIP settings where to include copy */
+   );
 
 /** frees NLPI */
 SCIP_RETCODE SCIPnlpiFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to NLPI data structure */
-);
+   SCIP_NLPI**           nlpi,               /**< pointer to NLPI data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
 
-/** gets pointer for NLP solver
- * @return void pointer to solver
- */
-SCIP_DECL_NLPIGETSOLVERPOINTER(SCIPnlpiGetSolverPointer);
+/** gets pointer for NLP solver */
+void* SCIPnlpiGetSolverPointer(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi                /**< solver interface */
+   );
 
 /** creates a problem instance */
-SCIP_DECL_NLPICREATEPROBLEM(SCIPnlpiCreateProblem);
+SCIP_RETCODE SCIPnlpiCreateProblem(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM**    problem,            /**< problem pointer to store the problem data */
+   const char*           name                /**< name of problem, can be NULL */
+   );
 
 /** frees a problem instance */
-SCIP_DECL_NLPIFREEPROBLEM(SCIPnlpiFreeProblem);
+SCIP_RETCODE SCIPnlpiFreeProblem(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM**    problem             /**< pointer where problem instance is stored */
+   );
 
-/** gets pointer to solver-internal problem instance
- * @return void pointer to problem instance
- */
-SCIP_DECL_NLPIGETPROBLEMPOINTER(SCIPnlpiGetProblemPointer);
+/** gets pointer to solver-internal problem instance */
+void* SCIPnlpiGetProblemPointer(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem             /**< problem instance */
+   );
 
 /** add variables to nlpi */
-SCIP_DECL_NLPIADDVARS(SCIPnlpiAddVars);
+SCIP_RETCODE SCIPnlpiAddVars(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   int                   nvars,              /**< number of variables */
+   const SCIP_Real*      lbs,                /**< lower bounds of variables, can be NULL if -infinity */
+   const SCIP_Real*      ubs,                /**< upper bounds of variables, can be NULL if +infinity */
+   const char**          varnames            /**< names of variables, can be NULL */
+   );
 
 /** add constraints to nlpi */
-SCIP_DECL_NLPIADDCONSTRAINTS(SCIPnlpiAddConstraints);
+SCIP_RETCODE SCIPnlpiAddConstraints(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   int                   nconss,             /**< number of constraints */
+   const SCIP_Real*      lhss,               /**< left hand sides of constraints, can be NULL if -infinity */
+   const SCIP_Real*      rhss,               /**< right hand sides of constraints, can be NULL if +infinity */
+   const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
+   int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
+   SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
+   SCIP_EXPR**           exprs,              /**< expressions for nonlinear part of constraints, entry of array may be NULL in case of no nonlinear part, may be NULL in case of no nonlinear part in any constraint */
+   const char**          names               /**< names of constraints, may be NULL or entries may be NULL */
+   );
 
 /** sets or overwrites objective, a minimization problem is expected */
-SCIP_DECL_NLPISETOBJECTIVE(SCIPnlpiSetObjective);
+SCIP_RETCODE SCIPnlpiSetObjective(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   int                   nlins,              /**< number of linear variables */
+   const int*            lininds,            /**< variable indices, may be NULL in case of no linear part */
+   const SCIP_Real*      linvals,            /**< coefficient values, may be NULL in case of no linear part */
+   SCIP_EXPR*            expr,               /**< expression for nonlinear part of objective function, may be NULL in case of no nonlinear part */
+   const SCIP_Real       constant            /**< objective value offset */
+   );
 
 /** change variable bounds */
-SCIP_DECL_NLPICHGVARBOUNDS(SCIPnlpiChgVarBounds);
+SCIP_RETCODE SCIPnlpiChgVarBounds(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   const int             nvars,              /**< number of variables to change bounds */
+   const int*            indices,            /**< indices of variables to change bounds */
+   const SCIP_Real*      lbs,                /**< new lower bounds */
+   const SCIP_Real*      ubs                 /**< new upper bounds */
+   );
 
 /** change constraint sides */
-SCIP_DECL_NLPICHGCONSSIDES(SCIPnlpiChgConsSides);
+SCIP_RETCODE SCIPnlpiChgConsSides(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   int                   nconss,             /**< number of constraints to change sides */
+   const int*            indices,            /**< indices of constraints to change sides */
+   const SCIP_Real*      lhss,               /**< new left hand sides */
+   const SCIP_Real*      rhss                /**< new right hand sides */
+   );
 
 /** delete a set of variables */
-SCIP_DECL_NLPIDELVARSET(SCIPnlpiDelVarSet);
+SCIP_RETCODE SCIPnlpiDelVarSet(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   int*                  dstats,             /**< deletion status of vars; 1 if var should be deleted, 0 if not */
+   int                   dstatssize          /**< size of the dstats array */
+   );
 
 /** delete a set of constraints */
-SCIP_DECL_NLPIDELCONSSET(SCIPnlpiDelConsSet);
+SCIP_RETCODE SCIPnlpiDelConsSet(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   int*                  dstats,             /**< deletion status of constraints; 1 if constraint should be deleted, 0 if not */
+   int                   dstatssize          /**< size of the dstats array */
+   );
 
 /** changes or adds linear coefficients in a constraint or objective */
-SCIP_DECL_NLPICHGLINEARCOEFS(SCIPnlpiChgLinearCoefs);
+SCIP_RETCODE SCIPnlpiChgLinearCoefs(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   int                   idx,                /**< index of constraint or -1 for objective */
+   int                   nvals,              /**< number of values in linear constraint to change */
+   const int*            varidxs,            /**< indices of variables which coefficient to change */
+   const SCIP_Real*      vals                /**< new values for coefficients */
+   );
 
 /** change the expression in the nonlinear part */
-SCIP_DECL_NLPICHGEXPR(SCIPnlpiChgExpr);
+SCIP_RETCODE SCIPnlpiChgExpr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   int                   idxcons,            /**< index of constraint or -1 for objective */
+   SCIP_EXPR*            expr                /**< new expression for constraint or objective, or NULL to only remove previous tree */
+   );
 
 /** change the constant offset in the objective */
-SCIP_DECL_NLPICHGOBJCONSTANT(SCIPnlpiChgObjConstant);
+SCIP_RETCODE SCIPnlpiChgObjConstant(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_Real             objconstant         /**< new value for objective constant */
+   );
 
 /** sets initial guess for primal variables */
-SCIP_DECL_NLPISETINITIALGUESS(SCIPnlpiSetInitialGuess);
+SCIP_RETCODE SCIPnlpiSetInitialGuess(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_Real*            primalvalues,       /**< initial primal values for variables, or NULL to clear previous values */
+   SCIP_Real*            consdualvalues,     /**< initial dual values for constraints, or NULL to clear previous values */
+   SCIP_Real*            varlbdualvalues,    /**< initial dual values for variable lower bounds, or NULL to clear previous values */
+   SCIP_Real*            varubdualvalues     /**< initial dual values for variable upper bounds, or NULL to clear previous values */
+   );
 
 /** tries to solve NLP */
-SCIP_DECL_NLPISOLVE(SCIPnlpiSolve);
+SCIP_RETCODE SCIPnlpiSolve(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem             /**< problem instance */
+   );
    
 /** gives solution status */
-SCIP_DECL_NLPIGETSOLSTAT(SCIPnlpiGetSolstat);
+SCIP_NLPSOLSTAT SCIPnlpiGetSolstat(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem             /**< problem instance */
+   );
 
 /** gives termination reason */
-SCIP_DECL_NLPIGETTERMSTAT(SCIPnlpiGetTermstat);
+SCIP_NLPTERMSTAT SCIPnlpiGetTermstat(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem             /**< problem instance */
+   );
 
 /** gives primal and dual solution
  * for a ranged constraint, the dual variable is positive if the right hand side is active and negative if the left hand side is active
  */
-SCIP_DECL_NLPIGETSOLUTION(SCIPnlpiGetSolution);
+SCIP_RETCODE SCIPnlpiGetSolution(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_Real**           primalvalues,       /**< buffer to store pointer to array to primal values, or NULL if not needed */
+   SCIP_Real**           consdualvalues,     /**< buffer to store pointer to array to dual values of constraints, or NULL if not needed */
+   SCIP_Real**           varlbdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real**           varubdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real*            objval              /**< pointer to store the objective value, or NULL if not needed */
+   );
 
 /** gives solve statistics */
-SCIP_DECL_NLPIGETSTATISTICS(SCIPnlpiGetStatistics);
+SCIP_RETCODE SCIPnlpiGetStatistics(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
+   );
 
 /** gives required size of a buffer to store a warmstart object */
-SCIP_DECL_NLPIGETWARMSTARTSIZE(SCIPnlpiGetWarmstartSize);
+SCIP_RETCODE SCIPnlpiGetWarmstartSize(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   size_t*               size                /**< pointer to store required size for warmstart buffer */
+   );
 
 /** stores warmstart information in buffer */
-SCIP_DECL_NLPIGETWARMSTARTMEMO(SCIPnlpiGetWarmstartMemo);
+SCIP_RETCODE SCIPnlpiGetWarmstartMemo(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   void*                 buffer              /**< memory to store warmstart information */
+   );
 
 /** sets warmstart information in solver */
-SCIP_DECL_NLPISETWARMSTARTMEMO(SCIPnlpiSetWarmstartMemo);
+SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   void*                 buffer              /**< warmstart information */
+   );
 
 /**@name Parameter Methods */
 /**@{ */
 
 /** gets integer parameter of NLP */
-SCIP_DECL_NLPIGETINTPAR(SCIPnlpiGetIntPar);
+SCIP_RETCODE SCIPnlpiGetIntPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   int*                  ival                /**< pointer to store the parameter value */
+   );
    
 /** sets integer parameter of NLP */
-SCIP_DECL_NLPISETINTPAR(SCIPnlpiSetIntPar);
+SCIP_RETCODE SCIPnlpiSetIntPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   int                   ival                /**< parameter value */
+   );
 
 /** gets floating point parameter of NLP */
-SCIP_DECL_NLPIGETREALPAR(SCIPnlpiGetRealPar);
+SCIP_RETCODE SCIPnlpiGetRealPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   SCIP_Real*            dval                /**< pointer to store the parameter value */
+   );
 
 /** sets floating point parameter of NLP */
-SCIP_DECL_NLPISETREALPAR(SCIPnlpiSetRealPar);
+SCIP_RETCODE SCIPnlpiSetRealPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   SCIP_Real             dval                /**< parameter value */
+   );
 
 /** gets string parameter of NLP */
-SCIP_DECL_NLPIGETSTRINGPAR(SCIPnlpiGetStringPar);
+SCIP_RETCODE SCIPnlpiGetStringPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char**          sval                /**< pointer to store the string value, the user must not modify the string */
+   );
 
 /** sets string parameter of NLP */
-SCIP_DECL_NLPISETSTRINGPAR(SCIPnlpiSetStringPar);
+SCIP_RETCODE SCIPnlpiSetStringPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_NLPPARAM         type,               /**< parameter number */
+   const char*           sval                /**< parameter value */
+   );
 
 /** @} */
 

@@ -177,7 +177,7 @@ void setup_sepadata(void)
    sepadata->nlpi = SCIPgetNlpis(scip)[0];
    cr_assert_not_null(sepadata->nlpi);
 
-   SCIP_CALL( SCIPnlpiCreateProblem(scip, sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp-unittest") );
+   SCIP_CALL( SCIPcreateNlpiProblem(scip, sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp-unittest") );
    SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 

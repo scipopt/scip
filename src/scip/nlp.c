@@ -145,7 +145,7 @@ SCIP_RETCODE nlrowLinearCoefChanged(
          assert(idx >= 0 && idx < nlp->nvars_solver);
 
          /* change coefficient in NLPI problem */
-         SCIP_CALL( SCIPnlpiChgLinearCoefs(set->scip, nlp->solver, nlp->problem, nlrow->nlpiindex, 1, &idx, &coef) );
+         SCIP_CALL( SCIPnlpiChgLinearCoefs(set, nlp->solver, nlp->problem, nlrow->nlpiindex, 1, &idx, &coef) );
       }
    }
 
@@ -221,7 +221,7 @@ SCIP_RETCODE nlrowExprChanged(
          SCIP_EXPR* nlpiexpr;
 
          SCIP_CALL( SCIPexprCopy(set, stat, blkmem, set, stat, blkmem, nlrow->expr, &nlpiexpr, mapvar2varidx, (void*)nlp, NULL, NULL) );
-         SCIP_CALL( SCIPnlpiChgExpr(set->scip, nlp->solver, nlp->problem, nlrow->nlpiindex, nlpiexpr) );
+         SCIP_CALL( SCIPnlpiChgExpr(set, nlp->solver, nlp->problem, nlrow->nlpiindex, nlpiexpr) );
          SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlpiexpr) );
       }
    }
@@ -260,7 +260,7 @@ SCIP_RETCODE nlrowSideChanged(
          if( !SCIPsetIsInfinity(set,  rhs) )
             rhs -= nlrow->constant;
 
-         SCIP_CALL( SCIPnlpiChgConsSides(set->scip, nlp->solver, nlp->problem, 1, &nlrow->nlpiindex, &lhs, &rhs) );
+         SCIP_CALL( SCIPnlpiChgConsSides(set, nlp->solver, nlp->problem, 1, &nlrow->nlpiindex, &lhs, &rhs) );
       }
    }
 
@@ -306,7 +306,7 @@ SCIP_RETCODE nlrowConstantChanged(
             rhs -= nlrow->constant;
 
          /* change sides in NLPI problem */
-         SCIP_CALL( SCIPnlpiChgConsSides(set->scip, nlp->solver, nlp->problem, 1, &nlrow->nlpiindex, &lhs, &rhs) );
+         SCIP_CALL( SCIPnlpiChgConsSides(set, nlp->solver, nlp->problem, 1, &nlrow->nlpiindex, &lhs, &rhs) );
       }
    }
 
@@ -2103,7 +2103,7 @@ SCIP_RETCODE nlpUpdateVarBounds(
    pos = nlp->varmap_nlp2nlpi[pos];
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
-   SCIP_CALL( SCIPnlpiChgVarBounds(set->scip, nlp->solver, nlp->problem, 1, &pos, &lb, &ub) );
+   SCIP_CALL( SCIPnlpiChgVarBounds(set, nlp->solver, nlp->problem, 1, &pos, &lb, &ub) );
 
    /* if we have a feasible NLP solution and it satisfies the new bounds, then it is still feasible
     * if the NLP was globally or locally infeasible and we tightened a bound, then it stays that way
@@ -2179,7 +2179,7 @@ SCIP_RETCODE nlpUpdateObjCoef(
 
    pos = nlp->varmap_nlp2nlpi[pos];
    objidx = -1;
-   SCIP_CALL( SCIPnlpiChgLinearCoefs(set->scip, nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
+   SCIP_CALL( SCIPnlpiChgLinearCoefs(set, nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
 
    /* if we had a solution and it was locally (or globally) optimal, then now we can only be sure that it is still feasible */
    if( nlp->solstat < SCIP_NLPSOLSTAT_FEASIBLE )
@@ -2572,7 +2572,7 @@ SCIP_RETCODE nlpFlushNlRowDeletions(
    assert(c == nlp->nunflushednlrowdel);
 
    /* remove rows from NLPI problem */
-   SCIP_CALL( SCIPnlpiDelConsSet(set->scip, nlp->solver, nlp->problem, rowset, nlp->nnlrows_solver) );
+   SCIP_CALL( SCIPnlpiDelConsSet(set, nlp->solver, nlp->problem, rowset, nlp->nnlrows_solver) );
 
    /* update NLPI row indices */
    for( j = 0; j < nlp->nnlrows_solver; ++j )
@@ -2665,7 +2665,7 @@ SCIP_RETCODE nlpFlushVarDeletions(
    assert(c == nlp->nunflushedvardel);
 
    /* delete variables from NLPI problem */
-   SCIP_CALL( SCIPnlpiDelVarSet(set->scip, nlp->solver, nlp->problem, colset, nlp->nvars_solver) );
+   SCIP_CALL( SCIPnlpiDelVarSet(set, nlp->solver, nlp->problem, colset, nlp->nvars_solver) );
 
    /* update NLPI variable indices */
    for( i = 0; i < nlp->nvars_solver; ++i )
@@ -2825,7 +2825,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 
    nlp->nnlrows_solver += c;
 
-   SCIP_CALL( SCIPnlpiAddConstraints(set->scip, nlp->solver, nlp->problem, c, lhss, rhss,
+   SCIP_CALL( SCIPnlpiAddConstraints(set, nlp->solver, nlp->problem, c, lhss, rhss,
          nlinvars, linidxs, lincoefs,
          exprs,
          names) );
@@ -2931,7 +2931,7 @@ SCIP_RETCODE nlpFlushVarAdditions(
 
    nlp->nvars_solver += c;
 
-   SCIP_CALL( SCIPnlpiAddVars(set->scip, nlp->solver, nlp->problem, c, lbs, ubs, names) );
+   SCIP_CALL( SCIPnlpiAddVars(set, nlp->solver, nlp->problem, c, lbs, ubs, names) );
 
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
@@ -2991,7 +2991,7 @@ SCIP_RETCODE nlpFlushObjective(
       ++nz;
    }
 
-   SCIP_CALL( SCIPnlpiSetObjective(set->scip, nlp->solver, nlp->problem,
+   SCIP_CALL( SCIPnlpiSetObjective(set, nlp->solver, nlp->problem,
          nz, linindices, lincoefs,
          NULL,
          0.0) );
@@ -3060,30 +3060,30 @@ SCIP_RETCODE nlpSolve(
 
          initialguess_solver[i] = nlp->initialguess[nlpidx];
       }
-      SCIP_CALL( SCIPnlpiSetInitialGuess(set->scip, nlp->solver, nlp->problem, initialguess_solver, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiSetInitialGuess(set, nlp->solver, nlp->problem, initialguess_solver, NULL, NULL, NULL) );
 
       SCIPsetFreeBufferArray(set, &initialguess_solver);
    }
 
    /* set NLP tolerances to current SCIP primal and dual feasibility tolerance */
-   SCIP_CALL( SCIPnlpiSetRealPar(set->scip, nlp->solver, nlp->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
-   SCIP_CALL( SCIPnlpiSetRealPar(set->scip, nlp->solver, nlp->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(set, nlp->solver, nlp->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(set, nlp->solver, nlp->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
 
    /* set the NLP timelimit to the remaining time */
    SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &sciptimelimit) );
    timeleft = sciptimelimit - SCIPclockGetTime(stat->solvingtime);
-   SCIP_CALL( SCIPnlpiSetRealPar(set->scip, nlp->solver, nlp->problem, SCIP_NLPPAR_TILIM, MAX(0.0, timeleft)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(set, nlp->solver, nlp->problem, SCIP_NLPPAR_TILIM, MAX(0.0, timeleft)) );
 
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);
 
-   SCIP_CALL( SCIPnlpiSolve(set->scip, nlp->solver, nlp->problem) );
+   SCIP_CALL( SCIPnlpiSolve(set, nlp->solver, nlp->problem) );
 
    SCIPclockStop(stat->nlpsoltime, set);
    ++stat->nnlps;
 
-   nlp->termstat = SCIPnlpiGetTermstat(set->scip, nlp->solver, nlp->problem);
-   nlp->solstat  = SCIPnlpiGetSolstat(set->scip, nlp->solver, nlp->problem);
+   nlp->termstat = SCIPnlpiGetTermstat(set, nlp->solver, nlp->problem);
+   nlp->solstat  = SCIPnlpiGetSolstat(set, nlp->solver, nlp->problem);
    switch( nlp->solstat )
    {
    case SCIP_NLPSOLSTAT_GLOBOPT:
@@ -3102,7 +3102,7 @@ SCIP_RETCODE nlpSolve(
       varubdualvals = NULL;
 
       /* get NLP solution */
-      SCIP_CALL( SCIPnlpiGetSolution(set->scip, nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(set, nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals, NULL) );
       assert(primalvals != NULL || nlp->nvars == 0);
       assert((varlbdualvals != NULL) == (varubdualvals != NULL)); /* if there are duals for one bound, then there should also be duals for the other bound */
 
@@ -3455,7 +3455,7 @@ SCIP_RETCODE SCIPnlpCreate(
          }
       }
       assert((*nlp)->solver != NULL);
-      SCIP_CALL( SCIPnlpiCreateProblem(set->scip, (*nlp)->solver, &(*nlp)->problem, "scip_nlp") );
+      SCIP_CALL( SCIPnlpiCreateProblem(set, (*nlp)->solver, &(*nlp)->problem, "scip_nlp") );
    }
    else
    {
@@ -3583,7 +3583,7 @@ SCIP_RETCODE SCIPnlpFree(
    /* free NLPI problem */
    if( (*nlp)->problem != NULL )
    {
-      SCIP_CALL( SCIPnlpiFreeProblem(set->scip, (*nlp)->solver, &(*nlp)->problem) );
+      SCIP_CALL( SCIPnlpiFreeProblem(set, (*nlp)->solver, &(*nlp)->problem) );
    }
 
    /* free NLP data structure */
@@ -4087,7 +4087,7 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
    if( initguess == NULL )
    {
       nlp->haveinitguess = FALSE;
-      SCIP_CALL( SCIPnlpiSetInitialGuess(set->scip, nlp->solver, nlp->problem, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiSetInitialGuess(set, nlp->solver, nlp->problem, NULL, NULL, NULL, NULL) );
       return SCIP_OKAY;
    }
 
@@ -4376,7 +4376,7 @@ SCIP_RETCODE SCIPnlpGetStatistics(
    assert(nlp->problem != NULL);
    assert(statistics != NULL);
 
-   SCIP_CALL( SCIPnlpiGetStatistics(set->scip, nlp->solver, nlp->problem, statistics) );
+   SCIP_CALL( SCIPnlpiGetStatistics(set, nlp->solver, nlp->problem, statistics) );
 
    return SCIP_OKAY;
 }
@@ -4405,7 +4405,7 @@ SCIP_RETCODE SCIPnlpGetIntPar(
    assert(nlp->problem != NULL);
    assert(ival != NULL);
 
-   SCIP_CALL( SCIPnlpiGetIntPar(set->scip, nlp->solver, nlp->problem, type, ival) );
+   SCIP_CALL( SCIPnlpiGetIntPar(set, nlp->solver, nlp->problem, type, ival) );
 
    return SCIP_OKAY;
 }
@@ -4422,7 +4422,7 @@ SCIP_RETCODE SCIPnlpSetIntPar(
    assert(nlp->solver  != NULL);
    assert(nlp->problem != NULL);
 
-   SCIP_CALL( SCIPnlpiSetIntPar(set->scip, nlp->solver, nlp->problem, type, ival) );
+   SCIP_CALL( SCIPnlpiSetIntPar(set, nlp->solver, nlp->problem, type, ival) );
 
    return SCIP_OKAY;
 }
@@ -4440,7 +4440,7 @@ SCIP_RETCODE SCIPnlpGetRealPar(
    assert(nlp->problem != NULL);
    assert(dval != NULL);
 
-   SCIP_CALL( SCIPnlpiGetRealPar(set->scip, nlp->solver, nlp->problem, type, dval) );
+   SCIP_CALL( SCIPnlpiGetRealPar(set, nlp->solver, nlp->problem, type, dval) );
 
    return SCIP_OKAY;
 }
@@ -4457,7 +4457,7 @@ SCIP_RETCODE SCIPnlpSetRealPar(
    assert(nlp->solver  != NULL);
    assert(nlp->problem != NULL);
 
-   SCIP_CALL( SCIPnlpiSetRealPar(set->scip, nlp->solver, nlp->problem, type, dval) );
+   SCIP_CALL( SCIPnlpiSetRealPar(set, nlp->solver, nlp->problem, type, dval) );
 
    return SCIP_OKAY;
 }
@@ -4475,7 +4475,7 @@ SCIP_RETCODE SCIPnlpGetStringPar(
    assert(nlp->problem != NULL);
    assert(sval != NULL);
 
-   SCIP_CALL( SCIPnlpiGetStringPar(set->scip, nlp->solver, nlp->problem, type, sval) );
+   SCIP_CALL( SCIPnlpiGetStringPar(set, nlp->solver, nlp->problem, type, sval) );
 
    return SCIP_OKAY;
 }
@@ -4492,7 +4492,7 @@ SCIP_RETCODE SCIPnlpSetStringPar(
    assert(nlp->solver  != NULL);
    assert(nlp->problem != NULL);
 
-   SCIP_CALL( SCIPnlpiSetStringPar(set->scip, nlp->solver, nlp->problem, type, sval) );
+   SCIP_CALL( SCIPnlpiSetStringPar(set, nlp->solver, nlp->problem, type, sval) );
 
    return SCIP_OKAY;
 }
@@ -4569,7 +4569,7 @@ SCIP_RETCODE SCIPnlpEndDive(
       varub[i] = SCIPvarGetUbLocal(nlp->vars[nlp->varmap_nlpi2nlp[i]]);
    }
 
-   SCIP_CALL( SCIPnlpiChgVarBounds(set->scip, nlp->solver, nlp->problem, nlp->nvars, varidx, varlb, varub) );
+   SCIP_CALL( SCIPnlpiChgVarBounds(set, nlp->solver, nlp->problem, nlp->nvars, varidx, varlb, varub) );
 
    SCIPsetFreeBufferArray(set, &varidx);
    SCIPsetFreeBufferArray(set, &varlb);
@@ -4621,7 +4621,7 @@ SCIP_RETCODE SCIPnlpChgVarObjDive(
 
    /* set coefficient in NLPI problem objective */
    objidx = -1;
-   SCIP_CALL( SCIPnlpiChgLinearCoefs(set->scip, nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
+   SCIP_CALL( SCIPnlpiChgLinearCoefs(set, nlp->solver, nlp->problem, objidx, 1, &pos, &coef) );
 
    /* create an nlrow that holds the diving objective, if not done yet */
    if( nlp->divingobj == NULL )
@@ -4675,7 +4675,7 @@ SCIP_RETCODE SCIPnlpChgVarBoundsDive(
    assert(pos >= 0);
 
    /* set new bounds in NLPI */
-   SCIP_CALL( SCIPnlpiChgVarBounds(set->scip, nlp->solver, nlp->problem, 1, &pos, &lb, &ub) );
+   SCIP_CALL( SCIPnlpiChgVarBounds(set, nlp->solver, nlp->problem, 1, &pos, &lb, &ub) );
 
    return SCIP_OKAY;
 }
@@ -4717,7 +4717,7 @@ SCIP_RETCODE SCIPnlpChgVarsBoundsDive(
    }
 
    /* set new bounds in NLPI */
-   SCIP_CALL( SCIPnlpiChgVarBounds(set->scip, nlp->solver, nlp->problem, nvars, poss, lbs, ubs) );
+   SCIP_CALL( SCIPnlpiChgVarBounds(set, nlp->solver, nlp->problem, nvars, poss, lbs, ubs) );
 
    SCIPsetFreeBufferArray(set, &poss);
 
