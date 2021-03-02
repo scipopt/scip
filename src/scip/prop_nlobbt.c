@@ -22,7 +22,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/nlpi.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_nlobbt.h"
 #include "scip/pub_message.h"
@@ -37,6 +36,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_nonlinear.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
@@ -129,7 +129,7 @@ SCIP_RETCODE propdataClear(
       SCIPfreeBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars);
       SCIPfreeBlockMemoryArray(scip, &propdata->nlpivars, propdata->nlpinvars);
       SCIPhashmapFree(&propdata->var2nlpiidx);
-      SCIP_CALL( SCIPnlpiFreeProblem(scip, propdata->nlpi, &propdata->nlpiprob) );
+      SCIP_CALL( SCIPfreeNlpiProblem(scip, propdata->nlpi, &propdata->nlpiprob) );
 
       propdata->nlpinvars = 0;
    }
@@ -208,9 +208,9 @@ SCIP_RETCODE filterCands(
    int i;
 
    assert(propdata->currpos >= 0 && propdata->currpos < propdata->nlpinvars);
-   assert(SCIPnlpiGetSolstat(scip, propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE);
+   assert(SCIPgetNlpiSolstat(scip, propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE);
 
-   SCIP_CALL( SCIPnlpiGetSolution(scip, propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetNlpiSolution(scip, propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    assert(primal != NULL);
 
    /* we skip all candidates which have been processed already, i.e., starting at propdata->currpos + 1 */
@@ -280,9 +280,9 @@ SCIP_RETCODE addGenVBound(
    assert(propdata->genvboundprop != NULL);
    assert(var != NULL);
    assert(varidx >= 0 && varidx < propdata->nlpinvars);
-   assert(SCIPnlpiGetSolstat(scip, propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
+   assert(SCIPgetNlpiSolstat(scip, propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
-   SCIP_CALL( SCIPnlpiGetSolution(scip, propdata->nlpi, propdata->nlpiprob, &primal, &dual, &alpha, &beta, NULL) );
+   SCIP_CALL( SCIPgetNlpiSolution(scip, propdata->nlpi, propdata->nlpiprob, &primal, &dual, &alpha, &beta, NULL) );
 
    /* not possible to generate genvbound if the duals for the propagated variable do not disappear */
    if( !SCIPisFeasZero(scip, alpha[varidx] - beta[varidx]) )
@@ -377,32 +377,32 @@ SCIP_RETCODE solveNlp(
    if( propdata->nlptimelimit > 0.0 )
       timelimit = MIN(propdata->nlptimelimit, timelimit);
    iterlimit = propdata->nlpiterlimit > 0 ? propdata->nlpiterlimit : INT_MAX;
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
-   SCIP_CALL( SCIPnlpiSetIntPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPsetNlpiIntPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
 
    /* set corresponding objective coefficient and solve NLP */
    obj = boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : -1.0;
-   SCIP_CALL( SCIPnlpiSetObjective(scip, propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, NULL, 0.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, NULL, 0.0) );
 
    SCIPdebugMsg(scip, "solve var=%s boundtype=%d nlscore=%g\n", SCIPvarGetName(var), boundtype,
       propdata->nlscore[propdata->currpos]);
-   SCIP_CALL( SCIPnlpiSolve(scip, propdata->nlpi, propdata->nlpiprob) );
-   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(scip, propdata->nlpi, propdata->nlpiprob));
+   SCIP_CALL( SCIPsolveNlpi(scip, propdata->nlpi, propdata->nlpiprob) );
+   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, propdata->nlpi, propdata->nlpiprob));
 
    /* collect NLP statistics */
    assert(propdata->nlpstatistics != NULL);
-   SCIP_CALL( SCIPnlpiGetStatistics(scip, propdata->nlpi, propdata->nlpiprob, propdata->nlpstatistics) );
+   SCIP_CALL( SCIPgetNlpiStatistics(scip, propdata->nlpi, propdata->nlpiprob, propdata->nlpstatistics) );
    *nlpiter = SCIPnlpStatisticsGetNIterations(propdata->nlpstatistics);
    SCIPdebugMsg(scip, "iterations %d time %g\n", *nlpiter, SCIPnlpStatisticsGetTotalTime(propdata->nlpstatistics));
 
    /* filter bound candidates first, otherwise we do not have access to the primal solution values */
-   if( SCIPnlpiGetSolstat(scip, propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE )
+   if( SCIPgetNlpiSolstat(scip, propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
       SCIP_CALL( filterCands(scip, propdata) );
    }
 
    /* try to tighten variable bound */
-   if( SCIPnlpiGetSolstat(scip, propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
+   if( SCIPgetNlpiSolstat(scip, propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )
    {
       SCIP_Bool tightened;
       SCIP_Bool infeasible;
@@ -413,7 +413,7 @@ SCIP_RETCODE solveNlp(
          SCIP_CALL( addGenVBound(scip, propdata, var, varidx, boundtype, SCIPgetCutoffbound(scip)) );
       }
 
-      SCIP_CALL( SCIPnlpiGetSolution(scip, propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPgetNlpiSolution(scip, propdata->nlpi, propdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
 
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
@@ -439,7 +439,7 @@ SCIP_RETCODE solveNlp(
          /* update bounds in NLP */
          lb = SCIPvarGetLbLocal(var);
          ub = SCIPvarGetUbLocal(var);
-         SCIP_CALL( SCIPnlpiChgVarBounds(scip, propdata->nlpi, propdata->nlpiprob, 1, &varidx, &lb, &ub) );
+         SCIP_CALL( SCIPchgNlpiVarBounds(scip, propdata->nlpi, propdata->nlpiprob, 1, &varidx, &lb, &ub) );
 
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "tightened bounds of %s from [%g,%g] to [%g,%g]\n", SCIPvarGetName(var), oldlb, oldub, lb, ub);
@@ -449,7 +449,7 @@ SCIP_RETCODE solveNlp(
 
    /* reset objective function */
    obj = 0.0;
-   SCIP_CALL( SCIPnlpiSetObjective(scip, propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, NULL, 0.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, NULL, 0.0) );
 
    return SCIP_OKAY;
 }
@@ -508,7 +508,7 @@ SCIP_RETCODE applyNlobbt(
       propdata->nlpi = SCIPgetNlpis(scip)[0];
       assert(propdata->nlpi != NULL);
 
-      SCIP_CALL( SCIPnlpiCreateProblem(scip, propdata->nlpi, &propdata->nlpiprob, "nlobbt-nlp") );
+      SCIP_CALL( SCIPcreateNlpiProblem(scip, propdata->nlpi, &propdata->nlpiprob, "nlobbt-nlp") );
       SCIP_CALL( SCIPhashmapCreate(&propdata->var2nlpiidx, SCIPblkmem(scip), propdata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->nlpivars, SCIPgetVars(scip), propdata->nlpinvars) ); /*lint !e666*/
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
@@ -550,11 +550,11 @@ SCIP_RETCODE applyNlobbt(
    }
 
    /* set parameters of NLP solver */
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
          SCIPfeastol(scip) * propdata->feastolfac) );
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
          SCIPfeastol(scip) * propdata->relobjtolfac) );
-   SCIP_CALL( SCIPnlpiSetIntPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
+   SCIP_CALL( SCIPsetNlpiIntPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
 
    /* main propagation loop */
    while( propdata->currpos < propdata->nlpinvars

@@ -15,7 +15,7 @@
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
- * @brief  type definitions for specific NLP solver interfaces
+ * @brief  type definitions for NLP solver interfaces
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
  */
@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/type_scip.h"
 #include "scip/type_expr.h"
+#include "scip/type_nlp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,7 +37,6 @@ extern "C" {
 typedef struct SCIP_Nlpi          SCIP_NLPI;          /**< NLP solver interface */
 typedef struct SCIP_NlpiData      SCIP_NLPIDATA;      /**< locally defined NLP solver interface data */
 typedef struct SCIP_NlpiProblem   SCIP_NLPIPROBLEM;   /**< locally defined NLP solver interface data for a specific problem instance */
-typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics */
 
 /** NLP solver parameter */
 enum SCIP_NlpParam

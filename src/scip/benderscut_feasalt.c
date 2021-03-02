@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "scip/pub_expr.h"
-#include "nlpi/nlpi.h"
 #include "scip/benderscut_feasalt.h"
 #include "scip/benderscut_opt.h"
 #include "scip/cons_linear.h"
@@ -43,6 +42,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_nonlinear.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
@@ -111,7 +111,7 @@ SCIP_RETCODE freeNonlinearProblem(
       SCIPhashmapFree(&benderscutdata->row2idx);
       SCIPhashmapFree(&benderscutdata->var2idx);
 
-      SCIP_CALL( SCIPnlpiFreeProblem(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob) );
+      SCIP_CALL( SCIPfreeNlpiProblem(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob) );
 
       benderscutdata->nlpinslackvars = 0;
       benderscutdata->nlpinrows = 0;
@@ -153,16 +153,16 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
          return SCIP_OKAY;
       }
    }
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
 
 #ifdef SCIP_MOREDEBUG
-      SCIP_CALL( SCIPnlpiSetIntPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
+      SCIP_CALL( SCIPsetNlpiIntPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
 #endif
 
-   SCIP_CALL( SCIPnlpiSolve(scip, benderscutdata->nlpi, benderscutdata->nlpiprob) );
-   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob));
+   SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob) );
+   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob));
 
-   nlpsolstat = SCIPnlpiGetSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob);
+   nlpsolstat = SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob);
 
    /* if the feasibility NLP is not feasible, then it is not possible to generate a Benders' cut. This is also an error,
     * since the NLP should always be feasible. In debug mode, an ABORT will be thrown.
@@ -201,7 +201,7 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    benderscutdata->nlpi = SCIPgetNlpis(subproblem)[0];
    assert(benderscutdata->nlpi != NULL);
 
-   SCIP_CALL( SCIPnlpiCreateProblem(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob, "benders-feascutalt-nlp") );
+   SCIP_CALL( SCIPcreateNlpiProblem(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob, "benders-feascutalt-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&benderscutdata->var2idx, SCIPblkmem(masterprob), benderscutdata->nlpinvars) );
    SCIP_CALL( SCIPhashmapCreate(&benderscutdata->row2idx, SCIPblkmem(masterprob), benderscutdata->nlpinrows) );
 
@@ -237,11 +237,11 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    }
 
    /* setting the objective function */
-   SCIP_CALL( SCIPnlpiSetObjective(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
+   SCIP_CALL( SCIPsetNlpiObjective(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
          benderscutdata->slackvarinds, obj, NULL, 0.0) );
 
    /* unfixing the slack variables */
-   SCIP_CALL( SCIPnlpiChgVarBounds(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
+   SCIP_CALL( SCIPchgNlpiVarBounds(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
          benderscutdata->slackvarinds, benderscutdata->slackvarlbs, benderscutdata->slackvarubs) );
 
    SCIPfreeBufferArray(masterprob, &obj);
@@ -273,7 +273,7 @@ SCIP_RETCODE updateAuxiliaryNonlinearSubproblem(
          benderscutdata->nlpivars, benderscutdata->nlpinvars, SCIPinfinity(subproblem)) );
 
    /* unfixing the slack variables */
-   SCIP_CALL( SCIPnlpiChgVarBounds(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
+   SCIP_CALL( SCIPchgNlpiVarBounds(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
          benderscutdata->slackvarinds, benderscutdata->slackvarlbs, benderscutdata->slackvarubs) );
 
    return SCIP_OKAY;
@@ -335,7 +335,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    }
 
    /* getting the solution from the NLPI problem */
-   SCIP_CALL( SCIPnlpiGetSolution(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, &primalvals, &consdualvals,
+   SCIP_CALL( SCIPgetNlpiSolution(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, &primalvals, &consdualvals,
          &varlbdualvals, &varubdualvals, &obj) );
 
 #ifdef SCIP_EVENMOREDEBUG

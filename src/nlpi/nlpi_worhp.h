@@ -25,7 +25,7 @@
 #ifndef __SCIP_NLPI_WORHP_H__
 #define __SCIP_NLPI_WORHP_H__
 
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {

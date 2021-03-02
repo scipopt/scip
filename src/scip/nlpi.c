@@ -27,8 +27,9 @@
 #include <string.h>
 
 #include "scip/pub_message.h"
-#include "nlpi/nlpi.h"
-#include "nlpi/struct_nlpi.h"
+#include "scip/nlpi.h"
+#include "scip/pub_nlpi.h"
+#include "scip/struct_nlpi.h"
 #include "blockmemshell/memory.h"
 
 /** compares two NLPIs w.r.t. their priority */
@@ -372,7 +373,7 @@ SCIP_DECL_NLPISOLVE(SCIPnlpiSolve)
    return SCIP_OKAY;
 }
 
-/** gives solution status, return: Solution Status */
+/** gives solution status */
 SCIP_DECL_NLPIGETSOLSTAT(SCIPnlpiGetSolstat)
 {
    assert(nlpi    != NULL);
@@ -382,7 +383,7 @@ SCIP_DECL_NLPIGETSOLSTAT(SCIPnlpiGetSolstat)
    return nlpi->nlpigetsolstat(scip, nlpi, problem);
 }
 
-/** gives termination reason; return: Termination Status */
+/** gives termination reason */
 SCIP_DECL_NLPIGETTERMSTAT(SCIPnlpiGetTermstat)
 {
    assert(nlpi    != NULL);
@@ -582,76 +583,4 @@ void SCIPnlpiSetPriority(
    assert(nlpi != NULL);
 
    nlpi->priority = priority;
-}
-
-/** creates an NLP statistics structure */
-SCIP_RETCODE SCIPnlpStatisticsCreate(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
-   )
-{
-   assert(blkmem != NULL);
-   assert(statistics != NULL);
-
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, statistics) );
-
-   (*statistics)->niterations = -1;
-   (*statistics)->totaltime = -1.0;
-
-   return SCIP_OKAY;
-}
-
-/** frees an NLP statistics structure */
-void SCIPnlpStatisticsFree(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
-   )
-{
-   assert(blkmem != NULL);
-   assert(statistics != NULL);
-   assert(*statistics != NULL);
-
-   BMSfreeBlockMemory(blkmem, statistics);
-
-   assert(*statistics == NULL);
-}
-
-/** gets the number of iterations from an NLP statistics structure */
-int SCIPnlpStatisticsGetNIterations(
-   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
-   )
-{
-   assert(statistics != NULL);
-
-   return statistics->niterations;
-}
-
-/** gets the total time from an NLP statistics structure */
-SCIP_Real SCIPnlpStatisticsGetTotalTime(
-   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
-   )
-{
-   assert(statistics != NULL);
-
-   return statistics->totaltime;
-}
-
-/** sets the number of iterations in an NLP statistics structure */
-void SCIPnlpStatisticsSetNIterations(
-   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
-   int                   niterations         /**< number of iterations to store */
-   )
-{
-   assert(statistics != NULL);
-   statistics->niterations = niterations;
-}
-
-/** sets the total time in an NLP statistics structure */
-void SCIPnlpStatisticsSetTotalTime(
-   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
-   SCIP_Real             totaltime           /**< solution time to store */
-   )
-{
-   assert(statistics != NULL);
-   statistics->totaltime = totaltime;
 }

@@ -25,7 +25,6 @@
 #define __SCIP_NLPIORACLE_H__
 
 #include "scip/type_message.h"
-#include "nlpi/type_nlpi.h"
 #include "nlpi/type_exprinterpret.h"
 
 

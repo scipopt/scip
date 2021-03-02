@@ -36,7 +36,7 @@
 #include "scip/type_var.h"
 #include "scip/type_sol.h"
 #include "scip/type_expr.h"
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -135,6 +135,46 @@ SCIP_Real SCIPnlrowGetDualsol(
    );
 
 /**@} */
+
+/** creates an NLP statistics structure */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpStatisticsCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
+   );
+
+/** frees an NLP statistics structure */
+SCIP_EXPORT
+void SCIPnlpStatisticsFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
+   );
+
+/** gets the number of iterations from an NLP statistics structure */
+SCIP_EXPORT
+int SCIPnlpStatisticsGetNIterations(
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
+   );
+
+/** gets the total time from an NLP statistics structure */
+SCIP_EXPORT
+SCIP_Real SCIPnlpStatisticsGetTotalTime(
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
+   );
+
+/** sets the number of iterations in an NLP statistics structure */
+SCIP_EXPORT
+void SCIPnlpStatisticsSetNIterations(
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   int                   niterations         /**< number of iterations to store */
+   );
+
+/** sets the total time in an NLP statistics structure */
+SCIP_EXPORT
+void SCIPnlpStatisticsSetTotalTime(
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   SCIP_Real             totaltime           /**< solution time to store */
+   );
 
 /**@} */ /* PublicNLPMethods */
 

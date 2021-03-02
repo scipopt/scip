@@ -40,13 +40,13 @@
 #endif
 
 #include "nlpi/nlpi_filtersqp.h"
-#include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_randnumgen.h"
 #include "scip/pub_misc.h"
 
@@ -2285,14 +2285,13 @@ SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_NLPI* nlpi;
    SCIP_NLPIDATA* nlpidata;
 
    /* create filterSQP solver interface data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &nlpidata) );
 
    /* create solver interface */
-   SCIP_CALL( SCIPnlpiCreate(&nlpi,
+   SCIP_CALL( SCIPincludeNlpi(scip,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
          nlpiCopyFilterSQP, nlpiFreeFilterSQP, nlpiGetSolverPointerFilterSQP,
          nlpiCreateProblemFilterSQP, nlpiFreeProblemFilterSQP, nlpiGetProblemPointerFilterSQP,
@@ -2304,7 +2303,6 @@ SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
          nlpiGetWarmstartSizeFilterSQP, nlpiGetWarmstartMemoFilterSQP, nlpiSetWarmstartMemoFilterSQP,
          nlpiGetIntParFilterSQP, nlpiSetIntParFilterSQP, nlpiGetRealParFilterSQP, nlpiSetRealParFilterSQP, nlpiGetStringParFilterSQP, nlpiSetStringParFilterSQP,
          nlpidata) );
-   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP()) );
 

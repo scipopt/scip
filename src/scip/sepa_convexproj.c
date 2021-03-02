@@ -29,7 +29,7 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/scip_expr.h"
-#include "nlpi/nlpi.h"
+#include "scip/scip_nlpi.h"
 #include "nlpi/expr_varidx.h"
 #include "scip/expr_pow.h"
 #include "scip/expr_sum.h"
@@ -143,7 +143,7 @@ SCIP_RETCODE sepadataClear(
       SCIPfreeBlockMemoryArray(scip, &sepadata->nlpivars, sepadata->nlpinvars);
 
       SCIPhashmapFree(&sepadata->var2nlpiidx);
-      SCIP_CALL( SCIPnlpiFreeProblem(scip, sepadata->nlpi, &sepadata->nlpiprob) );
+      SCIP_CALL( SCIPfreeNlpiProblem(scip, sepadata->nlpi, &sepadata->nlpiprob) );
 
       sepadata->nlpinvars = 0;
       sepadata->nnlrows = 0;
@@ -293,7 +293,7 @@ SCIP_RETCODE setQuadraticObj(
    SCIP_CALL( SCIPcreateExprSum(scip, &exprsum, sepadata->nlpinvars, exprspow, NULL, 0.0, NULL, NULL) );
 
    /* set quadratic part of objective function */
-   SCIP_CALL( SCIPnlpiSetObjective(scip, sepadata->nlpi, sepadata->nlpiprob, 0, NULL, NULL, exprsum, 0.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, sepadata->nlpi, sepadata->nlpiprob, 0, NULL, NULL, exprsum, 0.0) );
 
    /* free memory */
    SCIP_CALL( SCIPreleaseExpr(scip, &exprsum) );
@@ -373,7 +373,7 @@ SCIP_RETCODE separateCuts(
    }
 
    /* set linear part of objective function */
-   SCIP_CALL( SCIPnlpiChgLinearCoefs(scip, sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
+   SCIP_CALL( SCIPchgNlpiLinearCoefs(scip, sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
 
    /* set parameters in nlpi; time and iterations limit, tolerance, verbosity; for time limit, get time limit of scip;
     * if scip doesn't have much time left, don't run separator. otherwise, timelimit is the minimum between whats left
@@ -391,20 +391,20 @@ SCIP_RETCODE separateCuts(
    }
    if( sepadata->nlptimelimit > 0.0 )
       timelimit = MIN(sepadata->nlptimelimit, timelimit);
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
 
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
-   SCIP_CALL( SCIPnlpiSetIntPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) / 10.0) ); /* use tighter tolerances for the NLP solver */
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
-   SCIP_CALL( SCIPnlpiSetIntPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
+   SCIP_CALL( SCIPsetNlpiIntPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) / 10.0) ); /* use tighter tolerances for the NLP solver */
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
+   SCIP_CALL( SCIPsetNlpiIntPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute the projection onto the convex NLP relaxation */
-   SCIP_CALL( SCIPnlpiSolve(scip, sepadata->nlpi, sepadata->nlpiprob) );
-   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPnlpiGetSolstat(scip, sepadata->nlpi, sepadata->nlpiprob));
+   SCIP_CALL( SCIPsolveNlpi(scip, sepadata->nlpi, sepadata->nlpiprob) );
+   SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, sepadata->nlpi, sepadata->nlpiprob));
 
    /* if solution is feasible, add cuts */
-   switch( SCIPnlpiGetSolstat(scip, sepadata->nlpi, sepadata->nlpiprob) )
+   switch( SCIPgetNlpiSolstat(scip, sepadata->nlpi, sepadata->nlpiprob) )
    {
       case SCIP_NLPSOLSTAT_GLOBOPT:
       case SCIP_NLPSOLSTAT_LOCOPT:
@@ -418,7 +418,7 @@ SCIP_RETCODE separateCuts(
           */
 
          /* get solution: build SCIP_SOL out of nlpi sol */
-         SCIP_CALL( SCIPnlpiGetSolution(scip, sepadata->nlpi, sepadata->nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPgetNlpiSolution(scip, sepadata->nlpi, sepadata->nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
          assert(nlpisol != NULL);
 
          SCIP_CALL( SCIPcreateSol(scip, &projection, NULL) );
@@ -558,7 +558,7 @@ SCIP_RETCODE separateCuts(
 
    /* reset objective */
    BMSclearMemoryArray(linvals, nlpinvars);
-   SCIP_CALL( SCIPnlpiChgLinearCoefs(scip, sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
+   SCIP_CALL( SCIPchgNlpiLinearCoefs(scip, sepadata->nlpi, sepadata->nlpiprob, -1, nlpinvars, lininds, linvals) );
 
 CLEANUP:
    /* free memory */
@@ -791,7 +791,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       sepadata->nlpi = SCIPgetNlpis(scip)[0];
       assert(sepadata->nlpi != NULL);
 
-      SCIP_CALL( SCIPnlpiCreateProblem(scip, sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp") );
+      SCIP_CALL( SCIPcreateNlpiProblem(scip, sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp") );
       SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) ); /*lint !e666*/
 

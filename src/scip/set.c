@@ -56,7 +56,8 @@
 #include "scip/prop.h"
 #include "scip/benders.h"
 #include "scip/expr.h"
-#include "nlpi/nlpi.h"
+#include "scip/nlpi.h"
+#include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
 /*

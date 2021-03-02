@@ -13,41 +13,70 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file    nlpi_all.h
- * @brief   ALL NLP interface
- * @brief   NLP interface that uses all available NLP interfaces
- * @author  Benjamin Mueller
+/**@file   pub_nlpi.h
+ * @ingroup PUBLICCOREAPI
+ * @brief  public methods for NLP solver interfaces
+ * @author Thorsten Gellermann
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_NLPI_ALL_H__
-#define __SCIP_NLPI_ALL_H__
+#ifndef __SCIP_PUB_NLPI_H__
+#define __SCIP_PUB_NLPI_H__
 
+#include "scip/def.h"
 #include "scip/type_nlpi.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**@addtogroup NLPIS
+/**@addtogroup PublicNLPIMethods
  *
  * @{
  */
 
-/** create solver interface for All solver and includes it into SCIP, if at least 2 NLPIs have already been included
- *
- * this should be called after all other NLP solver interfaces have been included
- */
+/** compares two NLPIs w.r.t. their priority */
+SCIP_DECL_SORTPTRCOMP(SCIPnlpiComp);
+
+/** gets data of an NLPI */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeNlpSolverAll(
-   SCIP*                 scip                /**< SCIP data structure */
+SCIP_NLPIDATA* SCIPnlpiGetData(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
-/**@} */
+/** gets NLP solver name */
+SCIP_EXPORT
+const char* SCIPnlpiGetName(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gets NLP solver descriptions */
+SCIP_EXPORT
+const char* SCIPnlpiGetDesc(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gets NLP solver priority */
+SCIP_EXPORT
+int SCIPnlpiGetPriority(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** sets NLP solver priority */
+SCIP_EXPORT
+void SCIPnlpiSetPriority(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   int                   priority            /**< new priority of NLPI */
+   );
+
+
+/**@} */ /* PublicNLPIMethods */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_NLPI_ALL_H__ */
+#endif /* __SCIP_PUB_NLPI_H__ */

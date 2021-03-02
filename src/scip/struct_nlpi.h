@@ -25,7 +25,7 @@
 #define __SCIP_STRUCT_NLPI_H__
 
 #include "scip/def.h"
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,13 +69,6 @@ struct SCIP_Nlpi
    SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar));       /**< get value of string parameter in a problem  */
    SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar));       /**< set value of string parameter in a problem  */
    SCIP_NLPIDATA*                  nlpidata;                    /**< NLP interface local data */
-};
-
-/** Statistics from an NLP solve */
-struct SCIP_NlpStatistics
-{
-   int       niterations;   /**< number of iterations the NLP solver spend in the last solve command */
-   SCIP_Real totaltime;     /**< total time in CPU sections the NLP solver spend in the last solve command */ 
 };
 
 #ifdef __cplusplus

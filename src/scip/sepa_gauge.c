@@ -29,7 +29,7 @@
 #include <string.h>
 
 #include "blockmemshell/memory.h"
-#include "nlpi/nlpi.h"
+#include "scip/scip_nlpi.h"
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpioracle.h"
 #include "scip/scip_expr.h"
@@ -213,7 +213,7 @@ SCIP_RETCODE computeInteriorPoint(
    assert(nlpi != NULL);
 
    nvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPnlpiCreateProblem(scip, nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
+   SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
             NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
@@ -222,8 +222,8 @@ SCIP_RETCODE computeInteriorPoint(
    objvaridx = nvars;
    objvarlb = INTERIOROBJVARLB;
    one = 1.0;
-   SCIP_CALL( SCIPnlpiAddVars(scip, nlpi, nlpiprob, 1, &objvarlb, NULL, NULL) );
-   SCIP_CALL( SCIPnlpiSetObjective(scip, nlpi, nlpiprob, 1, &objvaridx, &one, NULL, 0.0) );
+   SCIP_CALL( SCIPaddNlpiVars(scip, nlpi, nlpiprob, 1, &objvarlb, NULL, NULL) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 1, &objvaridx, &one, NULL, 0.0) );
 
    /* add objective variables to constraints; for this we need to get nlpi oracle to have access to number of
     * constraints and which constraints are nonlinear
@@ -241,7 +241,7 @@ SCIP_RETCODE computeInteriorPoint(
    {
       if( SCIPnlpiOracleGetConstraintDegree(nlpioracle, i) > 1 )
       {
-         SCIP_CALL( SCIPnlpiChgLinearCoefs(scip, nlpi, nlpiprob, i, 1, &objvaridx, &minusone) );
+         SCIP_CALL( SCIPchgNlpiLinearCoefs(scip, nlpi, nlpiprob, i, 1, &objvaridx, &minusone) );
          ++nconvexnlrows;
       }
    }
@@ -275,17 +275,17 @@ SCIP_RETCODE computeInteriorPoint(
    }
    if( sepadata->nlptimelimit > 0.0 )
       timelimit = MIN(sepadata->nlptimelimit, timelimit);
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
 
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
-   SCIP_CALL( SCIPnlpiSetIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASFAC * SCIPfeastol(scip)) );
-   SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) ); /*lint !e666*/
-   SCIP_CALL( SCIPnlpiSetIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
+   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASFAC * SCIPfeastol(scip)) );
+   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) ); /*lint !e666*/
+   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute interior point */
    SCIPdebugMsg(scip, "starting interior point computation\n");
-   SCIP_CALL( SCIPnlpiSolve(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
    SCIPdebugMsg(scip, "finish interior point computation\n");
 
 #ifdef SCIP_DEBUG
@@ -294,21 +294,21 @@ SCIP_RETCODE computeInteriorPoint(
 
       /* get statistics */
       SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
-      SCIP_CALL( SCIPnlpiGetStatistics(scip, nlpi, nlpiprob, nlpstatistics) );
+      SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, nlpstatistics) );
 
       SCIPdebugMsg(scip, "nlpi took iters %d, time %g searching for an find interior point: solstat %d\n",
             SCIPnlpStatisticsGetNIterations(nlpstatistics), SCIPnlpStatisticsGetTotalTime(nlpstatistics),
-            SCIPnlpiGetSolstat(scip, nlpi, nlpiprob));
+            SCIPgetNlpiSolstat(scip, nlpi, nlpiprob));
 
       SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
    }
 #endif
 
-   if( SCIPnlpiGetSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE )
+   if( SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
       SCIP_Real* nlpisol;
 
-      SCIP_CALL( SCIPnlpiGetSolution(scip, nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
 
       assert(nlpisol != NULL);
       SCIPdebugMsg(scip, "NLP solved: sol found has objvalue = %g\n", nlpisol[objvaridx]);
@@ -340,14 +340,14 @@ SCIP_RETCODE computeInteriorPoint(
    }
    else
    {
-      SCIPdebugMsg(scip, "We couldn't get an interior point (stat: %d)\n", SCIPnlpiGetSolstat(scip, nlpi, nlpiprob));
+      SCIPdebugMsg(scip, "We couldn't get an interior point (stat: %d)\n", SCIPgetNlpiSolstat(scip, nlpi, nlpiprob));
       sepadata->skipsepa = TRUE;
    }
 
 CLEANUP:
    /* free memory */
    SCIPhashmapFree(&var2nlpiidx);
-   SCIP_CALL( SCIPnlpiFreeProblem(scip, nlpi, &nlpiprob) );
+   SCIP_CALL( SCIPfreeNlpiProblem(scip, nlpi, &nlpiprob) );
 
    return SCIP_OKAY;
 }

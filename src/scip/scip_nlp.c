@@ -34,7 +34,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/nlpi.h"
+#include "scip/nlpi.h"
 #include "scip/debug.h"
 #include "scip/nlp.h"
 #include "scip/pub_message.h"
@@ -51,105 +51,6 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_var.h"
-
-/** method to call, when the priority of an NLPI was changed */
-static
-SCIP_DECL_PARAMCHGD(paramChgdNlpiPriority)
-{  /*lint --e{715}*/
-   SCIP_PARAMDATA* paramdata;
-
-   paramdata = SCIPparamGetData(param);
-   assert(paramdata != NULL);
-
-   /* use SCIPsetSetPriorityNlpi() to mark the nlpis unsorted */
-   SCIP_CALL( SCIPsetNlpiPriority(scip, (SCIP_NLPI*)paramdata, SCIPparamGetInt(param)) );
-
-   return SCIP_OKAY;
-}
-/** includes an NLPI in SCIP */
-SCIP_RETCODE SCIPincludeNlpi(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi                /**< NLPI data structure */
-   )
-{
-   char paramname[SCIP_MAXSTRLEN];
-   char paramdesc[SCIP_MAXSTRLEN];
-
-   assert(scip != NULL);
-   assert(nlpi != NULL);
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeNlpi", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   /* check whether NLPI is already present */
-   if( SCIPfindNlpi(scip, SCIPnlpiGetName(nlpi)) != NULL )
-   {
-      SCIPerrorMessage("NLPI <%s> already included.\n", SCIPnlpiGetName(nlpi));
-      return SCIP_INVALIDDATA;
-   }
-
-   SCIP_CALL( SCIPsetIncludeNlpi(scip->set, nlpi) );
-
-   /* add parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nlpi/%s/priority", SCIPnlpiGetName(nlpi));
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of NLPI <%s>", SCIPnlpiGetName(nlpi));
-   SCIP_CALL( SCIPaddIntParam(scip, paramname, paramdesc,
-         NULL, FALSE, SCIPnlpiGetPriority(nlpi), INT_MIN/4, INT_MAX/4,
-         paramChgdNlpiPriority, (SCIP_PARAMDATA*)nlpi) ); /*lint !e740*/
-
-   return SCIP_OKAY;
-}
-
-/** returns the NLPI of the given name, or NULL if not existing */
-SCIP_NLPI* SCIPfindNlpi(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of NLPI */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-   assert(name != NULL);
-
-   return SCIPsetFindNlpi(scip->set, name);
-}
-
-/** returns the array of currently available NLPIs (sorted by priority) */
-SCIP_NLPI** SCIPgetNlpis(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   SCIPsetSortNlpis(scip->set);
-
-   return scip->set->nlpis;
-}
-
-/** returns the number of currently available NLPIs */
-int SCIPgetNNlpis(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return scip->set->nnlpis;
-}
-
-/** sets the priority of an NLPI */
-SCIP_RETCODE SCIPsetNlpiPriority(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi,               /**< NLPI */
-   int                   priority            /**< new priority of the NLPI */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   SCIPsetSetPriorityNlpi(scip->set, nlpi, priority);
-
-   return SCIP_OKAY;
-}
 
 /** returns whether the NLP relaxation has been enabled
  *
@@ -953,7 +854,7 @@ SCIP_RETCODE SCIPwriteNLP(
 }
 
 /** gets the NLP interface and problem used by the SCIP NLP;
- *  with the NLPI and its problem you can use all of the methods defined in nlpi/nlpi.h;
+ *  with the NLPI and its problem you can use all of the methods defined in scip/scip_nlpi.h;
  *
  *  @warning You have to make sure, that the full internal state of the NLPI does not change or is recovered completely
  *           after the end of the method that uses the NLPI. In particular, if you manipulate the NLP or its solution

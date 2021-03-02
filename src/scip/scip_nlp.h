@@ -32,60 +32,20 @@
 #define __SCIP_SCIP_NLP_H__
 
 
-#include "nlpi/type_nlpi.h"
 #include "scip/def.h"
 #include "scip/type_lp.h"
 #include "scip/type_nlp.h"
+#include "scip/type_nlpi.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_expr.h"
+#include "scip/pub_nlp.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**@addtogroup PublicNLPInterfaceMethods
- *
- * @{
- */
-
-/** includes an NLPI in SCIP */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeNlpi(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi                /**< NLPI data structure */
-   );
-
-/** returns the NLPI of the given name, or NULL if not existing */
-SCIP_EXPORT
-SCIP_NLPI* SCIPfindNlpi(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of NLPI */
-   );
-
-/** returns the array of currently available NLPIs (sorted by priority) */
-SCIP_EXPORT
-SCIP_NLPI** SCIPgetNlpis(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns the number of currently available NLPIs */
-SCIP_EXPORT
-int SCIPgetNNlpis(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** sets the priority of an NLPI */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetNlpiPriority(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi,               /**< NLPI */
-   int                   priority            /**< new priority of the NLPI */
-   );
-
-/** @} */
 
 /**@addtogroup PublicNLPMethods
  *
@@ -530,7 +490,7 @@ SCIP_RETCODE SCIPwriteNLP(
    );
 
 /** gets the NLP interface and problem used by the SCIP NLP;
- *  with the NLPI and its problem you can use all of the methods defined in nlpi/nlpi.h;
+ *  with the NLPI and its problem you can use all of the methods defined in scip/scip_nlpi.h;
  *
  *  @warning You have to make sure, that the full internal state of the NLPI does not change or is recovered completely
  *           after the end of the method that uses the NLPI. In particular, if you manipulate the NLP or its solution

@@ -26,11 +26,11 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "nlpi/nlpi_worhp.h"
-#include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
@@ -1933,7 +1933,6 @@ SCIP_RETCODE SCIPincludeNlpSolverWorhp(
    SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    )
 {
-   SCIP_NLPI* nlpi;
    SCIP_NLPIDATA* nlpidata;
    char name[SCIP_MAXSTRLEN];
    int priority;
@@ -1965,7 +1964,7 @@ SCIP_RETCODE SCIPincludeNlpSolverWorhp(
       priority = NLPI_PRIORITY_SQP;
    }
 
-   SCIP_CALL( SCIPnlpiCreate(&nlpi,
+   SCIP_CALL( SCIPincludeNlpi(scip,
          name, NLPI_DESC, priority,
          nlpiCopyWorhp, nlpiFreeWorhp, nlpiGetSolverPointerWorhp,
          nlpiCreateProblemWorhp, nlpiFreeProblemWorhp, nlpiGetProblemPointerWorhp,
@@ -1977,7 +1976,6 @@ SCIP_RETCODE SCIPincludeNlpSolverWorhp(
          nlpiGetWarmstartSizeWorhp, nlpiGetWarmstartMemoWorhp, nlpiSetWarmstartMemoWorhp,
          nlpiGetIntParWorhp, nlpiSetIntParWorhp, nlpiGetRealParWorhp, nlpiSetRealParWorhp, nlpiGetStringParWorhp, nlpiSetStringParWorhp,
          nlpidata) );
-   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
 
    if( useip )  /* TODO lookup whether Worhp info has already been included instead of assuming that worhp-up will be included */
    {

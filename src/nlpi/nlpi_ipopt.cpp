@@ -33,10 +33,10 @@
 
 #include "nlpi/nlpi_ipopt.h"
 
-#include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_nlp.h"
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_message.h"
@@ -1886,14 +1886,13 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_NLPI* nlpi;
    SCIP_NLPIDATA* nlpidata;
 
    assert(scip != NULL);
 
    SCIP_ALLOC( nlpidata = new SCIP_NLPIDATA() );
 
-   SCIP_CALL( SCIPnlpiCreate(&nlpi,
+   SCIP_CALL( SCIPincludeNlpi(scip,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
          nlpiCopyIpopt, nlpiFreeIpopt, nlpiGetSolverPointerIpopt,
          nlpiCreateProblemIpopt, nlpiFreeProblemIpopt, nlpiGetProblemPointerIpopt,
@@ -1906,7 +1905,6 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
          nlpiGetIntParIpopt, nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt,
          nlpiGetStringParIpopt, nlpiSetStringParIpopt,
          nlpidata) );
-   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
 

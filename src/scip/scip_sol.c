@@ -40,7 +40,6 @@
 #endif
 
 #include "blockmemshell/memory.h"
-#include "nlpi/type_nlpi.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
 #include "scip/debug.h"

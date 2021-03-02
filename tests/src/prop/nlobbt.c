@@ -22,7 +22,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "nlpi/nlpioracle.h"
-#include "nlpi/nlpi.h"
 
 #include "include/scip_test.h"
 
@@ -183,7 +182,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseExpr(scip, &expexpr) );
 
    /* create convex NLP relaxation */
-   SCIP_CALL( SCIPnlpiCreateProblem(scip, nlpi, &nlpiprob, "convex_NLP") );
+   SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "convex_NLP") );
    SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, nlrows, 5, nlpiprob, var2idx, NULL, nlscore, -1.5, FALSE, TRUE) );
    cr_assert(nlpiprob != NULL);
 
@@ -214,18 +213,18 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 4), 10.0));
 
    /* set tolerances */
-   SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * 0.01);
-   SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * 0.01);
+   SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * 0.01);
+   SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * 0.01);
 
    /* min x (OPT = -2.60064056606068e-01) */
    objcoefs[0] = 1.0;
    objcoefs[1] = 0.0;
    objinds[0] = 0;
    objinds[1] = 1;
-   SCIP_CALL( SCIPnlpiSetObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
-   SCIP_CALL( SCIPnlpiSolve(scip, nlpi, nlpiprob) );
-   SCIP_CALL( SCIPnlpiGetSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_assert(SCIPisFeasEQ(scip, primal[0], -2.60064056606068e-01));
 
    /* max x (OPT = 5.90606671174385e-01) */
@@ -233,10 +232,10 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    objcoefs[1] = 0.0;
    objinds[0] = 0;
    objinds[1] = 1;
-   SCIP_CALL( SCIPnlpiSetObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
-   SCIP_CALL( SCIPnlpiSolve(scip, nlpi, nlpiprob) );
-   SCIP_CALL( SCIPnlpiGetSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_assert(SCIPisFeasEQ(scip, primal[0], 5.90606671174385e-01));
 
    /* min y (OPT = -1.39009603494603e+00) */
@@ -244,10 +243,10 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    objcoefs[1] = 1.0;
    objinds[0] = 0;
    objinds[1] = 1;
-   SCIP_CALL( SCIPnlpiSetObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
-   SCIP_CALL( SCIPnlpiSolve(scip, nlpi, nlpiprob) );
-   SCIP_CALL( SCIPnlpiGetSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_assert(SCIPisFeasEQ(scip, primal[1], -1.39009603494603e+00));
 
    /* max y (OPT = -5.90909090909091e-01) */
@@ -255,14 +254,14 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    objcoefs[1] = -1.0;
    objinds[0] = 0;
    objinds[1] = 1;
-   SCIP_CALL( SCIPnlpiSetObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
+   SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
-   SCIP_CALL( SCIPnlpiSolve(scip, nlpi, nlpiprob) );
-   SCIP_CALL( SCIPnlpiGetSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_assert(SCIPisFeasEQ(scip, primal[1], -5.90909090909091e-01));
 
    /* free memory */
-   SCIP_CALL( SCIPnlpiFreeProblem(scip, nlpi, &nlpiprob) );
+   SCIP_CALL( SCIPfreeNlpiProblem(scip, nlpi, &nlpiprob) );
    for( i = 4; i >= 0; --i )
    {
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[i]) );

@@ -359,7 +359,7 @@ endif
 # NLP Solver Interfaces and expression interpreter
 #-----------------------------------------------------------------------------
 
-NLPILIBCOBJ	= 	nlpi/nlpi.o nlpi/expr_varidx.o nlpi/nlpioracle.o nlpi/nlpi_all.o
+NLPILIBCOBJ	= 	nlpi/expr_varidx.o nlpi/nlpioracle.o nlpi/nlpi_all.o
 
 NLPILIBCXXOBJ =
 
@@ -759,6 +759,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/misc_rowprep.o \
 			scip/nlhdlr.o \
 			scip/nlp.o \
+			scip/nlpi.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
@@ -793,6 +794,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_mem.o \
 			scip/scip_message.o \
 			scip/scip_nlp.o \
+			scip/scip_nlpi.o \
 			scip/scip_nodesel.o \
 			scip/scip_nonlinear.o \
 			scip/scip_numerics.o \

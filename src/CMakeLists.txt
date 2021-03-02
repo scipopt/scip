@@ -278,6 +278,7 @@ set(scipsources
     scip/misc_rowprep.c
     scip/nlhdlr.c
     scip/nlp.c
+    scip/nlpi.c
     scip/nodesel.c
     scip/paramset.c
     scip/presol.c
@@ -313,6 +314,7 @@ set(scipsources
     scip/scip_mem.c
     scip/scip_message.c
     scip/scip_nlp.c
+    scip/scip_nlpi.c
     scip/scip_nodesel.c
     scip/scip_nonlinear.c
     scip/scip_numerics.c
@@ -382,7 +384,6 @@ set(objscipsources
 )
 
 set(nlpisources
-    nlpi/nlpi.c
     nlpi/nlpi_all.c
     nlpi/nlpioracle.c
     nlpi/expr_varidx.c
@@ -413,13 +414,10 @@ set(dijkstraheaders
 
 set(nlpiheaders
     nlpi/nlpi_all.h
-    nlpi/nlpi.h
     nlpi/nlpi_filtersqp.h
     nlpi/nlpi_ipopt.h
     nlpi/nlpi_worhp.h
     nlpi/nlpioracle.h
-    nlpi/struct_nlpi.h
-    nlpi/type_nlpi.h
     nlpi/expr_varidx.h
     nlpi/exprinterpret.h
     nlpi/type_exprinterpret.h
@@ -626,6 +624,7 @@ set(scipheaders
     scip/nlhdlr_quotient.h
     scip/nlhdlr_soc.h
     scip/nlp.h
+    scip/nlpi.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
     scip/nodesel_dfs.h
@@ -700,6 +699,7 @@ set(scipheaders
     scip/pub_misc_sort.h
     scip/pub_nlhdlr.h
     scip/pub_nlp.h
+    scip/pub_nlpi.h
     scip/pub_nodesel.h
     scip/pub_paramset.h
     scip/pub_presol.h
@@ -770,6 +770,7 @@ set(scipheaders
     scip/scip_mem.h
     scip/scip_message.h
     scip/scip_nlp.h
+    scip/scip_nlpi.h
     scip/scip_nodesel.h
     scip/scip_nonlinear.h
     scip/scip_numerics.h
@@ -845,6 +846,7 @@ set(scipheaders
     scip/struct_misc.h
     scip/struct_nlhdlr.h
     scip/struct_nlp.h
+    scip/struct_nlpi.h
     scip/struct_nodesel.h
     scip/struct_paramset.h
     scip/struct_presol.h
@@ -902,6 +904,7 @@ set(scipheaders
     scip/type_misc.h
     scip/type_nlhdlr.h
     scip/type_nlp.h
+    scip/type_nlpi.h
     scip/type_nodesel.h
     scip/type_paramset.h
     scip/type_presol.h

@@ -32,11 +32,11 @@
 #define __SCIP_SCIP_NONLINEAR_H__
 
 
-#include "nlpi/type_nlpi.h"
 #include "scip/def.h"
 #include "scip/type_lp.h"
 #include "scip/type_misc.h"
 #include "scip/type_nlp.h"
+#include "scip/type_nlpi.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"

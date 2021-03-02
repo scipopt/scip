@@ -30,7 +30,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#include "nlpi/nlpi.h"
+#include "scip/nlpi.h"
 #include "scip/pub_expr.h"
 #include "scip/expr.h"
 #include "nlpi/expr_varidx.h"
@@ -4748,3 +4748,74 @@ SCIP_RETCODE SCIPnlpSolveDive(
    return SCIP_OKAY;
 }
 
+/** creates an NLP statistics structure */
+SCIP_RETCODE SCIPnlpStatisticsCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
+   )
+{
+   assert(blkmem != NULL);
+   assert(statistics != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, statistics) );
+
+   (*statistics)->niterations = -1;
+   (*statistics)->totaltime = -1.0;
+
+   return SCIP_OKAY;
+}
+
+/** frees an NLP statistics structure */
+void SCIPnlpStatisticsFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
+   )
+{
+   assert(blkmem != NULL);
+   assert(statistics != NULL);
+   assert(*statistics != NULL);
+
+   BMSfreeBlockMemory(blkmem, statistics);
+
+   assert(*statistics == NULL);
+}
+
+/** gets the number of iterations from an NLP statistics structure */
+int SCIPnlpStatisticsGetNIterations(
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
+   )
+{
+   assert(statistics != NULL);
+
+   return statistics->niterations;
+}
+
+/** gets the total time from an NLP statistics structure */
+SCIP_Real SCIPnlpStatisticsGetTotalTime(
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
+   )
+{
+   assert(statistics != NULL);
+
+   return statistics->totaltime;
+}
+
+/** sets the number of iterations in an NLP statistics structure */
+void SCIPnlpStatisticsSetNIterations(
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   int                   niterations         /**< number of iterations to store */
+   )
+{
+   assert(statistics != NULL);
+   statistics->niterations = niterations;
+}
+
+/** sets the total time in an NLP statistics structure */
+void SCIPnlpStatisticsSetTotalTime(
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   SCIP_Real             totaltime           /**< solution time to store */
+   )
+{
+   assert(statistics != NULL);
+   statistics->totaltime = totaltime;
+}

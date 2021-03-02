@@ -36,7 +36,6 @@
 #define _USE_MATH_DEFINES   /* to get M_E on Windows */  /*lint !750 */
 
 #include "blockmemshell/memory.h"
-#include "nlpi/nlpi.h"
 #include "nlpi/expr_varidx.h"
 #include "scip/scip_expr.h"
 #include "scip/pub_expr.h"
@@ -46,6 +45,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_nlp.h"
 #include "scip/pub_var.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nonlinear.h"
@@ -1286,7 +1286,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    }
 
    /* add variables */
-   SCIP_CALL( SCIPnlpiAddVars(scip, nlpi, nlpiprob, nvars, lbs, ubs, varnames) );
+   SCIP_CALL( SCIPaddNlpiVars(scip, nlpi, nlpiprob, nvars, lbs, ubs, varnames) );
    SCIPfreeBufferArray(scip, &varnames);
    SCIPfreeBufferArray(scip, &ubs);
    SCIPfreeBufferArray(scip, &lbs);
@@ -1296,7 +1296,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    {
       if( nobjinds > 0 )
       {
-         SCIP_CALL( SCIPnlpiSetObjective(scip, nlpi, nlpiprob, nobjinds, objinds, objvals, NULL, 0.0) );
+         SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, nobjinds, objinds, objvals, NULL, 0.0) );
       }
 
       SCIPfreeBufferArray(scip, &objinds);
@@ -1435,7 +1435,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    assert(nconss > 0);
 
    /* pass all constraint information to nlpi */
-   SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nlpiprob, nconss, lhss, rhss, nlininds, lininds, linvals,
+   SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, nconss, lhss, rhss, nlininds, lininds, linvals,
          exprs, names) );
 
    if( it != NULL )
@@ -1509,7 +1509,7 @@ SCIP_RETCODE SCIPupdateNlpiProb(
       assert(inds[i] >= 0 && inds[i] < nlpinvars);
    }
 
-   SCIP_CALL( SCIPnlpiChgVarBounds(scip, nlpi, nlpiprob, nlpinvars, inds, lbs, ubs) );
+   SCIP_CALL( SCIPchgNlpiVarBounds(scip, nlpi, nlpiprob, nlpinvars, inds, lbs, ubs) );
 
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &ubs);
@@ -1520,7 +1520,7 @@ SCIP_RETCODE SCIPupdateNlpiProb(
    rhs = cutoffbound;
    i = 0;
 
-   SCIP_CALL( SCIPnlpiChgConsSides(scip, nlpi, nlpiprob, 1, &i, &lhs, &rhs) );
+   SCIP_CALL( SCIPchgNlpiConsSides(scip, nlpi, nlpiprob, 1, &i, &lhs, &rhs) );
 
    return SCIP_OKAY;
 }
@@ -1591,7 +1591,7 @@ SCIP_RETCODE SCIPaddNlpiProbRows(
    }
 
    /* pass all linear rows to the nlpi */
-   SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nlpiprob, nrows, lhss, rhss, nlininds, lininds, linvals,
+   SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, nrows, lhss, rhss, nlininds, lininds, linvals,
          NULL, names) );
 
    /* free memory */
@@ -1696,7 +1696,7 @@ SCIP_RETCODE SCIPaddNlpiProbNlRows(
    }
 
    /* pass all rows to the nlpi */
-   SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nlpiprob, nnlrows, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
+   SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, nnlrows, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
 
    /* free memory */
    for( i = nnlrows - 1; i >= 0; --i )
