@@ -275,7 +275,8 @@ static
 SCIP_RETCODE dpsolverSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph of sub-problem */
-   DPSOLVER*             dpsolver            /**< solver */
+   DPSOLVER*             dpsolver,           /**< solver */
+   SCIP_Bool*            wasSolved           /**< was problem solved to optimality? */
 )
 {
    // todo compress?
@@ -283,7 +284,7 @@ SCIP_RETCODE dpsolverSolve(
 
    SCIP_CALL( graph_init_csr(scip, g) );
 
-   SCIP_CALL( dpterms_coreSolve(scip, g, dpsolver) );
+   SCIP_CALL( dpterms_coreSolve(scip, g, dpsolver, wasSolved) );
 
    graph_free_csr(scip, g);
 
@@ -362,7 +363,8 @@ void dpsolverFree(
 SCIP_RETCODE dpterms_solve(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph of sub-problem */
-   int*                  solution            /**< was sub-problem solved to optimality? */
+   int*                  solution,           /**< optimal solution (out) */
+   SCIP_Bool*            wasSolved           /**< was problem solved to optimality? */
 )
 {
    DPSOLVER* dpsolver;
@@ -371,12 +373,15 @@ SCIP_RETCODE dpterms_solve(
 
    SCIP_CALL( dpsolverInit(scip, graph, &dpsolver) );
 
-   SCIP_CALL( dpsolverSolve(scip, graph, dpsolver) );
-   SCIP_CALL( dpsolverGetSolution(scip, graph, dpsolver, solution) );
+   SCIP_CALL( dpsolverSolve(scip, graph, dpsolver, wasSolved) );
+
+   if( *wasSolved )
+   {
+      SCIP_CALL( dpsolverGetSolution(scip, graph, dpsolver, solution) );
+      assert(solstp_isValid(scip, graph, solution));
+   }
 
    dpsolverFree(scip, &dpsolver);
-
-   assert(solstp_isValid(scip, graph, solution));
 
    return SCIP_OKAY;
 }

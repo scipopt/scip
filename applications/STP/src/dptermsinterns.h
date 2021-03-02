@@ -173,7 +173,7 @@ extern STP_Vectype(int) dpterms_streeCollectIntersects(SCIP*, STP_Bitset, STP_Bi
 
 /* dpterms_core.c
  */
-extern SCIP_RETCODE     dpterms_coreSolve(SCIP*, GRAPH*, DPSOLVER*);
+extern SCIP_RETCODE     dpterms_coreSolve(SCIP*, GRAPH*, DPSOLVER*, SCIP_Bool*);
 
 
 

@@ -53,7 +53,8 @@ static
 SCIP_RETCODE solveWithDpTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
-   SCIP_Real*            obj
+   SCIP_Real*            obj,
+   SCIP_Bool*            wasSolved
    )
 {
    int* soledges;
@@ -63,9 +64,18 @@ SCIP_RETCODE solveWithDpTerms(
 
    printf("solving problem with DP... \n");
 
-   SCIP_CALL( dpterms_solve(scip, graph, soledges) );
+   SCIP_CALL( dpterms_solve(scip, graph, soledges, wasSolved) );
+
+   if( !(*wasSolved) )
+   {
+      printf("...aborted \n");
+
+      SCIPfreeMemoryArray(scip, &soledges);
+
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( solstp_addSolToProb(scip, graph, soledges, NULL, &success) );
-   assert(success);
 
    printf("...finished \n");
 
@@ -125,6 +135,7 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
 {  /*lint --e{715}*/
    GRAPH* graph;
    SCIP_RELAXDATA* const relaxdata = SCIPrelaxGetData(relax);
+   SCIP_Bool success;
 
    *lowerbound = -SCIPinfinity(scip);
    *result = SCIP_DIDNOTRUN;
@@ -132,10 +143,18 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
    if( !relaxdata->isActive )
       return SCIP_OKAY;
 
+   *result = SCIP_DIDNOTFIND;
+
    graph = SCIPprobdataGetGraph2(scip);
    assert(graph);
 
-   SCIP_CALL( solveWithDpTerms(scip, graph, lowerbound) );
+   SCIP_CALL( solveWithDpTerms(scip, graph, lowerbound, &success) );
+
+   if( !success )
+   {
+      assert(SCIPisStopped(scip));
+      return SCIP_OKAY;
+   }
 
    *result = SCIP_SUCCESS;
 
@@ -163,7 +182,7 @@ SCIP_Bool SCIPStpDpRelaxIsPromising(
    assert(graph);
    assert(!dpterms_isPromising(graph)); // todo!
 
-
+  // return TRUE;
    return dpterms_isPromising(graph);
 }
 

@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 
-extern SCIP_RETCODE     dpterms_solve(SCIP*, GRAPH*, int*);
+extern SCIP_RETCODE     dpterms_solve(SCIP*, GRAPH*, int*, SCIP_Bool*);
 extern SCIP_Bool        dpterms_isPromising(const GRAPH*);
 
 

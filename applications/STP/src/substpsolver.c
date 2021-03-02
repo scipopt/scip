@@ -389,7 +389,7 @@ SCIP_RETCODE substpsolver_solve(
       printf("solve! \n");
 
 
-      SCIP_CALL( dpterms_solve(scip, substp->subgraph, substp->dpsubsol) );
+      SCIP_CALL( dpterms_solve(scip, substp->subgraph, substp->dpsubsol, success) );
 
       assert(0);
 

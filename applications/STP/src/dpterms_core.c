@@ -1223,16 +1223,19 @@ void dpiterFinalizeSol(
 SCIP_RETCODE dpterms_coreSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph */
-   DPSOLVER*             dpsolver            /**< solver */
+   DPSOLVER*             dpsolver,           /**< solver */
+   SCIP_Bool*            wasSolved           /**< was problem solved to optimality? */
 )
 {
    DPITER* dpiterator;
    STP_PQ* const solpqueue = dpsolver->solpqueue;
    DPMISC* const dpmisc = dpsolver->dpmisc;
 
-   assert(scip && graph && dpsolver);
+   assert(scip && graph && dpsolver && wasSolved);
    assert(solpqueue && dpsolver->dpgraph && dpsolver->soltree_root && dpsolver->dpstree && dpmisc);
    assert(!stpprioqueue_isClean(solpqueue));
+
+   *wasSolved = TRUE;
 
    SCIP_CALL( dpiterInit(scip, graph, &dpiterator) );
 
@@ -1256,12 +1259,21 @@ SCIP_RETCODE dpterms_coreSolve(
       SCIP_CALL( subtreesAddNew(scip, graph, dpsolver, dpiterator) );
 
       dpiterFinalizeSol(scip, dpiterator);
+
+      if( dpmisc->global_size % 16 == 0 && SCIPisStopped(scip) )
+      {
+         *wasSolved = FALSE;
+         break;
+      }
    }
 
    assert(!dpsolver->solnodes);
 
-   SCIPdebugMessage("OBJ=%f \n", dpmisc->opt_obj);
-   dpsolver->solnodes = getSolnodesFinal(scip, dpmisc, dpiterator);
+   if( *wasSolved )
+   {
+      SCIPdebugMessage("OBJ=%f \n", dpmisc->opt_obj);
+      dpsolver->solnodes = getSolnodesFinal(scip, dpmisc, dpiterator);
+   }
 
    dpiterFree(scip, &dpiterator);
 
