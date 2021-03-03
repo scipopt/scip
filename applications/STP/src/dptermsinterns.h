@@ -165,6 +165,8 @@ void dpterms_dpsubsolFree(
 
 /* dpterms_util.c
  */
+extern SCIP_Bool        dpterms_intersectsEqualNaive(SCIP*, STP_Bitset, STP_Bitset, STP_Vectype(int), DPMISC*);
+extern STP_Vectype(int) dpterms_collectIntersectsNaive(SCIP*, STP_Bitset, STP_Bitset, DPMISC*);
 extern SCIP_RETCODE     dpterms_streeInit(SCIP*, int, int, DPSTREE**);
 extern void             dpterms_streeFree(SCIP*, DPSTREE**);
 extern SCIP_RETCODE     dpterms_streeInsert(SCIP*, STP_Bitset, STP_Bitset, int64_t, DPSTREE*);

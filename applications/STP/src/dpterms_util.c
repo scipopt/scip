@@ -329,6 +329,100 @@ void streeCollectIntersects(
  * Interface methods
  */
 
+
+/** for debugging: checks whether given intersection is equal to naively computed one */
+SCIP_Bool dpterms_intersectsEqualNaive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   STP_Bitset            termsmark,          /**< terminal mark */
+   STP_Bitset            rootsmark,          /**< marks roots of extension trees */
+   STP_Vectype(int)      intersects,         /**< intersection indices */
+   DPMISC*               dpmisc              /**< MISC DP data */
+)
+{
+   STP_Vectype(int) intersects_naive = dpterms_collectIntersectsNaive(scip, termsmark, rootsmark, dpmisc);
+   SCIP_Bool isEqual = TRUE;
+
+   if( StpVecGetSize(intersects_naive) != StpVecGetSize(intersects) )
+   {
+      isEqual = FALSE;
+   }
+   else
+   {
+      const int ninds = StpVecGetSize(intersects);
+      int* intersects_org;
+
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &intersects_org, ninds) );
+      BMScopyMemoryArray(intersects_org, intersects, ninds);
+
+      SCIPsortDownInt(intersects_org, ninds);
+      SCIPsortDownInt(intersects_naive, ninds);
+
+      for( int i = 0; i < ninds; i++ )
+      {
+         if( intersects_org[i] != intersects_naive[i] )
+         {
+            isEqual = FALSE;
+            break;
+         }
+      }
+
+      SCIPfreeMemoryArray(scip, &intersects_org);
+   }
+
+
+   StpVecFree(scip, intersects_naive);
+
+   return isEqual;
+}
+
+
+/** gets indices of intersections by using naive computation */
+STP_Vectype(int) dpterms_collectIntersectsNaive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   STP_Bitset            termsmark,          /**< terminal mark */
+   STP_Bitset            rootsmark,          /**< marks roots of extension trees */
+   DPMISC*               dpmisc              /**< MISC DP data */
+)
+{
+   STP_Vectype(int) intersects = NULL;
+   STP_Vectype(SOLTRACE) global_traces = dpmisc->global_traces;
+   STP_Vectype(STP_Bitset) global_termbits = dpmisc->global_termbits;
+   STP_Vectype(int) global_starts = dpmisc->global_starts;
+   const int nsets = StpVecGetSize(global_termbits);
+
+   for( int i = 0; i < nsets; i++ )
+   {
+      STP_Bitset termsmark_i = global_termbits[i];
+      assert(stpbitset_setsAreCompatible(termsmark_i, termsmark));
+
+      if( !stpbitset_haveIntersection(termsmark_i, termsmark) )
+      {
+         SOLTRACE* soltraces_i = &(global_traces[global_starts[i]]);
+         const int nsoltraces = global_starts[i + 1] - global_starts[i];
+         SCIP_Bool hasIntersection = FALSE;
+
+         assert(nsoltraces >= 0);
+
+         for( int j = 0; j < nsoltraces; j++ )
+         {
+            const int root = soltraces_i[j].root;
+
+            if( stpbitset_bitIsTrue(rootsmark, root) )
+            {
+               hasIntersection = TRUE;
+               break;
+            }
+         }
+
+         if( hasIntersection )
+            StpVecPushBack(scip, intersects, i);
+      }
+   }
+
+   return intersects;
+}
+
+
 /** inserts
  *  NOTE: dps-tree takes ownership of bitsets! */
 SCIP_RETCODE dpterms_streeInsert(
