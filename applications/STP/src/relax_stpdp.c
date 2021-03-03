@@ -143,8 +143,6 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
    if( !relaxdata->isActive )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
-
    graph = SCIPprobdataGetGraph2(scip);
    assert(graph);
 

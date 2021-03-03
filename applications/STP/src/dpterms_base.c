@@ -246,7 +246,7 @@ void dpsolverFreeData(
 {
    assert(dpsolver->dpgraph && dpsolver->dpstree && dpsolver->solpqueue);
    assert(dpsolver->dheap);
-   assert(stpprioqueue_isClean(dpsolver->solpqueue));
+   assert(SCIPisStopped(scip) || stpprioqueue_isClean(dpsolver->solpqueue));
 
    StpVecFree(scip, dpsolver->solnodes);
 
