@@ -32,11 +32,11 @@
 #define __SCIP_SCIP_NONLINEAR_H__
 
 
-#include "nlpi/type_nlpi.h"
 #include "scip/def.h"
 #include "scip/type_lp.h"
 #include "scip/type_misc.h"
 #include "scip/type_nlp.h"
+#include "scip/type_nlpi.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
@@ -250,6 +250,18 @@ SCIP_RETCODE SCIPaddNlpiProbRows(
                                               *   problem */
    SCIP_ROW**            rows,               /**< rows to add */
    int                   nrows               /**< total number of rows to add */
+   );
+
+/** adds nonlinear rows to the NLP relaxation */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddNlpiProbNlRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_NLROW**          nlrows,             /**< rows to add */
+   int                   nnlrows             /**< total number of rows to add */
    );
 
 /**@} */

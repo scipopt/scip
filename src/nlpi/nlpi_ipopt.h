@@ -25,7 +25,7 @@
 #ifndef __SCIP_NLPI_IPOPT_H__
 #define __SCIP_NLPI_IPOPT_H__
 
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,13 +36,10 @@ extern "C" {
  * @{
  */
 
-/** create solver interface for Ipopt solver
- * sets *nlpi to NULL if Ipopt is not available
- */
+/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateNlpSolverIpopt(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+SCIP_RETCODE SCIPincludeNlpSolverIpopt(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets string that identifies Ipopt (version number) */

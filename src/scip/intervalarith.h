@@ -740,6 +740,27 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
    SCIP_INTERVAL         ybnds               /**< bounds on y */
    );
 
+/** propagates a weighted sum of intervals in a given interval
+ *
+ * Given constant + sum weights_i operands_i \in rhs,
+ * computes possibly tighter interval for each term.
+ *
+ * @attention valid values are returned in resultants only if any tightening has been found and no empty interval, that is, function returns with non-zero and *infeasible == FALSE
+ *
+ * @return Number of terms for which resulting interval is smaller than operand interval.
+ */
+SCIP_EXPORT
+int SCIPintervalPropagateWeightedSum(
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
+   int                   noperands,          /**< number of operands (intervals) to propagate */
+   SCIP_INTERVAL*        operands,           /**< intervals to propagate */
+   SCIP_Real*            weights,            /**< weights of intervals in sum */
+   SCIP_Real             constant,           /**< constant in sum */
+   SCIP_INTERVAL         rhs,                /**< right-hand-side interval */
+   SCIP_INTERVAL*        resultants,         /**< array to store propagated intervals, if any reduction is found at all (check return code and *infeasible) */
+   SCIP_Bool*            infeasible          /**< buffer to store if propagation produced empty interval */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -20,12 +20,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr.c"
+#include "scip/scipdefplugins.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/sepastore.h"
-#include "scip/lp.h"
 #include "scip/scip.h"
-#include "scip/var.h"
-#include "scip/struct_lp.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_stat.h"
 #include "scip/sepa_rlt.c"
@@ -41,7 +39,7 @@ static SCIP_VAR* x4;
 static SCIP_VAR* b1;
 static SCIP_VAR* b2;
 
-/* creates scip, problem, includes expression constraint handler, creates and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
 {
@@ -54,14 +52,11 @@ void setup(void)
 
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   /* includes expression handlers as well as nonlinear constraint handler and rlt separator */
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* include rlt separator */
-   SCIP_CALL( SCIPincludeSepaRlt(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(conshdlr != NULL);
 
    /* get rlt separator */
@@ -85,6 +80,9 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, b1o) );
    SCIP_CALL( SCIPaddVar(scip, b2o) );
 
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
    /* get SCIP into SOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
@@ -157,20 +155,21 @@ Test(separation, sepadata, .init = setup, .fini = teardown, .description = "test
    ADJACENTVARDATA* adjvardata;
 
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
-   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->conshdlr = conshdlr;
    cr_assert(sepadata->conshdlr != NULL);
 
    /* create a cons with some bilinear expressions */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <t_x1>*<t_x2> + <t_x1>*<t_x3> + <t_x4>*<t_x2> + <t_x4>^2 <= 1", TRUE, TRUE,
-                 TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[nonlinear] <test>: <t_x1>*<t_x2> + <t_x1>*<t_x3> + <t_x4>*<t_x2> + <t_x4>^2 <= 1",
+                 TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* adds locks */
 
    /* creates auxvars and creates disaggregation variables and row */
-   SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
+   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
+   cr_assert_not(infeasible);
 
-   SCIP_CALL( SCIPcollectConsExprBilinTerms(scip, conshdlr, &cons, 1) );
+   SCIP_CALL( SCIPcollectBilinTermsNonlinear(scip, conshdlr, &cons, 1) );
 
    SCIP_CALL( createSepaData(scip, sepadata) );
 
@@ -238,6 +237,7 @@ Test(separation, projection, .init = setup, .fini = teardown, .description = "te
    SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x1, 4.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x2, -7.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x3, 1.0) );
+   cr_assert(SCIProwGetNNonz(rows[0]) == 3);
 
    /* specify solution (only x3 is not at bound) */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -245,7 +245,6 @@ Test(separation, projection, .init = setup, .fini = teardown, .description = "te
    vars[1] = x2; vals[1] = -6.0;
    vars[2] = x3; vals[2] = 2.0;
    SCIP_CALL( SCIPsetSolVals(scip, sol, 3, vars, vals) );
-   cr_assert(SCIProwGetNNonz(rows[0]) == 3);
 
    SCIP_CALL( createProjRows(scip, rows, 1, sol, &projrows, TRUE, &allcst) );
 
@@ -298,7 +297,7 @@ Test(separation, compute_projcut, .init = setup, .fini = teardown, .description 
 
    /* fill in sepadata */
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
-   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->conshdlr = conshdlr;
    cr_assert(sepadata->conshdlr != NULL);
    sepadata->maxusedvars = 4;
 
@@ -360,7 +359,7 @@ Test(separation, compute_clique_cuts, .init = setup, .fini = teardown, .descript
 
    /* fill in sepadata */
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
-   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->conshdlr = conshdlr;
    cr_assert(sepadata->conshdlr != NULL);
 
    /*add a clique (1-b1) + (1-b2) <= 1*/

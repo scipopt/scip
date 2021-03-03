@@ -24,7 +24,7 @@
 #ifndef __SCIP_NLPI_ALL_H__
 #define __SCIP_NLPI_ALL_H__
 
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,13 +35,13 @@ extern "C" {
  * @{
  */
 
-/** create solver interface for All solver */
+/** create solver interface for All solver and includes it into SCIP, if at least 2 NLPIs have already been included
+ *
+ * this should be called after all other NLP solver interfaces have been included
+ */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateNlpSolverAll(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
-   SCIP_NLPI**           nlpis,              /**< array containing existing nlpis */
-   int                   nnlpis              /**< total number of nlpis */
+SCIP_RETCODE SCIPincludeNlpSolverAll(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */

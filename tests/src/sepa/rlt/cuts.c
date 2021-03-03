@@ -21,8 +21,8 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr.c"
+#include "scip/scipdefplugins.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/sepa_rlt.c"
 #include "include/scip_test.h"
 
@@ -30,7 +30,7 @@ static SCIP* scip;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_SEPA* sepa;
 static SCIP_SEPADATA* sepadata;
-static SCIP_CONSEXPR_EXPR* expr;
+static SCIP_EXPR* expr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
@@ -51,20 +51,19 @@ void setup(void)
    SCIP_VAR* zo;
    SCIP_Bool success;
    SCIP_Bool infeasible;
-   const char* input1 = "[expr] <test1>: (<x>[C])^2 + <x>[C] * <y>[C] <= 4;";
-   const char* input2 = "[expr] <test2>: abs(<y>[C] * <x>[C]) * (log(<x>[C] * <z>[C]))^2 <= 1;";
+   const char* input1 = "[nonlinear] <test1>: (<x>[C])^2 + <x>[C] * <y>[C] <= 4;";
+   const char* input2 = "[nonlinear] <test2>: abs(<y>[C] * <x>[C]) * (log(<x>[C] * <z>[C]))^2 <= 1;";
 
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   /* includes expression handlers as well as nonlinear constraint handler and rlt separator */
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* get expr conshdlr*/
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr*/
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert(conshdlr != NULL);
 
-   /* include separator and get it */
-   SCIP_CALL( SCIPincludeSepaRlt(scip) );
+   /* get separator */
    sepa = SCIPfindSepa(scip, "rlt");
    cr_assert(sepa != NULL);
 
@@ -90,6 +89,9 @@ void setup(void)
    SCIP_CALL( SCIPaddCons(scip, conss[1]) );
    SCIP_CALL( SCIPreleaseCons(scip, &conss[1]) );
    SCIP_CALL( SCIPreleaseCons(scip, &conss[0]) );
+
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* go to the solving stage (calls detectnlhdlrs) */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
@@ -121,15 +123,15 @@ void setup(void)
    SCIP_CALL( SCIPreleaseVar(scip, &zo) );
 
    /* collect auxvars */
-   expr = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[0])->expr;
-   xx = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
-   xy = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[1]);
-   expr = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[1])->expr;
-   prodvar = SCIPgetConsExprExprAuxVar(expr);
-   absvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
-   powvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[1]);
-   logvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(expr)[1])[0]);
-   xz = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(SCIPgetConsExprExprChildren(expr)[1])[0])[0]);
+   expr = SCIPgetExprConsNonlinear(SCIPconshdlrGetConss(conshdlr)[0]);
+   xx = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[0]);
+   xy = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[1]);
+   expr = SCIPgetExprConsNonlinear(SCIPconshdlrGetConss(conshdlr)[1]);
+   prodvar = SCIPgetExprAuxVarNonlinear(expr);
+   absvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[0]);
+   powvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[1]);
+   logvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(SCIPexprGetChildren(expr)[1])[0]);
+   xz = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(SCIPexprGetChildren(SCIPexprGetChildren(expr)[1])[0])[0]);
 }
 
 static
@@ -185,28 +187,28 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
 Test(cuts, collect)
 {
    /* check original variables */
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, x)->aux.var, xx);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, y)->aux.var, xy);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, z)->aux.var, xz);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, x)->aux.var, xy);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, x)->aux.var, xz);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, x, x)->aux.var, xx);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, x, y)->aux.var, xy);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, x, z)->aux.var, xz);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, y, x)->aux.var, xy);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, z, x)->aux.var, xz);
 
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, z), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, y), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, y), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, z), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, y, z), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, z, y), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, y, y), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, z, z), NULL);
 
    /* check auxiliary variables for second constraint */
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, logvar, logvar)->aux.var, powvar);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, powvar)->aux.var, prodvar);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, prodvar), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, absvar), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, powvar), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, logvar), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, absvar), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, logvar), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, powvar, powvar), NULL);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, powvar, logvar), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, logvar, logvar)->aux.var, powvar);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, absvar, powvar)->aux.var, prodvar);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, prodvar, prodvar), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, prodvar, absvar), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, prodvar, powvar), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, prodvar, logvar), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, absvar, absvar), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, absvar, logvar), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, powvar, powvar), NULL);
+   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, powvar, logvar), NULL);
 }
 
 /* computes and checks cuts */

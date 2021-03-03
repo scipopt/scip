@@ -103,11 +103,13 @@ struct NlrowAggr
    SCIP_VAR**            linvars;            /**< linear variables */
    SCIP_Real*            lincoefs;           /**< linear coefficients */
    int                   nlinvars;           /**< number of linear variables */
+   int                   linvarssize;        /**< size of linvars array */
 
    SCIP_VAR**            quadvars;           /**< quadratic variables */
    int*                  quadvar2aggr;       /**< stores in which edge-concave aggregation the i-th quadratic variable
                                               *   is contained (< 0: in no edge-concave aggregation) */
    int                   nquadvars;          /**< number of quadratic variables */
+   int                   quadvarssize;       /**< size of quadvars array */
 
    SCIP_VAR**            remtermvars1;       /**< first quadratic variable of remaining bilinear terms */
    SCIP_VAR**            remtermvars2;       /**< second quadratic variable of remaining bilinear terms */
@@ -311,17 +313,18 @@ SCIP_RETCODE nlrowaggrStoreLinearTerms(
    assert(lincoefs != NULL || nlinvars == 0);
    assert(nlinvars >= 0);
 
-   nlrowaggr->nlinvars = nlinvars;
+   nlrowaggr->nlinvars = 0;
+   nlrowaggr->linvarssize = 0;
    nlrowaggr->linvars = NULL;
    nlrowaggr->lincoefs = NULL;
 
-   if( nlinvars > 0 )
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlrowaggr->linvars, nlinvars) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlrowaggr->lincoefs, nlinvars) );
-      BMScopyMemoryArray(nlrowaggr->linvars, linvars, nlinvars);
-      BMScopyMemoryArray(nlrowaggr->lincoefs, lincoefs, nlinvars);
-   }
+   if( nlinvars == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &nlrowaggr->linvars, linvars, nlinvars) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &nlrowaggr->lincoefs, lincoefs, nlinvars) );
+   nlrowaggr->nlinvars = nlinvars;
+   nlrowaggr->linvarssize = nlinvars;
 
    /* if we have a nlrow of the form g(x) >= lhs, multiply every coefficient by -1 */
    if( !nlrowaggr->rhsaggr )
@@ -335,6 +338,40 @@ SCIP_RETCODE nlrowaggrStoreLinearTerms(
    return SCIP_OKAY;
 }
 
+/** adds linear term to a given nonlinear row aggregation */
+static
+SCIP_RETCODE nlrowaggrAddLinearTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROWAGGR*       nlrowaggr,          /**< nonlinear row aggregation */
+   SCIP_VAR*             linvar,             /**< linear variable */
+   SCIP_Real             lincoef             /**< coefficient */
+   )
+{
+   assert(scip != NULL);
+   assert(nlrowaggr != NULL);
+   assert(linvar != NULL);
+
+   if( nlrowaggr->nlinvars == nlrowaggr->linvarssize )
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, nlrowaggr->linvarssize+1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlrowaggr->linvars, nlrowaggr->linvarssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlrowaggr->lincoefs, nlrowaggr->linvarssize, newsize) );
+      nlrowaggr->linvarssize = newsize;
+   }
+   assert(nlrowaggr->linvarssize > nlrowaggr->nlinvars);
+
+   /* if we have a nlrow of the form g(x) >= lhs, multiply coefficient by -1 */
+   if( !nlrowaggr->rhsaggr )
+      lincoef = -lincoef;
+
+   nlrowaggr->linvars[nlrowaggr->nlinvars] = linvar;
+   nlrowaggr->lincoefs[nlrowaggr->nlinvars] = lincoef;
+   ++nlrowaggr->nlinvars;
+
+   return SCIP_OKAY;
+}
+
+#ifdef SCIP_DISABLED_CODE
 /** stores quadratic variables in a given nonlinear row aggregation */
 static
 SCIP_RETCODE nlrowaggrStoreQuadraticVars(
@@ -349,9 +386,30 @@ SCIP_RETCODE nlrowaggrStoreQuadraticVars(
    assert(quadvars != NULL);
    assert(nquadvars > 0);
 
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &nlrowaggr->quadvars, quadvars, nquadvars) );
    nlrowaggr->nquadvars = nquadvars;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlrowaggr->quadvars, nquadvars) );
-   BMScopyMemoryArray(nlrowaggr->quadvars, quadvars, nquadvars);
+   nlrowaggr->quadvarssize = nquadvars;
+
+   return SCIP_OKAY;
+}
+#endif
+
+/** adds quadratic variable to a given nonlinear row aggregation */
+static
+SCIP_RETCODE nlrowaggrAddQuadraticVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROWAGGR*       nlrowaggr,          /**< nonlinear row aggregation */
+   SCIP_VAR*             quadvar             /**< quadratic variable */
+   )
+{
+   assert(scip != NULL);
+   assert(nlrowaggr != NULL);
+   assert(quadvar != NULL);
+
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &nlrowaggr->quadvars, &nlrowaggr->quadvarssize, nlrowaggr->nquadvars+1) );
+   assert(nlrowaggr->quadvarssize > nlrowaggr->nquadvars);
+   nlrowaggr->quadvars[nlrowaggr->nquadvars] = quadvar;
+   ++nlrowaggr->nquadvars;
 
    return SCIP_OKAY;
 }
@@ -395,9 +453,9 @@ SCIP_RETCODE nlrowaggrCreate(
                                               *   lhs <= g(x) (FALSE) */
    )
 {
+   SCIP_EXPR* expr;
    int* aggrnvars;  /* count the number of variables in each e.c. aggregations */
    int* aggrnterms; /* count the number of bilinear terms in each e.c. aggregations */
-   int nquadelems;
    int nquadvars;
    int nremterms;
    int i;
@@ -408,73 +466,97 @@ SCIP_RETCODE nlrowaggrCreate(
    assert(quadvar2aggr != NULL);
    assert(nfound > 0);
 
-   nquadelems = SCIPnlrowGetNQuadElems(nlrow);
-   nquadvars = SCIPnlrowGetNQuadVars(nlrow);
+   expr = SCIPnlrowGetExpr(nlrow);
+   SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadvars, NULL, NULL, NULL);
    nremterms = 0;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggrnvars, nfound) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggrnterms, nfound) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &aggrnvars, nfound) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &aggrnterms, nfound) );
 
    /* create an empty nonlinear row aggregation */
    SCIP_CALL( SCIPallocBlockMemory(scip, nlrowaggr) );
    (*nlrowaggr)->nlrow = nlrow;
    (*nlrowaggr)->rhsaggr = rhsaggr;
-   (*nlrowaggr)->nquadvars = nquadvars;
    (*nlrowaggr)->rhs = rhsaggr ? SCIPnlrowGetRhs(nlrow) : -SCIPnlrowGetLhs(nlrow);
    (*nlrowaggr)->constant = rhsaggr ? SCIPnlrowGetConstant(nlrow) : -SCIPnlrowGetConstant(nlrow);
 
    (*nlrowaggr)->quadvars = NULL;
+   (*nlrowaggr)->nquadvars = 0;
+   (*nlrowaggr)->quadvarssize = 0;
    (*nlrowaggr)->quadvar2aggr = NULL;
    (*nlrowaggr)->remtermcoefs = NULL;
    (*nlrowaggr)->remtermvars1 = NULL;
    (*nlrowaggr)->remtermvars2 = NULL;
-   (*nlrowaggr)->nquadvars = 0;
    (*nlrowaggr)->nremterms = 0;
 
    /* copy quadvar2aggr array */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlrowaggr)->quadvar2aggr, nquadvars) );
-   BMScopyMemoryArray((*nlrowaggr)->quadvar2aggr, quadvar2aggr, nquadvars);
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*nlrowaggr)->quadvar2aggr, quadvar2aggr, nquadvars) );
 
    /* store all linear terms */
    SCIP_CALL( nlrowaggrStoreLinearTerms(scip, *nlrowaggr, SCIPnlrowGetLinearVars(nlrow), SCIPnlrowGetLinearCoefs(nlrow),
          SCIPnlrowGetNLinearVars(nlrow)) );
 
-   /* store all quadratic variables */
-   SCIP_CALL( nlrowaggrStoreQuadraticVars(scip, *nlrowaggr, SCIPnlrowGetQuadVars(nlrow), SCIPnlrowGetNQuadVars(nlrow)) );
-   assert((*nlrowaggr)->nquadvars == nquadvars);
-
-   for( i = 0; i < nfound; ++i )
-   {
-      aggrnvars[i] = 0;
-      aggrnterms[i] = 0;
-   }
-
+   /* store all quadratic variables and additional linear terms */
    /* count the number of variables in each e.c. aggregation */
+   /* count the number of square and bilinear terms in each e.c. aggregation */
    for( i = 0; i < nquadvars; ++i )
    {
+      SCIP_EXPR* qterm;
+      SCIP_Real lincoef;
+      SCIP_Real sqrcoef;
+      int idx1;
+      int nadjbilin;
+      int* adjbilin;
+      int j;
+
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, &lincoef, &sqrcoef, &nadjbilin, &adjbilin, NULL);
+      assert(SCIPisExprVar(scip, qterm));
+
+      SCIP_CALL( nlrowaggrAddQuadraticVar(scip, *nlrowaggr, SCIPgetVarExprVar(qterm)) );
+
+      if( lincoef != 0.0 )
+      {
+         SCIP_CALL( nlrowaggrAddLinearTerm(scip, *nlrowaggr, SCIPgetVarExprVar(qterm), lincoef) );
+      }
+
       if( quadvar2aggr[i] >= 0)
          ++aggrnvars[ quadvar2aggr[i] ];
-   }
 
-   /* count the number of bilinear terms in each e.c. aggregation */
-   for( i = 0; i < nquadelems; ++i )
-   {
-      SCIP_QUADELEM* quadelem;
-      SCIP_Real coef;
-      int idx1;
-      int idx2;
+      idx1 = quadvar2aggr[i];
+      if( rhsaggr )
+         sqrcoef = -sqrcoef;
 
-      quadelem = &SCIPnlrowGetQuadElems(nlrow)[i];
-      idx1 = quadvar2aggr[quadelem->idx1];
-      idx2 = quadvar2aggr[quadelem->idx2];
-      coef = rhsaggr ? quadelem->coef : -quadelem->coef;
-
-      /* variables has to belong to the same e.c. aggregation; bilinear / quadratic term has to be concave */
-      if( idx1 >= 0 && idx2 >= 0 && idx1 == idx2 && (quadelem->idx1 != quadelem->idx2 || SCIPisNegative(scip, coef) ) )
+      /* variable has to belong to an e.c. aggregation; square term has to be concave */
+      if( idx1 >= 0 && SCIPisNegative(scip, sqrcoef) )
          ++aggrnterms[idx1];
       else
          ++nremterms;
+
+      for( j = 0; j < nadjbilin; ++j )
+      {
+         SCIP_EXPR* qterm1;
+         SCIP_Real coef;
+         int pos2;
+         int idx2;
+
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, NULL, &coef, &pos2, NULL);
+
+         /* only handle qterm1 == qterm here; the other case will be handled when its turn for qterm2 to be qterm */
+         if( qterm1 != qterm )
+            continue;
+
+         idx2 = quadvar2aggr[pos2];
+         if( rhsaggr )
+            coef = -coef;
+
+         /* variables have to belong to the same e.c. aggregation; bilinear term has to be concave */
+         if( idx1 >= 0 && idx2 >= 0 && idx1 == idx2 )
+            ++aggrnterms[idx1];
+         else
+            ++nremterms;
+      }
    }
+   assert((*nlrowaggr)->nquadvars == nquadvars);
 
    /* create all edge-concave aggregations (empty) and remaining terms */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlrowaggr)->ecaggr, nfound) );
@@ -501,37 +583,77 @@ SCIP_RETCODE nlrowaggrCreate(
 
       if( idx >= 0)
       {
+         SCIP_EXPR* qterm;
+
          SCIPdebugMsg(scip, "add quadvar %d to aggr. %d\n", i, idx);
-         SCIP_CALL( ecaggrAddQuadvar((*nlrowaggr)->ecaggr[idx], SCIPnlrowGetQuadVars(nlrow)[i]) );
+
+         SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, NULL, NULL, NULL, NULL);
+         assert(SCIPisExprVar(scip, qterm));
+
+         SCIP_CALL( ecaggrAddQuadvar((*nlrowaggr)->ecaggr[idx], SCIPgetVarExprVar(qterm)) );
       }
    }
 
-   /* add the bilinear /quadratic terms to the edge-concave aggregations or in the remaining part */
-   for( i = 0; i < nquadelems; ++i )
+   /* add the bilinear/square terms to the edge-concave aggregations or in the remaining part */
+   for( i = 0; i < nquadvars; ++i )
    {
-      SCIP_QUADELEM* quadelem;
+      SCIP_EXPR* qterm;
       SCIP_VAR* x;
-      SCIP_VAR* y;
       SCIP_Real coef;
       int idx1;
-      int idx2;
+      int nadjbilin;
+      int* adjbilin;
+      int j;
 
-      quadelem = &SCIPnlrowGetQuadElems(nlrow)[i];
-      x = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx1];
-      y = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx2];
-      idx1 = quadvar2aggr[quadelem->idx1];
-      idx2 = quadvar2aggr[quadelem->idx2];
-      coef = rhsaggr ? quadelem->coef : -quadelem->coef;
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, &coef, &nadjbilin, &adjbilin, NULL);
 
-      if( idx1 >= 0 && idx2 >= 0 && idx1 == idx2 && (quadelem->idx1 != quadelem->idx2 || SCIPisNegative(scip, coef) ) )
+      x = SCIPgetVarExprVar(qterm);
+
+      idx1 = quadvar2aggr[i];
+      if( rhsaggr )
+         coef = -coef;
+
+      if( idx1 >= 0 && SCIPisNegative(scip, coef) )
       {
-         SCIP_CALL( ecaggrAddBilinTerm(scip, (*nlrowaggr)->ecaggr[idx1], x, y, coef) );
-         SCIPdebugMsg(scip, "add term %e *%d*%d to aggr. %d\n", coef, quadelem->idx1, quadelem->idx2, idx1);
+         SCIP_CALL( ecaggrAddBilinTerm(scip, (*nlrowaggr)->ecaggr[idx1], x, x, coef) );
+         SCIPdebugMsg(scip, "add term %e *%d^2 to aggr. %d\n", coef, i, idx1);
       }
       else
       {
-         SCIP_CALL( nlrowaggrAddRemBilinTerm(*nlrowaggr, x, y, coef) );
-         SCIPdebugMsg(scip, "add term %e *%d*%d to the remaining part\n", coef, quadelem->idx1, quadelem->idx2);
+         SCIP_CALL( nlrowaggrAddRemBilinTerm(*nlrowaggr, x, x, coef) );
+         SCIPdebugMsg(scip, "add term %e *%d^2 to the remaining part\n", coef, idx1);
+      }
+
+      for( j = 0; j < nadjbilin; ++j )
+      {
+         SCIP_EXPR* qterm1;
+         SCIP_EXPR* qterm2;
+         int pos2;
+         int idx2;
+         SCIP_VAR* y;
+
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, &qterm2, &coef, &pos2, NULL);
+
+         /* only handle qterm1 == qterm here; the other case will be handled when its turn for qterm2 to be qterm */
+         if( qterm1 != qterm )
+            continue;
+
+         y = SCIPgetVarExprVar(qterm2);
+
+         idx2 = quadvar2aggr[pos2];
+         if( rhsaggr )
+            coef = -coef;
+
+         if( idx1 >= 0 && idx2 >= 0 && idx1 == idx2 )
+         {
+            SCIP_CALL( ecaggrAddBilinTerm(scip, (*nlrowaggr)->ecaggr[idx1], x, y, coef) );
+            SCIPdebugMsg(scip, "add term %e *%d*%d to aggr. %d\n", coef, i, pos2, idx1);
+         }
+         else
+         {
+            SCIP_CALL( nlrowaggrAddRemBilinTerm(*nlrowaggr, x, y, coef) );
+            SCIPdebugMsg(scip, "add term %e *%d*%d to the remaining part\n", coef, i, pos2);
+         }
       }
    }
 
@@ -565,20 +687,14 @@ SCIP_RETCODE nlrowaggrFree(
    SCIPfreeBlockMemoryArrayNull(scip, &(*nlrowaggr)->remtermvars2, (*nlrowaggr)->remtermsize);
 
    /* free quadratic variables */
-   SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->quadvars, (*nlrowaggr)->nquadvars);
+   SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->quadvars, (*nlrowaggr)->quadvarssize);
    SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->quadvar2aggr, (*nlrowaggr)->nquadvars);
-   (*nlrowaggr)->quadvars = NULL;
-   (*nlrowaggr)->quadvar2aggr = NULL;
-   (*nlrowaggr)->nquadvars = 0;
 
    /* free linear part */
    if( (*nlrowaggr)->nlinvars > 0 )
    {
-      SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->linvars, (*nlrowaggr)->nlinvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->lincoefs, (*nlrowaggr)->nlinvars);
-      (*nlrowaggr)->linvars = 0;
-      (*nlrowaggr)->linvars = NULL;
-      (*nlrowaggr)->lincoefs = NULL;
+      SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->linvars, (*nlrowaggr)->linvarssize);
+      SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->lincoefs, (*nlrowaggr)->linvarssize);
    }
 
    /* free edge-concave aggregations */
@@ -775,7 +891,8 @@ SCIP_RETCODE createMIP(
    SCIP_VAR**            forwardarcs,        /**< array to store all forward arc variables */
    SCIP_VAR**            backwardarcs,       /**< array to store all backward arc variables */
    SCIP_Real*            nodeweights,        /**< weights for each node of the graph */
-   int*                  nedges              /**< pointer to store the number of nonexcluded edges in the graph */
+   int*                  nedges,             /**< pointer to store the number of nonexcluded edges in the graph */
+   int*                  narcs               /**< pointer to store the number of created arc variables (number of square and bilinear terms) */
    )
 {
    SCIP_VAR** oddcyclearcs;
@@ -783,10 +900,13 @@ SCIP_RETCODE createMIP(
    SCIP_CONS* cyclelengthcons;
    SCIP_CONS* oddcyclecons;
    char name[SCIP_MAXSTRLEN];
+   SCIP_EXPR* expr;
    int noddcyclearcs;
    int nnodes;
-   int narcs;
+   int nquadexprs;
+   int nbilinexprs;
    int i;
+   int arcidx;
 
    assert(subscip != NULL);
    assert(forwardarcs != NULL);
@@ -794,73 +914,107 @@ SCIP_RETCODE createMIP(
    assert(nedges != NULL);
    assert(sepadata->minaggrsize <= sepadata->maxaggrsize);
 
-   narcs = SCIPnlrowGetNQuadElems(nlrow);
-   nnodes = SCIPnlrowGetNQuadVars(nlrow);
-   *nedges = 0;
+   expr = SCIPnlrowGetExpr(nlrow);
+   SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadexprs, &nbilinexprs, NULL, NULL);
 
-   assert(narcs > 0);
+   nnodes = nquadexprs;
+   *nedges = 0;
+   *narcs = 0;
+
    assert(nnodes > 0);
 
    noddcyclearcs = 0;
-   SCIP_CALL( SCIPallocBufferArray(subscip, &oddcyclearcs, 2*narcs) );
+   SCIP_CALL( SCIPallocBufferArray(subscip, &oddcyclearcs, 2*nbilinexprs) );
 
    /* create problem with default plug-ins */
    SCIP_CALL( SCIPcreateProbBasic(subscip, "E.C. aggregation MIP") );
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-   /* create forward and backward arc variables; loops are fixed to zero */
-   for( i = 0; i < narcs; ++i )
+   /* create forward and backward arc variables */
+   for( i = 0; i < nquadexprs; ++i )
    {
-      SCIP_CONS* noparallelcons;
-      SCIP_QUADELEM* quadelem;
-      SCIP_Real edgeweight;
-      SCIP_Real ub;
+      SCIP_EXPR* qterm;
+      SCIP_Real coef;
+      int nadjbilin;
+      int* adjbilin;
+      int j;
 
-      quadelem  = &SCIPnlrowGetQuadElems(nlrow)[i];
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, &coef, &nadjbilin, &adjbilin, NULL);
 
-      edgeweight = (quadelem->idx1 == quadelem->idx2) ? 0.0 : nodeweights[quadelem->idx1] + nodeweights[quadelem->idx2];
-      SCIPdebugMsg(scip, "edge {%d,%d} = {%s,%s}  coeff=%e edgeweight=%e\n", quadelem->idx1, quadelem->idx2,
-         SCIPvarGetName(SCIPnlrowGetQuadVars(nlrow)[quadelem->idx1]),
-         SCIPvarGetName(SCIPnlrowGetQuadVars(nlrow)[quadelem->idx2]), quadelem->coef, edgeweight);
-
-      ub = (quadelem->idx1 == quadelem->idx2) ? 0.0 : 1.0;
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x#%d#%d", quadelem->idx1, quadelem->idx2);
-      SCIP_CALL( SCIPcreateVarBasic(subscip, &forwardarcs[i], name, 0.0, ub, 0.01 + edgeweight, SCIP_VARTYPE_BINARY) );
-      SCIP_CALL( SCIPaddVar(subscip, forwardarcs[i]) );
-
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x#%d#%d", quadelem->idx2, quadelem->idx1);
-      SCIP_CALL( SCIPcreateVarBasic(subscip, &backwardarcs[i], name, 0.0, ub, 0.01 + edgeweight, SCIP_VARTYPE_BINARY) );
-      SCIP_CALL( SCIPaddVar(subscip, backwardarcs[i]) );
-
-      /* do not create redundant constraints for loops */
-      if( quadelem->idx1 == quadelem->idx2 )
-         continue;
-
-      ++(*nedges);
-
-      /* store all arcs which are important for the odd cycle property (no loops) */
-      if( rhsaggr && SCIPisPositive(scip, quadelem->coef) )
+      if( !SCIPisZero(scip, coef) )
       {
-         oddcyclearcs[noddcyclearcs++] = forwardarcs[i];
-         oddcyclearcs[noddcyclearcs++] = backwardarcs[i];
+         /* squares (loops) are fixed to zero */
+         SCIPdebugMsg(scip, "edge {%d,%d} = {%s,%s}  coeff=%e edgeweight=0\n", i, i,
+            SCIPvarGetName(SCIPgetVarExprVar(qterm)), SCIPvarGetName(SCIPgetVarExprVar(qterm)),
+            coef);
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x#%d#%d", i, i);
+         SCIP_CALL( SCIPcreateVarBasic(subscip, &forwardarcs[*narcs], name, 0.0, 0.0, 0.01, SCIP_VARTYPE_BINARY) );
+         SCIP_CALL( SCIPaddVar(subscip, forwardarcs[*narcs]) );
+
+         SCIP_CALL( SCIPcreateVarBasic(subscip, &backwardarcs[*narcs], name, 0.0, 0.0, 0.01, SCIP_VARTYPE_BINARY) );
+         SCIP_CALL( SCIPaddVar(subscip, backwardarcs[*narcs]) );
+
+         ++*narcs;
       }
 
-      if( !rhsaggr && SCIPisNegative(scip, quadelem->coef) )
+      for( j = 0 ; j < nadjbilin; ++j )
       {
-         oddcyclearcs[noddcyclearcs++] = forwardarcs[i];
-         oddcyclearcs[noddcyclearcs++] = backwardarcs[i];
-      }
+         SCIP_EXPR* qterm1;
+         SCIP_EXPR* qterm2;
+         int pos2;
+         SCIP_Real edgeweight;
+         SCIP_CONS* noparallelcons;
 
-      /* add constraints to ensure no parallel edges  */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cons_noparalleledges");
-      SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &noparallelcons, name, 0, NULL, NULL, 0.0, 1.0) );
-      SCIP_CALL( SCIPaddCoefLinear(subscip, noparallelcons, forwardarcs[i], 1.0) );
-      SCIP_CALL( SCIPaddCoefLinear(subscip, noparallelcons, backwardarcs[i], 1.0) );
-      SCIP_CALL( SCIPaddCons(subscip, noparallelcons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &noparallelcons) );
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, &qterm2, &coef, &pos2, NULL);
+
+         /* handle qterm == qterm2 later */
+         if( qterm1 != qterm )
+            continue;
+
+         edgeweight = nodeweights[i] + nodeweights[pos2];
+         SCIPdebugMsg(scip, "edge {%d,%d} = {%s,%s}  coeff=%e edgeweight=%e\n", i, pos2,
+            SCIPvarGetName(SCIPgetVarExprVar(qterm1)), SCIPvarGetName(SCIPgetVarExprVar(qterm2)),
+            coef, edgeweight);
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x#%d#%d", i, pos2);
+         SCIP_CALL( SCIPcreateVarBasic(subscip, &forwardarcs[*narcs], name, 0.0, 1.0, 0.01 + edgeweight, SCIP_VARTYPE_BINARY) );
+         SCIP_CALL( SCIPaddVar(subscip, forwardarcs[*narcs]) );
+
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x#%d#%d", i, pos2);
+         SCIP_CALL( SCIPcreateVarBasic(subscip, &backwardarcs[*narcs], name, 0.0, 1.0, 0.01 + edgeweight, SCIP_VARTYPE_BINARY) );
+         SCIP_CALL( SCIPaddVar(subscip, backwardarcs[*narcs]) );
+
+         ++(*nedges);
+
+         /* store all arcs which are important for the odd cycle property (no loops) */
+         if( rhsaggr && SCIPisPositive(scip, coef) )
+         {
+            assert(noddcyclearcs < 2*nbilinexprs-1);
+            oddcyclearcs[noddcyclearcs++] = forwardarcs[i];
+            oddcyclearcs[noddcyclearcs++] = backwardarcs[i];
+         }
+
+         if( !rhsaggr && SCIPisNegative(scip, coef) )
+         {
+            assert(noddcyclearcs < 2*nbilinexprs-1);
+            oddcyclearcs[noddcyclearcs++] = forwardarcs[i];
+            oddcyclearcs[noddcyclearcs++] = backwardarcs[i];
+         }
+
+         /* add constraints to ensure no parallel edges  */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cons_noparalleledges");
+         SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &noparallelcons, name, 0, NULL, NULL, 0.0, 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(subscip, noparallelcons, forwardarcs[*narcs], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(subscip, noparallelcons, backwardarcs[*narcs], 1.0) );
+         SCIP_CALL( SCIPaddCons(subscip, noparallelcons) );
+         SCIP_CALL( SCIPreleaseCons(subscip, &noparallelcons) );
+
+         ++*narcs;
+      }
    }
+   assert(*narcs > 0);
 
    /* odd cycle property constraint */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cons_oddcycle");
@@ -874,7 +1028,7 @@ SCIP_RETCODE createMIP(
    SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &cyclelengthcons, name, 0, NULL, NULL,
          (SCIP_Real) sepadata->minaggrsize, (SCIP_Real) sepadata->maxaggrsize) );
 
-   for( i = 0; i < narcs; ++i )
+   for( i = 0; i < *narcs; ++i )
    {
       SCIP_CALL( SCIPaddCoefLinear(subscip, cyclelengthcons, forwardarcs[i], 1.0) );
       SCIP_CALL( SCIPaddCoefLinear(subscip, cyclelengthcons, backwardarcs[i], 1.0) );
@@ -892,22 +1046,41 @@ SCIP_RETCODE createMIP(
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &flowcons[i], name, 0, NULL, NULL, 0.0, 0.0) );
    }
 
-   for( i = 0; i < narcs; ++i )
+   arcidx = 0;
+   for( i = 0; i < nquadexprs; ++i )
    {
-      int u;
-      int v;
+      SCIP_EXPR* qterm;
+      SCIP_Real coef;
+      int nadjbilin;
+      int* adjbilin;
+      int j;
 
-      u = SCIPnlrowGetQuadElems(nlrow)[i].idx1;
-      assert(u >= 0 && u < SCIPnlrowGetNQuadVars(nlrow));
-      v = SCIPnlrowGetQuadElems(nlrow)[i].idx2;
-      assert(v >= 0 && v < SCIPnlrowGetNQuadVars(nlrow));
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, &coef, &nadjbilin, &adjbilin, NULL);
 
-      SCIP_CALL( SCIPaddCoefLinear(subscip, flowcons[u], forwardarcs[i], 1.0) );
-      SCIP_CALL( SCIPaddCoefLinear(subscip, flowcons[u], backwardarcs[i], -1.0) );
+      if( !SCIPisZero(scip, coef) )
+         ++arcidx;
 
-      SCIP_CALL( SCIPaddCoefLinear(subscip, flowcons[v], forwardarcs[i], -1.0) );
-      SCIP_CALL( SCIPaddCoefLinear(subscip, flowcons[v], backwardarcs[i], 1.0) );
+      for( j = 0 ; j < nadjbilin; ++j )
+      {
+         SCIP_EXPR* qterm1;
+         int pos2;
+
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, NULL, NULL, &pos2, NULL);
+
+         /* handle qterm == qterm2 later */
+         if( qterm1 != qterm )
+            continue;
+
+         SCIP_CALL( SCIPaddCoefLinear(subscip, flowcons[i], forwardarcs[arcidx], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(subscip, flowcons[i], backwardarcs[arcidx], -1.0) );
+
+         SCIP_CALL( SCIPaddCoefLinear(subscip, flowcons[pos2], forwardarcs[arcidx], -1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(subscip, flowcons[pos2], backwardarcs[arcidx], 1.0) );
+
+         ++arcidx;
+      }
    }
+   assert(arcidx == *narcs);
 
    for( i = 0; i < nnodes; ++i )
    {
@@ -931,6 +1104,9 @@ SCIP_RETCODE updateMIP(
    int*                  nedges              /**< pointer to store the number of nonexcluded edges */
    )
 {
+   SCIP_EXPR* expr;
+   int nquadexprs;
+   int arcidx;
    int i;
 
    assert(subscip != NULL);
@@ -945,20 +1121,52 @@ SCIP_RETCODE updateMIP(
    /* recompute the number of edges */
    *nedges = 0;
 
+   expr = SCIPnlrowGetExpr(nlrow);
+   SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+
    /* fix each arc to 0 if at least one of its nodes is contained in an e.c. aggregation */
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); ++i )
+   arcidx = 0;
+   for( i = 0; i < nquadexprs; ++i )
    {
-      SCIP_QUADELEM* quadelem;
+      SCIP_EXPR* qterm;
+      SCIP_Real coef;
+      int nadjbilin;
+      int* adjbilin;
+      int j;
 
-      quadelem = &SCIPnlrowGetQuadElems(nlrow)[i];
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, &coef, &nadjbilin, &adjbilin, NULL);
 
-      if( quadvar2aggr[quadelem->idx1] != -1 || quadvar2aggr[quadelem->idx2] != -1 )
+      if( !SCIPisZero(subscip, coef) )
       {
-         SCIP_CALL( SCIPchgVarUb(subscip, forwardarcs[i], 0.0) );
-         SCIP_CALL( SCIPchgVarUb(subscip, backwardarcs[i], 0.0) );
+         if( quadvar2aggr[i] != -1 )
+         {
+            SCIP_CALL( SCIPchgVarUb(subscip, forwardarcs[arcidx], 0.0) );
+            SCIP_CALL( SCIPchgVarUb(subscip, backwardarcs[arcidx], 0.0) );
+         }
+         ++arcidx;
       }
-      else
-         *nedges += (quadelem->idx1 != quadelem->idx2) ? 1 : 0;
+
+      for( j = 0 ; j < nadjbilin; ++j )
+      {
+         SCIP_EXPR* qterm1;
+         int pos2;
+
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, NULL, NULL, &pos2, NULL);
+
+         /* handle qterm == qterm2 later */
+         if( qterm1 != qterm )
+            continue;
+
+         if( quadvar2aggr[i] != -1 || quadvar2aggr[pos2] != -1 )
+         {
+            SCIP_CALL( SCIPchgVarUb(subscip, forwardarcs[arcidx], 0.0) );
+            SCIP_CALL( SCIPchgVarUb(subscip, backwardarcs[arcidx], 0.0) );
+         }
+         else
+            ++*nedges;
+
+         ++arcidx;
+      }
    }
 
    return SCIP_OKAY;
@@ -976,6 +1184,9 @@ SCIP_RETCODE storeAggrFromMIP(
    )
 {
    SCIP_SOL* sol;
+   SCIP_EXPR* expr;
+   int nquadexprs;
+   int arcidx;
    int i;
 
    assert(subscip != NULL);
@@ -990,20 +1201,55 @@ SCIP_RETCODE storeAggrFromMIP(
    sol = SCIPgetBestSol(subscip);
    assert(sol != NULL);
 
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); ++i )
+   expr = SCIPnlrowGetExpr(nlrow);
+   SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+
+   /* fix each arc to 0 if at least one of its nodes is contained in an e.c. aggregation */
+   arcidx = 0;
+   for( i = 0; i < nquadexprs; ++i )
    {
-      SCIP_QUADELEM* quadelem;
+      SCIP_EXPR* qterm;
+      SCIP_Real coef;
+      int nadjbilin;
+      int* adjbilin;
+      int j;
 
-      quadelem = &SCIPnlrowGetQuadElems(nlrow)[i];
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, &coef, &nadjbilin, &adjbilin, NULL);
 
-      if( SCIPisGT(subscip, SCIPgetSolVal(subscip, sol, forwardarcs[i]), 0.5)
-         || SCIPisGT(subscip, SCIPgetSolVal(subscip, sol, backwardarcs[i]), 0.5) )
+      if( !SCIPisZero(subscip, coef) )
       {
-         assert(quadvar2aggr[quadelem->idx1] == -1 || quadvar2aggr[quadelem->idx1] == nfoundsofar);
-         assert(quadvar2aggr[quadelem->idx2] == -1 || quadvar2aggr[quadelem->idx2] == nfoundsofar);
+         if( SCIPisGT(subscip, SCIPgetSolVal(subscip, sol, forwardarcs[arcidx]), 0.5) ||
+             SCIPisGT(subscip, SCIPgetSolVal(subscip, sol, backwardarcs[arcidx]), 0.5) )
+         {
+            assert(quadvar2aggr[i] == -1 || quadvar2aggr[i] == nfoundsofar);
+            quadvar2aggr[i] = nfoundsofar;
+         }
 
-         quadvar2aggr[quadelem->idx1] = nfoundsofar;
-         quadvar2aggr[quadelem->idx2] = nfoundsofar;
+         ++arcidx;
+      }
+
+      for( j = 0; j < nadjbilin; ++j )
+      {
+         SCIP_EXPR* qterm1;
+         int pos2;
+
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, NULL, NULL, &pos2, NULL);
+
+         /* handle qterm == qterm2 later */
+         if( qterm1 != qterm )
+            continue;
+
+         if( SCIPisGT(subscip, SCIPgetSolVal(subscip, sol, forwardarcs[arcidx]), 0.5) ||
+             SCIPisGT(subscip, SCIPgetSolVal(subscip, sol, backwardarcs[arcidx]), 0.5) )
+         {
+            assert(quadvar2aggr[i] == -1 || quadvar2aggr[i] == nfoundsofar);
+            assert(quadvar2aggr[pos2] == -1 || quadvar2aggr[pos2] == nfoundsofar);
+
+            quadvar2aggr[i] = nfoundsofar;
+            quadvar2aggr[pos2] = nfoundsofar;
+         }
+
+         ++arcidx;
       }
    }
 
@@ -1085,6 +1331,8 @@ SCIP_RETCODE createTcliqueGraph(
    SCIP_Real*            nodeweights         /**< weights for each quadratic variable (nodes in the graph) */
    )
 {
+   SCIP_EXPR* expr;
+   int nquadexprs;
    int i;
 
    assert(graph != NULL);
@@ -1097,8 +1345,11 @@ SCIP_RETCODE createTcliqueGraph(
       return SCIP_ERROR;
    }
 
+   expr = SCIPnlrowGetExpr(nlrow);
+   SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+
    /* add all nodes to the tclique graph */
-   for( i = 0; i < SCIPnlrowGetNQuadVars(nlrow); ++i )
+   for( i = 0; i < nquadexprs; ++i )
    {
       int nodeweight;
 
@@ -1114,37 +1365,38 @@ SCIP_RETCODE createTcliqueGraph(
    }
 
    /* add all edges */
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); ++i )
+   for( i = 0; i < nquadexprs; ++i )
    {
-      SCIP_QUADELEM* quadelem;
-      SCIP_VAR* bilinvar1;
-      SCIP_VAR* bilinvar2;
+      SCIP_EXPR* qterm;
+      int nadjbilin;
+      int* adjbilin;
+      int j;
 
-      quadelem = &SCIPnlrowGetQuadElems(nlrow)[i];
-      assert(quadelem != NULL);
-      assert(!SCIPisZero(scip, quadelem->coef));
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, NULL, &nadjbilin, &adjbilin, NULL);
 
-      bilinvar1 = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx1];
-      bilinvar2 = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx2];
-      assert(bilinvar1 != NULL);
-      assert(bilinvar2 != NULL);
+      for( j = 0; j < nadjbilin; ++j )
+      {
+         SCIP_EXPR* qterm1;
+         SCIP_EXPR* qterm2;
+         int pos2;
 
-      /* do not add the edge {i,i} */
-      if( bilinvar1 == bilinvar2 )
-         continue;
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, &qterm2, NULL, &pos2, NULL);
 
-      assert(quadelem->idx1 != quadelem->idx2);
+         /* handle qterm == qterm2 later */
+         if( qterm1 != qterm )
+            continue;
 
 #ifdef SCIP_DEBUG_DETAILED
-      SCIPdebugMsg(scip, "   add edge (%d, %d) = (%s,%s) to tclique graph\n",
-            SCIPvarGetIndex(bilinvar1), SCIPvarGetIndex(bilinvar2),
-            SCIPvarGetName(bilinvar1), SCIPvarGetName(bilinvar2));
+         SCIPdebugMsg(scip, "   add edge (%d, %d) = (%s,%s) to tclique graph\n",
+            SCIPvarGetIndex(SCIPgetVarExprVar(qterm1)), SCIPvarGetIndex(SCIPgetVarExprVar(qterm2)),
+            SCIPvarGetName(SCIPgetVarExprVar(qterm1)), SCIPvarGetName(SCIPgetVarExprVar(qterm2)));
 #endif
 
-      if( !tcliqueAddEdge(*graph, quadelem->idx1, quadelem->idx2) )
-      {
-         SCIPerrorMessage("could not add edge to clique graph\n");
-         return SCIP_ERROR;
+         if( !tcliqueAddEdge(*graph, i, pos2) )
+         {
+            SCIPerrorMessage("could not add edge to clique graph\n");
+            return SCIP_ERROR;
+         }
       }
    }
 
@@ -1178,6 +1430,8 @@ SCIP_RETCODE searchEcAggrWithCliques(
 {
    SCIP_HASHMAP* cliquemap;
    TCLIQUE_STATUS status;
+   SCIP_EXPR* expr;
+   int nquadexprs;
    int* maxcliquenodes;
    int* degrees;
    int nmaxcliquenodes;
@@ -1191,14 +1445,17 @@ SCIP_RETCODE searchEcAggrWithCliques(
    assert(nfoundsofar >= 0);
    assert(foundaggr != NULL);
    assert(foundclique != NULL);
-   assert(SCIPnlrowGetNQuadVars(nlrow) == tcliqueGetNNodes(graph));
 
    cliquemap = NULL;
    *foundaggr = FALSE;
    *foundclique = FALSE;
 
+   expr = SCIPnlrowGetExpr(nlrow);
+   SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+   assert(nquadexprs == tcliqueGetNNodes(graph));
+
    /* exclude all nodes which are already in an edge-concave aggregation (no flush is needed) */
-   for( i = 0; i < SCIPnlrowGetNQuadVars(nlrow); ++i )
+   for( i = 0; i < nquadexprs; ++i )
    {
       if( quadvar2aggr[i] != -1 )
       {
@@ -1207,7 +1464,7 @@ SCIP_RETCODE searchEcAggrWithCliques(
       }
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &maxcliquenodes, SCIPnlrowGetNQuadVars(nlrow)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &maxcliquenodes, nquadexprs) );
 
    /* solve clique problem */
    tcliqueMaxClique(tcliqueGetNNodes, tcliqueGetWeights, tcliqueIsEdge, tcliqueSelectAdjnodes, graph, NULL, NULL,
@@ -1233,22 +1490,47 @@ SCIP_RETCODE searchEcAggrWithCliques(
 
    /* count the number of positive or negative edges (depending on <= rhs or >= lhs) */
    noddcycleedges = 0;
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); ++i )
+   for( i = 0; i < nquadexprs; ++i )
    {
-      SCIP_QUADELEM* quadelem;
       SCIP_Bool isoddcycleedge;
+      SCIP_EXPR* qterm;
+      SCIP_Real coef;
+      int nadjbilin;
+      int* adjbilin;
+      int j;
 
-      quadelem = &SCIPnlrowGetQuadElems(nlrow)[i];
-      isoddcycleedge = (rhsaggr && SCIPisPositive(scip, quadelem->coef))
-         || (!rhsaggr && SCIPisNegative(scip, quadelem->coef));
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, &coef, &nadjbilin, &adjbilin, NULL);
 
-      if( isoddcycleedge
-         && SCIPhashmapExists(cliquemap, (void*) (size_t) quadelem->idx1)
-         && SCIPhashmapExists(cliquemap, (void*) (size_t) quadelem->idx2) )
+      isoddcycleedge = (rhsaggr && SCIPisPositive(scip, coef)) || (!rhsaggr && SCIPisNegative(scip, coef));
+
+      if( isoddcycleedge && SCIPhashmapExists(cliquemap, (void*) (size_t) i) )
       {
          ++noddcycleedges;
-         ++degrees[quadelem->idx1];
-         ++degrees[quadelem->idx2];
+         ++degrees[i];
+      }
+
+      for( j = 0; j < nadjbilin; ++j )
+      {
+         SCIP_EXPR* qterm1;
+         SCIP_EXPR* qterm2;
+         int pos2;
+
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, &qterm2, &coef, &pos2, NULL);
+
+         /* handle qterm == qterm2 later */
+         if( qterm1 != qterm )
+            continue;
+
+         isoddcycleedge = (rhsaggr && SCIPisPositive(scip, coef)) || (!rhsaggr && SCIPisNegative(scip, coef));
+
+         if( isoddcycleedge
+            && SCIPhashmapExists(cliquemap, (void*) (size_t) i)
+            && SCIPhashmapExists(cliquemap, (void*) (size_t) pos2) )
+         {
+            ++noddcycleedges;
+            ++degrees[i];
+            ++degrees[pos2];
+         }
       }
    }
 
@@ -1296,51 +1578,60 @@ SCIP_RETCODE doSeachEcAggr(
    )
 {
    TCLIQUE_GRAPH* graph = NULL;
+   SCIP_EXPR* expr;
    SCIP_VAR** forwardarcs;
    SCIP_VAR** backwardarcs;
-   SCIP_VAR** quadvars;
    SCIP_Real* nodeweights;
    SCIP_Real timelimit;
    SCIP_RETCODE retcode;
    int nunsucces = 0;
    int nedges = 0;
-   int nquadelems;
+   int narcs;
    int nquadvars;
+   int nbilinexprs;
    int i;
 
    assert(subscip != NULL);
    assert(quadvar2aggr != NULL);
    assert(nfound != NULL);
 
-   quadvars = SCIPnlrowGetQuadVars(nlrow);
-   nquadvars = SCIPnlrowGetNQuadVars(nlrow);
-   nquadelems = SCIPnlrowGetNQuadElems(nlrow);
+   expr = SCIPnlrowGetExpr(nlrow);
+   SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadvars, &nbilinexprs, NULL, NULL);
 
    retcode = SCIP_OKAY;
    *nfound = 0;
 
    /* arrays to store all arc variables of the MIP model; note that we introduce variables even for loops in the graph
     * to have an easy mapping from the edges of the graph to the quadratic elements
+    * nquadvars + nbilinexprs is an upper bound on the actual number of square and bilinear terms
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &nodeweights, nquadvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &forwardarcs, nquadelems) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &backwardarcs, nquadelems) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &forwardarcs, nquadvars + nbilinexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &backwardarcs, nquadvars + nbilinexprs) );
 
-   /* inititialize mapping from quadvars to e.c. aggregation index (-1: quadvar is in no aggregation); compute node
+   /* initialize mapping from quadvars to e.c. aggregation index (-1: quadvar is in no aggregation); compute node
     * weights
     */
-   for( i = 0; i < SCIPnlrowGetNQuadVars(nlrow); ++i )
+   for( i = 0; i < nquadvars; ++i )
    {
-      SCIP_VAR* var = quadvars[i];
+      SCIP_EXPR* qterm;
+      SCIP_VAR* var;
+
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, NULL, NULL, NULL, NULL);
+      assert(SCIPisExprVar(scip, qterm));
+      var = SCIPgetVarExprVar(qterm);
+
       quadvar2aggr[i] = -1;
-      nodeweights[i] = phi(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) );
+      nodeweights[i] = phi(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
       SCIPdebugMsg(scip, "%s = %e (%e in [%e, %e])\n", SCIPvarGetName(var), nodeweights[i], SCIPgetSolVal(scip, sol, var),
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
    }
 
-   SCIP_CALL( createMIP(scip, subscip, sepadata, nlrow, rhsaggr, forwardarcs, backwardarcs, nodeweights, &nedges) );
+   SCIP_CALL( createMIP(scip, subscip, sepadata, nlrow, rhsaggr, forwardarcs, backwardarcs, nodeweights, &nedges, &narcs) );
    assert(nedges >= 0);
+   assert(narcs > 0);
    SCIPdebugMsg(scip, "nedges (without loops) = %d\n", nedges);
+   SCIPdebugMsg(scip, "narcs (number of quadratic terms) = %d\n", narcs);
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1445,7 +1736,7 @@ TERMINATE:
       tcliqueFree(&graph);
 
    /* free sub-SCIP */
-   for( i = 0; i < nquadelems; ++i )
+   for( i = 0; i < narcs; ++i )
    {
       SCIP_CALL( SCIPreleaseVar(subscip, &forwardarcs[i]) );
       SCIP_CALL( SCIPreleaseVar(subscip, &backwardarcs[i]) );
@@ -1512,6 +1803,9 @@ SCIP_RETCODE isCandidate(
                                               *   the >= lhs case */
    )
 {
+   SCIP_EXPR* expr = NULL;
+   SCIP_Bool takerow = FALSE;
+   int nquadvars = 0;
    int* degrees;
    int ninterestingnodes;
    int nposedges;
@@ -1524,9 +1818,20 @@ SCIP_RETCODE isCandidate(
    *rhscandidate = TRUE;
    *lhscandidate = TRUE;
 
-   /* skip if the nlrow is not in the NLP, there are other nonlinearities, or too few quadratic variables */
-   if( !SCIPnlrowIsInNLP(nlrow) || SCIPnlrowGetExprtree(nlrow) != NULL
-      || SCIPnlrowGetNQuadVars(nlrow) < sepadata->minaggrsize )
+   /* check whether nlrow is in the NLP, is quadratic in variables, and there are enough quadratic variables */
+   if( SCIPnlrowIsInNLP(nlrow) && SCIPnlrowGetExpr(nlrow) != NULL )
+   {
+      expr = SCIPnlrowGetExpr(nlrow);
+      SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &takerow) );
+   }
+   if( takerow )
+      takerow = SCIPexprAreQuadraticExprsVariables(expr);
+   if( takerow )
+   {
+      SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadvars, NULL, NULL, NULL);
+      takerow = nquadvars >= sepadata->minaggrsize;
+   }
+   if( !takerow )
    {
       *rhscandidate = FALSE;
       *lhscandidate = FALSE;
@@ -1539,39 +1844,59 @@ SCIP_RETCODE isCandidate(
    if( SCIPisInfinity(scip, REALABS(SCIPnlrowGetLhs(nlrow))) )
       *lhscandidate = FALSE;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &degrees, SCIPnlrowGetNQuadVars(nlrow)) );
-   BMSclearMemoryArray(degrees, SCIPnlrowGetNQuadVars(nlrow));
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &degrees, nquadvars) );
 
    ninterestingnodes = 0;
    nposedges = 0;
    nnegedges = 0;
 
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); ++i )
+   for( i = 0; i < nquadvars; ++i )
    {
-      SCIP_QUADELEM* quadelem;
-      SCIP_VAR* x;
-      SCIP_VAR* y;
+      SCIP_EXPR* qterm;
+      SCIP_VAR* var1;
+      int nadjbilin;
+      int* adjbilin;
+      int j;
 
-      quadelem = &SCIPnlrowGetQuadElems(nlrow)[i];
-      x = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx1];
-      y = SCIPnlrowGetQuadVars(nlrow)[quadelem->idx2];
+      SCIPexprGetQuadraticQuadTerm(expr, i, &qterm, NULL, NULL, &nadjbilin, &adjbilin, NULL);
+      assert(SCIPisExprVar(scip, qterm));
 
-      /* do not consider loops or global fixed variables */
-      if( quadelem->idx1 != quadelem->idx2
-         && !SCIPisEQ(scip, SCIPvarGetLbGlobal(x), SCIPvarGetUbGlobal(x))
-         && !SCIPisEQ(scip, SCIPvarGetLbGlobal(y), SCIPvarGetUbGlobal(y)) )
+      var1 = SCIPgetVarExprVar(qterm);
+
+      /* do not consider global fixed variables */
+      if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var1), SCIPvarGetUbGlobal(var1)) )
+         continue;
+
+      for( j = 0; j < nadjbilin; ++j )
       {
-         ++degrees[quadelem->idx1];
-         ++degrees[quadelem->idx2];
+         SCIP_EXPR* qterm1;
+         SCIP_EXPR* qterm2;
+         SCIP_VAR* var2;
+         SCIP_Real coef;
+         int pos2;
+
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, &qterm2, &coef, &pos2, NULL);
+
+         if( qterm1 != qterm )
+            continue;
+
+         var2 = SCIPgetVarExprVar(qterm2);
+
+         /* do not consider loops or global fixed variables */
+         if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var2), SCIPvarGetUbGlobal(var2)) )
+            continue;
+
+         ++degrees[i];
+         ++degrees[pos2];
 
          /* count the number of nodes with a degree of at least 2 */
-         if( degrees[quadelem->idx1] == 2 )
+         if( degrees[i] == 2 )
             ++ninterestingnodes;
-         if( degrees[quadelem->idx2] == 2 )
+         if( degrees[pos2] == 2 )
             ++ninterestingnodes;
 
-         nposedges += SCIPisPositive(scip, quadelem->coef) ? 1 : 0;
-         nnegedges += SCIPisNegative(scip, quadelem->coef) ? 1 : 0;
+         nposedges += SCIPisPositive(scip, coef) ? 1 : 0;
+         nnegedges += SCIPisNegative(scip, coef) ? 1 : 0;
       }
    }
 
@@ -1606,6 +1931,7 @@ SCIP_RETCODE findAndStoreEcAggregations(
    SCIP_SOL*             sol                 /**< current solution (might be NULL) */
    )
 {
+   int nquadvars;
    int* quadvar2aggr;
    SCIP_Bool rhscandidate;
    SCIP_Bool lhscandidate;
@@ -1614,16 +1940,20 @@ SCIP_RETCODE findAndStoreEcAggregations(
    assert(nlrow != NULL);
    assert(sepadata != NULL);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadvar2aggr, SCIPnlrowGetNQuadVars(nlrow)) ); /*lint !e705*/
-
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "search for edge-concave aggregation for the nonlinear row: \n");
-   SCIP_CALL( SCIPnlrowPrint(nlrow, SCIPgetMessagehdlr(scip), NULL) );
+   SCIP_CALL( SCIPprintNlRow(scip, nlrow, NULL) );
 #endif
 
    /* check obvious conditions for existing cycles with an odd number of positive/negative edges */
    SCIP_CALL( isCandidate(scip, sepadata, nlrow, &rhscandidate, &lhscandidate) );
    SCIPdebugMsg(scip, "rhs candidate = %u lhs candidate = %u\n", rhscandidate, lhscandidate);
+
+   if( !rhscandidate && !lhscandidate )
+      return SCIP_OKAY;
+
+   SCIPexprGetQuadraticData(SCIPnlrowGetExpr(nlrow), NULL, NULL, NULL, NULL, &nquadvars, NULL, NULL, NULL);
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadvar2aggr, nquadvars) ); /*lint !e705*/
 
    /* search for edge-concave aggregations (consider <= rhs) */
    if( rhscandidate )
@@ -2439,7 +2769,7 @@ SCIP_RETCODE computeCut(
    SCIP_CALL( SCIPallocBufferArray(scip, &bestfacet, bestfacetsize) );
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPnlrowPrint(nlrowaggr->nlrow, SCIPgetMessagehdlr(scip), NULL) );
+   SCIP_CALL( SCIPprintNlRow(scip, nlrowaggr->nlrow, NULL) );
 
    SCIPdebugMsg(scip, "current solution:\n");
    for( i = 0; i < SCIPgetNVars(scip); ++i )

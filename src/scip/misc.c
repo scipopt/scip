@@ -9754,11 +9754,10 @@ SCIP_Real SCIPselectSimpleValue(
    return val;
 }
 
-/** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
- *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
- *  number inside the interval was found
+/** Performs the Newton Procedure from a given starting point to compute a root of the given function with
+ *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
  */
-SCIP_Real SCIPcomputeRootNewton(
+SCIP_Real SCIPcalcRootNewton(
    SCIP_DECL_NEWTONEVAL((*function)),       /**< pointer to function for which roots are computed */
    SCIP_DECL_NEWTONEVAL((*derivative)),     /**< pointer to derivative of above function */
    SCIP_Real*            params,            /**< parameters needed for function (can be NULL) */
@@ -9800,7 +9799,6 @@ SCIP_Real SCIPcomputeRootNewton(
    else
       return result;
 }
-
 
 
 /*

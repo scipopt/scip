@@ -11,7 +11,7 @@ add_subdirectory(CycleClustering EXCLUDE_FROM_ALL)
 
 # disable PolySCIP when compiling with MSVC (TODO enable it again after #1994 has been fixed)
 if(NOT MSVC)
-  add_subdirectory(PolySCIP EXCLUDE_FROM_ALL)
+   add_subdirectory(PolySCIP EXCLUDE_FROM_ALL)
 endif()
 
 enable_testing()

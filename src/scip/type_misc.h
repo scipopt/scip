@@ -155,6 +155,13 @@ typedef struct SCIP_Regression SCIP_REGRESSION;
  */
 typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
 
+/** a linear inequality row in preparation
+ *
+ * Uses to assemble data that could eventually make a SCIP_ROW.
+ * @note Only one-sided rows are allowed here.
+ */
+typedef struct SCIP_RowPrep SCIP_ROWPREP;
+
 /** compares two element indices
  *  result:
  *    < 0: ind1 comes before (is better than) ind2

@@ -1747,7 +1747,7 @@ SCIP_RETCODE freeSolve(
    /* free the NLP, if there is one, and reset the flags indicating nonlinearity */
    if( scip->nlp != NULL )
    {
-      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
+      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    }
    scip->transprob->nlpenabled = FALSE;
 
@@ -1844,7 +1844,7 @@ SCIP_RETCODE freeReoptSolve(
    /* free the NLP, if there is one, and reset the flags indicating nonlinearity */
    if( scip->nlp != NULL )
    {
-      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
+      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    }
    scip->transprob->nlpenabled = FALSE;
 

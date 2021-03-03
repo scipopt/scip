@@ -970,6 +970,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
          SCIP_CALL_ABORT( SCIPsolve(subscip) );
+         SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
          SCIPdebugMsg(scip, "ending solving clique-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 

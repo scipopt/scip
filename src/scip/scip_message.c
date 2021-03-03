@@ -33,7 +33,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "nlpi/nlpi.h"
 #include "scip/debug.h"
 #include "scip/pub_message.h"
 #include "scip/scip_message.h"
@@ -58,21 +57,10 @@ SCIP_RETCODE SCIPsetMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
    )
 {
-   int i;
-
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetMessagehdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    assert(scip != NULL);
    assert(scip->set != NULL);
-   assert(scip->set->nlpis != NULL || scip->set->nnlpis == 0);
-
-   /* update message handler in NLP solver interfaces */
-   for( i = 0; i < scip->set->nnlpis; ++i )
-   {
-      assert(scip->set->nlpis[i] != NULL);
-
-      SCIP_CALL( SCIPnlpiSetMessageHdlr(scip->set->nlpis[i], messagehdlr) );
-   }
 
    SCIPmessagehdlrCapture(messagehdlr);
 

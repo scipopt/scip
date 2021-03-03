@@ -27,17 +27,13 @@
 
 #include "scip/pub_message.h"
 #include "nlpi/nlpi_ipopt.h"
+#include "blockmemshell/memory.h"
 
-/** create solver interface for Ipopt solver */ /*lint -e715*/
-SCIP_RETCODE SCIPcreateNlpSolverIpopt(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */
+SCIP_RETCODE SCIPincludeNlpSolverIpopt(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   assert(nlpi != NULL);
-
-   *nlpi = NULL;
-
    return SCIP_OKAY;
 }  /*lint !e715*/
 

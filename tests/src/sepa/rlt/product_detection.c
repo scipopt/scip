@@ -23,7 +23,8 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_stat.h"
 #include "scip/sepa_rlt.c"
-#include "scip/cons_expr.c"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_linear.h"
 #include "include/scip_test.h"
 
 /* in all comments it is assumed that the linear relations used for product detections have the form:
@@ -41,7 +42,7 @@ static SCIP_VAR* x4;
 static SCIP_VAR* bvar1;
 static SCIP_VAR* bvar2;
 
-/* creates scip, problem, includes expression constraint handler, creates and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
 {
@@ -54,16 +55,13 @@ void setup(void)
 
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
+   /* include nonlinear and linear constraint handlers and rlt separator */
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
-
-   /* include rlt separator */
    SCIP_CALL( SCIPincludeSepaRlt(scip) );
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(conshdlr != NULL);
 
    /* get rlt separator */
@@ -116,7 +114,7 @@ void teardown(void)
 /* check an auxiliary expression by comparing simplified expressions */
 static
 void checkAuxExpr(
-   SCIP_CONSEXPR_BILINTERM term,
+   SCIP_CONSNONLINEAR_BILINTERM term,
    int                   auxidx,             /* index of the term */
    SCIP_VAR*             auxvar,             /* expected auxiliary variable */
    SCIP_Real*            vals,               /* expected coefficients in the order w, x, y */
@@ -153,7 +151,7 @@ Test(product_detection, implrels, .init = setup, .fini = teardown, .description 
    SCIP_Real coefs1[3];
    SCIP_Real coefs2[3];
    SCIP_Bool cutoff;
-   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_CONSNONLINEAR_BILINTERM* terms;
 
    vars[0] = x1;
    vars[1] = x2;
@@ -168,7 +166,7 @@ Test(product_detection, implrels, .init = setup, .fini = teardown, .description 
    coefs2[2] = -1.0;
 
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
-   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->conshdlr = conshdlr;
    sepadata->isinitialround = TRUE;
    sepadata->detecthidden = TRUE;
    cr_assert(sepadata->conshdlr != NULL);
@@ -204,10 +202,10 @@ Test(product_detection, implrels, .init = setup, .fini = teardown, .description 
 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
-                                                          SCIPgetConsExprNBilinTerms(conshdlr));
+   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
+                                                          SCIPgetNBilinTermsNonlinear(conshdlr));
 
-   terms = SCIPgetConsExprBilinTerms(conshdlr);
+   terms = SCIPgetBilinTermsNonlinear(conshdlr);
    cr_assert(terms != NULL);
 
    cr_expect_eq(terms[0].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
@@ -254,7 +252,7 @@ Test(product_detection, implrelbnd, .init = setup, .fini = teardown, .descriptio
    int nbdchgs;
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
-   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_CONSNONLINEAR_BILINTERM* terms;
 
    vars[0] = x1;
    vars[1] = x2;
@@ -265,7 +263,7 @@ Test(product_detection, implrelbnd, .init = setup, .fini = teardown, .descriptio
    coefs[2] = 3.0;
 
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
-   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->conshdlr = conshdlr;
    sepadata->isinitialround = TRUE;
    sepadata->detecthidden = TRUE;
    cr_assert(sepadata->conshdlr != NULL);
@@ -296,10 +294,10 @@ Test(product_detection, implrelbnd, .init = setup, .fini = teardown, .descriptio
 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
-                                                          SCIPgetConsExprNBilinTerms(conshdlr));
+   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
+                                                          SCIPgetNBilinTermsNonlinear(conshdlr));
 
-   terms = SCIPgetConsExprBilinTerms(conshdlr);
+   terms = SCIPgetBilinTermsNonlinear(conshdlr);
 
    /* check the product expressions */
    cr_expect_eq(terms[0].x, bvar1, "x var of product 0 should be bvar1, got %s", SCIPvarGetName(terms[0].x));
@@ -330,7 +328,7 @@ Test(product_detection, implrelclique, .init = setup, .fini = teardown, .descrip
    SCIP_Bool infeasible;
    SCIP_VAR* clique_vars[2];
    SCIP_Bool clique_vals[2];
-   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_CONSNONLINEAR_BILINTERM* terms;
 
    vars[0] = x1;
    vars[1] = bvar1;
@@ -341,7 +339,7 @@ Test(product_detection, implrelclique, .init = setup, .fini = teardown, .descrip
    coefs1[2] = 3.0;
 
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
-   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->conshdlr = conshdlr;
    sepadata->isinitialround = TRUE;
    sepadata->detecthidden = TRUE;
    cr_assert(sepadata->conshdlr != NULL);
@@ -379,12 +377,12 @@ Test(product_detection, implrelclique, .init = setup, .fini = teardown, .descrip
     * <=> xy <= -w - x, which in problem variables is bvar2*x1 <= -bvar1 - bvar2
     */
 
-   terms = SCIPgetConsExprBilinTerms(conshdlr);
+   terms = SCIPgetBilinTermsNonlinear(conshdlr);
 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
-                                                          SCIPgetConsExprNBilinTerms(conshdlr));
+   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
+                                                          SCIPgetNBilinTermsNonlinear(conshdlr));
    cr_expect_eq(terms[0].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
    cr_expect_eq(terms[1].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
    cr_expect_eq(terms[2].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product 2, got %d", terms[2].nauxexprs);
@@ -418,7 +416,7 @@ Test(product_detection, implbnd, .init = setup, .fini = teardown, .description =
    int nbdchgs;
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
-   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_CONSNONLINEAR_BILINTERM* terms;
 
    vars[0] = x1;
    vars[1] = x2;
@@ -427,7 +425,7 @@ Test(product_detection, implbnd, .init = setup, .fini = teardown, .description =
    coefs[1] = 2.0;
 
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
-   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->conshdlr = conshdlr;
    sepadata->isinitialround = TRUE;
    sepadata->detecthidden = TRUE;
    cr_assert(sepadata->conshdlr != NULL);
@@ -476,12 +474,12 @@ Test(product_detection, implbnd, .init = setup, .fini = teardown, .description =
     * <=> xy <= -w + 0.5x, which in problem variables is bvar2*x2 <= -x1 + 0.5bvar2
     */
 
-   terms = SCIPgetConsExprBilinTerms(conshdlr);
+   terms = SCIPgetBilinTermsNonlinear(conshdlr);
 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
-                                                          SCIPgetConsExprNBilinTerms(conshdlr));
+   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
+                                                          SCIPgetNBilinTermsNonlinear(conshdlr));
    cr_expect_eq(terms[0].nauxexprs, 2, "\nExpected 2 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
    cr_expect_eq(terms[1].nauxexprs, 1, "\nExpected 1 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
    cr_expect_eq(terms[2].nauxexprs, 1, "\nExpected 1 auxiliary expressions for product 2, got %d", terms[2].nauxexprs);

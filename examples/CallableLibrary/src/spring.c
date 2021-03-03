@@ -32,21 +32,19 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES  /* to get M_PI, etc, on Windows */
+
+/* workaround if standard makefiles aren't used */
+#if !defined(_XOPEN_SOURCE) || _XOPEN_SOURCE < 600
+#undef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
+#endif
+
 #include <stdio.h>
 #include <math.h>
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_product.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_var.h"
-
-#ifndef M_PI
-#define M_PI           3.141592653589793238462643
-#endif
-
 
 /* Model parameters */
 
@@ -96,14 +94,13 @@ SCIP_RETCODE setupProblem(
    SCIP_VAR* volume;      /* total volume */
    SCIP_VAR* y[nwires];   /* wire choice (binary) */
 
-   SCIP_CONSHDLR* consexprhdlr;
-   SCIP_CONSEXPR_EXPR* coilexpr;
-   SCIP_CONSEXPR_EXPR* wireexpr;
-   SCIP_CONSEXPR_EXPR* deflexpr;
-   SCIP_CONSEXPR_EXPR* ncoilsexpr;
-   SCIP_CONSEXPR_EXPR* const1expr;
-   SCIP_CONSEXPR_EXPR* const2expr;
-   SCIP_CONSEXPR_EXPR* volumeexpr;
+   SCIP_EXPR* coilexpr;
+   SCIP_EXPR* wireexpr;
+   SCIP_EXPR* deflexpr;
+   SCIP_EXPR* ncoilsexpr;
+   SCIP_EXPR* const1expr;
+   SCIP_EXPR* const2expr;
+   SCIP_EXPR* volumeexpr;
 
    SCIP_CONS* voldef;
    SCIP_CONS* defconst1;
@@ -117,10 +114,6 @@ SCIP_RETCODE setupProblem(
 
    char name[SCIP_MAXSTRLEN];
    int i;
-
-   /* find expression constraint handler */
-   consexprhdlr = SCIPfindConshdlr(scip, "expr");
-   assert(consexprhdlr != NULL);
 
    /* create empty problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "spring") );
@@ -157,113 +150,113 @@ SCIP_RETCODE setupProblem(
    }
 
    /* create variable expressions */
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &coilexpr, coil) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &wireexpr, wire) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &deflexpr, defl) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &ncoilsexpr, ncoils) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &const1expr, const1) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &const2expr, const2) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &volumeexpr, volume) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &coilexpr, coil, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &wireexpr, wire, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &deflexpr, defl, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &ncoilsexpr, ncoils, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &const1expr, const1, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &const2expr, const2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &volumeexpr, volume, NULL, NULL) );
 
    /* nonlinear constraint voldef: PI/2 * (ncoils+2)*coil*wire^2 - volume == 0 */
    {
-      SCIP_CONSEXPR_EXPR* exprs[3];
-      SCIP_CONSEXPR_EXPR* powexpr;
-      SCIP_CONSEXPR_EXPR* prodexpr;
-      SCIP_CONSEXPR_EXPR* sumexpr;
-      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_EXPR* exprs[3];
+      SCIP_EXPR* powexpr;
+      SCIP_EXPR* prodexpr;
+      SCIP_EXPR* sumexpr;
+      SCIP_EXPR* expr;
       SCIP_Real coefs[2];
 
       /* create wire^2 */
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, wireexpr, 2.0) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, wireexpr, 2.0, NULL, NULL) );
 
       /* create (ncoils+2) */
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 1, &ncoilsexpr, NULL, 2.0) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 1, &ncoilsexpr, NULL, 2.0, NULL, NULL) );
 
       /* create (ncoils+2)*coil*wire^2 */
       exprs[0] = sumexpr;
       exprs[1] = coilexpr;
       exprs[2] = powexpr;
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 3, exprs, 1.0) );
+      SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr, 3, exprs, 1.0, NULL, NULL) );
 
       /* create PI/2 * (ncoils+2)*coil*wire^2 - volume */
       exprs[0] = prodexpr;
-      coefs[0] = M_PI / 2.0;
+      coefs[0] = M_PI_2;
       exprs[1] = volumeexpr;
       coefs[1] = -1.0;
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &expr, 2, exprs, coefs, 0.0) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &expr, 2, exprs, coefs, 0.0, NULL, NULL) );
 
       /* create nonlinear constraint */
-      SCIP_CALL( SCIPcreateConsExprBasic(scip, &voldef, "voldef", expr, 0.0, 0.0) );
+      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &voldef, "voldef", expr, 0.0, 0.0) );
 
       /* release expressions */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
    }
 
    /* nonlinear constraint defconst1: coil / wire - const1 == 0.0 */
    {
-      SCIP_CONSEXPR_EXPR* exprs[2];
-      SCIP_CONSEXPR_EXPR* powexpr;
-      SCIP_CONSEXPR_EXPR* prodexpr;
-      SCIP_CONSEXPR_EXPR* sumexpr;
+      SCIP_EXPR* exprs[2];
+      SCIP_EXPR* powexpr;
+      SCIP_EXPR* prodexpr;
+      SCIP_EXPR* sumexpr;
       SCIP_Real coefs[2];
 
       /* create 1 / wire */
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, wireexpr, -1.0) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &powexpr, wireexpr, -1.0, NULL, NULL) );
 
       /* create coil / wire */
       exprs[0] = coilexpr;
       exprs[1] = powexpr;
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, exprs, 1.0) );
+      SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr, 2, exprs, 1.0, NULL, NULL) );
 
       /* create coil / wire - const1 */
       exprs[0] = prodexpr;
       coefs[0] = 1.0;
       exprs[1] = const1expr;
       coefs[1] = -1.0;
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 2, exprs, coefs, 0.0) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 2, exprs, coefs, 0.0, NULL, NULL) );
 
       /* create nonlinear constraint */
-      SCIP_CALL( SCIPcreateConsExprBasic(scip, &defconst1, "defconst1", sumexpr, 0.0, 0.0) );
+      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &defconst1, "defconst1", sumexpr, 0.0, 0.0) );
 
       /* release expressions */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &powexpr) );
    }
 
    /* nonlinear constraint defconst2: (4.0 * const1 - 1.0) / (4.0 * const1 - 4.0) + 0.615 / const1 - const2 == 0.0 */
    {
-      SCIP_CONSEXPR_EXPR* exprs[3];
-      SCIP_CONSEXPR_EXPR* sumexpr1;
-      SCIP_CONSEXPR_EXPR* sumexpr2;
-      SCIP_CONSEXPR_EXPR* powexpr1;
-      SCIP_CONSEXPR_EXPR* powexpr2;
-      SCIP_CONSEXPR_EXPR* prodexpr;
-      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_EXPR* exprs[3];
+      SCIP_EXPR* sumexpr1;
+      SCIP_EXPR* sumexpr2;
+      SCIP_EXPR* powexpr1;
+      SCIP_EXPR* powexpr2;
+      SCIP_EXPR* prodexpr;
+      SCIP_EXPR* expr;
       SCIP_Real coefs[3];
 
       /* create (4.0 * const1 - 1.0) */
       coefs[0] = 4.0;
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr1, 1, &const1expr, coefs, -1.0) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 1, &const1expr, coefs, -1.0, NULL, NULL) );
 
       /* create (4.0 * const1 - 4.0) */
       coefs[0] = 4.0;
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr2, 1, &const1expr, coefs, -4.0) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 1, &const1expr, coefs, -4.0, NULL, NULL) );
 
       /* create 1 / (4.0 * const1 - 4.0) */
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr1, sumexpr2, -1.0) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &powexpr1, sumexpr2, -1.0, NULL, NULL) );
 
       /* create (4.0 * const1 - 1.0) / (4.0 * const1 - 4.0) */
       exprs[0] = sumexpr1;
       exprs[1] = powexpr1;
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, exprs, 1.0) );
+      SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr, 2, exprs, 1.0, NULL, NULL) );
 
       /* create 1 / const1 */
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr2, const1expr, -1.0) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &powexpr2, const1expr, -1.0, NULL, NULL) );
 
       /* create (4.0 * const1 - 1.0) / (4.0 * const1 - 4.0) + 0.615 / const1 - const2 */
       exprs[0] = prodexpr;
@@ -272,18 +265,18 @@ SCIP_RETCODE setupProblem(
       coefs[1] = 0.615;
       exprs[2] = const2expr;
       coefs[2] = -1.0;
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &expr, 3, exprs, coefs, 0.0) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &expr, 3, exprs, coefs, 0.0, NULL, NULL) );
 
       /* create nonlinear constraint */
-      SCIP_CALL( SCIPcreateConsExprBasic(scip, &defconst2, "defconst2", expr, 0.0, 0.0) );
+      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &defconst2, "defconst2", expr, 0.0, 0.0) );
 
       /* release expressions */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr2) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr1) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr2) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr1) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &powexpr2) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &powexpr1) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
    }
 
    /* quadratic constraint shear: 8.0*maxworkload/PI * const1 * const2 - maxshearstress * wire^2 <= 0.0 */
@@ -293,46 +286,46 @@ SCIP_RETCODE setupProblem(
       SCIP_Real quadcoefs[2] = {8.0 * maxworkload / M_PI, -maxshearstress};
 
       /* create empty quadratic constraint with right-hand-side 0.0 */
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &shear, "shear", 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &shear, "shear", 0, NULL, NULL, 2, quadvars1, quadvars2, quadcoefs,
          -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    }
 
    /* nonlinear constraint defdefl: 8.0/shearmod * ncoils * const1^3 / wire - defl == 0.0 */
    {
-      SCIP_CONSEXPR_EXPR* exprs[3];
-      SCIP_CONSEXPR_EXPR* prodexpr;
-      SCIP_CONSEXPR_EXPR* powexpr1;
-      SCIP_CONSEXPR_EXPR* powexpr2;
-      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_EXPR* exprs[3];
+      SCIP_EXPR* prodexpr;
+      SCIP_EXPR* powexpr1;
+      SCIP_EXPR* powexpr2;
+      SCIP_EXPR* expr;
       SCIP_Real coefs[3];
 
       /* create const1^3 */
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr1, const1expr, 3.0) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &powexpr1, const1expr, 3.0, NULL, NULL) );
 
       /* create 1 / wire */
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr2, wireexpr, -1.0) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &powexpr2, wireexpr, -1.0, NULL, NULL) );
 
       /* create ncoils * const1^3 / wire */
       exprs[0] = ncoilsexpr;
       exprs[1] = powexpr1;
       exprs[2] = powexpr2;
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 3, exprs, 1.0) );
+      SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr, 3, exprs, 1.0, NULL, NULL) );
 
       /* create 8.0/shearmod * ncoils * const1^3 / wire - defl */
       exprs[0] = prodexpr;
       coefs[0] = 8.0 / shearmod;
       exprs[1] = deflexpr;
       coefs[1] = -1.0;
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &expr, 2, exprs, coefs, 0.0) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &expr, 2, exprs, coefs, 0.0, NULL, NULL) );
 
       /* create nonlinear constraint */
-      SCIP_CALL( SCIPcreateConsExprBasic(scip, &defdefl, "defdefl", expr, 0.0, 0.0) );
+      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &defdefl, "defdefl", expr, 0.0, 0.0) );
 
       /* release expressions */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr2) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr1) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &powexpr2) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &powexpr1) );
    }
 
    /* quadratic constraint freel: maxworkload * defl + 1.05 * ncoils * wire + 2.1 * wire <= maxfreelen */
@@ -342,7 +335,7 @@ SCIP_RETCODE setupProblem(
       SCIP_Real one05 = 1.05;
 
       /* create quadratic constraint maxworkload * defl + 1.05 * ncoils * wire <= maxfreelen */
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &freel, "freel", 2, linvars, lincoefs, 1, &ncoils, &wire, &one05,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &freel, "freel", 2, linvars, lincoefs, 1, &ncoils, &wire, &one05,
          -SCIPinfinity(scip), maxfreelen, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE,
          FALSE, FALSE) );
    }
@@ -383,13 +376,13 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPaddCons(scip, selectwire) );
 
    /* release variable expressions */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &volumeexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &const2expr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &const1expr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &ncoilsexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &deflexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wireexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &coilexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &volumeexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &const2expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &const1expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &ncoilsexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &deflexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &wireexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &coilexpr) );
 
    /* release variables and constraints
     * the problem has them captured, and we do not require them anymore

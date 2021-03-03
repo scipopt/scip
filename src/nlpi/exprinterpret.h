@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   exprinterpret.h
- * @brief  methods to interpret (evaluate) an expression tree "fast"
+ * @brief  methods to interpret (evaluate) an expression "fast"
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
  * Realized similar to LPI: one implementation of an interpreter is linked in.
@@ -23,8 +23,8 @@
 /* @todo product Gradient times vector
    @todo product Hessian times vector
    @todo product Hessian of Lagrangian times vector
-   @todo sparse Hessian of expression tree
-   @todo sparse Hessian of Lagrangian (sets of expression trees and quadratic parts)?
+   @todo sparse Hessian of expression
+   @todo sparse Hessian of Lagrangian (sets of expressions and quadratic parts)?
 */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,10 +33,9 @@
 #define __SCIP_EXPRINTERPRET_H__
 
 #include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "nlpi/type_expr.h"
 #include "nlpi/type_exprinterpret.h"
-#include "scip/intervalarith.h"
+#include "scip/type_scip.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,21 +60,39 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(void);
 /** creates an expression interpreter object */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintCreate(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT**        exprint             /**< buffer to store pointer to expression interpreter */
    );
 
 /** frees an expression interpreter object */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
    );
 
-/** compiles an expression tree and stores compiled data in expression tree */
+/** compiles an expression and returns interpreter-specific data for expression
+ *
+ * can be called again with existing exprintdata if expression has been changed
+ *
+ * @attention *exprintdata needs to be initialized to NULL at first call
+ * @attention the expression is assumed to use varidx expressions but no var expressions
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintCompile(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree                /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA**    exprintdata         /**< buffer to store pointer to compiled data */
+   );
+
+/** frees interpreter data for expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprintFreeData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA**    exprintdata         /**< pointer to pointer to compiled data to be freed */
    );
 
 /** gives the capability to evaluate an expression by the expression interpreter
@@ -86,93 +103,73 @@ SCIP_RETCODE SCIPexprintCompile(
  * Hessians.
  */
 SCIP_EXPORT
-SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprCapability(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree                /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata         /**< interpreter-specific data for expression */
    );
 
-/** frees interpreter data */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprintFreeData(
-   SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
-   );
-
-/** notify expression interpreter that a new parameterization is used
- * this probably causes retaping by AD algorithms
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprintNewParametrization(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   );
-
-/** evaluates an expression tree */
+/** evaluates an expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintEval(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Real*            val                 /**< buffer to store value of expression */
    );
 
-/** evaluates an expression tree on intervals */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprintEvalInt(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Real             infinity,           /**< value for infinity */
-   SCIP_INTERVAL*        varvals,            /**< interval values of variables */
-   SCIP_INTERVAL*        val                 /**< buffer to store interval value of expression */
-   );
-
-/** computes value and gradient of an expression tree */
+/** computes value and gradient of an expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintGrad(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store expression value */
-   SCIP_Real*            gradient            /**< buffer to store expression gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
+   SCIP_Real*            gradient            /**< buffer to store expression gradient */
    );
 
-/** computes interval value and interval gradient of an expression tree */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprintGradInt(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Real             infinity,           /**< value for infinity */
-   SCIP_INTERVAL*        varvals,            /**< interval values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /**< have variable interval values changed since last call to an interval evaluation routine? */
-   SCIP_INTERVAL*        val,                /**< buffer to store expression interval value */
-   SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
-   );
-
-/** gives sparsity pattern of hessian
+/** gives sparsity pattern of lower-triangular part of hessian
  *
- * NOTE: this function might be replaced later by something nicer.
  * Since the AD code might need to do a forward sweep, you should pass variable values in here.
+ *
+ * Result will have (*colidxs)[i] <= (*rowidixs)[i] for i=0..*nnz.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprintHessianSparsityDense(
+SCIP_RETCODE SCIPexprintHessianSparsity(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
-   SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
+   int**                 rowidxs,            /**< buffer to return array with row indices of Hessian elements */
+   int**                 colidxs,            /**< buffer to return array with column indices of Hessian elements */
+   int*                  nnz                 /**< buffer to return length of arrays */
    );
 
-/** computes value and dense hessian of an expression tree
+/** computes value and hessian of an expression
  *
- *  The full hessian is computed (lower left and upper right triangle).
+ * Returned arrays rowidxs and colidxs and number of elements nnz are the same as given by SCIPexprintHessianSparsity().
+ * Returned array hessianvals will contain the corresponding Hessian elements.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprintHessianDense(
+SCIP_RETCODE SCIPexprintHessian(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store function value */
-   SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
+   int**                 rowidxs,            /**< buffer to return array with row indices of Hessian elements */
+   int**                 colidxs,            /**< buffer to return array with column indices of Hessian elements */
+   SCIP_Real**           hessianvals,        /**< buffer to return array with Hessian elements */
+   int*                  nnz                 /**< buffer to return length of arrays */
    );
 
 /** @} */

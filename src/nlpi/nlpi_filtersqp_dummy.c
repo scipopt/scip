@@ -24,16 +24,11 @@
 #include "scip/pub_message.h"
 #include "nlpi/nlpi_filtersqp.h"
 
-/** create solver interface for filterSQP solver */ /*lint -e715*/
-SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+/** create solver interface for filterSQP solver and include it into SCIP, if filterSQP is available */
+SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   assert(nlpi != NULL);
-
-   *nlpi = NULL;
-
    return SCIP_OKAY;
 }  /*lint !e715*/
 

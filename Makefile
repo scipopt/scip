@@ -359,12 +359,9 @@ endif
 # NLP Solver Interfaces and expression interpreter
 #-----------------------------------------------------------------------------
 
-NLPILIBCOBJ	= 	nlpi/nlpi.o \
-			nlpi/nlpi_all.o \
-			nlpi/nlpioracle.o \
-			nlpi/expr.o
+NLPILIBCOBJ	= 	nlpi/expr_varidx.o nlpi/nlpioracle.o nlpi/nlpi_all.o
 
-NLPILIBCXXOBJ	= 	nlpi/intervalarithext.o
+NLPILIBCXXOBJ =
 
 NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
 			scip/misc.o \
@@ -536,34 +533,13 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
-			scip/cons_expr.o \
-			scip/cons_expr_abs.o \
-			scip/cons_expr_cos.o \
-			scip/cons_expr_erf.o \
-			scip/cons_expr_exp.o \
-			scip/cons_expr_iterator.o \
-			scip/cons_expr_log.o \
-			scip/cons_expr_pow.o \
-			scip/cons_expr_product.o \
-			scip/cons_expr_rowprep.o \
-			scip/cons_expr_sin.o \
-			scip/cons_expr_sum.o \
-			scip/cons_expr_value.o \
-			scip/cons_expr_var.o \
-			scip/cons_expr_entropy.o \
-			scip/cons_expr_nlhdlr_bilinear.o \
-			scip/cons_expr_nlhdlr_convex.o \
-			scip/cons_expr_nlhdlr_default.o \
-			scip/cons_expr_nlhdlr_perspective.o \
-			scip/cons_expr_nlhdlr_quadratic.o \
-			scip/cons_expr_nlhdlr_quotient.o \
-			scip/cons_expr_nlhdlr_soc.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
 			scip/cons_knapsack.o \
 			scip/cons_linear.o \
 			scip/cons_linking.o \
 			scip/cons_logicor.o \
+			scip/cons_nonlinear.o \
 			scip/cons_or.o \
 			scip/cons_orbisack.o \
 			scip/cons_orbitope.o \
@@ -583,6 +559,18 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
 			scip/event_estim.o \
+			scip/expr_abs.o \
+			scip/expr_cos.o \
+			scip/expr_entropy.o \
+			scip/expr_erf.o \
+			scip/expr_exp.o \
+			scip/expr_log.o \
+			scip/expr_pow.o \
+			scip/expr_product.o \
+			scip/expr_sin.o \
+			scip/expr_sum.o \
+			scip/expr_value.o \
+			scip/expr_var.o \
 			scip/heur_sync.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_adaptivediving.o \
@@ -609,8 +597,8 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_lpface.o \
 			scip/heur_alns.o \
 			scip/heur_locks.o \
-			scip/heur_mutation.o \
 			scip/heur_multistart.o \
+			scip/heur_mutation.o \
 			scip/heur_mpec.o \
 			scip/heur_nlpdiving.o \
 			scip/heur_objpscostdiving.o \
@@ -642,6 +630,13 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
 			scip/message_default.o \
+			scip/nlhdlr_bilinear.o \
+			scip/nlhdlr_convex.o \
+			scip/nlhdlr_default.o \
+			scip/nlhdlr_perspective.o \
+			scip/nlhdlr_quadratic.o \
+			scip/nlhdlr_quotient.o \
+			scip/nlhdlr_soc.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_breadthfirst.o \
 			scip/nodesel_dfs.o \
@@ -700,10 +695,10 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/reader_tim.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
+			scip/sepa_aggregation.o \
 			scip/sepa_cgmip.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
-			scip/sepa_aggregation.o \
 			scip/sepa_convexproj.o \
 			scip/sepa_disjunctive.o \
 			scip/sepa_eccuts.o \
@@ -719,6 +714,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
+
 
 SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o
 
@@ -744,6 +740,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \
+			scip/expr.o \
+			scip/exprcurv.o \
+			scip/expriter.o \
 			scip/fileio.o \
 			scip/heur.o \
 			scip/heuristics.o \
@@ -757,7 +756,10 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/misc_linear.o \
+			scip/misc_rowprep.o \
+			scip/nlhdlr.o \
 			scip/nlp.o \
+			scip/nlpi.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
@@ -792,6 +794,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_mem.o \
 			scip/scip_message.o \
 			scip/scip_nlp.o \
+			scip/scip_nlpi.o \
 			scip/scip_nodesel.o \
 			scip/scip_nonlinear.o \
 			scip/scip_numerics.o \

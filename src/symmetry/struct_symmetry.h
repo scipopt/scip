@@ -25,7 +25,7 @@
 
 #include "scip/scip.h"
 #include "symmetry/type_symmetry.h"
-#include "scip/cons_expr.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,7 +45,7 @@ struct SYM_Vartype
 /** data of operators that are considered to be equivalent */
 struct SYM_Optype
 {
-   SCIP_CONSEXPR_EXPR*   expr;               /**< the underlying expression */
+   SCIP_EXPR*            expr;               /**< the underlying expression */
    int                   level;              /**< level of operator in its expression tree */
    int                   color;              /**< store color */
 };

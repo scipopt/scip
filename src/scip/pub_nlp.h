@@ -35,8 +35,8 @@
 #include "scip/type_nlp.h"
 #include "scip/type_var.h"
 #include "scip/type_sol.h"
-#include "nlpi/type_expr.h"
-#include "nlpi/type_nlpi.h"
+#include "scip/type_expr.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,52 +47,6 @@ extern "C" {
  * @{
  */
 
-
-/**@addtogroup PublicExpressionTreeMethods
- *
- * @{
- */
-
-/** returns variables of expression tree */
-SCIP_EXPORT
-SCIP_VAR** SCIPexprtreeGetVars(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   );
-
-/** stores array of variables in expression tree */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprtreeSetVars(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int                   nvars,              /**< number of variables */
-   SCIP_VAR**            vars                /**< variables */
-   );
-
-/** adds variables to the expression tree variables array */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprtreeAddVars(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int                   nvars,              /**< number of variables */
-   SCIP_VAR**            vars                /**< variables */
-   );
-
-/** prints an expression tree using variable names from variables array */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprtreePrintWithNames(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< file for printing, or NULL for stdout */
-   );
-
-/** searches the variables array of an expression tree for a variable and returns its position, or -1 if not found
- * Note that this is an O(n) operation!
- */
-SCIP_EXPORT
-int SCIPexprtreeFindVar(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_VAR*             var                 /**< variable to search for */
-   );
-
-/**@} */
 
 /**@addtogroup PublicNLRowMethods
  *
@@ -123,50 +77,9 @@ SCIP_Real* SCIPnlrowGetLinearCoefs(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
-/** gets number of quadratic variables in quadratic part */
+/** gets expression */
 SCIP_EXPORT
-int SCIPnlrowGetNQuadVars(
-   SCIP_NLROW*           nlrow               /**< NLP row */
-   );
-
-/** gets quadratic variables in quadratic part */
-SCIP_EXPORT
-SCIP_VAR** SCIPnlrowGetQuadVars(
-   SCIP_NLROW*           nlrow               /**< NLP row */
-   );
-
-/** gives position of variable in quadvars array of row, or -1 if not found */
-SCIP_EXPORT
-int SCIPnlrowSearchQuadVar(
-   SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   SCIP_VAR*             var                 /**< variable to search for */
-   );
-
-/** gets number of quadratic elements in quadratic part */
-SCIP_EXPORT
-int SCIPnlrowGetNQuadElems(
-   SCIP_NLROW*           nlrow               /**< NLP row */
-   );
-
-/** gets quadratic elements in quadratic part */
-SCIP_EXPORT
-SCIP_QUADELEM* SCIPnlrowGetQuadElems(
-   SCIP_NLROW*           nlrow               /**< NLP row */
-   );
-
-/** gets array with coefficients in linear part */
-SCIP_EXPORT
-void SCIPnlrowGetQuadData(
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   int*                  nquadvars,          /**< buffer to store number of variables in quadratic term, or NULL if not of interest */
-   SCIP_VAR***           quadvars,           /**< buffer to store pointer to array of variables in quadratic term, or NULL if not of interest */
-   int*                  nquadelems,         /**< buffer to store number of entries in quadratic term, or NULL if not of interest */
-   SCIP_QUADELEM**       quadelems           /**< buffer to store pointer to array of entries in quadratic term, or NULL if not of interest */
-   );
-
-/** gets expression tree */
-SCIP_EXPORT
-SCIP_EXPRTREE* SCIPnlrowGetExprtree(
+SCIP_EXPR* SCIPnlrowGetExpr(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 
@@ -222,6 +135,46 @@ SCIP_Real SCIPnlrowGetDualsol(
    );
 
 /**@} */
+
+/** creates an NLP statistics structure */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpStatisticsCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
+   );
+
+/** frees an NLP statistics structure */
+SCIP_EXPORT
+void SCIPnlpStatisticsFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
+   );
+
+/** gets the number of iterations from an NLP statistics structure */
+SCIP_EXPORT
+int SCIPnlpStatisticsGetNIterations(
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
+   );
+
+/** gets the total time from an NLP statistics structure */
+SCIP_EXPORT
+SCIP_Real SCIPnlpStatisticsGetTotalTime(
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
+   );
+
+/** sets the number of iterations in an NLP statistics structure */
+SCIP_EXPORT
+void SCIPnlpStatisticsSetNIterations(
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   int                   niterations         /**< number of iterations to store */
+   );
+
+/** sets the total time in an NLP statistics structure */
+SCIP_EXPORT
+void SCIPnlpStatisticsSetTotalTime(
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   SCIP_Real             totaltime           /**< solution time to store */
+   );
 
 /**@} */ /* PublicNLPMethods */
 

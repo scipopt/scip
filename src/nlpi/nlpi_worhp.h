@@ -25,7 +25,7 @@
 #ifndef __SCIP_NLPI_WORHP_H__
 #define __SCIP_NLPI_WORHP_H__
 
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,11 +36,10 @@ extern "C" {
  * @{
  */
 
-/** create solver interface for Worhp solver */
+/** create solver interface for Worhp solver and includes it into SCIP, if Worhp is available */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateNlpSolverWorhp(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
+SCIP_RETCODE SCIPincludeNlpSolverWorhp(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    );
 

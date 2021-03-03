@@ -39,9 +39,8 @@
 #include <string.h>
 
 #include "scip/cons_linear.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_var.h"
-#include "scip/intervalarith.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/nlhdlr_bilinear.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_obbt.h"
 #include "scip/pub_cons.h"
@@ -70,10 +69,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_product.h"
-#include "scip/cons_expr_nlhdlr_bilinear.h"
 
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
@@ -156,7 +151,7 @@ typedef enum Corner CORNER;
 /** bilinear bound data */
 struct BilinBound
 {
-   SCIP_CONSEXPR_EXPR*   expr;               /**< product expression */
+   SCIP_EXPR*            expr;               /**< product expression */
    int                   filtered;           /**< corners that could be thrown out during pre-filtering step */
    unsigned int          done:1;             /**< has this bilinear term been processed already? */
    SCIP_Real             score;              /**< score value that is used to group bilinear term bounds */
@@ -837,9 +832,9 @@ SCIP_VAR* bilinboundGetX(
    )
 {
    assert(bilinbound->expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(bilinbound->expr) == 2);
+   assert(SCIPexprGetNChildren(bilinbound->expr) == 2);
 
-   return SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(bilinbound->expr)[0]);
+   return SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(bilinbound->expr)[0]);
 }
 
 /** returns the second variable of a bilinear bound */
@@ -849,9 +844,9 @@ SCIP_VAR* bilinboundGetY(
    )
 {
    assert(bilinbound->expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(bilinbound->expr) == 2);
+   assert(SCIPexprGetNChildren(bilinbound->expr) == 2);
 
-   return SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(bilinbound->expr)[1]);
+   return SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(bilinbound->expr)[1]);
 }
 
 /** returns the negative locks of the expression in a bilinear bound */
@@ -862,7 +857,7 @@ int bilinboundGetLocksNeg(
 {
    assert(bilinbound->expr != NULL);
 
-   return SCIPgetConsExprExprNLocksNeg(bilinbound->expr);
+   return SCIPgetExprNLocksNegNonlinear(bilinbound->expr);
 }
 
 /** returns the positive locks of the expression in a bilinear bound */
@@ -873,7 +868,7 @@ int bilinboundGetLocksPos(
 {
    assert(bilinbound->expr != NULL);
 
-   return SCIPgetConsExprExprNLocksPos(bilinbound->expr);
+   return SCIPgetExprNLocksPosNonlinear(bilinbound->expr);
 }
 
 /** computes the score of a bilinear term bound */
@@ -2394,8 +2389,8 @@ SCIP_RETCODE applyObbtBilinear(
    SCIP_Bool lperror;
    SCIP_Longint nolditerations;
    SCIP_Longint nleftiterations;
-   SCIP_CONSHDLR* exprconshdlr;
-   SCIP_CONSEXPR_NLHDLR* bilinearnlhdlr;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_NLHDLR* bilinearnlhdlr;
    int nvars;
    int i;
 
@@ -2410,8 +2405,8 @@ SCIP_RETCODE applyObbtBilinear(
    SCIPdebugMsg(scip, "call applyObbtBilinear starting from %d\n", propdata->lastbilinidx);
 
    /* find nonlinear handler for bilinear terms */
-   exprconshdlr = SCIPfindConshdlr(scip, "expr");
-   bilinearnlhdlr = exprconshdlr != NULL ? SCIPfindConsExprNlhdlr(exprconshdlr, "bilinear") : NULL;
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   bilinearnlhdlr = conshdlr != NULL ? SCIPfindNlhdlrNonlinear(conshdlr, "bilinear") : NULL;
 
    /* no nonlinear handler available -> skip */
    if( bilinearnlhdlr == NULL )
@@ -2521,7 +2516,7 @@ SCIP_RETCODE applyObbtBilinear(
             SCIP_Bool success;
 
             /* add inequality to the associated product expression */
-            SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, bilinearnlhdlr, bilinbound->expr, xcoef, ycoef,
+            SCIP_CALL( SCIPaddNlhdlrBilinearIneq(scip, bilinearnlhdlr, bilinbound->expr, xcoef, ycoef,
                constant, &success) );
 
             /* check whether the inequality has been accepted */
@@ -2640,11 +2635,11 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    BMSclearMemoryArray(nccounts, nvars);
 
    /* get expression constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    if( conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0 )
       return SCIP_OKAY;
 
-   var2expr = SCIPgetConsExprVarHashmap(scip, conshdlr);
+   var2expr = SCIPgetVarExprHashmapNonlinear(conshdlr);
    assert(var2expr != NULL);
 
    for( i = 0; i < SCIPgetNVars(scip); ++i )
@@ -2656,24 +2651,20 @@ SCIP_RETCODE getNLPVarsNonConvexity(
 
       if( SCIPhashmapExists(var2expr, (void*) var) )
       {
-         SCIP_CONSEXPR_EXPR* expr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, (void*) var);
+         SCIP_EXPR* expr = (SCIP_EXPR*)SCIPhashmapGetImage(var2expr, (void*) var);
          assert(expr != NULL);
-         assert(SCIPisConsExprExprVar(expr));
+         assert(SCIPisExprVar(scip, expr));
 
-         nccounts[SCIPvarGetProbindex(var)] = SCIPgetConsExprExprNSepaUsesActivity(expr);
+         nccounts[SCIPvarGetProbindex(var)] = SCIPgetExprNSepaUsesActivityNonlinear(expr);
       }
    }
 
 #ifdef SCIP_DEBUG
+   for( i = 0; i < SCIPgetNVars(scip); ++i)
    {
-      int i;
-
-      for( i = 0; i < SCIPgetNVars(scip); ++i)
-      {
-         SCIP_VAR* var = SCIPgetVars(scip)[i];
-         assert(var != NULL);
-         SCIPdebugMsg(scip, "nccounts[%s] = %u\n", SCIPvarGetName(var), nccounts[SCIPvarGetProbindex(var)]);
-      }
+      SCIP_VAR* var = SCIPgetVars(scip)[i];
+      assert(var != NULL);
+      SCIPdebugMsg(scip, "nccounts[%s] = %u\n", SCIPvarGetName(var), nccounts[SCIPvarGetProbindex(var)]);
    }
 #endif
 
@@ -2704,7 +2695,7 @@ SCIP_RETCODE initBounds(
    SCIP_PROPDATA*        propdata            /**< data of the obbt propagator */
    )
 {
-   SCIP_CONSHDLR* exprconshdlr;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** vars;                          /* array of the problems variables */
    int* nlcount;                             /* array that stores in how many nonlinearities each variable appears */
    unsigned int* nccount;                    /* array that stores in how many nonconvexities each variable appears */
@@ -2784,22 +2775,22 @@ SCIP_RETCODE initBounds(
    /* set number of interesting bounds */
    propdata->nbounds = bdidx;
 
-   exprconshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
 
    /* get all product expressions from expression constraint handler */
-   if( propdata->nbounds > 0 && exprconshdlr != NULL && propdata->createbilinineqs )
+   if( propdata->nbounds > 0 && conshdlr != NULL && propdata->createbilinineqs )
    {
-      SCIP_CONSEXPR_NLHDLR* bilinnlhdlr;
-      SCIP_CONSEXPR_EXPR** exprs;
+      SCIP_NLHDLR* bilinnlhdlr;
+      SCIP_EXPR** exprs;
       int nexprs;
 
       /* find nonlinear handler for bilinear terms */
-      bilinnlhdlr = SCIPfindConsExprNlhdlr(exprconshdlr, "bilinear");
+      bilinnlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, "bilinear");
       assert(bilinnlhdlr != NULL);
 
       /* collect all bilinear product in all expression constraints */
-      exprs = SCIPgetConsExprNlhdlrBilinearExprs(bilinnlhdlr);
-      nexprs = SCIPgetConsExprNlhdlrBilinearNExprs(bilinnlhdlr);
+      exprs = SCIPgetNlhdlrBilinearExprs(bilinnlhdlr);
+      nexprs = SCIPgetNlhdlrBilinearNExprs(bilinnlhdlr);
 
       if( nexprs > 0 )
       {
@@ -2815,10 +2806,10 @@ SCIP_RETCODE initBounds(
             SCIP_VAR* y;
 
             assert(exprs[i] != NULL);
-            assert(SCIPgetConsExprExprNChildren(exprs[i]) == 2);
+            assert(SCIPexprGetNChildren(exprs[i]) == 2);
 
-            x = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(exprs[i])[0]);
-            y = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(exprs[i])[1]);
+            x = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(exprs[i])[0]);
+            y = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(exprs[i])[1]);
             assert(x != NULL);
             assert(y != NULL);
             assert(x != y);
@@ -2834,7 +2825,7 @@ SCIP_RETCODE initBounds(
 
             /* store and capture expression */
             bilinbound->expr = exprs[i];
-            SCIPcaptureConsExprExpr(bilinbound->expr);
+            SCIPcaptureExpr(bilinbound->expr);
 
             /* compute a descent score */
             bilinbound->score = bilinboundGetScore(scip, propdata->randnumgen, bilinbound);
@@ -3092,7 +3083,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
          assert(propdata->bilinbounds[i]->expr != NULL);
 
          /* release expression */
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &propdata->bilinbounds[i]->expr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &propdata->bilinbounds[i]->expr) );
 
          SCIPfreeBlockMemory(scip, &propdata->bilinbounds[i]); /*lint !e866*/
       }

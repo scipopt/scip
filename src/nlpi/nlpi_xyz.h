@@ -24,7 +24,7 @@
 #ifndef __SCIP_NLPI_XYZ_H__
 #define __SCIP_NLPI_XYZ_H__
 
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,10 +35,9 @@ extern "C" {
  * @{
  */
 
-/** create solver interface for Xyz solver */
-SCIP_RETCODE SCIPcreateNlpSolverXyz(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+/** create solver interface for Xyz solver and includes it into SCIP */
+SCIP_RETCODE SCIPincludeNlpSolverXyz(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** @} */

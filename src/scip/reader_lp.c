@@ -32,8 +32,7 @@
 #include <ctype.h>
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_var.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -1359,7 +1358,7 @@ SCIP_RETCODE readObjective(
          }
 
          minusone = -1.0;
-         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+         SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &quadobjcons, "quadobj", 1, &quadobjvar, &minusone, nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
@@ -1781,7 +1780,7 @@ SCIP_RETCODE readConstraints(
       }
       else
       {
-         retcode = SCIPcreateConsExprQuadratic(scip, &cons, name, ncoefs, vars, coefs,
+         retcode = SCIPcreateConsQuadraticNonlinear(scip, &cons, name, ncoefs, vars, coefs,
             nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
       }
@@ -2645,7 +2644,7 @@ SCIP_RETCODE printRow(
    SCIP_VAR**            linvars,            /**< array of linear variables */
    SCIP_Real*            linvals,            /**< array of linear coefficient values */
    int                   nlinvars,           /**< number of linear variables */
-   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic expression data */
+   SCIP_EXPR*            quadexpr,           /**< quadratic expression */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
@@ -2697,9 +2696,9 @@ SCIP_RETCODE printRow(
    }
 
    /* print quadratic part */
-   if( quaddata != NULL )
+   if( quadexpr != NULL )
    {
-      SCIP_CONSEXPR_EXPR** linexprs;
+      SCIP_EXPR** linexprs;
       SCIP_VAR** activevars;
       SCIP_Real* activevals;
       SCIP_Real* lincoefs;
@@ -2711,7 +2710,7 @@ SCIP_RETCODE printRow(
       int nlinexprs;
 
       /* get data from the quadratic expression */
-      SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprterms,
+      SCIPexprGetQuadraticData(quadexpr, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprterms,
             NULL, NULL);
 
       /* allocate memory to store active linear variables */
@@ -2722,9 +2721,9 @@ SCIP_RETCODE printRow(
       for( v = 0; v < nlinexprs; ++v )
       {
          assert(linexprs != NULL && linexprs[v] != NULL);
-         assert(SCIPisConsExprExprVar(linexprs[v]));
+         assert(SCIPisExprVar(scip, linexprs[v]));
 
-         activevars[v] = SCIPgetConsExprExprVarVar(linexprs[v]);
+         activevars[v] = SCIPgetVarExprVar(linexprs[v]);
          assert(activevars[v] != NULL);
       }
 
@@ -2764,16 +2763,16 @@ SCIP_RETCODE printRow(
       /* print linear coefficients of quadratic variables */
       for( v = 0; v < nquadexprs; ++v )
       {
-         SCIP_CONSEXPR_EXPR* expr;
+         SCIP_EXPR* expr;
          SCIP_VAR* var;
          SCIP_Real lincoef;
 
          /* get linear coefficient and variable of quadratic term */
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &expr, &lincoef, NULL, NULL, NULL, NULL);
+         SCIPexprGetQuadraticQuadTerm(quadexpr, v, &expr, &lincoef, NULL, NULL, NULL, NULL);
          assert(expr != NULL);
-         assert(SCIPisConsExprExprVar(expr));
+         assert(SCIPisExprVar(scip, expr));
 
-         var = SCIPgetConsExprExprVarVar(expr);
+         var = SCIPgetVarExprVar(expr);
          assert(var != NULL);
 
          if( lincoef == 0.0 )
@@ -2795,16 +2794,16 @@ SCIP_RETCODE printRow(
       /* print square terms */
       for( v = 0; v < nquadexprs; ++v )
       {
-         SCIP_CONSEXPR_EXPR* expr;
+         SCIP_EXPR* expr;
          SCIP_VAR* var;
          SCIP_Real sqrcoef;
 
          /* get square coefficient and variable of quadratic term */
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &expr, NULL, &sqrcoef, NULL, NULL, NULL);
+         SCIPexprGetQuadraticQuadTerm(quadexpr, v, &expr, NULL, &sqrcoef, NULL, NULL, NULL);
          assert(expr != NULL);
-         assert(SCIPisConsExprExprVar(expr));
+         assert(SCIPisExprVar(scip, expr));
 
-         var = SCIPgetConsExprExprVarVar(expr);
+         var = SCIPgetVarExprVar(expr);
          assert(var != NULL);
 
          if( sqrcoef == 0.0 )
@@ -2823,22 +2822,22 @@ SCIP_RETCODE printRow(
       /* print bilinear terms */
       for( v = 0; v < nbilinexprterms; ++v )
       {
-         SCIP_CONSEXPR_EXPR* expr1;
-         SCIP_CONSEXPR_EXPR* expr2;
+         SCIP_EXPR* expr1;
+         SCIP_EXPR* expr2;
          SCIP_VAR* var1;
          SCIP_VAR* var2;
          SCIP_Real bilincoef;
 
          /* get coefficient and variables of bilinear */
-         SCIPgetConsExprQuadraticBilinTermData(quaddata, v, &expr1, &expr2, &bilincoef, NULL, NULL);
+         SCIPexprGetQuadraticBilinTerm(quadexpr, v, &expr1, &expr2, &bilincoef, NULL, NULL);
          assert(expr1 != NULL);
-         assert(SCIPisConsExprExprVar(expr1));
+         assert(SCIPisExprVar(scip, expr1));
          assert(expr2 != NULL);
-         assert(SCIPisConsExprExprVar(expr2));
+         assert(SCIPisExprVar(scip, expr2));
 
-         var1 = SCIPgetConsExprExprVarVar(expr1);
+         var1 = SCIPgetVarExprVar(expr1);
          assert(var1 != NULL);
-         var2 = SCIPgetConsExprExprVarVar(expr2);
+         var2 = SCIPgetVarExprVar(expr2);
          assert(var2 != NULL);
 
          /* we start a new line; therefore we tab this line */
@@ -2881,7 +2880,7 @@ SCIP_RETCODE printQuadraticCons(
    SCIP_VAR**            linvars,            /**< array of linear variables */
    SCIP_Real*            linvals,            /**< array of linear coefficients values (or NULL if all linear coefficient values are 1) */
    int                   nlinvars,           /**< number of linear variables */
-   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic expression data (or NULL if nlinvars > 0) */
+   SCIP_EXPR*            quadexpr,           /**< quadratic expression (or NULL if nlinvars > 0) */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed         /**< transformed constraint? */
@@ -2895,7 +2894,7 @@ SCIP_RETCODE printQuadraticCons(
 
    assert( scip != NULL );
    assert( rowname != NULL );
-   assert( quaddata == NULL || nlinvars == 0);
+   assert( quadexpr == NULL || nlinvars == 0);
 
    /* The LP format does not forbid that the variable array is empty */
    assert( nlinvars == 0 || linvars != NULL );
@@ -2931,7 +2930,7 @@ SCIP_RETCODE printQuadraticCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* equal constraint */
-      SCIP_CALL( printRow(scip, file, rowname, "", "=", activevars, activevals, nactivevars, quaddata,
+      SCIP_CALL( printRow(scip, file, rowname, "", "=", activevars, activevals, nactivevars, quadexpr,
          rhs - activeconstant, transformed) );
    }
    else
@@ -2940,13 +2939,13 @@ SCIP_RETCODE printQuadraticCons(
       {
          /* print inequality ">=" */
          SCIP_CALL( printRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", ">=", activevars, activevals,
-            nactivevars, quaddata, lhs - activeconstant, transformed) );
+            nactivevars, quadexpr, lhs - activeconstant, transformed) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
          SCIP_CALL( printRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "<=", activevars, activevals,
-            nactivevars, quaddata, rhs - activeconstant, transformed) );
+            nactivevars, quadexpr, rhs - activeconstant, transformed) );
       }
    }
 
@@ -3875,13 +3874,13 @@ SCIP_RETCODE SCIPwriteLp(
       }
       else if( strcmp(conshdlrname, "expr") == 0 )
       {
-         SCIP_CONSEXPR_QUADEXPR* quaddata;
+         SCIP_Bool isquadratic;
 
-         /* get the quadratic representation of the expression constraint */
-         SCIP_CALL( SCIPgetQuadExprConsExpr(scip, cons, &quaddata) );
+         /* check whether there is a quadratic representation of the nonlinear constraint */
+         SCIP_CALL( SCIPcheckQuadraticConsNonlinear(scip, cons, &isquadratic) );
 
-         /* we cannot handle expression constraint that are not quadratically representable */
-         if( quaddata == NULL || !SCIPareConsExprQuadraticExprsVariables(quaddata) )
+         /* we cannot handle nonlinear constraint that are not quadratically representable */
+         if( !isquadratic )
          {
             SCIPwarningMessage(scip, "constraint handler <%s> cannot print constraint\n", SCIPconsGetHdlr(cons));
             SCIPinfoMessage(scip, file, "\\ ");
@@ -3891,8 +3890,8 @@ SCIP_RETCODE SCIPwriteLp(
             return SCIP_OKAY;
          }
 
-         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, quaddata,
-            SCIPgetLhsConsExpr(scip, cons), SCIPgetRhsConsExpr(scip, cons), transformed) );
+         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprConsNonlinear(cons),
+            SCIPgetLhsConsNonlinear(cons), SCIPgetRhsConsNonlinear(cons), transformed) );
 
          consExpr[nConsExpr++] = cons;
       }

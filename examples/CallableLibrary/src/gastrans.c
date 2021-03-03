@@ -40,10 +40,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
-#include "scip/cons_expr_var.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_pow.h"
-
 /* Model parameters */
 
 /** node data structure */
@@ -159,7 +155,6 @@ SCIP_RETCODE setupProblem(
    SCIP_CONS* pressurediffcons[narcs];
    SCIP_CONS* pressureloss[narcs];
 
-   SCIP_CONSHDLR* conshdlr;
    char name[SCIP_MAXSTRLEN];
    int i;
    int j;
@@ -268,35 +263,33 @@ SCIP_RETCODE setupProblem(
     * where coef = 96.074830e-15*power(diameter(i)^5/lambda/compressibility/temperatur/length(i)/density
     * and lambda = (2*log10(3.7*diameter(i)/rugosity))^(-2);
     */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
    for( i = 0; i < narcs; ++i )
    {
-      SCIP_CONSEXPR_EXPR* exprflow;
-      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_EXPR* exprflow;
+      SCIP_EXPR* exprs[2];
       SCIP_Real coefs[2];
-      SCIP_CONSEXPR_EXPR* exprsum;
+      SCIP_EXPR* exprsum;
       SCIP_Real coef;
 
       coef = 96.074830e-15 * pow(arcdata[i].diameter, 5.0) * pow(2.0*log10(3.7*arcdata[i].diameter / rugosity), 2.0)
          / compressibility / gastemp / arcdata[i].length / density;
 
       /* we can always use the signpower-expression, because flow(i) is positive for active arcs */
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprflow, flow[i]) );
-      SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, conshdlr, &exprs[0], exprflow, 2.0) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprflow) );
+      SCIP_CALL( SCIPcreateExprVar(scip, &exprflow, flow[i], NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprSignpower(scip, &exprs[0], exprflow, 2.0, NULL, NULL) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprflow) );
 
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[1], pressurediff[i]) );
+      SCIP_CALL( SCIPcreateExprVar(scip, &exprs[1], pressurediff[i], NULL, NULL) );
 
       coefs[0] = 1.0;
       coefs[1] = arcdata[i].active ? coef : -coef;
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &exprsum, 2, exprs, coefs, 0.0) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &exprsum, 2, exprs, coefs, 0.0, NULL, NULL) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprs[1]) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprs[0]) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pressureloss_%s_%s", nodedata[arcdata[i].node1].name, nodedata[arcdata[i].node2].name);
-      SCIP_CALL( SCIPcreateConsExprBasic(scip, &pressureloss[i], name, exprsum, arcdata[i].active ? -SCIPinfinity(scip) : 0.0, 0.0) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprsum) );
+      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &pressureloss[i], name, exprsum, arcdata[i].active ? -SCIPinfinity(scip) : 0.0, 0.0) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprsum) );
 
       SCIP_CALL( SCIPaddCons(scip, pressureloss[i]) );
    }

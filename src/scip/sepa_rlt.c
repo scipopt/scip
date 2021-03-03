@@ -31,7 +31,7 @@
 #include <string.h>
 
 #include "scip/sepa_rlt.h"
-#include "scip/cons_expr.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/pub_lp.h"
 
 
@@ -97,7 +97,7 @@ typedef struct AdjacentVarData ADJACENTVARDATA;
 /** separator data */
 struct SCIP_SepaData
 {
-   SCIP_CONSHDLR*        conshdlr;           /**< expression constraint handler */
+   SCIP_CONSHDLR*        conshdlr;           /**< nonlinear constraint handler */
    SCIP_Bool             iscreated;          /**< indicates whether the sepadata has been initialized yet */
    SCIP_Bool             isinitialround;     /**< indicates that this is the first round and original rows are used */
 
@@ -779,7 +779,7 @@ SCIP_RETCODE extractProducts(
       overestimate ? "<=" : ">=", A, SCIPvarGetName(x), B, SCIPvarGetName(w), C, SCIPvarGetName(y), D);
 
    SCIP_CALL( addProductVars(scip, sepadata, x, y, varmap, 1) );
-   SCIP_CALL( SCIPinsertBilinearTermImplicit(scip, sepadata->conshdlr, x, y, w, A, C, B, D, overestimate) );
+   SCIP_CALL( SCIPinsertBilinearTermImplicitNonlinear(scip, sepadata->conshdlr, x, y, w, A, C, B, D, overestimate) );
 
    return SCIP_OKAY;
 }
@@ -1577,7 +1577,7 @@ SCIP_RETCODE createSepaData(
 {
    SCIP_HASHMAP* varmap;
    int i;
-   SCIP_CONSEXPR_BILINTERM* bilinterms;
+   SCIP_CONSNONLINEAR_BILINTERM* bilinterms;
    int varmapsize;
    int nvars;
 
@@ -1592,7 +1592,7 @@ SCIP_RETCODE createSepaData(
    sepadata->sbilinvars = 0;
 
    /* get total number of bilinear terms */
-   sepadata->nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
+   sepadata->nbilinterms = SCIPgetNBilinTermsNonlinear(sepadata->conshdlr);
 
    /* skip if there are no bilinear terms and implicit product detection is off */
    if( sepadata->nbilinterms == 0 && !sepadata->detecthidden )
@@ -1608,7 +1608,7 @@ SCIP_RETCODE createSepaData(
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), varmapsize) );
 
    /* get all bilinear terms from the expression constraint handler */
-   bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+   bilinterms = SCIPgetBilinTermsNonlinear(sepadata->conshdlr);
 
    /* store the information of all variables that appear bilinearly */
    for( i = 0; i < sepadata->nbilinterms; ++i )
@@ -1637,8 +1637,8 @@ SCIP_RETCODE createSepaData(
       SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
 
       /* update nbilinterms and bilinterms, as detectHiddenProducts might have found new terms */
-      sepadata->nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
-      bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+      sepadata->nbilinterms = SCIPgetNBilinTermsNonlinear(sepadata->conshdlr);
+      bilinterms = SCIPgetBilinTermsNonlinear(sepadata->conshdlr);
 
       if( sepadata->nbilinterms > oldnterms )
       {
@@ -1690,7 +1690,7 @@ SCIP_RETCODE createSepaData(
    sepadata->iscreated = TRUE;
    sepadata->isinitialround = TRUE;
 
-   if( SCIPgetConsExprNBilinTerms(sepadata->conshdlr) > 0 )
+   if( SCIPgetNBilinTermsNonlinear(sepadata->conshdlr) > 0 )
       SCIPstatisticMessage(" Found bilinear terms\n");
    else
       SCIPstatisticMessage(" No bilinear terms\n");
@@ -1717,14 +1717,14 @@ void getBestEstimators(
    SCIP_Real viol_above;
    int i;
    int j;
-   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_CONSNONLINEAR_BILINTERM* terms;
 
    assert(bestunderestimators != NULL);
    assert(bestoverestimators != NULL);
 
-   terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+   terms = SCIPgetBilinTermsNonlinear(sepadata->conshdlr);
 
-   for( j = 0; j < SCIPgetConsExprNBilinTerms(sepadata->conshdlr); ++j )
+   for( j = 0; j < SCIPgetNBilinTermsNonlinear(sepadata->conshdlr); ++j )
    {
       viol_below = 0.0;
       viol_above = 0.0;
@@ -1738,7 +1738,7 @@ void getBestEstimators(
       /* if there are any auxexprs, look there */
       for( i = 0; i < terms[j].nauxexprs; ++i )
       {
-         auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[j].x, terms[j].y, terms[j].aux.exprs[i], sol);
+         auxval = SCIPevalBilinAuxExprNonlinear(scip, terms[j].x, terms[j].y, terms[j].aux.exprs[i], sol);
          prodviol = auxval - prodval;
 
          if( terms[j].aux.exprs[i]->underestimate && SCIPisFeasGT(scip, auxval, prodval) && prodviol > viol_below )
@@ -1769,17 +1769,17 @@ SCIP_RETCODE isAcceptableRow(
 {
    int i;
    int idx;
-   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_CONSNONLINEAR_BILINTERM* terms;
 
    assert(row != NULL);
    assert(var != NULL);
 
    *currentnunknown = 0;
-   terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+   terms = SCIPgetBilinTermsNonlinear(sepadata->conshdlr);
 
    for( i = 0; (i < SCIProwGetNNonz(row)) && (sepadata->maxunknownterms < 0 || *currentnunknown <= sepadata->maxunknownterms); ++i )
    {
-      idx = SCIPgetConsExprBilinTermIdx(sepadata->conshdlr, var, SCIPcolGetVar(SCIProwGetCols(row)[i]));
+      idx = SCIPgetBilinTermIdxNonlinear(sepadata->conshdlr, var, SCIPcolGetVar(SCIProwGetCols(row)[i]));
 
       /* if the product hasn't been found, no auxiliary expressions for it are known */
       if( idx < 0 )
@@ -1807,7 +1807,7 @@ static
 void addAuxexprCoefs(
    SCIP_VAR*             var1,               /**< first product variable */
    SCIP_VAR*             var2,               /**< second product variable */
-   SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression to be added */
+   SCIP_CONSNONLINEAR_AUXEXPR* auxexpr,      /**< auxiliary expression to be added */
    SCIP_Real             coef,               /**< coefficient of the auxiliary expression */
    SCIP_Real*            coefaux,            /**< pointer to add the coefficient of the auxiliary variable */
    SCIP_Real*            coef1,              /**< pointer to add the coefficient of the first variable */
@@ -1874,10 +1874,10 @@ SCIP_RETCODE addRltTerm(
    SCIP_Real coefterm;
    int auxpos;
    int idx;
-   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_CONSNONLINEAR_BILINTERM* terms;
    SCIP_VAR* auxvar;
 
-   terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+   terms = SCIPgetBilinTermsNonlinear(sepadata->conshdlr);
 
    if( computeEqCut )
    {
@@ -1904,7 +1904,7 @@ SCIP_RETCODE addRltTerm(
 
    /* first, add the linearisation of the bilinear term */
 
-   idx = SCIPgetConsExprBilinTermIdx(sepadata->conshdlr, var, colvar);
+   idx = SCIPgetBilinTermIdxNonlinear(sepadata->conshdlr, var, colvar);
    auxpos = -1;
 
    /* for an implicit term, get the position of the best estimator */
@@ -2472,7 +2472,7 @@ static
 SCIP_RETCODE markRowsXj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_SOL*             sol,                /**< point to be separated (can be NULL) */
    int                   j,                  /**< index of the multiplier variable in sepadata */
    SCIP_Bool             local,              /**< are local cuts allowed? */
@@ -2499,7 +2499,7 @@ SCIP_RETCODE markRowsXj(
    SCIP_COL* coli;
    SCIP_Real* colvals;
    SCIP_ROW** colrows;
-   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_CONSNONLINEAR_BILINTERM* terms;
    SCIP_Bool violatedbelow;
    SCIP_Bool violatedabove;
    SCIP_VAR** bilinadjvars;
@@ -2521,7 +2521,7 @@ SCIP_RETCODE markRowsXj(
       return SCIP_OKAY;
    }
 
-   terms = SCIPgetConsExprBilinTerms(conshdlr);
+   terms = SCIPgetBilinTermsNonlinear(conshdlr);
    bilinadjvars = getAdjacentVars(sepadata->bilinvardatamap, xj, &nbilinadjvars);
    assert(bilinadjvars != NULL);
 
@@ -2542,8 +2542,8 @@ SCIP_RETCODE markRowsXj(
          continue;
 
       /* get the index of the bilinear product */
-      idx = SCIPgetConsExprBilinTermIdx(conshdlr, xj, xi);
-      assert(idx >= 0 && idx < SCIPgetConsExprNBilinTerms(conshdlr));
+      idx = SCIPgetBilinTermIdxNonlinear(conshdlr, xj, xi);
+      assert(idx >= 0 && idx < SCIPgetNBilinTermsNonlinear(conshdlr));
 
       /* skip implicit products if we don't want to add RLT cuts for them */
       if( !sepadata->hiddenrlt && !terms[idx].existing )
@@ -2571,7 +2571,7 @@ SCIP_RETCODE markRowsXj(
          assert(bestunderest[idx] >= 0 && bestunderest[idx] < terms[idx].nauxexprs);
 
          /* if we are here, the relation with the best underestimator must be violated */
-         assert(SCIPisFeasPositive(scip, SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
+         assert(SCIPisFeasPositive(scip, SCIPevalBilinAuxExprNonlinear(scip, terms[idx].x, terms[idx].y,
                terms[idx].aux.exprs[bestunderest[idx]], sol) - valj * vali));
          violatedbelow = TRUE;
       }
@@ -2594,7 +2594,7 @@ SCIP_RETCODE markRowsXj(
          assert(bestoverest[idx] >= 0 && bestoverest[idx] < terms[idx].nauxexprs);
 
          /* if we are here, the relation with the best overestimator must be violated */
-         assert(SCIPisFeasPositive(scip, valj * vali - SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
+         assert(SCIPisFeasPositive(scip, valj * vali - SCIPevalBilinAuxExprNonlinear(scip, terms[idx].x, terms[idx].y,
                terms[idx].aux.exprs[bestoverest[idx]], sol)));
          violatedabove = TRUE;
       }
@@ -2648,7 +2648,7 @@ SCIP_RETCODE separateMcCormickImplicit(
 {
    int i;
    int j;
-   SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_CONSNONLINEAR_BILINTERM* terms;
    SCIP_ROW* cut;
    char name[SCIP_MAXSTRLEN];
    SCIP_Bool underestimate;
@@ -2657,7 +2657,7 @@ SCIP_RETCODE separateMcCormickImplicit(
    SCIP_Real auxcoef;
    SCIP_Real constant;
    SCIP_Bool success;
-   SCIP_CONSEXPR_AUXEXPR* auxexpr;
+   SCIP_CONSNONLINEAR_AUXEXPR* auxexpr;
    SCIP_Bool cutoff;
    SCIP_Real refpointx;
    SCIP_Real refpointy;
@@ -2668,11 +2668,11 @@ SCIP_RETCODE separateMcCormickImplicit(
    SCIP_Real auxval;
 #endif
 
-   assert(sepadata->nbilinterms == SCIPgetConsExprNBilinTerms(sepadata->conshdlr));
+   assert(sepadata->nbilinterms == SCIPgetNBilinTermsNonlinear(sepadata->conshdlr));
    assert(bestunderestimators != NULL && bestoverestimators != NULL);
 
    cutoff = FALSE;
-   terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+   terms = SCIPgetBilinTermsNonlinear(sepadata->conshdlr);
 
    for( i = 0; i < sepadata->nbilinterms; ++i )
    {
@@ -2713,7 +2713,7 @@ SCIP_RETCODE separateMcCormickImplicit(
 #ifndef NDEBUG
          /* make sure that the term is violated */
          productval = SCIPgetSolVal(scip, sol, terms[i].x) * SCIPgetSolVal(scip, sol, terms[i].y);
-         auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[i].x, terms[i].y, auxexpr, sol);
+         auxval = SCIPevalBilinAuxExprNonlinear(scip, terms[i].x, terms[i].y, auxexpr, sol);
 
          /* if underestimate, then xy <= aux must be violated; otherwise aux <= xy must be violated */
          assert((underestimate && SCIPisFeasLT(scip, auxval, productval)) ||
@@ -2797,7 +2797,7 @@ SCIP_RETCODE separateRltCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
    SCIP_HASHMAP*         row_to_pos,         /**< hashmap linking row indices to positions in array */
    RLT_SIMPLEROW*        projrows,           /**< projected rows */
@@ -3144,7 +3144,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
       SCIP_CALL( createSepaData(scip, sepadata) );
    }
    assert(sepadata->iscreated || (sepadata->nbilinvars == 0 && sepadata->nbilinterms == 0));
-   assert(sepadata->nbilinterms == SCIPgetConsExprNBilinTerms(sepadata->conshdlr));
+   assert(sepadata->nbilinterms == SCIPgetNBilinTermsNonlinear(sepadata->conshdlr));
 
    /* no bilinear terms available -> skip */
    if( sepadata->nbilinvars == 0 )
@@ -3275,7 +3275,7 @@ SCIP_RETCODE SCIPincludeSepaRlt(
 
    /* create RLT separator data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &sepadata) );
-   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
+   sepadata->conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(sepadata->conshdlr != NULL);
 
    /* include separator */

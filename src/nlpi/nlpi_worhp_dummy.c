@@ -21,15 +21,12 @@
 
 #include "nlpi/nlpi_worhp.h"
 
-/** create solver interface for Worhp solver */ /*lint -e715*/
-SCIP_RETCODE SCIPcreateNlpSolverWorhp(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
+/** create solver interface for Worhp solver and includes it into SCIP, if Worhp is available */
+SCIP_RETCODE SCIPincludeNlpSolverWorhp(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    )
 {
-   *nlpi = NULL;
-
    return SCIP_OKAY;
 } /*lint !e715*/
 

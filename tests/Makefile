@@ -28,7 +28,7 @@ UNITTESTSSRC	=	$(shell find src/ -name *.c)
 
 # remove unittests in src/bugs if BUGS is not true
 ifneq ($(BUGS),true)
-	UNITTESTSSRC 	:= $(filter-out $(shell find src/bugs/ -name *.c),$(UNITTESTSSRC))
+	UNITTESTSSRC 	:= $(filter-out $(wildcard src/bugs/*.c),$(UNITTESTSSRC))
 endif
 
 # removes `src/` prefix and file.c postfix, then sorts, which removes duplicates!
