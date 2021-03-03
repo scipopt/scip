@@ -17,6 +17,8 @@
  * @brief  Utility methods for dynamic programming solver for Steiner tree (sub-) problems
  * @author Daniel Rehfeldt
  *
+ * Implements two implementations for finding valid intersections of sub-trees during DP.
+ * One naive one, and one based on a search tree (DPS tree). Performance is slightly better for the latter one.
  * NOTE: DPS tree design is mostly taken from "Separator-Based Pruned Dynamic Programming for Steiner Tree"
  * by Iwata and Shigemura.
  */
@@ -185,20 +187,27 @@ void insertData(
    assert(treenodeIsInRange(node_pos, dpstree));
    assert(bitsetsizesAreValid(termsmark, rootsmark, dpstree));
 
-   /* NOTE: we recursively increase split_pos until we have a hit */
-
    terms_intersection = tnodes[node_pos].terms_intersection;
    assert(terms_intersection);
 
+   /* find the correct position */
+   while( tnodes[node_pos].split_pos != split_pos &&
+      stpbitset_bitIsTrue(terms_intersection, split_pos) == stpbitset_bitIsTrue(termsmark, split_pos) )
+   {
+      split_pos++;
+      assert(split_pos <= dpstree->nterms);
+   }
+
    if( tnodes[node_pos].split_pos == split_pos )
    {
+      /* split position is greater equal than split position of the current node */
       int root;
       const int down_direction =
          stpbitset_bitIsTrue(termsmark, split_pos) ? CHILD_RIGHT : CHILD_LEFT;
       const int child_position = tnodes[node_pos].children_id[down_direction];
       STP_Bitset roots_union = tnodes[node_pos].roots_union;
 
-      assert(child_position >= 0);
+      assert(child_position >= 0 && child_position != node_pos);
 
       /* update node data */
       stpbitset_and(scip, termsmark, terms_intersection, terms_intersection);
@@ -215,12 +224,14 @@ void insertData(
 
       *subrootpos = node_pos;
    }
-   else if( stpbitset_bitIsTrue(terms_intersection, split_pos)
-         != stpbitset_bitIsTrue(termsmark, split_pos) )
+   else
    {
+      /* split position is smaller than split position of the current node */
       int leaf_pos;
       STP_Bitset roots_union = tnodes[node_pos].roots_union;
       const SCIP_Bool leafIsRight = stpbitset_bitIsTrue(termsmark, split_pos);
+
+      assert(stpbitset_bitIsTrue(terms_intersection, split_pos) != stpbitset_bitIsTrue(termsmark, split_pos));
 
       /* we add a new internal node with current node and new leaf as children */
 
@@ -258,11 +269,6 @@ void insertData(
          SCIPdebugMessage("created new internal node: \n");
          printNodeDebugInfo(*subrootpos, dpstree);
       }
-   }
-   else
-   {
-      /* call again with incremented split position */
-      insertData(scip, termsmark, rootsmark, nsubsets, node_pos, split_pos + 1, subrootpos, dpstree);
    }
 }
 
@@ -344,6 +350,17 @@ SCIP_Bool dpterms_intersectsEqualNaive(
 
    if( StpVecGetSize(intersects_naive) != StpVecGetSize(intersects) )
    {
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("wrong sizes: %d %d\n", StpVecGetSize(intersects_naive), StpVecGetSize(intersects));
+      printf("naive: \n");
+
+      for( int i = 0; i < StpVecGetSize(intersects_naive); i++ )
+         printf("%d \n", intersects_naive[i]);
+
+      printf("org: \n");
+      for( int i = 0; i < StpVecGetSize(intersects); i++ )
+         printf("%d \n", intersects[i]);
+#endif
       isEqual = FALSE;
    }
    else
@@ -361,6 +378,8 @@ SCIP_Bool dpterms_intersectsEqualNaive(
       {
          if( intersects_org[i] != intersects_naive[i] )
          {
+            SCIPdebugMessage("wrong index %d: %d!=%d \n", i, intersects_org[i], intersects_naive[i]);
+
             isEqual = FALSE;
             break;
          }
@@ -415,7 +434,9 @@ STP_Vectype(int) dpterms_collectIntersectsNaive(
          }
 
          if( hasIntersection )
+         {
             StpVecPushBack(scip, intersects, i);
+         }
       }
    }
 
@@ -506,7 +527,6 @@ STP_Vectype(int) dpterms_streeCollectIntersects(
 
    return intersects;
 }
-
 
 
 /** initializes */
