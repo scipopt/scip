@@ -26,6 +26,9 @@
 #include "probdata_stp.h"
 #include "solstp.h"
 #include "dpterms.h"
+#ifndef NDEBUG
+#include "substpsolver.h"
+#endif
 
 #define RELAX_NAME             "stpdp"
 #define RELAX_DESC             "DP relaxator for STP"
@@ -46,6 +49,49 @@ struct SCIP_RelaxData
 /*
  * Local methods
  */
+
+#ifndef NDEBUG
+/** gets solution by B&C, for debugging */
+static
+SCIP_RETCODE getBCOptObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph */
+   SCIP_Real*            obj                 /**< to store solution */
+   )
+{
+   int* soledges;
+   GRAPH* graph_copied;
+   SUBSTP* substp;
+   SCIP_Bool success;
+
+   assert(graph);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &soledges, graph->edges) );
+
+   SCIP_CALL( graph_copy(scip, graph, &graph_copied) );
+   graph_copied->is_packed = FALSE;
+
+   SCIP_CALL( substpsolver_initBC(scip, graph_copied, &substp) );
+   SCIP_CALL( substpsolver_initHistory(substp) );
+
+   SCIP_CALL( substpsolver_setMute(substp) );
+   SCIP_CALL( substpsolver_setProbNoSubDP(substp) );
+   SCIP_CALL( substpsolver_solve(scip, substp, &success) );
+
+   assert(success);
+
+   SCIP_CALL( substpsolver_getSolution(substp, soledges) );
+
+   substpsolver_free(scip, &substp);
+
+   *obj = solstp_getObj(graph, soledges, 0.0);
+
+   SCIPfreeMemoryArray(scip, &soledges);
+
+   return SCIP_OKAY;
+}
+#endif
+
 
 
 /** solves problem with terminals-FPT DP */
@@ -82,6 +128,14 @@ SCIP_RETCODE solveWithDpTerms(
    *obj = solstp_getObj(graph, soledges, 0.0);
 
    SCIPfreeMemoryArray(scip, &soledges);
+
+#ifndef NDEBUG
+   {
+      SCIP_Real obj_bc;
+      SCIP_CALL( getBCOptObj(scip, graph, &obj_bc) );
+      assert(EQ(obj_bc, *obj));
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -178,9 +232,7 @@ SCIP_Bool SCIPStpDpRelaxIsPromising(
    assert(relaxdata);
 */
    assert(graph);
-   assert(!dpterms_isPromising(graph)); // todo!
 
-  // return TRUE;
    return dpterms_isPromising(graph);
 }
 

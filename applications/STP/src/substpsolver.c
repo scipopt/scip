@@ -255,15 +255,9 @@ SCIP_RETCODE subscipGetSol(
    return SCIP_OKAY;
 }
 
-
-/*
- * Interface methods
- */
-
-
-/** Initializes from given sub-graph. Sub-graph will be moved into internal data structure and also released
- *  once substp is freed! */
-SCIP_RETCODE substpsolver_init(
+/** Initializes default stuff */
+static
+SCIP_RETCODE initDefault(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                subgraph,           /**< subproblem to initialize from; NOTE: will be moved */
    SUBSTP**              substp              /**< initialize */
@@ -284,21 +278,82 @@ SCIP_RETCODE substpsolver_init(
    sub->subprobIsIndependent = FALSE;
    sub->dpsubsol = NULL;
 
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Interface methods
+ */
+
+
+/** Initializes from given sub-graph. Decides automatically whether to use DP or B&C.
+ *  NOTE: Sub-graph will be moved into internal data structure and also released
+ *  once substp is freed! */
+SCIP_RETCODE substpsolver_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                subgraph,           /**< subproblem to initialize from; NOTE: will be moved */
+   SUBSTP**              substp              /**< initialize */
+)
+{
    /* decide whether to do dynamic programming or branch-and-cut */
    if( dpterms_isPromising(subgraph) )
    {
-      sub->useDP = TRUE;
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->dpsubsol), subgraph->edges) );
+      SCIP_CALL( substpsolver_initDP(scip, subgraph, substp) );
    }
    else
    {
-      sub->useDP = FALSE;
-      SCIP_CALL( SCIPcreate(&(sub->subscip)) );
-      SCIP_CALL( subscipSetup(scip, sub, sub->subscip) );
+      SCIP_CALL( substpsolver_initBC(scip, subgraph, substp) );
+
    }
 
    return SCIP_OKAY;
 }
+
+
+/** Initializes from given sub-graph, and always uses dynamic programming for solving
+ * NOTE: Sub-graph will be moved into internal data structure and also released
+ *  once substp is freed! */
+SCIP_RETCODE substpsolver_initDP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                subgraph,           /**< subproblem to initialize from; NOTE: will be moved */
+   SUBSTP**              substp              /**< initialize */
+)
+{
+   SUBSTP* sub;
+
+   SCIP_CALL( initDefault(scip, subgraph, substp) );
+
+   sub = *substp;
+   sub->useDP = TRUE;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->dpsubsol), subgraph->edges) );
+
+   return SCIP_OKAY;
+}
+
+
+
+/** Initializes from given sub-graph, and always uses B&C for solving
+ * NOTE: Sub-graph will be moved into internal data structure and also released
+ *  once substp is freed! */
+SCIP_RETCODE substpsolver_initBC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                subgraph,           /**< subproblem to initialize from; NOTE: will be moved */
+   SUBSTP**              substp              /**< initialize */
+)
+{
+   SUBSTP* sub;
+
+   SCIP_CALL( initDefault(scip, subgraph, substp) );
+
+   sub = *substp;
+   sub->useDP = FALSE;
+   SCIP_CALL( SCIPcreate(&(sub->subscip)) );
+   SCIP_CALL( subscipSetup(scip, sub, sub->subscip) );
+
+   return SCIP_OKAY;
+}
+
 
 
 /** frees */
@@ -386,14 +441,13 @@ SCIP_RETCODE substpsolver_solve(
    if( substp->useDP )
    {
       assert(substp->dpsubsol);
-      printf("solve! \n");
 
+      if( !graph_path_exists(substp->subgraph) )
+      {
+         SCIP_CALL( graph_path_init(scip, substp->subgraph) );
+      }
 
       SCIP_CALL( dpterms_solve(scip, substp->subgraph, substp->dpsubsol, success) );
-
-      assert(0);
-
-
 
       // todo add an extra flag to avoid deletion of graph in some cases?
       graph_free(scip, &(substp->subgraph), TRUE);
@@ -474,12 +528,31 @@ SCIP_RETCODE substpsolver_setProbIsIndependent(
 }
 
 
+/** disables DP for solving sub-problems */
+SCIP_RETCODE substpsolver_setProbNoSubDP(
+   SUBSTP*               substp              /**< sub-problem */
+)
+{
+   assert(substp);
+   if( substp->subscip )
+   {
+      SCIP_CALL( SCIPsetIntParam(substp->subscip, "stp/usedp", 0) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** sets full presolving */
 SCIP_RETCODE substpsolver_setProbFullPresolve(
    SUBSTP*               substp              /**< sub-problem */
 )
 {
    assert(substp);
-   SCIP_CALL( SCIPsetIntParam(substp->subscip, "stp/reduction", 2) );
+   if( substp->subscip )
+   {
+      SCIP_CALL( SCIPsetIntParam(substp->subscip, "stp/reduction", 2) );
+   }
+
    return SCIP_OKAY;
 }

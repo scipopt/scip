@@ -484,7 +484,7 @@ SCIP_RETCODE subtreesBuild(
 
                SCIPdebugMessage("at pred. solution with index=%d root=%d \n", previdx0, global_traces[previdx0].root);
 
-               assert(GT(parent_trace.cost - global_traces[previdx0].cost, 0.0));
+               assert(GE(parent_trace.cost - global_traces[previdx0].cost, 0.0));
 
                nodes_dist[curr_root] = MIN(nodes_dist[curr_root], sol_trace.cost);
                nodes_nvisits[curr_root]++;

@@ -44,6 +44,10 @@ extern "C" {
 #define STP_CONS_ALWAYS        1           /**< always use (respective) constraints */
 #define STP_CONS_AUTOMATIC     2           /**< use (respective) constraints depending on the problem instance */
 
+#define STP_USEDP_NEVER         0          /**< never use DP */
+#define STP_USEDP_ALWAYS        1          /**< always use */
+#define STP_USEDP_AUTOMATIC     2          /**< let SCIP-Jack decide */
+
 
 /** sets up the problem data */
 SCIP_EXPORT

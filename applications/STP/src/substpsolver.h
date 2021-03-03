@@ -43,6 +43,8 @@ extern "C" {
 
 
 extern SCIP_RETCODE substpsolver_init(SCIP*, GRAPH*, SUBSTP**);
+extern SCIP_RETCODE substpsolver_initDP(SCIP*, GRAPH*, SUBSTP**);
+extern SCIP_RETCODE substpsolver_initBC(SCIP*, GRAPH*, SUBSTP**);
 extern void         substpsolver_free(SCIP*, SUBSTP**);
 extern SCIP_RETCODE substpsolver_transferHistory(const int*, GRAPH*, SUBSTP*);
 extern SCIP_RETCODE substpsolver_initHistory(SUBSTP*);
@@ -51,6 +53,7 @@ extern int          substpsolver_getNsubedges(const SUBSTP*);
 extern SCIP_RETCODE substpsolver_getSolution(SUBSTP*, int*);
 extern SCIP_RETCODE substpsolver_setMute(SUBSTP*);
 extern SCIP_RETCODE substpsolver_setProbIsIndependent(SUBSTP*);
+extern SCIP_RETCODE substpsolver_setProbNoSubDP(SUBSTP*);
 extern SCIP_RETCODE substpsolver_setProbFullPresolve(SUBSTP*);
 
 

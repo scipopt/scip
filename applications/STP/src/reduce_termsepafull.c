@@ -656,7 +656,7 @@ SCIP_RETCODE solveSub(
    SCIP_CALL( graph_copy(scip, subgraph, &subgraph_copy) );
 
    /* NOTE: subgraph will be moved into substp! */
-   SCIP_CALL( substpsolver_init(scip, subgraph_copy, &substp) );
+   SCIP_CALL( substpsolver_initBC(scip, subgraph_copy, &substp) );
    SCIP_CALL( substpsolver_initHistory(substp) );
 
    SCIP_CALL( substpsolver_setMute(substp) );

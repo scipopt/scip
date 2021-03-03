@@ -394,12 +394,8 @@ SCIP_Bool dpterms_isPromising(
 {
    assert(graph);
 
-
-   // todo!
-   /*
    if( graph->terms <= PROMISING_FULL_MAXNTERMS )
       return TRUE;
-      */
 
    return FALSE;
 }

@@ -2856,6 +2856,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    int symcons;
    int cyclecons;
    int usedacuts;
+   int usedp;
    int compcentral;
 
    assert(scip && probname && graph);
@@ -2869,6 +2870,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    SCIP_CALL( SCIPgetIntParam(scip, "stp/usesymcons", &(symcons)) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/usecyclecons", &(cyclecons)) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/usedacuts", &(usedacuts)) );
+   SCIP_CALL( SCIPgetIntParam(scip, "stp/usedp", &(usedp)) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/minelims", &(probdata->minelims)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/emitgraph", &(probdata->emitgraph)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/bigt", &(probdata->bigt)) );
@@ -2959,9 +2961,11 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
          }
       }
 
-      if( !useDecompose )
+      if( !useDecompose && usedp != STP_USEDP_NEVER )
       {
-         if( SCIPStpDpRelaxIsPromising(scip, graph) )
+         assert(usedp == STP_USEDP_ALWAYS || usedp == STP_USEDP_AUTOMATIC);
+
+         if( usedp == STP_USEDP_ALWAYS || SCIPStpDpRelaxIsPromising(scip, graph) )
          {
             SCIP_CALL( SCIPStpDpRelaxActivate(scip) );
             usedacuts = STP_CONS_NEVER;
