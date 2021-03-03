@@ -533,6 +533,7 @@ SCIP_RETCODE subtreesExtend(
    const int* const nodes_termId = dpsolver->dpgraph->nodes_termId;
    int* terms_adjCount;
    const SCIP_Bool breakEarly = (graph->terms - dpiterator->sol_nterms > 1);
+   const int* const grad = graph->grad;
 
    assert(nnodes == graph->knots);
    assert(dpiterator->extterm == -1);
@@ -598,7 +599,7 @@ SCIP_RETCODE subtreesExtend(
                terms_adjCount[nodes_termId[m]]++;
 
                /* all neighbors hit? */
-               if( terms_adjCount[nodes_termId[m]] == (k_end - k_start) )
+               if( terms_adjCount[nodes_termId[m]] == grad[m] )
                {
                   graph_heap_clean(FALSE, dheap);
                   assert(dheap->size == 0);
