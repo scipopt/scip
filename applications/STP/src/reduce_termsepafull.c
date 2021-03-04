@@ -566,7 +566,7 @@ SCIP_RETCODE sepafullBuildSolcands(
 
    if( !(*success) )
    {
-      printf("problem while building bottleneck distances, aborting \n");
+      SCIPdebugMessage("problem while building bottleneck distances, aborting \n");
       return SCIP_OKAY;
    }
 
@@ -625,15 +625,15 @@ SCIP_Bool sepafullSolcandsArePromising(
       maxratio = COMPONENT_MAXNODESRATIO_5PLUSCANDS;
    }
 
-   printf("FINAL CHECK: noderatio=%f, maxratio=%f\n", noderatio, maxratio);
+   SCIPdebugMessage("FINAL CHECK: noderatio=%f, maxratio=%f\n", noderatio, maxratio);
 
    if( noderatio > maxratio )
    {
-      printf("...component is finally NOT promising! \n");
+      SCIPdebugMessage("...component is finally NOT promising! \n");
       return FALSE;
    }
 
-   printf("...component is finally promising! \n");
+   SCIPdebugMessage("...component is finally promising! \n");
 
    return TRUE;
 }
@@ -982,15 +982,15 @@ SCIP_Bool termcompIsPromising(
       maxratio = COMPONENT_MAXNODESRATIO_4SEPA;
    }
 
-   printf("noderatio=%f, maxratio=%f\n", noderatio, maxratio);
+   SCIPdebugMessage("noderatio=%f, maxratio=%f\n", noderatio, maxratio);
 
    if( noderatio > maxratio )
    {
-      printf("...component is NOT promising! \n");
+      SCIPdebugMessage("...component is NOT promising! \n");
       return FALSE;
    }
 
-   printf("...component is promising! \n");
+   SCIPdebugMessage("...component is promising! \n");
 
    return TRUE;
 }
@@ -1054,7 +1054,7 @@ SCIP_RETCODE initHelpers(
       SCIPdebugMessage("update nChecks %d->%d \n", maxncompchecks, mincheckbound);
       maxncompchecks = mincheckbound;
    }
-#ifndef WITH_UG
+#ifdef SCIP_DEBUG
    graph_printInfoReduced(g);
    printf("max. number of components to be checked: %d \n", maxncompchecks);
 #endif
