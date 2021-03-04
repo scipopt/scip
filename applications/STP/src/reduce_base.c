@@ -462,8 +462,9 @@ SCIP_RETCODE redLoopInnerStp(
    const SCIP_Bool fullreduce = redparameters->fullreduce;
    const SCIP_Bool nodereplacing = redparameters->nodereplacing;
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
+   const SCIP_Bool usestrongreds = redparameters->usestrongreds;
    SCIP_Bool sd = TRUE;
-   SCIP_Bool sdbiased = TRUE;
+   SCIP_Bool sdbiased = redparameters->usestrongreds;
    SCIP_Bool sdc = FALSE;
    SCIP_Bool sdstar = TRUE;
    SCIP_Bool da = redparameters->dualascent;
@@ -513,9 +514,7 @@ SCIP_RETCODE redLoopInnerStp(
 
       if( sd && !skiptests )
       {
-         SCIP_CALL( reduce_sd(scip, g, redbase->vnoi,
-               redbase->state, redbase->vbase, redbase->nodearrint, redbase->nodearrint2, redbase->edgearrint, &sdnelims,
-               nodereplacing, NULL));
+         SCIP_CALL( reduce_sd(scip, g, redbase, &sdnelims) );
 
          if( sdnelims <= reductbound && !extensive )
             sd = FALSE;
@@ -531,7 +530,8 @@ SCIP_RETCODE redLoopInnerStp(
 
       if( sdstar && !skiptests )
       {
-         SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsStp(g, inner_rounds, fullreduce, stp_sdstar), NULL, g, &sdstarnelims) );
+         SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsStp(g, inner_rounds, fullreduce, stp_sdstar),
+               usestrongreds, g, &sdstarnelims) );
 
          if( sdstarnelims <= reductbound && !extensive )
             sdstar = FALSE;
@@ -544,7 +544,7 @@ SCIP_RETCODE redLoopInnerStp(
          SCIP_CALL( reduce_sdsp(scip, g, redbase->vnoi,
                redbase->heap, redbase->state, redbase->vbase, redbase->nodearrint,
                redbase->nodearrint2, &sdcnelims,
-               ((inner_rounds > 0) ? STP_REDBOUND_SDSP2 : STP_REDBOUND_SDSP), NULL));
+               ((inner_rounds > 0) ? STP_REDBOUND_SDSP2 : STP_REDBOUND_SDSP), usestrongreds));
 
          if( sdcnelims <= reductbound && !extensive )
             sdc = FALSE;
@@ -975,7 +975,9 @@ SCIP_RETCODE reduceStp(
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             dualascent,         /**< perform dual-ascent reductions? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
-   SCIP_Bool             userec              /**< use recombination heuristic? */
+   SCIP_Bool             userec,             /**< use recombination heuristic? */
+   SCIP_Bool             usestrongreds       /**< allow strong reductions?
+                                                  NOTE: needed for propagation, because arcs might have been fixed to 0 */
    )
 {
    PATH* vnoi;
@@ -1013,8 +1015,10 @@ SCIP_RETCODE reduceStp(
 
    /* reduction loop */
    {
-      RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing, .reductbound_min = minelims,
-                                   .reductbound = reductbound, .userec = userec, .fullreduce = (dualascent && userec) };
+      RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing,
+                             .reductbound_min = minelims,
+                             .reductbound = reductbound, .userec = userec, .fullreduce = (dualascent && userec),
+                             .usestrongreds = usestrongreds };
       BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 3, .newLevelStarted = FALSE };
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,
                           .solnode = NULL, .redsol = redsol,
@@ -1764,7 +1768,7 @@ SCIP_RETCODE redLoopPc(
          {
             int sdstarpcnelims = 0;
 
-            SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsPc(g, rounds, pc_sdstar), NULL, g, &sdstarnelims));
+            SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsPc(g, rounds, pc_sdstar), TRUE, g, &sdstarnelims));
             if( verbose ) printf("sdstarnelims %d \n", sdstarnelims);
 
             SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
@@ -2142,7 +2146,7 @@ SCIP_RETCODE reduce(
       {
          assert(graph_typeIsSpgLike(graph));
 
-         SCIP_CALL( reduceStp(scip, graph, redsol, minelims, FALSE, TRUE, FALSE) );
+         SCIP_CALL( reduceStp(scip, graph, redsol, minelims, FALSE, TRUE, FALSE, TRUE) );
       }
    }
    else if( reductionlevel == STP_REDUCTION_ADVANCED )
@@ -2175,7 +2179,7 @@ SCIP_RETCODE reduce(
       {
          assert(graph_typeIsSpgLike(graph));
 
-         SCIP_CALL( reduceStp(scip, graph, redsol, minelims, TRUE, TRUE, userec) );
+         SCIP_CALL( reduceStp(scip, graph, redsol, minelims, TRUE, TRUE, userec, TRUE) );
       }
    }
 

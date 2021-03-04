@@ -78,6 +78,7 @@ typedef struct reduction_parameters
    int                   reductbound_min;    /**< absolute minimum */
    SCIP_Bool             userec;             /**< use recombination heuristic? */
    SCIP_Bool             fullreduce;         /**< use full reductions? (including extended techniques) */
+   SCIP_Bool             usestrongreds;      /**< allow strong reductions? */
 } RPARAMS;
 
 

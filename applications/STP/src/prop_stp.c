@@ -1957,7 +1957,7 @@ SCIP_RETCODE fixVarsRedbased(
       // todo: before make all the node replacements from lurking bounds!
       assert(graph_typeIsSpgLike(propgraph));
       SCIP_CALL( reduce_unconnected(scip, propgraph) );
-      SCIP_CALL( reduceStp(scip, propgraph, redsol, 2, FALSE, FALSE, FALSE) );
+      SCIP_CALL( reduceStp(scip, propgraph, redsol, 2, FALSE, FALSE, FALSE, FALSE) );
 
     //  SCIP_CALL( reduceStp(scip, propgraph, redsol, 2, FALSE, TRUE, FALSE) );
 

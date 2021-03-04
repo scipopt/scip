@@ -417,7 +417,7 @@ SCIP_RETCODE testBiconnectedDecomposition(
    {
       BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
       RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1, .reductbound_min = 10,
-                                        .reductbound = 10, .userec = 1, .fullreduce = 1 };
+                             .reductbound = 10, .userec = 1, .fullreduce = 1, .usestrongreds = TRUE };
       redbase->redparameters = &parameters;
       redbase->bidecompparams = &decparameters;
       graph->stp_type = STP_SPG;
@@ -485,7 +485,7 @@ SCIP_RETCODE testBiconnectedDecomposition2(
    {
       BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
       RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1, .reductbound_min = 10,
-                                        .reductbound = 10, .userec = 1, .fullreduce = 1 };
+                             .reductbound = 10, .userec = 1, .fullreduce = 1, .usestrongreds = TRUE };
       redbase->redparameters = &parameters;
       redbase->bidecompparams = &decparameters;
       graph->stp_type = STP_SPG;
@@ -548,7 +548,7 @@ SCIP_RETCODE testBiconnectedDecomposition3(
    {
       BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
       RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1,
-                                .reductbound_min = 10, .reductbound = 10, .userec = 1, .fullreduce = 1 };
+                             .reductbound_min = 10, .reductbound = 10, .userec = 1, .fullreduce = 1, .usestrongreds = TRUE };
       redbase->redparameters = &parameters;
       redbase->bidecompparams = &decparameters;
       graph->stp_type = STP_SPG;

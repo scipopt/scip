@@ -172,7 +172,7 @@ static
 SCIP_RETCODE sdStarBiasedProcessNode(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   node,               /**< node to process */
-   const int*            edgestate,          /**< state array or NULL */
+   SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
    const SDPROFIT*       sdprofit,           /**< SD profit */
    GRAPH*                g,                  /**< graph data structure */
    DIJK*                 dijkdata,           /**< data */
@@ -187,7 +187,6 @@ SCIP_RETCODE sdStarBiasedProcessNode(
    RANGE *RESTRICT range_csr;
    int *RESTRICT head_csr;
    int *RESTRICT edgeid_csr;
-   const SCIP_Bool checkstate = (edgestate != NULL);
 
    dcsr = g->dcsr_storage;
    range_csr = dcsr->range;
@@ -225,13 +224,6 @@ SCIP_RETCODE sdStarBiasedProcessNode(
 
             enext = e + 1;
 
-            if( checkstate )
-            {
-               const int orgedge = edgeid_csr[e];
-               if( edgestate[orgedge] == EDGE_BLOCKED )
-                  continue;
-            }
-
             /* shorter path to current star node found? */
             if( starnode != starbase )
             {
@@ -240,6 +232,9 @@ SCIP_RETCODE sdStarBiasedProcessNode(
                /* path still valid? todo really necessary? */
                if( star_base[starbase] != SDSTAR_BASE_KILLED )
                {
+                  if( !usestrongreds && SCIPisEQ(scip, dijkdata->node_distance[starnode], dcsr->cost[e]) )
+                     continue;
+
                   star_base[starnode] = SDSTAR_BASE_KILLED;
                   edge_deletable[edgeid_csr[e] / 2] = TRUE;
                   graph_dcsr_deleteEdgeBi(scip, dcsr, e);
@@ -1530,15 +1525,8 @@ SCIP_RETCODE reduce_sdImpLongEdge(
 SCIP_RETCODE reduce_sd(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   PATH*                 vnoi,               /**< Voronoi data structure */
-   int*                  state,              /**< array to indicate whether a node has been scanned during SP calculation */
-   int*                  vbase,              /**< Voronoi base to each vertex */
-   int*                  nodesid,            /**< array to map nodes in auxiliary graph to original ones */
-   int*                  nodesorg,           /**< array to map terminals of original graph vertices of auxiliary graph */
-   int*                  forbidden,          /**< array to mark whether an edge may be eliminated */
-   int*                  nelims,             /**< point to store number of deleted edges */
-   SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
-   int*                  edgestate           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
+   REDBASE*              redbase,            /**< reduction data */
+   int*                  nelims              /**< point to store number of deleted edges */
    )
 {
    SDGRAPH* sdgraph;
@@ -1546,11 +1534,17 @@ SCIP_RETCODE reduce_sd(
    PATH* mst;
    SCIP_Real termdist1[4];
    SCIP_Real termdist2[4];
+   PATH* RESTRICT vnoi = redbase->vnoi;
+   int* RESTRICT state = redbase->state;
+   int* RESTRICT vbase = redbase->vbase;
+   int* RESTRICT nodesid = redbase->nodearrint;
+   int* RESTRICT nodesorg = redbase->nodearrint2;
+   int* RESTRICT forbidden = redbase->edgearrint;
    SCIP_Real ecost;
    SCIP_Real dist;
    int neighbterms1[4];
    int neighbterms2[4];
-   int* edgepreds;
+   int* RESTRICT edgepreds;
    int j;
    int nnterms1;
    int nnterms2;
@@ -1558,7 +1552,8 @@ SCIP_RETCODE reduce_sd(
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
    const int nterms = g->terms;
-   SCIP_Bool checkstate = (edgestate != NULL);
+   const SCIP_Bool nodereplacing = redbase->redparameters->nodereplacing;
+   const SCIP_Bool usestrongreds = redbase->redparameters->usestrongreds;
 
    assert(scip != NULL);
    assert(vnoi != NULL);
@@ -1789,12 +1784,12 @@ SCIP_RETCODE reduce_sd(
 
                   if( SCIPisEQ(scip, dist, ecost) )
                   {
+                     if( !usestrongreds )
+                        continue;
+
                      if( !sddeltable(scip, g, vnoi, vbase, forbidden, j, k, i, i2, e, nnodes ) )
                         continue;
                   }
-
-                  if( checkstate && (edgestate[e] == EDGE_BLOCKED) )
-                     continue;
 
                   graph_edge_del(scip, g, e, TRUE);
                   (*nelims)++;
@@ -1814,15 +1809,15 @@ SCIP_RETCODE reduce_sd(
                   {
                      if( SCIPisEQ(scip, ecost, dist) )
                      {
+                        if( !usestrongreds )
+                           continue;
+
                         if( !(sddeltable(scip, g, vnoi, vbase, forbidden, j, k, i, i2, e, nnodes)) )
                            continue;
                      }
 
                      assert(SCIPisGE(scip, ecost, termdist1[j]));
                      assert(SCIPisGE(scip, ecost, termdist2[k]));
-
-                     if( checkstate && (edgestate[e] == EDGE_BLOCKED) )
-                        continue;
 
                      graph_edge_del(scip, g, e, TRUE);
                      (*nelims)++;
@@ -3729,7 +3724,7 @@ SCIP_RETCODE reduce_sdWalkTriangle(
 SCIP_RETCODE reduce_sdStar(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edgelimit,          /**< limit */
-   const int*            edgestate,          /**< state array or NULL */
+   SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            dist,               /**< vertex distances */
    int*                  star_base,          /**< array of size nnodes */
@@ -3746,7 +3741,6 @@ SCIP_RETCODE reduce_sdStar(
    SCIP_Bool* edge_deletable;
    const int nnodes = g->knots;
    const int nedges = g->edges;
-   const SCIP_Bool checkstate = (edgestate != NULL);
 
    assert(g && scip && nelims && visited && visitlist && dheap && star_base);
    assert(!graph_pc_isPcMw(g) || !g->extended);
@@ -3817,13 +3811,6 @@ SCIP_RETCODE reduce_sdStar(
 
                enext = e + 1;
 
-               if( checkstate )
-               {
-                  const int orgedge = edgeid_csr[e];
-                  if( edgestate[orgedge] == EDGE_BLOCKED )
-                     continue;
-               }
-
                /* shorter path to current star node found? */
                if( starnode != starbase )
                {
@@ -3875,7 +3862,7 @@ SCIP_RETCODE reduce_sdStar(
 SCIP_RETCODE reduce_sdStarBiased(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edgelimit,          /**< limit */
-   const int*            edgestate,          /**< state array or NULL */
+   SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
    GRAPH*                g,                  /**< graph data structure */
    int*                  nelims              /**< point to store number of deleted edges */
    )
@@ -3885,7 +3872,7 @@ SCIP_RETCODE reduce_sdStarBiased(
    assert(scip && nelims);
 
    SCIP_CALL( reduce_sdprofitInit(scip, g, &sdprofit) );
-   SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, edgelimit, sdprofit, edgestate, g, nelims)  );
+   SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, edgelimit, sdprofit, usestrongreds, g, nelims)  );
    reduce_sdprofitFree(scip, &sdprofit);
 
    return SCIP_OKAY;
@@ -3897,7 +3884,7 @@ SCIP_RETCODE reduce_sdStarBiasedWithProfit(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edgelimit,          /**< limit */
    const SDPROFIT*       sdprofit,           /**< with profit given */
-   const int*            edgestate,          /**< state array or NULL */
+   SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
    GRAPH*                g,                  /**< graph data structure */
    int*                  nelims              /**< point to store number of deleted edges */
    )
@@ -3923,7 +3910,7 @@ SCIP_RETCODE reduce_sdStarBiasedWithProfit(
          continue;
       }
 
-      SCIP_CALL( sdStarBiasedProcessNode(scip, i, edgestate, sdprofit, g, dijkdata, star_base, edge_deletable, nelims) );
+      SCIP_CALL( sdStarBiasedProcessNode(scip, i, usestrongreds, sdprofit, g, dijkdata, star_base, edge_deletable, nelims) );
    }
 
    sdStarFinalize(scip, g, &dijkdata, &star_base, &edge_deletable);
@@ -4591,7 +4578,7 @@ SCIP_RETCODE reduce_sdsp(
    int*                  memlblhead,
    int*                  nelims,
    int                   limit,
-   int*                  edgestate
+   SCIP_Bool             usestrongreds       /**< allow strong reductions? */
 )
 {
    PATH *pathhead = NULL;
@@ -4599,7 +4586,6 @@ SCIP_RETCODE reduce_sdsp(
    int* pathmaxnodehead = NULL;
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
-   const SCIP_Bool checkstate = (edgestate != NULL);
 
    assert(scip  != NULL);
    assert(pathtail != NULL);
@@ -4791,16 +4777,20 @@ SCIP_RETCODE reduce_sdsp(
                      if( SCIPisGE(scip, ecost, pathhead[l].dist) && SCIPisGE(scip, ecost, pathtail[l].dist) )
                      {
                         deletable = TRUE;
-#if 0
-                        if( pc && SCIPisLT(scip, ecost, pathhead[l].dist + pathtail[l].dist - g->prize[l]) )
+
+                        if( !usestrongreds && SCIPisEQ(scip, ecost, pathhead[l].dist) && SCIPisEQ(scip, ecost, pathtail[l].dist) )
                            deletable = FALSE;
-#endif
                      }
                   }
                   else
                   {
                      if( SCIPisGE(scip, ecost, pathhead[l].dist + pathtail[l].dist) )
+                     {
                         deletable = TRUE;
+
+                        if( !usestrongreds && SCIPisEQ(scip, ecost, pathhead[l].dist + pathtail[l].dist) )
+                           deletable = FALSE;
+                     }
                   }
                }
             }
@@ -4847,11 +4837,8 @@ SCIP_RETCODE reduce_sdsp(
          /* can edge be deleted? */
          if( deletable )
          {
-            if( !checkstate || (edgestate[e] != EDGE_BLOCKED) )
-            {
-               graph_edge_del(scip, g, e, TRUE);
-               (*nelims)++;
-            }
+            graph_edge_del(scip, g, e, TRUE);
+            (*nelims)++;
          }
 
          e = enext;

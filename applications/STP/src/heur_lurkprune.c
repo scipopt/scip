@@ -262,7 +262,7 @@ SCIP_RETCODE reduceExact(
    else
    {
       RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE, .reductbound_min = LURKPRUNE_MINREDELIMS,
-                                                    .reductbound = LURKPRUNE_MINREDELIMS, .userec = FALSE, .fullreduce = FALSE };
+                             .reductbound = LURKPRUNE_MINREDELIMS, .userec = FALSE, .fullreduce = FALSE, .usestrongreds = TRUE };
 
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
                           .solnode = NULL, .redsol = NULL,

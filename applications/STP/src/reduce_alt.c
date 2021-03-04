@@ -2553,7 +2553,7 @@ SCIP_RETCODE reduce_impliedProfitBased(
    {
       SCIP_CALL( reduce_sdBiased(scip, sdistance, g, &nelimsnew) );
    }
-   SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, edgelimit, sdistance->sdprofit, NULL, g, &nelimsnew) );
+   SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, edgelimit, sdistance->sdprofit, TRUE, g, &nelimsnew) );
 
 #if 0
    SCIP_CALL( reduce_sdAddNeighborSd(scip, g, sdistance) );

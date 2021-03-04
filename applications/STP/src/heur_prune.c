@@ -746,7 +746,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       else
       {
          RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE, .reductbound_min = PRUNE_MINREDELIMS,
-                                                       .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
+                                .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE, .usestrongreds = TRUE };
          BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
          REDSOL* redsol;
          REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,
@@ -863,7 +863,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
          else
          {
             RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE, .reductbound_min = PRUNE_MINREDELIMS,
-                                                          .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
+                                   .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE, .usestrongreds = TRUE };
             BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
             REDSOL* redsol;
             REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,

@@ -634,7 +634,7 @@ SCIP_RETCODE testSdStarBiasedDeletesEdge(
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
 
-   SCIP_CALL( reduce_sdStarBiased(scip, 10, NULL, graph, &nelims) );
+   SCIP_CALL( reduce_sdStarBiased(scip, 10, TRUE, graph, &nelims) );
 
    STPTEST_ASSERT(nelims == 1);
    STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
@@ -675,7 +675,7 @@ SCIP_RETCODE testSdStarBiasedDeletesEdge2(
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
 
-   SCIP_CALL( reduce_sdStarBiased(scip, 10, NULL, graph, &nelims) );
+   SCIP_CALL( reduce_sdStarBiased(scip, 10, TRUE, graph, &nelims) );
 
    STPTEST_ASSERT(nelims == 1);
    STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
@@ -717,7 +717,7 @@ SCIP_RETCODE testSdStarBiasedDeletesEdge3(
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
 
-   SCIP_CALL( reduce_sdStarBiased(scip, 20, NULL, graph, &nelims) );
+   SCIP_CALL( reduce_sdStarBiased(scip, 20, TRUE, graph, &nelims) );
 
    STPTEST_ASSERT(nelims == 1);
    STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
