@@ -527,7 +527,6 @@ static
 SCIP_RETCODE performBranchingNoSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            cands,              /**< candidate array */
-   SCIP_Real*            candsols,           /**< array of candidate solution values, or NULL */
    int                   ncands,             /**< number of candidates */
    SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
    SCIP_Real             inferenceweight,    /**< weight in score calculations for inference score */
@@ -796,7 +795,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
    }
 
    /* perform the branching */
-   SCIP_CALL( performBranchingNoSol(scip, cands, NULL, ncands, branchruledata->conflictweight,
+   SCIP_CALL( performBranchingNoSol(scip, cands, ncands, branchruledata->conflictweight,
          branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->reliablescore,
          branchruledata->useweightedsum, result) );
 
@@ -849,7 +848,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, &cands, NULL, &ncands) );
 
    /* perform the branching */
-   SCIP_CALL( performBranchingNoSol(scip, cands, NULL, ncands, branchruledata->conflictweight,
+   SCIP_CALL( performBranchingNoSol(scip, cands, ncands, branchruledata->conflictweight,
          branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->reliablescore,
          branchruledata->useweightedsum, result) );
 
