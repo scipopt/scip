@@ -1278,6 +1278,7 @@ void conflictsetClear(
    conflictset->repropdepth = 0;
    conflictset->repropagate = TRUE;
    conflictset->usescutoffbound = FALSE;
+   conflictset->hasrelaxonlyvar = FALSE;
    conflictset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
 }
 
@@ -1332,6 +1333,7 @@ SCIP_RETCODE conflictsetCopy(
    (*targetconflictset)->conflictdepth = sourceconflictset->conflictdepth;
    (*targetconflictset)->repropdepth = sourceconflictset->repropdepth;
    (*targetconflictset)->usescutoffbound = sourceconflictset->usescutoffbound;
+   (*targetconflictset)->hasrelaxonlyvar = sourceconflictset->hasrelaxonlyvar;
    (*targetconflictset)->conflicttype = sourceconflictset->conflicttype;
 
    return SCIP_OKAY;
@@ -1584,6 +1586,9 @@ SCIP_RETCODE conflictsetAddBound(
       }
    }
 
+   if( SCIPvarIsRelaxationOnly(var) )
+      conflictset->hasrelaxonlyvar = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -1676,6 +1681,9 @@ SCIP_RETCODE conflictsetAddBounds(
          confrelaxedbds[confnbdchginfos] = SCIPbdchginfoGetRelaxedBound(bdchginfo);
          confsortvals[confnbdchginfos] = sortval;
          ++confnbdchginfos;
+
+         if( SCIPvarIsRelaxationOnly(SCIPbdchginfoGetVar(bdchginfo)) )
+            conflictset->hasrelaxonlyvar = TRUE;
       }
       else
       {
@@ -3478,7 +3486,7 @@ SCIP_RETCODE conflictAddConflictCons(
       *success = TRUE;
       SCIP_CALL( updateStatistics(conflict, blkmem, set, stat, conflictset, insertdepth) );
    }
-   else
+   else if( !conflictset->hasrelaxonlyvar )
    {
       /* sort conflict handlers by priority */
       SCIPsetSortConflicthdlrs(set);
@@ -3503,6 +3511,11 @@ SCIP_RETCODE conflictAddConflictCons(
             SCIPconflicthdlrGetName(set->conflicthdlrs[h]), SCIPconflicthdlrGetPriority(set->conflicthdlrs[h]),
             conflictset->nbdchginfos, result);
       }
+   }
+   else
+   {
+      SCIPsetDebugMsg(set, " -> skip conflict set with relaxation-only variable\n");
+      /* TODO would be nice to still create a constraint?, if we can make sure that we the constraint does not survive a restart */
    }
 
    return SCIP_OKAY;
