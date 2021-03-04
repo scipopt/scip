@@ -337,7 +337,7 @@ SCIP_Real getValueScore(
 }
 
 static
-SCIP_RETCODE selectBestCands(
+void selectBestCands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            cands,              /**< candidate array */
    SCIP_Real*            candsols,           /**< array of candidate solution values, or NULL */
@@ -438,38 +438,38 @@ SCIP_RETCODE performBranchingSol(
    if( conflictprio > cutoffprio )
    {
       /* select the best candidates w.r.t. the first criterion */
-      SCIP_CALL( selectBestCands(scip, cands, candsols, ncands, conflictweight, 0.0, 0.0, reliablescore,
-            bestcands, &nbestcands) );
+      selectBestCands(scip, cands, candsols, ncands, conflictweight, 0.0, 0.0, reliablescore,
+            bestcands, &nbestcands);
 
       /* select the best candidates w.r.t. the second criterion; we use bestcands and nbestcands as input and
        * output, so the method must make sure to overwrite the last argument only at the very end */
       if( nbestcands > 1 )
       {
-         SCIP_CALL( selectBestCands(scip, cands, candsols, ncands, 0.0, inferenceweight, cutoffweight, reliablescore,
-               bestcands, &nbestcands) );
+         selectBestCands(scip, cands, candsols, ncands, 0.0, inferenceweight, cutoffweight, reliablescore,
+               bestcands, &nbestcands);
       }
    }
    else if( conflictprio == cutoffprio )
    {
       /* select the best candidates w.r.t. weighted sum of both criterion */
-      SCIP_CALL( selectBestCands(scip, cands, candsols, ncands, conflictweight, inferenceweight, cutoffweight, reliablescore,
-            bestcands, &nbestcands) );
+      selectBestCands(scip, cands, candsols, ncands, conflictweight, inferenceweight, cutoffweight, reliablescore,
+            bestcands, &nbestcands);
    }
    else
    {
       assert(conflictprio < cutoffprio);
 
       /* select the best candidates w.r.t. the first criterion */
-      SCIP_CALL( selectBestCands(scip, cands, candsols, ncands, 0.0, inferenceweight, cutoffweight, reliablescore,
-            bestcands, &nbestcands) );
+      selectBestCands(scip, cands, candsols, ncands, 0.0, inferenceweight, cutoffweight, reliablescore,
+            bestcands, &nbestcands);
 
       /* select the best candidates w.r.t. the second criterion; we use bestcands and nbestcands as input and
        * output, so the method must make sure to overwrite the last argument only at the very end */
       if( nbestcands > 1 )
       {
          /* select the best candidates w.r.t. the first criterion */
-         SCIP_CALL( selectBestCands(scip, cands, candsols, ncands, conflictweight, 0.0, 0.0, reliablescore,
-               bestcands, &nbestcands) );
+         selectBestCands(scip, cands, candsols, ncands, conflictweight, 0.0, 0.0, reliablescore,
+               bestcands, &nbestcands);
       }
    }
 
