@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 3.3)
 
 project(TSP)
 
-find_package(SCIP REQUIRED)
+if(TARGET SCIP::SCIP)
+  # find package by SCIP PATH
+  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+else()
+  find_package(SCIP REQUIRED)
+endif()
+
 include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(sciptsp
@@ -19,9 +25,11 @@ add_executable(sciptsp
 
 target_link_libraries(sciptsp ${SCIP_LIBRARIES})
 
-find_package(ZLIB)
-if(ZLIB_FOUND)
-   target_link_libraries(sciptsp ${ZLIB_LIBRARIES})
+if(ZLIB)
+    find_package(ZLIB)
+    if(ZLIB_FOUND)
+        target_link_libraries(sciptsp ${ZLIB_LIBRARIES})
+    endif()
 endif()
 
 if( TARGET examples )

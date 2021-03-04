@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -77,7 +77,7 @@
  *
  * \verbinclude output.log
  *
- * @version  7.0.1.3
+ * @version  7.0.2.4
  *
  * \image html scippy.png
  */
@@ -1143,6 +1143,14 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  @subpage SUDOKU_MAIN "Sudoku example"
+ *  </td>
+ *  <td>
+ *  An example solving sudokus.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  @subpage LOP_MAIN "Linear Ordering"
  *  </td>
  *  <td>
@@ -1856,6 +1864,23 @@
  * if all integer variables in the constraint are already fixed.
  * In this case, the LP has to be solved in order to get a solution that satisfies the linear constraint.
  *
+ * @subsection CONSENFORELAX
+ *
+ * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
+ *
+ * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
+ * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
+ * solutions that satisfy all active LP-constraints.
+ *
+ * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
+ * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
+ * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
+ * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
+ *
+ * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
+ * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
+ * via user-plugins.
+ *
  * @subsection CONSLOCK
  *
  * The CONSLOCK callback provides dual information for a single constraint.
@@ -2070,23 +2095,6 @@
  * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
  * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
  * calling CONSSEPASOL.
- *
- * @subsection CONSENFORELAX
- *
- * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
- *
- * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
- * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
- * solutions that satisfy all active LP-constraints.
- *
- * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
- * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
- * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
- * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
- *
- * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
- * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
- * via user-plugins.
  *
  * @subsection CONSPROP
  *
@@ -7505,6 +7513,26 @@
  *
  *  Furthermore you can also use the script <code>allcmpres.sh</code> for comparing results.
  *
+ *  @section PYTHON Testing using PySCIPOpt
+ *
+ *  To run a python script that uses PySCIPOpt with <code>make test</code> or <code>make testcluster</code>, one has to
+ *  specify the python code to execute with the option <code>EXECUTABLE=/full/path/to/python-script.py</code>.
+ *  Note that <code>python-script.py</code> must be an executable file.
+ *  In addition, one <b>must</b> specify which python it should run with the option <code>PYTHON=my-python</code>.
+ *  The reason for this is that one usually installs PySCIPOpt in a virtual environment, thus only the python of the
+ *  virtual environment will work with the python script.
+ *
+ *  The scripts work in such a way that they pass information to SCIP like the setting files, the instance name, and some other options.
+ *  It is the responsability of the python script <code>python-script.py</code> to parse this information.
+ *  Thus, you need to modify your python script to read the setting files and the other options provided by the testing scripts.
+ *  An example of how to do this is provided in <code>scip/check/scip-runner.py</code>.
+ *  One should either modify <code>scip/check/scip-runner.py</code> or include the <code>build_model()</code> function
+ *  into your script to correctly read the options passed by the scripts.
+ *
+ *  An example of how to run the tests is
+ *  \code
+ *  make test EXECUTABLE=/full/path/to/scip/check/scip-runner.py PYTHON=python
+ *  \endcode
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7687,7 +7715,7 @@
   * @section OTHER Interfaces for other programming languages
   *
   * Interfaces for other programming languages are developed and maintained independently from the SCIP Optimization Suite
-  * on <a href="https://github.com/SCIP-Interfaces">GitHub</a> in order to provide extensions and patches faster
+  * on <a href="https://github.com/scipopt">GitHub</a> in order to provide extensions and patches faster
   * and to collaborate on them more easily. Besides the popular interfaces for Python and Java, there is also an interface
   * for Julia available. Contributions to these projects are very welcome.
   *

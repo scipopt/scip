@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -956,7 +956,7 @@ int SCIPgetNPricevars(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNPricevars", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPpricestoreGetNVars(scip->pricestore);
+   return scip->pricestore == NULL ? 0 : SCIPpricestoreGetNVars(scip->pricestore);
 }
 
 /** get total number of pricing variables found so far
@@ -974,7 +974,7 @@ int SCIPgetNPricevarsFound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNPricevarsFound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPpricestoreGetNVarsFound(scip->pricestore);
+   return scip->pricestore == NULL ? 0 : SCIPpricestoreGetNVarsFound(scip->pricestore);
 }
 
 /** get total number of pricing variables applied to the LPs
@@ -992,7 +992,7 @@ int SCIPgetNPricevarsApplied(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNPricevarsApplied", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPpricestoreGetNVarsApplied(scip->pricestore);
+   return scip->pricestore == NULL ? 0 : SCIPpricestoreGetNVarsApplied(scip->pricestore);
 }
 
 /** gets number of separation rounds performed so far at the current node
@@ -1026,7 +1026,7 @@ int SCIPgetNCutsFound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNCutsFound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPsepastoreGetNCutsFound(scip->sepastore);
+   return scip->sepastore == NULL ? 0 : SCIPsepastoreGetNCutsFound(scip->sepastore);
 }
 
 /** get number of cuts found so far in current separation round
@@ -1044,7 +1044,7 @@ int SCIPgetNCutsFoundRound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNCutsFoundRound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPsepastoreGetNCutsFoundRound(scip->sepastore);
+   return scip->sepastore == NULL ? 0 : SCIPsepastoreGetNCutsFoundRound(scip->sepastore);
 }
 
 /** get total number of cuts applied to the LPs
@@ -1062,7 +1062,7 @@ int SCIPgetNCutsApplied(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNCutsApplied", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPsepastoreGetNCutsApplied(scip->sepastore);
+   return scip->sepastore == NULL ? 0 : SCIPsepastoreGetNCutsApplied(scip->sepastore);
 }
 
 /** get total number of constraints found in conflict analysis (conflict, reconvergence constraints, and dual proofs)
@@ -1086,7 +1086,7 @@ SCIP_Longint SCIPgetNConflictConssFound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictConssFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNPropConflictConss(scip->conflict)
+   return scip->conflict == NULL ? 0 : (SCIPconflictGetNPropConflictConss(scip->conflict)
       + SCIPconflictGetNPropReconvergenceConss(scip->conflict)
       + SCIPconflictGetNInfeasibleLPConflictConss(scip->conflict)
       + SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict)
@@ -1097,7 +1097,7 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
       + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
       + SCIPconflictGetNDualproofsBndGlobal(scip->conflict)
-      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict);
+      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict));
 }
 
 /** get number of conflict constraints found so far at the current node
@@ -1121,7 +1121,7 @@ int SCIPgetNConflictConssFoundNode(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictConssFoundNode", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNConflicts(scip->conflict);
+   return scip->conflict == NULL ? 0 : SCIPconflictGetNConflicts(scip->conflict);
 }
 
 /** get total number of conflict constraints added to the problem
@@ -1145,7 +1145,7 @@ SCIP_Longint SCIPgetNConflictConssApplied(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictConssApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNAppliedConss(scip->conflict);
+   return scip->conflict == NULL ? 0 : SCIPconflictGetNAppliedConss(scip->conflict);
 }
 
 /** get total number of dual proof constraints added to the problem
@@ -1169,7 +1169,8 @@ SCIP_Longint SCIPgetNConflictDualproofsApplied(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictDualproofsApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNDualproofsInfSuccess(scip->conflict) + SCIPconflictGetNDualproofsBndSuccess(scip->conflict);
+   return scip->conflict == NULL ? 0 : (SCIPconflictGetNDualproofsInfSuccess(scip->conflict) +
+      SCIPconflictGetNDualproofsBndSuccess(scip->conflict));
 }
 
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -3986,15 +3987,21 @@ SCIP_RETCODE SCIPprintReoptStatistics(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintReoptStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert(scip != NULL);
+
    /* skip if reoptimization is disabled */
    if( !scip->set->reopt_enable )
+      return SCIP_OKAY;
+
+   /* skip if not problem yet */
+   if( scip->stat == NULL )
       return SCIP_OKAY;
 
    solving = SCIPclockGetTime(scip->stat->solvingtimeoverall);
    presolving = SCIPclockGetTime(scip->stat->presolvingtimeoverall);
    updatetime = SCIPclockGetTime(scip->stat->reoptupdatetime);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finish after %d runs.\n", scip->stat->nreoptruns);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finished after %d runs.\n", scip->stat->nreoptruns);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time         (sec) :\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", solving);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", presolving);
@@ -4004,19 +4011,32 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d %10d %10d\n",
          SCIPreoptGetNTotalFeasNodes(scip->reopt), SCIPreoptGetNTotalInfNodes(scip->reopt),
          SCIPreoptGetNTotalPrunedNodes(scip->reopt), SCIPreoptGetNTotalCutoffReoptnodes(scip->reopt));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n",
+   if( scip->stat->nreoptruns > 0 )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n",
          (SCIP_Real)SCIPreoptGetNTotalFeasNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalInfNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalPrunedNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalCutoffReoptnodes(scip->reopt)/scip->stat->nreoptruns);
-
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10s %10s %10s %10s\n", "--", "--", "--", "--");
+   }
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Restarts           :     global      local\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  first            : %10d         --\n", SCIPreoptGetFirstRestarts(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  last             : %10d         --\n", SCIPreoptGetLastRestarts(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d\n", SCIPreoptGetNRestartsGlobal(scip->reopt),
          SCIPreoptGetNTotalRestartsLocal(scip->reopt));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              :         -- %10.2f\n",
+   if( scip->stat->nreoptruns > 0 )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              :         -- %10.2f\n",
          (SCIP_Real)SCIPreoptGetNTotalRestartsLocal(scip->reopt)/scip->stat->nreoptruns);
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              :         -- %10s\n", "--");
+   }
 
    return SCIP_OKAY;
 }

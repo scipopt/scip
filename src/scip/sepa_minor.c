@@ -804,7 +804,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    int ncalls;
-   int depth;
 
    /* need routine to compute eigenvalues/eigenvectors */
    if( !SCIPisIpoptAvailableIpopt() )
@@ -812,7 +811,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call the separator a given number of times at each node */
@@ -839,7 +837,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMinor)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    int ncalls;
-   int depth;
 
    /* need routine to compute eigenvalues/eigenvectors */
    if( !SCIPisIpoptAvailableIpopt() )
@@ -847,7 +844,6 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMinor)
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call the separator a given number of times at each node */

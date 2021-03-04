@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -476,7 +476,7 @@ SCIP_Bool mpsinputReadLine(
             return FALSE;
          mpsi->lineno++;
       }
-      while( *mpsi->buf == '*' );
+      while( *mpsi->buf == '*' );   /* coverity[a_loop_bound] */
 
       /* Normalize line */
       len = (unsigned int) strlen(mpsi->buf);
@@ -729,6 +729,7 @@ SCIP_RETCODE readName(
    mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
 
    /* This hat to be a new section */
+   /* coverity[tainted_data] */
    if( !mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL) )
    {
       mpsinputSyntaxerror(mpsi);
@@ -783,6 +784,7 @@ SCIP_RETCODE readObjsen(
    }
 
    /* Look for ROWS, USERCUTS, LAZYCONS, or OBJNAME Section */
+   /* coverity[tainted_data] */
    if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL )
    {
       mpsinputSyntaxerror(mpsi);
@@ -827,6 +829,7 @@ SCIP_RETCODE readObjname(
    mpsinputSetObjname(mpsi, mpsinputField1(mpsi));
 
    /* Look for ROWS, USERCUTS, or LAZYCONS Section */
+   /* coverity[tainted_data] */
    if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL )
    {
       mpsinputSyntaxerror(mpsi);
@@ -856,6 +859,7 @@ SCIP_RETCODE readRows(
 {
    SCIPdebugMsg(scip, "read rows\n");
 
+   /* coverity[tainted_data] */
    while( mpsinputReadLine(mpsi) )
    {
       if( mpsinputField0(mpsi) != NULL )
@@ -1951,6 +1955,7 @@ SCIP_RETCODE readQMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, size) );
 
    /* loop through section */
+   /* coverity[tainted_data] */
    while( mpsinputReadLine(mpsi) )
    {
       /* otherwise we are in the section given variables */
@@ -2178,6 +2183,7 @@ SCIP_RETCODE readQCMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, size) );
 
    /* loop through section */
+   /* coverity[tainted_data] */
    while( mpsinputReadLine(mpsi) )
    {
       /* otherwise we are in the section given variables */

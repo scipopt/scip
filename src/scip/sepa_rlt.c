@@ -2178,7 +2178,7 @@ SCIP_RETCODE computeRltCut(
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "rlt_%scut_%s_%s_%s_%s_%d", useprojrow ? "proj" : "", rowname,
                        uselhs ? "lhs" : "rhs", SCIPvarGetName(var), uselb ? "lb" : "ub", SCIPgetNLPs(scip));
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, cut, sepa, cutname, -SCIPinfinity(scip), SCIPinfinity(scip),
-         SCIPgetDepth(scip) > 0 && local, FALSE, FALSE) );
+         SCIPgetDepth(scip) > 0 && local, FALSE, FALSE) );  /* TODO SCIPgetDepth() should be replaced by depth that is passed on to the SEPAEXEC calls (?) */
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, *cut) );
 
@@ -3097,7 +3097,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    SCIP_ROW** rows;
    SCIP_SEPADATA* sepadata;
    int ncalls;
-   int depth;
    int nrows;
    SCIP_HASHMAP* row_to_pos;
    RLT_SIMPLEROW* projrows;
@@ -3128,7 +3127,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    }
 
    /* only call separator a given number of times at each node */
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
    if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
         || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
