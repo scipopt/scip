@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -336,6 +336,10 @@ SCIP_Bool checkConstraintMatching(
    if( nnonzeros1 == 0 && nnonzeros2 == 0 )
       return TRUE;
 
+   /* if matching rate is 0.0, we don't need to check anything */
+   if( matchingrate == 0.0 )
+      return TRUE;
+
    /* initialize the counters for the number of rows not shared. */
    nrowmaximum = MAX(nnonzeros1, nnonzeros2);
 
@@ -379,6 +383,8 @@ SCIP_Bool checkConstraintMatching(
 
    /* now apply the ratio based comparison, that is if the ratio of shared rows is greater or equal the matching rate
     * for each variable */
+   /* nnonzeros1 = 0 or nnonzeros2 = 0 iff matching rate is 0, but in this case, we return TRUE at the beginning */
+   /* coverity[divide_by_zero] */
    return ( SCIPisFeasLE(scip, matchingrate, (nnonzeros1 - nrows1not2) / (SCIP_Real)(nnonzeros1)) ||
       SCIPisFeasLE(scip, matchingrate, (nnonzeros2 - nrows2not1) / (SCIP_Real)(nnonzeros2)) );  /*lint !e795 */
 }

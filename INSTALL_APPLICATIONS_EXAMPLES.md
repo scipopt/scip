@@ -167,7 +167,7 @@ Here is what you have to do to compile and run the application or example projec
    to last compiled version
 
 5. To generate the documentation, you need to have doxygen installed.
-   Enter `make doc` in the project's `doc` folder if there exists a .dxy file for that project
+   Enter `make doc` in the project's folder if there exists a .dxy file in the project's doc folder
    or run `make doc` in scip's doc folder.
    Then open `html/index.html` in your favorite browser.
 
