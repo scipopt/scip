@@ -369,8 +369,6 @@ SCIP_RETCODE selectBestCands(
       SCIP_VAR* cand;
       SCIP_Real val;
       SCIP_Real aggrscore;
-      SCIP_Real branchpoint;
-      SCIP_BRANCHDIR branchdir;
 
       cand = cands[c];
       assert(cand != NULL);
