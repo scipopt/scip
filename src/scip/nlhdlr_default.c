@@ -213,29 +213,27 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
    SCIPdebug( SCIPprintExpr(scip, expr, NULL) );
    SCIPdebug( SCIPinfoMessage(scip, NULL, "\n") );
 
-   /* get global valid bounds for children */
-   /* use global bounds of auxvar if not at root node or estimate doesn't actually need bounds
-    * otherwise, ensure we have current (local) activity of expression and use that (can be tighter than auxvar bounds)
+   /* use global bounds of auxvar as global valid bounds for children
+    * if at root node (thus local=global) and estimate actually uses bounds, then intersect with (local) activity of expression
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &childrenbounds, SCIPexprGetNChildren(expr)) );
    for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
    {
-      if( SCIPgetDepth(scip) > 0 ||
-         (underestimate && !((size_t)nlhdlrexprdata & UNDERESTIMATEUSESACTIVITY)) ||
-         (overestimate  && !((size_t)nlhdlrexprdata & OVERESTIMATEUSESACTIVITY )) )
-      {
-         auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]);
-         assert(auxvar != NULL);
+      auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]);
+      assert(auxvar != NULL);
 
-         SCIPintervalSetBounds(&childrenbounds[i],
-            -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(auxvar)),
-             infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(auxvar)));
-      }
-      else
+      SCIPintervalSetBounds(&childrenbounds[i],
+         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(auxvar)),
+          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(auxvar)));
+
+      if( SCIPgetDepth(scip) == 0 &&
+          ((underestimate && ((size_t)nlhdlrexprdata & UNDERESTIMATEUSESACTIVITY)) ||
+           (overestimate  && ((size_t)nlhdlrexprdata & OVERESTIMATEUSESACTIVITY ))) )
       {
          SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(expr)[i]) );
-         childrenbounds[i] = SCIPexprGetActivity(SCIPexprGetChildren(expr)[i]);
+         SCIPintervalIntersect(&childrenbounds[i], childrenbounds[i], SCIPexprGetActivity(SCIPexprGetChildren(expr)[i]));
       }
+
       if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childrenbounds[i]) )
       {
          SCIPdebugMsg(scip, "activity for expression %d (unexpectedly) empty in initsepa\n");
