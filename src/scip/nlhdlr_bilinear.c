@@ -62,7 +62,7 @@ struct SCIP_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_NlhdlrData
 {
-   SCIP_EXPR**  exprs;             /**< expressions that have been detected by the nlhdlr */
+   SCIP_EXPR**           exprs;             /**< expressions that have been detected by the nlhdlr */
    int                   nexprs;            /**< total number of expression that have been detected */
    int                   exprsize;          /**< size of exprs array */
    SCIP_HASHMAP*         exprmap;           /**< hashmap to store the position of each expression in the exprs array */
