@@ -159,7 +159,7 @@ void evaluateAggrCand(
       bestcands[0] = cand;
    }
    /** TODO: consider a weaker comparison of some kind */
-   else if( *bestscore == score )
+   else if( SCIPisEQ(*bestscore, score) )
    {
       /* the score of the candidate is comparable to the currently known best, so we add it to bestcands and increase nbestcands by 1*/
       bestcands[*nbestcands] = cand;
