@@ -86,6 +86,8 @@ set(scipsources
     scip/expr_sum.c
     scip/expr_value.c
     scip/expr_var.c
+    scip/expr_varidx.c
+    ${exprinterpret}
     scip/disp_default.c
     scip/heur_actconsdiving.c
     scip/heur_adaptivediving.c
@@ -153,6 +155,8 @@ set(scipsources
     scip/nlhdlr_quadratic.c
     scip/nlhdlr_quotient.c
     scip/nlhdlr_soc.c
+    scip/nlpi_all.c
+    ${nlpi}
     scip/nodesel_bfs.c
     scip/nodesel_breadthfirst.c
     scip/nodesel_dfs.c
@@ -278,6 +282,7 @@ set(scipsources
     scip/nlhdlr.c
     scip/nlp.c
     scip/nlpi.c
+    scip/nlpioracle.c
     scip/nodesel.c
     scip/paramset.c
     scip/presol.c
@@ -382,14 +387,6 @@ set(objscipsources
     objscip/objvardata.cpp
 )
 
-set(nlpisources
-    scip/nlpi_all.c
-    scip/nlpioracle.c
-    scip/expr_varidx.c
-    ${nlpi}
-    ${exprinterpret}
-)
-
 set(lpisources
    ${lpi}
    )
@@ -409,17 +406,6 @@ set(lpiheaders
 
 set(dijkstraheaders
     dijkstra/dijkstra.h
-)
-
-set(nlpiheaders
-    scip/nlpi_all.h
-    scip/nlpi_filtersqp.h
-    scip/nlpi_ipopt.h
-    scip/nlpi_worhp.h
-    scip/nlpioracle.h
-    scip/expr_varidx.h
-    scip/exprinterpret.h
-    scip/type_exprinterpret.h
 )
 
 set(objscipheaders
@@ -546,6 +532,8 @@ set(scipheaders
     scip/expr_sum.h
     scip/expr_value.h
     scip/expr_var.h
+    scip/expr_varidx.h
+    scip/exprinterpret.h
     scip/heur_actconsdiving.h
     scip/heur_adaptivediving.h
     scip/heur_bound.h
@@ -624,6 +612,11 @@ set(scipheaders
     scip/nlhdlr_soc.h
     scip/nlp.h
     scip/nlpi.h
+    scip/nlpioracle.h
+    scip/nlpi_all.h
+    scip/nlpi_filtersqp.h
+    scip/nlpi_ipopt.h
+    scip/nlpi_worhp.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
     scip/nodesel_dfs.h
@@ -893,6 +886,7 @@ set(scipheaders
     scip/type_disp.h
     scip/type_event.h
     scip/type_expr.h
+    scip/type_exprinterpret.h
     scip/type_heur.h
     scip/type_history.h
     scip/type_implics.h
@@ -968,7 +962,7 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
 
     # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -986,7 +980,7 @@ add_library(liblpi EXCLUDE_FROM_ALL
     scip/message.c)
 setLibProperties(liblpi "lpi")
 
-add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
+add_library(libscip ${scipsources} ${objscipsources} ${lpisources} ${tpisources} ${symsources})
 
 if(MSVC)
    # msvc otherwise is not smart enough and tries to link the scip.exe binary as a library
@@ -1013,7 +1007,7 @@ if(SHARED)
     set(SOPLEX_NEEDED 0)
     set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
-    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
+    add_executable(scip main.c ${scipsources} ${objscipsources} ${lpisources} ${tpisources} ${symsources})
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
@@ -1066,7 +1060,6 @@ set_target_properties(scip PROPERTIES
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION include/lpi)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
-install(FILES ${nlpiheaders} DESTINATION include/scip)
 install(FILES ${objscipheaders} DESTINATION include/objscip)
 install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
 install(FILES ${tcliqueheaders} DESTINATION include/tclique)
