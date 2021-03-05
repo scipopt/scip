@@ -41,7 +41,6 @@ Further comments:
  - Possibly you have to enter paths to the following files:
    + the SCIP installation, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0
    + the LPI library, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0/lib/liblpispx.a
-   + the NLPI library, e.g., /home/ziboptsuite-2.1.0/scip-2.1.0/lib/libnlpispx.a
    + the library for soplex, e.g., libsoplex.linux.x86_64.gnu.opt.a
  - This makes a function called scip available, which has 8 input and two output parameters.
 

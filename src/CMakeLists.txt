@@ -979,16 +979,6 @@ endif()
 add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
 setLibProperties(libobjscip "objscip")
 
-add_library(libnlpi EXCLUDE_FROM_ALL
-    ${nlpisources}
-    blockmemshell/memory.c
-    scip/misc.c
-    scip/intervalarith.c
-    scip/interrupt.c
-    scip/message.c)
-setLibProperties(libnlpi "nlpi")
-
-
 add_library(liblpi EXCLUDE_FROM_ALL
     ${lpisources}
     scip/bitencode.c
