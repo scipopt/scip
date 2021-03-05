@@ -445,7 +445,7 @@ SCIP_RETCODE performBranchingSol(
        * output, so the method must make sure to overwrite the last argument only at the very end */
       if( nbestcands > 1 )
       {
-         selectBestCands(scip, cands, candsols, ncands, 0.0, inferenceweight, cutoffweight, reliablescore,
+         selectBestCands(scip, bestcands, candsols, nbestcands, 0.0, inferenceweight, cutoffweight, reliablescore,
                bestcands, &nbestcands);
       }
    }
@@ -468,7 +468,7 @@ SCIP_RETCODE performBranchingSol(
       if( nbestcands > 1 )
       {
          /* select the best candidates w.r.t. the first criterion */
-         selectBestCands(scip, cands, candsols, ncands, conflictweight, 0.0, 0.0, reliablescore,
+         selectBestCands(scip, bestcands, candsols, nbestcands, conflictweight, 0.0, 0.0, reliablescore,
                bestcands, &nbestcands);
       }
    }
