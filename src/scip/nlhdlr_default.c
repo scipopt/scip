@@ -378,15 +378,9 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 
    nchildren = SCIPexprGetNChildren(expr);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &localbounds, SCIPexprGetNChildren(expr)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &globalbounds, SCIPexprGetNChildren(expr)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &refpoint, SCIPexprGetNChildren(expr)) );
-
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
-
-   /* make sure enough space is available in rowprep arrays */
-   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
-
+   SCIP_CALL( SCIPallocBufferArray(scip, &localbounds, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &globalbounds, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &refpoint, nchildren) );
    /* we need to pass a branchcand array to exprhdlr's estimate also if not asked to add branching scores */
    SCIP_CALL( SCIPallocBufferArray(scip, &branchcand, nchildren) );
 
@@ -403,6 +397,12 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
           */
          SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(expr)[c]) );
          localbounds[c] = SCIPgetExprBoundsNonlinear(scip, SCIPexprGetChildren(expr)[c]);
+
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, localbounds[c]) )
+         {
+            *success = FALSE;
+            goto TERMINATE;
+         }
       }
       else
       {
@@ -420,6 +420,11 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 
       branchcand[c] = TRUE;
    }
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
+   /* make sure enough space is available in rowprep arrays */
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
 
    /* call the estimation callback of the expression handler */
    SCIP_CALL( SCIPcallExprEstimate(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, SCIProwprepGetCoefs(rowprep), &constant, &local, success, branchcand) );
@@ -496,6 +501,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       }
    }
 
+TERMINATE:
    SCIPfreeBufferArray(scip, &branchcand);
    SCIPfreeBufferArray(scip, &refpoint);
    SCIPfreeBufferArray(scip, &globalbounds);
