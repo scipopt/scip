@@ -546,6 +546,8 @@ SCIP_RETCODE performBranchingNoSol(
    SCIP_NODE* downchild;
    SCIP_NODE* eqchild;
    SCIP_NODE* upchild;
+   SCIP_VAR** bestcands;
+   int nbestcands;
 
    bestbranchpoint = SCIP_UNKNOWN;
    bestbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
@@ -557,8 +559,6 @@ SCIP_RETCODE performBranchingNoSol(
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_VAR** bestcands;
-   int nbestcands;
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcands, ncands) );
@@ -591,11 +591,10 @@ SCIP_RETCODE performBranchingNoSol(
          SCIP_Real aggrscore;
          SCIP_Real branchpoint;
          SCIP_BRANCHDIR branchdir;
+         SCIP_Real valuescore;
 
          cand = cands[c];
          assert(cand != NULL);
-
-         SCIP_Real valuescore;
 
          val = SCIP_UNKNOWN;
 
