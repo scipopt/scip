@@ -20,7 +20,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/nlpi_ipopt.h"
 #include "scip/scipdefplugins.h"
 #include "scip/sepa_minor.c"
 

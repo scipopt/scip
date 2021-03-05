@@ -25,7 +25,7 @@
 #define __SCIP_NLPIORACLE_H__
 
 #include "scip/type_message.h"
-#include "nlpi/type_exprinterpret.h"
+#include "scip/type_exprinterpret.h"
 
 
 #ifdef __cplusplus

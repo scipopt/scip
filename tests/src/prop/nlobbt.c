@@ -21,7 +21,7 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-#include "nlpi/nlpioracle.h"
+#include "scip/nlpioracle.h"
 
 #include "include/scip_test.h"
 

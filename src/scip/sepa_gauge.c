@@ -30,8 +30,8 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/scip_nlpi.h"
-#include "nlpi/nlpi_ipopt.h"
-#include "nlpi/nlpioracle.h"
+#include "scip/nlpi_ipopt.h"
+#include "scip/nlpioracle.h"
 #include "scip/scip_expr.h"
 #include "scip/pub_expr.h"
 #include "scip/pub_lp.h"

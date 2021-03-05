@@ -359,7 +359,7 @@ endif
 # NLP Solver Interfaces and expression interpreter
 #-----------------------------------------------------------------------------
 
-NLPILIBCOBJ	= 	nlpi/expr_varidx.o nlpi/nlpioracle.o nlpi/nlpi_all.o
+NLPILIBCOBJ	= 	scip/expr_varidx.o scip/nlpioracle.o scip/nlpi_all.o
 
 NLPILIBCXXOBJ =
 
@@ -371,28 +371,28 @@ NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
 			scip/rbtree.o
 
 ifeq ($(EXPRINT),none)
-NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
+NLPILIBCOBJ 	+=	scip/exprinterpret_none.o
 endif
 ifeq ($(EXPRINT),cppad)
-NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
+NLPILIBCXXOBJ 	+= 	scip/exprinterpret_cppad.o
 endif
 
 ifeq ($(IPOPT),true)
-NLPILIBCXXOBJ	+= 	nlpi/nlpi_ipopt.o
+NLPILIBCXXOBJ	+= 	scip/nlpi_ipopt.o
 else
-NLPILIBCOBJ	+= 	nlpi/nlpi_ipopt_dummy.o
+NLPILIBCOBJ	+= 	scip/nlpi_ipopt_dummy.o
 endif
 
 ifeq ($(FILTERSQP),true)
-NLPILIBCOBJ	+= nlpi/nlpi_filtersqp.o
+NLPILIBCOBJ	+= scip/nlpi_filtersqp.o
 else
-NLPILIBCOBJ	+= nlpi/nlpi_filtersqp_dummy.o
+NLPILIBCOBJ	+= scip/nlpi_filtersqp_dummy.o
 endif
 
 ifeq ($(WORHP),true)
-NLPILIBCOBJ	+= 	nlpi/nlpi_worhp.o
+NLPILIBCOBJ	+= 	scip/nlpi_worhp.o
 else
-NLPILIBCOBJ	+= 	nlpi/nlpi_worhp_dummy.o
+NLPILIBCOBJ	+= 	scip/nlpi_worhp_dummy.o
 endif
 
 NLPILIBSHORTNAME = nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP)
@@ -1221,7 +1221,7 @@ depend:
 		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
-		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC) src/lpi/lpi*.{c,cpp} src/nlpi/nlpi*.{c,cpp}` >$(THREADSAFEDEP)
+		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC) src/lpi/lpi*.{c,cpp} src/scip/nlpi*.{c,cpp}` >$(THREADSAFEDEP)
 
 # do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
 ifneq ($(DFLAGS),)

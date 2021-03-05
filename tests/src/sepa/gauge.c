@@ -20,8 +20,8 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "nlpi/nlpi_ipopt.h"
-#include "nlpi/expr_varidx.h"
+#include "scip/nlpi_ipopt.h"
+#include "scip/expr_varidx.h"
 #include "scip/expr_abs.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_log.h"

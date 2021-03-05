@@ -24,7 +24,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/struct_expr.h"
-#include "nlpi/nlpi_ipopt.h" /* to check whether LAPACK is around */
+#include "scip/nlpi_ipopt.h" /* to check whether LAPACK is around */
 #include "include/scip_test.h"
 
 static SCIP* scip;

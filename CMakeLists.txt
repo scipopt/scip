@@ -165,9 +165,9 @@ endif()
 
 #set expression interpreter file that should be used
 if(EXPRINT STREQUAL "cppad")
-    set(exprinterpret nlpi/exprinterpret_cppad.cpp)
+    set(exprinterpret scip/exprinterpret_cppad.cpp)
 elseif(EXPRINT STREQUAL "none")
-    set(exprinterpret nlpi/exprinterpret_none.c)
+    set(exprinterpret scip/exprinterpret_none.c)
 else()
     message(FATAL_ERROR "EXPRINT option has wrong value")
 endif()
@@ -507,10 +507,10 @@ if(IPOPT)
     #on debian IPOPT package needs this definition to work
     set(HAVE_CSTDDEF on)
     set(NLPI_LIBRARIES ${IPOPT_LIBRARIES})
-    set(nlpi nlpi/nlpi_ipopt.cpp)
+    set(nlpi scip/nlpi_ipopt.cpp)
 else()
     message(STATUS "Support IPOPT: OFF")
-    set(nlpi nlpi/nlpi_ipopt_dummy.c)
+    set(nlpi scip/nlpi_ipopt_dummy.c)
 endif()
 
 # WORHP
@@ -519,15 +519,15 @@ if(WORHP)
     find_package(WORHP REQUIRED)
     message(STATUS "Finding WORHP - found")
     include_directories(${WORHP_INCLUDE_DIRS})
-    set(nlpi ${nlpi} nlpi/nlpi_worhp.c)
+    set(nlpi ${nlpi} scip/nlpi_worhp.c)
     set(NLPI_LIBRARIES ${NLPI_LIBRARIES} ${WORHP_LIBRARIES})
 else()
     message(STATUS "Support WORHP: OFF")
-    set(nlpi ${nlpi} nlpi/nlpi_worhp_dummy.c)
+    set(nlpi ${nlpi} scip/nlpi_worhp_dummy.c)
 endif()
 
 # FilterSQP (with CMake, nlpi_filtersqp doesn't build anyway)
-set(nlpi ${nlpi} nlpi/nlpi_filtersqp_dummy.c)
+set(nlpi ${nlpi} scip/nlpi_filtersqp_dummy.c)
 
 # run checks to figure out how the rounding mode can be set
 include(CheckSymbolExists)

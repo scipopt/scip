@@ -34,7 +34,7 @@
 #include "scip/tree.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
-#include "nlpi/nlpi_ipopt.h" /* for LAPACK */
+#include "scip/nlpi_ipopt.h" /* for LAPACK */
 
 /*lint -e441*/
 /*lint -e777*/

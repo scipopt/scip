@@ -25,7 +25,7 @@
 /* #3026 will decide whether to remove or adapt this code */
 #ifdef SCIP_DISABLED_CODE
 
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/nlpi_ipopt.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.c"
 

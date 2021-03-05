@@ -57,7 +57,7 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
-#include "nlpi/nlpi_ipopt.h"  /* for SCIPsolveLinearProb */
+#include "scip/nlpi_ipopt.h"  /* for SCIPsolveLinearProb */
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */

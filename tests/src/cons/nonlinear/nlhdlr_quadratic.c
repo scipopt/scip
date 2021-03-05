@@ -39,7 +39,7 @@
 #include "scip/expr_var.h"
 #include "scip/expr_cos.h"
 #include "scip/expr_value.h"
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/nlpi_ipopt.h"
 
 
 /*

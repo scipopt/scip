@@ -42,7 +42,7 @@
 #include "scip/expr_var.h"
 #include "scip/debug.h"
 #include "scip/pub_nlhdlr.h"
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/nlpi_ipopt.h"
 
 
 /* fundamental nonlinear handler properties */

@@ -21,7 +21,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "nlpi/nlpi_xyz.h"
+#include "scip/nlpi_xyz.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_nlp.h"

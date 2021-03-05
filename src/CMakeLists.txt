@@ -383,9 +383,9 @@ set(objscipsources
 )
 
 set(nlpisources
-    nlpi/nlpi_all.c
-    nlpi/nlpioracle.c
-    nlpi/expr_varidx.c
+    scip/nlpi_all.c
+    scip/nlpioracle.c
+    scip/expr_varidx.c
     ${nlpi}
     ${exprinterpret}
 )
@@ -412,14 +412,14 @@ set(dijkstraheaders
 )
 
 set(nlpiheaders
-    nlpi/nlpi_all.h
-    nlpi/nlpi_filtersqp.h
-    nlpi/nlpi_ipopt.h
-    nlpi/nlpi_worhp.h
-    nlpi/nlpioracle.h
-    nlpi/expr_varidx.h
-    nlpi/exprinterpret.h
-    nlpi/type_exprinterpret.h
+    scip/nlpi_all.h
+    scip/nlpi_filtersqp.h
+    scip/nlpi_ipopt.h
+    scip/nlpi_worhp.h
+    scip/nlpioracle.h
+    scip/expr_varidx.h
+    scip/exprinterpret.h
+    scip/type_exprinterpret.h
 )
 
 set(objscipheaders
@@ -1076,7 +1076,7 @@ set_target_properties(scip PROPERTIES
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION include/lpi)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
-install(FILES ${nlpiheaders} DESTINATION include/nlpi)
+install(FILES ${nlpiheaders} DESTINATION include/scip)
 install(FILES ${objscipheaders} DESTINATION include/objscip)
 install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
 install(FILES ${tcliqueheaders} DESTINATION include/tclique)
