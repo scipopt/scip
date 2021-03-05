@@ -137,6 +137,7 @@ void evaluateValueCand(
 /** evaluate the given candidate with the given score against the currently best know candidate */
 static
 void evaluateAggrCand(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             cand,               /**< candidate to be checked */
    SCIP_Real             score,              /**< score of the candidate */
    SCIP_Real             val,                /**< solution value of the candidate */
@@ -159,7 +160,7 @@ void evaluateAggrCand(
       bestcands[0] = cand;
    }
    /** TODO: consider a weaker comparison of some kind */
-   else if( SCIPisEQ(*bestscore, score) )
+   else if( SCIPisEQ(scip, *bestscore, score) )
    {
       /* the score of the candidate is comparable to the currently known best, so we add it to bestcands and increase nbestcands by 1*/
       bestcands[*nbestcands] = cand;
@@ -383,7 +384,7 @@ void selectBestCands(
          val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore);
 
       /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
-      evaluateAggrCand(cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, nbestcands);
+      evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, nbestcands);
    }
 }
 
@@ -616,7 +617,7 @@ SCIP_RETCODE performBranchingNoSol(
             val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore);
 
          /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
-         evaluateAggrCand(cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, &nbestcands);
+         evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, &nbestcands);
       }
    }
    else
@@ -654,7 +655,7 @@ SCIP_RETCODE performBranchingNoSol(
             val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore); /*lint !e777*/
 
          /* evaluate the candidate against the currently best candidate */
-         evaluateAggrCand(cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, &nbestcands);
+         evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, &nbestcands);
       }
    }
 
