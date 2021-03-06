@@ -1296,7 +1296,7 @@ SCIP_RETCODE reduce_boundHopDa(
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
 )
 {
-   const RPDA paramsda = { .prevrounds = STP_DAHOPS_MAGIC, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none,
+   const RPDA paramsda = { .damode = STP_DAMODE_HOPS, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none,
          .nodereplacing = FALSE};
    SCIP_Real* orgcosts;
    SCIP_Real fixed = 0.0;

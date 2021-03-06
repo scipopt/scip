@@ -1639,7 +1639,13 @@ SCIP_RETCODE extreduce_deleteEdges(
 
   // printf("number of extended edge eliminations=%d \n", *nelims);
 
-   if( graph_typeIsSpgLike(graph) )
+   {
+      int todo; // fail with I049a for
+      //&& extperma->mode == extred_full  debug!
+// and test to activate again!
+   }
+
+   if( graph_typeIsSpgLike(graph)   )
    {
       int sepanelims = 0;
       SCIP_CALL( reduce_termsepaDaWithExperma(scip, graph, extperma, NULL, &sepanelims) );

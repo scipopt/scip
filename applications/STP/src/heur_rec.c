@@ -1541,8 +1541,10 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          }
          else
          {
+            const int minnreds = 5;
             SCIP_CALL( reduce_solInit(scip, solgraph, TRUE, &redsol) );
-            SCIP_CALL( reduce(scip, solgraph, redsol, 2, 5, FALSE) );
+            SCIP_CALL( reduce(scip, solgraph, redsol,
+                  STP_REDUCTION_ADVANCED, minnreds, FALSE) );
          }
 
          SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, redsol, FALSE) );

@@ -66,6 +66,9 @@
 
 #define DEFAULT_RANDSEED 5                   /**< seed for pseudo-random functions */
 
+#define TM_HARD_MAXNEDGES 10000
+#define TM_HARD_FACTOR    3
+
 #define AUTO        0
 #define TM_SP       1
 #define TM_VORONOI  2
@@ -2755,8 +2758,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    GRAPH* graph;
    int* soledges;
    int runs;
-   int nedges;
    SCIP_Bool success = FALSE;
+   SCIP_Bool isSpg;
+   SCIP_Bool isPcMw;
 
    assert(scip != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -2775,6 +2779,8 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    assert(graph != NULL);
 
    runs = 0;
+   isSpg = graph_typeIsSpgLike(graph);
+   isPcMw = graph_pc_isPcMw(graph);
 
    /* set the runs, i.e. number of different starting points for the heuristic */
    if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
@@ -2788,7 +2794,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    {
       runs = heurdata->evalruns;
 
-      if( graph_pc_isPcMw(graph) )
+      if( isPcMw )
          runs *= 2;
    }
    else if( heurtiming & SCIP_HEURTIMING_AFTERNODE )
@@ -2800,6 +2806,11 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
       if( graph->stp_type == STP_DCSTP )
          runs = 0;
+   }
+
+   if( (isPcMw || isSpg) && graph->edges < TM_HARD_MAXNEDGES && SCIPprobdataProbIsAversarial(scip) )
+   {
+      runs *= TM_HARD_FACTOR;
    }
 
    /* increase counter for number of (TM) calls */
@@ -2825,11 +2836,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       return SCIP_OKAY;
 
    assert(vars[0] != NULL);
-
-   nedges = graph->edges;
-
-   /* allocate memory */
-   SCIP_CALL(SCIPallocBufferArray(scip, &soledges, nedges));
+   SCIP_CALL(SCIPallocBufferArray(scip, &soledges, graph->edges));
 
    *result = SCIP_DIDNOTFIND;
 

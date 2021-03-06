@@ -36,12 +36,15 @@ extern "C" {
 #endif
 
 
-
 #define STP_REDUCTION_NONE      0
 #define STP_REDUCTION_BASIC     1
 #define STP_REDUCTION_ADVANCED  2
 
-#define STP_DAHOPS_MAGIC -9991 // terrible :(
+#define STP_DAMODE_HOPS         -9991
+#define STP_DAMODE_FAST          0
+#define STP_DAMODE_MEDIUM        1
+#define STP_DAMODE_EXTENSIVE     2
+
 
 /** lightweight minimum spanning tree structure that allows to add vertices to given MST on complete graph (in CSR format) */
 typedef struct dynamic_complete_minimum_spanning_tree DCMST;
@@ -141,7 +144,7 @@ struct special_distance_implied_profit
 /** reduced cost reduction parameters */
 typedef struct reduce_costs_reduction_parameters
 {
-   int                   prevrounds;         /**< number of reduction rounds that have been performed already */
+   int                   damode;             /**< mode */
    enum EXTRED_MODE      extredMode;         /**< mode of extended reductions */
    SCIP_Bool             useRec;             /**< use recombination heuristic? */
    SCIP_Bool             useSlackPrune;      /**< use slack-prune heuristic? */

@@ -616,7 +616,9 @@ SCIP_RETCODE redLoopInnerStp(
 
       if( da )
       {
-         const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = FALSE,
+         const RPDA paramsda = {
+           .damode = (!redparameters->userec && inner_rounds > 0) ? STP_DAMODE_MEDIUM : STP_DAMODE_FAST,
+           .useRec = FALSE,
            .useSlackPrune = FALSE, .extredMode = extred_none, .nodereplacing = nodereplacing };
 
          SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal,
@@ -762,8 +764,10 @@ SCIP_RETCODE redLoopInnerMw(
 
       if( (da || (dualascent && extensive)) )
       {
-         const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .extredMode = extred_none, .nodereplacing = FALSE, .useSlackPrune = FALSE,
-                .pcmw_solbasedda = (rounds > 0), .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
+         const RPDA paramsda = {
+            .damode = STP_DAMODE_FAST , .useRec = userec, .extredMode = extred_none,
+            .nodereplacing = FALSE, .useSlackPrune = FALSE,
+            .pcmw_solbasedda = (rounds > 0), .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
 
          if( graph_pc_isRootedPcMw(g) )
          {
@@ -1294,7 +1298,7 @@ SCIP_RETCODE reduceHc(
 
       if( da )
       {
-         const RPDA paramsda = { .prevrounds = 0, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
+         const RPDA paramsda = { .damode = STP_DAMODE_FAST , .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
 
          SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, fixed, &danelims, randnumgen) );
          if( danelims <= redbound )
@@ -1425,7 +1429,7 @@ SCIP_RETCODE reduceSap(
 
       if( da )
       {
-         const RPDA paramsda = { .prevrounds = 0, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
+         const RPDA paramsda = { .damode = STP_DAMODE_FAST, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
          SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &danelims, randnumgen) );
 
          if( danelims <= 2 * redbound )
@@ -1487,7 +1491,7 @@ SCIP_RETCODE reduceNw(
    while( (da) && !SCIPisStopped(scip) )
    {
       int danelims = 0;
-      const RPDA paramsda = { .prevrounds = 0, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
+      const RPDA paramsda = { .damode = STP_DAMODE_FAST , .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1536,7 +1540,7 @@ SCIP_RETCODE reduceDc(
    while( (da) && !SCIPisStopped(scip) )
    {
       int danelims = 0;
-      const RPDA paramsda = { .prevrounds = 0, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
+      const RPDA paramsda = { .damode = STP_DAMODE_FAST , .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1602,7 +1606,7 @@ SCIP_RETCODE redLoopMw(
    /* todo currently run a most two times */
    for( int rounds = 0; rounds < 3 && !SCIPisStopped(scip) && fullrerun; rounds++ )
    {
-      const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .extredMode = extred_none, .nodereplacing = FALSE, .useSlackPrune = TRUE,
+      const RPDA paramsda = { .damode = STP_DAMODE_FAST , .useRec = userec, .extredMode = extred_none, .nodereplacing = FALSE, .useSlackPrune = TRUE,
             .pcmw_solbasedda = TRUE, .pcmw_useMultRoots =  (g->terms > STP_RED_MWTERMBOUND),
             .pcmw_markroots = tryrmw, .pcmw_fastDa = FALSE };
       int daelims = 0;
@@ -1708,6 +1712,7 @@ SCIP_RETCODE redLoopPc(
    const SCIP_Bool verbose = FALSE && dualascent && userec && nodereplacing;
    int nelims;
    int degnelims;
+   int nadvruns = 0;
    const int reductbound_global = reductbound * STP_RED_GLBFACTOR;
 
    /* already finished? */
@@ -1850,7 +1855,7 @@ SCIP_RETCODE redLoopPc(
 
          if( da || (dualascent && extensive) )
          {
-            const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .extredMode = extred_none, .nodereplacing = nodereplacing, .useSlackPrune = FALSE,
+            const RPDA paramsda = { .damode = STP_DAMODE_FAST , .useRec = userec, .extredMode = extred_none, .nodereplacing = nodereplacing, .useSlackPrune = FALSE,
                 .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
 
             SCIP_CALL( reduce_simple_pc(scip, edgestate, g, fixed, &nelims, &degnelims, solnode) );
@@ -1883,9 +1888,10 @@ SCIP_RETCODE redLoopPc(
 
       if( advancedrun && g->terms > 2 )
       {
-         const RPDA paramsda = { .prevrounds = 0,
+         const RPDA paramsda = {
+               .damode = STP_DAMODE_MEDIUM,
                .useRec = userec,
-               .extredMode = (outterrounds == 1 ? extred_fast : extred_full),
+               .extredMode = (nadvruns == 0 ? extred_fast : extred_full),
                .nodereplacing = nodereplacing,
                .useSlackPrune = FALSE,
                .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = TRUE, .pcmw_markroots = TRUE, .pcmw_fastDa = FALSE };
@@ -1894,6 +1900,7 @@ SCIP_RETCODE redLoopPc(
          degnelims = 0;
          nelims = 0;
          advancedrun = FALSE;
+         nadvruns++;
 
          if( rpc )
          {
@@ -2012,7 +2019,8 @@ SCIP_RETCODE redLoopStp(
       if( fullreduce && !SCIPisStopped(scip) )
       {
          int extendedelims = 0;
-         const RPDA paramsda = { .prevrounds = 1,
+         const RPDA paramsda = {
+                         .damode = (nruns == 0 ? STP_DAMODE_FAST : STP_DAMODE_MEDIUM),
                          .useRec = redparameters->userec,
                          .extredMode = (nruns == 0 ? extred_fast : extred_full),
                          .useSlackPrune = FALSE,

@@ -48,6 +48,7 @@
 #define BND_TMHEUR_NRUNS_RPC      16          /**< number of runs for RPC */
 #define DEFAULT_DARUNS_DIRECTED   3
 #define DEFAULT_DARUNS     8                  /**< number of runs for dual ascent heuristic */
+#define DEFAULT_DARUNS_FAST     4             /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  8                  /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
@@ -1688,7 +1689,7 @@ SCIP_Real daGetMaxDeviation(
 #if 1
    damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
 #else
-   if( paramsda->prevrounds > 0 )
+   if( paramsda->damode > 0 )
       damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
    else
       damaxdeviation = -1.0;
@@ -1828,8 +1829,8 @@ int daGetNruns(
 {
    int nruns;
 
-   if( paramsda->prevrounds == 0 )
-	   nruns = MIN(nterms, DEFAULT_DARUNS / 2);
+   if( paramsda->damode == STP_DAMODE_FAST )
+	   nruns = MIN(nterms, DEFAULT_DARUNS_FAST);
    else
 	   nruns = MIN(nterms, DEFAULT_DARUNS);
 
@@ -1838,7 +1839,7 @@ int daGetNruns(
       nruns = MIN(nruns, DEFAULT_DARUNS_DIRECTED);
    }
 
-   if( paramsda->prevrounds == STP_DAHOPS_MAGIC )
+   if( paramsda->damode == STP_DAMODE_HOPS )
    {
       assert(graph->stp_type == STP_DHCSTP);
       nruns = MIN(nruns, 2);
@@ -2647,7 +2648,7 @@ SCIP_RETCODE reduce_da(
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
    const SCIP_Bool userec = paramsda->useRec;
    SCIP_Bool havebestsol = FALSE;
-   const SCIP_Bool useHops = (paramsda->prevrounds == STP_DAHOPS_MAGIC);    // todo do that properly
+   const SCIP_Bool useHops = (paramsda->damode == STP_DAMODE_HOPS);    // todo do that properly
 
    assert(scip && graph && nelims);
    assert(graph_valid_ancestors(scip, graph) && graph_valid(scip, graph));
@@ -2745,9 +2746,16 @@ SCIP_RETCODE reduce_da(
          }
          else
          {
-            const SCIP_Bool useSlackPrune = (run == 1 && paramsda->useSlackPrune);
-            SCIP_CALL( computeSteinerTreeRedCosts(scip, graph, redcostdata, useSlackPrune,
+            if( useExtRed || run < 2 )
+            {
+               const SCIP_Bool useSlackPrune = (run == 1 && paramsda->useSlackPrune);
+               SCIP_CALL( computeSteinerTreeRedCosts(scip, graph, redcostdata, useSlackPrune,
                         userec, pool, result, bestresult, &havebestsol, &upperbound) );
+            }
+            else
+            {
+               havebestsol = havebestsol && solstp_isUnreduced(scip, graph, bestresult);
+            }
          }
 
          SCIPdebugMessage("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
@@ -3305,7 +3313,7 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const RPDA*           paramsda,           /**< parameters */
-   REDSOLLOCAL*            redprimal,          /**< primal bound info or NULL */
+   REDSOLLOCAL*          redprimal,          /**< primal bound info or NULL */
    PATH*                 vnoi,               /**< Voronoi data structure array */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    int*                  vbase,              /**< Voronoi base array */
