@@ -671,7 +671,7 @@ SCIP_RETCODE primalAddSol(
          SCIPmessagePrintWarning(messagehdlr, "Dual bound %g is smaller than the objective of the primal solution %g. The solution might not be optimal.\n",
             SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
       }
-#if WITH_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
       SCIP_ABORT();
 #endif
    }
