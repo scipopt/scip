@@ -207,6 +207,10 @@ SCIP_RETCODE addCut(
  *
  *  @todo Check whether one wants to sort according to the quotient of solution values and coefficients to increase the
  *  chance of having smaller coefficients in the front.
+ *
+ *  @todo Currently the needed storage in this function is quite high, since we have four arrays for lower and upper
+ *  variable bounds, respectively, and we use the total number of variables as an upper bound for the sizes. One
+ *  solution would be to store the maximal number of variable bounds corresponding to a variable somewhere.
  */
 static
 SCIP_RETCODE separateCuts(
@@ -232,7 +236,6 @@ SCIP_RETCODE separateCuts(
    int* vlbmixsigns;
    int* vubmixsigns;
    int firstvar;
-   int nmaxvars;
    int nvars;
    int i;
    int k;
@@ -260,22 +263,21 @@ SCIP_RETCODE separateCuts(
    }
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   nmaxvars = nvars - SCIPgetNContVars(scip);
 
    if ( firstvar == nvars )
       return SCIP_OKAY;
 
    /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixcoefs, nmaxvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixsols, nmaxvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixinds, nmaxvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixsigns, nmaxvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vubmixcoefs, nmaxvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vubmixsols, nmaxvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vubmixinds, nmaxvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vubmixsigns, nmaxvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nmaxvars + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nmaxvars + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixsols, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixinds, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixsigns, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vubmixcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vubmixsols, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vubmixinds, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vubmixsigns, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars + 1) );
 
    for( i = firstvar; i < nvars; i++ )
    {
@@ -397,7 +399,7 @@ SCIP_RETCODE separateCuts(
             ++vlbmixsize;
          }
       }
-      assert( vlbmixsize <= nmaxvars );
+      assert( vlbmixsize <= nvars );
 
       /* stop if no variable lower bounds information exists */
       if( vlbmixsize == 0 )
@@ -463,7 +465,7 @@ SCIP_RETCODE separateCuts(
             cutcoefs[cutnnz] = maxabscoef - lastcoef;
          cutinds[cutnnz++] = maxabsind;
       }
-      assert( cutnnz <= nmaxvars + 1 );
+      assert( cutnnz <= nvars + 1 );
 
       /* add the cut if the violtion is good enough and the number of nonzero coefficients is larger than 2 */
       if( SCIPisEfficacious(scip, activity) && cutnnz > 2 )
@@ -552,7 +554,7 @@ SCIP_RETCODE separateCuts(
             ++vubmixsize;
          }
       }
-      assert( vubmixsize <= nmaxvars );
+      assert( vubmixsize <= nvars );
 
       /* stop if no variable upper bounds information exists */
       if( vubmixsize == 0 )
@@ -618,7 +620,7 @@ SCIP_RETCODE separateCuts(
             cutcoefs[cutnnz] = maxabscoef - lastcoef;
          cutinds[cutnnz++] = maxabsind;
       }
-      assert( cutnnz <= nmaxvars + 1 );
+      assert( cutnnz <= nvars + 1 );
 
       /* add the cut if the violtion is good enough and the number of nonzero coefficients is larger than 2 */
       if( SCIPisEfficacious(scip, activity) && cutnnz > 2 )
