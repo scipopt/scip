@@ -659,7 +659,22 @@ SCIP_RETCODE primalAddSol(
       (void*)sol, obj, insertpos, replace);
 
    /* make sure that the primal bound is at least the lower bound */
-   assert( SCIPsetIsInfinity(set, obj) || SCIPsetIsInfinity(set, -SCIPgetLowerbound(set->scip)) || SCIPsetIsFeasLE(set, SCIPgetLowerbound(set->scip), obj) );
+   if( ! SCIPsetIsInfinity(set, obj) && ! SCIPsetIsInfinity(set, -SCIPgetLowerbound(set->scip)) && SCIPsetIsFeasGT(set, SCIPgetLowerbound(set->scip), obj) )
+   {
+      if( origprob->objsense == SCIP_OBJSENSE_MINIMIZE )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "Dual bound %g is larger than the objective of the primal solution %g. The solution might not be optimal.\n",
+            SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
+      }
+      else
+      {
+         SCIPmessagePrintWarning(messagehdlr, "Dual bound %g is smaller than the objective of the primal solution %g. The solution might not be optimal.\n",
+            SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
+      }
+#if WITH_DEBUG_SOLUTION
+      SCIP_ABORT();
+#endif
+   }
 
    SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 
