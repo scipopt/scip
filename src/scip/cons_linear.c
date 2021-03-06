@@ -10582,8 +10582,8 @@ SCIP_Bool consdataIsResidualIntegral(
    return TRUE;
 }
 
-/** check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i,
- *  check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
+/** check if \f$lhs/a_i - \sum_{j \neq i} a_j/a_i x_j\f$ is always inside the bounds of \f$x_i\f$,
+ *  check if \f$rhs/a_i - \sum_{j \neq i} a_j/a_i x_j\f$ is always inside the bounds of \f$x_i\f$
  */
 static
 void calculateMinvalAndMaxval(
