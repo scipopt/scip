@@ -174,31 +174,25 @@ fi
 POSSIBLEPATHS="${POSSIBLEPATHS} / DONE"
 
 #search for test file and check if we use a ttest or a test file
-if [ -f instancedata/testsets/$TSTNAME.ttest ];
+if [ -f testset/$TSTNAME.ttest ];
+then
+    FULLTSTNAME="testset/$TSTNAME.ttest"
+    TIMEFACTOR=$TIMELIMIT
+elif [ -f testset/$TSTNAME.test ];
+then
+    FULLTSTNAME="testset/$TSTNAME.test"
+    TIMEFACTOR=1
+elif [ -f instancedata/testsets/$TSTNAME.ttest ];
 then
     FULLTSTNAME="instancedata/testsets/$TSTNAME.ttest"
     TIMEFACTOR=$TIMELIMIT
+elif [ -f instancedata/testsets/$TSTNAME.test ];
+then
+    FULLTSTNAME="instancedata/testsets/$TSTNAME.test"
+    TIMEFACTOR=1
 else
-    if [ -f instancedata/testsets/$TSTNAME.test ];
-    then
-	FULLTSTNAME="instancedata/testsets/$TSTNAME.test"
-	TIMEFACTOR=1
-    else
-	if [ -f testset/$TSTNAME.ttest ];
-	then
-	    FULLTSTNAME="testset/$TSTNAME.ttest"
-	    TIMEFACTOR=$TIMELIMIT
-	else
-	    if [ -f testset/$TSTNAME.test ];
-	    then
-		FULLTSTNAME="testset/$TSTNAME.test"
-		TIMEFACTOR=1
-	    else
-		echo "Skipping test: no $TSTNAME.(t)test file found in testset/ or instancedata/testsets/"
-		exit
-	    fi
-	fi
-    fi
+    echo "Skipping test: no $TSTNAME.(t)test file found in testset/ or instancedata/testsets/"
+    exit 1
 fi
 
 if [ ${TIMEFACTOR} -gt 5 ]
