@@ -98,8 +98,7 @@ SCIP_Real getTreeRedcosts_dbg(
 #endif
 
 
-/** insertion sort; todo
- * : could be speed-up by use of sentinel value at position 0
+/** insertion sort; keyArr has sentinel value at position -1
  * : do something special: maybe sort index array
  * */
 static inline
@@ -121,8 +120,9 @@ void sortDescendingIntRealReal(
       const SCIP_Real currData1 = dataArr1[i];
       const SCIP_Real currData2 = dataArr2[i];
 
-      for( j = i - 1; j >= 0 && currKey > keyArr[j]; j-- )
+      for( j = i - 1; currKey > keyArr[j]; j-- )
       {
+         assert(j >= 0);
          keyArr[j + 1] = keyArr[j];
          dataArr1[j + 1] = dataArr1[j];
          dataArr2[j + 1] = dataArr2[j];
@@ -249,7 +249,8 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    int                   root                /**< the root for the orientation */
 )
 {
-   int nearestTerms[STP_EXTTREE_MAXNLEAVES_GUARD];
+   int nearestTerms_x[STP_EXTTREE_MAXNLEAVES_GUARD + 1];
+   int* nearestTerms;
    SCIP_Real firstTermDist[STP_EXTTREE_MAXNLEAVES_GUARD];
    SCIP_Real secondTermDist[STP_EXTTREE_MAXNLEAVES_GUARD];
    const int* const tree_leaves = extdata->tree_leaves;
@@ -266,9 +267,14 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    const SCIP_Real swapcost = reddata->redcost_treenodeswaps[redcostlevel * nnodes + root];
    SCIP_Real redcost_directed = tree_redcost + rootToNodeDist[root] + swapcost;
    int leavescount = 0;
-
 #ifndef NDEBUG
    SCIP_Real redcost_debug = redcost_directed;
+#endif
+
+   nearestTerms_x[0] = INT_MAX;
+   nearestTerms = &(nearestTerms_x[1]);
+
+#ifndef NDEBUG
    for( int i = 0; i < STP_EXTTREE_MAXNLEAVES_GUARD; i++ )
    {
       nearestTerms[i] = -1;
@@ -280,6 +286,8 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    assert(GE(tree_redcost, 0.0));
    assert(graph_knot_isInRange(graph, root));
 #endif
+
+
 
 #ifdef STP_DEBUG_EXT
    SCIPdebugMessage("...reduced costs without leaves: %f (treecost=%f + rootdist=%f + swap=%f) \n",
