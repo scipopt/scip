@@ -28,6 +28,11 @@
 #include "stpvector.h"
 #include "stpprioqueue.h"
 #include "solstp.h"
+#ifdef STP_DPTERM_USEDA
+#include "dualascent.h"
+#include "heur_ascendprune.h"
+#include "heur_local.h"
+#endif
 
 #define PROMISING_FULL_MAXNTERMS 20
 
@@ -35,6 +40,106 @@
 /*
  * Local methods
  */
+
+#ifdef STP_DPTERM_USEDA
+
+/** initializes */
+static
+SCIP_RETCODE dpredcostsInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< original graph */
+   DPREDCOST**           dpredcosts          /**< DP graph */
+)
+{
+   SCIP_Real* redcosts_tmp;
+   int* soledges_tmp;
+   DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = graph->source,
+         .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
+   DPREDCOST* dprc;
+   SCIP_Real dualobjval = -1.0;
+   SCIP_Real primalobjval;
+   SCIP_Bool success;
+   int* pathedge;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+
+   SCIP_CALL( SCIPallocMemory(scip, dpredcosts) );
+   dprc = *dpredcosts;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(redcosts_tmp), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(soledges_tmp), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dprc->csr_redcosts), nedges) );
+
+   SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, redcosts_tmp, &dualobjval) );
+
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, redcosts_tmp, soledges_tmp, graph->source, &success, FALSE));
+   assert(success);
+   SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, soledges_tmp));
+   assert(solstp_isValid(scip, graph, soledges_tmp));
+
+   primalobjval = solstp_getObj(graph, soledges_tmp, 0.0);
+   assert(GE(primalobjval, dualobjval));
+   dprc->cutoffbound = primalobjval - dualobjval;
+   dprc->upperbound = primalobjval;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dprc->nodes_rootdist), nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes + 1) );
+   graph_mark(graph);
+   graph_path_execX(scip, graph, graph->source, redcosts_tmp, dprc->nodes_rootdist, pathedge);
+   SCIPfreeBufferArray(scip, &pathedge);
+
+   printf("dual=%f primal =%f \n", dualobjval, primalobjval);
+   printf("cutoffbound=%f \n", dprc->cutoffbound);
+
+   // todo extra method
+   {
+      const CSR* const csr = graph->csr_storage;
+      const int* const edgeid_csr = csr->edge_id;
+      const int* const start_csr = csr->start;
+
+      assert(csr && edgeid_csr && start_csr);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         for( int j = start_csr[k]; j != start_csr[k + 1]; j++  )
+         {
+            const int edge = edgeid_csr[j];
+            const SCIP_Real rc = MIN(redcosts_tmp[edge], redcosts_tmp[flipedge(edge)]);
+
+            assert(EQ(graph->cost[edge], csr->cost[j]));
+            assert(GE(rc, 0.0));
+            assert(0 <= j && j < nedges);
+
+            dprc->csr_redcosts[j] = rc;
+         }
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &soledges_tmp);
+   SCIPfreeMemoryArray(scip, &redcosts_tmp);
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+static
+void dpredcostsFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DPREDCOST**           dpredcosts          /**< DP graph */
+)
+{
+   DPREDCOST* dprc = *dpredcosts;
+
+   assert(dprc);
+   assert(dprc->csr_redcosts);
+
+   SCIPfreeMemoryArray(scip, &(dprc->nodes_rootdist));
+   SCIPfreeMemoryArray(scip, &(dprc->csr_redcosts));
+
+   SCIPfreeMemory(scip, dpredcosts);
+}
+#endif
 
 
 /** initializes */
@@ -202,14 +307,26 @@ SCIP_RETCODE dpsolverInitData(
    SCIP_CALL( dpgraphInit(scip, graph, &(dpsolver->dpgraph)) );
    terminals = dpsolver->dpgraph->terminals;
 
+#ifdef STP_DPTERM_USEDA
+   SCIP_CALL( dpredcostsInit(scip, graph, &(dpsolver->dpredcosts)) );
+#endif
+
    for( int i = 0; i < nterms; i++ )
    {
       DPSUBSOL* singleton_sol;
       const int term = terminals[i];
       int pos;
+#ifdef STP_DPTERM_USEDA
+      SOLTRACE trace = { .prevs = {-1,-1},
+                         .cost = 0.0,
+                         .redcost = 0.0,
+                         .root = term};
+#else
       SOLTRACE trace = { .prevs = {-1,-1},
                          .cost = 0.0,
                          .root = term};
+#endif
+
 
       assert(Is_term(graph->term[term]));
       SCIPdebugMessage("add term %d (index=%d) \n", term, i);
@@ -262,6 +379,10 @@ void dpsolverFreeData(
       assert(!dpsolver->soltree_root);
    }
 
+#ifdef STP_DPTERM_USEDA
+   dpredcostsFree(scip, &(dpsolver->dpredcosts));
+#endif
+
    dpgraphFree(scip, &(dpsolver->dpgraph));
    dpmiscFree(scip, &(dpsolver->dpmisc));
    dpterms_streeFree(scip, &(dpsolver->dpstree));
@@ -282,11 +403,7 @@ SCIP_RETCODE dpsolverSolve(
    // todo compress?
 
 
-   SCIP_CALL( graph_init_csr(scip, g) );
-
    SCIP_CALL( dpterms_coreSolve(scip, g, dpsolver, wasSolved) );
-
-   graph_free_csr(scip, g);
 
    return SCIP_OKAY;
 }
@@ -371,6 +488,7 @@ SCIP_RETCODE dpterms_solve(
 
    assert(scip && graph && solution);
 
+   SCIP_CALL( graph_init_csrWithEdgeId(scip, graph) );
    SCIP_CALL( dpsolverInit(scip, graph, &dpsolver) );
 
    SCIP_CALL( dpsolverSolve(scip, graph, dpsolver, wasSolved) );
@@ -382,6 +500,7 @@ SCIP_RETCODE dpterms_solve(
    }
 
    dpsolverFree(scip, &dpsolver);
+   graph_free_csr(scip, graph);
 
    return SCIP_OKAY;
 }

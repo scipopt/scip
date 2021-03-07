@@ -1583,14 +1583,33 @@ SCIP_RETCODE graph_init_csr(
    GRAPH*                g                   /**< the graph */
    )
 {
-   const int nedges = g->edges;
-   const int nnodes = g->knots;
-
    assert(scip && g);
-   assert(nnodes >= 1);
+   assert(g->knots >= 1);
    assert(g->csr_storage == NULL);
 
-   SCIP_CALL( graph_csr_alloc(scip, nnodes, nedges, &(g->csr_storage)) );
+   SCIP_CALL( graph_csr_alloc(scip, g->knots, g->edges, &(g->csr_storage)) );
+
+   graph_csr_build(g, g->cost, g->csr_storage);
+
+   assert(graph_valid_csr(g, TRUE));
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/** initializes CSR storage of graph */
+SCIP_RETCODE graph_init_csrWithEdgeId(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   assert(scip && g);
+   assert(g->knots >= 1);
+   assert(g->csr_storage == NULL);
+
+   SCIP_CALL( graph_csr_allocWithEdgeId(scip, g->knots, g->edges, &(g->csr_storage)) );
 
    graph_csr_build(g, g->cost, g->csr_storage);
 

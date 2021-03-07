@@ -124,6 +124,7 @@ extern void   graph_heap_correct(int, SCIP_Real, DHEAP*);
 extern SCIP_Bool graph_heap_isClean(const DHEAP*);
 /* CSR storage: */
 extern SCIP_RETCODE   graph_init_csr(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_init_csrWithEdgeId(SCIP*, GRAPH*);
 extern void           graph_free_csr(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_csr_alloc(SCIP*, int, int, CSR**);
 extern SCIP_RETCODE   graph_csr_allocWithEdgeId(SCIP*, int, int, CSR**);

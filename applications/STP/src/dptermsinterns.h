@@ -34,6 +34,8 @@
 #include "stpbitset.h"
 #include "stpprioqueue.h"
 
+//#define STP_DPTERM_USEDA
+
 /** dynamic programming search tree */
 typedef struct dynamic_programming_search_tree DPSTREE;
 
@@ -49,6 +51,9 @@ typedef struct solution_trace
 {
    int                   prevs[2];           /**< marker to get ancestor solutions (0,1,2 ancestors possible) */
    SCIP_Real             cost;               /**< solution cost */
+#ifdef STP_DPTERM_USEDA
+   SCIP_Real             redcost;            /**< reduced solution cost */
+#endif
    int                   root;               /**< solution root */
 } SOLTRACE;
 
@@ -87,6 +92,18 @@ typedef struct dynamic_programming_misc
 } DPMISC;
 
 
+
+/** reduced cost data */
+typedef struct dynamic_programming_reduced_costs
+{
+   SCIP_Real*            csr_redcosts;
+   SCIP_Real*            nodes_rootdist;
+   SCIP_Real             cutoffbound;
+   SCIP_Real             upperbound;
+} DPREDCOST;
+
+
+
 /** solver */
 typedef struct dynamic_programming_solver
 {
@@ -97,6 +114,9 @@ typedef struct dynamic_programming_solver
    DPMISC*               dpmisc;             /**< this and that */
    STP_PQ*               solpqueue;          /**< sub-solutions */
    DHEAP*                dheap;              /**< heap of size nnodes */
+#ifdef STP_DPTERM_USEDA
+   DPREDCOST*            dpredcosts;
+#endif
 } DPSOLVER;
 
 

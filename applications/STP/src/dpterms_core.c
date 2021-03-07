@@ -56,6 +56,9 @@ typedef struct dynamic_programming_iterator
    STP_Vectype(SOLTRACE) valid_traces;       /**< traces of valid extension */
    STP_Bitset            valid_bitset;       /**< marks valid roots */
    SCIP_Real*            nodes_dist;         /**< weight of sub-ST rooted at node */
+#ifdef STP_DPTERM_USEDA
+   SCIP_Real*            nodes_reddist;      /**< reduced cost weight of sub-ST rooted at node */
+#endif
    SCIP_Real*            nodes_ub;           /**< upper bounds for rule-out */
    int*                  nodes_previdx0;     /**< predecessor NOTE: with shift! */
    int*                  nodes_previdx1;     /**< predecessor */
@@ -267,6 +270,9 @@ SCIP_RETCODE dpiterInit(
    StpVecReserve(scip, iter->stack, 2);
    StpVecReserve(scip, iter->valid_traces, 2);
 
+#ifdef STP_DPTERM_USEDA
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_reddist), nnodes) );
+#endif
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_dist), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_ub), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(iter->nodes_previdx0), nnodes) );
@@ -296,6 +302,9 @@ void dpiterFree(
    SCIPfreeMemoryArray(scip, &(iter->nodes_previdx0));
    SCIPfreeMemoryArray(scip, &(iter->nodes_ub));
    SCIPfreeMemoryArray(scip, &(iter->nodes_dist));
+#ifdef STP_DPTERM_USEDA
+   SCIPfreeMemoryArray(scip, &(iter->nodes_reddist));
+#endif
 
    SCIPfreeMemory(scip, dpiterator);
 }
@@ -315,7 +324,15 @@ void dpiterSetDefault(
    SCIP_Bool* RESTRICT nodes_isValidRoot = dpiterator->nodes_isValidRoot;
    const int nnodes = dpiterator->nnodes;
 
+#ifdef STP_DPTERM_USEDA
+   SCIP_Real* RESTRICT nodes_reddist = dpiterator->nodes_reddist;
+
+   for( int i = 0; i < nnodes; i++ )
+      nodes_reddist[i] = 0.0;
+#endif
+
    dpiterator->extterm = -1;
+
 
    for( int i = 0; i < nnodes; i++ )
       nodes_dist[i] = FARAWAY;
@@ -433,6 +450,9 @@ SCIP_RETCODE subtreesBuild(
       SCIPdebugMessage("building solution with root %d and prev0=%d prev1=%d \n", sol_root,
             sol_trace.prevs[0], sol_trace.prevs[1]);
 
+#ifdef STP_DPTERM_USEDA
+      dpiterator->nodes_reddist[sol_root] = sol_trace.redcost;
+#endif
       nodes_isValidRoot[sol_root] = TRUE;
       nodes_dist[sol_root] = sol_trace.cost;
       nodes_ub[sol_root] = 0.0;
@@ -486,7 +506,14 @@ SCIP_RETCODE subtreesBuild(
 
                assert(GE(parent_trace.cost - global_traces[previdx0].cost, 0.0));
 
-               nodes_dist[curr_root] = MIN(nodes_dist[curr_root], sol_trace.cost);
+               if( LT(sol_trace.cost, nodes_dist[curr_root]) )
+               {
+                  nodes_dist[curr_root] = sol_trace.cost;
+#ifdef STP_DPTERM_USEDA
+                  dpiterator->nodes_reddist[curr_root] = sol_trace.redcost;
+#endif
+               }
+
                nodes_nvisits[curr_root]++;
                nodes_ub[curr_root] = MIN(nodes_ub[curr_root], curr_bdist_global);
 
@@ -534,6 +561,10 @@ SCIP_RETCODE subtreesExtend(
    int* terms_adjCount;
    const SCIP_Bool breakEarly = (graph->terms - dpiterator->sol_nterms > 1);
    const int* const grad = graph->grad;
+#ifdef STP_DPTERM_USEDA
+   SCIP_Real* RESTRICT nodes_reddist = dpiterator->nodes_reddist;
+   const SCIP_Real* const csr_redcost = dpsolver->dpredcosts->csr_redcosts;
+#endif
 
    assert(nnodes == graph->knots);
    assert(dpiterator->extterm == -1);
@@ -585,6 +616,9 @@ SCIP_RETCODE subtreesExtend(
                nodes_dist[m] = distnew;
                nodes_previdx0[m] = k;
                nodes_previdx1[m] = -1;
+#ifdef STP_DPTERM_USEDA
+               nodes_reddist[m] = nodes_reddist[k] + csr_redcost[e];
+#endif
 
                graph_heap_correct(m, distnew, dheap);
             }
@@ -649,9 +683,14 @@ SCIP_RETCODE dpiterAddNewPrepare(
 
          assert(GE(nodes_dist[i], 0.0) && LT(nodes_dist[i], FARAWAY));
 
+#ifdef STP_DPTERM_USEDA
          StpVecPushBack(scip, valid_traces,
-         ((SOLTRACE) { {nodes_previdx0[i], nodes_previdx1[i]}, nodes_dist[i], i })
-         );
+         ((SOLTRACE) { {nodes_previdx0[i], nodes_previdx1[i]}, nodes_dist[i], dpiterator->nodes_reddist[i], i }) );
+#else
+         StpVecPushBack(scip, valid_traces,
+         ((SOLTRACE) { {nodes_previdx0[i], nodes_previdx1[i]}, nodes_dist[i], i }) );
+#endif
+
          stpbitset_setBitTrue(valid_bits, i);
       }
    }
@@ -722,11 +761,21 @@ STP_Vectype(SOLTRACE) combineTraces(
 
       if( traces1[pos1].root == traces2[pos2].root )
       {
+#ifdef STP_DPTERM_USEDA
+         StpVecPushBack(scip, combined, ((SOLTRACE)
+           {  {prevoffset1 + pos1, prevoffset2 + pos2},
+              traces1[pos1].cost + traces2[pos2].cost,
+              traces1[pos1].redcost + traces2[pos2].redcost,
+              traces1[pos1].root
+           }  ) );
+#else
          StpVecPushBack(scip, combined, ((SOLTRACE)
            {  {prevoffset1 + pos1, prevoffset2 + pos2},
               traces1[pos1].cost + traces2[pos2].cost,
               traces1[pos1].root
            }  ) );
+#endif
+
          pos1++;
          pos2++;
       }
@@ -1091,6 +1140,10 @@ SCIP_RETCODE subtreesRemoveNonValids(
    STP_Vectype(int) stack = dpiterator->stack;
    const int extterm = dpiterator->extterm;
    int termcount = graph->terms - dpiterator->sol_nterms;
+#ifdef STP_DPTERM_USEDA
+   SCIP_Real* RESTRICT nodes_reddist = dpiterator->nodes_reddist;
+   const SCIP_Real cutoffbound = dpsolver->dpredcosts->cutoffbound;
+#endif
 
    assert(nnodes == graph->knots);
    assert(termcount >= 1);
@@ -1179,10 +1232,22 @@ SCIP_RETCODE subtreesRemoveNonValids(
       }
    }
 
+#ifdef STP_DPTERM_USEDA
+   maxvaliddist = MIN(maxvaliddist, dpsolver->dpredcosts->upperbound);
+#endif
+
    for( int i = 0; i < nnodes; i++ )
    {
       if( GT(nodes_dist[i], maxvaliddist) )
          nodes_isValidRoot[i] = FALSE;
+#ifdef STP_DPTERM_USEDA
+      // todo also check dpsolver->dpredcosts->nodes_rootdist[i]
+      else if( GT(nodes_reddist[i], cutoffbound) )
+      {
+         //printf("kill %f > %f \n", nodes_reddist[i], cutoffbound);
+         nodes_isValidRoot[i] = FALSE;
+      }
+#endif
    }
 
    debugPrintSeparator(maxvaliddist, dpiterator);
