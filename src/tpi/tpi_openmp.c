@@ -466,7 +466,10 @@ SCIP_RETCODE SCIPtpiCollectJobs(
             if( currjob == _jobqueues->finishedjobs.firstjob )
                _jobqueues->finishedjobs.firstjob = currjob->nextjob;
             else
-               prevjob->nextjob = currjob->nextjob; /*lint !e613*/
+            {
+               if( prevjob != NULL )
+                  prevjob->nextjob = currjob->nextjob; /*lint !e613*/
+            }
 
             if( currjob == _jobqueues->finishedjobs.lastjob )
                _jobqueues->finishedjobs.lastjob = prevjob;
