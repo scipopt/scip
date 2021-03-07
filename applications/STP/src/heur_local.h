@@ -50,6 +50,15 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
    int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    );
 
+
+/** perform fast local heuristics on a given Steiner tree */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpHeurLocalRunFast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   );
+
 /** Implication based local heuristic for (R)PC and MW */
 SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMwImp(

@@ -280,7 +280,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, redcosts, result, daroot, &success, FALSE));
    assert(success && solstp_isValid(scip, graph, result));
 
-   SCIP_CALL(SCIPStpHeurLocalRun(scip, graph, result));
+   SCIP_CALL(SCIPStpHeurLocalRunFast(scip, graph, result));
    assert(solstp_isValid(scip, graph, result));
 
    objval = getSolObj(scip, graph, result);

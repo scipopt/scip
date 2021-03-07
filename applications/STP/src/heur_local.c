@@ -59,7 +59,9 @@
 #define DEFAULT_MINNBESTSOLS  10
 #define DEFAULT_MINNBESTSOLS_HARD  30
 #define DEFAULT_RANDSEED      1492          /**< random seed                                                                       */
-#define LOCAL_MAXRESTARTS  10
+#define LOCAL_MAXRESTARTS       10
+#define LOCAL_MAXRESTARTS_FAST  3
+
 
 #define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
 #define GREEDY_EXTENSIONS_MW 6   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
@@ -3125,6 +3127,7 @@ static
 SCIP_RETCODE localKeyVertexHeuristics(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
+   SCIP_Bool             useFast,            /**< fast variant? */
    STP_Bool*             solNodes,           /**< Steiner tree nodes */
    LCNODE*               linkcutNodes,       /**< Steiner tree nodes */
    int*                  solEdges,           /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
@@ -3159,6 +3162,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    const int root = graph->source;
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
+   const int maxnrestarts = (useFast ? LOCAL_MAXRESTARTS_FAST : LOCAL_MAXRESTARTS);
    const int solroot = pcmwGetSolRoot(graph, solEdges);
    const STP_Bool mwpc = graph_pc_isPcMw(graph);
    SCIP_Bool solimproved = FALSE;
@@ -3232,7 +3236,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIP_CALL( SCIPStpunionfindInit(scip, &uf, nnodes) );
 
    /* main loop */
-   for( int nruns = 0, localmoves = 1; nruns < LOCAL_MAXRESTARTS && localmoves > 0; nruns++ )
+   for( int nruns = 0, localmoves = 1; nruns < maxnrestarts && localmoves > 0; nruns++ )
    {
       VNOILOC vnoiData = { .vnoi_path = vnoipath, .vnoi_base = vnoibase, .memvdist = memvdist, .memvbase = memvbase,
          .meminedges = meminedges, .vnoi_nodestate = graph->path_state, .nmems = 0, .nkpnodes = -1 };
@@ -3791,16 +3795,13 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    return SCIP_OKAY;
 }
 
-/*
- * primal heuristic specific interface methods
- */
-
-
 
 /** perform local heuristics on a given Steiner tree */
-SCIP_RETCODE SCIPStpHeurLocalRun(
+static
+SCIP_RETCODE localRun(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
+   SCIP_Bool             useFast,            /**< fast variant? */
    int*                  solEdges            /**< array indicating whether an arc is part of the solution: CONNECTED/UNKNOWN (in/out) */
    )
 {
@@ -3849,15 +3850,15 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
 
-   SCIP_CALL( localKeyVertexHeuristics(scip, graph, solNodes, linkcutNodes, solEdges, &success) );
+   SCIP_CALL( localKeyVertexHeuristics(scip, graph, useFast, solNodes, linkcutNodes, solEdges, &success) );
 
-   if( success )
+   if( success && !useFast )
    {
       markSolTreeNodes(scip, graph, solEdges, linkcutNodes, solNodes);
       SCIP_CALL( localVertexInsertion(scip, heurdata, graph, solNodes, linkcutNodes, solEdges) );
    }
 
-   if( success && mwpc )
+   if( success && mwpc && !useFast )
    {
       SCIP_CALL( SCIPStpHeurLocalExtendPcMw(scip, graph, graph->cost, solEdges, solNodes) );
    }
@@ -3875,6 +3876,31 @@ SCIP_RETCODE SCIPStpHeurLocalRun(
 
    return SCIP_OKAY;
 }
+
+
+/** perform local heuristics on a given Steiner tree */
+SCIP_RETCODE SCIPStpHeurLocalRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   int*                  solEdges            /**< array indicating whether an arc is part of the solution: CONNECTED/UNKNOWN (in/out) */
+   )
+{
+   SCIP_CALL( localRun(scip, graph, FALSE, solEdges) );
+   return SCIP_OKAY;
+}
+
+
+/** perform local heuristics on a given Steiner tree */
+SCIP_RETCODE SCIPStpHeurLocalRunFast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   int*                  solEdges            /**< array indicating whether an arc is part of the solution: CONNECTED/UNKNOWN (in/out) */
+   )
+{
+   SCIP_CALL( localRun(scip, graph, TRUE, solEdges) );
+    return SCIP_OKAY;
+}
+
 
 /** Implication based local heuristic for (R)PC and MW */
 SCIP_RETCODE SCIPStpHeurLocalExtendPcMwImp(
