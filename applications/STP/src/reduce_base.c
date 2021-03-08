@@ -54,7 +54,7 @@
 #include "probdata_stp.h"
 #include "prop_stp.h"
 #include "portab.h"
-
+#include "dpterms.h"
 
 
 
@@ -2055,6 +2055,9 @@ SCIP_RETCODE redLoopStp(
          if( !rerun && runFullSepa )
          {
             int sepanelims = 0;
+
+            if( dpterms_isPromising(g) )
+               break;
 
             SCIP_CALL( reduce_termsepaFull(scip, g, redbaseGetSolnode(redsollocal, redbase), redbase, &sepanelims) );
 
