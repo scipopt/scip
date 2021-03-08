@@ -1587,6 +1587,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    const int nedges = graph_get_nEdges(graph);
    REDCOST* const redcostdata = extperma->redcostdata;
    DISTDATA* const distdata = extperma->distdata_default;
+   SD* const sddata = distdata->sdistdata;
    const int* result = extperma->result;
    SCIP_Bool withSol = extperma->solIsValid;
 
@@ -1606,8 +1607,8 @@ SCIP_RETCODE extreduce_deleteEdges(
 
    if( useSd )
    {
-      assert(distdata->sdistdata);
-      SCIP_CALL( reduce_sdRepairSetUp(scip, graph, distdata->sdistdata) );
+      assert(sddata);
+      SCIP_CALL( reduce_sdRepairSetUp(scip, graph, sddata) );
    }
 
    /* main loop */
@@ -1617,10 +1618,13 @@ SCIP_RETCODE extreduce_deleteEdges(
       {
          const int erev = e + 1;
          SCIP_Bool deletable = TRUE;
-         extperma->redcostEqualAllow = (withSol && result[e] != CONNECT && result[erev] != CONNECT);
 
          assert(flipedge(e) == erev && SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
 
+         if( useSd && extperma->mode == extred_fast && reduce_sdgraphEdgeIsInMst(sddata->sdgraph, e) )
+            continue;
+
+         extperma->redcostEqualAllow = (withSol && result[e] != CONNECT && result[erev] != CONNECT);
          SCIP_CALL( extreduce_checkEdge(scip, graph, redcostdata, e, extperma, &deletable) );
 
          if( deletable )
@@ -1640,12 +1644,11 @@ SCIP_RETCODE extreduce_deleteEdges(
   // printf("number of extended edge eliminations=%d \n", *nelims);
 
    {
-      int todo; // fail with I049a for
-      //&& extperma->mode == extred_full  debug!
-// and test to activate again!
+      int todo;
+  // try    if( graph_typeIsSpgLike(graph) &&  extperma->mode == extred_full )
    }
 
-   if( graph_typeIsSpgLike(graph)   )
+   if( graph_typeIsSpgLike(graph) )
    {
       int sepanelims = 0;
       SCIP_CALL( reduce_termsepaDaWithExperma(scip, graph, extperma, NULL, &sepanelims) );

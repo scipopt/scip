@@ -829,10 +829,20 @@ SCIP_RETCODE reduce_sdRepair(
 
    if( reduce_sdgraphEdgeIsInMst(sd->sdgraph, edge) )
    {
+      const SCIP_Real edgecost = g->cost[edge];
+
+      assert(EQ(g->cost[edge], g->cost[flipedge(edge)]));
+
+      g->cost[edge] = FARAWAY;
+      g->cost[flipedge(edge)] = FARAWAY;
+
       reduce_sdgraphFree(scip, &(sd->sdgraph));
 
       SCIP_CALL( reduce_sdgraphInit(scip, g, &(sd->sdgraph)) );
       reduce_sdgraphInitOrderedMstCosts(sd->sdgraph);
+
+      g->cost[edge] = edgecost;
+      g->cost[flipedge(edge)] = edgecost;
    }
 
    return SCIP_OKAY;
