@@ -1525,8 +1525,12 @@ void sdgraphUpdateDistgraphFromTpaths(
          const int head = g->head[e];
          int vbase_tail;
          int vbase_head;
-         const SCIP_Real distance =
-            distgraphGetBoundaryEdgeDistBest(g, tpaths, tail, head, g->cost[e], sdprofit, &vbase_tail, &vbase_head);
+         SCIP_Real distance;
+
+         if( head < tail )
+            continue;
+
+         distance = distgraphGetBoundaryEdgeDistBest(g, tpaths, tail, head, g->cost[e], sdprofit, &vbase_tail, &vbase_head);
 
          /* NOTE: we should not take the fast query method here, because sdgraphGetSd at least partly reflects
           * the change of the distance graph */
@@ -1545,6 +1549,8 @@ void sdgraphUpdateDistgraphFromTpaths(
          }
       }
    }
+
+
    assert(sdprofit);
 }
 

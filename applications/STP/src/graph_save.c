@@ -436,7 +436,6 @@ SCIP_RETCODE graph_writeGmlSub(
 {
    char label[SCIP_MAXSTRLEN];
    FILE* file;
-   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    int e;
 
    assert(graph != NULL);
