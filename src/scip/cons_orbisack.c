@@ -1773,7 +1773,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
    do
    {
       /* skip whitespace */
-      while ( isspace((int)*s) )
+      while ( *s != '\0' && isspace((unsigned char)*s) )
          ++s;
 
       /* parse variable name */
