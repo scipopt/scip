@@ -385,8 +385,8 @@ int selectBestCands(
 
       /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
       nbestcands = evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, nbestcands);
-      return nbestcands;
    }
+   return nbestcands;
 }
 
 
