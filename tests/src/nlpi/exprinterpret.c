@@ -412,6 +412,31 @@ Test(checkad, value)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
+#if SCIP_DISABLED_CODE
+// CppAD fails to report x^0.3y^0.7 to be non-differentiable at x=y=0, see #2590
+// this test reproduces this fail
+Test(checkad, issue2590)
+{
+   SCIP_EXPR* pows[2];
+   SCIP_EXPR* expr;
+
+   SCIP_CALL( SCIPcreateExprPow(scip, &pows[0], varexprs[0], 0.3, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &pows[1], varexprs[1], 0.7, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprProduct(scip, &expr, 2, pows, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &pows[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &pows[0]) );
+
+   varvals[0][0] = 2.0;
+   varvals[0][1] = 2.0;
+
+   varvals[1][0] = 0.0;
+   varvals[1][1] = 0.0;
+   checkAD(expr, 2, 2);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+#endif
+
 Test(checkad, quad)
 {
    SCIP_EXPR* expr;
