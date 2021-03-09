@@ -2643,7 +2643,8 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
    }
    else
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "permutation is shorter than vars array\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "Length of permutation is not equal to number of given variables.\n");
       *success = FALSE;
    }
 
