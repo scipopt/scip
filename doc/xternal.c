@@ -5255,13 +5255,13 @@
  * A complete list of all NLPIs contained in this release can be found \ref NLPIS "here".
  *
  * We now explain how users can add their own NLP solver interface.
- * Take the interface to Ipopt (src/nlpi/nlpi_ipopt.cpp) as an example.
+ * Take the interface to Ipopt (src/scip/nlpi_ipopt.cpp) as an example.
  * Unlike most other plugins, it is written in C++.
  * Additional documentation for the callback methods of an NLPI, in particular for their input parameters,
  * can be found in the file type_nlpi.h.
  *
  * Here is what you have to do to implement an NLPI:
- * -# Copy the template files src/nlpi/nlpi_xyz.c and src/nlpi/nlpi_xyz.h into files named "nlpi_mynlpi.c"
+ * -# Copy the template files src/scip/nlpi_xyz.c and src/scip/nlpi_xyz.h into files named "nlpi_mynlpi.c"
  *    and "nlpi_mynlpi.h".
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.

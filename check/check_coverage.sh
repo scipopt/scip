@@ -43,10 +43,6 @@ if test ! -e obj/O.linux.x86_64.gnu.gcov/lib/blockmemshell/src
 then
     ln -s ../../../../src obj/O.linux.x86_64.gnu.gcov/lib/blockmemshell
 fi
-if test ! -e obj/O.linux.x86_64.gnu.gcov/lib/nlpi/src
-then
-    ln -s ../../../../src obj/O.linux.x86_64.gnu.gcov/lib/nlpi
-fi
 if test ! -e obj/O.linux.x86_64.gnu.gcov/lib/xml/src
 then
     ln -s ../../../../src obj/O.linux.x86_64.gnu.gcov/lib/xml
