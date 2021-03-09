@@ -62,8 +62,8 @@
 #define DEFAULT_FRACTIONALS        TRUE /**< should branching on LP solution be restricted to the fractional variables? */
 #define DEFAULT_USEWEIGHTEDSUM     TRUE /**< should a weighted sum of inference, conflict and cutoff weights be used? */
 
-#define DEFAULT_CONFLICTPRIO        10  /**< priority value for using conflict weights in lex. order */
-#define DEFAULT_CUTOFFPRIO          100 /**< priority value for using cutoff weights in lex. order */
+#define DEFAULT_CONFLICTPRIO       10  /**< priority value for using conflict weights in lex. order */
+#define DEFAULT_CUTOFFPRIO         100 /**< priority value for using cutoff weights in lex. order */
 
 /**@} */
 
@@ -164,7 +164,7 @@ void evaluateAggrCand(
    {
       /* the score of the candidate is comparable to the currently known best, so we add it to bestcands and increase nbestcands by 1*/
       bestcands[*nbestcands] = cand;
-      ++*nbestcands;
+      ++(*nbestcands);
    }
 }
 
@@ -355,8 +355,6 @@ void selectBestCands(
    SCIP_Real bestval;
    SCIP_Real bestaggrscore;
 
-   int c;
-
    bestaggrcand = cands[0];
    assert(cands[0] != NULL);
 
@@ -365,7 +363,7 @@ void selectBestCands(
    /* get aggregated score for the first candidate */
    bestaggrscore = getAggrScore(scip, cands[0], conflictweight, inferenceweight, cutoffweight, reliablescore);
 
-   for( c = 1; c < ncands; ++c )
+   for( int c = 1; c < ncands; ++c )
    {
       SCIP_VAR* cand;
       SCIP_Real val;
