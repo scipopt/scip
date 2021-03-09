@@ -1791,6 +1791,8 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
       else
          vars2[nrows] = var;
       s = endptr;
+      assert( s != NULL );
+
       firstcolumn = !firstcolumn;
 
       /* skip white space and ',' */

@@ -2583,6 +2583,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
                return SCIP_OKAY;
             }
             s = endptr;
+            assert( s != NULL );
 
             vars[nvars++] = var;
 
@@ -2616,6 +2617,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
                return SCIP_OKAY;
             }
             s = endptr;
+            assert( s != NULL );
 
             perm[nfoundpermidx++] = val;
 
