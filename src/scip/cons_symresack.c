@@ -2564,7 +2564,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
       }
       ++s;
 
-      /* read array, cnt=0: variables; cnt=1: permutation*/
+      /* read array, cnt = 0: variables; cnt = 1: permutation*/
       if ( cnt == 0 )
       {
          do
