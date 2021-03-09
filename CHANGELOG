@@ -1,6 +1,90 @@
 @page RN70 Release notes for SCIP 7.0
 
-@section RN000 SCIP 7.0.2
+@section RN703 SCIP 7.0.3
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+- New function SCIPcreateConsBounddisjunctionRedundant() and SCIPcreateConsBasicBounddisjunctionRedundant() that allow
+  the input to contain redundant literals.
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+- Compilation will now also work in a raw tarball of the scip git repository
+
+### Cmake
+
+- Make find_package more verbose and require packages to be found. Now enabled packages that are not found result in an error.
+
+### Makefile
+
+Fixed bugs
+----------
+
+- Fixed numerical bug by creating and checking the empty solution when problem vanishes in presolving.
+- Fixed several bugs in reoptimization.
+- Fixed bug in cons_bounddisjunction in which a constraint leads to a cutoff.
+- Fixed bug in reoptimization by avoiding redundant literals for bound disjunctions.
+- Replace wrong usage of CMAKE_BINARY_DIR by PROJECT_BINARY_DIR in CMake system
+- Fixed lpi_glop to use absl flag instead of GFlags
+- Fixed invalid initialization of limits/softtime parameter in cons_components
+- Fixed MIN macro not defined in some cases.
+- Safeguard some API methods for querying solving statistics against segmentation faults after SCIPpresolve()
+- Fixed unfreed solution in concurrent solving
+- Make sure that logicor constraints are enforced/separated if genlogicor is true in cons_indicator.
+  Thus, do not change constraints/logicor/sepafreq anymore, but output warning.
+- Fixed assert that assumed infeasibility cannot occur in presol_boundshift.
+- Fixed sign bug during creation of conflict constraints with almost zero left-hand side.
+- Disabled call of conflict handler for conflict sets that contain relaxation-only variables.
+
+
+Miscellaneous
+-------------
+
+- To avoid performance variablity during reoptimization, the active constraints are now stored in the same order as in the
+  original problem.
+- Added workaround for bug in MSVS 2019 when compiling CppAD source.
+
+Known bugs
+----------
+
+@section RN702 SCIP 7.0.2
 *************************
 
 Features
@@ -17,6 +101,8 @@ Performance improvements
 
 Examples and applications
 -------------------------
+
+- Add c++ Sudoku example
 
 Interface changes
 -----------------
@@ -78,6 +164,9 @@ Fixed bugs
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
 - Fixed bug with multi-aggregated integer variables in cons_xor.
 - Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
+- Fixed issues with scip statistics
+- Fixed issue with multi-aggregated variables
+- Fixed issue in with buffer memory in cons_cumulative
 
 Miscellaneous
 -------------

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1268,6 +1268,7 @@ SCIP_RETCODE extractCapacityRows(
          /* calculate mean commodity excess: in the (un)directed case there should be exactly */
          /* one (two) flow variable per commodity. in this case commodityexcessratio = 0   */
          assert(ncoveredcommodities > 0);
+         /* coverity[divide_by_zero] */
          commodityexcessratio =
                ABS((nposflowcoefs + nnegflowcoefs)/(SCIP_Real)ncoveredcommodities - maxcolspercommoditylimit);
 
@@ -5820,7 +5821,7 @@ SCIP_RETCODE addCut(
    }
 
    /* create the cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%" SCIP_LONGINT_FORMAT "_%d", SCIPgetNLPs(scip), *ncuts);
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE,
          sepadata->dynamiccuts) );
 

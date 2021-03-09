@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1248,7 +1248,8 @@ static
 SCIP_RETCODE presolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundedness */
-   SCIP_Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether presolving detected infeasibility */
+   SCIP_Bool*            vanished            /**< pointer to store whether the problem vanished in presolving */
    )
 {
    SCIP_PRESOLTIMING presoltiming;
@@ -1274,6 +1275,7 @@ SCIP_RETCODE presolve(
    assert(infeasible != NULL);
 
    *unbounded = FALSE;
+   *vanished = FALSE;
 
    /* GCG wants to perform presolving during the reading process of a file reader;
     * hence the number of used buffers does not need to be zero, however, it should
@@ -1408,27 +1410,48 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
-   if( *infeasible || *unbounded )
+   /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
+   if( *infeasible )
    {
-      /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
-      if( *infeasible )
+      /* switch status to OPTIMAL */
+      if( scip->primal->nlimsolsfound > 0 )
       {
-         /* switch status to OPTIMAL */
-         if( scip->primal->nlimsolsfound > 0 )
-         {
-            scip->stat->status = SCIP_STATUS_OPTIMAL;
-         }
-         else /* switch status to INFEASIBLE */
-            scip->stat->status = SCIP_STATUS_INFEASIBLE;
+         scip->stat->status = SCIP_STATUS_OPTIMAL;
       }
-      else if( scip->primal->nsols >= 1 ) /* switch status to UNBOUNDED */
+      else /* switch status to INFEASIBLE */
+         scip->stat->status = SCIP_STATUS_INFEASIBLE;
+   }
+   else if( *unbounded )
+   {
+      if( scip->primal->nsols >= 1 ) /* switch status to UNBOUNDED */
          scip->stat->status = SCIP_STATUS_UNBOUNDED;
       else /* switch status to INFORUNBD */
          scip->stat->status = SCIP_STATUS_INFORUNBD;
    }
+   /* if no variables and constraints are present, we try to add the empty solution (constraint handlers with needscons
+    * flag FALSE could theoretically reject it); if no active pricers could create variables later, we conclude
+    * optimality or infeasibility */
+   else if( scip->transprob->nvars == 0 && scip->transprob->nconss == 0 )
+   {
+      SCIP_SOL* sol;
+      SCIP_Bool stored;
+
+      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
+
+      if( scip->set->nactivepricers == 0 )
+      {
+         if( scip->primal->nlimsolsfound > 0 )
+            scip->stat->status = SCIP_STATUS_OPTIMAL;
+         else
+            scip->stat->status = SCIP_STATUS_INFEASIBLE;
+
+         *vanished = TRUE;
+      }
+   }
 
    /* deinitialize presolving */
-   if( finished && (!stopped || *unbounded || *infeasible) )
+   if( finished && (!stopped || *unbounded || *infeasible || *vanished) )
    {
       SCIP_Real maxnonzeros;
       SCIP_Longint nchecknonzeros;
@@ -1437,13 +1460,13 @@ SCIP_RETCODE presolve(
       SCIP_Bool approxactivenonzeros;
       SCIP_Bool infeas;
 
-      SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible, &infeas) );
+      SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible || *vanished, &infeas) );
       *infeasible = *infeasible || infeas;
 
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
       /* resort variables if we are not already done */
-      if( !(*infeasible) && !(*unbounded) )
+      if( !(*infeasible) && !(*unbounded) && !(*vanished) )
       {
          /* (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after
           * presolve with respect to their original index (within their categories). Adjust the problem index afterwards
@@ -1826,6 +1849,9 @@ SCIP_RETCODE freeReoptSolve(
       assert(!cutoff);
    }
 
+   /* mark current stats, such that new solve begins with the var/col/row indices from the previous run */
+   SCIPstatMark(scip->stat);
+
    /* switch stage to EXITSOLVE */
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
@@ -2021,9 +2047,9 @@ SCIP_RETCODE freeTransform(
    scip->set->stage = SCIP_STAGE_FREETRANS;
 
    /* reset solving specific paramters */
-   if( scip->set->reopt_enable )
+   assert(!scip->set->reopt_enable || scip->reopt != NULL);
+   if( scip->set->reopt_enable && scip->reopt != NULL )
    {
-      assert(scip->reopt != NULL);
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
    }
 
@@ -2355,6 +2381,7 @@ SCIP_RETCODE prepareReoptimization(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVED
  *
  *  @post After calling this method \SCIP reaches one of the following stages:
  *        - \ref SCIP_STAGE_PRESOLVING if the presolving process was interrupted
@@ -2369,8 +2396,9 @@ SCIP_RETCODE SCIPpresolve(
 {
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
+   SCIP_Bool vanished;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
@@ -2395,10 +2423,10 @@ SCIP_RETCODE SCIPpresolve(
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
       /* presolve problem */
-      SCIP_CALL( presolve(scip, &unbounded, &infeasible) );
+      SCIP_CALL( presolve(scip, &unbounded, &infeasible, &vanished) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING);
 
-      if( infeasible || unbounded )
+      if( infeasible || unbounded || vanished )
       {
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 

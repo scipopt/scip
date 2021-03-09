@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -382,7 +382,7 @@ SCIP_RETCODE generateDisjCutSOS1(
    }
 
    /* create cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT "_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
    if ( SCIPgetDepth(scip) == 0 )
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
    else

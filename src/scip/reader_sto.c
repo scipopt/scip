@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1287,7 +1287,7 @@ SCIP_Bool stoinputReadLine(
             return FALSE;
          stoi->lineno++;
       }
-      while( *stoi->buf == '*' );
+      while( *stoi->buf == '*' );   /* coverity[a_loop_bound] */
 
       /* Normalize line */
       len = (unsigned int) strlen(stoi->buf);
@@ -1392,6 +1392,7 @@ SCIP_RETCODE readStoch(
    stoinputSetProbname(stoi, (stoinputField1(stoi) == 0) ? "_STO_" : stoinputField1(stoi));
 
    /* This hat to be a new section */
+   /* coverity[tainted_data] */
    if( !stoinputReadLine(stoi) || (stoinputField0(stoi) == NULL) )
    {
       stoinputSyntaxerror(stoi);
@@ -1477,6 +1478,7 @@ SCIP_RETCODE readBlocks(
    numstages = 0;
    (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "");
 
+   /* coverity[tainted_data] */
    while( stoinputReadLine(stoi) )
    {
       if( stoinputField0(stoi) != NULL )
@@ -1634,6 +1636,7 @@ SCIP_RETCODE readScenarios(
    SCIP_CALL( setScenarioNum(scip, readerdata->scenariotree, 0) );
    SCIP_CALL( setScenarioStageNum(scip, readerdata->scenariotree, 0) );
 
+   /* coverity[tainted_data] */
    while( stoinputReadLine(stoi) )
    {
       if( stoinputField0(stoi) != NULL )
@@ -2627,6 +2630,7 @@ SCIP_RETCODE readSto(
    {
       if( stoinputSection(stoi) == STO_BLOCKS )
       {
+         /* coverity[tainted_data] */
          SCIP_CALL_TERMINATE( retcode, readBlocks(stoi, scip, readerdata), TERMINATE );
       }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -73,6 +73,7 @@ struct SCIP_ConflictSet
    unsigned int          depthcalced:1;      /**< are the conflict and repropagation depth calculated? */
    unsigned int          sorted:1;           /**< is the conflict set sorted */
    unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
+   unsigned int          hasrelaxonlyvar:1;  /**< is one of the bound change informations using a relaxation-only variable */
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP, propagation */
 };
 
