@@ -1756,7 +1756,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
    {
       if ( strncmp(s, "fullOrbisack(", 13) != 0 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error - expected \"fullOrbisack(\", \"partOrbisack\" or \"packOrbisacj\": %s\n", s);
+         SCIPerrorMessage("Syntax error - expected \"fullOrbisack(\", \"partOrbisack\" or \"packOrbisacj\": %s\n", s);
          *success = FALSE;
          return SCIP_OKAY;
       }
@@ -1780,7 +1780,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &endptr) );
       if ( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
+         SCIPerrorMessage("unknown variable name at '%s'\n", str);
          *success = FALSE;
 
          SCIPfreeBufferArray(scip, &vars2);

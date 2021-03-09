@@ -2528,7 +2528,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
 
    if ( strncmp(s, "symresack(", 10) != 0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error - expected \"symresack(\"", s);
+      SCIPerrorMessage("Syntax error - expected \"symresack(\"", s);
       *success = FALSE;
       return SCIP_OKAY;
    }
