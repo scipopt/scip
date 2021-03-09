@@ -2699,9 +2699,7 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
    }
    SCIPinfoMessage(scip, file, "],[%d", perm[0]);
    for (i = 1; i < nvars; ++i)
-   {
       SCIPinfoMessage(scip, file, ",%d", perm[i]);
-   }
    SCIPinfoMessage(scip, file, "])");
 
    return SCIP_OKAY;
