@@ -165,8 +165,8 @@ int evaluateAggrCand(
       /* the score of the candidate is comparable to the currently known best, so we add it to bestcands and increase nbestcands by 1*/
       bestcands[nbestcands] = cand;
       ++nbestcands;
-      return nbestcands;
    }
+   return nbestcands;
 }
 
 /** choose a singular best candidate from bestcands */
