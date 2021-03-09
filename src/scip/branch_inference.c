@@ -356,6 +356,7 @@ int selectBestCands(
    SCIP_VAR* bestaggrcand;
    SCIP_Real bestval;
    SCIP_Real bestaggrscore;
+   int c;
 
    bestaggrcand = cands[0];
    assert(cands[0] != NULL);
@@ -365,7 +366,7 @@ int selectBestCands(
    /* get aggregated score for the first candidate */
    bestaggrscore = getAggrScore(scip, cands[0], conflictweight, inferenceweight, cutoffweight, reliablescore);
 
-   for( int c = 1; c < ncands; ++c )
+   for( c = 1; c < ncands; ++c )
    {
       SCIP_VAR* cand;
       SCIP_Real val;
@@ -483,9 +484,10 @@ SCIP_RETCODE performBranchingSol(
 
    assert(nbestcands == 1);
    bestaggrcand = bestcands[0];
+   bestval = candsols[0];
 
    /* loop over cands, find bestcands[0], and store corresponding candsols value in bestval */
-   for( c = 0; c < ncands; ++c)
+   for( c = 1; c < ncands; ++c)
    {
       if( bestcands[0] == cands[c] )
       {
