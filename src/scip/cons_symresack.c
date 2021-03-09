@@ -2511,11 +2511,11 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
    SCIP_VAR** vars;
    SCIP_VAR* var;
    int* perm;
-   int nvars;
-   int cnt;
-   int nfoundpermidx;
-   int maxnvars;
    int val;
+   int nvars = 0;
+   int cnt = 0;
+   int nfoundpermidx = 0;
+   int maxnvars = 10;
 
    assert( success != NULL );
 
@@ -2535,11 +2535,6 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
    s += 10;
 
    /* loop through string */
-   nvars = 0;
-   cnt = 0;
-   nfoundpermidx = 0;
-   maxnvars = 10;
-
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, maxnvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, maxnvars) );
 

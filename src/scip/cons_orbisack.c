@@ -1730,8 +1730,8 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
    SCIP_VAR** vars1;
    SCIP_VAR** vars2;
    SCIP_VAR* var;
-   int nrows;
-   int maxnrows;
+   int nrows = 0;
+   int maxnrows = 10;
    SCIP_Bool firstcolumn = TRUE;
    SCIP_Bool ispporbisack = FALSE;
    SCIP_Bool isparttype = FALSE;
@@ -1764,9 +1764,6 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
    s += 13;
 
    /* loop through string */
-   nrows = 0;
-   maxnrows = 10;
-
    SCIP_CALL( SCIPallocBufferArray(scip, &vars1, maxnrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars2, maxnrows) );
 
