@@ -30,7 +30,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/scip_expr.h"
 #include "scip/scip_nlpi.h"
-#include "nlpi/expr_varidx.h"
+#include "scip/expr_varidx.h"
 #include "scip/expr_pow.h"
 #include "scip/expr_sum.h"
 #include "scip/pub_message.h"

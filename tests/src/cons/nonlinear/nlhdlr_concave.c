@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include "scip/scipdefplugins.h"
-#include "nlpi/nlpi_ipopt.h" /* to check whether LAPACK is around */
+#include "scip/nlpi_ipopt.h" /* to check whether LAPACK is around */
 
 #define NLHDLR_CONVEX_UNITTEST
 #include "scip/nlhdlr_convex.c"

@@ -21,7 +21,7 @@
 
 #include "scip/scip.h"
 #include "scip/cons_nonlinear.h"
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/nlpi_ipopt.h"
 
 #include "scip/sepa_convexproj.c"
 

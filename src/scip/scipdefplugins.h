@@ -238,11 +238,11 @@
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
 
-#include "nlpi/expr_varidx.h"
-#include "nlpi/nlpi_ipopt.h"
-#include "nlpi/nlpi_filtersqp.h"
-#include "nlpi/nlpi_worhp.h"
-#include "nlpi/nlpi_all.h"
+#include "scip/expr_varidx.h"
+#include "scip/nlpi_ipopt.h"
+#include "scip/nlpi_filtersqp.h"
+#include "scip/nlpi_worhp.h"
+#include "scip/nlpi_all.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -26,7 +26,7 @@
 
 #include "blockmemshell/memory.h"
 #ifdef CLASSIC_NONLINEAR_CONSHDLR
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_bivariate.h"
 #include "scip/cons_nonlinear.h"

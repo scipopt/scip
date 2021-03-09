@@ -22,7 +22,7 @@
 
 #include "scip/nodesel_bfs.h"
 #include "scip/heur_multistart.c"
-#include "nlpi/expr_varidx.h"
+#include "scip/expr_varidx.h"
 #include "scip/expr_abs.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_log.h"

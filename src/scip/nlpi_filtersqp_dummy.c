@@ -13,37 +13,39 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file    nlpi_worhp_dummy.c
+/**@file    nlpi_filtersqp_dummy.c
  * @ingroup NLPIS
- * @brief   dummy WORHP NLP interface
- * @author  Benjamin Mueller
+ * @brief   dummy filterSQP NLP interface for the case that FilterSQP is not available
+ * @author  Stefan Vigerske
  */
 
-#include "nlpi/nlpi_worhp.h"
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/** create solver interface for Worhp solver and includes it into SCIP, if Worhp is available */
-SCIP_RETCODE SCIPincludeNlpSolverWorhp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
+#include "scip/pub_message.h"
+#include "scip/nlpi_filtersqp.h"
+
+/** create solver interface for filterSQP solver and include it into SCIP, if filterSQP is available */
+SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    return SCIP_OKAY;
-} /*lint !e715*/
+}  /*lint !e715*/
 
-/** gets string that identifies Worhp (version number) */
-const char* SCIPgetSolverNameWorhp(void)
+/** gets string that identifies filterSQP */
+const char* SCIPgetSolverNameFilterSQP(void)
 {
-   return "WORHP";
+   return "";
 }
 
-/** gets string that describes Worhp (version number) */
-const char* SCIPgetSolverDescWorhp(void)
+/** gets string that describes filterSQP */
+const char* SCIPgetSolverDescFilterSQP(void)
 {
-   return "this is WORHP";
+   return "";
 }
 
-/** returns whether Worhp is available, i.e., whether it has been linked in */
-SCIP_Bool SCIPisWorhpAvailableWorhp(void)
+/** returns whether filterSQP is available, i.e., whether it has been linked in */
+SCIP_Bool SCIPisFilterSQPAvailableFilterSQP(void)
 {
    return FALSE;
 }

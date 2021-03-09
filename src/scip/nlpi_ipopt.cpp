@@ -31,10 +31,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/nlpi_ipopt.h"
 
-#include "nlpi/nlpioracle.h"
-#include "nlpi/exprinterpret.h"
+#include "scip/nlpioracle.h"
+#include "scip/exprinterpret.h"
 #include "scip/interrupt.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_nlp.h"

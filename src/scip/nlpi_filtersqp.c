@@ -39,8 +39,8 @@
 #include <pthread.h>
 #endif
 
-#include "nlpi/nlpi_filtersqp.h"
-#include "nlpi/nlpioracle.h"
+#include "scip/nlpi_filtersqp.h"
+#include "scip/nlpioracle.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"

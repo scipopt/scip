@@ -33,7 +33,7 @@
 #include "scip/nlpi.h"
 #include "scip/pub_expr.h"
 #include "scip/expr.h"
-#include "nlpi/expr_varidx.h"
+#include "scip/expr_varidx.h"
 #include "scip/clock.h"
 #include "scip/event.h"
 #include "scip/nlp.h"

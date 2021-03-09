@@ -28,7 +28,7 @@
 
 #include "scip/sepa_minor.h"
 #include "scip/cons_nonlinear.h"
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/nlpi_ipopt.h"
 
 #define SEPA_NAME              "minor"
 #define SEPA_DESC              "separator to ensure that 2x2 principal minors of X - xx' are positive semi-definite"

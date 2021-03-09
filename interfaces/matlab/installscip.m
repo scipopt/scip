@@ -117,17 +117,6 @@ else
    end
 end
 
-% detect NLPI library
-fprintf('Detecting NLPI library ...');
-
-pathtolibnlpi = [pathtoscip '/lib/libnlpi.cppad.so'];
-
-if( ~isempty(dir(pathtolibnlpi)) )
-   fprintf('\t using NLPI library <%s>.\n', pathtolibnlpi);
-else
-   error('\nCould not find library <%s>.', pathtolibnlpi);
-end
-
 % detect SoPlex library
 fprintf('Detecting SoPlex library ...');
 
@@ -207,12 +196,12 @@ end
 % compile
 if ( ~isoctave )
    pathtosciplib = [pathtoscip '/lib'];
-   flags = ['-I' pathtosrc ' -L' pathtosciplib ' -lscip -lnlpi.cppad.so ' liblpi libzimpl libsoplex ' -lgmp -lz LDFLAGS=''$LDFLAGS -Wl,-rpath,' pathtosciplib ''''];
+   flags = ['-I' pathtosrc ' -L' pathtosciplib ' -lscip ' liblpi libzimpl libsoplex ' -lgmp -lz LDFLAGS=''$LDFLAGS -Wl,-rpath,' pathtosciplib ''''];
    fprintf('\nRunning:\nmex %s matscip.c\n', flags);
    eval(['mex ' flags ' matscip.c']);
 else
    pathtosciplib = [pathtoscip '/lib'];
-   flags = ['"-Wl,-rpath=' pathtosciplib '" -I' pathtosrc ' -L' pathtosciplib ' -lscip -lnlpi.cppad ' liblpi libzimpl libsoplex ' -lgmp -lz'];
+   flags = ['"-Wl,-rpath=' pathtosciplib '" -I' pathtosrc ' -L' pathtosciplib ' -lscip ' liblpi libzimpl libsoplex ' -lgmp -lz'];
    fprintf('\nRunning:\nmkoctfile --mex %s matscip.c\n', flags);
    eval(['mkoctfile --mex ' flags ' matscip.c'], 'printf ("The following error occurred:\n%s\n", lasterr());');
 end

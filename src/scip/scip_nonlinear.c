@@ -36,7 +36,7 @@
 #define _USE_MATH_DEFINES   /* to get M_E on Windows */  /*lint !750 */
 
 #include "blockmemshell/memory.h"
-#include "nlpi/expr_varidx.h"
+#include "scip/expr_varidx.h"
 #include "scip/scip_expr.h"
 #include "scip/pub_expr.h"
 #include "scip/dbldblarith.h"

@@ -356,69 +356,6 @@ LPIINSTMSG	+=	"\n  -> \"papilo\" is the path to the PaPILO directory\n"
 endif
 
 #-----------------------------------------------------------------------------
-# NLP Solver Interfaces and expression interpreter
-#-----------------------------------------------------------------------------
-
-NLPILIBCOBJ	= 	nlpi/expr_varidx.o nlpi/nlpioracle.o nlpi/nlpi_all.o
-
-NLPILIBCXXOBJ =
-
-NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
-			scip/misc.o \
-			scip/intervalarith.o \
-			scip/interrupt.o \
-			scip/message.o \
-			scip/rbtree.o
-
-ifeq ($(EXPRINT),none)
-NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
-endif
-ifeq ($(EXPRINT),cppad)
-NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
-endif
-
-ifeq ($(IPOPT),true)
-NLPILIBCXXOBJ	+= 	nlpi/nlpi_ipopt.o
-else
-NLPILIBCOBJ	+= 	nlpi/nlpi_ipopt_dummy.o
-endif
-
-ifeq ($(FILTERSQP),true)
-NLPILIBCOBJ	+= nlpi/nlpi_filtersqp.o
-else
-NLPILIBCOBJ	+= nlpi/nlpi_filtersqp_dummy.o
-endif
-
-ifeq ($(WORHP),true)
-NLPILIBCOBJ	+= 	nlpi/nlpi_worhp.o
-else
-NLPILIBCOBJ	+= 	nlpi/nlpi_worhp_dummy.o
-endif
-
-NLPILIBSHORTNAME = nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP)
-
-NLPILIBNAME	=	$(NLPILIBSHORTNAME)-$(VERSION)
-NLPILIB		=	$(NLPILIBNAME).$(BASE)
-NLPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
-NLPILIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBCOBJ)) $(addprefix $(LIBOBJDIR)/,$(NLPILIBCXXOBJ))
-NLPILIBSCIPOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(NLPILIBSCIPOBJ))
-NLPILIBSRC	=	$(addprefix $(SRCDIR)/,$(NLPILIBCOBJ:.o=.c)) $(addprefix $(SRCDIR)/,$(NLPILIBCXXOBJ:.o=.cpp))
-NLPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(BASE).$(LIBEXT)
-NLPILIBSHORTLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(NLPILIBSHORTNAME).$(LIBEXT)
-ALLSRC		+=	$(NLPILIBSRC)
-
-ifeq ($(SHARED),true)
-NLPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) $(FILTERSQPLIBS)
-ifeq ($(IPOPT),true)
-NLPILIBEXTLIBS	+=	 $(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
-endif
-ifeq ($(WORHP),true)
-NLPILIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib)
-endif
-endif
-
-
-#-----------------------------------------------------------------------------
 # External Libraries
 #-----------------------------------------------------------------------------
 
@@ -481,7 +418,13 @@ LPIINSTMSG	+=	"\n  -> \"worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)\" is a direc
 endif
 
 ifeq ($(SHARED),true)
-SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE)
+SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) $(FILTERSQPLIBS)
+ifeq ($(IPOPT),true)
+SCIPLIBEXTLIBS	+=	 $(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
+endif
+ifeq ($(WORHP),true)
+SCIPLIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib)
+endif
 ifeq ($(ZLIB),true)
 SCIPLIBEXTLIBS	+=	$(ZLIB_LDFLAGS)
 endif
@@ -571,6 +514,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/expr_sum.o \
 			scip/expr_value.o \
 			scip/expr_var.o \
+			scip/expr_varidx.o \
 			scip/heur_sync.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_adaptivediving.o \
@@ -637,6 +581,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/nlhdlr_quadratic.o \
 			scip/nlhdlr_quotient.o \
 			scip/nlhdlr_soc.o \
+			scip/nlpi_all.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_breadthfirst.o \
 			scip/nodesel_dfs.o \
@@ -719,6 +664,31 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 
 SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o
 
+ifeq ($(EXPRINT),none)
+SCIPPLUGINLIBOBJ 	+=	scip/exprinterpret_none.o
+endif
+ifeq ($(EXPRINT),cppad)
+SCIPPLUGINLIBCPPOBJ 	+= 	scip/exprinterpret_cppad.o
+endif
+
+ifeq ($(IPOPT),true)
+SCIPPLUGINLIBCPPOBJ	+= 	scip/nlpi_ipopt.o
+else
+SCIPPLUGINLIBOBJ	+= 	scip/nlpi_ipopt_dummy.o
+endif
+
+ifeq ($(FILTERSQP),true)
+SCIPPLUGINLIBOBJ	+= scip/nlpi_filtersqp.o
+else
+SCIPPLUGINLIBOBJ	+= scip/nlpi_filtersqp_dummy.o
+endif
+
+ifeq ($(WORHP),true)
+SCIPPLUGINLIBOBJ	+= 	scip/nlpi_worhp.o
+else
+SCIPPLUGINLIBOBJ	+= 	scip/nlpi_worhp_dummy.o
+endif
+
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
 			scip/bandit.o \
@@ -761,6 +731,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/nlhdlr.o \
 			scip/nlp.o \
 			scip/nlpi.o \
+			scip/nlpioracle.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
@@ -935,11 +906,11 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) \
+.SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) \
 		$(LPILIBLINK) $(LPILIBSHORTLINK) $(TPILIBLINK) $(TPILIBSHORTLINK) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) \
-		$(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) $(NLPILIBLINK) $(NLPILIBSHORTLINK) \
+		$(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK) \
 		$(MAINLINK) $(MAINSHORTLINK) \
-		$(LPILIBOBJFILES) $(TPILIBOBJFILES) $(NLPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES) $(SYMOBJFILES) \
+		$(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES) $(SYMOBJFILES) \
 		$(SCIPLIBSOLVERFILE) $(SCIPLIBSOLVERLINK) $(SCIPLIBSOLVERSHORTLINK)
 MAKE		+= -s
 endif
@@ -949,7 +920,7 @@ all:		libs
 		@$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
-libs:		libscip libobjscip liblpi libtpi libnlpi
+libs:		libscip libobjscip liblpi libtpi
 ifeq ($(SHARED),true)
 		@$(MAKE) libscipsolver
 endif
@@ -964,7 +935,7 @@ preprocess:     checkdefines
 		@$(MAKE) touchexternal
 
 .PHONY: lint
-lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC) $(SYMSRC) githash
+lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) githash
 		-rm -f lint.out
 
 		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
@@ -991,7 +962,7 @@ else
 endif
 
 .PHONY: pclint
-pclint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC) $(SYMSRC)
+pclint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC)
 		-rm -f pclint.out
 
 		@$(SHELL) -ec 'if ! test -e pclint/co-gcc.h ; \
@@ -1022,7 +993,7 @@ else
 endif
 
 .PHONY: splint
-splint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC) $(SYMSRC)
+splint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC)
 		-rm -f splint.out
 ifeq ($(FILES),)
 		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) >> splint.out;'
@@ -1101,16 +1072,6 @@ $(TPILIBLINK):	$(TPILIBFILE)
 $(TPILIBSHORTLINK):	$(TPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(TPILIBFILE)) $(notdir $@)
-
-$(NLPILIBLINK):	$(NLPILIBFILE)
-		@rm -f $@
-		cd $(dir $@) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $@)
-
-# the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
-.PHONY: $(NLPILIBSHORTLINK)
-$(NLPILIBSHORTLINK):	$(NLPILIBFILE)
-		@rm -f $@
-		cd $(dir $@) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $@)
 
 $(SCIPLIBLINK):	$(SCIPLIBFILE)
 		@rm -f $@
@@ -1203,8 +1164,6 @@ cleanlibs:      | $(LIBDIR)/$(LIBTYPE)
 		@-rm -f $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK)
 		@echo "-> remove library $(TPILIBFILE)"
 		@-rm -f $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
-		@echo "-> remove library $(NLPILIBFILE)"
-		@-rm -f $(NLPILIBFILE) $(NLPILIBLINK) $(NLPILIBSHORTLINK)
 		@echo "-> remove library $(SCIPLIBSOLVERFILE)"
 		@-rm -f $(SCIPLIBSOLVERFILE) $(SCIPLIBSOLVERLINK) $(SCIPLIBSOLVERSHORTLINK)
 
@@ -1216,12 +1175,12 @@ cleanbin:       | $(BINDIR)
 depend:
 # We explicitely add all lpi's here, since the content of depend.lpscheck should be independent of the currently selected LPI,
 # but contain all LPI's that use the SCIP_WITH_LPSCHECK define.
-		@echo `grep -l "SCIP_WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) $(NLPILIBSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
+		@echo `grep -l "SCIP_WITH_LPSCHECK" $(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(MAINSRC) src/lpi/lpi*.{c,cpp}` >$(LPSCHECKDEP)
 		@echo `grep -l "SCIP_WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
 		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
-		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC) src/lpi/lpi*.{c,cpp} src/nlpi/nlpi*.{c,cpp}` >$(THREADSAFEDEP)
+		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC) src/lpi/lpi*.{c,cpp} src/scip/nlpi*.{c,cpp}` >$(THREADSAFEDEP)
 
 # do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
 ifneq ($(DFLAGS),)
@@ -1230,7 +1189,6 @@ ifneq ($(DFLAGS),)
 -include $(OBJSCIPOBJFILES:.o=.d)
 -include $(LPILIBOBJFILES:.o=.d)
 -include $(TPILIBOBJFILES:.o=.d)
--include $(NLPILIBOBJFILES:.o=.d)
 else
 ifeq ($(VERBOSE),true)
 $(info No compilation dependencies. If changing header files, do a make clean before building.)
@@ -1238,7 +1196,7 @@ endif
 endif
 
 # make binary
-$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
+$(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
@@ -1285,18 +1243,6 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-.PHONY: libnlpi
-libnlpi:	preprocess
-		@$(MAKE) $(NLPILIBFILE) $(NLPILIBLINK) $(NLPILIBSHORTLINK)
-
-$(NLPILIBFILE):	$(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
-		@echo "-> generating library $@"
-		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) $(NLPILIBEXTLIBS)
-ifneq ($(RANLIB),)
-		$(RANLIB) $@
-endif
-
 .PHONY: libtpi
 libtpi:		preprocess
 		@$(MAKE) $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
@@ -1313,16 +1259,16 @@ endif
 libscipsolver:	preprocess
 		@$(MAKE) $(SCIPLIBSOLVERFILE) $(SCIPLIBSOLVERLINK) $(SCIPLIBSOLVERSHORTLINK)
 
-$(SCIPLIBSOLVERFILE): $(SCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) | $(LIBDIR)/$(LIBTYPE) $(LIBOBJSUBDIRS)
+$(SCIPLIBSOLVERFILE): $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) | $(LIBDIR)/$(LIBTYPE) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
 		-rm -f $@
 ifeq ($(SHARED),false)
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES)
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 else
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) $(LPILIBEXTLIBS) $(NLPILIBEXTLIBS) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) $(SCIPLIBEXTLIBS) \
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(LPILIBEXTLIBS) $(TPILIBOBJFILES) $(SYMOBJFILES) $(OBJSCIPLIBOBJFILES) $(SCIPLIBEXTLIBS) \
 		$(LPSLDFLAGS) $(LDFLAGS) $(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)/shared
 endif
 
@@ -1352,15 +1298,15 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 -include $(LASTSETTINGS)
 
 .PHONY: windowslib
-windowslib: $(SCIPLIBOBJFILES) $(MAINOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(TPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
+windowslib: $(SCIPLIBOBJFILES) $(MAINOBJFILES) $(LPILIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(TPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating Windows library $@"
 ifeq ($(SHARED),true)
 		$(LINKCC) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LIBBUILD_o)$(LIBDIR)/$(LIBTYPE)/$(WINLIBFILENAME) \
-			$(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) \
+			$(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) \
 			$(LPSLDFLAGS) $(LDFLAGS)
 else
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR)/$(LIBTYPE) $(LIBBUILD_o)$(LIBDIR)/$(LIBTYPE)/$(WINLIBFILENAME) \
-			$(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) \
+			$(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) \
 			$(LPSLDFLAGS) $(LDFLAGS)
 endif
 
@@ -1373,7 +1319,6 @@ ifeq ($(TOUCHLINKS),true)
 		@-touch $(ZIMPLSRC)
 		@-touch $(LPSCHECKSRC)
 		@-touch $(LPILIBSRC)
-		@-touch $(NLPILIBSRC)
 endif
 ifneq ($(SCIPGITHASH),$(LAST_SCIPGITHASH))
 		@$(MAKE) githash
@@ -1398,12 +1343,6 @@ endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
 		@-touch $(ZIMPLSRC)
 endif
-ifneq ($(IPOPT),$(LAST_IPOPT))
-		@-touch $(NLPILIBSRC)
-endif
-ifneq ($(WORHP),$(LAST_WORHP))
-		@-touch $(NLPILIBSRC)
-endif
 ifneq ($(SYM),$(LAST_SYM))
 		@-touch $(SYMSRC)
 endif
@@ -1426,10 +1365,10 @@ ifneq ($(USRCXXFLAGS),$(LAST_USRCXXFLAGS))
 		@-touch $(ALLSRC)
 endif
 ifneq ($(USRLDFLAGS),$(LAST_USRLDFLAGS))
-		@-touch -c $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(NLPILIBOBJFILES) $(TPILIBOBJFILES) $(MAINOBJFILES)
+		@-touch -c $(SCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(TPILIBOBJFILES) $(MAINOBJFILES)
 endif
 ifneq ($(USRARFLAGS),$(LAST_USRARFLAGS))
-		@-touch -c $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(TPILIBOBJFILES) $(NLPILIBSCIPOBJFILES)
+		@-touch -c $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES)
 endif
 ifneq ($(NOBLKMEM),$(LAST_NOBLKMEM))
 		@-touch -c $(ALLSRC)
@@ -1675,7 +1614,6 @@ help:
 		@echo "  - libscip: Build library for the main part of SCIP."
 		@echo "  - libobjscip: Build library for the C++-interface of SCIP."
 		@echo "  - liblpi: Build library for the LP interface in SCIP."
-		@echo "  - libnlpi: Build library for the NLP interface in SCIP."
 		@echo "  - libtpi: Build library for the parallel task interface in SCIP."
 		@echo "  - links: Reconfigures the links in the \"lib\" directory."
 		@echo "  - doc: Creates documentation in the \"doc\" directory."

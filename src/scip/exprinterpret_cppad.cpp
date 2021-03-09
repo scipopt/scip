@@ -21,7 +21,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "nlpi/exprinterpret.h"
+#include "scip/exprinterpret.h"
 #include "scip/def.h"
 #include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
@@ -29,7 +29,7 @@
 #include "scip/expr_pow.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_log.h"
-#include "nlpi/expr_varidx.h"
+#include "scip/expr_varidx.h"
 
 #include <cmath>
 #include <cstring>

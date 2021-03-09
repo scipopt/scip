@@ -63,7 +63,7 @@
 #include "scip/type_nlp.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-#include "nlpi/type_exprinterpret.h"
+#include "scip/type_exprinterpret.h"
 
 #ifdef __cplusplus
 extern "C" {
