@@ -55,8 +55,7 @@ extern SCIP_RETCODE substpsolver_setMute(SUBSTP*);
 extern SCIP_RETCODE substpsolver_setProbIsIndependent(SUBSTP*);
 extern SCIP_RETCODE substpsolver_setProbNoSubDP(SUBSTP*);
 extern SCIP_RETCODE substpsolver_setProbFullPresolve(SUBSTP*);
-
-
+extern SCIP_RETCODE substpsolver_getObjFromGraph(SCIP*, const GRAPH*, SCIP_Real*);
 
 
 #ifdef __cplusplus
