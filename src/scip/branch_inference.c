@@ -169,9 +169,9 @@ int evaluateAggrCand(
    return nbestcands;
 }
 
-/** choose a singular best candidate from bestcands */
+/** choose a singular best candidate from bestcands and move it to the beginning of the candidate array */
 static
-int tiebreakAggrCand(
+void tiebreakAggrCand(
    SCIP_VAR**            bestcands,          /**< buffer array to return selected candidates */
    int                   nbestcands          /**< buffer to return number of selected candidates */
    )
@@ -206,8 +206,6 @@ int tiebreakAggrCand(
          bestcands[0] = bestcands[c];
       }
    }
-   nbestcands = 1;
-   return nbestcands;
 }
 
 /** check if the score for the given domain value and variable domain value is better than the current best know one */
@@ -479,7 +477,8 @@ SCIP_RETCODE performBranchingSol(
    /* final tie breaking */
    if( nbestcands > 1 )
    {
-      nbestcands = tiebreakAggrCand(bestcands, nbestcands);
+      tiebreakAggrCand(bestcands, nbestcands);
+      nbestcands = 1;
    }
 
    assert(nbestcands == 1);
@@ -489,7 +488,7 @@ SCIP_RETCODE performBranchingSol(
    /* loop over cands, find bestcands[0], and store corresponding candsols value in bestval */
    for( c = 1; c < ncands; ++c)
    {
-      if( bestcands[0] == cands[c] )
+      if( bestaggrcand == cands[c] )
       {
          bestval = candsols[c];
          break;
