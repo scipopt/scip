@@ -41,7 +41,8 @@ extern "C" {
 
 
 extern SCIP_RETCODE     dpterms_solve(SCIP*, GRAPH*, int*, SCIP_Bool*);
-extern SCIP_Bool        dpterms_isPromising(const GRAPH*);
+extern SCIP_Bool        dpterms_isPromisingFully(const GRAPH*);
+extern SCIP_Bool        dpterms_isPromisingPartly(const GRAPH*);
 
 
 #ifdef __cplusplus

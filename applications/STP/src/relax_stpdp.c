@@ -189,7 +189,7 @@ SCIP_Bool SCIPStpDpRelaxIsPromising(
 */
    assert(graph);
 
-   return dpterms_isPromising(graph);
+   return dpterms_isPromisingPartly(graph);
 }
 
 

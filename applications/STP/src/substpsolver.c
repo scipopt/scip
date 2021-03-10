@@ -298,7 +298,7 @@ SCIP_RETCODE substpsolver_init(
 )
 {
    /* decide whether to do dynamic programming or branch-and-cut */
-   if( dpterms_isPromising(subgraph) )
+   if( dpterms_isPromisingFully(subgraph) )
    {
       SCIP_CALL( substpsolver_initDP(scip, subgraph, substp) );
    }
