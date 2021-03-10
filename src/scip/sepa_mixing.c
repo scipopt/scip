@@ -258,12 +258,12 @@ SCIP_RETCODE separateCuts(
       /* only generate cuts based on continuous variables */
       firstvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
    }
-   vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   nmaxvars = nvars - SCIPgetNContVars(scip);
-
    if ( firstvar == nvars )
       return SCIP_OKAY;
+
+   vars = SCIPgetVars(scip);
+   nmaxvars = SCIPgetNBinVars(scip);
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixcoefs, nmaxvars) );
@@ -395,6 +395,10 @@ SCIP_RETCODE separateCuts(
             }
 
             ++vlbmixsize;
+
+            /* stop if size is exceeded; possibly ignore redundant variable bounds */
+            if ( vlbmixsize >= nmaxvars )
+               break;
          }
       }
       assert( vlbmixsize <= nmaxvars );
@@ -550,6 +554,10 @@ SCIP_RETCODE separateCuts(
             }
 
             ++vubmixsize;
+
+            /* stop if size is exceeded; possibly ignore redundant variable bounds */
+            if ( vubmixsize >= nmaxvars )
+               break;
          }
       }
       assert( vubmixsize <= nmaxvars );
