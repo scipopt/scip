@@ -720,6 +720,8 @@ SCIP_RETCODE SCIPreplaceCommonSubexpressions(
 /** computes the curvature of a given expression and all its subexpressions
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
+ *  @note this function relies on information from the curvature callback of expression handlers only,
+ *    consider using function @ref SCIPhasExprCurvature() of the convex-nlhdlr as that uses more information to deduce convexity
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeExprCurvature(
