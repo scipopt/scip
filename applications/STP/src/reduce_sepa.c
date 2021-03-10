@@ -85,6 +85,7 @@ int cutNodesGetLastCutnode(
    return lastcutnode;
 }
 
+
 #ifdef CUTTREE_PRINT_STATISTICS
 /** helper */
 static inline
@@ -474,14 +475,14 @@ void cutNodesTreeMakeTerms(
 
       if( nodes_isTree[cutnode] )
       {
-         const int compid = biconn_nodesmark[g->head[g->outbeg[cutnode]]];
+         const int compid = biconn_nodesmark[cutnode];
          SCIP_Bool isTerm = FALSE;
 
          for( int e = g->outbeg[cutnode]; e != EAT_LAST; e = g->oeat[e] )
          {
             const int head = g->head[e];
 
-            if( biconn_nodesmark[head] != compid )
+            if( biconn_nodesmark[head] != compid && head != cutnodes->biconn_comproots[compid] )
             {
                isTerm = TRUE;
                break;
@@ -495,6 +496,14 @@ void cutNodesTreeMakeTerms(
             graph_knot_printInfo(g, cutnode);
 #endif
             graph_knot_chg(g, cutnode, STP_TERM);
+
+            // todo remove me
+                 if(g->grad[cutnode] == 1 )
+                 {
+                    printf("error in cut nodes terms");
+                    exit(1);
+                 }
+
          }
       }
    }

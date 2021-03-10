@@ -2758,6 +2758,13 @@ SCIP_RETCODE reduce_da(
             }
          }
 
+         // todo remove
+         if( GT(redcosts_getDualBoundTop(redcostdata), upperbound) )
+         {
+            printf("WRONG BOUND: upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
+            return SCIP_ERROR;
+         }
+
          SCIPdebugMessage("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
 
          SCIP_CALL( daRoundInit(scip, upperbound, graph, redcostdata, arcsdeleted, &cutoffbound) );
