@@ -1970,6 +1970,8 @@ SCIP_RETCODE detectSocQuadraticComplex(
    if( nvars > 7000 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "nlhdlr_soc - number of quadratic variables is too large (%d) to check the curvature\n", nvars);
+      SCIPfreeBufferArray(scip, &occurringexprs);
+      SCIPhashmapFree(&expr2idx);
       return SCIP_OKAY;
    }
 
