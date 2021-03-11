@@ -204,6 +204,7 @@ typedef struct extension_data
    const int tree_maxnleaves;
    const int tree_maxdepth;
    const int tree_maxnedges;
+   enum EXTRED_MODE      mode;               /**< mode */
 } EXTDATA;
 
 

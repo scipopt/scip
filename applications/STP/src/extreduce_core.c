@@ -1906,7 +1906,8 @@ SCIP_RETCODE extreduce_checkComponent(
          .tree_maxdepth = extpermanent->tree_maxdepth,
          .tree_maxnleaves = extpermanent->tree_maxnleaves,
          .tree_maxnedges = extpermanent->tree_maxnedges, .node_isterm = isterm, .reddata = &reddata,
-         .distdata = extpermanent->distdata_default, .distdata_biased = extpermanent->distdata_biased };
+         .distdata = extpermanent->distdata_default, .distdata_biased = extpermanent->distdata_biased,
+         .mode = extpermanent->mode};
 
 #ifdef STP_DEBUG_EXT
       extreduce_extdataCleanArraysDbg(graph, &extdata);

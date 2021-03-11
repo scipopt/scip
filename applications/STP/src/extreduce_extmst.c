@@ -1923,13 +1923,11 @@ void extreduce_mstLevelVerticalAddLeaf(
       extreduce_bottleneckCheckNonLeaves_pc(scip, graph, edge2neighbor, extdata, leafRuledOut);
    }
 
-#if 1
    /* if not yet ruled out, try bottleneck distances to non-leaves of the tree */
-   if( !(*leafRuledOut) && !extInitialCompIsGenStar(extdata) )
+   if( (extdata->mode == extred_full) && !(*leafRuledOut) && !extInitialCompIsGenStar(extdata) )
    {
       extreduce_bottleneckCheckNonLeaves(scip, graph, edge2neighbor, extdata, leafRuledOut);
    }
-#endif
 
    mstLevelLeafExit(graph, neighbor_base, neighbor, *leafRuledOut, extdata);
 }
