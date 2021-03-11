@@ -2248,7 +2248,7 @@
 =best=     var_con5                                       278.1448937000
 =bestdual= var_con5                                         0.0000000000
 =opt=      wager                                        20339.4318400000
-=opt=      wall                                            -1.0000046620
+=best=     wall                                        -20833.3333300000
 =best=     wallfix                                          1.0000046580
 =bestdual= wallfix                                          0.9999953343
 =opt=      waste                                          598.9191764000
