@@ -958,7 +958,7 @@ SCIP_RETCODE addSymresackInequality(
    consdata = SCIPconsGetData(cons);
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_cover_%s_%d", SCIPconsGetName(cons), consdata->debugcnt);
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
-   consdata->debugcnt += 1;
+   ++consdata->debugcnt;
 #else
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
 #endif
