@@ -1780,8 +1780,19 @@ SCIP_RETCODE detectSocQuadraticSimple(
    if( !ishyperbolic )
    {
       /* store rhs term */
-      SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, SCIPexprGetChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE, FALSE) );
-      vars[nvars - 1] = SCIPexprGetChildren(children[specialtermidx])[0];
+      if( SCIPisExprVar(scip, children[specialtermidx]) )
+      {
+         /* this should be the "children[specialtermidx] can be a variable, in which case we treat it as if it is squared" case */
+         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[specialtermidx], TRUE, FALSE, FALSE, FALSE) );
+         vars[nvars - 1] = children[specialtermidx];
+      }
+      else
+      {
+         assert(SCIPisExprPower(scip, children[specialtermidx]));
+         assert(SCIPexprGetChildren(children[specialtermidx]) != NULL);
+         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, SCIPexprGetChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE, FALSE) );
+         vars[nvars - 1] = SCIPexprGetChildren(children[specialtermidx])[0];
+      }
 
       assert(childcoefs[specialtermidx] < 0.0);
 
