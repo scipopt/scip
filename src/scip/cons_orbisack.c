@@ -1731,7 +1731,7 @@ SCIP_DECL_CONSPARSE(consParseOrbisack)
    SCIP_VAR** vars2;
    SCIP_VAR* var;
    int nrows = 0;
-   int maxnrows = 10;
+   int maxnrows = 128;
    SCIP_Bool firstcolumn = TRUE;
    SCIP_Bool ispporbisack = FALSE;
    SCIP_Bool isparttype = FALSE;

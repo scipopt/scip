@@ -2515,7 +2515,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
    int nvars = 0;
    int cnt = 0;
    int nfoundpermidx = 0;
-   int maxnvars = 10;
+   int maxnvars = 128;
 
    assert( success != NULL );
 
