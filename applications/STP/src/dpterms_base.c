@@ -505,9 +505,21 @@ SCIP_RETCODE dpterms_solve(
    return SCIP_OKAY;
 }
 
+/** is DP at least partly promising? */
+SCIP_Bool dpterms_isPromisingPartly(
+   const GRAPH*          graph               /**< graph */
+)
+{
+   assert(graph);
 
-/** solves sub-problem */
-SCIP_Bool dpterms_isPromising(
+   if( dpterms_isPromisingFully(graph) )
+      return TRUE;
+
+   return FALSE;
+}
+
+/** is DP fully promising? */
+SCIP_Bool dpterms_isPromisingFully(
    const GRAPH*          graph               /**< graph */
 )
 {

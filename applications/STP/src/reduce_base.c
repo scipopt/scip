@@ -2056,7 +2056,7 @@ SCIP_RETCODE redLoopStp(
          {
             int sepanelims = 0;
 
-            if( dpterms_isPromising(g) )
+            if( dpterms_isPromisingFully(g) )
                break;
 
             SCIP_CALL( reduce_termsepaFull(scip, g, redbaseGetSolnode(redsollocal, redbase), redbase, &sepanelims) );
