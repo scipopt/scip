@@ -2133,7 +2133,7 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** helper method to detect SOC structures. The dection runs in 3 steps:
+/** helper method to detect SOC structures. The detection runs in 3 steps:
  *
  *  1. check if expression is a norm of the form SQRT(sum_i (sqrcoef_i expr_i^2 + lincoef_i expr_i) + c)
  *  which can be transformed to the form SQRT(sum_i (coef_i expr_i + const_i)^2 + c*) with c* >= 0.
@@ -2157,7 +2157,7 @@ CLEANUP:
 static
 SCIP_RETCODE detectSOC(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
+   SCIP_NLHDLRDATA*      nlhdlrdata,         /**< nonlinear handler data */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
@@ -2167,14 +2167,10 @@ SCIP_RETCODE detectSOC(
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
-   SCIP_NLHDLRDATA* nlhdlrdata;
-
    assert(expr != NULL);
+   assert(nlhdlrdata != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(success != NULL);
-
-   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
-   assert(nlhdlrdata != NULL);
 
    *success = FALSE;
 
@@ -2282,6 +2278,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
    SCIP_Real consrhs;
    SCIP_Bool enforcebelow;
    SCIP_Bool success;
+   SCIP_NLHDLRDATA* nlhdlrdata;
 
    assert(expr != NULL);
 
@@ -2293,10 +2290,13 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
 
    assert(SCIPgetExprNAuxvarUsesNonlinear(expr) > 0);  /* since some sepa is required, there should have been demand for it */
 
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
    conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsNonlinear(cons));
    consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsNonlinear(cons));
 
-   SCIP_CALL( detectSOC(scip, nlhdlr, expr, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, &success) );
+   SCIP_CALL( detectSOC(scip, nlhdlrdata, expr, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, &success) );
 
    if( !success )
       return SCIP_OKAY;
@@ -2670,6 +2670,54 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/compeigenvalues",
          "Should Eigenvalue computations be done to detect complex cases in quadratic constraints?",
          &nlhdlrdata->compeigenvalues, FALSE, DEFAULT_COMPEIGENVALUES, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** checks whether either the given constraint (if cons != NULL) or the constraint expr <= auxvar
+ * (if cons == NULL) is SOC-representable
+ *
+ * This function uses the methods that are used in the detection algorithm of the SOC nonlinear handler.
+ */
+SCIP_RETCODE SCIPisConsSOC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
+                                               valid when success is TRUE */
+   SCIP_Bool*            success,            /**< pointer to store whether SOC structure has been detected */
+   SCIP_EXPR***          vars,               /**< expressions which (aux)variables appear on both sides (x) */
+   SCIP_Real**           offsets,            /**< offsets of both sides (beta_i) */
+   SCIP_Real**           transcoefs,         /**< non-zeros of linear transformation vectors (v_i) */
+   int**                 transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
+   int**                 termbegins,         /**< starting indices of transcoefs for each term */
+   int*                  nvars,              /**< total number of variables appearing */
+   int*                  nterms              /**< number of summands in the SQRT +1 for RHS (n+1) */
+   ) {
+   SCIP_NLHDLRDATA nlhdlrdata;
+   SCIP_NLHDLREXPRDATA *nlhdlrexprdata;
+   SCIP_Real conslhs;
+   SCIP_Real consrhs;
+
+   nlhdlrdata.mincutefficacy = 0.0;
+   nlhdlrdata.compeigenvalues = TRUE;
+
+   conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsNonlinear(cons));
+   consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsNonlinear(cons));
+
+   SCIP_CALL(detectSOC(scip, &nlhdlrdata, expr, conslhs, consrhs, &nlhdlrexprdata, enforcebelow, success));
+
+   if (*success)
+   {
+      *vars = nlhdlrexprdata->vars;
+      *offsets = nlhdlrexprdata->offsets;
+      *transcoefs = nlhdlrexprdata->transcoefs;
+      *transcoefsidx = nlhdlrexprdata->transcoefsidx;
+      *termbegins = nlhdlrexprdata->termbegins;
+      *nvars = nlhdlrexprdata->nvars;
+      *nterms = nlhdlrexprdata->nterms;
+      SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
+   }
 
    return SCIP_OKAY;
 }

@@ -37,6 +37,26 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** checks whether a given constraint is SOC-representable
+ *
+ * This function uses the methods that are used in the detection algorithm of the SOC nonlinear handler.
+ */
+SCIP_RETCODE SCIPisConsSOC(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
+                                               valid when success is TRUE */
+   SCIP_Bool*            success,            /**< pointer to store whether SOC structure has been detected */
+   SCIP_EXPR***          vars,               /**< expressions which (aux)variables appear on both sides (x) */
+   SCIP_Real**           offsets,            /**< offsets of both sides (beta_i) */
+   SCIP_Real**           transcoefs,         /**< non-zeros of linear transformation vectors (v_i) */
+   int**                 transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
+   int**                 termbegins,         /**< starting indices of transcoefs for each term */
+   int*                  nvars,              /**< total number of variables appearing */
+   int*                  nterms              /**< number of summands in the SQRT +1 for RHS (n+1) */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -1225,3 +1225,47 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
+
+/* detects ||x|| - y <= 0 as soc expression using a public function */
+Test(nlhdlrsoc, access, .description = "public detect for simple norm expression")
+{
+   SCIP_CONS* cons;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* normexpr;
+   SCIP_Bool enforcebelow;
+   SCIP_Bool success;
+   SCIP_EXPR** vars;
+   SCIP_Real* offsets;
+   SCIP_Real* transcoefs;
+   int* transcoefsidx;
+   int* termbegins;
+   int nvars;
+   int nterms;
+   int ntranscoefs;
+
+   SCIP_CALL( createAddConsAndConstructLP(&cons, (char*)"[nonlinear] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 - <w> <= 0") );
+
+   expr = SCIPgetExprConsNonlinear(cons);
+   normexpr = SCIPexprGetChildren(expr)[1];
+   SCIP_CALL( SCIPisConsSOC(scip, normexpr, NULL, &enforcebelow, &success, &vars, &offsets, &transcoefs, &transcoefsidx,
+      &termbegins, &nvars, &nterms) );
+
+   ntranscoefs = termbegins[nterms];
+
+   /* check that soc nlhdlr detected correctly */
+   cr_assert(success);
+   cr_assert(enforcebelow);
+   cr_expect_eq(nvars, 4);
+   cr_expect_eq(nterms, 4);
+   cr_expect_eq(ntranscoefs, 4);
+
+   /* free arrays with the SOC representation */
+   SCIPfreeBlockMemoryArray(scip, &termbegins, nterms + 1);
+   SCIPfreeBlockMemoryArray(scip, &transcoefsidx, ntranscoefs);
+   SCIPfreeBlockMemoryArray(scip, &transcoefs, ntranscoefs);
+   SCIPfreeBlockMemoryArray(scip, &offsets, nterms);
+   SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
