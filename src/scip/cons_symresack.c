@@ -484,6 +484,7 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->ndescentpoints = 0;
    (*consdata)->descentpoints = NULL;
+   (*consdata)->ismodelcons = ismodelcons;
 
    /* count the number of binary variables which are affected by the permutation */
    SCIP_CALL( SCIPallocBufferArray(scip, &indexcorrection, inputnvars) );
@@ -548,7 +549,6 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->vars = vars;
    (*consdata)->perm = perm;
-   (*consdata)->ismodelcons = ismodelcons;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
    for (i = 0; i < naffectedvariables; ++i)
