@@ -746,7 +746,7 @@ int SCIPgetNExternalCodes(
    return scip->set->nextcodes;
 }
 
-/** prints information on external codes to a file stream via the message handler system
+/** prints information on external libraries to a file stream via the message handler system
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
  */
@@ -757,7 +757,7 @@ void SCIPprintExternalCodes(
 {
    int i;
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "External codes: ");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "External libraries: ");
    if( scip->set->nextcodes == 0 )
    {
       SCIPinfoMessage(scip, file, "none\n");
