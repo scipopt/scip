@@ -253,13 +253,20 @@ SCIP_RETCODE addCut(
          SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
       }
 
-      if( cutnnz == 1 )
-      {
-         /* Add the bound change as cut to avoid that the LP gets modified. that would mean the LP is not flushed
-          * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply that bound change automatically. */
+      /* flush all changes before adding the cut */
+      SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-         /* flush all changes before adding the cut */
-         SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+      if( SCIProwGetNNonz(cut) == 0 )
+      {
+         assert( SCIPisFeasNegative(scip, cutrhs) );
+         SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %g.\n", cutrhs);
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+      else if( SCIProwGetNNonz(cut) == 1 )
+      {
+         /* Add the bound change as cut to avoid that the LP gets modified. This would mean that the LP is not flushed
+          * and the method SCIPgetLPBInvRow() fails; SCIP internally will apply this bound change automatically. */
          SCIP_CALL( SCIPaddRow(scip, cut, TRUE, cutoff) );
          ++(*naddedcuts);
       }
@@ -281,9 +288,6 @@ SCIP_RETCODE addCut(
                SCIProwGetNorm(cut), SCIPgetCutEfficacy(scip, NULL, cut),
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
-
-            /* flush all changes before adding the cut */
-            SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
             if( SCIPisCutNew(scip, cut) )
             {
