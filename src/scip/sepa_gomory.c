@@ -208,9 +208,9 @@ SCIP_RETCODE addCut(
       return SCIP_OKAY;
    }
 
-   /* Only take efficient cuts, except for cuts with one non-zero coefficients (= bound
+   /* Only take efficient cuts, except for cuts with one non-zero coefficient (= bound
     * changes); the latter cuts will be handled internally in sepastore. */
-   if( SCIPisEfficacious(scip, cutefficacy) )
+   if( SCIPisEfficacious(scip, cutefficacy) || ( cutnnz == 1 && SCIPisFeasPositive(scip, cutefficacy) ) )
    {
       SCIP_ROW* cut;
       SCIP_SEPA* cutsepa;
