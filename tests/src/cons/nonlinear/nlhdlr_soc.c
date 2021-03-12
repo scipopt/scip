@@ -1226,15 +1226,12 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* detects ||x|| - y <= 0 as soc expression using a public function */
-Test(nlhdlrsoc, access, .description = "public detect for simple norm expression")
+/* detects 2x^2 - 9y^2 + sin(z)^2 < = 0 as soc constraint using a public function */
+Test(nlhdlrsoc, access, .description = "public detect for simple quadratic constraint")
 {
    SCIP_CONS* cons;
-   SCIP_EXPR* expr;
-   SCIP_EXPR* normexpr;
-   SCIP_Bool enforcebelow;
    SCIP_Bool success;
-   SCIP_EXPR** vars;
+   SCIP_VAR** vars;
    SCIP_Real* offsets;
    SCIP_Real* transcoefs;
    int* transcoefsidx;
@@ -1242,22 +1239,30 @@ Test(nlhdlrsoc, access, .description = "public detect for simple norm expression
    int nvars;
    int nterms;
    int ntranscoefs;
+   SCIP_SIDETYPE sidetype;
+   SCIP_Bool infeasible;
 
-   SCIP_CALL( createAddConsAndConstructLP(&cons, (char*)"[nonlinear] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 - <w> <= 0") );
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 2*<x>^2 - 9*<y>^2 + <z>^2  <= 0",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
 
-   expr = SCIPgetExprConsNonlinear(cons);
-   normexpr = SCIPexprGetChildren(expr)[1];
-   SCIP_CALL( SCIPisConsSOC(scip, normexpr, NULL, &enforcebelow, &success, &vars, &offsets, &transcoefs, &transcoefsidx,
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   SCIP_CALL( SCIPisSOCNonlinear(scip, cons, &sidetype, &success, &vars, &offsets, &transcoefs, &transcoefsidx,
       &termbegins, &nvars, &nterms) );
-
-   ntranscoefs = termbegins[nterms];
 
    /* check that soc nlhdlr detected correctly */
    cr_assert(success);
-   cr_assert(enforcebelow);
-   cr_expect_eq(nvars, 4);
-   cr_expect_eq(nterms, 4);
-   cr_expect_eq(ntranscoefs, 4);
+   ntranscoefs = termbegins[nterms];
+   cr_assert(sidetype == SCIP_SIDETYPE_RIGHT);
+   cr_expect_eq(nvars, 3);
+   cr_expect_eq(nterms, 3);
+   cr_expect_eq(ntranscoefs, 3);
 
    /* free arrays with the SOC representation */
    SCIPfreeBlockMemoryArray(scip, &termbegins, nterms + 1);
@@ -1265,6 +1270,12 @@ Test(nlhdlrsoc, access, .description = "public detect for simple norm expression
    SCIPfreeBlockMemoryArray(scip, &transcoefs, ntranscoefs);
    SCIPfreeBlockMemoryArray(scip, &offsets, nterms);
    SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
