@@ -2029,6 +2029,9 @@ SCIP_RETCODE redLoopStp(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
 
+         if( dpterms_isPromisingFully(g) && redparameters->userec )
+            break;
+
          assert(!rerun);
 
          SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, redbaseGetOffsetPointer(redbase), &extendedelims, randnumgen) );

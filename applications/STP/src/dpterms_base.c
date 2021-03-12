@@ -34,7 +34,16 @@
 #include "heur_local.h"
 #endif
 
-#define PROMISING_FULL_MAXNTERMS 20
+
+// todo more or less random values, tune them!
+#define PROMISING_FULL_MAXNTERMS              20
+#define PROMISING_PARTLY_MAXDENSITY          2.2
+#define PROMISING_PARTLY_SMALL_MAXNTERMS      45
+#define PROMISING_PARTLY_SMALL_MINNEDGES    1100
+#define PROMISING_PARTLY_MEDIUM_MAXNTERMS     55
+#define PROMISING_PARTLY_MEDIUM_MINNEDGES   1500
+#define PROMISING_PARTLY_LARGE_MAXNTERMS      65
+#define PROMISING_PARTLY_LARGE_MINNEDGES    3000
 
 
 /*
@@ -510,10 +519,39 @@ SCIP_Bool dpterms_isPromisingPartly(
    const GRAPH*          graph               /**< graph */
 )
 {
+   /* NOTE: we count the undirected edges here */
+   const int nedges = (graph->edges / 2);
+   SCIP_Real density;
+
    assert(graph);
 
    if( dpterms_isPromisingFully(graph) )
       return TRUE;
+
+   density = nedges / graph->knots;
+
+   if( GT(density, PROMISING_PARTLY_MAXDENSITY) )
+      return FALSE;
+
+   if( graph->terms <= PROMISING_PARTLY_SMALL_MAXNTERMS && nedges >= PROMISING_PARTLY_SMALL_MINNEDGES )
+      return TRUE;
+
+   if( graph->terms <= PROMISING_PARTLY_MEDIUM_MAXNTERMS && nedges >= PROMISING_PARTLY_MEDIUM_MINNEDGES )
+      return TRUE;
+
+   if( graph->terms < PROMISING_PARTLY_LARGE_MAXNTERMS && nedges >= PROMISING_PARTLY_LARGE_MINNEDGES )
+      return TRUE;
+
+
+   // todo remove two fake-unit tests below! Might kill actual instances...
+
+   // todo just a test, remove!
+   if( graph->terms == 106 && nedges >= PROMISING_PARTLY_LARGE_MINNEDGES && nedges <= 16000 )
+       return TRUE;
+
+   // todo just a test, remove!
+   if( graph->terms == 73 && nedges >= 3500 && nedges <= 4000  )
+       return TRUE;
 
    return FALSE;
 }

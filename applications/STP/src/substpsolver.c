@@ -46,6 +46,8 @@
 #include "relax_stpdp.h"
 
 
+//#define CHECK_BCOPT
+
 
 /*
  * Data structures
@@ -69,6 +71,23 @@ struct sub_steiner_tree_problem
 /*
  * Local methods
  */
+
+#ifdef CHECK_BCOPT
+#define CHECK_BCOPT_MAXNTERMS 50
+
+/** checks solution with dynamic programming */
+static inline
+SCIP_RETCODE checkSolWithDP(
+   GRAPH*                graph,              /**< sub-problem */
+   const int*            edgesol             /**< array to store edge solution; CONNECT/UNKNOWN */
+)
+{
+   return SCIP_ERROR;
+}
+
+#endif
+
+
 
 
 /** helper */
@@ -456,6 +475,7 @@ SCIP_RETCODE substpsolver_solve(
    else
    {
       SCIP_CALL( subscipSolve(scip, substp, success) );
+
    }
 
    assert(substp->subgraph == NULL);
