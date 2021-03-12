@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 # option() honors normal variables.
 if(POLICY CMP0077)
    cmake_policy(SET CMP0077 NEW)
@@ -96,6 +101,19 @@ option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
+option(ENABLE_IPO "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)" ON)
+
+if(ENABLE_IPO AND CMAKE_BUILD_TYPE STREQUAL "Release")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if(result)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        message(STATUS "IPO enabled")
+    else()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
+        message(STATUS "IPO is not supported.")
+    endif()
+endif()
 
 set(MPFR AUTO CACHE STRING "should MPFR be linked")
 set_property(CACHE MPFR PROPERTY STRINGS AUTO ON OFF)
