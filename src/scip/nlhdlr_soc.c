@@ -2691,7 +2691,8 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    int**                 termbegins,         /**< starting indices of transcoefs for each term */
    int*                  nvars,              /**< total number of variables appearing */
    int*                  nterms              /**< number of summands in the SQRT +1 for RHS (n+1) */
-   ) {
+   )
+{
    SCIP_NLHDLRDATA nlhdlrdata;
    SCIP_NLHDLREXPRDATA *nlhdlrexprdata;
    SCIP_Real conslhs;
