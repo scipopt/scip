@@ -44,7 +44,6 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
 SCIP_EXPORT
 SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
                                                valid when success is TRUE */

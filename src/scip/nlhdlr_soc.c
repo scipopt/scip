@@ -2674,14 +2674,12 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    return SCIP_OKAY;
 }
 
-/** checks whether either the given constraint (if cons != NULL) or the constraint expr <= auxvar
- * (if cons == NULL) is SOC-representable
+/** checks whether either the given constraint is SOC-representable
  *
  * This function uses the methods that are used in the detection algorithm of the SOC nonlinear handler.
  */
 SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
                                                valid when success is TRUE */
@@ -2698,6 +2696,12 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP_NLHDLREXPRDATA *nlhdlrexprdata;
    SCIP_Real conslhs;
    SCIP_Real consrhs;
+   SCIP_EXPR* expr;
+
+   assert(cons != NULL);
+
+   expr = SCIPgetExprConsNonlinear(cons);
+   assert(expr != NULL);
 
    nlhdlrdata.mincutefficacy = 0.0;
    nlhdlrdata.compeigenvalues = TRUE;
