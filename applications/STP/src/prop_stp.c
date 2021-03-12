@@ -273,10 +273,6 @@ void getBoundchangesPcMW(
          }
       }
    }
-#ifndef NDEBUG
-   for( int k = 0; k < nnodes; k++ )
-      assert(!(BRANCH_STP_VERTEX_TERM == nodestate[k] && graph_pc_knotIsDummyTerm(propgraph, k)));
-#endif
 }
 
 
@@ -340,6 +336,11 @@ SCIP_RETCODE getBoundchanges(
       SCIP_Bool conflict = FALSE;
 
       getBoundchangesPcMW(scip, vars, propgraph, nodestate, &conflict);
+
+#ifndef NDEBUG
+   for( int k = 0; k < nnodes; k++ )
+      assert(!(BRANCH_STP_VERTEX_TERM == nodestate[k] && graph_pc_knotIsDummyTerm(propgraph, k)));
+#endif
 
       if( conflict )
          *probisinfeas = TRUE;
