@@ -689,6 +689,10 @@ else
 SCIPPLUGINLIBOBJ	+= 	scip/nlpi_worhp_dummy.o
 endif
 
+SCIPPLUGINLIBCPPOBJ += scip/reader_nl.o
+SCIPPLUGINLIBCPPOBJ += mp/src/format.o mp/src/expr-info.o mp/src/nl-reader.o mp/src/os.o mp/src/posix.o
+FLAGS			+=	-I$(SRCDIR)/mp/include -DSCIP_WITH_AMPL
+
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
 			scip/bandit.o \
