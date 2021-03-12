@@ -44,7 +44,7 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
 SCIP_RETCODE SCIPisConsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
                                                valid when success is TRUE */
    SCIP_Bool*            success,            /**< pointer to store whether SOC structure has been detected */
