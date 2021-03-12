@@ -1253,7 +1253,7 @@ Test(nlhdlrsoc, access, .description = "public detect for simple quadratic const
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
-   SCIP_CALL( SCIPisSOCNonlinear(scip, cons, &sidetype, &success, &vars, &offsets, &transcoefs, &transcoefsidx,
+   SCIP_CALL( SCIPisSOCNonlinear(scip, cons, FALSE, &success, &sidetype, &vars, &offsets, &transcoefs, &transcoefsidx,
       &termbegins, &nvars, &nterms) );
 
    /* check that soc nlhdlr detected correctly */
