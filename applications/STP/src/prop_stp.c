@@ -388,9 +388,6 @@ SCIP_RETCODE getGraphStatesDirected(
 
    for( int e = 0; e < nedges; e++ )
    {
-      if( isPcMw && graph_pc_edgeIsExtended(graph, e) )
-         continue;
-
       if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
       {
          assert(SCIPvarGetUbLocal(vars[e]) > 0.5);
