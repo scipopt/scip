@@ -283,6 +283,7 @@ extern SCIP_RETCODE   graph_transNw2pc(SCIP*, PRESOL*, GRAPH*);
 extern SCIP_RETCODE   graph_transPc(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_transPc2Spg(SCIP*, PRESOL*, GRAPH*);
 extern SCIP_RETCODE   graph_transRpc(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_transRpc2SpgTrivial(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_transRpc2FixedProper(SCIP*, PRESOL*, GRAPH*);
 extern SCIP_RETCODE   graph_transMw(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_transRmw(SCIP*, GRAPH*);

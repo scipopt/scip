@@ -1709,10 +1709,14 @@ SCIP_RETCODE redLoopPc(
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
    SCIP_Bool advancedrun = dualascent;
    SCIP_Real prizesum;
+   // todo remove
    const SCIP_Bool verbose = FALSE && dualascent && userec && nodereplacing;
    int nelims;
    int degnelims;
    int nadvruns = 0;
+   SCIP_Bool isSpg = FALSE;
+   int todo;
+   const SCIP_Bool trySpgTrans = userec && 0; // todo extra parameter
    const int reductbound_global = reductbound * STP_RED_GLBFACTOR;
 
    /* already finished? */
@@ -1777,7 +1781,7 @@ SCIP_RETCODE redLoopPc(
             if( verbose ) printf("sdstarnelims %d \n", sdstarnelims);
 
             SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
-            if( verbose )  printf("sdstarpcnelims %d \n", sdstarpcnelims);
+            if( verbose ) printf("sdstarpcnelims %d \n", sdstarpcnelims);
 
             sdstarnelims += sdstarpcnelims;
 
@@ -1811,8 +1815,7 @@ SCIP_RETCODE redLoopPc(
             SCIP_CALL( reduce_sdWalkTriangle(scip, getWorkLimitsPc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, vbase, nodearrchar, dheap, &sdwnelims));
             SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimitsPc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2) );
 
-            if( verbose )
-               printf("SDw: %d, SDwExt: %d\n", sdwnelims, sdwnelims2);
+            if( verbose ) printf("SDw: %d, SDwExt: %d\n", sdwnelims, sdwnelims2);
 
             sdwnelims += sdwnelims2;
 
@@ -1904,6 +1907,12 @@ SCIP_RETCODE redLoopPc(
 
          if( rpc )
          {
+            if( trySpgTrans && graph_pc_nNonLeafTerms(g) == 0 && graph_pc_nProperPotentialTerms(g) == 0 )
+            {
+               isSpg = TRUE;
+               break;
+            }
+
             SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, fixed, &danelims, randnumgen) );
          }
          else
@@ -1944,6 +1953,12 @@ SCIP_RETCODE redLoopPc(
             advancedrun = dualascent;
             outterrounds = 0;
 
+            if( trySpgTrans && graph_pc_nNonLeafTerms(g) == 0 && graph_pc_nProperPotentialTerms(g) == 0 )
+            {
+               isSpg = TRUE;
+               break;
+            }
+
          }
       }
    } // outter loop; todo refactor
@@ -1962,6 +1977,13 @@ SCIP_RETCODE redLoopPc(
    SCIPfreeRandom(scip, &randnumgen);
 
    reduce_sollocalFree(scip, &redsollocal);
+
+   if( isSpg )
+   {
+      printf("change to STP \n");
+      graph_printInfo(g);
+      SCIP_CALL( graph_transRpc2SpgTrivial(scip, g) );
+   }
 
    SCIPdebugMessage("Reduction Level PC 1: Fixed Cost = %.12e\n", *fixed);
    return SCIP_OKAY;
@@ -2168,6 +2190,9 @@ SCIP_RETCODE reduce(
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
          SCIP_CALL( reducePc(scip, NULL, graph, offset, minelims, TRUE, userec, TRUE) );
+
+         if( graph->stp_type == STP_SPG )
+            SCIP_CALL( reduceStp(scip, graph, redsol, minelims, TRUE, TRUE, userec, TRUE) );
       }
       else if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
       {

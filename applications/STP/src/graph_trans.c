@@ -496,6 +496,33 @@ SCIP_RETCODE graph_transRpc(
 }
 
 
+/** alters the graph from rooted prize collecting problems to SPG if there are not potential terminals.
+ *  NOTE: deletes some PC data, but keeps history, in order to be able to reconstruct original optimal solution. */
+SCIP_RETCODE graph_transRpc2SpgTrivial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   assert(scip && g);
+   assert(g->stp_type == STP_RPCSPG);
+
+   if( graph_pc_nNonLeafTerms(g) != 0 || graph_pc_nProperPotentialTerms(g) != 0 )
+   {
+      SCIPerrorMessage("tried invalid transformation from RPC to SPG \n");
+      return SCIP_ERROR;
+   }
+
+   graph_pc_2orgcheck(scip, g);
+   SCIPfreeMemoryArrayNull(scip, &(g->prize));
+   SCIPfreeMemoryArrayNull(scip, &(g->costbudget));
+   SCIPfreeMemoryArrayNull(scip, &(g->term2edge));
+
+   g->stp_type = STP_SPG;
+
+   return SCIP_OKAY;
+}
+
+
 /** changes the graph for rooted prize collecting problems such that no proper potential terminal are fixed */
 SCIP_RETCODE graph_transRpc2FixedProper(
    SCIP*                 scip,               /**< SCIP data structure */
