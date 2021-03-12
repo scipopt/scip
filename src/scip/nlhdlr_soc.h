@@ -41,7 +41,8 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
  *
  * This function uses the methods that are used in the detection algorithm of the SOC nonlinear handler.
  */
-SCIP_RETCODE SCIPisConsSOC(
+SCIP_EXPORT
+SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
