@@ -2759,7 +2759,7 @@ SCIP_RETCODE reduce_da(
          }
 
          // todo remove
-         if( GT(redcosts_getDualBoundTop(redcostdata), upperbound) )
+         if( SCIPisGT(scip, redcosts_getDualBoundTop(redcostdata), upperbound) )
          {
             printf("WRONG BOUND: upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
             return SCIP_ERROR;
