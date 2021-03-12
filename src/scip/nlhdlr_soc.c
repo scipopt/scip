@@ -2681,7 +2681,7 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
 SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
+   SCIP_SIDETYPE*        sidetype,           /**< pointer to store which side of cons is SOC representable; only
                                                valid when success is TRUE */
    SCIP_Bool*            success,            /**< pointer to store whether SOC structure has been detected */
    SCIP_EXPR***          vars,               /**< expressions which (aux)variables appear on both sides (x) */
@@ -2698,6 +2698,7 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP_Real conslhs;
    SCIP_Real consrhs;
    SCIP_EXPR* expr;
+   SCIP_Bool enforcebelow;
 
    assert(cons != NULL);
 
@@ -2710,10 +2711,11 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsNonlinear(cons));
    consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsNonlinear(cons));
 
-   SCIP_CALL(detectSOC(scip, &nlhdlrdata, expr, conslhs, consrhs, &nlhdlrexprdata, enforcebelow, success));
+   SCIP_CALL( detectSOC(scip, &nlhdlrdata, expr, conslhs, consrhs, &nlhdlrexprdata, &enforcebelow, success) );
 
    if (*success)
    {
+      *sidetype = enforcebelow ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
       *vars = nlhdlrexprdata->vars;
       *offsets = nlhdlrexprdata->offsets;
       *transcoefs = nlhdlrexprdata->transcoefs;

@@ -45,7 +45,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
-   SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
+   SCIP_SIDETYPE*        sidetype,           /**< pointer to store which side of cons is SOC representable; only
                                                valid when success is TRUE */
    SCIP_Bool*            success,            /**< pointer to store whether SOC structure has been detected */
    SCIP_EXPR***          vars,               /**< expressions which (aux)variables appear on both sides (x) */
