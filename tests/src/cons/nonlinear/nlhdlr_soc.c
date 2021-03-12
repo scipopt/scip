@@ -1265,11 +1265,7 @@ Test(nlhdlrsoc, access, .description = "public detect for simple quadratic const
    cr_expect_eq(ntranscoefs, 3);
 
    /* free arrays with the SOC representation */
-   SCIPfreeBlockMemoryArray(scip, &termbegins, nterms + 1);
-   SCIPfreeBlockMemoryArray(scip, &transcoefsidx, ntranscoefs);
-   SCIPfreeBlockMemoryArray(scip, &transcoefs, ntranscoefs);
-   SCIPfreeBlockMemoryArray(scip, &offsets, nterms);
-   SCIPfreeBlockMemoryArray(scip, &vars, nvars);
+   SCIPfreeSOCArraysNonlinear(scip, &vars, &offsets, &transcoefs, &transcoefsidx, &termbegins, nvars, nterms);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );

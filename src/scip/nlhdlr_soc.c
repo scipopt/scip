@@ -2766,3 +2766,35 @@ SCIP_RETCODE SCIPisSOCNonlinear(
 
    return SCIP_OKAY;
 }
+
+/** frees arrays created by SCIPisSOCNonlinear() */
+void SCIPfreeSOCArraysNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< variables that appear on both sides (x) */
+   SCIP_Real**           offsets,            /**< offsets of both sides (beta_i) */
+   SCIP_Real**           transcoefs,         /**< non-zeros of linear transformation vectors (v_i) */
+   int**                 transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
+   int**                 termbegins,         /**< starting indices of transcoefs for each term */
+   int                   nvars,              /**< total number of variables appearing */
+   int                   nterms              /**< number of summands in the SQRT +1 for RHS (n+1) */
+   )
+{
+   int ntranscoefs;
+
+   if( nvars == 0 )
+      return;
+
+   assert(vars != NULL);
+   assert(offsets != NULL);
+   assert(transcoefs != NULL);
+   assert(transcoefsidx != NULL);
+   assert(termbegins != NULL);
+
+   ntranscoefs = (*termbegins)[nterms];
+
+   SCIPfreeBlockMemoryArray(scip, termbegins, nterms + 1);
+   SCIPfreeBlockMemoryArray(scip, transcoefsidx, ntranscoefs);
+   SCIPfreeBlockMemoryArray(scip, transcoefs, ntranscoefs);
+   SCIPfreeBlockMemoryArray(scip, offsets, nterms);
+   SCIPfreeBlockMemoryArray(scip, vars, nvars);
+}

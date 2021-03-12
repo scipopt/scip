@@ -58,6 +58,19 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    int*                  nterms              /**< number of summands in the SQRT +1 for RHS (n+1) */
    );
 
+/** frees arrays created by SCIPisSOCNonlinear() */
+SCIP_EXPORT
+void SCIPfreeSOCArraysNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< variables that appear on both sides (x) */
+   SCIP_Real**           offsets,            /**< offsets of both sides (beta_i) */
+   SCIP_Real**           transcoefs,         /**< non-zeros of linear transformation vectors (v_i) */
+   int**                 transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
+   int**                 termbegins,         /**< starting indices of transcoefs for each term */
+   int                   nvars,              /**< total number of variables appearing */
+   int                   nterms              /**< number of summands in the SQRT +1 for RHS (n+1) */
+   );
+
 #ifdef __cplusplus
 }
 #endif
