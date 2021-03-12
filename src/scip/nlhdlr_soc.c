@@ -2674,7 +2674,7 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    return SCIP_OKAY;
 }
 
-/** checks whether either the given constraint is SOC-representable
+/** checks whether either the given constraint is SOC-representable in original variables
  *
  * This function uses the methods that are used in the detection algorithm of the SOC nonlinear handler.
  */
@@ -2684,7 +2684,7 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP_SIDETYPE*        sidetype,           /**< pointer to store which side of cons is SOC representable; only
                                                valid when success is TRUE */
    SCIP_Bool*            success,            /**< pointer to store whether SOC structure has been detected */
-   SCIP_EXPR***          vars,               /**< expressions which (aux)variables appear on both sides (x) */
+   SCIP_VAR***           vars,               /**< variables that appear on both sides (x) */
    SCIP_Real**           offsets,            /**< offsets of both sides (beta_i) */
    SCIP_Real**           transcoefs,         /**< non-zeros of linear transformation vectors (v_i) */
    int**                 transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
@@ -2699,6 +2699,7 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP_Real consrhs;
    SCIP_EXPR* expr;
    SCIP_Bool enforcebelow;
+   int i;
 
    assert(cons != NULL);
 
@@ -2708,15 +2709,37 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    nlhdlrdata.mincutefficacy = 0.0;
    nlhdlrdata.compeigenvalues = TRUE;
 
-   conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsNonlinear(cons));
-   consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsNonlinear(cons));
+   conslhs = SCIPgetLhsConsNonlinear(cons);
+   consrhs = SCIPgetRhsConsNonlinear(cons);
 
    SCIP_CALL( detectSOC(scip, &nlhdlrdata, expr, conslhs, consrhs, &nlhdlrexprdata, &enforcebelow, success) );
 
-   if (*success)
+   /* the constraint must be SOC representable in original variables */
+   if( *success )
+   {
+      assert(nlhdlrexprdata != NULL);
+
+      for( i = 0; i < nlhdlrexprdata->nvars; ++i )
+      {
+         if( !SCIPisExprVar(scip, nlhdlrexprdata->vars[i]) )
+         {
+            *success = FALSE;
+            break;
+         }
+      }
+   }
+
+   if( *success )
    {
       *sidetype = enforcebelow ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
-      *vars = nlhdlrexprdata->vars;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, vars, nlhdlrexprdata->nvars) );
+
+      for( i = 0; i < nlhdlrexprdata->nvars; ++i )
+      {
+         (*vars)[i] = SCIPgetVarExprVar(nlhdlrexprdata->vars[i]);
+         assert((*vars)[i] != NULL);
+      }
+      SCIPfreeBlockMemoryArray(scip, &nlhdlrexprdata->vars, nlhdlrexprdata->nvars);
       *offsets = nlhdlrexprdata->offsets;
       *transcoefs = nlhdlrexprdata->transcoefs;
       *transcoefsidx = nlhdlrexprdata->transcoefsidx;
@@ -2727,6 +2750,10 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    }
    else
    {
+      if( nlhdlrexprdata != NULL )
+      {
+         SCIP_CALL( freeNlhdlrExprData(scip, &nlhdlrexprdata) );
+      }
       *vars = NULL;
       *offsets = NULL;
       *transcoefs = NULL;

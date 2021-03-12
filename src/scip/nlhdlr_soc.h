@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP_SIDETYPE*        sidetype,           /**< pointer to store which side of cons is SOC representable; only
                                                valid when success is TRUE */
    SCIP_Bool*            success,            /**< pointer to store whether SOC structure has been detected */
-   SCIP_EXPR***          vars,               /**< expressions which (aux)variables appear on both sides (x) */
+   SCIP_VAR***           vars,               /**< variables that appear on both sides (x) */
    SCIP_Real**           offsets,            /**< offsets of both sides (beta_i) */
    SCIP_Real**           transcoefs,         /**< non-zeros of linear transformation vectors (v_i) */
    int**                 transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
