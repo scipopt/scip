@@ -2718,6 +2718,16 @@ SCIP_RETCODE SCIPisConsSOC(
       *nterms = nlhdlrexprdata->nterms;
       SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
    }
+   else
+   {
+      *vars = NULL;
+      *offsets = NULL;
+      *transcoefs = NULL;
+      *transcoefsidx = NULL;
+      *termbegins = NULL;
+      *nvars = 0;
+      *nterms = 0;
+   }
 
    return SCIP_OKAY;
 }
