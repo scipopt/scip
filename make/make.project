@@ -132,6 +132,7 @@ READLINE	=	true
 ZLIB		=	true
 GMP		=	true
 ZIMPL		=	false
+AMPL		=	true
 IPOPT		=	false
 FILTERSQP	=	false
 WORHP		=	false
