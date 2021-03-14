@@ -394,7 +394,7 @@ SCIP_Real calcEfficacyDenseStorageQuad(
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
 
-/** safely remove all items with |a_i| or |u_i - l_i)| below the given value
+/** safely remove all items with |a_i| or |u_i - l_i| below the given value
  *
  *  Returns TRUE if the cut became redundant.
  *  If it is a local cut, use local bounds, otherwise, use global bounds.
@@ -487,7 +487,7 @@ SCIP_Bool removeZerosQuad(
    return FALSE;
 }
 
-/** safely remove all items with |a_i| or |u_i - l_i)| below the given value
+/** safely remove all items with |a_i| or |u_i - l_i| below the given value
  *
  *  Returns TRUE if the cut became redundant.
  *  If it is a local cut, use local bounds, otherwise, use global bounds.
@@ -8620,7 +8620,7 @@ SCIP_RETCODE cutsTransformStrongCG(
          continue;
       }
 
-      /* determine the best bounds for the integral variable, usevbd can be set to FALSE here as vbds are only used for continous variables */
+      /* determine the best bounds for the integral variable, usevbd can be set to 0 here as vbds are only used for continuous variables */
       SCIP_CALL( determineBestBounds(scip, vars[v], sol, boundswitch, 0, allowlocal, FALSE, FALSE, NULL, NULL,
             &bestlb, &bestub, &bestlbtype, &bestubtype, &selectedbound, freevariable) );
 
@@ -8658,21 +8658,21 @@ SCIP_RETCODE cutsTransformStrongCG(
       QUAD_ASSIGN(*cutrhs, 0.0);
 
   TERMINATE:
-   /*free temporary memory */
+   /* free temporary memory */
    SCIPfreeBufferArray(scip, &bestbds);
 
    return SCIP_OKAY;
 }
 
-/** Calculate fractionalities \f$ f_0 := b - down(b) \f$, \f$ f_j := a^\prime_j - down(a^\prime_j) \f$ and
- *   integer \f$ k >= 1 \f$ with \f$ 1/(k + 1) <= f_0 < 1/k \f$ and \f$ (=> k = up(1/f_0) + 1) \f$
- *   integer \f$ 1 <= p_j <= k \f$ with \f$ f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k)\f$ \f$ (=> p_j = up( k*(f_j - f_0)/(1 - f_0) )) \f$
- * and derive strong CG cut \f$ \tilde{a}*x^\prime <= down(b) \f$
+/** Calculate fractionalities \f$ f_0 := b - down(b) \f$, \f$ f_j := a^\prime_j - down(a^\prime_j) \f$,
+ *   integer \f$ k \geq 1 \f$ with \f$ 1/(k + 1) \leq f_0 < 1/k \f$  \f$ (\Rightarrow k = up(1/f_0) - 1) \f$ and
+ *   integer \f$ 1 \leq p_j \leq k \f$ with \f$ f_0 + ((p_j - 1) \cdot (1 - f_0)/k) < f_j \leq f_0 + (p_j (1 - f_0)/k)\f$ \f$ (\Rightarrow p_j = up( k\,(f_j - f_0)/(1 - f_0) )) \f$
+ * and derive strong CG cut \f$ \tilde{a} x^\prime \leq down(b) \f$
  * \f[
  * \begin{array}{rll}
- * integers : &  \tilde{a}_j = down(a^\prime_j)                &, if \qquad f_j <= f_0 \\
+ * integers : &  \tilde{a}_j = down(a^\prime_j)                &, if \qquad f_j \leq f_0 \\
  *            &  \tilde{a}_j = down(a^\prime_j) + p_j/(k + 1)  &, if \qquad f_j >  f_0 \\
- * continuous:&  \tilde{a}_j = 0                               &, if \qquad a^\prime_j >= 0 \\
+ * continuous:&  \tilde{a}_j = 0                               &, if \qquad a^\prime_j \geq 0 \\
  *            &  \mbox{no strong CG cut found}                 &, if \qquad a^\prime_j <  0
  * \end{array}
  * \f]
@@ -8709,7 +8709,7 @@ SCIP_RETCODE cutsTransformStrongCG(
  *     \tilde{a}_j * du_j == -\hat{a}_j * du_j &
  * \end{array}
  * \f]
- *  to the rhs, and update the VB variable coefficients:
+ * to the rhs, and update the VB variable coefficients:
  * \f[
  * \begin{array}{ll}
  *    \hat{a}_{zl_j} := \hat{a}_{zl_j} - \tilde{a}_j * bl_j == \hat{a}_{zl_j} - \hat{a}_j * bl_j,& \mbox{or} \\
@@ -8794,7 +8794,7 @@ SCIP_RETCODE cutsRoundStrongCG(
       SCIPquadprecSumQQ(fj, aj, -downaj);
 
       if( SCIPisLE(scip, QUAD_TO_DBL(fj), QUAD_TO_DBL(f0)) )
-         QUAD_ASSIGN_Q(cutaj, downaj); /* a^_j */
+         QUAD_ASSIGN_Q(cutaj, downaj); /* a_j */
       else
       {
          SCIP_Real pj;
@@ -8826,7 +8826,7 @@ SCIP_RETCODE cutsRoundStrongCG(
       /* integral var uses standard bound */
       assert(boundtype[i] < 0);
 
-      /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
+      /* move the constant term  -\tilde{a}_j * lb_j == -a_j * lb_j , or  \tilde{a}_j * ub_j == -a_j * ub_j  to the rhs */
       if( varsign[i] == +1 )
       {
          SCIP_Real QUAD(tmp);
@@ -9219,7 +9219,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
     * integers :  a~_j = down(a'_j)                , if f_j <= f_0
     *             a~_j = down(a'_j) + p_j/(k + 1)  , if f_j >  f_0
     * continuous: a~_j = 0                         , if a'_j >= 0
-    *             no strong CG cut found          , if a'_j <  0
+    *             no strong CG cut found           , if a'_j <  0
     *
     * Transform inequality back to a^*x <= rhs:
     *
