@@ -1714,8 +1714,7 @@ SCIP_RETCODE redLoopPc(
    int degnelims;
    int nadvruns = 0;
    SCIP_Bool isSpg = FALSE;
-   int todo;
-   const SCIP_Bool trySpgTrans = userec && 0; // todo extra parameter
+   const SCIP_Bool trySpgTrans = userec; // todo extra parameter
    const int reductbound_global = reductbound * STP_RED_GLBFACTOR;
 
    /* already finished? */
@@ -1957,7 +1956,6 @@ SCIP_RETCODE redLoopPc(
                isSpg = TRUE;
                break;
             }
-
          }
       }
    } // outter loop; todo refactor
@@ -1979,8 +1977,10 @@ SCIP_RETCODE redLoopPc(
 
    if( isSpg )
    {
-      printf("change to STP \n");
+#ifndef WITH_UG
+      printf("change problem to SPG \n");
       graph_printInfo(g);
+#endif
       SCIP_CALL( graph_transRpc2SpgTrivial(scip, g) );
    }
 
