@@ -442,7 +442,7 @@ SCIP_Bool removeZerosQuad(
       else
          isfixed = FALSE;
 
-      if( EPSZ(QUAD_TO_DBL(val), minval) || isfixed )
+      if( isfixed || EPSZ(QUAD_TO_DBL(val), minval) )
       {
          if( REALABS(QUAD_TO_DBL(val)) > QUAD_EPSILON )
          {
