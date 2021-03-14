@@ -8778,6 +8778,8 @@ SCIP_RETCODE cutsRoundStrongCG(
       SCIP_Real QUAD(downaj);
       SCIP_Real QUAD(cutaj);
       SCIP_Real QUAD(fj);
+      SCIP_Real QUAD(tmp);
+      SCIP_Real bound;
       int v;
 
       v = cutinds[i];
@@ -8832,40 +8834,24 @@ SCIP_RETCODE cutsRoundStrongCG(
       /* move the constant term  -\tilde{a}_j * lb_j == -a_j * lb_j , or  \tilde{a}_j * ub_j == -a_j * ub_j  to the rhs */
       if( varsign[i] == +1 )
       {
-         SCIP_Real QUAD(tmp);
-
          /* lower bound was used */
          if( boundtype[i] == -1 )
-         {
-            assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbGlobal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
-         }
+            bound = SCIPvarGetLbGlobal(var);
          else
-         {
-            assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbLocal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
-         }
+            bound = SCIPvarGetLbLocal(var);
+         assert(!SCIPisInfinity(scip, -bound));
       }
       else
       {
-         SCIP_Real QUAD(tmp);
-
          /* upper bound was used */
          if( boundtype[i] == -1 )
-         {
-            assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbGlobal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
-         }
+            bound = SCIPvarGetUbGlobal(var);
          else
-         {
-            assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbLocal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
-         }
+            bound = SCIPvarGetUbLocal(var);
+         assert(!SCIPisInfinity(scip, bound));
       }
+      SCIPquadprecProdQD(tmp, cutaj, bound);
+      SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
    }
 
    /* now process the continuous variables; postpone deletion of zeros until all continuous variables have been processed */
