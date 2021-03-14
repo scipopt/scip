@@ -8914,20 +8914,20 @@ SCIP_RETCODE cutsRoundStrongCG(
 
 /** substitute aggregated slack variables:
  *
- *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
- *  variable only appears in its own row: \f$ a^\prime_r = scale * weight[r] * slacksign[r] \f$.
+ *  The coefficient of the slack variable \f$s_r\f$ is equal to the row's weight times the slack's sign, because the slack
+ *  variable only appears in its own row: \f$ a^\prime_r = scale \cdot weight[r] \cdot slacksign[r] \f$.
  *
- *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
+ *  Depending on the slack's type (integral or continuous), its coefficient in the cut calculates as follows:
  *  \f[
  *  \begin{array}{rll}
- *    integers:  & \hat{a}_r = \tilde{a}_r = down(a^\prime_r)                  &, if \qquad f_r \leq f_0 \\
- *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + p_r/(k + 1)    &, if \qquad f_r >  f_0 \\
- *    continuous:& \hat{a}_r = \tilde{a}_r = 0                                 &, if \qquad a^\prime_r \geq 0 \\
- *               & \mbox{no strong CG cut found}                               &, if \qquad a^\prime_r <  0
+ *    integers:  & \hat{a}_r = \tilde{a}_r = down(a^\prime_r),                  & if \qquad f_r \leq f_0 \\
+ *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + p_r/(k + 1),    & if \qquad f_r >  f_0 \\
+ *    continuous:& \hat{a}_r = \tilde{a}_r = 0,                                 & if \qquad a^\prime_r \geq 0 \\
+ *               & \mbox{no strong CG cut found},                               & if \qquad a^\prime_r <  0
  *  \end{array}
  *  \f]
  *
- *  Substitute \f$ \hat{a}_r * s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
+ *  Substitute \f$ \hat{a}_r \cdot s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
  */
 static
 SCIP_RETCODE cutsSubstituteStrongCG(
@@ -9257,12 +9257,12 @@ SCIP_RETCODE SCIPcalcStrongCG(
     *    a'_r = scale * weight[r] * slacksign[r].
     *
     * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
-    *   integers :  a^_r = a~_r = (k + 1) * down(a'_r)        , if f_r <= f0
-    *               a^_r = a~_r = (k + 1) * down(a'_r) + p_r  , if f_r >  f0
-    *   continuous: a^_r = a~_r = 0                           , if a'_r >= 0
-    *               a^_r = a~_r = a'_r/(1 - f0)               , if a'_r <  0
+    *   integers :  a_r = a~_r = (k + 1) * down(a'_r)        , if f_r <= f0
+    *               a_r = a~_r = (k + 1) * down(a'_r) + p_r  , if f_r >  f0
+    *   continuous: a_r = a~_r = 0                           , if a'_r >= 0
+    *               a_r = a~_r = a'_r/(1 - f0)               , if a'_r <  0
     *
-    * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
+    * Substitute a_r * s_r by adding a_r times the slack's definition to the cut.
     */
    SCIP_CALL( cutsSubstituteStrongCG(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
                           aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0), k) );
