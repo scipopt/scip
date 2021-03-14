@@ -18,6 +18,7 @@
  * @brief  methods for aggregation of rows
  * @author Jakob Witzig
  * @author Leona Gottwald
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -207,7 +208,7 @@ SCIP_Real calcEfficacy(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real norm;
+   SCIP_Real norm = 0.0;
    SCIP_Real activity = 0.0;
    int i;
 
@@ -217,10 +218,45 @@ SCIP_Real calcEfficacy(
 
    vars = SCIPgetVars(scip);
 
-   for( i = 0; i < cutnnz; ++i )
-      activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+   switch( scip->set->sepa_efficacynorm )
+   {
+   case 'e':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         norm += SQR(cutcoefs[i]);
+      }
+      norm = SQRT(norm);
+      break;
+   case 'm':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         SCIP_Real absval;
 
-   norm = SCIPgetVectorEfficacyNorm(scip, cutcoefs, cutnnz);
+         activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         absval = REALABS(cutcoefs[i]);
+         norm = MAX(norm, absval);
+      }
+      break;
+   case 's':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         norm += REALABS(cutcoefs[i]);
+      }
+      break;
+   case 'd':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         if( !SCIPisZero(scip, cutcoefs[i]) )
+            norm = 1.0;
+      }
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", scip->set->sepa_efficacynorm);
+      assert(FALSE); /*lint !e506*/
+   }
 
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
@@ -299,7 +335,7 @@ SCIP_Real calcEfficacyDenseStorageQuad(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real norm;
+   SCIP_Real norm = 0.0;
    SCIP_Real activity = 0.0;
    SCIP_Real QUAD(coef);
    int i;
@@ -311,13 +347,49 @@ SCIP_Real calcEfficacyDenseStorageQuad(
 
    vars = SCIPgetVars(scip);
 
-   for( i = 0; i < cutnnz; ++i )
+   switch( scip->set->sepa_efficacynorm )
    {
-      QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-      activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
-   }
+   case 'e':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
+         activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         norm += SQR(QUAD_TO_DBL(coef));
+      }
+      norm = SQRT(norm);
+      break;
+   case 'm':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         SCIP_Real absval;
 
-   norm = calcEfficacyNormQuad(scip, cutcoefs, cutinds, cutnnz);
+         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
+         activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         absval = REALABS(QUAD_TO_DBL(coef));
+         norm = MAX(norm, absval);
+      }
+      break;
+   case 's':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
+         activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         norm += REALABS(QUAD_TO_DBL(coef));
+      }
+      break;
+   case 'd':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
+         activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         if( !SCIPisZero(scip, QUAD_TO_DBL(coef)) )
+            norm = 1.0;
+      }
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c.'\n", scip->set->sepa_efficacynorm);
+      assert(FALSE); /*lint !e506*/
+   }
 
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
