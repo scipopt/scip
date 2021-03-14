@@ -9197,7 +9197,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    /* Calculate
     *  - fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j)
     *  - integer k >= 1 with 1/(k + 1) <= f_0 < 1/k
-    *    (=> k = up(1/f_0) + 1)
+    *    (=> k = up(1/f_0) - 1)
     *  - integer 1 <= p_j <= k with f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k)
     *    (=> p_j = up( (f_j - f_0)/((1 - f_0)/k) ))
     * and derive strong CG cut
