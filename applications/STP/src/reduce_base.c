@@ -177,7 +177,6 @@ SCIP_RETCODE execNvSl(
    SCIP_Real*            nodearrreal,
    SCIP_Real*            fixed,
    int*                  edgearrint,
-   int*                  state,
    int*                  vbase,
    int*                  neighb,
    int*                  distnode,
@@ -194,7 +193,6 @@ SCIP_RETCODE execNvSl(
    int totalelims;
 
    assert(g != NULL);
-   assert(state != NULL);
    assert(vbase != NULL);
    assert(vnoi != NULL);
    assert(nodearrreal != NULL);
@@ -216,7 +214,7 @@ SCIP_RETCODE execNvSl(
       SCIPdebugMessage("NV-reduction (in NVSL): %d \n", nvelims);
 
       /* SL-reduction */
-      SCIP_CALL( reduce_sl(scip, edgestate, g, vnoi, fixed, state, vbase, neighb, visited, solnode, &slelims) );
+      SCIP_CALL( reduce_sl(scip, edgestate, g, vnoi, fixed, vbase, neighb, visited, solnode, &slelims) );
       elims += slelims;
 
       SCIPdebugMessage("SL-reduction (in NVSL): %d \n", slelims);
@@ -348,7 +346,6 @@ SCIP_RETCODE execPc_NVSL(
    SCIP_Real*            nodearrreal,
    SCIP_Real*            fixed,
    int*                  edgearrint,
-   int*                  state,
    int*                  vbase,
    int*                  neighb,
    int*                  distnode,
@@ -360,7 +357,7 @@ SCIP_RETCODE execPc_NVSL(
    SCIP_Bool*            rerun               /**< use again? */
 )
 {
-   SCIP_CALL( execNvSl(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, state, vbase, neighb,
+   SCIP_CALL( execNvSl(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, vbase, neighb,
          distnode, solnode, visited, nelims, redbound) );
 
    if( verbose )
@@ -591,7 +588,7 @@ SCIP_RETCODE redLoopInnerStp(
       {
          SCIP_CALL( execNvSl(scip, NULL, g, redbase->vnoi,
                redbase->nodearrreal, redbaseGetOffsetPointer(redbase), redbase->edgearrint,
-               redbase->state, redbase->vbase, redbase->nodearrint, NULL,
+               redbase->vbase, redbase->nodearrint, NULL,
                redbaseGetSolnode(redsollocal, redbase),
                redbase->nodearrchar, &nvslnelims, reductbound));
 
@@ -1842,7 +1839,7 @@ SCIP_RETCODE redLoopPc(
 
          if( nvsl || extensive )
          {
-            SCIP_CALL( execPc_NVSL(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, state, vbase,
+            SCIP_CALL( execPc_NVSL(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, vbase,
                   nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound, verbose, &nvsl) );
          }
 

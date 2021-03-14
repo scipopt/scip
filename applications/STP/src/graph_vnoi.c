@@ -432,6 +432,87 @@ void graph_voronoi(
 
 
 
+
+/** build a voronoi region, w.r.t. shortest paths, for all terminal
+ * NOTE: uses bias for PC! */
+void graph_voronoiTerms(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Bool*      nodes_isTerm,
+   int* RESTRICT         vbase,              /**< array containing Voronoi base to each node */
+   PATH* RESTRICT        path                /**< array containing Voronoi paths data */
+   )
+{
+   int* RESTRICT heap;
+   int* RESTRICT state;
+   int heapsize;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(nodes_isTerm && vbase && path);
+
+   heap = g->path_heap;
+   state = g->path_state;
+   assert(heap && state);
+
+   heapsize = 0;
+
+   /* initialize */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      /* set the base of vertex i */
+      if( nodes_isTerm[i] && g->mark[i] )
+      {
+         if( nnodes > 1 )
+            heap[++heapsize] = i;
+         vbase[i] = i;
+         state[i] = heapsize;
+         path[i].dist = 0.0;
+      }
+      else
+      {
+         vbase[i] = UNKNOWN;
+         state[i] = UNKNOWN;
+         path[i].dist = FARAWAY;
+      }
+      path[i].edge = UNKNOWN;
+   }
+
+   if( nnodes > 1 )
+   {
+      const SCIP_Bool isPc = graph_pc_isPc(g);
+
+      /* until the heap is empty */
+      while( heapsize > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex of the heap */
+         const int k = nearest(heap, state, &heapsize, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+
+         /* iterate over all outgoing edges of vertex k */
+         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            SCIP_Real costbiased;
+            const int m = g->head[e];
+
+            costbiased = g->cost[e];
+
+            if( isPc && !nodes_isTerm[k] )
+               costbiased -= g->prize[k];
+
+            assert(GE(costbiased, 0.0) && LE(costbiased, g->cost[e]));
+
+            if( state[m] && g->mark[m] && GT(path[m].dist, path[k].dist + costbiased) )
+            {
+               correct(heap, state, &heapsize, path, m, k, e, costbiased);
+               vbase[m] = vbase[k];
+            }
+         }
+      }
+   }
+}
+
+
 /** build a Voronoi region, w.r.t. shortest paths, for all positive vertices */
 void graph_voronoiMw(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -531,9 +612,8 @@ SCIP_RETCODE graph_voronoiWithDist(
    int* RESTRICT state;
    int count;
    int nbases;
-   int nnodes;
+   const int nnodes = graph_get_nNodes(g);
 
-   assert(g        != NULL);
    assert(path     != NULL);
    assert(cost     != NULL);
    assert(distance != NULL);
@@ -546,7 +626,6 @@ SCIP_RETCODE graph_voronoiWithDist(
 
    count = 0;
    nbases = 0;
-   nnodes = g->knots;
 
    if( distnode != NULL )
    {

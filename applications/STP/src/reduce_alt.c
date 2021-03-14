@@ -621,8 +621,7 @@ SCIP_RETCODE reduce_sl(
    const int*            edgestate,          /**< for propagation or NULL */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
-   double*               fixed,              /**< offset pointer */
-   int*                  state,              /**< shortest path array */
+   SCIP_Real*            fixed,              /**< offset pointer */
    int*                  vbase,              /**< Voronoi/shortest path bases array */
    int*                  vrnodes,            /**< Voronoi/shortest path array  */
    STP_Bool*             visited,            /**< Voronoi/shortest path array */
@@ -631,17 +630,15 @@ SCIP_RETCODE reduce_sl(
    int*                  nelims              /**< pointer to store number of eliminations */
    )
 {
-   SCIP_QUEUE* queue;
-   SCIP_Real cost;
-   const int nnodes = g->knots;
+   STP_Vectype(int) queue = NULL;
+   SCIP_Bool* nodes_isTerm;
    STP_Bool foundterms;
    STP_Bool* forbidden;
    STP_Bool* newterm;
-   const SCIP_Bool pc = (g->stp_type == STP_PCSPG) || (g->stp_type == STP_RPCSPG);
+   const SCIP_Bool isPc = graph_pc_isPc(g);
+   const int nnodes = g->knots;
 
-   assert(g != NULL);
    assert(vnoi != NULL);
-   assert(state != NULL);
    assert(vbase != NULL);
    assert(vrnodes != NULL);
    assert(visited != NULL);
@@ -652,86 +649,88 @@ SCIP_RETCODE reduce_sl(
    if( g->terms <= 1 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &forbidden, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &newterm, nnodes) );
+   if( g->terms <= 2 && graph_pc_isUnrootedPcMw(g) )
+      return SCIP_OKAY;
 
-   if( !pc )
-      for( int i = 0; i < nnodes; i++ )
-         g->mark[i] = (g->grad[i] > 0);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &forbidden, nnodes) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &newterm, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_isTerm, nnodes) );
 
-   graph_add1stTermPaths(g, g->cost, vnoi, vbase, state);
+   BMSclearMemoryArray(visited, nnodes);
+   graph_mark(g);
+   graph_getIsTermArray(g, nodes_isTerm);
+   graph_voronoiTerms(g, nodes_isTerm, vbase, vnoi);
 
-   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
+#ifndef NDEBUG
    for( int i = 0; i < nnodes; i++ )
    {
-      newterm[i] = FALSE;
-      forbidden[i] = FALSE;
-      visited[i] = FALSE;
+      assert(!newterm[i]);
+      assert(!forbidden[i]);
+      assert(!visited[i]);
    }
+#endif
 
-   for( int i = 0; i < nnodes; i++ )
+   for( int baseterm = 0; baseterm < nnodes; baseterm++ )
    {
-      /* is i terminal and not disabled? */
-      if( Is_term(g->term[i]) && g->mark[i] && !forbidden[i] )
+      if( nodes_isTerm[baseterm] && g->mark[baseterm] && !forbidden[baseterm] )
       {
-         /* traverse voronoi-region of (terminal) i */
-
          SCIP_Real mincost2 = FARAWAY;
          SCIP_Real mincost3 = FARAWAY;
-         int t = i;
-         int tail;
-         int head;
+         SCIP_Real ttdist;
+         int mintail;
+         int minhead;
          int minedge = UNKNOWN;
          int vrcount = 1;
 
-         assert(SCIPqueueIsEmpty(queue));
+         assert(StpVecGetSize(queue) == 0);
 
-         SCIP_CALL( SCIPqueueInsert(queue, &t) );
-         vrnodes[0] = i;
-         visited[i] = TRUE;
+         StpVecPushBack(scip, queue, baseterm);
+         vrnodes[0] = baseterm;
+         visited[baseterm] = TRUE;
 
-         while( !SCIPqueueIsEmpty(queue) )
+         /* traverse Voronoi-region of "baseterm" */
+         while( StpVecGetSize(queue) != 0 )
          {
-            const int qnode = *(int*) (SCIPqueueRemove(queue));
+            const int qnode = queue[StpVecGetSize(queue) - 1];
+            StpVecPopBack(queue);
 
-            /* traverse all adjacent edges */
             for( int e = g->outbeg[qnode]; e != EAT_LAST; e = g->oeat[e] )
             {
-               int base;
-               head = g->head[e];
+               int headbase;
+               minhead = g->head[e];
 
-               if( !g->mark[head] )
+               if( !g->mark[minhead] )
                   continue;
 
-               base = vbase[head];
-               assert(base != UNKNOWN);
+               headbase = vbase[minhead];
+               assert(headbase != UNKNOWN);
 
-               if( !visited[head] && base == i )
+               if( !visited[minhead] && headbase == baseterm )
                {
-                  visited[head] = TRUE;
-                  vrnodes[vrcount++] = head;
-                  SCIP_CALL( SCIPqueueInsert(queue, &(g->head[e])) );
+                  visited[minhead] = TRUE;
+                  vrnodes[vrcount++] = minhead;
+                  StpVecPushBack(scip, queue, minhead);
                }
-               else if( base != i )
+               else if( headbase != baseterm )
                /* update shortest and second shortest edge (cost) leaving the voronoi region */
                {
-                  cost = g->cost[e];
+                  const SCIP_Real edgecost = g->cost[e];
                   if( minedge == UNKNOWN )
                   {
                      minedge = e;
                   }
-                  else if( SCIPisLE(scip, cost, g->cost[minedge]) )
+                  else if( LE(edgecost, g->cost[minedge]) )
                   {
                      mincost3 = mincost2;
                      mincost2 = g->cost[minedge];
                      minedge = e;
                   }
-                  else if( SCIPisLE(scip, cost, mincost2) )
+                  else if( LE(edgecost, mincost2) )
                   {
                      mincost3 = mincost2;
                      mincost2 = g->cost[e];
                   }
-                  else if( SCIPisLT(scip, cost, mincost3) )
+                  else if( LT(edgecost, mincost3) )
                   {
                      mincost3 = g->cost[e];
                   }
@@ -749,85 +748,113 @@ SCIP_RETCODE reduce_sl(
          if( minedge == UNKNOWN )
             continue;
 
-         tail = g->tail[minedge];
-         head = g->head[minedge];
-         assert(vbase[tail] == i);
+         mintail = g->tail[minedge];
+         minhead = g->head[minedge];
+         assert(vbase[mintail] == baseterm);
 
-         cost = vnoi[tail].dist + g->cost[minedge] + vnoi[head].dist;
+         ttdist = vnoi[mintail].dist + g->cost[minedge] + vnoi[minhead].dist;
+
+         if( isPc )
+         {
+            if( !nodes_isTerm[mintail] )
+               ttdist -= g->prize[mintail];
+
+            if( !nodes_isTerm[minhead] )
+               ttdist -= g->prize[minhead];
+
+            assert(GE(ttdist, 0.0) && LE(ttdist, vnoi[mintail].dist + g->cost[minedge] + vnoi[minhead].dist));
+         }
 
          /* check whether minedge can be removed */
-         if( SCIPisGE(scip, mincost2, cost) && (edgestate == NULL || edgestate[minedge] != EDGE_BLOCKED) )
+         if( SCIPisGE(scip, mincost2, ttdist) && (edgestate == NULL || edgestate[minedge] != EDGE_BLOCKED) )
          {
-            int j;
-            int k;
+            int contractnode_in;
+            int contractnode_out;
             int old;
 
-            if( pc )
+            if( isPc )
             {
-               assert(g->stp_type != STP_RPCSPG || g->prize[g->source] == FARAWAY);
+               assert(g->stp_type != STP_RPCSPG || EQ(g->prize[g->source], FARAWAY));
 
-               if( !SCIPisLE(scip, g->cost[minedge] + vnoi[tail].dist + vnoi[head].dist, g->prize[vbase[head]]) )
+               if( !SCIPisLE(scip, ttdist, g->prize[vbase[minhead]]) )
                   continue;
 
-               if( i == tail )
+               if( !SCIPisLE(scip, ttdist, g->prize[baseterm]) )
+                   continue;
+               // todo check and remove
+#ifdef SCIP_DISBALED
+               if( baseterm == mintail || 1 )
                {
-                  if( !SCIPisLE(scip, vnoi[tail].dist + g->cost[minedge], g->prize[i]) )
+                  if( !SCIPisLE(scip, ttdist, g->prize[baseterm]) )
                      continue;
                }
                else
                {
-                  if( !SCIPisLT(scip, vnoi[tail].dist + g->cost[minedge], g->prize[i]) )
+                  if( !SCIPisLT(scip, ttdist, g->prize[baseterm]) )
                      continue;
                }
-               if( Is_term(g->term[head]) && Is_term(g->term[tail]) )
+#endif
+
+               if( nodes_isTerm[minhead] && nodes_isTerm[mintail] )
                   continue;
             }
 
+            assert(g->mark[mintail] && g->mark[minhead]);
+            assert(!Is_pseudoTerm(g->term[mintail]) && !Is_pseudoTerm(g->term[minhead]));
+
+            if( nodes_isTerm[minhead] || (isPc && graph_pc_knotIsNonLeafTerm(g, mintail) ) )
+            {
+               contractnode_in = minhead;
+               contractnode_out = mintail;
+            }
+            else
+            {
+               contractnode_in = mintail;
+               contractnode_out = minhead;
+            }
+
+            // NOTE: currently not supported for contraction operation
+            // todo
+            if( isPc && graph_pc_knotIsNonLeafTerm(g, contractnode_in) )
+               continue;
+
             *fixed += g->cost[minedge];
-            assert(g->mark[tail] && g->mark[head]);
-            assert(!Is_pseudoTerm(g->term[tail]) && !Is_pseudoTerm(g->term[head]));
+            old = g->grad[contractnode_in] + g->grad[contractnode_out] - 1;
 
-            if( Is_term(g->term[head]) )
-            {
-               j = head;
-               k = tail;
-            }
-            else
-            {
-               j = tail;
-               k = head;
-            }
+            // todo
+#ifdef SCIP_DEBUG
+            printf("SL contract edge: \n");
+            graph_edge_printInfo(g, minedge);
+#endif
 
-            old = g->grad[j] + g->grad[k] - 1;
-
-            if( pc )
+            if( isPc )
             {
-               SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, j, k, i) );
-               assert(g->grad[j] > 0);
-               if( graph_pc_knotIsFixedTerm(g, i) && !Is_term(g->term[j]) )
+               SCIP_CALL( graph_pc_contractEdge(scip, g, solnode, contractnode_in, contractnode_out, baseterm) );
+               assert(g->grad[contractnode_in] > 0);
+               if( graph_pc_knotIsFixedTerm(g, baseterm) && !nodes_isTerm[contractnode_in] )
                {
-                  assert(!Is_anyTerm(g->term[j]));
-                  newterm[j] = TRUE;
+                  assert(!Is_anyTerm(g->term[contractnode_in]));
+                  newterm[contractnode_in] = TRUE;
                   foundterms = TRUE;
                }
             }
             else
             {
-               SCIP_CALL( graph_knot_contractFixed(scip, g, solnode, minedge, j, k) );
+               SCIP_CALL( graph_knot_contractFixed(scip, g, solnode, minedge, contractnode_in, contractnode_out) );
 
-               assert(g->grad[k] == 0 && g->grad[j] >= 0);
+               assert(g->grad[contractnode_out] == 0 && g->grad[contractnode_in] >= 0);
 
-               if( !Is_term(g->term[j]) )
+               if( !nodes_isTerm[contractnode_in] )
                {
-                  newterm[j] = TRUE;
+                  newterm[contractnode_in] = TRUE;
                   foundterms = TRUE;
                }
             }
 
-            assert(old - g->grad[j] - g->grad[k] > 0);
-            (*nelims) += old - g->grad[j] - g->grad[k];
-            forbidden[vbase[j]] = TRUE;
-            forbidden[vbase[k]] = TRUE;
+            assert(old - g->grad[contractnode_in] - g->grad[contractnode_out] > 0);
+            (*nelims) += old - g->grad[contractnode_in] - g->grad[contractnode_out];
+            forbidden[vbase[contractnode_in]] = TRUE;
+            forbidden[vbase[contractnode_out]] = TRUE;
          }
       }
    }
@@ -835,22 +862,24 @@ SCIP_RETCODE reduce_sl(
    if( foundterms )
    {
       for( int i = 0; i < nnodes; i++ )
-         if( newterm[i] && !Is_term(g->term[i]) && g->grad[i] > 0 )
+      {
+         if( newterm[i] && g->grad[i] > 0 )
          {
-            if( pc )
+            if( isPc )
             {
-               assert(SCIPisZero(scip, g->prize[i]) && !Is_anyTerm(g->term[i]));
-               graph_pc_knotToFixedTerm(scip, g, i, NULL);
+               if( !graph_pc_knotIsFixedTerm(g, i) )
+                  graph_pc_knotToFixedTerm(scip, g, i, NULL);
             }
-            else
+            else if( !nodes_isTerm[i] )
             {
                graph_knot_chg(g, i, STP_TERM);
             }
          }
+      }
    }
 
-   /* free memory */
-   SCIPqueueFree(&queue);
+   StpVecFree(scip, queue);
+   SCIPfreeBufferArray(scip, &nodes_isTerm);
    SCIPfreeBufferArray(scip, &newterm);
    SCIPfreeBufferArray(scip, &forbidden);
 
@@ -863,7 +892,7 @@ SCIP_RETCODE reduce_nv(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
-   double*               fixed,              /**< offset pointer */
+   SCIP_Real*            fixed,              /**< offset pointer */
    int*                  edgearrint,         /**< edge int array for internal computations */
    int*                  vbase,              /**< array for internal computations */
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
@@ -1054,7 +1083,7 @@ SCIP_RETCODE reduce_nvAdv(
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
    SCIP_Real*            distance,           /**< nodes-sized distance array */
-   double*               fixed,              /**< offset pointer */
+   SCIP_Real*            fixed,              /**< offset pointer */
    int*                  edgearrint,         /**< edges-sized array */
    int*                  vbase,              /**< Voronoi base array  */
    int*                  distnode,           /**< nodes-sized distance array  */
@@ -1286,8 +1315,6 @@ SCIP_RETCODE reduce_nvAdv(
       {
          (*nelims)++;
          SCIPdebugMessage("nvAdv contract \n");
-
-       //  graph_edge_printInfo(g, edge1);
 
          *fixed += g->cost[edge1];
 
