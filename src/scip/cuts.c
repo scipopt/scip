@@ -9265,7 +9265,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
     * Substitute a_r * s_r by adding a_r times the slack's definition to the cut.
     */
    SCIP_CALL( cutsSubstituteStrongCG(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
-                          aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0), k) );
+         aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0), k) );
    SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
 
    /* remove all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
