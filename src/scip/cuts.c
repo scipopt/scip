@@ -1689,6 +1689,7 @@ void SCIPaggrRowFree(
    )
 {
    int nvars;
+
    assert(scip != NULL);
    assert(aggrrow != NULL);
 
@@ -8568,7 +8569,7 @@ SCIP_RETCODE cutsTransformStrongCG(
          SCIP_Real simplebound;
 
          /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
-         SCIP_CALL( findBestUb(scip, vars[cutinds[i]], sol, usevbds ? 2 : 0, allowlocal, bestbds + i, &simplebound, boundtype + i) );
+         SCIP_CALL( findBestUb(scip, vars[v], sol, usevbds ? 2 : 0, allowlocal, bestbds + i, &simplebound, boundtype + i) );
 
           /* cannot create transformation for strongcg cut */
          if( SCIPisInfinity(scip, bestbds[i]) )
