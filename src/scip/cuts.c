@@ -9132,10 +9132,9 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    *success = FALSE;
 
-   /* check if a negative continuous slack variable is present in the aggregation
-    * since then no strongcg cut can be generated
-    */
-   for( i = 0; i != aggrrow->nrows; ++i )
+   /* check whether a negative continuous slack variable in a non-integral row is present in the aggregation, since then
+    * no strongcg cut can be generated */
+   for( i = 0; i < aggrrow->nrows; ++i )
    {
       if( aggrrow->rowweights[i] * aggrrow->slacksign[i] < 0.0 && !scip->lp->rows[aggrrow->rowsinds[i]]->integral )
          return SCIP_OKAY;
