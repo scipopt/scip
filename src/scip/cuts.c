@@ -8861,27 +8861,24 @@ SCIP_RETCODE cutsRoundStrongCG(
    /* in a strong CG cut, cut coefficients of continuous variables are always zero; check this in debug mode */
    for( i = 0; i < aggrrowintstart; ++i )
    {
+      SCIP_Real QUAD(aj);
+      SCIP_VAR* var;
       int v;
 
       v = cutinds[i];
       assert(firstcontvar <= v && v < SCIPgetNVars(scip));
 
-      {
-         SCIP_VAR* var;
-         SCIP_Real QUAD(aj);
+      var = vars[v];
+      assert(var != NULL);
+      assert(!SCIPvarIsIntegral(var));
+      assert(SCIPvarGetProbindex(var) == v);
+      assert(varsign[i] == +1 || varsign[i] == -1);
 
-         var = vars[v];
-         assert(var != NULL);
-         assert(!SCIPvarIsIntegral(var));
-         assert(SCIPvarGetProbindex(var) == v);
-         assert(varsign[i] == +1 || varsign[i] == -1);
+      /* calculate the coefficient in the retransformed cut */
+      QUAD_ARRAY_LOAD(aj, cutcoefs, v);
+      QUAD_SCALE(aj, varsign[i]);
 
-         /* calculate the coefficient in the retransformed cut */
-         QUAD_ARRAY_LOAD(aj, cutcoefs, v);
-         QUAD_SCALE(aj, varsign[i]);
-
-         assert(QUAD_TO_DBL(aj) >= 0.0);
-      }
+      assert(QUAD_TO_DBL(aj) >= 0.0);
    }
 #endif
 
