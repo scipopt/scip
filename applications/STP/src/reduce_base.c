@@ -210,7 +210,7 @@ SCIP_RETCODE execNvSl(
       degelims = 0;
 
       /* NV-reduction */
-      SCIP_CALL( reduce_nvAdv(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, vbase, neighb, distnode, solnode, &nvelims) );
+      SCIP_CALL( reduce_nvAdv(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, vbase, distnode, solnode, &nvelims) );
       elims += nvelims;
 
       SCIPdebugMessage("NV-reduction (in NVSL): %d \n", nvelims);
@@ -614,6 +614,24 @@ SCIP_RETCODE redLoopInnerStp(
             break;
       }
 
+      if( (inner_rounds > 0) && bred && nodereplacing )
+      {
+         SCIP_Real ub;
+         reduce_sollocalSetOffset(*redbaseGetOffsetPointer(redbase), redsollocal);
+         ub = reduce_sollocalGetUpperBound(redsollocal);
+         SCIP_CALL(reduce_bound(scip, g,
+               redbase->vnoi, redbase->nodearrreal, redbaseGetOffsetPointer(redbase), &ub,
+               redbase->heap, redbase->state, redbase->vbase, &brednelims));
+
+         if( brednelims <= reductbound )
+            bred = FALSE;
+
+         reduceStatsPrint(fullreduce, "bnd", brednelims);
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
       if( da )
       {
          const RPDA paramsda = {
@@ -632,25 +650,6 @@ SCIP_RETCODE redLoopInnerStp(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
-
-      if( bred && nodereplacing )
-      {
-         SCIP_Real ub;
-         reduce_sollocalSetOffset(*redbaseGetOffsetPointer(redbase), redsollocal);
-         ub = reduce_sollocalGetUpperBound(redsollocal);
-         SCIP_CALL(reduce_bound(scip, g,
-               redbase->vnoi, redbase->nodearrreal, redbaseGetOffsetPointer(redbase), &ub,
-               redbase->heap, redbase->state, redbase->vbase, &brednelims));
-
-         if( brednelims <= reductbound )
-            bred = FALSE;
-
-         reduceStatsPrint(fullreduce, "bnd", brednelims);
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
 
       SCIP_CALL(reduce_unconnected(scip, g));
       SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &degtnelims, NULL));

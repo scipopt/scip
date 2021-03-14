@@ -757,7 +757,7 @@ SCIP_Bool bidecomposition_isPossible(
          nnodes_real++;
    }
 
-   return (nnodes_real < 100000);
+   return (nnodes_real < 150000);
 }
 
 
