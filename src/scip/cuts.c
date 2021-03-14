@@ -8918,14 +8918,14 @@ SCIP_RETCODE cutsRoundStrongCG(
  *  variable only appears in its own row: \f$ a^\prime_r = scale * weight[r] * slacksign[r] \f$.
  *
  *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
- * \f[
- * \begin{array}{rll}
- *    integers:  & \hat{a}_r = \tilde{a}_r = down(a^\prime_r)                  &, if \qquad f_r <= f0 \\
- *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + p_r/(k + 1)    &, if \qquad f_r >  f0 \\
- *    continuous:& \hat{a}_r = \tilde{a}_r = 0                                 &, if \qquad a^\prime_r >= 0 \\
+ *  \f[
+ *  \begin{array}{rll}
+ *    integers:  & \hat{a}_r = \tilde{a}_r = down(a^\prime_r)                  &, if \qquad f_r \leq f_0 \\
+ *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + p_r/(k + 1)    &, if \qquad f_r >  f_0 \\
+ *    continuous:& \hat{a}_r = \tilde{a}_r = 0                                 &, if \qquad a^\prime_r \geq 0 \\
  *               & \mbox{no strong CG cut found}                               &, if \qquad a^\prime_r <  0
- * \end{array}
- * \f]
+ *  \end{array}
+ *  \f]
  *
  *  Substitute \f$ \hat{a}_r * s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
  */
@@ -8989,7 +8989,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       /* get the slack's coefficient a'_r in the aggregated row */
       SCIPquadprecProdDD(ar, slacksign[i] * scale, weights[i]);
 
-      /* calculate slack variable's coefficient a^_r in the cut */
+      /* calculate slack variable's coefficient a_r in the cut */
       if( row->integral )
       {
          /* slack variable is always integral: */
@@ -9023,11 +9023,11 @@ SCIP_RETCODE cutsSubstituteStrongCG(
 
       /* depending on the slack's sign, we have
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
-       * substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
+       * substitute a_r * s_r by adding a_r times the slack's definition to the cut.
        */
       mul = -slacksign[i] * QUAD_TO_DBL(cutar);
 
-      /* add the slack's definition multiplied with a^_j to the cut */
+      /* add the slack's definition multiplied with a_j to the cut */
       SCIP_CALL( varVecAddScaledRowCoefsQuad(cutinds, cutcoefs, nnz, row, mul) );
 
       /* move slack's constant to the right hand side */
@@ -9035,7 +9035,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       {
          SCIP_Real rhs;
 
-         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
+         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, row->rhs));
          rhs = row->rhs - row->constant;
          if( row->integral )
@@ -9051,7 +9051,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       {
          SCIP_Real lhs;
 
-         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
+         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -row->lhs));
          lhs = row->lhs - row->constant;
          if( row->integral )
