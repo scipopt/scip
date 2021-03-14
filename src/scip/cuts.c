@@ -8883,19 +8883,21 @@ SCIP_RETCODE cutsRoundStrongCG(
    }
 #endif
 
-   /* move integer variables to the empty position of the continuous variables */
+   /* set continuous variable coefficients to 0 */
    if( aggrrowintstart > 0 )
    {
       SCIP_Real QUAD(tmp);
       assert(aggrrowintstart <= *nnz);
 
+      /* explicitly set continuous variable coefficients to 0 */
       QUAD_ASSIGN(tmp, 0.0);
-
       for( i = 0; i < aggrrowintstart; ++i )
       {
          QUAD_ARRAY_STORE(cutcoefs, cutinds[i], tmp);
       }
 
+      /* fill empty positions of the continuous variables by integral variables; copy all indices to the front or only
+       * use the indices at the end, whatever is faster */
       *nnz -= aggrrowintstart;
       if( *nnz < aggrrowintstart )
       {
