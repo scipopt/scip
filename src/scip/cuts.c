@@ -8758,11 +8758,14 @@ SCIP_RETCODE cutsRoundStrongCG(
    /* in debug mode check, that all continuous variables of the aggrrow come before the integral variables */
    i = 0;
    while( i < *nnz && cutinds[i] >= firstcontvar )
+   {
+      assert(SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_CONTINUOUS);
       ++i;
-
+   }
    while( i < *nnz )
    {
       assert(cutinds[i] < firstcontvar);
+      assert(SCIPvarGetType(vars[cutinds[i]]) != SCIP_VARTYPE_CONTINUOUS);
       ++i;
    }
 #endif
