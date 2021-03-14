@@ -446,7 +446,7 @@ SCIP_Bool removeZerosQuad(
       {
          if( REALABS(QUAD_TO_DBL(val)) > QUAD_EPSILON )
          {
-            /* adjust left and right hand sides with max contribution */
+            /* adjust right hand side with max contribution */
             if( QUAD_TO_DBL(val) < 0.0 )
             {
                if( SCIPisInfinity(scip, ub) )
@@ -4018,7 +4018,7 @@ SCIP_RETCODE cutsSubstituteMIR(
       }
    }
 
-   /* relax rhs to zero, if it's very close to */
+   /* relax rhs to zero, if it's very close to 0 */
    if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
@@ -7533,7 +7533,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
 
    *cutrhs = QUAD_TO_DBL(rhs);
 
-   /* relax rhs to zero, if it's very close to */
+   /* relax rhs to zero, if it's very close to 0 */
    if( *cutrhs < 0.0 && *cutrhs >= SCIPepsilon(scip) )
       *cutrhs = 0.0;
 
@@ -9065,7 +9065,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       }
    }
 
-   /* relax rhs to zero, if it's very close to */
+   /* relax rhs to zero, if it's very close to 0 */
    if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
