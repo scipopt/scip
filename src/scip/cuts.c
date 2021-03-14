@@ -3277,7 +3277,7 @@ SCIP_RETCODE cutsTransformMIR(
    nvars = SCIPgetNVars(scip);
    firstcontvar = nvars - SCIPgetNContVars(scip);
 
-   /* determine the best bounds for the continous variables */
+   /* determine the best bounds for the continuous variables */
    for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
    {
       SCIP_CALL( determineBestBounds(scip, vars[cutinds[i]], sol, boundswitch, usevbds ? 2 : 0, allowlocal, fixintegralrhs,
@@ -3329,7 +3329,7 @@ SCIP_RETCODE cutsTransformMIR(
 
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
-      /* due to variable bound usage for the continous variables cancellation may have occurred */
+      /* due to variable bound usage for the continuous variables cancellation may have occurred */
       if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(coef, 0.0);
@@ -3340,7 +3340,7 @@ SCIP_RETCODE cutsTransformMIR(
          continue;
       }
 
-      /* determine the best bounds for the integral variable, usevbd can be set to 0 here as vbds are only used for continous variables */
+      /* determine the best bounds for the integral variable, usevbd can be set to 0 here as vbds are only used for continuous variables */
       SCIP_CALL( determineBestBounds(scip, vars[v], sol, boundswitch, 0, allowlocal, fixintegralrhs,
             ignoresol, boundsfortrans, boundtypesfortrans,
             bestlbs + i, bestubs + i, bestlbtypes + i, bestubtypes + i, selectedbounds + i, freevariable) );
@@ -5103,7 +5103,7 @@ struct SNF_Relaxation
    int*                  origcontvars;       /**< associated original continuous var for all vars in relaxed set */
    SCIP_Real*            aggrcoefsbin;       /**< aggregation coefficient of the original binary var used to define the
                                               *   continuous variable in the relaxed set */
-   SCIP_Real*            aggrcoefscont;      /**< aggregation coefficient of the original continous var used to define the
+   SCIP_Real*            aggrcoefscont;      /**< aggregation coefficient of the original continuous var used to define the
                                               *   continuous variable in the relaxed set */
    SCIP_Real*            aggrconstants;      /**< aggregation constant used to define the continuous variable in the relaxed set */
 } SNF_RELAXATION;
@@ -7721,7 +7721,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
    vars = SCIPgetVars(scip);
    firstnonbinvar = SCIPgetNBinVars(scip);
 
-   /* determine best bounds for the continous and general integer variables such that they will have
+   /* determine best bounds for the continuous and general integer variables such that they will have
     * a positive coefficient in the transformation */
    for( i = 0; i < *nnz && cutinds[i] >= firstnonbinvar; ++i )
    {
@@ -7804,7 +7804,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       assert(v < firstnonbinvar);
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
-      /* due to variable bound usage for bound substitution of continous variables cancellation may have occurred */
+      /* due to variable bound usage for bound substitution of continuous variables cancellation may have occurred */
       if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
       {
          /* do not increase i, since last element is copied to the i-th position */
@@ -8539,7 +8539,7 @@ SCIP_RETCODE cutsTransformStrongCG(
    nvars = SCIPgetNVars(scip);
    firstcontvar = nvars - SCIPgetNContVars(scip);
 
-   /* determine best bounds for the continous variables such that they will have a positive coefficient in the transformation */
+   /* determine best bounds for the continuous variables such that they will have a positive coefficient in the transformation */
    for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
    {
       SCIP_Real QUAD(coef);
@@ -8608,7 +8608,7 @@ SCIP_RETCODE cutsTransformStrongCG(
       assert(v < firstcontvar);
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
-      /* due to variable bound usage for the continous variables cancellation may have occurred */
+      /* due to variable bound usage for the continuous variables cancellation may have occurred */
       if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(coef, 0.0);
@@ -8755,7 +8755,7 @@ SCIP_RETCODE cutsRoundStrongCG(
    firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    vars = SCIPgetVars(scip);
 #ifndef NDEBUG
-   /*in debug mode check, that all continuous variables of the aggrrow come before the integral variables */
+   /* in debug mode check, that all continuous variables of the aggrrow come before the integral variables */
    i = 0;
    while( i < *nnz && cutinds[i] >= firstcontvar )
       ++i;
@@ -8865,7 +8865,7 @@ SCIP_RETCODE cutsRoundStrongCG(
       }
    }
 
-   /* now process the continuous variables; postpone deletetion of zeros till all continuous variables have been processed */
+   /* now process the continuous variables; postpone deletion of zeros until all continuous variables have been processed */
    aggrrowintstart = i + 1;
 
 #ifndef NDEBUG
