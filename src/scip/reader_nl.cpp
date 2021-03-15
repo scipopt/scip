@@ -88,7 +88,7 @@ struct SCIP_ProbData
 static SCIP_DECL_PROBDELORIG(probdataDelOrigNl);
 
 /// implementation of AMPL/MPs NLHandler that constructs a SCIP problem while a .nl file is read
-class AMPLProblemHandler : public mp::NullNLHandler<SCIP_EXPR*>
+class AMPLProblemHandler : public mp::NLHandler<AMPLProblemHandler, SCIP_EXPR*>
 {
 private:
    SCIP* scip;
@@ -273,6 +273,9 @@ public:
       )
    {
       SCIP_EXPR* expr;
+
+      assert(child != NULL);
+
       switch( kind )
       {
          case mp::expr::MINUS:
@@ -321,7 +324,8 @@ public:
             break;
 
          default:
-            throw std::logic_error("Error: Unsupported AMPL function " + std::string(mp::expr::str(kind)));
+            OnUnhandled(mp::expr::str(kind));
+            break;
       }
 
       // remember that we have to release this expr
@@ -338,6 +342,10 @@ public:
    {
       SCIP_EXPR* expr;
       SCIP_EXPR* children[2] = { firstChild, secondChild };
+
+      assert(firstChild != NULL);
+      assert(secondChild != NULL);
+
       switch( kind )
       {
          case mp::expr::ADD:
@@ -383,7 +391,12 @@ public:
 
             assert(SCIPisExprValue(scip, firstChild));
             if( SCIPgetValueExprValue(firstChild) <= 0.0 )
-               throw std::logic_error("Error: Cannot handle pow(" + std::to_string(SCIPgetValueExprValue(firstChild)) + ", function)");
+            {
+               /* cannot deal with log(firstChild) undefined */
+               char buf[SCIP_MAXSTRLEN];
+               (void) SCIPsnprintf(buf, SCIP_MAXSTRLEN, "pow(%g, function)", SCIPgetValueExprValue(firstChild));
+               OnUnhandled(buf);
+            }
 
             coef = log(SCIPgetValueExprValue(firstChild)); // log(firstChild)
             SCIP_CALL_THROW( SCIPcreateExprSum(scip, &prod, 1, &secondChild, &coef, 0.0, NULL, NULL) );  // log(firstChild)*secondChild
@@ -399,7 +412,7 @@ public:
             break;
 
          default:
-            throw std::logic_error("Error: Unsupported AMPL function " + std::string(mp::expr::str(kind)));
+            OnUnhandled(mp::expr::str(kind));
             break;
       }
 
@@ -449,7 +462,7 @@ public:
       )
    {
       if( objectiveIndex >= 1 )
-         throw std::logic_error("Error: Multiple objective functions not supported");
+         OnUnhandled("multiple objective functions");
 
       SCIPsetObjsense(scip, type == mp::obj::Type::MAX ? SCIP_OBJSENSE_MAXIMIZE : SCIP_OBJSENSE_MINIMIZE);
 
@@ -522,6 +535,29 @@ public:
       }
    }
 
+   /// Receives notification of the initial value for a variable
+   void OnInitialValue(int var_index, double value) {
+      //TODO
+     //internal::Unused(var_index, value);
+     //MP_DISPATCH(OnUnhandled("initial value"));
+   }
+
+   /// Receives notification of the initial value for a dual variable.
+   void OnInitialDualValue(
+      int                /* con_index */,
+      double             /* value */
+      )
+   {
+      // ignore initial dual value
+   }
+
+   /// Receives notification of Jacobian column sizes.
+   ColumnSizeHandler OnColumnSizes()
+   {
+      /// use ColumnSizeHandler from upper class, which does nothing
+      return ColumnSizeHandler();
+   }
+
    class LinearPartHandler
    {
    private:
@@ -537,7 +573,7 @@ public:
          )
       : scip(amplph.scip),
         probdata(amplph.probdata),
-        lincons(amplph.linconss[constraintIndex - amplph.nlconsexprs.size()])
+        lincons(amplph.linconss.at(constraintIndex - amplph.nlconsexprs.size()))
       { }
 
       // constructor for linear objective
@@ -579,7 +615,7 @@ public:
       )
    {
       if( objectiveIndex >= 1 )
-         throw std::logic_error("Error: Multiple objective functions not supported");
+         OnUnhandled("multiple objective functions");
 
       return LinearObjHandler(*this);
    }
@@ -591,6 +627,7 @@ public:
       int                /* numLinearTerms */
       )
    {
+      // FIXME this can also be the linear part of a nonlinear constraint
       return LinearConHandler(*this, constraintIndex);
    }
 
@@ -728,14 +765,30 @@ SCIP_DECL_READERREAD(readerReadNl)
    {
       mp::ReadNLFile(filename, handler);
    }
-   catch( const std::exception& e )
+   catch( const mp::UnsupportedError& e )
    {
-      // TODO distinguish exceptions and give different error return codes
-      SCIPerrorMessage("Error when reading AMPL .nl file %s: %s", filename, e.what());
+      SCIPerrorMessage("Error when reading AMPL .nl file %s: %s\n", filename, e.what());
 
       SCIP_CALL( handler.cleanup() );
 
       return SCIP_READERROR;
+   }
+   catch( const fmt::SystemError& e )
+   {
+      // probably a file open error, probably because file not found
+      SCIPerrorMessage("%s\n", e.what());
+
+      SCIP_CALL( handler.cleanup() );
+
+      return SCIP_NOFILE;
+   }
+   catch( const std::bad_alloc& e )
+   {
+      SCIPerrorMessage("Out of memory: %s\n", e.what());
+
+      SCIP_CALL( handler.cleanup() );
+
+      return SCIP_NOMEMORY;
    }
    SCIP_CALL( handler.finalize() );
 
