@@ -215,7 +215,10 @@ public:
                break;
          }
 
-         SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &probdata->vars[i], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, vartype) );
+         SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &probdata->vars[i], name,
+            vartype == SCIP_VARTYPE_BINARY ? 0.0 : -SCIPinfinity(scip),
+            vartype == SCIP_VARTYPE_BINARY ? 1.0 :  SCIPinfinity(scip),
+            0.0, vartype) );
          SCIP_CALL_THROW( SCIPaddVar(scip, probdata->vars[i]) );
 
          if( i < h.num_nl_vars_in_both + h.num_nl_vars_in_cons + h.num_nl_vars_in_objs )
@@ -477,11 +480,13 @@ public:
       assert(variableIndex < probdata->nvars);
 
       // as far as I see, ampl::mp gives -inf, +inf for no-bounds, which is always beyond SCIPinfinity()
-      if( !SCIPisInfinity(scip, -variableLB) )
+      // we ignore bounds outside [-scipinfinity,scipinfinity] here
+      // for binary variables, we also ignore bounds outside [0,1]
+      if( variableLB > (SCIPvarGetType(probdata->vars[variableIndex]) == SCIP_VARTYPE_BINARY ? 0.0 : -SCIPinfinity(scip)) )
       {
          SCIP_CALL_THROW( SCIPchgVarLbGlobal(scip, probdata->vars[variableIndex], variableLB) );
       }
-      if( !SCIPisInfinity(scip, variableUB) )
+      if( variableUB < (SCIPvarGetType(probdata->vars[variableIndex]) == SCIP_VARTYPE_BINARY ? 1.0 :  SCIPinfinity(scip)) )
       {
          SCIP_CALL_THROW( SCIPchgVarUbGlobal(scip, probdata->vars[variableIndex], variableUB) );
       }
