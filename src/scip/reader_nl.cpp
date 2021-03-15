@@ -122,6 +122,9 @@ private:
    // alternatively, one could encapsulate SCIP_EXPR* into a small class that handles proper reference counting
    std::vector<SCIP_EXPR*> exprstorelease;
 
+   // initial solution, if any
+   SCIP_SOL* initsol;
+
 public:
    /// constructor
    ///
@@ -132,7 +135,8 @@ public:
       )
    : scip(scip_),
      probdata(NULL),
-     objexpr(NULL)
+     objexpr(NULL),
+     initsol(NULL)
    {
       assert(scip != NULL);
       assert(filename != NULL);
@@ -545,10 +549,17 @@ public:
    }
 
    /// Receives notification of the initial value for a variable
-   void OnInitialValue(int var_index, double value) {
-      //TODO
-     //internal::Unused(var_index, value);
-     //MP_DISPATCH(OnUnhandled("initial value"));
+   void OnInitialValue(
+      int                var_index,
+      double             value
+      )
+   {
+      if( initsol == NULL )
+      {
+         SCIP_CALL_THROW( SCIPcreateSol(scip, &initsol, NULL) );
+      }
+
+      SCIP_CALL_THROW( SCIPsetSolVal(scip, initsol, probdata->vars[var_index], value) );
    }
 
    /// Receives notification of the initial value for a dual variable.
@@ -697,6 +708,13 @@ public:
       }
       linconss.clear();
 
+      // add initial solution
+      if( initsol != NULL )
+      {
+         SCIP_Bool stored;
+         SCIP_CALL( SCIPaddSolFree(scip, &initsol, &stored) );
+      }
+
       // release expressions
       SCIP_CALL( cleanup() );
 
@@ -707,11 +725,17 @@ public:
    // this is not in the destructor, because we want to return SCIP_RETCODE
    SCIP_RETCODE cleanup()
    {
-      // release linear constraints (in case finalize() wasn't called or failed)
+      // release linear constraints (in case finalize() wasn't called)
       while( !linconss.empty() )
       {
          SCIP_CALL( SCIPreleaseCons(scip, &linconss.back()) );
          linconss.pop_back();
+      }
+
+      // release initial sol (in case finalize() wasn't called)
+      if( initsol != NULL )
+      {
+         SCIP_CALL( SCIPfreeSol(scip, &initsol) );
       }
 
       // release created expressions (they should all be used in other expressions or constraints now)
