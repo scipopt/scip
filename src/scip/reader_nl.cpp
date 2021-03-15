@@ -371,47 +371,45 @@ public:
             SCIP_CALL_THROW( SCIPreleaseExpr(scip, &children[1]) );
             break;
 
-         case mp::expr::POW:
-         {
-            // reformulate x^y as exp(y*log(x))
-            SCIP_EXPR* prod;
-
-            SCIP_CALL_THROW( SCIPcreateExprLog(scip, &children[0], firstChild, NULL, NULL) );  // log(firstChild)
-            SCIP_CALL_THROW( SCIPcreateExprProduct(scip, &prod, 2, children, 1.0, NULL, NULL) );  // log(firstChild)*secondChild
-            SCIP_CALL_THROW( SCIPcreateExprExp(scip, &expr, prod, NULL, NULL) );  // expr(log(firstChild)*secondChild)
-
-            SCIP_CALL_THROW( SCIPreleaseExpr(scip, &prod) );
-            SCIP_CALL_THROW( SCIPreleaseExpr(scip, &children[0]) );
-            break;
-         }
-
          case mp::expr::POW_CONST_BASE:
-         {
-            // reformulate constant^x as exp(y*log(constant)), require constant > 0.0
-            SCIP_EXPR* prod;
-            SCIP_Real coef;
-
-            assert(SCIPisExprValue(scip, firstChild));
-            if( SCIPgetValueExprValue(firstChild) <= 0.0 )
+         case mp::expr::POW_CONST_EXP:
+         case mp::expr::POW:
+            // with some .nl files, we seem to get mp::expr::POW even if base or exponent is constant,
+            // so do not rely on kind but better check expr type
+            if( SCIPisExprValue(scip, secondChild) )
             {
-               /* cannot deal with log(firstChild) undefined */
-               char buf[SCIP_MAXSTRLEN];
-               (void) SCIPsnprintf(buf, SCIP_MAXSTRLEN, "pow(%g, function)", SCIPgetValueExprValue(firstChild));
-               OnUnhandled(buf);
+               SCIP_CALL_THROW( SCIPcreateExprPow(scip, &expr, firstChild, SCIPgetValueExprValue(secondChild), NULL, NULL) );
+               break;
             }
 
-            coef = log(SCIPgetValueExprValue(firstChild)); // log(firstChild)
-            SCIP_CALL_THROW( SCIPcreateExprSum(scip, &prod, 1, &secondChild, &coef, 0.0, NULL, NULL) );  // log(firstChild)*secondChild
-            SCIP_CALL_THROW( SCIPcreateExprExp(scip, &expr, prod, NULL, NULL) );  // expr(log(firstChild)*secondChild)
+            if( SCIPisExprValue(scip, firstChild) && SCIPgetValueExprValue(firstChild) > 0.0 )
+            {
+               // reformulate constant^x as exp(y*log(constant)), if constant > 0.0
+               // if constant < 0, we create an expression and let cons_nonlinear figure out infeasibility somehow
+               SCIP_EXPR* prod;
 
-            SCIP_CALL_THROW( SCIPreleaseExpr(scip, &prod) );
-            break;
-         }
+               SCIP_Real coef = log(SCIPgetValueExprValue(firstChild)); // log(firstChild)
+               SCIP_CALL_THROW( SCIPcreateExprSum(scip, &prod, 1, &secondChild, &coef, 0.0, NULL, NULL) );  // log(firstChild)*secondChild
+               SCIP_CALL_THROW( SCIPcreateExprExp(scip, &expr, prod, NULL, NULL) );  // expr(log(firstChild)*secondChild)
 
-         case mp::expr::POW_CONST_EXP:
-            assert(SCIPisExprValue(scip, secondChild));
-            SCIP_CALL_THROW( SCIPcreateExprPow(scip, &expr, firstChild, SCIPgetValueExprValue(secondChild), NULL, NULL) );
-            break;
+               SCIP_CALL_THROW( SCIPreleaseExpr(scip, &prod) );
+               break;
+            }
+
+            {
+               // reformulate x^y as exp(y*log(x))
+               SCIP_EXPR* prod;
+
+               assert(SCIPisExprValue(scip, secondChild));
+
+               SCIP_CALL_THROW( SCIPcreateExprLog(scip, &children[0], firstChild, NULL, NULL) );  // log(firstChild)
+               SCIP_CALL_THROW( SCIPcreateExprProduct(scip, &prod, 2, children, 1.0, NULL, NULL) );  // log(firstChild)*secondChild
+               SCIP_CALL_THROW( SCIPcreateExprExp(scip, &expr, prod, NULL, NULL) );  // expr(log(firstChild)*secondChild)
+
+               SCIP_CALL_THROW( SCIPreleaseExpr(scip, &prod) );
+               SCIP_CALL_THROW( SCIPreleaseExpr(scip, &children[0]) );
+               break;
+            }
 
          default:
             OnUnhandled(mp::expr::str(kind));
