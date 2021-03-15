@@ -511,6 +511,19 @@ public:
          nlconsexprs[constraintIndex] = expr;
    }
 
+#if !1  // TODO
+   LinearExprHandler BeginCommonExpr(int index, int num_linear_terms) {
+     return builder_.common_expr(index).set_linear_expr(num_linear_terms);
+   }
+   void EndCommonExpr(int index, NumericExpr expr, int position) {
+     SetCommonExpr(builder_.common_expr(index), expr, position);
+   }
+
+   Reference OnCommonExprRef(int expr_index) {
+     return builder_.MakeCommonExpr(expr_index);
+   }
+#endif
+
    void OnVarBounds(
       int                variableIndex,
       double             variableLB,
@@ -591,6 +604,125 @@ public:
    {
       /// use ColumnSizeHandler from upper class, which does nothing
       return ColumnSizeHandler();
+   }
+
+   // TODO finish
+   template<typename T> class SuffixHandler
+   {
+   private:
+      AMPLProblemHandler& amplph;
+   public:
+      SuffixHandler(
+         AMPLProblemHandler& amplph_,
+         fmt::StringRef      name,
+         mp::suf::Kind       kind,
+         int                 num_values
+         )
+      : amplph(amplph_)
+      {
+         switch( kind )
+         {
+            case mp::suf::Kind::CON:
+               if( strncmp(name.data(), "initial", name.size()) == 0 )
+               {
+
+               }
+               else if( strncmp(name.data(), "separate", name.size()) == 0 )
+               {
+
+               }
+               else if( strncmp(name.data(), "enforce", name.size()) == 0 )
+               {
+
+               }
+               else if( strncmp(name.data(), "check", name.size()) == 0 )
+               {
+
+               }
+               else if( strncmp(name.data(), "propagate", name.size()) == 0 )
+               {
+
+               }
+               else if( strncmp(name.data(), "dynamic", name.size()) == 0 )
+               {
+
+               }
+               else if( strncmp(name.data(), "removable", name.size()) == 0 )
+               {
+
+               }
+               else if( strncmp(name.data(), "sos", name.size()) == 0 )
+               {
+                  // SOS
+               }
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown constraint suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+               break;
+
+            case mp::suf::Kind::VAR:
+            {
+               if( strncmp(name.data(), "initial", name.size()) == 0 )
+               {
+
+               }
+               else if( strncmp(name.data(), "removable", name.size()) == 0 )
+               {
+
+               }
+               else if( strncmp(name.data(), "ref", name.size()) == 0 )
+               {
+                  // SOS, real
+               }
+               else if( strncmp(name.data(), "sos", name.size()) == 0 )
+               {
+                  // SOS
+               }
+               else if( strncmp(name.data(), "sosno", name.size()) == 0 )
+               {
+                  // SOS, real (?)
+               }
+               else if( strncmp(name.data(), "priority", name.size()) == 0 )
+               {
+                  // SOS, not real (?)
+               }
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown variable suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+               break;
+
+            case mp::suf::Kind::OBJ:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown objective suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+               break;
+
+            case mp::suf::Kind::PROBLEM:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown problem suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+               break;
+            }
+         }
+      }
+
+      void SetValue(
+         int index,
+         T   value
+      )
+      { }
+   };
+
+   typedef SuffixHandler<int> IntSuffixHandler;
+   IntSuffixHandler OnIntSuffix(
+      fmt::StringRef     name,
+      mp::suf::Kind      kind,
+      int                num_values
+      )
+   {
+      return IntSuffixHandler(*this, name, kind, num_values);
+   }
+
+   typedef SuffixHandler<SCIP_Real> DblSuffixHandler;
+   DblSuffixHandler OnDblSuffix(
+      fmt::StringRef     name,
+      mp::suf::Kind      kind,
+      int                num_values
+      )
+   {
+      return DblSuffixHandler(*this, name, kind, num_values);
    }
 
    class LinearPartHandler
@@ -816,6 +948,8 @@ SCIP_DECL_READERREAD(readerReadNl)
    assert(reader != NULL);
    assert(filename != NULL);
    assert(result != NULL);
+
+   // TODO read var/con names from corresponding files, if existing
 
    AMPLProblemHandler handler(scip, filename);
    try
