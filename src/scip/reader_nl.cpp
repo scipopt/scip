@@ -423,15 +423,25 @@ public:
    }
 
    // Used for creating a list of terms in a sum
-   // TODO copying around NumericArgHandler objects doesn't look efficient
-   class NumericArgHandler : public std::vector<SCIP_EXPR*>
+   // NumericArgHandler is copied around, so make it keep only a pointer (with reference counting) to actual data
+   class NumericArgHandler
    {
    public:
+      std::shared_ptr<std::vector<SCIP_EXPR*> > v;
+
+      NumericArgHandler(
+         int num_args
+         )
+      : v(new std::vector<SCIP_EXPR*>())
+      {
+         v->reserve(num_args);
+      }
+
       void AddArg(
          SCIP_EXPR*      term
          )
       {
-         push_back(term);
+         v->push_back(term);
       }
    };
 
@@ -439,8 +449,7 @@ public:
       int                num_args
       )
    {
-      NumericArgHandler h;
-      h.reserve(num_args);
+      NumericArgHandler h(num_args);
       return h;
    }
 
@@ -449,7 +458,7 @@ public:
       )
    {
       SCIP_EXPR* expr;
-      SCIP_CALL_THROW( SCIPcreateExprSum(scip, &expr, (int)handler.size(), handler.data(), NULL, 0.0, NULL, NULL) );
+      SCIP_CALL_THROW( SCIPcreateExprSum(scip, &expr, (int)handler.v->size(), handler.v->data(), NULL, 0.0, NULL, NULL) );
       // remember that we have to release this expr
       exprstorelease.push_back(expr);
       return expr;
