@@ -149,12 +149,19 @@ void getOrgNodeToNodeMap(
    int* orgToNewNode
    )
 {
+   const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
    const int nnodes = graph_get_nNodes(g);
    int nodecount = 0;
 
    for( int k = 0; k < nnodes; ++k )
    {
-      if( g->grad[k] > 0 )
+      if( isPcMw && graph_pc_knotIsDummyTerm(g, k) )
+      {
+         orgToNewNode[k] = -1;
+         continue;
+      }
+
+      if( g->grad[k] > 0 || (isPcMw && GT(g->prize[k], 0.0)) )
       {
          orgToNewNode[k] = nodecount;
          nodecount++;
@@ -583,15 +590,37 @@ void graph_writeStp(
       fprintf(fp, "End\n\n");
    }
 
-   graph_get_nVET(g, &nnodes_curr, &nedges_curr, NULL);
-
-   if( graph_pc_isRootedPcMw(g) )
+   if( graph_pc_isPcMw(g) )
    {
-      const int ndummyterms = g->terms - graph_pc_nFixedTerms(g);
-      assert(ndummyterms >= 0);
+      nnodes_curr = 0;
+      nedges_curr = 0;
+      assert(!g->extended);
 
-      nnodes_curr -= ndummyterms;
-      nedges_curr -= ndummyterms * 2;
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( !graph_pc_knotIsDummyTerm(g, i) && (g->grad[i] > 0 || GT(g->prize[i], 0.0)) )
+            nnodes_curr++;
+      }
+
+      for( int i = 0; i < g->edges; i += 2 )
+      {
+         if( g->ieat[i] != EAT_FREE )
+         {
+            const int tail = g->tail[i];
+            const int head = g->head[i];
+
+            if( graph_pc_knotIsDummyTerm(g, tail) || graph_pc_knotIsDummyTerm(g, head) )
+               continue;
+
+            assert(EQ(g->cost[i], g->cost[i + 1]));
+
+            nedges_curr += 2;
+         }
+      }
+   }
+   else
+   {
+      graph_get_nVET(g, &nnodes_curr, &nedges_curr, NULL);
    }
 
    fprintf(fp, "Section Graph\n");
@@ -609,10 +638,10 @@ void graph_writeStp(
 
          if( graph_pc_isPcMw(g) )
          {
-            assert(g->extended);
-
             if( graph_pc_knotIsDummyTerm(g, tail) || graph_pc_knotIsDummyTerm(g, head) )
                continue;
+
+            assert(EQ(g->cost[i], g->cost[i + 1]));
          }
 
          assert(0 <= tail_curr && tail_curr < nnodes_curr);
@@ -626,7 +655,7 @@ void graph_writeStp(
 
          fprintf(fp, "%d %d ", tail_curr + 1, head_curr + 1);
 
-         if( g->stp_type == STP_SPG || g->stp_type == STP_DCSTP || g->stp_type == STP_RSMT || g->stp_type == STP_OARSMT || graph_pc_isPcMw(g) )
+         if( graph_typeIsSpgLike(g) || g->stp_type == STP_DCSTP || graph_pc_isPcMw(g) )
             fprintf(fp, "%f\n", g->cost[i]);
          else
             fprintf(fp, "%f %f\n", g->cost[i], g->cost[Edge_anti(i)]);
@@ -648,27 +677,39 @@ void graph_writeStp(
       const int i_curr = orgToNewNode[i];
 
       if( g->grad[i] == 0 )
+      {
+         if( graph_pc_isPcMw(g) && GT(g->prize[i], 0.0) )
+         {
+            assert(0 <= i_curr && i_curr < nnodes_curr);
+            assert(graph_pc_knotIsNonLeafTerm(g, i));
+            fprintf(fp, "TP %d %f\n", i_curr + 1, g->prize[i]);
+         }
          continue;
-
-      assert(0 <= i_curr && i_curr < nnodes_curr);
+      }
 
       if( graph_pc_isPcMw(g) )
       {
-         if( i == g->source )
+         if( graph_pc_knotIsDummyTerm(g, i) )
             continue;
 
-         if( Is_pseudoTerm(g->term[i]) )
-            fprintf(fp, "TP %d %f\n", i_curr + 1, g->prize[i]);
-
-         if( Is_term(g->term[i]) && !graph_pc_knotIsFixedTerm(g, i) )
+         if( !Is_anyTerm(g->term[i]) )
             continue;
 
-         if( Is_term(g->term[i]) && g->stp_type == STP_RPCSPG )
+         if( !graph_pc_knotIsFixedTerm(g, i) )
          {
-            fprintf(fp, "TF %d\n", i_curr + 1);
+            assert(0 <= i_curr && i_curr < nnodes_curr);
+            fprintf(fp, "TP %d %f\n", i_curr + 1, g->prize[i]);
             continue;
          }
+
+         assert(Is_term(g->term[i]) && g->stp_type == STP_RPCSPG);
+         assert(0 <= i_curr && i_curr < nnodes_curr);
+
+         fprintf(fp, "TF %d\n", i_curr + 1);
+         continue;
       }
+
+      assert(0 <= i_curr && i_curr < nnodes_curr);
 
       if (Is_term(g->term[i]) )
          fprintf(fp, "T %d\n", i_curr + 1);
