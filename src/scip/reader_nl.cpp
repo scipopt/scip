@@ -73,10 +73,10 @@
  * Data structures
  */
 
-/** problem data */
+/// problem data stored in SCIP
 struct SCIP_ProbData
 {
-   SCIP_VAR**            vars;               /**< variables */
+   SCIP_VAR**            vars;               /**< variables in the order given by AMPL */
    int                   nvars;              /**< number of variables */
 };
 
@@ -87,25 +87,47 @@ struct SCIP_ProbData
 // forward declaration
 static SCIP_DECL_PROBDELORIG(probdataDelOrigNl);
 
+/// implementation of AMPL/MPs NLHandler that constructs a SCIP problem while a .nl file is read
 class AMPLProblemHandler : public mp::NullNLHandler<SCIP_EXPR*>
 {
 private:
    SCIP* scip;
    SCIP_PROBDATA* probdata;
 
+   // variable expressions corresponding to nonlinear variables
+   // created in OnHeader() and released in destructor
+   // for reuse of var-expressions in OnVariableRef()
+   std::vector<SCIP_EXPR*> varexprs;
+
+   // data for nonlinear constraints (lhs, rhs, expression)
+   // nonlinear constraints don't have functions to change lhs or rhs at the moment
+   // so first collect all data and then create constraints in finalize()
    std::vector<SCIP_Real>  nlconslhss;
    std::vector<SCIP_Real>  nlconsrhss;
    std::vector<SCIP_EXPR*> nlconsexprs;
+
+   // linear constraints (collected here and added to SCIP in finalize())
    std::vector<SCIP_CONS*> linconss;
+
+   // expression that represents a nonlinear objective function
+   // used to create a corresponding constraint in finalize(), unless NULL
    SCIP_EXPR* objexpr;
 
-   std::vector<SCIP_EXPR*> varexprs;
+   // collect expressions that need to be released eventually
+   // this are all expression that are returned to the AMPL/MP code in AMPLProblemHandler::OnXyz() functions
+   // they need to be released exactly once, but after they are used in another expression or a constraint
+   // as AMPL/MP may reuse expressions (common subexpressions), we don't release an expression when it is used
+   // as a child or when constructing a constraint, but first collect them all and then release in destructor
+   // alternatively, one could encapsulate SCIP_EXPR* into a small class that handles proper reference counting
    std::vector<SCIP_EXPR*> exprstorelease;
 
 public:
+   /// constructor
+   ///
+   /// initializes SCIP problem and problem data
    AMPLProblemHandler(
-      SCIP*              scip_,
-      const char*        filename
+      SCIP*              scip_,              /**< SCIP data structure */
+      const char*        filename            /**< name of .nl file that is read (used to setup problem name) */
       )
    : scip(scip_),
      probdata(NULL),
@@ -126,9 +148,11 @@ public:
       SCIP_CALL_THROW( SCIPcreateProb(scip, filebasename, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, probdata) );
    }
 
+   /// destructor
+   /// exprs and linear constraint arrays should have been cleared up in cleanup()
    ~AMPLProblemHandler()
    {
-      // finalize() must have been called
+      assert(linconss.empty());
       assert(varexprs.empty());
       assert(exprstorelease.empty());
    }
@@ -565,7 +589,7 @@ public:
       return LinearConHandler(*this, constraintIndex);
    }
 
-   void finalize()
+   SCIP_RETCODE finalize()
    {
       char name[SCIP_MAXSTRLEN];
 
@@ -577,17 +601,17 @@ public:
          SCIP_CONS* objcons;
          SCIP_VAR* objvar;
 
-         SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
-         SCIP_CALL_THROW( SCIPaddVar(scip, objvar) );
+         SCIP_CALL( SCIPcreateVarBasic(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &objcons, "objcons", objexpr,
+         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &objcons, "objcons", objexpr,
             SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
             SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0) );
-         SCIP_CALL_THROW( SCIPaddLinearTermConsNonlinear(scip, objcons, -1.0, objvar) );
-         SCIP_CALL_THROW( SCIPaddCons(scip, objcons) );
+         SCIP_CALL( SCIPaddLinearTermConsNonlinear(scip, objcons, -1.0, objvar) );
+         SCIP_CALL( SCIPaddCons(scip, objcons) );
 
-         SCIP_CALL_THROW( SCIPreleaseCons(scip, &objcons) );
-         SCIP_CALL_THROW( SCIPreleaseVar(scip, &objvar) );
+         SCIP_CALL( SCIPreleaseCons(scip, &objcons) );
+         SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
       }
 
       // create and add nonlinear constraints
@@ -598,31 +622,51 @@ public:
          assert(nlconsexprs[i] != NULL);
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlc_%d", (int)i);
-         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &cons, name, nlconsexprs[i], nlconslhss[i], nlconsrhss[i]) );
-         SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
-         SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
+         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, name, nlconsexprs[i], nlconslhss[i], nlconsrhss[i]) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
 
       // add linear constraints
       for( size_t i = 0; i < linconss.size(); ++i )
       {
-         SCIP_CALL_THROW( SCIPaddCons(scip, linconss[i]) );
-         SCIP_CALL_THROW( SCIPreleaseCons(scip, &linconss[i]) );
+         SCIP_CALL( SCIPaddCons(scip, linconss[i]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &linconss[i]) );
+      }
+      linconss.clear();
+
+      // release expressions
+      SCIP_CALL( cleanup() );
+
+      return SCIP_OKAY;
+   }
+
+   // releases expressions and linear constraints from data
+   // this is not in the destructor, because we want to return SCIP_RETCODE
+   SCIP_RETCODE cleanup()
+   {
+      // release linear constraints (in case finalize() wasn't called or failed)
+      while( !linconss.empty() )
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &linconss.back()) );
+         linconss.pop_back();
       }
 
       // release created expressions (they should all be used in other expressions or constraints now)
       while( !exprstorelease.empty() )
       {
-         SCIP_CALL_THROW( SCIPreleaseExpr(scip, &exprstorelease.back()) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &exprstorelease.back()) );
          exprstorelease.pop_back();
       }
 
       // release variable expressions (they should all be used in other expressions or constraints now)
       while( !varexprs.empty() )
       {
-         SCIP_CALL_THROW( SCIPreleaseExpr(scip, &varexprs.back()) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs.back()) );
          varexprs.pop_back();
       }
+
+      return SCIP_OKAY;
    }
 };
 
@@ -674,18 +718,21 @@ SCIP_DECL_READERREAD(readerReadNl)
    assert(filename != NULL);
    assert(result != NULL);
 
+   AMPLProblemHandler handler(scip, filename);
    try
    {
-      AMPLProblemHandler handler(scip, filename);
       mp::ReadNLFile(filename, handler);
-      handler.finalize();
    }
    catch( const std::exception& e )
    {
       // TODO distinguish exceptions and give different error return codes
       SCIPerrorMessage("Error when reading AMPL .nl file %s: %s", filename, e.what());
+
+      SCIP_CALL( handler.cleanup() );
+
       return SCIP_READERROR;
    }
+   SCIP_CALL( handler.finalize() );
 
    *result = SCIP_SUCCESS;
 
