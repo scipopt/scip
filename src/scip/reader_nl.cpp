@@ -99,12 +99,13 @@ private:
    // for reuse of var-expressions in OnVariableRef()
    std::vector<SCIP_EXPR*> varexprs;
 
-   // data for nonlinear constraints (lhs, rhs, expression)
+   // data for nonlinear constraints (lhs, rhs, expression, linear part)
    // nonlinear constraints don't have functions to change lhs or rhs at the moment
    // so first collect all data and then create constraints in finalize()
    std::vector<SCIP_Real>  nlconslhss;
    std::vector<SCIP_Real>  nlconsrhss;
    std::vector<SCIP_EXPR*> nlconsexprs;
+   std::vector<std::vector<std::pair<SCIP_Real, SCIP_VAR*> > > nlconslin;
 
    // linear constraints (collected here and added to SCIP in finalize())
    std::vector<SCIP_CONS*> linconss;
@@ -231,6 +232,7 @@ public:
       nlconslhss.resize(h.num_nl_cons, -SCIPinfinity(scip));
       nlconsrhss.resize(h.num_nl_cons,  SCIPinfinity(scip));
       nlconsexprs.resize(h.num_nl_cons, NULL);
+      nlconslin.resize(h.num_nl_cons);
 
       // create empty linear constraints
       linconss.reserve(h.num_algebraic_cons - h.num_nl_cons);
@@ -561,28 +563,28 @@ public:
    class LinearPartHandler
    {
    private:
-      SCIP* scip;
-      SCIP_PROBDATA* probdata;
-      SCIP_CONS* lincons;
+      AMPLProblemHandler& amplph;
+      int constraintIndex;
 
    public:
-      // constructor for linear constraint
+      // constructor for constraint
       explicit LinearPartHandler(
-         AMPLProblemHandler& amplph,
-         int                 constraintIndex
+         AMPLProblemHandler& amplph_,
+         int                 constraintIndex_
          )
-      : scip(amplph.scip),
-        probdata(amplph.probdata),
-        lincons(amplph.linconss.at(constraintIndex - amplph.nlconsexprs.size()))
-      { }
+      : amplph(amplph_),
+        constraintIndex(constraintIndex_)
+      {
+         assert(constraintIndex_ >= 0);
+         assert(constraintIndex_ < (int)(amplph.nlconslin.size() + amplph.linconss.size()));
+      }
 
       // constructor for linear objective
       explicit LinearPartHandler(
-         AMPLProblemHandler& amplph
+         AMPLProblemHandler& amplph_
          )
-      : scip(amplph.scip),
-        probdata(amplph.probdata),
-        lincons(NULL)
+      : amplph(amplph_),
+        constraintIndex(-1)
       { }
 
       void AddTerm(
@@ -591,18 +593,23 @@ public:
          )
       {
          assert(variableIndex >= 0);
-         assert(variableIndex < probdata->nvars);
+         assert(variableIndex < amplph.probdata->nvars);
 
          if( coefficient == 0.0 )
             return;
 
-         if( lincons == NULL )
+         if( constraintIndex < 0 )
          {
-            SCIP_CALL_THROW( SCIPchgVarObj(scip, probdata->vars[variableIndex], coefficient) );
+            SCIP_CALL_THROW( SCIPchgVarObj(amplph.scip, amplph.probdata->vars[variableIndex], coefficient) );
+         }
+         else if( constraintIndex < (int)amplph.nlconslin.size() )
+         {
+            amplph.nlconslin[constraintIndex].push_back(std::pair<SCIP_Real, SCIP_VAR*>(coefficient, amplph.probdata->vars[variableIndex]));
          }
          else
          {
-            SCIP_CALL_THROW( SCIPaddCoefLinear(scip, lincons, probdata->vars[variableIndex], coefficient) );
+            SCIP_CONS* lincons = amplph.linconss.at(constraintIndex - amplph.nlconslin.size());
+            SCIP_CALL_THROW( SCIPaddCoefLinear(amplph.scip, lincons, amplph.probdata->vars[variableIndex], coefficient) );
          }
       }
    };
@@ -627,7 +634,6 @@ public:
       int                /* numLinearTerms */
       )
    {
-      // FIXME this can also be the linear part of a nonlinear constraint
       return LinearConHandler(*this, constraintIndex);
    }
 
@@ -665,6 +671,13 @@ public:
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlc_%d", (int)i);
          SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, name, nlconsexprs[i], nlconslhss[i], nlconsrhss[i]) );
+
+         /// add linear terms to expression (should be ok to do this one-by-one for now)
+         for( size_t j = 0; j < nlconslin[i].size(); ++j )
+         {
+            SCIP_CALL( SCIPaddLinearTermConsNonlinear(scip, cons, nlconslin[i][j].first, nlconslin[i][j].second) );
+         }
+
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
