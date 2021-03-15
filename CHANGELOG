@@ -73,7 +73,7 @@ Fixed bugs
 - Fixed sign bug during creation of conflict constraints with almost zero left-hand side.
 - Disabled call of conflict handler for conflict sets that contain relaxation-only variables.
 - Fixed bug in cons_symresack by initializing all constraint data in constrans
-- Avoid unlocking upgrading of linear constraints corresponding to indicators in propagation of nodes.
+- Avoid allowing the upgrade of linear constraints corresponding to indicators in propagation of nodes.
 
 
 Miscellaneous
