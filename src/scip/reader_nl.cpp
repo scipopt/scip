@@ -271,12 +271,15 @@ public:
             SCIP_CALL_THROW( SCIPcreateExprLog(scip, &expr, child, NULL, NULL) );
             break;
 
-         //TODO
-         //case mp::expr::LOG10:
-         //{
-         //   return std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(1.0 / log(10.0)), std::make_shared<ExpressionLog>(child));
-         //   break;
-         //}
+         case mp::expr::LOG10:  // 1/log(10)*log(child)
+         {
+            SCIP_EXPR* logexpr;
+            SCIP_Real factor = 1.0/log(10.0);
+            SCIP_CALL_THROW( SCIPcreateExprLog(scip, &logexpr, child, NULL, NULL) );
+            SCIP_CALL_THROW( SCIPcreateExprSum(scip, &expr, 1, &child, &factor, 0.0, NULL, NULL) );
+            SCIP_CALL_THROW( SCIPreleaseExpr(scip, &logexpr) );
+            break;
+         }
 
          case mp::expr::EXP:
             SCIP_CALL_THROW( SCIPcreateExprExp(scip, &expr, child, NULL, NULL) );
@@ -290,7 +293,6 @@ public:
             SCIP_CALL_THROW( SCIPcreateExprCos(scip, &expr, child, NULL, NULL) );
             break;
 
-         case mp::expr::TAN: //TODO?
          default:
             throw std::logic_error("Error: Unsupported AMPL function " + std::string(mp::expr::str(kind)));
       }
