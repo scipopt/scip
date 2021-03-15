@@ -60,6 +60,7 @@
 #define READER_DESC             "AMPL .nl file reader"
 #define READER_EXTENSION        "nl"
 
+// a variant of SCIP_CALL that throws a std::logic_error if not SCIP_OKAY
 #define SCIP_CALL_THROW(x) \
    do                                                                                                   \
    {                                                                                                    \
@@ -101,17 +102,17 @@ private:
 
    // data for nonlinear constraints (lhs, rhs, expression, linear part)
    // nonlinear constraints don't have functions to change lhs or rhs at the moment
-   // so first collect all data and then create constraints in finalize()
+   // so first collect all data and then create constraints in EndInput()
    std::vector<SCIP_Real>  nlconslhss;
    std::vector<SCIP_Real>  nlconsrhss;
    std::vector<SCIP_EXPR*> nlconsexprs;
    std::vector<std::vector<std::pair<SCIP_Real, SCIP_VAR*> > > nlconslin;
 
-   // linear constraints (collected here and added to SCIP in finalize())
+   // linear constraints (collected here and added to SCIP in EndInput())
    std::vector<SCIP_CONS*> linconss;
 
    // expression that represents a nonlinear objective function
-   // used to create a corresponding constraint in finalize(), unless NULL
+   // used to create a corresponding constraint in EndInput(), unless NULL
    SCIP_EXPR* objexpr;
 
    // collect expressions that need to be released eventually
@@ -154,9 +155,11 @@ public:
    }
 
    /// destructor
-   /// exprs and linear constraint arrays should have been cleared up in cleanup()
+   ///
+   /// only asserts that cleanup() has been called, as we cannot throw an exception or return a SCIP_RETCODE here
    ~AMPLProblemHandler()
    {
+      // exprs and linear constraint arrays should have been cleared up in cleanup()
       assert(linconss.empty());
       assert(varexprs.empty());
       assert(exprstorelease.empty());
@@ -667,7 +670,7 @@ public:
       return LinearConHandler(*this, constraintIndex);
    }
 
-   SCIP_RETCODE finalize()
+   void EndInput()
    {
       char name[SCIP_MAXSTRLEN];
 
@@ -679,17 +682,17 @@ public:
          SCIP_CONS* objcons;
          SCIP_VAR* objvar;
 
-         SCIP_CALL( SCIPcreateVarBasic(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
-         SCIP_CALL( SCIPaddVar(scip, objvar) );
+         SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL_THROW( SCIPaddVar(scip, objvar) );
 
-         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &objcons, "objcons", objexpr,
+         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &objcons, "objcons", objexpr,
             SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
             SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0) );
-         SCIP_CALL( SCIPaddLinearTermConsNonlinear(scip, objcons, -1.0, objvar) );
-         SCIP_CALL( SCIPaddCons(scip, objcons) );
+         SCIP_CALL_THROW( SCIPaddLinearTermConsNonlinear(scip, objcons, -1.0, objvar) );
+         SCIP_CALL_THROW( SCIPaddCons(scip, objcons) );
 
-         SCIP_CALL( SCIPreleaseCons(scip, &objcons) );
-         SCIP_CALL( SCIPreleaseVar(scip, &objvar) );
+         SCIP_CALL_THROW( SCIPreleaseCons(scip, &objcons) );
+         SCIP_CALL_THROW( SCIPreleaseVar(scip, &objvar) );
       }
 
       // create and add nonlinear constraints
@@ -700,23 +703,23 @@ public:
          assert(nlconsexprs[i] != NULL);
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlc%d", (int)i);
-         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, name, nlconsexprs[i], nlconslhss[i], nlconsrhss[i]) );
+         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &cons, name, nlconsexprs[i], nlconslhss[i], nlconsrhss[i]) );
 
          /// add linear terms to expression (should be ok to do this one-by-one for now)
          for( size_t j = 0; j < nlconslin[i].size(); ++j )
          {
-            SCIP_CALL( SCIPaddLinearTermConsNonlinear(scip, cons, nlconslin[i][j].first, nlconslin[i][j].second) );
+            SCIP_CALL_THROW( SCIPaddLinearTermConsNonlinear(scip, cons, nlconslin[i][j].first, nlconslin[i][j].second) );
          }
 
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
+         SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
       }
 
       // add linear constraints
       for( size_t i = 0; i < linconss.size(); ++i )
       {
-         SCIP_CALL( SCIPaddCons(scip, linconss[i]) );
-         SCIP_CALL( SCIPreleaseCons(scip, &linconss[i]) );
+         SCIP_CALL_THROW( SCIPaddCons(scip, linconss[i]) );
+         SCIP_CALL_THROW( SCIPreleaseCons(scip, &linconss[i]) );
       }
       linconss.clear();
 
@@ -724,27 +727,25 @@ public:
       if( initsol != NULL )
       {
          SCIP_Bool stored;
-         SCIP_CALL( SCIPaddSolFree(scip, &initsol, &stored) );
+         SCIP_CALL_THROW( SCIPaddSolFree(scip, &initsol, &stored) );
       }
 
       // release expressions
-      SCIP_CALL( cleanup() );
-
-      return SCIP_OKAY;
+      SCIP_CALL_THROW( cleanup() );
    }
 
    // releases expressions and linear constraints from data
    // this is not in the destructor, because we want to return SCIP_RETCODE
    SCIP_RETCODE cleanup()
    {
-      // release linear constraints (in case finalize() wasn't called)
+      // release linear constraints (in case EndInput() wasn't called)
       while( !linconss.empty() )
       {
          SCIP_CALL( SCIPreleaseCons(scip, &linconss.back()) );
          linconss.pop_back();
       }
 
-      // release initial sol (in case finalize() wasn't called)
+      // release initial sol (in case EndInput() wasn't called)
       if( initsol != NULL )
       {
          SCIP_CALL( SCIPfreeSol(scip, &initsol) );
@@ -846,7 +847,6 @@ SCIP_DECL_READERREAD(readerReadNl)
 
       return SCIP_NOMEMORY;
    }
-   SCIP_CALL( handler.finalize() );
 
    *result = SCIP_SUCCESS;
 
