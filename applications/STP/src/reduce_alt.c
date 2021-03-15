@@ -779,11 +779,7 @@ SCIP_RETCODE reduce_sl(
                if( !SCIPisLE(scip, ttdist, g->prize[vbase[minhead]]) )
                   continue;
 
-               if( !SCIPisLE(scip, ttdist, g->prize[baseterm]) )
-                   continue;
-               // todo check and remove
-#ifdef SCIP_DISBALED
-               if( baseterm == mintail || 1 )
+               if( baseterm == mintail )
                {
                   if( !SCIPisLE(scip, ttdist, g->prize[baseterm]) )
                      continue;
@@ -793,7 +789,6 @@ SCIP_RETCODE reduce_sl(
                   if( !SCIPisLT(scip, ttdist, g->prize[baseterm]) )
                      continue;
                }
-#endif
 
                if( nodes_isTerm[minhead] && nodes_isTerm[mintail] )
                   continue;
