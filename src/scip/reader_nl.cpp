@@ -203,13 +203,13 @@ public:
          switch( vartype )
          {
             case SCIP_VARTYPE_BINARY :
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "b_%d", i);
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "b%d", i);
                break;
             case SCIP_VARTYPE_INTEGER :
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "i_%d", i);
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "i%d", i);
                break;
             case SCIP_VARTYPE_CONTINUOUS :
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x_%d", i);
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x%d", i);
                break;
             default:
                SCIPABORT();
@@ -238,7 +238,7 @@ public:
       linconss.reserve(h.num_algebraic_cons - h.num_nl_cons);
       for( int i = h.num_nl_cons; i < h.num_algebraic_cons; ++i )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "lc_%d", i);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "lc%d", i);
          SCIP_CALL_THROW( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, -SCIPinfinity(scip), SCIPinfinity(scip)) );
          linconss.push_back(cons);
       }
@@ -669,7 +669,7 @@ public:
 
          assert(nlconsexprs[i] != NULL);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlc_%d", (int)i);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlc%d", (int)i);
          SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, name, nlconsexprs[i], nlconslhss[i], nlconsrhss[i]) );
 
          /// add linear terms to expression (should be ok to do this one-by-one for now)
