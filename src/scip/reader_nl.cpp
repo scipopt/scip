@@ -480,9 +480,21 @@ public:
       SCIPsetObjsense(scip, type == mp::obj::Type::MAX ? SCIP_OBJSENSE_MAXIMIZE : SCIP_OBJSENSE_MINIMIZE);
 
       assert(objexpr == NULL);
-      objexpr = nonlinearExpression;
 
-      // FIXME how does AMPL handle a constant in a linear objective?
+      if( SCIPisExprValue(scip, nonlinearExpression) )
+      {
+         // handle objective constant by adding a fixed variable for it
+         SCIP_VAR* objconstvar;
+         SCIP_Real objconst = SCIPgetValueExprValue(nonlinearExpression);
+
+         SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &objconstvar, "objconstant", objconst, objconst, 1.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL_THROW( SCIPaddVar(scip, objconstvar) );
+         SCIP_CALL_THROW( SCIPreleaseVar(scip, &objconstvar) );
+      }
+      else
+      {
+         objexpr = nonlinearExpression;
+      }
    }
 
    void OnAlgebraicCon(
