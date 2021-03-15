@@ -423,7 +423,7 @@ LPIINSTMSG	+=	"\n  -> \"worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)\" is a direc
 endif
 
 ifeq ($(AMPL),true)
-FLAGS		+=	-DSCIP_WITH_AMPL -I$(SRCDIR)/mp/include
+FLAGS		+=	-DSCIP_WITH_AMPL -I$(SRCDIR)/amplmp/include
 endif
 
 ifeq ($(SHARED),true)
@@ -700,7 +700,7 @@ endif
 
 ifeq ($(AMPL),true)
 SCIPPLUGINLIBCPPOBJ += scip/reader_nl.o
-SCIPPLUGINLIBCPPOBJ += mp/src/format.o mp/src/expr-info.o mp/src/nl-reader.o mp/src/os.o mp/src/posix.o
+SCIPPLUGINLIBCPPOBJ += amplmp/src/format.o amplmp/src/expr-info.o amplmp/src/nl-reader.o amplmp/src/os.o amplmp/src/posix.o
 endif
 
 SCIPLIBOBJ	=	scip/boundstore.o \
