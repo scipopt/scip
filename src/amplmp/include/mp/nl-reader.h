@@ -1248,7 +1248,11 @@ class BinaryReader : private InputConverter, public BinaryReaderBase {
   template <typename Int>
   Int ReadInt() {
     token_ = ptr_;
-    return this->Convert(*reinterpret_cast<const Int*>(Read(sizeof(Int))));
+    //SV was return this->Convert(*reinterpret_cast<const Int*>(Read(sizeof(Int))));
+    //but this can trigger a load of misaligned address error from sanitizers, so copy into aligned memory first
+    Int val;
+    memcpy(&val, Read(sizeof(Int)), sizeof(Int));
+    return val;
   }
 
   int ReadUInt() {
@@ -1260,8 +1264,12 @@ class BinaryReader : private InputConverter, public BinaryReaderBase {
 
   double ReadDouble() {
     token_ = ptr_;
-    return this->Convert(
-          *reinterpret_cast<const double*>(Read(sizeof(double))));
+    // SV was return this->Convert(
+    //      *reinterpret_cast<const double*>(Read(sizeof(double))));
+    //but this can trigger a load of misaligned address error from sanitizers, so copy into aligned memory first
+    double val;
+    memcpy(&val, Read(sizeof(double)), sizeof(double));
+    return val;
   }
 
   fmt::StringRef ReadString() {
