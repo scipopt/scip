@@ -171,13 +171,16 @@ public:
    {
       char name[SCIP_MAXSTRLEN];
       SCIP_CONS* cons;
+      int nnlvars;
 
       assert(probdata->vars == NULL);
 
       probdata->nvars = h.num_vars;
       SCIP_CALL_THROW( SCIPallocBlockMemoryArray(scip, &probdata->vars, probdata->nvars) );
 
-      varexprs.resize(h.num_nl_vars_in_both + h.num_nl_vars_in_cons + h.num_nl_vars_in_objs);
+      // number of nonlinear variables
+      nnlvars = MAX(h.num_nl_vars_in_cons, h.num_nl_vars_in_objs);
+      varexprs.resize(nnlvars);
 
       // create variables
       // create variable expressions for nonlinear variables
@@ -189,15 +192,15 @@ public:
             vartype = SCIP_VARTYPE_CONTINUOUS;
          else if( i < h.num_nl_vars_in_both )
             vartype = SCIP_VARTYPE_INTEGER;
-         // Nonlinear variables in constraints (num_nl_vars_in_cons includes num_nl_vars_in_both)
+         // Nonlinear variables in constraints
          else if( i < h.num_nl_vars_in_cons - h.num_nl_integer_vars_in_cons )
             vartype = SCIP_VARTYPE_CONTINUOUS;
          else if( i < h.num_nl_vars_in_cons )
             vartype = SCIP_VARTYPE_INTEGER;
-         // Nonlinear variables in objective (both num_nl_vars_in_cons and num_nl_vars_in_objs includes num_nl_vars_in_both, so subtract once)
-         else if( i - h.num_nl_vars_in_cons < h.num_nl_vars_in_objs - h.num_nl_vars_in_both - h.num_nl_integer_vars_in_objs )
+         // Nonlinear variables in objective
+         else if( i < h.num_nl_vars_in_objs - h.num_nl_integer_vars_in_objs )
             vartype = SCIP_VARTYPE_CONTINUOUS;
-         else if( i - h.num_nl_vars_in_cons < h.num_nl_vars_in_objs - h.num_nl_vars_in_both )
+         else if( i < h.num_nl_vars_in_objs )
             vartype = SCIP_VARTYPE_INTEGER;
          // Linear variables
          else if( i < h.num_vars - h.num_linear_binary_vars - h.num_linear_integer_vars )
@@ -229,7 +232,7 @@ public:
             0.0, vartype) );
          SCIP_CALL_THROW( SCIPaddVar(scip, probdata->vars[i]) );
 
-         if( i < h.num_nl_vars_in_both + h.num_nl_vars_in_cons + h.num_nl_vars_in_objs )
+         if( i < nnlvars )
          {
             SCIP_CALL_THROW( SCIPcreateExprVar(scip, &varexprs[i], probdata->vars[i], NULL, NULL) );
          }
