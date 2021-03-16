@@ -1928,7 +1928,8 @@ SCIP_RETCODE redLoopPc(
    /* main reduction loop */
    for( int outterrounds = 0; outterrounds < 3 && rerun; outterrounds++ )
    {
-      int ninnerelims;
+      int ninnerelims = 0;
+      rerun = FALSE;
 
       SCIP_CALL( redLoopInnerPc(scip, g, redsollocal, dheap, vnoi, path, nodearrreal, heap, state,
              vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, fixed, randnumgen, prizesum,
