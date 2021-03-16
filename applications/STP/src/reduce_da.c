@@ -2690,6 +2690,9 @@ SCIP_RETCODE reduce_da(
    if( redsollocal )
    {
       reduce_sollocalSetOffset(*offsetp, redsollocal);
+      if( isRpcmw )
+         SCIP_CALL( reduce_sollocalRebuildTry(scip, graph, redsollocal) );
+
       upperbound = reduce_sollocalGetUpperBound(redsollocal);
    }
 
@@ -2761,6 +2764,7 @@ SCIP_RETCODE reduce_da(
          // todo remove
          if( SCIPisGT(scip, redcosts_getDualBoundTop(redcostdata), upperbound) )
          {
+           // graph_writeStpByName(scip, graph, "pcfail.stp", 0.0);
             printf("WRONG BOUND: upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
             return SCIP_ERROR;
          }
@@ -3433,6 +3437,13 @@ SCIP_RETCODE reduce_daPcMw(
    /* the required reduced path cost to be surpassed */
    minpathcost = upperbound - lpobjval;
 
+   // todo delete
+   if( SCIPisLT(scip, minpathcost, 0.0) )
+   {
+      printf("havenewsol=%d upperbound=%f lpobjval=%f \n", havenewsol, upperbound, lpobjval);
+      return SCIP_ERROR;
+   }
+
    SCIPdebugMessage("havenewsol=%d upperbound=%f lpobjval=%f \n", havenewsol, upperbound, lpobjval);
 
    if( userec)
@@ -3519,9 +3530,22 @@ SCIP_RETCODE reduce_daPcMw(
          SCIPdebugMessage("eliminations after sol based run2 with best dual sol %d bestlb %f newlb %f\n", nfixed, bestlpobjval, lpobjval);
    }
 
+
+   if( reduce_sollocalUsesNodesol(redprimal) )
+   {
+      havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
+      if( havenewsol )
+      {
+         graph_pc_2trans(scip, graph);
+         SCIP_CALL( reduce_sollocalUpdateNodesol(scip, result, graph, redprimal) );
+         graph_pc_2org(scip, graph);
+      }
+   }
+
    /* pertubation runs for MWCSP */
    if( varyroot && graph->stp_type == STP_MWCSP )
    {
+      int todo; // disable?
       for( int run = 0; run < DEFAULT_NMAXROOTS && graph->terms > STP_RED_MINBNDTERMS; run++ )
       {
          SCIP_Real oldupperbound = upperbound;
@@ -3597,10 +3621,8 @@ SCIP_RETCODE reduce_daPcMw(
       if( graph->terms <= 2 )
          break;
 
-      if( graph_pc_knotIsNonLeafTerm(graph, tmproot) )
-      {
-         assert(0); // might actually happen!
-      }
+      // todo can that happen?
+      assert(!graph_pc_knotIsNonLeafTerm(graph, tmproot));
 
       SCIP_CALL( graph_transPcGetRsap(scip, graph, &transgraph, roots, nroots, tmproot) );
 

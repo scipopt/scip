@@ -497,8 +497,6 @@ SCIP_RETCODE computeReducedProbSolution(
    SCIP_Bool*            success
 )
 {
-   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
-
    assert(soledges != NULL);
    assert(graph_valid(scip, solgraph));
 
@@ -512,14 +510,14 @@ SCIP_RETCODE computeReducedProbSolution(
 
  //  printf("solval_bias=%f \n", solstp_getObj(solgraph, soledges, 0.0));
 
-   if( !pcmw )
+   if( reduce_solUsesNodesol(redsol) )
    {
       SCIP_Real solval_red;
       int* soledges_red;
       SCIP_CALL(SCIPallocBufferArray(scip, &soledges_red, solgraph->edges));
       SCIP_CALL(reduce_solGetEdgesol(scip, solgraph, redsol, &solval_red, soledges_red));
 
-   //   printf("solval_red=%f \n", solval_red);
+      SCIPdebugMessage("solval_red=%f solval_bias=%f\n", solval_red, solstp_getObj(solgraph, soledges, 0.0));
 
       if( LT(solval_red, FARAWAY) )
       {
@@ -529,8 +527,10 @@ SCIP_RETCODE computeReducedProbSolution(
 
          if( LT(solval_red, solval_bias) )
          {
+            assert(LT(solstp_getObj(solgraph, soledges_red, 0.0), solstp_getObj(solgraph, soledges, 0.0)));
+
             BMScopyMemoryArray(soledges, soledges_red, solgraph->edges);
-        //    printf("updating %f->%f \n", solval_bias, solval_red);
+            SCIPdebugMessage("updating best solution value: %f->%f \n", solval_bias, solval_red);
          }
       }
       else
@@ -541,6 +541,11 @@ SCIP_RETCODE computeReducedProbSolution(
       }
 
       SCIPfreeBufferArray(scip, &soledges_red);
+   }
+   else
+   {
+      assert(!graph_typeIsSpgLike(graph));
+      assert(!graph_pc_isPcMw(graph) || graph->stp_type == STP_RMWCSP);
    }
 
    graph_path_exit(scip, solgraph);
@@ -1522,7 +1527,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       /* valid graph built? */
       if( success )
       {
-         REDSOL* redsol;
+         REDSOL* redsol = NULL;
          IDX** ancestors;
          GRAPH* psolgraph;
          int* soledges = NULL;

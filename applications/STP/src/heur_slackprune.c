@@ -230,6 +230,7 @@ SCIP_RETCODE reduceExact(
    SCIP_Real*            offset
    )
 {
+   REDSOL* redsol;
    PATH* vnoi;
    PATH* path;
    SCIP_Real* nodearrreal;
@@ -254,16 +255,19 @@ SCIP_RETCODE reduceExact(
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes + 1) );
 
+   SCIP_CALL( reduce_solInit(scip, prunegraph, TRUE, &(redsol)) );
+   SCIP_CALL( reduce_solAddNodesol(prunegraph, solnode, redsol) );
+
    if( graph_pc_isPc(prunegraph) )
    {
-      SCIP_CALL( redLoopPc(scip, NULL, prunegraph, vnoi, path, nodearrreal, heap, state,
-            vbase, nodearrint, edgearrint, nodearrint2, solnode, nodearrchar, offset,
+      SCIP_CALL( redLoopPc(scip, redsol, prunegraph, vnoi, path, nodearrreal, heap, state,
+            vbase, nodearrint, edgearrint, nodearrint2, nodearrchar,
             FALSE, FALSE, FALSE, reductbound, FALSE, TRUE) );
    }
    else if( graph_pc_isMw(prunegraph) )
    {
-      SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, nodearrreal, state,
-            vbase, nodearrint, solnode, nodearrchar, offset,
+      SCIP_CALL( redLoopMw(scip, redsol, prunegraph, vnoi, nodearrreal, state,
+            vbase, nodearrint, nodearrchar,
             FALSE, FALSE, FALSE, reductbound, FALSE) );
    }
    else
@@ -271,25 +275,20 @@ SCIP_RETCODE reduceExact(
       RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE, .reductbound_min = SLACKPRUNE_MINREDELIMS,
                              .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce, .usestrongreds = TRUE };
       BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
-      REDSOL* redsol;
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,
-                          .solnode = NULL, .redsol = NULL,
+                          .solnode = NULL, .redsol = redsol,
                           .vnoi = vnoi, .path = path, .heap = heap,
                           .nodearrreal = nodearrreal,
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,
                           .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
 
-      SCIP_CALL( reduce_solInit(scip, prunegraph, TRUE, &(redbase.redsol)) );
-      redsol = redbase.redsol;
-
-      SCIP_CALL( reduce_solAddNodesol(prunegraph, solnode, redsol) );
       SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
-
-      reduce_solGetNodesol(prunegraph, redsol, solnode);
-
-      *offset = reduce_solGetOffset(redsol);
-      reduce_solFree(scip, &(redsol));
    }
+
+   reduce_solGetNodesol(prunegraph, redsol, solnode);
+
+   *offset = reduce_solGetOffset(redsol);
+   reduce_solFree(scip, &(redsol));
 
    SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &vnoi);

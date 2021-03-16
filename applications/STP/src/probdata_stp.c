@@ -2904,7 +2904,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    {
       int reduction;
       SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
-      useNodeSol = graph_typeIsSpgLike(graph) && (reduction != STP_REDUCTION_NONE);
+      useNodeSol = (graph_pc_isPcMw(graph) || graph_typeIsSpgLike(graph)) && (reduction != STP_REDUCTION_NONE);
       SCIP_CALL( reduce_solInit(scip, graph, useNodeSol, &redsol) );
    }
 

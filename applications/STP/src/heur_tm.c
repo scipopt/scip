@@ -3066,7 +3066,7 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
          for( int k = 0; k < nnodes; k++ )
             mst[k].edge = UNKNOWN;
 
-         printf("trivial solution in buildPcMwTree \n");
+         SCIPdebugMessage("trivial solution in buildPcMwTree \n");
          for( a = g->outbeg[orgroot]; a != EAT_LAST; a = g->oeat[a] )
          {
             const int head = g->head[a];

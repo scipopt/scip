@@ -118,17 +118,12 @@ SCIP_RETCODE nodesolUpdate(
    int*                 nodesol             /**< solution array to be filled */
    )
 {
-   assert(graph_typeIsSpgLike(g));
+   assert(graph_typeIsSpgLike(g) || graph_pc_isPcMw(g));
 
-   /*
-         if( pcmw )
-         SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
-      else
-         SCIPStpHeurTMBuildTree(scip, prunegraph, path, prunegraph->cost, &objold, solnode);
-
-    */
-
-   SCIPStpHeurTMBuildTree(scip, g, solpath, g->cost, solval, nodesol);
+   if( graph_pc_isPcMw(g) )
+      SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, g, solpath, g->cost, solval, nodesol) );
+   else
+      SCIPStpHeurTMBuildTree(scip, g, solpath, g->cost, solval, nodesol);
 
    return SCIP_OKAY;
 }
@@ -500,10 +495,58 @@ void reduce_sollocalSetOffset(
 
    if( sollocal->isPcMw && !EQ(sollocal->offset, offsetnew) )
    {
+      SCIPdebugMessage("setting primalbound from %f to FARAWAY \n", sollocal->primalbound);
       sollocal->primalbound = FARAWAY;
    }
 
    sollocal->offset = offsetnew;
+}
+
+
+/** tries to rebuild solnode if possible and necessary */
+SCIP_RETCODE reduce_sollocalRebuildTry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph */
+   REDSOLLOCAL*          sollocal            /**< sollocal */
+   )
+{
+   assert(g && sollocal);
+   assert(sollocal->nnodes == g->knots);
+   assert(graph_pc_isPcMw(g));
+
+   if( GE(sollocal->primalbound, FARAWAY) && !EQ(sollocal->nodesol_ub, REDSOLVAL_UNSET) && g->terms > 2 )
+   {
+      PATH* solpath;
+      SCIP_Real solval;
+      SCIP_Real solval_total;
+      const SCIP_Real isOrg = !g->extended;
+
+      if( isOrg )
+         graph_pc_2trans(scip, g);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &solpath, sollocal->nnodes ) );
+      SCIP_CALL( nodesolUpdate(scip, g, &solval, solpath, sollocal->nodesol) );
+      SCIPfreeBufferArray(scip, &solpath);
+
+      solval_total = solval + sollocal->offset;
+
+      if( graph_pc_isPc(g) )
+         solval_total += graph_pc_getNonLeafTermOffset(scip, g);
+
+      if( isOrg )
+         graph_pc_2org(scip, g);
+
+      if( GT(solval_total, FARAWAY) )
+         solval_total = FARAWAY;
+
+      SCIPdebugMessage("updating upper bound %f->%f \n", sollocal->primalbound, solval_total);
+      SCIPdebugMessage("without offset: %f \n", solval);
+
+      sollocal->primalbound = solval_total;
+      sollocal->nodesol_ub = solval_total;
+   }
+
+   return SCIP_OKAY;
 }
 
 
@@ -610,7 +653,7 @@ int* reduce_sollocalGetSolnode(
    )
 {
    assert(sollocal);
-   assert(reduce_sollocalUsesNodesol(sollocal));
+   assert(reduce_sollocalUsesNodesol(sollocal) == (sollocal->nodesol != NULL));
 
    return sollocal->nodesol;
 }
@@ -743,6 +786,31 @@ void reduce_solFinalizeLocal(
    }
 
    reduce_sollocalFree(scip, &(toplevel->redsollocal));
+}
+
+
+/** reinitalizes local after it has been finished */
+void reduce_solReInitLocal(
+   const GRAPH*          g,                  /**< graph data structure */
+   REDSOL*               redsol              /**< reduction solution */
+   )
+{
+   REDSOLLEVEL* toplevel = redsolGetTopLevel(redsol);
+
+   assert(g);
+   assert(toplevel->nnodes == g->knots);
+
+   toplevel->solval_postred = REDSOLVAL_UNSET;
+   toplevel->nodesol_ub = REDSOLVAL_UNSET;
+
+   if( redsol->nodesol_use )
+   {
+      assert(toplevel->nodesol);
+      assert(!toplevel->nodesol_transfer);
+
+      toplevel->nodesol_transfer = toplevel->nodesol;
+      toplevel->nodesol = NULL;
+   }
 }
 
 

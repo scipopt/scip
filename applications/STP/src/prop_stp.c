@@ -1838,6 +1838,7 @@ SCIP_RETCODE fixVarsRedbased(
    SCIP_Bool*            probisinfeas        /**< is problem infeasible? */
    )
 {
+   REDSOL* redsol;
    GRAPH* propgraph = NULL;
    int* nodestate = NULL;
    int* edgestate = NULL;
@@ -1886,15 +1887,17 @@ SCIP_RETCODE fixVarsRedbased(
       SCIP_CALL( fixVarsExtendedRed(scip, graph, vars, propdata) );
    }
 
+   SCIP_CALL( reduce_solInit(scip, propgraph, FALSE, &redsol) );
+
    /* now reduce the graph by standard reductions */
    if( graph_pc_isPc(propgraph) )
    {
-      SCIP_CALL( reducePc(scip, NULL, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
+      SCIP_CALL( reducePc(scip, redsol, propgraph, 2, FALSE, FALSE, FALSE) );
    }
    else if( graph_pc_isMw(propgraph) )
    {
       SCIPdebugMessage("starting MW reductions \n");
-      SCIP_CALL( reduceMw(scip, propgraph, &offset, 2, FALSE, FALSE) );
+      SCIP_CALL( reduceMw(scip, redsol, propgraph, 2, FALSE, FALSE) );
    }
    else
    {
@@ -1948,9 +1951,6 @@ SCIP_RETCODE fixVarsRedbased(
       }
 #endif
 
-      REDSOL* redsol;
-      SCIP_CALL( reduce_solInit(scip, propgraph, FALSE, &redsol) );
-
       // todo Call two times, and with node-replacing!
       // todo: before make all the node replacements from lurking bounds!
       assert(graph_typeIsSpgLike(propgraph));
@@ -1959,8 +1959,9 @@ SCIP_RETCODE fixVarsRedbased(
 
     //  SCIP_CALL( reduceStp(scip, propgraph, redsol, 2, FALSE, TRUE, FALSE) );
 
-      reduce_solFree(scip, &redsol);
    }
+   offset += reduce_solGetOffset(redsol);
+   reduce_solFree(scip, &redsol);
 
    assert(graph_valid(scip, propgraph));
 
