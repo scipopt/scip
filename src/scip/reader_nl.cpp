@@ -108,6 +108,7 @@ private:
    std::vector<SCIP_Real>  nlconsrhss;
    std::vector<SCIP_EXPR*> nlconsexprs;
    std::vector<std::vector<std::pair<SCIP_Real, SCIP_VAR*> > > nlconslin;
+   std::vector<std::string> nlconsnames;
 
    // linear constraints (collected here and added to SCIP in EndInput())
    std::vector<SCIP_CONS*> linconss;
@@ -127,18 +128,61 @@ private:
    // initial solution, if any
    SCIP_SOL* initsol;
 
+   // opened files with column/variable and row/constraint names, or NULL
+   fmt::File* colfile;
+   fmt::File* rowfile;
+
+   // get name from names strings, if possible
+   // returns whether a name has been stored
+   bool nextName(
+      const char*&       namesbegin,         /**< current pointer into names string, or NULL */
+      const char*        namesend,           /**< pointer to end of names string */
+      char*              name                /**< buffer to store name, should have lenght SCIP_MAXSTRLEN */
+   )
+   {
+      if( namesbegin == NULL )
+         return false;
+
+      // copy namesbegin into name until newline or namesend
+      // updates namesbegin
+      int nchars = 0;
+      while( namesbegin != namesend )
+      {
+         if( nchars == SCIP_MAXSTRLEN )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "name too long when parsing names file");
+            // do no longer read names from this string (something seems awkward)
+            namesbegin = NULL;
+            return false;
+         }
+         if( *namesbegin == '\n' )
+         {
+            *name = '\0';
+            ++namesbegin;
+            return true;
+         }
+         *(name++) = *(namesbegin++);
+         ++nchars;
+      }
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "missing newline when parsing names file");
+      return false;
+   }
+
 public:
    /// constructor
    ///
    /// initializes SCIP problem and problem data
    AMPLProblemHandler(
       SCIP*              scip_,              /**< SCIP data structure */
-      const char*        filename            /**< name of .nl file that is read (used to setup problem name) */
+      const char*        filename            /**< name of .nl file that is read */
       )
    : scip(scip_),
      probdata(NULL),
      objexpr(NULL),
-     initsol(NULL)
+     initsol(NULL),
+     colfile(NULL),
+     rowfile(NULL)
    {
       assert(scip != NULL);
       assert(filename != NULL);
@@ -151,8 +195,34 @@ public:
 
       SCIP_CALL_THROW( SCIPallocClearMemory(scip, &probdata) );
 
-      /* initialize empty SCIP problem */
+      // initialize empty SCIP problem
       SCIP_CALL_THROW( SCIPcreateProb(scip, filebasename, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, probdata) );
+
+      // open files with variable and constraint names
+      int len = filename != NULL ? strlen(filename) : 0;
+      if( len > 3 && filename[len-3] == '.' && filename[len-2] == 'n' && filename[len-1] == 'l' )
+      {
+         char* filename2;
+         SCIP_CALL_THROW( SCIPallocBufferArray(scip, &filename2, len+1) );
+
+         try
+         {
+            sprintf(filename2, "%.*s.col", len-3, filename);
+            colfile = new fmt::File(filename2, fmt::File::RDONLY);
+
+            filename2[len-2] = 'r';
+            filename2[len-1] = 'o';
+            filename2[len] = 'w';
+            rowfile = new fmt::File(filename2, fmt::File::RDONLY);
+         }
+         catch( const fmt::SystemError& e )
+         {
+            // probably a file open error, probably because file not found
+            // ignore, we can make up our own names
+         }
+
+         SCIPfreeBufferArray(scip, &filename2);
+      }
    }
 
    /// destructor
@@ -164,6 +234,9 @@ public:
       assert(linconss.empty());
       assert(varexprs.empty());
       assert(exprstorelease.empty());
+
+      delete colfile;
+      delete rowfile;
    }
 
    /// process header of .nl files
@@ -178,6 +251,20 @@ public:
       int nnlvars;
 
       assert(probdata->vars == NULL);
+
+      // read variable and constraint names from file, if available, into memory
+      // if not available, we will get varnamesbegin==NULL and consnamesbegin==NULL
+      mp::MemoryMappedFile<> mapped_colfile;
+      if( colfile != NULL )
+         mapped_colfile.map(*colfile, "colfile");
+      const char* varnamesbegin = mapped_colfile.start();
+      const char* varnamesend = mapped_colfile.start() + mapped_colfile.size();
+
+      mp::MemoryMappedFile<> mapped_rowfile;
+      if( rowfile != NULL )
+         mapped_rowfile.map(*rowfile, "rowfile");
+      const char* consnamesbegin = mapped_rowfile.start();
+      const char* consnamesend = mapped_rowfile.start() + mapped_rowfile.size();
 
       probdata->nvars = h.num_vars;
       SCIP_CALL_THROW( SCIPallocBlockMemoryArray(scip, &probdata->vars, probdata->nvars) );
@@ -214,20 +301,24 @@ public:
          else
             vartype = SCIP_VARTYPE_INTEGER;
 
-         switch( vartype )
+         if( !nextName(varnamesbegin, varnamesend, name) )
          {
-            case SCIP_VARTYPE_BINARY :
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "b%d", i);
-               break;
-            case SCIP_VARTYPE_INTEGER :
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "i%d", i);
-               break;
-            case SCIP_VARTYPE_CONTINUOUS :
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x%d", i);
-               break;
-            default:
-               SCIPABORT();
-               break;
+            // make up name if no names file or could not be read
+            switch( vartype )
+            {
+               case SCIP_VARTYPE_BINARY :
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "b%d", i);
+                  break;
+               case SCIP_VARTYPE_INTEGER :
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "i%d", i);
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS :
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x%d", i);
+                  break;
+               default:
+                  SCIPABORT();
+                  break;
+            }
          }
 
          SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &probdata->vars[i], name,
@@ -247,12 +338,22 @@ public:
       nlconsrhss.resize(h.num_nl_cons,  SCIPinfinity(scip));
       nlconsexprs.resize(h.num_nl_cons, NULL);
       nlconslin.resize(h.num_nl_cons);
+      nlconsnames.reserve(h.num_nl_cons);
+
+      for( int i = 0; i < h.num_nl_cons; ++i )
+      {
+         // make up name if no names file or could not be read
+         if( !nextName(consnamesbegin, consnamesend, name) )
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlc%d", i);
+         nlconsnames.push_back(name);
+      }
 
       // create empty linear constraints
       linconss.reserve(h.num_algebraic_cons - h.num_nl_cons);
       for( int i = h.num_nl_cons; i < h.num_algebraic_cons; ++i )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "lc%d", i);
+         if( !nextName(consnamesbegin, consnamesend, name) )
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "lc%d", i);
          SCIP_CALL_THROW( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, -SCIPinfinity(scip), SCIPinfinity(scip)) );
          linconss.push_back(cons);
       }
@@ -836,8 +937,6 @@ public:
    /// - add initial solution, if initial values were given
    void EndInput()
    {
-      char name[SCIP_MAXSTRLEN];
-
       // turn nonlinear objective into constraint
       // min f(x) -> min z s.t. f(x) - z <= 0
       // max f(x) -> max z s.t. 0 <= f(x) - z
@@ -866,8 +965,7 @@ public:
 
          assert(nlconsexprs[i] != NULL);
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlc%d", (int)i);
-         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &cons, name, nlconsexprs[i], nlconslhss[i], nlconsrhss[i]) );
+         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &cons, nlconsnames[i].c_str(), nlconsexprs[i], nlconslhss[i], nlconsrhss[i]) );
 
          /// add linear terms to expression (should be ok to do this one-by-one for now)
          for( size_t j = 0; j < nlconslin[i].size(); ++j )
@@ -983,38 +1081,44 @@ SCIP_DECL_READERREAD(readerReadNl)
    assert(filename != NULL);
    assert(result != NULL);
 
-   // TODO read var/con names from corresponding files, if existing
-
-   // try to read the .nl file and setup SCIP problem
-   AMPLProblemHandler handler(scip, filename);
    try
    {
-      mp::ReadNLFile(filename, handler);
-   }
-   catch( const mp::UnsupportedError& e )
-   {
-      SCIPerrorMessage("Error when reading AMPL .nl file %s: %s\n", filename, e.what());
+      // try to read the .nl file and setup SCIP problem
+      AMPLProblemHandler handler(scip, filename);
+      try
+      {
+         mp::ReadNLFile(filename, handler);
+      }
+      catch( const mp::UnsupportedError& e )
+      {
+         SCIPerrorMessage("unsupported construct in AMPL .nl file %s: %s\n", filename, e.what());
 
-      SCIP_CALL( handler.cleanup() );
+         SCIP_CALL( handler.cleanup() );
 
-      return SCIP_READERROR;
+         return SCIP_READERROR;
+      }
+      catch( const fmt::SystemError& e )
+      {
+         // probably a file open error, probably because file not found
+         SCIPerrorMessage("%s\n", e.what());
+
+         SCIP_CALL( handler.cleanup() );
+
+         return SCIP_NOFILE;
+      }
+      catch( const std::bad_alloc& e )
+      {
+         SCIPerrorMessage("Out of memory: %s\n", e.what());
+
+         SCIP_CALL( handler.cleanup() );
+
+         return SCIP_NOMEMORY;
+      }
    }
-   catch( const fmt::SystemError& e )
+   catch( const std::exception& e )
    {
-      // probably a file open error, probably because file not found
       SCIPerrorMessage("%s\n", e.what());
-
-      SCIP_CALL( handler.cleanup() );
-
-      return SCIP_NOFILE;
-   }
-   catch( const std::bad_alloc& e )
-   {
-      SCIPerrorMessage("Out of memory: %s\n", e.what());
-
-      SCIP_CALL( handler.cleanup() );
-
-      return SCIP_NOMEMORY;
+      return SCIP_ERROR;
    }
 
    *result = SCIP_SUCCESS;
