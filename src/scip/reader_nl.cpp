@@ -22,7 +22,7 @@
  *
  * The code for SOS reading is based on the AMPL/Bonmin interface (https://github.com/coin-or/Bonmin).
  *
- * For documentation on ampl::mp, see https://ampl.github.io.
+ * For documentation on ampl::mp, see https://ampl.github.io and https://www.zverovich.net/2014/09/19/reading-nl-files.html.
  * For documentation on .nl files, see https://ampl.com/REFS/hooking2.pdf.
  */
 
@@ -101,17 +101,13 @@ private:
    // for reuse of var-expressions in OnVariableRef()
    std::vector<SCIP_EXPR*> varexprs;
 
-   // data for nonlinear constraints (lhs, rhs, expression, linear part)
-   // nonlinear constraints don't have functions to change lhs or rhs at the moment
-   // so first collect all data and then create constraints in EndInput()
-   std::vector<SCIP_Real>  nlconslhss;
-   std::vector<SCIP_Real>  nlconsrhss;
-   std::vector<SCIP_EXPR*> nlconsexprs;
-   std::vector<std::vector<std::pair<SCIP_Real, SCIP_VAR*> > > nlconslin;
-   std::vector<std::string> nlconsnames;
+   // constraints (collected here and added to SCIP in EndInput())
+   // first nonliner, then linear
+   std::vector<SCIP_CONS*> conss;
 
-   // linear constraints (collected here and added to SCIP in EndInput())
-   std::vector<SCIP_CONS*> linconss;
+   // linear parts for nonlinear constraints
+   // first collect and then add to constraints in EndInput()
+   std::vector<std::vector<std::pair<SCIP_Real, SCIP_VAR*> > > nlconslin;
 
    // expression that represents a nonlinear objective function
    // used to create a corresponding constraint in EndInput(), unless NULL
@@ -231,7 +227,7 @@ public:
    ~AMPLProblemHandler()
    {
       // exprs and linear constraint arrays should have been cleared up in cleanup()
-      assert(linconss.empty());
+      assert(conss.empty());
       assert(varexprs.empty());
       assert(exprstorelease.empty());
 
@@ -333,29 +329,32 @@ public:
          }
       }
 
-      // alloc some space for nonlinear constraints
-      nlconslhss.resize(h.num_nl_cons, -SCIPinfinity(scip));
-      nlconsrhss.resize(h.num_nl_cons,  SCIPinfinity(scip));
-      nlconsexprs.resize(h.num_nl_cons, NULL);
+      // alloc some space for constraints
+      conss.reserve(h.num_algebraic_cons);
       nlconslin.resize(h.num_nl_cons);
-      nlconsnames.reserve(h.num_nl_cons);
 
+      // create empty nonlinear constraints
+      // use expression == 0, because nonlinear constraint don't like to be without an expression
+      SCIP_EXPR* dummyexpr;
+      SCIP_CALL_THROW( SCIPcreateExprValue(scip, &dummyexpr, 0.0, NULL, NULL) );
       for( int i = 0; i < h.num_nl_cons; ++i )
       {
          // make up name if no names file or could not be read
          if( !nextName(consnamesbegin, consnamesend, name) )
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlc%d", i);
-         nlconsnames.push_back(name);
+
+         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &cons, name, dummyexpr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
+         conss.push_back(cons);
       }
+      SCIP_CALL_THROW( SCIPreleaseExpr(scip, &dummyexpr) );
 
       // create empty linear constraints
-      linconss.reserve(h.num_algebraic_cons - h.num_nl_cons);
       for( int i = h.num_nl_cons; i < h.num_algebraic_cons; ++i )
       {
          if( !nextName(consnamesbegin, consnamesend, name) )
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "lc%d", i);
          SCIP_CALL_THROW( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, -SCIPinfinity(scip), SCIPinfinity(scip)) );
-         linconss.push_back(cons);
+         conss.push_back(cons);
       }
    }
 
@@ -622,10 +621,10 @@ public:
       SCIP_EXPR*         expr
       )
    {
-      // nonlinear constraint iff expression is not NULL
-      assert((constraintIndex < (int)nlconsexprs.size()) == (expr != NULL));
       if( expr != NULL )
-         nlconsexprs[constraintIndex] = expr;
+      {
+         SCIP_CALL_THROW( SCIPchgExprNonlinear(scip, conss[constraintIndex], expr) );
+      }
    }
 
 #if !1  // TODO
@@ -672,25 +671,29 @@ public:
       )
    {
       assert(index >= 0);
-      assert(index < (int)(nlconslhss.size() + linconss.size()));
+      assert(index < (int)conss.size());
 
       // nonlinear constraints are first
-      if( index < (int)nlconslhss.size() )
+      if( index < (int)nlconslin.size() )
       {
          if( !SCIPisInfinity(scip, -lb) )
-            nlconslhss[index] = lb;
+         {
+            SCIP_CALL_THROW( SCIPchgLhsNonlinear(scip, conss[index], lb) );
+         }
          if( !SCIPisInfinity(scip,  ub) )
-            nlconsrhss[index] = ub;
+         {
+            SCIP_CALL_THROW( SCIPchgRhsNonlinear(scip, conss[index], ub) );
+         }
       }
       else
       {
          if( !SCIPisInfinity(scip, -lb) )
          {
-            SCIP_CALL_THROW( SCIPchgLhsLinear(scip, linconss[index - nlconslhss.size()], lb) );
+            SCIP_CALL_THROW( SCIPchgLhsLinear(scip, conss[index], lb) );
          }
          if( !SCIPisInfinity(scip,  ub) )
          {
-            SCIP_CALL_THROW( SCIPchgRhsLinear(scip, linconss[index - nlconslhss.size()], ub) );
+            SCIP_CALL_THROW( SCIPchgRhsLinear(scip, conss[index], ub) );
          }
       }
    }
@@ -867,7 +870,7 @@ public:
         constraintIndex(constraintIndex_)
       {
          assert(constraintIndex_ >= 0);
-         assert(constraintIndex_ < (int)(amplph.nlconslin.size() + amplph.linconss.size()));
+         assert(constraintIndex_ < (int)amplph.conss.size());
       }
 
       // constructor for linear objective
@@ -899,7 +902,7 @@ public:
          }
          else
          {
-            SCIP_CONS* lincons = amplph.linconss.at(constraintIndex - amplph.nlconslin.size());
+            SCIP_CONS* lincons = amplph.conss.at(constraintIndex);
             SCIP_CALL_THROW( SCIPaddCoefLinear(amplph.scip, lincons, amplph.probdata->vars[variableIndex], coefficient) );
          }
       }
@@ -958,32 +961,22 @@ public:
          SCIP_CALL_THROW( SCIPreleaseVar(scip, &objvar) );
       }
 
-      // create and add nonlinear constraints
-      for( size_t i = 0; i < nlconsexprs.size(); ++i )
+      // add linear terms to expressions of nonlinear constraints (should be ok to do this one-by-one for now)
+      for( size_t i = 0; i < nlconslin.size(); ++i )
       {
-         SCIP_CONS* cons;
-
-         assert(nlconsexprs[i] != NULL);
-
-         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &cons, nlconsnames[i].c_str(), nlconsexprs[i], nlconslhss[i], nlconsrhss[i]) );
-
-         /// add linear terms to expression (should be ok to do this one-by-one for now)
          for( size_t j = 0; j < nlconslin[i].size(); ++j )
          {
-            SCIP_CALL_THROW( SCIPaddLinearTermConsNonlinear(scip, cons, nlconslin[i][j].first, nlconslin[i][j].second) );
+            SCIP_CALL_THROW( SCIPaddLinearTermConsNonlinear(scip, conss[i], nlconslin[i][j].first, nlconslin[i][j].second) );
          }
-
-         SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
-         SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
       }
 
-      // add linear constraints
-      for( size_t i = 0; i < linconss.size(); ++i )
+      // add and release constraints
+      for( size_t i = 0; i < conss.size(); ++i )
       {
-         SCIP_CALL_THROW( SCIPaddCons(scip, linconss[i]) );
-         SCIP_CALL_THROW( SCIPreleaseCons(scip, &linconss[i]) );
+         SCIP_CALL_THROW( SCIPaddCons(scip, conss[i]) );
+         SCIP_CALL_THROW( SCIPreleaseCons(scip, &conss[i]) );
       }
-      linconss.clear();
+      conss.clear();
 
       // add initial solution
       if( initsol != NULL )
@@ -1002,11 +995,11 @@ public:
    /// this is not in the destructor, because we want to return SCIP_RETCODE
    SCIP_RETCODE cleanup()
    {
-      // release linear constraints (in case EndInput() wasn't called)
-      while( !linconss.empty() )
+      // release constraints (in case EndInput() wasn't called)
+      while( !conss.empty() )
       {
-         SCIP_CALL( SCIPreleaseCons(scip, &linconss.back()) );
-         linconss.pop_back();
+         SCIP_CALL( SCIPreleaseCons(scip, &conss.back()) );
+         conss.pop_back();
       }
 
       // release initial sol (in case EndInput() wasn't called)
