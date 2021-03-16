@@ -733,6 +733,26 @@ public:
    {
    private:
       AMPLProblemHandler& amplph;
+
+      enum Suffix
+      {
+         IGNORE,
+         CONSINITIAL,
+         CONSSEPARATE,
+         CONSENFORCE,
+         CONSCHECK,
+         CONSPROPAGATE,
+         CONSDYNAMIC,
+         CONSREMOVABLE,
+         CONSSOS,
+         VARINITIAL,
+         VARREMOVABLE,
+         VARREF,
+         VARSOS,
+         VARSOSNO,
+         VARPRIORITY
+      } suffix;
+
    public:
       SuffixHandler(
          AMPLProblemHandler& amplph_,
@@ -740,42 +760,43 @@ public:
          mp::suf::Kind       kind,
          int                 num_values
          )
-      : amplph(amplph_)
+      : amplph(amplph_),
+        suffix(IGNORE)
       {
          switch( kind )
          {
             case mp::suf::Kind::CON:
                if( strncmp(name.data(), "initial", name.size()) == 0 )
                {
-
+                  suffix = CONSINITIAL;
                }
                else if( strncmp(name.data(), "separate", name.size()) == 0 )
                {
-
+                  suffix = CONSSEPARATE;
                }
                else if( strncmp(name.data(), "enforce", name.size()) == 0 )
                {
-
+                  suffix = CONSENFORCE;
                }
                else if( strncmp(name.data(), "check", name.size()) == 0 )
                {
-
+                  suffix = CONSCHECK;
                }
                else if( strncmp(name.data(), "propagate", name.size()) == 0 )
                {
-
+                  suffix = CONSPROPAGATE;
                }
                else if( strncmp(name.data(), "dynamic", name.size()) == 0 )
                {
-
+                  suffix = CONSDYNAMIC;
                }
                else if( strncmp(name.data(), "removable", name.size()) == 0 )
                {
-
+                  suffix = CONSREMOVABLE;
                }
                else if( strncmp(name.data(), "sos", name.size()) == 0 )
                {
-                  // SOS
+                  suffix = CONSSOS;
                }
                SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown constraint suffix <%.*s>. Ignoring.\n", name.size(), name.data());
                break;
@@ -784,27 +805,30 @@ public:
             {
                if( strncmp(name.data(), "initial", name.size()) == 0 )
                {
-
+                  suffix = VARINITIAL;
                }
                else if( strncmp(name.data(), "removable", name.size()) == 0 )
                {
-
+                  suffix = VARREMOVABLE;
                }
                else if( strncmp(name.data(), "ref", name.size()) == 0 )
                {
                   // SOS, real
+                  suffix = VARREF;
                }
                else if( strncmp(name.data(), "sos", name.size()) == 0 )
                {
-                  // SOS
+                  suffix = VARSOS;
                }
                else if( strncmp(name.data(), "sosno", name.size()) == 0 )
                {
-                  // SOS, real (?)
+                  // SOS, real
+                  suffix = VARSOSNO;
                }
                else if( strncmp(name.data(), "priority", name.size()) == 0 )
                {
-                  // SOS, not real (?)
+                  // SOS, not real
+                  suffix = VARPRIORITY;
                }
                SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown variable suffix <%.*s>. Ignoring.\n", name.size(), name.data());
                break;
@@ -824,7 +848,61 @@ public:
          int index,
          T   value
       )
-      { }
+      {
+         assert(index >= 0);
+         switch( suffix )
+         {
+            case IGNORE :
+               return;
+
+            case CONSINITIAL:
+               SCIPsetConsInitial(amplph.scip, amplph.conss.at(index), value == 1);
+               break;
+
+            case CONSSEPARATE:
+               SCIPsetConsSeparated(amplph.scip, amplph.conss.at(index), value == 1);
+               break;
+
+            case CONSENFORCE:
+               SCIPsetConsEnforced(amplph.scip, amplph.conss.at(index), value == 1);
+               break;
+
+            case CONSCHECK:
+               SCIPsetConsChecked(amplph.scip, amplph.conss.at(index), value == 1);
+               break;
+
+            case CONSPROPAGATE:
+               SCIPsetConsPropagated(amplph.scip, amplph.conss.at(index), value == 1);
+               break;
+
+            case CONSDYNAMIC:
+               SCIPsetConsDynamic(amplph.scip, amplph.conss.at(index), value == 1);
+               break;
+
+            case CONSREMOVABLE:
+               SCIPsetConsRemovable(amplph.scip, amplph.conss.at(index), value == 1);
+               break;
+
+            case CONSSOS:
+               break;
+
+            case VARINITIAL:
+               assert(index < amplph.probdata->nvars);
+               SCIPvarSetInitial(amplph.probdata->vars[index], value == 1);
+               break;
+
+            case VARREMOVABLE:
+               assert(index < amplph.probdata->nvars);
+               SCIPvarSetRemovable(amplph.probdata->vars[index], value == 1);
+               break;
+
+            case VARREF:
+            case VARSOS:
+            case VARSOSNO:
+            case VARPRIORITY:
+               break;
+         }
+      }
    };
 
    typedef SuffixHandler<int> IntSuffixHandler;
