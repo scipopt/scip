@@ -686,7 +686,8 @@ SCIP_RETCODE redLoopInnerStp(
    return SCIP_OKAY;
 }
 
-/** inner MWCS loop */
+/** inner MWCS loop
+ *  todo use REDBASE here instead of all the parameters and also allocate the memory locally! */
 static
 SCIP_RETCODE redLoopInnerMw(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -697,7 +698,6 @@ SCIP_RETCODE redLoopInnerMw(
    int*                  state,              /**< shortest path array  */
    int*                  vbase,              /**< voronoi base array  */
    int*                  nodearrint,         /**< nodes-sized array  */
-   int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
    STP_Bool*             nodearrchar,        /**< nodes-sized array  */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    STP_Bool              dualascent,         /**< do dual-ascent reduction? */
@@ -707,6 +707,7 @@ SCIP_RETCODE redLoopInnerMw(
    SCIP_Real             prizesum            /**< prize sum */
    )
 {
+   int* solnode = reduce_sollocalGetSolnode(redsollocal);
    SCIP_Real timelimit;
    STP_Bool da = dualascent;
    STP_Bool ans = TRUE;
@@ -862,6 +863,189 @@ SCIP_RETCODE redLoopInnerMw(
    } /* inner loop */
 
    SCIPfreeRandom(scip, &randnumgen);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/** inner (R)PC loop
+ * todo use REDBASE here instead of all the parameters and also allocate the memory locally! */
+static
+SCIP_RETCODE redLoopInnerPc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   REDSOLLOCAL*          redsollocal,        /**< solution store */
+   DHEAP*                dheap,
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   PATH*                 path,               /**< path data structure */
+   SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
+   int*                  heap,               /**< shortest path array  */
+   int*                  state,              /**< voronoi base array  */
+   int*                  vbase,              /**< nodes-sized array  */
+   int*                  nodearrint,         /**< node-sized array  */
+   int*                  edgearrint,         /**< edge-sized array  */
+   int*                  nodearrint2,        /**< nodes-sized array  */
+   STP_Bool*             nodearrchar,        /**< nodes-sized array  */
+   SCIP_Real*            fixed,
+   SCIP_RANDNUMGEN*      randnumgen,
+   SCIP_Real             prizesum,
+   SCIP_Bool             dualascent,         /**< do dual-ascent reduction? */
+   SCIP_Bool             bred,               /**< do bound-based reduction? */
+   int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   SCIP_Bool             userec,             /**< use recombination heuristic? */
+   SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
+   int*                  ninnerelims
+   )
+{
+   int* solnode = reduce_sollocalGetSolnode(redsollocal);
+   SCIP_Real timelimit;
+   const int reductbound_global = reductbound * STP_RED_GLBFACTOR;
+   SCIP_Bool dapaths = TRUE;
+   SCIP_Bool da = dualascent;
+   SCIP_Bool sd = TRUE;
+   SCIP_Bool sdw = TRUE;
+   SCIP_Bool sdstar = TRUE;
+   SCIP_Bool bd3 = nodereplacing;
+   SCIP_Bool nvsl = TRUE;
+   SCIP_Bool rerun = TRUE;
+   const SCIP_Bool verbose = FALSE && dualascent && userec && nodereplacing;
+   const STP_Bool extensive = STP_RED_EXTENSIVE;
+
+   *ninnerelims = 0;
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   /* inner loop! */
+   for( int rounds = 0; rounds < STP_RED_MAXNROUNDS && !SCIPisStopped(scip) && rerun; rounds++ )
+   {
+      int dapathelims = 0;
+      int danelims = 0;
+      int sdnelims = 0;
+      int sdcnelims = 0;
+      int bd3nelims = 0;
+      int nvslnelims = 0;
+      int sdwnelims = 0;
+      int sdstarnelims = 0;
+      int brednelims = 0;
+      int degnelims = 0;
+      int nelims = 0;
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      if( sdstar || extensive )
+      {
+         int sdstarpcnelims = 0;
+
+         SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsPc(g, rounds, pc_sdstar), TRUE, g, &sdstarnelims));
+         if( verbose ) printf("sdstarnelims %d \n", sdstarnelims);
+
+         SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
+         if( verbose ) printf("sdstarpcnelims %d \n", sdstarpcnelims);
+
+         sdstarnelims += sdstarpcnelims;
+
+         if( sdstarnelims <= reductbound )
+            sdstar = FALSE;
+      }
+
+      SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
+
+      if( (graph_pc_isRootedPcMw(g) && dapaths) || extensive )
+      {
+         reduce_dapaths(scip, g, fixed, &dapathelims);
+
+         if( dapathelims <= reductbound )
+            dapaths = FALSE;
+      }
+
+      if( sd || extensive )
+      {
+         SCIP_CALL( execPc_SD(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims,
+               reductbound, verbose, &sd) );
+      }
+
+      if( sd )
+         SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
+
+      if( sdw || extensive )
+      {
+         int sdwnelims2 = 0;
+
+         SCIP_CALL( reduce_sdWalkTriangle(scip, getWorkLimitsPc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, vbase, nodearrchar, dheap, &sdwnelims));
+         SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimitsPc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2) );
+
+         if( verbose ) printf("SDw: %d, SDwExt: %d\n", sdwnelims, sdwnelims2);
+
+         sdwnelims += sdwnelims2;
+
+         if( sdwnelims <= reductbound )
+            sdw = FALSE;
+      }
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+          break;
+
+      if( sdw )
+         SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
+
+      if( bd3 && dualascent )
+      {
+         SCIP_CALL( execPc_BDk(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2,
+               &bd3nelims, getWorkLimitsPc(g, rounds, pc_bd3), fixed, reductbound, verbose, &bd3) );
+      }
+
+      if( nvsl || extensive )
+      {
+         SCIP_CALL( execPc_NVSL(scip, NULL, g, vnoi, nodearrreal, fixed, edgearrint, vbase,
+               nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound, verbose, &nvsl) );
+      }
+
+      if( bred )
+      {
+         SCIP_CALL( execPc_BND(scip, g, vnoi, nodearrreal, fixed, heap, state, vbase, &brednelims, reductbound, verbose, &bred) );
+      }
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      if( da || (dualascent && extensive) )
+      {
+         const RPDA paramsda = { .damode = STP_DAMODE_FAST, .useRec = userec, .extredMode = extred_none, .nodereplacing = nodereplacing, .useSlackPrune = FALSE,
+             .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
+
+         SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
+
+         if( g->stp_type == STP_RPCSPG )
+         {
+            SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, fixed, &danelims, randnumgen) );
+         }
+         else
+         {
+            reduce_sollocalSetOffset(*fixed, redsollocal);
+            SCIP_CALL( reduce_sollocalRebuildTry(scip, g, redsollocal) );
+
+            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, redsollocal, vnoi,  nodearrreal, vbase, heap,
+               state, nodearrchar, &danelims, randnumgen, prizesum) );
+         }
+
+         if( danelims <= reductbound )
+            da = FALSE;
+
+         if( verbose ) printf("daX: %d \n", danelims);
+      }
+
+      SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
+
+      nelims = degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims + sdstarnelims + dapathelims;
+      *ninnerelims += nelims;
+
+      if( nelims <= reductbound_global )
+         rerun = FALSE;
+   } /* inner reduction loop */
+
 
    return SCIP_OKAY;
 }
@@ -1614,7 +1798,7 @@ SCIP_RETCODE redLoopMw(
       fullrerun = FALSE;
 
       SCIP_CALL( redLoopInnerMw(scip, g, redsollocal, vnoi, nodearrreal, state,
-            vbase, nodearrint, solnode, nodearrchar, fixed, da, bred, redbound, userec, prizesum) );
+            vbase, nodearrint, nodearrchar, fixed, da, bred, redbound, userec, prizesum) );
 
       if( advanced && g->terms > 2 )
       {
@@ -1709,7 +1893,6 @@ SCIP_RETCODE redLoopPc(
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real timelimit;
    SCIP_Bool rerun = TRUE;
-   const SCIP_Bool extensive = STP_RED_EXTENSIVE;
    SCIP_Bool advancedrun = dualascent;
    SCIP_Real prizesum;
    // todo remove
@@ -1718,6 +1901,7 @@ SCIP_RETCODE redLoopPc(
    int degnelims;
    int nadvruns = 0;
    SCIP_Bool isSpg = FALSE;
+   SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
    const SCIP_Bool trySpgTrans = userec; // todo extra parameter
    const int reductbound_global = reductbound * STP_RED_GLBFACTOR;
 
@@ -1744,154 +1928,11 @@ SCIP_RETCODE redLoopPc(
    /* main reduction loop */
    for( int outterrounds = 0; outterrounds < 3 && rerun; outterrounds++ )
    {
-      int ninnerelims = 0;
-      SCIP_Bool rpc = (g->stp_type == STP_RPCSPG);
-      SCIP_Bool dapaths = TRUE;
-      SCIP_Bool da = dualascent;
-      SCIP_Bool sd = TRUE;
-      SCIP_Bool sdc = TRUE;
-      SCIP_Bool sdw = TRUE;
-      SCIP_Bool sdstar = TRUE;
-      SCIP_Bool bd3 = nodereplacing;
-      SCIP_Bool nvsl = TRUE;
+      int ninnerelims;
 
-      /* inner loop todo outsource! */
-      for( int rounds = 0; rounds < STP_RED_MAXNROUNDS && !SCIPisStopped(scip) && rerun; rounds++ )
-      {
-         int dapathelims = 0;
-         int danelims = 0;
-         int sdnelims = 0;
-         int sdcnelims = 0;
-         int bd3nelims = 0;
-         int nvslnelims = 0;
-         int sdwnelims = 0;
-         int sdstarnelims = 0;
-         int brednelims = 0;
-         degnelims = 0;
-         nelims = 0;
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-
-         if( sdstar || extensive )
-         {
-            int sdstarpcnelims = 0;
-
-            SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsPc(g, rounds, pc_sdstar), TRUE, g, &sdstarnelims));
-            if( verbose ) printf("sdstarnelims %d \n", sdstarnelims);
-
-            SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
-            if( verbose ) printf("sdstarpcnelims %d \n", sdstarpcnelims);
-
-            sdstarnelims += sdstarpcnelims;
-
-            if( sdstarnelims <= reductbound )
-               sdstar = FALSE;
-         }
-
-         SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
-
-         if( (graph_pc_isRootedPcMw(g) && dapaths) || extensive )
-         {
-            reduce_dapaths(scip, g, fixed, &dapathelims);
-
-            if( dapathelims <= reductbound )
-               dapaths = FALSE;
-         }
-
-         if( sd || extensive )
-         {
-            SCIP_CALL( execPc_SD(scip, g, vnoi, heap, state, vbase, nodearrint, nodearrint2, &sdnelims,
-                  reductbound, verbose, &sd) );
-         }
-
-         if( sd )
-            SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
-
-         if( sdw || extensive )
-         {
-            int sdwnelims2 = 0;
-
-            SCIP_CALL( reduce_sdWalkTriangle(scip, getWorkLimitsPc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, vbase, nodearrchar, dheap, &sdwnelims));
-            SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimitsPc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2) );
-
-            if( verbose ) printf("SDw: %d, SDwExt: %d\n", sdwnelims, sdwnelims2);
-
-            sdwnelims += sdwnelims2;
-
-            if( sdwnelims <= reductbound )
-               sdw = FALSE;
-         }
-
-         if( sdc || extensive )
-         {
-#if 0
-            SCIP_CALL( execPc_SDSP(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims,
-               getWorkLimitsPc(g, rounds, pc_sdc), NULL, reductbound, verbose, &sdc) );
-#endif
-         }
-         if( SCIPgetTotalTime(scip) > timelimit )
-             break;
-
-         if( sdw )
-            SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
-
-         if( bd3 && dualascent )
-         {
-            SCIP_CALL( execPc_BDk(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2,
-                  &bd3nelims, getWorkLimitsPc(g, rounds, pc_bd3), fixed, reductbound, verbose, &bd3) );
-         }
-
-         if( nvsl || extensive )
-         {
-            SCIP_CALL( execPc_NVSL(scip, NULL, g, vnoi, nodearrreal, fixed, edgearrint, vbase,
-                  nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound, verbose, &nvsl) );
-         }
-
-         if( bred )
-         {
-            SCIP_CALL( execPc_BND(scip, g, vnoi, nodearrreal, fixed, heap, state, vbase, &brednelims, reductbound, verbose, &bred) );
-         }
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-
-         if( da || (dualascent && extensive) )
-         {
-            const RPDA paramsda = { .damode = STP_DAMODE_FAST , .useRec = userec, .extredMode = extred_none, .nodereplacing = nodereplacing, .useSlackPrune = FALSE,
-                .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
-
-            SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
-
-            assert(*fixed == reduce_solGetOffset(redsol));
-
-            if( rpc )
-            {
-               SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, fixed, &danelims, randnumgen) );
-            }
-            else
-            {
-               reduce_sollocalSetOffset(*fixed, redsollocal);
-               SCIP_CALL( reduce_sollocalRebuildTry(scip, g, redsollocal) );
-
-               SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, redsollocal, vnoi,  nodearrreal, vbase, heap,
-                  state, nodearrchar, &danelims, randnumgen, prizesum) );
-            }
-
-            if( danelims <= reductbound )
-               da = FALSE;
-
-            if( verbose ) printf("daX: %d \n", danelims);
-         }
-
-         SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
-
-         nelims = degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims + sdstarnelims + dapathelims;
-         ninnerelims += nelims;
-
-         if( nelims <= reductbound_global )
-            rerun = FALSE;
-      } /* inner reduction loop */
+      SCIP_CALL( redLoopInnerPc(scip, g, redsollocal, dheap, vnoi, path, nodearrreal, heap, state,
+             vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, fixed, randnumgen, prizesum,
+             dualascent, bred, reductbound, userec, nodereplacing, &ninnerelims) );
 
       if( advancedrun && g->terms > 2 )
       {
@@ -1904,6 +1945,7 @@ SCIP_RETCODE redLoopPc(
                .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = TRUE, .pcmw_markroots = TRUE, .pcmw_fastDa = FALSE };
 
          int danelims = 0;
+
          degnelims = 0;
          nelims = 0;
          advancedrun = FALSE;
@@ -1964,7 +2006,7 @@ SCIP_RETCODE redLoopPc(
             }
          }
       }
-   } // outter loop; todo refactor
+   }
 
    if( dualascent && tryrpc)
    {
@@ -1984,7 +2026,7 @@ SCIP_RETCODE redLoopPc(
    if( isSpg )
    {
 #ifndef WITH_UG
-      printf("change problem to SPG \n");
+      printf("changing problem to SPG \n");
       graph_printInfo(g);
 #endif
       SCIP_CALL( graph_transRpc2SpgTrivial(scip, g) );
