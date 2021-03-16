@@ -89,8 +89,15 @@ int getWorkLimitsStp(
          assert(0);
    }
 
-   if( !fullreduce )
+   if( fullreduce )
+   {
+      if( stp_bdk == redtype )
+         limit /= 2;
+   }
+   else
+   {
       limit /= 3;
+   }
 
    assert(limit >= 0);
 

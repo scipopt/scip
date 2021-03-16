@@ -59,6 +59,7 @@
 #define DEFAULT_EVALRUNS 20                  /**< number of runs */
 #define DEFAULT_INITRUNS 100                 /**< number of initial runs */
 #define DEFAULT_LEAFRUNS 25                  /**< number of runs at leafs */
+#define DEFAULT_HARD_RUNSMULT 2              /**< multiplier */
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
 #define DEFAULT_DURINGLPFREQ 5               /**< frequency during LP solving */
 #define DEFAULT_TYPE  0                      /**< heuristic to execute */
@@ -66,8 +67,7 @@
 
 #define DEFAULT_RANDSEED 5                   /**< seed for pseudo-random functions */
 
-#define TM_HARD_MAXNEDGES 10000
-#define TM_HARD_FACTOR    3
+#define TM_HARD_MAXNEDGES 15000
 
 #define AUTO        0
 #define TM_SP       1
@@ -148,6 +148,7 @@ struct SCIP_HeurData
    int                   initruns;           /**< number of initial runs */
    int                   leafruns;           /**< number of runs at leafs */
    int                   rootruns;           /**< number of runs at the root */
+   int                   hardrunsmult;       /**< multiplier */
    int                   duringlpfreq;       /**< frequency during LP solving */
    int                   type;               /**< Heuristic type: 0 automatic, 1 TM_SP, 2 TM_VORONOI, 3 TM_DIJKSTRA */
    int                   beststartnode;      /**< start node of the so far best found solution */
@@ -2810,7 +2811,11 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    if( (isPcMw || isSpg) && graph->edges < TM_HARD_MAXNEDGES && SCIPprobdataProbIsAversarial(scip) )
    {
-      runs *= TM_HARD_FACTOR;
+      assert(heurdata->hardrunsmult >= 1);
+      if( !(heurtiming & SCIP_HEURTIMING_BEFORENODE) )
+      {
+         runs *= heurdata->hardrunsmult;
+      }
    }
 
    /* increase counter for number of (TM) calls */
@@ -3760,6 +3765,9 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/pcmwmode",
          "PC/MW solving mode: 0 simple, 1 bias, 2 full bias, 3 full tree, 4 all, 5 bias and full tree",
          NULL, FALSE, DEFAULT_PCMODE, 0, 4, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/hardrunsmult",
+         "multiplier of run for hard instances",
+         &heurdata->hardrunsmult, FALSE, DEFAULT_HARD_RUNSMULT, 1, INT_MAX, NULL, NULL) );
 
    heurdata->hopfactor = DEFAULT_HOPFACTOR;
    heurdata->pcmw_mode = DEFAULT_PCMODE;
