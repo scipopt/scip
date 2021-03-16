@@ -229,8 +229,8 @@ SCIP_RETCODE sdStarBiasedProcessNode(
             {
                assert(star_base[starbase] != SDSTAR_BASE_UNSET);
 
-               /* path still valid? todo really necessary? */
-               if( star_base[starbase] != SDSTAR_BASE_KILLED )
+               /* path still valid? todo check */
+               if( 1 ) // star_base[starbase] != SDSTAR_BASE_KILLED )
                {
                   if( !usestrongreds && SCIPisEQ(scip, dijkdata->node_distance[starnode], dcsr->cost[e]) )
                      continue;
@@ -3809,7 +3809,7 @@ SCIP_RETCODE reduce_sdStar(
                   assert(star_base[starbase] != SDSTAR_BASE_UNSET);
 
                   /* path still valid? todo really necessary? */
-                  if( star_base[starbase] != SDSTAR_BASE_KILLED )
+                  if( 1 ) //star_base[starbase] != SDSTAR_BASE_KILLED )
                   {
                      star_base[starnode] = SDSTAR_BASE_KILLED;
                      edge_deletable[edgeid_csr[e] / 2] = TRUE;
@@ -4018,7 +4018,7 @@ SCIP_RETCODE reduce_sdStarPc2(
                   assert(star_base[starbase] != SDSTAR_BASE_UNSET);
 
                   /* path still valid?   */
-                  if( star_base[starbase] != SDSTAR_BASE_KILLED || !EQ(dist[starnode], dcsr->cost[e]) )
+                  if( 1 ) //star_base[starbase] != SDSTAR_BASE_KILLED || !EQ(dist[starnode], dcsr->cost[e]) )
                   {
                      if( !usestrongreds && EQ(dist[starnode], dcsr->cost[e]) )
                         continue;
