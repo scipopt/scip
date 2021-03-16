@@ -11757,6 +11757,138 @@ SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
    return SCIP_OKAY;
 }
 
+/** changes left-hand-side of a nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_RETCODE SCIPchgLhsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             lhs                 /**< new left-hand-side */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("SCIPchgLhsNonlinear can only be called in problem stage.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* we should have an original constraint */
+   assert(SCIPconsIsOriginal(cons));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->lhs == lhs )
+      return SCIP_OKAY;
+
+   consdata->lhs = lhs;
+
+   /* not sure we care about any of these flags for original constraints */
+   consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** changes right-hand-side of a nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_RETCODE SCIPchgRhsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             rhs                 /**< new right-hand-side */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("SCIPchgLhsNonlinear can only be called in problem stage.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* we should have an original constraint */
+   assert(SCIPconsIsOriginal(cons));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->rhs == rhs )
+      return SCIP_OKAY;
+
+   consdata->rhs = rhs;
+
+   /* not sure we care about any of these flags for original constraints */
+   consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** changes expression of a nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_RETCODE SCIPchgExprNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_EXPR*            expr                /**< new expression */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(expr != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("SCIPaddLinearTermConsNonlinear can only be called in problem stage.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* we should have an original constraint */
+   assert(SCIPconsIsOriginal(cons));
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   /* we should not have collected additional data for the expr
+    * if some of these asserts fail, we may have to remove it and add some code to keep information uptodate
+    */
+   assert(consdata->nvarexprs == 0);
+   assert(consdata->varexprs == NULL);
+   assert(!consdata->catchedevents);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &consdata->expr) );
+
+   /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
+   SCIP_CALL( SCIPduplicateExpr(scip, expr, &consdata->expr, mapexprvar, conshdlr, exprownerCreate, (void*)conshdlr) );
+
+   /* not sure we care about any of these flags for original constraints */
+   consdata->curv = SCIP_EXPRCURV_UNKNOWN;
+   consdata->issimplified = FALSE;
+   consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** adds coef * var to expression constraint
  *
  * @attention This method can only be called in the problem stage.
