@@ -23,6 +23,7 @@
  * The code for SOS reading is based on the AMPL/Bonmin interface (https://github.com/coin-or/Bonmin).
  *
  * For documentation on ampl::mp, see https://ampl.github.io.
+ * For documentation on .nl files, see https://ampl.com/REFS/hooking2.pdf.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -165,6 +166,9 @@ public:
       assert(exprstorelease.empty());
    }
 
+   /// process header of .nl files
+   ///
+   /// create and add variables, allocate constraints
    void OnHeader(
       const mp::NLHeader& h
       )
@@ -254,6 +258,7 @@ public:
       }
    }
 
+   /// receive notification of a number in a nonlinear expression
    SCIP_EXPR* OnNumber(
       double             value
       )
@@ -268,6 +273,7 @@ public:
       return expr;
    }
 
+   /// receive notification of a variable reference in a nonlinear expression
    SCIP_EXPR* OnVariableRef(
       int                variableIndex
       )
@@ -279,6 +285,7 @@ public:
       return varexprs[variableIndex];
    }
 
+   /// receive notification of a unary expression
    SCIP_EXPR* OnUnary(
       mp::expr::Kind     kind,
       SCIP_EXPR*         child
@@ -346,6 +353,7 @@ public:
       return expr;
    }
 
+   /// receive notification of a binary expression
    SCIP_EXPR* OnBinary(
       mp::expr::Kind     kind,
       SCIP_EXPR*         firstChild,
@@ -432,8 +440,9 @@ public:
       return expr;
    }
 
-   // Used for creating a list of terms in a sum
-   // NumericArgHandler is copied around, so make it keep only a pointer (with reference counting) to actual data
+   /// handler to create a list of terms in a sum
+   ///
+   /// NumericArgHandler is copied around, so it keeps only a pointer (with reference counting) to actual data
    class NumericArgHandler
    {
    public:
@@ -455,6 +464,7 @@ public:
       }
    };
 
+   /// receive notification of the beginning of a summation
    NumericArgHandler BeginSum(
       int                num_args
       )
@@ -463,6 +473,7 @@ public:
       return h;
    }
 
+   /// receive notification of the end of a summation
    SCIP_EXPR* EndSum(
       NumericArgHandler handler
       )
@@ -474,6 +485,7 @@ public:
       return expr;
    }
 
+   /// receive notification of an objective type and the nonlinear part of an objective expression
    void OnObj(
       int                objectiveIndex,
       mp::obj::Type      type,
@@ -503,6 +515,7 @@ public:
       }
    }
 
+   /// receive notification of an algebraic constraint expression
    void OnAlgebraicCon(
       int                constraintIndex,
       SCIP_EXPR*         expr
@@ -527,6 +540,7 @@ public:
    }
 #endif
 
+   /// receive notification of variable bounds
    void OnVarBounds(
       int                variableIndex,
       double             variableLB,
@@ -549,6 +563,7 @@ public:
       }
    }
 
+   /// receive notification of constraint sides
    void OnConBounds(
       int                index,
       double             lb,
@@ -579,7 +594,7 @@ public:
       }
    }
 
-   /// Receives notification of the initial value for a variable
+   /// receive notification of the initial value for a variable
    void OnInitialValue(
       int                var_index,
       double             value
@@ -593,7 +608,7 @@ public:
       SCIP_CALL_THROW( SCIPsetSolVal(scip, initsol, probdata->vars[var_index], value) );
    }
 
-   /// Receives notification of the initial value for a dual variable.
+   /// receives notification of the initial value for a dual variable
    void OnInitialDualValue(
       int                /* con_index */,
       double             /* value */
@@ -602,7 +617,7 @@ public:
       // ignore initial dual value
    }
 
-   /// Receives notification of Jacobian column sizes.
+   /// receives notification of Jacobian column sizes
    ColumnSizeHandler OnColumnSizes()
    {
       /// use ColumnSizeHandler from upper class, which does nothing
@@ -709,9 +724,10 @@ public:
    };
 
    typedef SuffixHandler<int> IntSuffixHandler;
+   /// receive notification of an integer suffix
    IntSuffixHandler OnIntSuffix(
-      fmt::StringRef     name,
-      mp::suf::Kind      kind,
+      fmt::StringRef     name,               /**< suffix name, not null-terminated */
+      mp::suf::Kind      kind,               /**< suffix kind */
       int                num_values
       )
    {
@@ -719,15 +735,21 @@ public:
    }
 
    typedef SuffixHandler<SCIP_Real> DblSuffixHandler;
+   /// receive notification of a double suffix
    DblSuffixHandler OnDblSuffix(
-      fmt::StringRef     name,
-      mp::suf::Kind      kind,
+      fmt::StringRef     name,               /**< suffix name, not null-terminated */
+      mp::suf::Kind      kind,               /**< suffix kind */
       int                num_values
       )
    {
       return DblSuffixHandler(*this, name, kind, num_values);
    }
 
+   /// handles receiving the linear part of an objective or constraint
+   ///
+   /// for objective, set the objective-coefficient of the variable
+   /// for linear constraints, add to the constraint
+   /// for nonlinear constraints, add to nlconslin vector; adding to constraint later
    class LinearPartHandler
    {
    private:
@@ -784,6 +806,7 @@ public:
 
    typedef LinearPartHandler LinearObjHandler;
 
+   /// receive notification of the linear part of an objective
    LinearPartHandler OnLinearObjExpr(
       int                objectiveIndex,
       int                /* numLinearTerms */
@@ -797,6 +820,7 @@ public:
 
    typedef LinearPartHandler LinearConHandler;
 
+   /// receive notification of the linear part of a constraint
    LinearConHandler OnLinearConExpr(
       int                constraintIndex,
       int                /* numLinearTerms */
@@ -805,6 +829,11 @@ public:
       return LinearConHandler(*this, constraintIndex);
    }
 
+   /// receive notification of the end of the input
+   ///
+   /// - setup all nonlinear constraints and add them to SCIP
+   /// - add linear constraints to SCIP (should be after nonlinear ones to respect order in .nl file)
+   /// - add initial solution, if initial values were given
    void EndInput()
    {
       char name[SCIP_MAXSTRLEN];
@@ -869,8 +898,10 @@ public:
       SCIP_CALL_THROW( cleanup() );
    }
 
-   // releases expressions and linear constraints from data
-   // this is not in the destructor, because we want to return SCIP_RETCODE
+   /// releases expressions and linear constraints from data
+   ///
+   /// should be called if there was an error while reading the .nl file
+   /// this is not in the destructor, because we want to return SCIP_RETCODE
    SCIP_RETCODE cleanup()
    {
       // release linear constraints (in case EndInput() wasn't called)
@@ -954,6 +985,7 @@ SCIP_DECL_READERREAD(readerReadNl)
 
    // TODO read var/con names from corresponding files, if existing
 
+   // try to read the .nl file and setup SCIP problem
    AMPLProblemHandler handler(scip, filename);
    try
    {
