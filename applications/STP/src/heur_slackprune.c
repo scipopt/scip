@@ -262,13 +262,13 @@ SCIP_RETCODE reduceExact(
    {
       SCIP_CALL( redLoopPc(scip, redsol, prunegraph, vnoi, path, nodearrreal, heap, state,
             vbase, nodearrint, edgearrint, nodearrint2, nodearrchar,
-            FALSE, FALSE, FALSE, reductbound, FALSE, TRUE) );
+            FALSE, FALSE, FALSE, reductbound, FALSE, TRUE, TRUE) );
    }
    else if( graph_pc_isMw(prunegraph) )
    {
       SCIP_CALL( redLoopMw(scip, redsol, prunegraph, vnoi, nodearrreal, state,
             vbase, nodearrint, nodearrchar,
-            FALSE, FALSE, FALSE, reductbound, FALSE) );
+            FALSE, FALSE, FALSE, reductbound, FALSE, TRUE) );
    }
    else
    {

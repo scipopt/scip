@@ -47,15 +47,17 @@ extern int reduce_getMinNreductions(const GRAPH*, int);
 extern SCIP_RETCODE reduce_baseInit(SCIP*, const GRAPH*, REDBASE**);
 extern void reduce_baseFree(SCIP*, REDBASE**);
 extern SCIP_RETCODE reduceStp(SCIP*, GRAPH*, REDSOL*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool, SCIP_Bool);
-extern SCIP_RETCODE reducePc(SCIP*, REDSOL*, GRAPH*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
-extern SCIP_RETCODE reduceMw(SCIP*, REDSOL*, GRAPH*, int, SCIP_Bool, SCIP_Bool);
+extern SCIP_RETCODE reducePc(SCIP*, REDSOL*, GRAPH*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool, SCIP_Bool);
+extern SCIP_RETCODE reduceMw(SCIP*, REDSOL*, GRAPH*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE reduceHc(SCIP*, GRAPH*, SCIP_Real*, int);
 extern SCIP_RETCODE reduceSap(SCIP*, GRAPH*, SCIP_Bool, SCIP_Real*, int);
 extern SCIP_RETCODE reduceNw(SCIP*, GRAPH*, SCIP_Real*, int);
 extern SCIP_RETCODE reduceDc(SCIP*, GRAPH*, SCIP_Real*, int);
 extern SCIP_RETCODE redLoopStp(SCIP*, GRAPH*, REDBASE*);
-extern SCIP_RETCODE redLoopPc(SCIP*, REDSOL*, GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool);
-extern SCIP_RETCODE redLoopMw(SCIP*, REDSOL*, GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, STP_Bool*, STP_Bool, STP_Bool, STP_Bool, int, SCIP_Bool);
+extern SCIP_RETCODE redLoopPc(SCIP*, REDSOL*, GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int*, STP_Bool*,
+                              SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
+extern SCIP_RETCODE redLoopMw(SCIP*, REDSOL*, GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, STP_Bool*,
+                              STP_Bool, STP_Bool, STP_Bool, int, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE reduce(SCIP*, GRAPH*, REDSOL*, int, int, SCIP_Bool);
 
 /* reduce_sol.c
@@ -122,11 +124,11 @@ extern SCIP_RETCODE    reduce_sdStar(SCIP*, int, SCIP_Bool, GRAPH*, SCIP_Real*, 
 extern SCIP_RETCODE    reduce_sdStarBiased(SCIP*, int, SCIP_Bool, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_sdStarBiasedWithProfit(SCIP*, int, const SDPROFIT*, SCIP_Bool, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_sdStarPc(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, STP_Bool*, DHEAP*, int*);
-extern SCIP_RETCODE    reduce_sdStarPc2(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, STP_Bool*, DHEAP*, int*);
+extern SCIP_RETCODE    reduce_sdStarPc2(SCIP*, int, SCIP_Bool, GRAPH*, SCIP_Real*, int*, int*, STP_Bool*, DHEAP*, int*);
 extern SCIP_RETCODE    reduce_sdWalk(SCIP*, int, const int*, GRAPH*, int*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdWalk_csr(SCIP*, int, const int*, GRAPH*, int*, SCIP_Real*, int*, STP_Bool*, DHEAP*, int*);
-extern SCIP_RETCODE    reduce_sdWalkTriangle(SCIP*, int, const int*, GRAPH*, int*, SCIP_Real*, int*, STP_Bool*, DHEAP*, int*);
-extern SCIP_RETCODE    reduce_sdWalkExt(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
+extern SCIP_RETCODE    reduce_sdWalkTriangle(SCIP*, int, SCIP_Bool, GRAPH*, int*, SCIP_Real*, int*, STP_Bool*, DHEAP*, int*);
+extern SCIP_RETCODE    reduce_sdWalkExt(SCIP*, int, SCIP_Bool, GRAPH*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdWalkExt2(SCIP*, int, const int*, GRAPH*, int*,  SCIP_Real*, int*, int*, int*, STP_Bool*, int*);
 extern SCIP_RETCODE    reduce_sdspSap(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    reduce_sd(SCIP*, GRAPH*, REDBASE*, int*);

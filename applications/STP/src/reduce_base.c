@@ -340,7 +340,7 @@ SCIP_RETCODE execPc_BDk(
 static
 SCIP_RETCODE execPc_NVSL(
    SCIP*                 scip,
-   const int*            edgestate,          /**< for propagation or NULL */
+   SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
    GRAPH*                g,
    PATH*                 vnoi,
    SCIP_Real*            nodearrreal,
@@ -357,7 +357,8 @@ SCIP_RETCODE execPc_NVSL(
    SCIP_Bool*            rerun               /**< use again? */
 )
 {
-   SCIP_CALL( execNvSl(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, vbase, neighb,
+   // todo propagate usestrongreds and use it!
+   SCIP_CALL( execNvSl(scip, NULL, g, vnoi, nodearrreal, fixed, edgearrint, vbase, neighb,
          distnode, solnode, visited, nelims, redbound) );
 
    if( verbose )
@@ -896,16 +897,17 @@ SCIP_RETCODE redLoopInnerPc(
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             userec,             /**< use recombination heuristic? */
    SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
+   SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
    int*                  ninnerelims
    )
 {
    int* solnode = reduce_sollocalGetSolnode(redsollocal);
    SCIP_Real timelimit;
    const int reductbound_global = reductbound * STP_RED_GLBFACTOR;
-   SCIP_Bool dapaths = TRUE;
+   SCIP_Bool dapaths = usestrongreds;
    SCIP_Bool da = dualascent;
-   SCIP_Bool sd = TRUE;
-   SCIP_Bool sdw = TRUE;
+   SCIP_Bool sd = usestrongreds;
+   SCIP_Bool sdw = usestrongreds;
    SCIP_Bool sdstar = TRUE;
    SCIP_Bool bd3 = nodereplacing;
    SCIP_Bool nvsl = TRUE;
@@ -939,10 +941,10 @@ SCIP_RETCODE redLoopInnerPc(
       {
          int sdstarpcnelims = 0;
 
-         SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsPc(g, rounds, pc_sdstar), TRUE, g, &sdstarnelims));
+         SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsPc(g, rounds, pc_sdstar), usestrongreds, g, &sdstarnelims));
          if( verbose ) printf("sdstarnelims %d \n", sdstarnelims);
 
-         SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar), NULL, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
+         SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar), usestrongreds, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
          if( verbose ) printf("sdstarpcnelims %d \n", sdstarpcnelims);
 
          sdstarnelims += sdstarpcnelims;
@@ -974,8 +976,8 @@ SCIP_RETCODE redLoopInnerPc(
       {
          int sdwnelims2 = 0;
 
-         SCIP_CALL( reduce_sdWalkTriangle(scip, getWorkLimitsPc(g, rounds, pc_sdw1), NULL, g, nodearrint, nodearrreal, vbase, nodearrchar, dheap, &sdwnelims));
-         SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimitsPc(g, rounds, pc_sdw2), NULL, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2) );
+         SCIP_CALL( reduce_sdWalkTriangle(scip, getWorkLimitsPc(g, rounds, pc_sdw1), usestrongreds, g, nodearrint, nodearrreal, vbase, nodearrchar, dheap, &sdwnelims));
+         SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimitsPc(g, rounds, pc_sdw2), usestrongreds, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2) );
 
          if( verbose ) printf("SDw: %d, SDwExt: %d\n", sdwnelims, sdwnelims2);
 
@@ -999,7 +1001,7 @@ SCIP_RETCODE redLoopInnerPc(
 
       if( nvsl || extensive )
       {
-         SCIP_CALL( execPc_NVSL(scip, NULL, g, vnoi, nodearrreal, fixed, edgearrint, vbase,
+         SCIP_CALL( execPc_NVSL(scip, usestrongreds, g, vnoi, nodearrreal, fixed, edgearrint, vbase,
                nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound, verbose, &nvsl) );
       }
 
@@ -1240,7 +1242,9 @@ SCIP_RETCODE reducePc(
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             advanced,           /**< perform advanced (e.g. dual ascent) reductions? */
    SCIP_Bool             userec,             /**< use recombination heuristic? */
-   SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
+   SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
+   SCIP_Bool             usestrongreds       /**< allow strong reductions?
+                                                  NOTE: needed for propagation, because arcs might have been fixed to 0 */
    )
 {
    PATH* vnoi;
@@ -1296,7 +1300,8 @@ SCIP_RETCODE reducePc(
 
    /* reduction loop */
    SCIP_CALL( redLoopPc(scip, redsol, g, vnoi, path, nodearrreal, heap, state,
-         vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, advanced, bred, userec && advanced, reductbound, userec, nodereplacing) );
+         vbase, nodearrint, edgearrint, nodearrint2, nodearrchar,
+         advanced, bred, userec && advanced, reductbound, userec, nodereplacing, usestrongreds) );
 
    /* free memory */
    SCIPfreeBufferArray(scip, &edgearrint);
@@ -1320,7 +1325,9 @@ SCIP_RETCODE reduceMw(
    GRAPH*                g,                  /**< graph data structure */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             advanced,           /**< perform advanced reductions? */
-   SCIP_Bool             userec              /**< use recombination heuristic? */
+   SCIP_Bool             userec,             /**< use recombination heuristic? */
+   SCIP_Bool             usestrongreds       /**< allow strong reductions?
+                                                  NOTE: needed for propagation, because arcs might have been fixed to 0 */
    )
 {
    PATH* vnoi;
@@ -1357,7 +1364,7 @@ SCIP_RETCODE reduceMw(
 
    /* reduction loop */
    SCIP_CALL( redLoopMw(scip, redsol, g, vnoi, nodearrreal, state,
-         vbase, nodearrint, nodearrchar, advanced, bred, advanced, redbound, userec) );
+         vbase, nodearrint, nodearrchar, advanced, bred, advanced, redbound, userec, usestrongreds) );
 
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &nodearrreal);
@@ -1753,7 +1760,9 @@ SCIP_RETCODE redLoopMw(
    STP_Bool              bred,               /**< do bound-based reduction? */
    STP_Bool              tryrmw,             /**< try to convert problem to RMWCSP? Only possible if advanced = TRUE and userec = TRUE */
    int                   redbound,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   SCIP_Bool             userec              /**< use recombination heuristic? */
+   SCIP_Bool             userec,             /**< use recombination heuristic? */
+   SCIP_Bool             usestrongreds       /**< allow strong reductions? */
+
    )
 {
    SCIP_Real* fixed;
@@ -1883,7 +1892,8 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool             tryrpc,             /**< try to transform to rpc? */
    int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
    SCIP_Bool             userec,             /**< use recombination heuristic? */
-   SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
+   SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
+   SCIP_Bool             usestrongreds       /**< allow strong reductions? */
    )
 {
    SCIP_Real* fixed;
@@ -1933,7 +1943,7 @@ SCIP_RETCODE redLoopPc(
 
       SCIP_CALL( redLoopInnerPc(scip, g, redsollocal, dheap, vnoi, path, nodearrreal, heap, state,
              vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, fixed, randnumgen, prizesum,
-             dualascent, bred, reductbound, userec, nodereplacing, &ninnerelims) );
+             dualascent, bred, reductbound, userec, nodereplacing, usestrongreds, &ninnerelims) );
 
       if( advancedrun && g->terms > 2 )
       {
@@ -2204,11 +2214,11 @@ SCIP_RETCODE reduce(
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, redsol, graph, minelims, FALSE, FALSE, TRUE) );
+         SCIP_CALL( reducePc(scip, redsol, graph, minelims, FALSE, FALSE, TRUE, TRUE) );
       }
       else if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
       {
-         SCIP_CALL( reduceMw(scip, redsol, graph, minelims, FALSE, FALSE) );
+         SCIP_CALL( reduceMw(scip, redsol, graph, minelims, FALSE, FALSE, TRUE) );
       }
       else if( stp_type == STP_DHCSTP )
       {
@@ -2237,7 +2247,7 @@ SCIP_RETCODE reduce(
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, redsol, graph, minelims, TRUE, userec, TRUE) );
+         SCIP_CALL( reducePc(scip, redsol, graph, minelims, TRUE, userec, TRUE, TRUE) );
 
          if( graph->stp_type == STP_SPG )
          {
@@ -2247,7 +2257,7 @@ SCIP_RETCODE reduce(
       }
       else if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
       {
-         SCIP_CALL( reduceMw(scip, redsol, graph, minelims, TRUE, userec) );
+         SCIP_CALL( reduceMw(scip, redsol, graph, minelims, TRUE, userec, TRUE) );
       }
       else if( stp_type == STP_DHCSTP )
       {

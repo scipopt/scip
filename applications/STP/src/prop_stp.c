@@ -1892,12 +1892,12 @@ SCIP_RETCODE fixVarsRedbased(
    /* now reduce the graph by standard reductions */
    if( graph_pc_isPc(propgraph) )
    {
-      SCIP_CALL( reducePc(scip, redsol, propgraph, 2, FALSE, FALSE, FALSE) );
+      SCIP_CALL( reducePc(scip, redsol, propgraph, 2, FALSE, FALSE, FALSE, FALSE) );
    }
    else if( graph_pc_isMw(propgraph) )
    {
       SCIPdebugMessage("starting MW reductions \n");
-      SCIP_CALL( reduceMw(scip, redsol, propgraph, 2, FALSE, FALSE) );
+      SCIP_CALL( reduceMw(scip, redsol, propgraph, 2, FALSE, FALSE, FALSE) );
    }
    else
    {

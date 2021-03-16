@@ -3525,7 +3525,7 @@ SCIP_RETCODE reduce_sdEdgeCliqueStar(
 SCIP_RETCODE reduce_sdWalkTriangle(
    SCIP*                 scip,
    int                   edgelimit,
-   const int*            edgestate,
+   SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
    GRAPH*                g,
    int*                  termmark,
    SCIP_Real*            dist,
@@ -3548,7 +3548,6 @@ SCIP_RETCODE reduce_sdWalkTriangle(
    STP_Bool* visited2;
    const int nnodes = g->knots;
    const int nedges = g->edges;
-   const SCIP_Bool checkstate = (edgestate != NULL);
 
    assert(g && scip && nelims && visited && visitlist && dheap);
    assert(!g->extended);
@@ -3614,13 +3613,6 @@ SCIP_RETCODE reduce_sdWalkTriangle(
          /* avoid double checking */
          if( i2 < i )
             continue;
-
-         if( checkstate  )
-         {
-            const int orgedge = edgeid_csr[e];
-            if( edgestate[orgedge] == EDGE_BLOCKED )
-               continue;
-         }
 
          success = graph_sdWalksTriangle(scip, g, termmark, NULL, ecost, i, i2, edgelimit, NULL, dist, visitlist, &nvisits, dheap, visited);
 
@@ -3924,7 +3916,7 @@ SCIP_RETCODE reduce_sdStarBiasedWithProfit(
 SCIP_RETCODE reduce_sdStarPc2(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edgelimit,          /**< limit */
-   const int*            edgestate,          /**< state array or NULL */
+   SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            dist,               /**< vertex distances */
    int*                  star_base,          /**< array of size nnodes */
@@ -3943,7 +3935,6 @@ SCIP_RETCODE reduce_sdStarPc2(
    SCIP_Bool* edge_deletable;
    const int nnodes = g->knots;
    const int nedges = g->edges;
-   const SCIP_Bool checkstate = (edgestate != NULL);
 
    assert(g && scip && nelims && visited && visitlist && dheap && star_base);
    assert(graph_pc_isPcMw(g) && !g->extended);
@@ -4021,13 +4012,6 @@ SCIP_RETCODE reduce_sdStarPc2(
 
                enext = e + 1;
 
-               if( checkstate )
-               {
-                  const int orgedge = edgeid_csr[e];
-                  if( edgestate[orgedge] == EDGE_BLOCKED )
-                     continue;
-               }
-
                /* shorter path to current star node found? */
                if( starnode != starbase )
                {
@@ -4036,6 +4020,9 @@ SCIP_RETCODE reduce_sdStarPc2(
                   /* path still valid?   */
                   if( star_base[starbase] != SDSTAR_BASE_KILLED || !EQ(dist[starnode], dcsr->cost[e]) )
                   {
+                     if( !usestrongreds && EQ(dist[starnode], dcsr->cost[e]) )
+                        continue;
+
                      star_base[starnode] = SDSTAR_BASE_KILLED;
                      edge_deletable[edgeid_csr[e] / 2] = TRUE;
 
@@ -4370,7 +4357,7 @@ SCIP_RETCODE reduce_sdWalk(
 SCIP_RETCODE reduce_sdWalkExt(
    SCIP*                 scip,
    int                   edgelimit,
-   const int*            edgestate,
+   SCIP_Bool             usestrongreds,      /**< allow strong reductions? */
    GRAPH*                g,
    SCIP_Real*            dist,
    int*                  heap,
@@ -4383,7 +4370,6 @@ SCIP_RETCODE reduce_sdWalkExt(
    int* prevterms;
    int* nprevterms;
    const int nnodes = g->knots;
-   const SCIP_Bool checkstate = (edgestate != NULL);
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -4426,12 +4412,6 @@ SCIP_RETCODE reduce_sdWalkExt(
 
          /* avoid double checking */
          if( !g->mark[i2] )
-         {
-            e = enext;
-            continue;
-         }
-
-         if( checkstate && edgestate[e] == EDGE_BLOCKED )
          {
             e = enext;
             continue;

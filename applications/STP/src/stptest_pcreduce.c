@@ -91,11 +91,11 @@ SCIP_RETCODE checkSdWalk(
 
    if( extended )
    {
-      SCIP_CALL( reduce_sdWalkExt(scip, 200, NULL, graph, nodearrreal1, heap, state, vbase, nodearrchar, nelims) );
+      SCIP_CALL( reduce_sdWalkExt(scip, 200, TRUE, graph, nodearrreal1, heap, state, vbase, nodearrchar, nelims) );
    }
    else
    {
-     SCIP_CALL( reduce_sdWalkTriangle(scip, 5, NULL, graph, nodearr_int1, nodearrreal1, heap, nodearrchar, dheap, nelims));
+     SCIP_CALL( reduce_sdWalkTriangle(scip, 5, TRUE, graph, nodearr_int1, nodearrreal1, heap, nodearrchar, dheap, nelims));
    }
 
    /* clean up */
@@ -774,7 +774,7 @@ SCIP_RETCODE testSdStarPcKillsEdge(
    SCIP_CALL( SCIPallocMemoryArray(scip, &star_base, nnodes) );
 
    /* actual test: edge 0 should have been deleted */
-   SCIP_CALL( reduce_sdStarPc2(scip, nedges, NULL, graph, dijkdata->node_distance, star_base, dijkdata->visitlist, dijkdata->node_visited, dijkdata->dheap, &nelims) );
+   SCIP_CALL( reduce_sdStarPc2(scip, nedges, TRUE, graph, dijkdata->node_distance, star_base, dijkdata->visitlist, dijkdata->node_visited, dijkdata->dheap, &nelims) );
 
    STPTEST_ASSERT(nelims == 1);
    STPTEST_ASSERT(graph->oeat[0] == EAT_FREE);
