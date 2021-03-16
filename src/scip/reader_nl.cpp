@@ -600,7 +600,7 @@ public:
 
       assert(objexpr == NULL);
 
-      if( SCIPisExprValue(scip, nonlinearExpression) )
+      if( nonlinearExpression != NULL && SCIPisExprValue(scip, nonlinearExpression) )
       {
          // handle objective constant by adding a fixed variable for it
          SCIP_VAR* objconstvar;
