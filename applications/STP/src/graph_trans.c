@@ -24,6 +24,8 @@
  *
  */
 
+//#define SCIP_DEBUG
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -1251,6 +1253,8 @@ SCIP_RETCODE graph_transRpcGetSpg(
 
       if( GT(graph->prize[k], 0.0) && LT(graph->prize[k], FARAWAY) )
       {
+         assert(Is_term(graph->term[k]));
+
          prizesum += graph->prize[k];
          ndummyterms++;
          nnodes_new++;
@@ -1263,12 +1267,15 @@ SCIP_RETCODE graph_transRpcGetSpg(
 
    assert(ndummyterms == graph_pc_nProperPotentialTerms(graph) + graph_pc_nNonLeafTerms(graph));
 
-   printf("prizesum=%f \n", prizesum);
+   prizesum = floor(prizesum);
+
+   SCIPdebugMessage("prizesum=%f \n", prizesum);
    assert(LT(prizesum, BLOCKED));
 
    *offset -= prizesum * (ndummyterms);
 
-   printf("fixed=%f \n", prizesum * ndummyterms);
+   SCIPdebugMessage("fixed=%f \n", prizesum * ndummyterms);
+   SCIPdebugMessage("number of dummy terminals: %d \n", ndummyterms);
 
    SCIP_CALL( graph_init(scip, newgraph, nnodes_new, nedges_new, 1) );
    graph_new = *newgraph;
@@ -1283,7 +1290,11 @@ SCIP_RETCODE graph_transRpcGetSpg(
       }
 
       nodes_org2new[k] = graph_new->knots;
-      graph_knot_add(graph_new, graph->term[k]);
+
+      if( graph_pc_knotIsFixedTerm(graph, k) )
+         graph_knot_add(graph_new, STP_TERM);
+      else
+         graph_knot_add(graph_new, STP_TERM_NONE);
    }
 
    firstdummy = graph_new->knots;
@@ -1332,6 +1343,11 @@ SCIP_RETCODE graph_transRpcGetSpg(
          assert(graph_knot_isInRange(graph_new, newterm));
          assert(Is_term(graph_new->term[newterm]));
          assert(graph_new->grad[newterm] == 0);
+
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("adding dummy terminal for original node %d: \n", k);
+         graph_knot_printInfo(graph, k);
+#endif
 
          for( int j = 0 ; j < 4; j++ )
             edges_new2org[graph_new->edges + j] = -1;

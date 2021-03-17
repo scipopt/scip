@@ -417,7 +417,7 @@ SCIP_Real bdkStarGetCombinedSdCost(
 
 
 #ifndef NDEBUG
-   assert(LE(star_mstsds[star_degree - 2], sdsum_dbg)); /* make sure we did not get worse */
+   assert(LE_FEAS(star_mstsds[star_degree - 2], sdsum_dbg)); /* make sure we did not get worse */
 #endif
 
    return star_mstsds[star_degree - 2];
