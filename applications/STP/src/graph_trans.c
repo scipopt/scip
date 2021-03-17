@@ -1311,7 +1311,7 @@ SCIP_RETCODE graph_transRpcGetSpg(
       graph_knot_add(graph_new, STP_TERM);
 
    graph_new->source = nodes_org2new[graph->source];
-   assert(graph_knot_isInRange(graph_new, graph->source));
+   assert(graph_knot_isInRange(graph_new, graph_new->source));
 
    /* add default edges */
    for( int k = 0; k < nnodes_org; ++k )

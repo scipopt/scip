@@ -100,6 +100,7 @@ extern void         reduce_solGetNodesol(const GRAPH*, REDSOL*, int*);
 /* reduce_alt.c
  */
 extern SCIP_RETCODE    reduce_impliedProfitBased(SCIP*, int, GRAPH*, int*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_impliedProfitBasedRpc(SCIP*, GRAPH*, REDSOLLOCAL*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_ans(SCIP*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_ansAdv(SCIP*, GRAPH*, int*, SCIP_Bool);
 extern SCIP_RETCODE    reduce_ansAdv2(SCIP*, GRAPH*, int*);

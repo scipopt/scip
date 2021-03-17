@@ -360,7 +360,7 @@ void graph_edge_del(
    assert(g);
    assert(e >= 0 && e < g->edges);
 
-   if( freeancestors )
+   if( freeancestors && g->ancestors )
    {
       graph_edge_delHistory(scip, g, e);
    }

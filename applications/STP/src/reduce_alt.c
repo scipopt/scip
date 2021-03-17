@@ -2620,3 +2620,117 @@ SCIP_RETCODE reduce_impliedProfitBased(
 
    return SCIP_OKAY;
 }
+
+
+/** similar to above, but for rooted-prize collecting Steiner tree problem */
+SCIP_RETCODE reduce_impliedProfitBasedRpc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph structure */
+   REDSOLLOCAL*          redsollocal,        /**< primal bound info */
+   SCIP_Real*            fixed,              /**< offset pointer */
+   int*                  nelims              /**< number of eliminations */
+)
+{
+   GRAPH* graph_spg;
+   SD* sdistance;
+   int* edgemap_new2org;
+   int* solnode = reduce_sollocalGetSolnode(redsollocal);
+   SCIP_Real fixednew = 0.0;
+   int nelimsnew = 0;
+   SCIP_Real primalbound;
+
+   assert(scip && g && nelims && fixed);
+
+   assert(*nelims >= 0);
+   assert(g->stp_type == STP_RPCSPG);
+
+   if( g->terms <= 2 )
+      return SCIP_OKAY;
+
+   reduce_sollocalSetOffset(*fixed, redsollocal);
+   SCIP_CALL( reduce_sollocalRebuildTry(scip, g, redsollocal) );
+   primalbound = reduce_sollocalGetUpperBound(redsollocal);
+
+   if( GE(primalbound, FARAWAY) )
+      return SCIP_OKAY;
+
+   if( !graph_transRpcToSpgIsStable(g, primalbound) )
+      return SCIP_OKAY;
+
+   printf("GO \n");
+
+
+   /* NOTE: pruning is necessary, because we need remaining graph to be connected */
+   reduce_unconnectedRpcRmw(scip, g, fixed);
+
+   assert(graph_valid(scip, g));
+
+   graph_mark(g);
+   SCIP_CALL( graph_transRpcGetSpg(scip, g, primalbound, &fixednew, &edgemap_new2org, &graph_spg) );
+
+   graph_printInfoReduced(graph_spg);
+
+   /*
+   if( graph_spg->edges < 100 )
+   {
+      graph_writeGml(g, "fail.gml", NULL);
+   }
+
+   if( graph_spg->edges < 100 )
+   {
+      graph_writeGml(graph_spg, "transfail.gml", NULL);
+   }
+*/
+
+   SCIP_CALL( graph_path_init(scip, graph_spg) );
+   SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph_spg, &sdistance) );
+   SCIP_CALL( reduce_sdBiased(scip, sdistance, graph_spg, &nelimsnew) );
+
+   for( int i = 0; i < graph_spg->edges; i += 2 )
+   {
+      if( graph_spg->oeat[i] == EAT_FREE )
+      {
+         const int orgedge = edgemap_new2org[i];
+         if( orgedge == -1 )
+         {
+            assert(Is_term(graph_spg->term[graph_spg->tail[i]]) || Is_term(graph_spg->term[graph_spg->head[i]]));
+            continue;
+         }
+         assert(graph_edge_isInRange(g, orgedge));
+
+         printf("delete %d \n", orgedge);
+         graph_edge_printInfo(g, orgedge);
+
+         graph_edge_del(scip, g, orgedge, TRUE);
+      }
+   }
+
+   assert(graph_valid(scip, g));
+
+
+   graph_printInfoReduced(graph_spg);
+
+
+   // todo use later
+#ifdef XXX
+   if( nelimsnew > 0 )
+   {
+      SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
+      SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );
+      *nelims += nelimsnew;
+   }
+
+ //  reduce_sdFree(scip, &sdistance);
+ //  SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
+
+   /* now call edge contraction tests */
+   SCIP_CALL( reduce_nsvImplied(scip, sdistance, g, solnode, fixed, nelims) );
+#endif
+
+   SCIPfreeMemoryArray(scip, &edgemap_new2org);
+   graph_path_exit(scip, graph_spg);
+   graph_free(scip, &graph_spg, FALSE);
+   reduce_sdFree(scip, &sdistance);
+
+   return SCIP_OKAY;
+}
