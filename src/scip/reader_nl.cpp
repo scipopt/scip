@@ -112,6 +112,9 @@ private:
    // used to create a corresponding constraint in EndInput(), unless NULL
    SCIP_EXPR* objexpr;
 
+   // common expressions (defined variables)
+   std::vector<SCIP_EXPR*> commonexprs;
+
    // collect expressions that need to be released eventually
    // this are all expression that are returned to the AMPL/MP code in AMPLProblemHandler::OnXyz() functions
    // they need to be released exactly once, but after they are used in another expression or a constraint
@@ -369,6 +372,9 @@ public:
 
       if( h.num_nl_cons == 0 && h.num_integer_vars() == 0 )
          probdata->islp = true;
+
+      // alloc space for common expressions
+      commonexprs.resize(h.num_common_exprs());
    }
 
    /// receive notification of a number in a nonlinear expression
@@ -640,18 +646,100 @@ public:
       }
    }
 
-#if !1  // TODO
-   LinearExprHandler BeginCommonExpr(int index, int num_linear_terms) {
-     return builder_.common_expr(index).set_linear_expr(num_linear_terms);
-   }
-   void EndCommonExpr(int index, NumericExpr expr, int position) {
-     SetCommonExpr(builder_.common_expr(index), expr, position);
+   /// handles linear part of a common expression
+   /// sets up a sum expression, if the linear part isn't empty
+   class LinearExprHandler
+   {
+   private:
+      AMPLProblemHandler& amplph;
+      SCIP_EXPR*          commonexpr;
+
+   public:
+      LinearExprHandler(
+         AMPLProblemHandler& amplph_,
+         int                 index,
+         int                 num_linear_terms
+         )
+      : amplph(amplph_),
+        commonexpr(NULL)
+      {
+         if( num_linear_terms > 0 )
+         {
+            SCIP_CALL_THROW( SCIPcreateExprSum(amplph.scip, &commonexpr, 0, NULL, NULL, 0.0, NULL, NULL) );
+            amplph.commonexprs[index] = commonexpr;
+         }
+      }
+
+      /// receives notification of a term in the linear expression
+      void AddTerm(
+         int             var_index,
+         double          coef
+         )
+      {
+         assert(commonexpr != NULL);
+
+         if( coef == 0.0 )
+            return;
+
+         if( var_index < (int)amplph.varexprs.size() )
+         {
+            SCIP_CALL_THROW( SCIPappendExprSumExpr(amplph.scip, commonexpr, amplph.varexprs[var_index], coef) );
+         }
+         else
+         {
+            // the index variable is linear (not sure this can happen here)
+            assert(var_index < amplph.probdata->nvars);
+            SCIP_EXPR* varexpr;
+            SCIP_CALL_THROW( SCIPcreateExprVar(amplph.scip, &varexpr, amplph.probdata->vars[var_index], NULL, NULL) );
+            SCIP_CALL_THROW( SCIPappendExprSumExpr(amplph.scip, commonexpr, varexpr, coef) );
+            SCIP_CALL_THROW( SCIPreleaseExpr(amplph.scip, &varexpr) );
+         }
+      }
+   };
+
+   /// receive notification of the beginning of a common expression (defined variable)
+   LinearExprHandler BeginCommonExpr(
+      int                index,
+      int                num_linear_terms
+      )
+   {
+      assert(index >= 0);
+      assert(index < (int)commonexprs.size());
+
+      return LinearExprHandler(*this, index, num_linear_terms);
    }
 
-   Reference OnCommonExprRef(int expr_index) {
-     return builder_.MakeCommonExpr(expr_index);
+   /// receive notification of the end of a common expression
+   void EndCommonExpr(
+      int                index,
+      SCIP_EXPR*         expr,
+      int                /* position */  // doesn't seem to have any purpose
+      )
+   {
+      if( commonexprs[index] != NULL )
+      {
+         // add expr, if any, to linear part
+         if( expr != NULL )
+         {
+            SCIP_CALL_THROW( SCIPappendExprSumExpr(scip, commonexprs[index], expr, 1.0) );
+         }
+      }
+      else if( expr != NULL )
+      {
+         commonexprs[index] = expr;
+      }
    }
-#endif
+
+   /// receive notification of a common expression (defined variable) reference
+   SCIP_EXPR* OnCommonExprRef(
+      int                expr_index
+      )
+   {
+      assert(expr_index >= 0);
+      assert(expr_index < (int)commonexprs.size());
+      assert(commonexprs[expr_index] != NULL);
+      return commonexprs[expr_index];
+   }
 
    /// receive notification of variable bounds
    void OnVarBounds(
@@ -1153,6 +1241,13 @@ public:
       {
          SCIP_CALL( SCIPreleaseExpr(scip, &varexprs.back()) );
          varexprs.pop_back();
+      }
+
+      // release common expressions
+      while( !commonexprs.empty() )
+      {
+         SCIP_CALL( SCIPreleaseExpr(scip, &commonexprs.back()) );
+         commonexprs.pop_back();
       }
 
       return SCIP_OKAY;
