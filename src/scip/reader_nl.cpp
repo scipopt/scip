@@ -425,7 +425,7 @@ public:
             SCIP_EXPR* logexpr;
             SCIP_Real factor = 1.0/log(10.0);
             SCIP_CALL_THROW( SCIPcreateExprLog(scip, &logexpr, child, NULL, NULL) );
-            SCIP_CALL_THROW( SCIPcreateExprSum(scip, &expr, 1, &child, &factor, 0.0, NULL, NULL) );
+            SCIP_CALL_THROW( SCIPcreateExprSum(scip, &expr, 1, &logexpr, &factor, 0.0, NULL, NULL) );
             SCIP_CALL_THROW( SCIPreleaseExpr(scip, &logexpr) );
             break;
          }
