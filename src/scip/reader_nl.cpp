@@ -17,11 +17,6 @@
  * @brief  AMPL .nl file reader
  * @author Stefan Vigerske
  *
- * The code (including some comments) for the AMPLProblemHandler class based on ModelingSystemAMPL.cpp,
- * the nl-reader of SHOT (https://github.com/coin-or/SHOT).
- *
- * The code for SOS reading is based on the AMPL/Bonmin interface (https://github.com/coin-or/Bonmin).
- *
  * For documentation on ampl::mp, see https://ampl.github.io and https://www.zverovich.net/2014/09/19/reading-nl-files.html.
  * For documentation on .nl files, see https://ampl.com/REFS/hooking2.pdf.
  */
@@ -30,6 +25,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "scip/reader_nl.h"
 #include "scip/cons_linear.h"
@@ -120,6 +116,11 @@ private:
    // as a child or when constructing a constraint, but first collect them all and then release in destructor
    // alternatively, one could encapsulate SCIP_EXPR* into a small class that handles proper reference counting
    std::vector<SCIP_EXPR*> exprstorelease;
+
+   // SOS constraints
+   // collected while handling suffixes in SuffixHandler
+   std::map<int, std::vector<int> > sosvars;
+   std::vector<int> sosweights;
 
    // initial solution, if any
    SCIP_SOL* initsol;
@@ -728,13 +729,18 @@ public:
       return ColumnSizeHandler();
    }
 
-   // TODO finish
+   /// handling of suffices for variable and constraint flags and SOS constraints
+   ///
+   /// regarding SOS in AMPL, see https://ampl.com/faqs/how-can-i-use-the-solvers-special-ordered-sets-feature/
+   /// we pass the .ref suffix as weight to the SOS constraint handlers
+   /// for a SOS2, the weights determine the order of variables in the set
    template<typename T> class SuffixHandler
    {
    private:
       AMPLProblemHandler& amplph;
 
-      enum Suffix
+      // type of suffix that is handled, or IGNORE if unsupported suffix
+      enum
       {
          IGNORE,
          CONSINITIAL,
@@ -744,13 +750,10 @@ public:
          CONSPROPAGATE,
          CONSDYNAMIC,
          CONSREMOVABLE,
-         CONSSOS,
          VARINITIAL,
          VARREMOVABLE,
-         VARREF,
-         VARSOS,
          VARSOSNO,
-         VARPRIORITY
+         VARREF,
       } suffix;
 
    public:
@@ -794,11 +797,10 @@ public:
                {
                   suffix = CONSREMOVABLE;
                }
-               else if( strncmp(name.data(), "sos", name.size()) == 0 )
+               else
                {
-                  suffix = CONSSOS;
+                  SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown constraint suffix <%.*s>. Ignoring.\n", name.size(), name.data());
                }
-               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown constraint suffix <%.*s>. Ignoring.\n", name.size(), name.data());
                break;
 
             case mp::suf::Kind::VAR:
@@ -811,26 +813,21 @@ public:
                {
                   suffix = VARREMOVABLE;
                }
-               else if( strncmp(name.data(), "ref", name.size()) == 0 )
-               {
-                  // SOS, real
-                  suffix = VARREF;
-               }
-               else if( strncmp(name.data(), "sos", name.size()) == 0 )
-               {
-                  suffix = VARSOS;
-               }
                else if( strncmp(name.data(), "sosno", name.size()) == 0 )
                {
-                  // SOS, real
+                  // SOS membership
                   suffix = VARSOSNO;
                }
-               else if( strncmp(name.data(), "priority", name.size()) == 0 )
+               else if( strncmp(name.data(), "ref", name.size()) == 0 )
                {
-                  // SOS, not real
-                  suffix = VARPRIORITY;
+                  // SOS weights
+                  suffix = VARREF;
+                  amplph.sosweights.resize(amplph.probdata->nvars, 0);
                }
-               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown variable suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+               else
+               {
+                  SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown variable suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+               }
                break;
 
             case mp::suf::Kind::OBJ:
@@ -883,9 +880,6 @@ public:
                SCIPsetConsRemovable(amplph.scip, amplph.conss.at(index), value == 1);
                break;
 
-            case CONSSOS:
-               break;
-
             case VARINITIAL:
                assert(index < amplph.probdata->nvars);
                SCIPvarSetInitial(amplph.probdata->vars[index], value == 1);
@@ -896,10 +890,14 @@ public:
                SCIPvarSetRemovable(amplph.probdata->vars[index], value == 1);
                break;
 
-            case VARREF:
-            case VARSOS:
             case VARSOSNO:
-            case VARPRIORITY:
+               // remember that variable index belongs to SOS identified by value
+               amplph.sosvars[(int)value].push_back(index);
+               break;
+
+            case VARREF:
+               // remember that variable index has weight value
+               amplph.sosweights[index] = (int)value;
                break;
          }
       }
@@ -1055,6 +1053,57 @@ public:
          SCIP_CALL_THROW( SCIPreleaseCons(scip, &conss[i]) );
       }
       conss.clear();
+
+      // add SOS constraints
+      std::vector<SCIP_VAR*> setvars;     // variables in one SOS
+      std::vector<SCIP_Real> setweights;  // weights for one SOS
+      if( !sosvars.empty() )
+         setvars.resize(probdata->nvars);
+      if( !sosweights.empty() )
+         setweights.resize(probdata->nvars);
+      for( std::map<int, std::vector<int> >::iterator sosit(sosvars.begin()); sosit != sosvars.end(); ++sosit )
+      {
+         assert(sosit->first != 0);
+         assert(!sosit->second.empty());
+
+         // a negative SOS identifier means SOS2
+         bool issos2 = sosit->first < 0;
+
+         if( issos2 && sosweights.empty() )
+         {
+            // if no .ref suffix was given for a SOS2 constraint, then we consider this as an error
+            // since the weights determine the order
+            // for a SOS1, the weights only specify branching preference, so can treat them as optional
+            OnUnhandled("SOS2 requires variable .ref suffix");
+         }
+
+         int setlen = 0;
+         for( int& varidx : sosit->second )
+         {
+            setvars[setlen] = probdata->vars[varidx];
+
+            if( issos2 && sosweights[varidx] == 0 )
+               // 0 is the default if no ref was given for a variable; we don't allow this for SOS2
+               OnUnhandled("Missing .ref value for SOS2 variable");
+            if( !sosweights.empty() )
+               setweights[setlen] = (SCIP_Real)sosweights[varidx];
+            ++setlen;
+         }
+
+         SCIP_CONS* cons;
+         if( !issos2 )
+         {
+            std::string name = "sos1_" + std::to_string(sosit->first);
+            SCIP_CALL_THROW( SCIPcreateConsBasicSOS1(scip, &cons, name.c_str(), setlen, setvars.data(), setweights.empty() ? NULL : setweights.data()) );
+         }
+         else
+         {
+            std::string name = "sos2_" + std::to_string(-sosit->first);
+            SCIP_CALL_THROW( SCIPcreateConsBasicSOS2(scip, &cons, name.c_str(), setlen, setvars.data(), setweights.data()) );
+         }
+         SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
+         SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
+      }
 
       // add initial solution
       if( initsol != NULL )
