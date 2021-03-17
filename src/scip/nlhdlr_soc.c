@@ -59,7 +59,7 @@
 
 /** nonlinear handler expression data. The data is structured in the following way:
  *
- *  A 'term' is one of the arguments of the  quadratic terms, i.e. v_i^T x + beta_i.
+ *  A 'term' is one of the arguments of the quadratic terms, i.e. v_i^T x + beta_i.
  *  The last term is always the one on the right-hand side. This means that nterms is
  *  equal to n+1 in the above description.
  *
@@ -2146,7 +2146,7 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** helper method to detect SOC structures. The dection runs in 3 steps:
+/** helper method to detect SOC structures. The detection runs in 3 steps:
  *
  *  1. check if expression is a norm of the form SQRT(sum_i (sqrcoef_i expr_i^2 + lincoef_i expr_i) + c)
  *  which can be transformed to the form SQRT(sum_i (coef_i expr_i + const_i)^2 + c*) with c* >= 0.
@@ -2170,7 +2170,7 @@ CLEANUP:
 static
 SCIP_RETCODE detectSOC(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
+   SCIP_NLHDLRDATA*      nlhdlrdata,         /**< nonlinear handler data */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
@@ -2180,14 +2180,10 @@ SCIP_RETCODE detectSOC(
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
-   SCIP_NLHDLRDATA* nlhdlrdata;
-
    assert(expr != NULL);
+   assert(nlhdlrdata != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(success != NULL);
-
-   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
-   assert(nlhdlrdata != NULL);
 
    *success = FALSE;
 
@@ -2295,6 +2291,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
    SCIP_Real consrhs;
    SCIP_Bool enforcebelow;
    SCIP_Bool success;
+   SCIP_NLHDLRDATA* nlhdlrdata;
 
    assert(expr != NULL);
 
@@ -2306,10 +2303,13 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
 
    assert(SCIPgetExprNAuxvarUsesNonlinear(expr) > 0);  /* since some sepa is required, there should have been demand for it */
 
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
    conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsNonlinear(cons));
    consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsNonlinear(cons));
 
-   SCIP_CALL( detectSOC(scip, nlhdlr, expr, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, &success) );
+   SCIP_CALL( detectSOC(scip, nlhdlrdata, expr, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, &success) );
 
    if( !success )
       return SCIP_OKAY;
@@ -2685,4 +2685,149 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
          &nlhdlrdata->compeigenvalues, FALSE, DEFAULT_COMPEIGENVALUES, NULL, NULL) );
 
    return SCIP_OKAY;
+}
+
+/** checks whether constraint is SOC representable in original variables and if yes, returns the SOC
+ * representation
+ *
+ * The SOC representation has the form:
+ * \f$\sqrt{\sum_{i=1}^{n} (v_i^T x + \beta_i)^2} - v_{n+1}^T x - \beta_{n+1} \lessgtr 0\f$,
+ * where \f$n+1 = nterms\f$ and the inequality type is given by sidetype (SCIP_SIDETYPE_RIGHT if inequality
+ * is \f$\leq\f$, SCIP_SIDETYPE_LEFT if \f$\geq\f$).
+ *
+ * For each term (i.e. for each i in the above notation as well as n+1), the constant $\beta_i$ is given by the
+ * corresponding element offsets[i-1], and termbegins[i-1] is the starting position of the term in arrays
+ * transcoefs and transcoefsidx. The overall number of nonzeros is termbegins[nterms].
+ *
+ * Arrays transcoefs and transcoefsidx have size termbegins[nterms] and define the linear expressions \f$v_i^T x\f$
+ * for each term. For a term i in the above notation, the nonzeroes are given by elements
+ * termbegins[i-1]...termbegins[i] of transcoefs and transcoefsidx. There may be no nonzeroes for some term (i.e.,
+ * constant terms are possible). transcoefs contains the coefficients v_i and transcoefsidx contains positions of
+ * variables in the vars array.
+ *
+ * The vars array has size nvars and contains \f$x\f$ variables; each variable is included at most once.
+ *
+ * The arrays should be freed by calling SCIPfreeSOCArraysNonlinear().
+ *
+ * This function uses the methods that are used in the detection algorithm of the SOC nonlinear handler.
+ */
+SCIP_RETCODE SCIPisSOCNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
+   SCIP_Bool             compeigenvalues,    /**< whether eigenvalues should be computed to detect complex cases */
+   SCIP_Bool*            success,            /**< pointer to store whether SOC structure has been detected */
+   SCIP_SIDETYPE*        sidetype,           /**< pointer to store which side of cons is SOC representable; only
+                                               valid when success is TRUE */
+   SCIP_VAR***           vars,               /**< variables (x) that appear on both sides; no duplicates are allowed */
+   SCIP_Real**           offsets,            /**< offsets of both sides (beta_i) */
+   SCIP_Real**           transcoefs,         /**< non-zeros of linear transformation vectors (v_i) */
+   int**                 transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
+   int**                 termbegins,         /**< starting indices of transcoefs for each term */
+   int*                  nvars,              /**< total number of variables appearing (i.e. size of vars) */
+   int*                  nterms              /**< number of summands in the SQRT +1 for RHS (n+1) */
+   )
+{
+   SCIP_NLHDLRDATA nlhdlrdata;
+   SCIP_NLHDLREXPRDATA *nlhdlrexprdata;
+   SCIP_Real conslhs;
+   SCIP_Real consrhs;
+   SCIP_EXPR* expr;
+   SCIP_Bool enforcebelow;
+   int i;
+
+   assert(cons != NULL);
+
+   expr = SCIPgetExprConsNonlinear(cons);
+   assert(expr != NULL);
+
+   nlhdlrdata.mincutefficacy = 0.0;
+   nlhdlrdata.compeigenvalues = compeigenvalues;
+
+   conslhs = SCIPgetLhsConsNonlinear(cons);
+   consrhs = SCIPgetRhsConsNonlinear(cons);
+
+   SCIP_CALL( detectSOC(scip, &nlhdlrdata, expr, conslhs, consrhs, &nlhdlrexprdata, &enforcebelow, success) );
+
+   /* the constraint must be SOC representable in original variables */
+   if( *success )
+   {
+      assert(nlhdlrexprdata != NULL);
+
+      for( i = 0; i < nlhdlrexprdata->nvars; ++i )
+      {
+         if( !SCIPisExprVar(scip, nlhdlrexprdata->vars[i]) )
+         {
+            *success = FALSE;
+            break;
+         }
+      }
+   }
+
+   if( *success )
+   {
+      *sidetype = enforcebelow ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, vars, nlhdlrexprdata->nvars) );
+
+      for( i = 0; i < nlhdlrexprdata->nvars; ++i )
+      {
+         (*vars)[i] = SCIPgetVarExprVar(nlhdlrexprdata->vars[i]);
+         assert((*vars)[i] != NULL);
+      }
+      SCIPfreeBlockMemoryArray(scip, &nlhdlrexprdata->vars, nlhdlrexprdata->nvars);
+      *offsets = nlhdlrexprdata->offsets;
+      *transcoefs = nlhdlrexprdata->transcoefs;
+      *transcoefsidx = nlhdlrexprdata->transcoefsidx;
+      *termbegins = nlhdlrexprdata->termbegins;
+      *nvars = nlhdlrexprdata->nvars;
+      *nterms = nlhdlrexprdata->nterms;
+      SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
+   }
+   else
+   {
+      if( nlhdlrexprdata != NULL )
+      {
+         SCIP_CALL( freeNlhdlrExprData(scip, &nlhdlrexprdata) );
+      }
+      *vars = NULL;
+      *offsets = NULL;
+      *transcoefs = NULL;
+      *transcoefsidx = NULL;
+      *termbegins = NULL;
+      *nvars = 0;
+      *nterms = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees arrays created by SCIPisSOCNonlinear() */
+void SCIPfreeSOCArraysNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< variables that appear on both sides (x) */
+   SCIP_Real**           offsets,            /**< offsets of both sides (beta_i) */
+   SCIP_Real**           transcoefs,         /**< non-zeros of linear transformation vectors (v_i) */
+   int**                 transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
+   int**                 termbegins,         /**< starting indices of transcoefs for each term */
+   int                   nvars,              /**< total number of variables appearing */
+   int                   nterms              /**< number of summands in the SQRT +1 for RHS (n+1) */
+   )
+{
+   int ntranscoefs;
+
+   if( nvars == 0 )
+      return;
+
+   assert(vars != NULL);
+   assert(offsets != NULL);
+   assert(transcoefs != NULL);
+   assert(transcoefsidx != NULL);
+   assert(termbegins != NULL);
+
+   ntranscoefs = (*termbegins)[nterms];
+
+   SCIPfreeBlockMemoryArray(scip, termbegins, nterms + 1);
+   SCIPfreeBlockMemoryArray(scip, transcoefsidx, ntranscoefs);
+   SCIPfreeBlockMemoryArray(scip, transcoefs, ntranscoefs);
+   SCIPfreeBlockMemoryArray(scip, offsets, nterms);
+   SCIPfreeBlockMemoryArray(scip, vars, nvars);
 }

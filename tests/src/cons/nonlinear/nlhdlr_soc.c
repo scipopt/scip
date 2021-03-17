@@ -1225,3 +1225,54 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
+
+/* detects 2x^2 - 9y^2 + sin(z)^2 < = 0 as soc constraint using a public function */
+Test(nlhdlrsoc, access, .description = "public detect for simple quadratic constraint")
+{
+   SCIP_CONS* cons;
+   SCIP_Bool success;
+   SCIP_VAR** vars;
+   SCIP_Real* offsets;
+   SCIP_Real* transcoefs;
+   int* transcoefsidx;
+   int* termbegins;
+   int nvars;
+   int nterms;
+   int ntranscoefs;
+   SCIP_SIDETYPE sidetype;
+   SCIP_Bool infeasible;
+
+   /* create expression constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 2*<x>^2 - 9*<y>^2 + <z>^2  <= 0",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_expect_not(infeasible);
+
+   SCIP_CALL( SCIPisSOCNonlinear(scip, cons, FALSE, &success, &sidetype, &vars, &offsets, &transcoefs, &transcoefsidx,
+      &termbegins, &nvars, &nterms) );
+
+   /* check that soc nlhdlr detected correctly */
+   cr_assert(success);
+   ntranscoefs = termbegins[nterms];
+   cr_assert(sidetype == SCIP_SIDETYPE_RIGHT);
+   cr_expect_eq(nvars, 3);
+   cr_expect_eq(nterms, 3);
+   cr_expect_eq(ntranscoefs, 3);
+
+   /* free arrays with the SOC representation */
+   SCIPfreeSOCArraysNonlinear(scip, &vars, &offsets, &transcoefs, &transcoefsidx, &termbegins, nvars, nterms);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
