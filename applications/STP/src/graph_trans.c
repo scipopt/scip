@@ -30,6 +30,8 @@
 #include "portab.h"
 #include "graph.h"
 
+#define TRANS_MAXPRIZESUM   1e09
+
 
 /** initializes cost_org_pc array (call right after transformation to extended has been performed)  */
 static
@@ -1175,6 +1177,175 @@ SCIP_RETCODE graph_transPcGetRsap(
 
    graph_knot_chg(p, oldroot, STP_TERM_NONE);
    p->prize[saproot] = 0.0;
+
+   return SCIP_OKAY;
+}
+
+
+/** is a transformation stable? */
+SCIP_Bool graph_transRpcToSpgIsStable(
+   const GRAPH*          graph               /**< the graph */
+   )
+{
+   SCIP_Real prizesum = 1.0;
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(graph->stp_type == STP_RPCSPG);
+   assert(graph->prize);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( GT(graph->prize[k], 0.0) && LT(graph->prize[k], FARAWAY) )
+      {
+         prizesum += graph->prize[k];
+      }
+   }
+
+   return (LE(prizesum, TRANS_MAXPRIZESUM));
+}
+
+
+/** constructs equivalent SPG for given RPC  */
+SCIP_RETCODE graph_transRpcGetSpg(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< the graph */
+   SCIP_Real*            offset,             /**< offset (in/out) */
+   int**                 edgemap_new2org,    /**< maps edges */
+   GRAPH**               newgraph            /**< the new graph */
+   )
+{
+   GRAPH* graph_new;
+   int* nodes_org2new;
+   int* edges_new2org;
+   int termscount;
+   const int nnodes_org = graph_get_nNodes(graph);
+   int firstdummy = 0;
+   int nnodes_new = 0;
+   int nedges_new = 0;
+   int ndummyterms = 0;
+   SCIP_Real prizesum;
+
+   assert(scip && offset);
+   assert(graph && graph->prize);
+   assert(graph_transRpcToSpgIsStable(graph));
+   assert(!graph->extended);
+   assert(graph_isMarked(graph));
+
+   prizesum = 1.0;
+   for( int k = 0; k < nnodes_org; k++ )
+   {
+      nedges_new += graph->grad[k];
+
+      if( !graph->mark[k] )
+         continue;
+
+      nnodes_new++;
+
+      if( graph_pc_knotIsNonLeafTerm(graph, k) )
+      {
+         assert(GT(graph->prize[k], 0.0) && LT(graph->prize[k], FARAWAY));
+
+         /* NOTE: dummy edges and terminals for non-proper potential terminals are counted here */
+         nedges_new += 4;
+      }
+
+      if( GT(graph->prize[k], 0.0) && LT(graph->prize[k], FARAWAY) )
+      {
+         prizesum += graph->prize[k];
+         ndummyterms++;
+         nnodes_new++;
+      }
+   }
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &nodes_org2new, nnodes_org) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, edgemap_new2org, nedges_new) );
+   edges_new2org = *edgemap_new2org;
+
+   assert(ndummyterms == graph_pc_nProperPotentialTerms(graph) + graph_pc_nNonLeafTerms(graph));
+
+   printf("prizesum=%f \n", prizesum);
+   assert(LT(prizesum, BLOCKED));
+
+   *offset -= prizesum * (ndummyterms);
+
+   printf("fixed=%f \n", prizesum * ndummyterms);
+
+   SCIP_CALL( graph_init(scip, newgraph, nnodes_new, nedges_new, 1) );
+   graph_new = *newgraph;
+
+   /* add nodes */
+   for( int k = 0; k < nnodes_org; ++k )
+   {
+      if( !graph->mark[k] )
+      {
+         nodes_org2new[k] = -1;
+         continue;
+      }
+
+      nodes_org2new[k] = graph_new->knots;
+      graph_knot_add(graph_new, graph->term[k]);
+   }
+
+   firstdummy = graph_new->knots;
+
+   for( int k = 0; k < ndummyterms; k++ )
+      graph_knot_add(graph_new, STP_TERM);
+
+   graph_new->source = nodes_org2new[graph->source];
+   assert(graph_knot_isInRange(graph_new, graph->source));
+
+   /* add default edges */
+   for( int k = 0; k < nnodes_org; ++k )
+   {
+      if( !graph->mark[k] )
+         continue;
+
+      for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         const int head = graph->head[e];
+
+         if( head < k || !graph->mark[head] )
+            continue;
+
+         assert(EQ(graph->cost[e], graph->cost[flipedge(e)]));
+         assert(graph_knot_isInRange(graph_new, nodes_org2new[k]));
+         assert(graph_knot_isInRange(graph_new, nodes_org2new[head]));
+
+         edges_new2org[graph_new->edges] = e;
+         edges_new2org[graph_new->edges + 1] = flipedge(e);
+         graph_edge_addBi(scip, graph_new, nodes_org2new[k], nodes_org2new[head], graph->cost[e]);
+      }
+   }
+
+   /* add dummy edges */
+   termscount = 0;
+   for( int k = 0; k < nnodes_org; ++k )
+   {
+      if( GT(graph->prize[k], 0.0) && LT(graph->prize[k], FARAWAY) )
+      {
+         /* the future terminal */
+         const int oldterm = nodes_org2new[k];
+         const int newterm = firstdummy + termscount;
+         termscount++;
+
+         assert(graph_knot_isInRange(graph_new, oldterm));
+         assert(graph_knot_isInRange(graph_new, newterm));
+         assert(Is_term(graph_new->term[newterm]));
+         assert(graph_new->grad[newterm] == 0);
+
+         for( int j = 0 ; j < 4; j++ )
+            edges_new2org[graph_new->edges + j] = -1;
+
+         graph_edge_addBi(scip, graph_new, graph_new->source, newterm, prizesum + graph->prize[k]);
+         graph_edge_addBi(scip, graph_new, oldterm, newterm, prizesum);
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &(nodes_org2new));
+
+   assert(nedges_new == graph_new->edges);
+   assert(termscount == ndummyterms);
+   graph_new->stp_type = STP_SPG;
 
    return SCIP_OKAY;
 }

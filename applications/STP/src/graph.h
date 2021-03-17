@@ -290,6 +290,8 @@ extern SCIP_RETCODE   graph_transRmw(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_transPcmw2rooted(SCIP*, GRAPH*, SCIP_Real, SCIP_Bool);
 extern SCIP_RETCODE   graph_transPcGetSap(SCIP*, GRAPH*, GRAPH**, SCIP_Real*);
 extern SCIP_RETCODE   graph_transPcGetRsap(SCIP*, GRAPH*, GRAPH**, const int*, int, int);
+extern SCIP_RETCODE   graph_transRpcGetSpg(SCIP*, const GRAPH*, SCIP_Real*, int**, GRAPH**);
+extern SCIP_Bool      graph_transRpcToSpgIsStable(const GRAPH*);
 
 
 /* graph_pcbase.c
