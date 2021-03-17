@@ -709,19 +709,15 @@ SCIP_RETCODE reduce_bound(
    if( pcmw )
       prize = graph->prize;
 
-   nterms = 0;
-   for( int k = 0; k < nnodes; k++ )
-      if( graph->mark[k] && Is_term(graph->term[k]) )
-         nterms++;
-
-   /* not more than two terminals? */
-   if( nterms <= 2 || (pcmw && nterms <= 3) )
+   if( graph->terms <= 2 )
       return SCIP_OKAY;
 
    if( graph->grad[graph->source] == 0 )
       return SCIP_OKAY;
 
-   assert(nterms == (graph->terms - ((graph->stp_type == STP_PCSPG)? 1 : 0)));
+   reduce_unconnectedRpcRmw(scip, graph, offset);
+
+   nterms = (graph->terms - ((graph->stp_type == STP_PCSPG)? 1 : 0));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
