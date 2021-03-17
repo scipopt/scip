@@ -424,6 +424,7 @@ endif
 
 ifeq ($(AMPL),true)
 FLAGS		+=	-DSCIP_WITH_AMPL -I$(SRCDIR)/amplmp/include
+LINKER		=	CPP
 endif
 
 ifeq ($(SHARED),true)
