@@ -463,7 +463,7 @@ public:
 
          default:
             OnUnhandled(mp::expr::str(kind));
-            break;
+            return NULL;
       }
 
       // remember that we have to release this expr
@@ -550,7 +550,7 @@ public:
 
          default:
             OnUnhandled(mp::expr::str(kind));
-            break;
+            return NULL;
       }
 
       // remember that we have to release this expr
