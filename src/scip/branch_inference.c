@@ -136,7 +136,7 @@ void evaluateValueCand(
 
 /** evaluate the given candidate with the given score against the currently best know candidate */
 static
-int evaluateAggrCand(
+void evaluateAggrCand(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             cand,               /**< candidate to be checked */
    SCIP_Real             score,              /**< score of the candidate */
@@ -145,7 +145,7 @@ int evaluateAggrCand(
    SCIP_Real*            bestscore,          /**< pointer to the score of the currently best candidate */
    SCIP_Real*            bestval,            /**< pointer to the solution value of the currently best candidate */
    SCIP_VAR**            bestcands,          /**< buffer array to return selected candidates */
-   int                   nbestcands          /**< buffer to return number of selected candidates */
+   int*                  nbestcands          /**< pointer to return number of selected candidates */
    )
 {
    /* evaluate the candidate against the currently best candidate */
@@ -156,29 +156,28 @@ int evaluateAggrCand(
       *bestscore = score;
       *bestcand = cand;
       *bestval = val;
-      nbestcands = 1;
+      *nbestcands = 1;
       bestcands[0] = cand;
    }
    /** TODO: consider a weaker comparison of some kind */
    else if( SCIPisEQ(scip, *bestscore, score) )
    {
       /* the score of the candidate is comparable to the currently known best, so we add it to bestcands and increase nbestcands by 1*/
-      bestcands[nbestcands] = cand;
-      ++nbestcands;
+      bestcands[*nbestcands] = cand;
+      (*nbestcands)++;
    }
-   return nbestcands;
 }
 
 /** choose a singular best candidate from bestcands and move it to the beginning of the candidate array */
 static
 void tiebreakAggrCand(
    SCIP_VAR**            bestcands,          /**< buffer array to return selected candidates */
-   int                   nbestcands          /**< buffer to return number of selected candidates */
+   int                   nbestcands          /**< number of selected candidates */
    )
 {
    int c;
 
-   for( c = 0; c < nbestcands; ++c)
+   for( c = 0; c < nbestcands; ++c )
    {
       SCIP_Real bestobj;
       SCIP_Real candobj;
@@ -195,7 +194,7 @@ void tiebreakAggrCand(
        *   unique best candidate
        *
        * @note It is very important to select a unique best candidate. Otherwise the solver might vary w.r.t. the
-       *       performance to much since the candidate array which is used here (SCIPgetPseudoBranchCands() or
+       *       performance too much since the candidate array which is used here (SCIPgetPseudoBranchCands() or
        *       SCIPgetLPBranchCands()) gets dynamically changed during the solution process. In particular,
        *       starting a probing mode might already change the order of these arrays. To be independent of that
        *       the selection should be unique. Otherwise, to selection process can get influenced by starting a
@@ -338,7 +337,7 @@ SCIP_Real getValueScore(
 }
 
 static
-int selectBestCands(
+void selectBestCands(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            cands,              /**< candidate array */
    SCIP_Real*            candsols,           /**< array of candidate solution values, or NULL */
@@ -348,7 +347,7 @@ int selectBestCands(
    SCIP_Real             cutoffweight,       /**< weight in score calculations for cutoff score */
    SCIP_Real             reliablescore,      /**< score which is seen to be reliable for a branching decision */
    SCIP_VAR**            bestcands,          /**< buffer array to return selected candidates */
-   int                   nbestcands          /**< buffer to return number of selected candidates */
+   int*                  nbestcands          /**< pointer to return number of selected candidates */
    )
 {
    SCIP_VAR* bestaggrcand;
@@ -360,6 +359,7 @@ int selectBestCands(
    assert(cands[0] != NULL);
 
    bestval = candsols[0];
+   *nbestcands = 1;
 
    /* get aggregated score for the first candidate */
    bestaggrscore = getAggrScore(scip, cands[0], conflictweight, inferenceweight, cutoffweight, reliablescore);
@@ -383,9 +383,8 @@ int selectBestCands(
          val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore);
 
       /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
-      nbestcands = evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, nbestcands);
+      evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, nbestcands);
    }
-   return nbestcands;
 }
 
 
@@ -439,38 +438,38 @@ SCIP_RETCODE performBranchingSol(
    if( conflictprio > cutoffprio )
    {
       /* select the best candidates w.r.t. the first criterion */
-      nbestcands = selectBestCands(scip, cands, candsols, ncands, conflictweight, 0.0, 0.0, reliablescore,
-            bestcands, nbestcands);
+      selectBestCands(scip, cands, candsols, ncands, conflictweight, 0.0, 0.0, reliablescore,
+            bestcands, &nbestcands);
 
       /* select the best candidates w.r.t. the second criterion; we use bestcands and nbestcands as input and
        * output, so the method must make sure to overwrite the last argument only at the very end */
       if( nbestcands > 1 )
       {
-         nbestcands = selectBestCands(scip, bestcands, candsols, nbestcands, 0.0, inferenceweight, cutoffweight, reliablescore,
-               bestcands, nbestcands);
+         selectBestCands(scip, bestcands, candsols, nbestcands, 0.0, inferenceweight, cutoffweight, reliablescore,
+               bestcands, &nbestcands);
       }
    }
    else if( conflictprio == cutoffprio )
    {
       /* select the best candidates w.r.t. weighted sum of both criterion */
-      nbestcands = selectBestCands(scip, cands, candsols, ncands, conflictweight, inferenceweight, cutoffweight, reliablescore,
-            bestcands, nbestcands);
+      selectBestCands(scip, cands, candsols, ncands, conflictweight, inferenceweight, cutoffweight, reliablescore,
+            bestcands, &nbestcands);
    }
    else
    {
       assert(conflictprio < cutoffprio);
 
       /* select the best candidates w.r.t. the first criterion */
-      nbestcands = selectBestCands(scip, cands, candsols, ncands, 0.0, inferenceweight, cutoffweight, reliablescore,
-            bestcands, nbestcands);
+      selectBestCands(scip, cands, candsols, ncands, 0.0, inferenceweight, cutoffweight, reliablescore,
+            bestcands, &nbestcands);
 
       /* select the best candidates w.r.t. the second criterion; we use bestcands and nbestcands as input and
        * output, so the method must make sure to overwrite the last argument only at the very end */
       if( nbestcands > 1 )
       {
          /* select the best candidates w.r.t. the first criterion */
-         nbestcands = selectBestCands(scip, bestcands, candsols, nbestcands, conflictweight, 0.0, 0.0, reliablescore,
-               bestcands, nbestcands);
+         selectBestCands(scip, bestcands, candsols, nbestcands, conflictweight, 0.0, 0.0, reliablescore,
+               bestcands, &nbestcands);
       }
    }
 
@@ -619,7 +618,7 @@ SCIP_RETCODE performBranchingNoSol(
             val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore);
 
          /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
-         nbestcands = evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, nbestcands);
+         evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, &nbestcands);
       }
    }
    else
@@ -657,7 +656,7 @@ SCIP_RETCODE performBranchingNoSol(
             val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore); /*lint !e777*/
 
          /* evaluate the candidate against the currently best candidate */
-         nbestcands = evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, nbestcands);
+         evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, &nbestcands);
       }
    }
 
