@@ -715,8 +715,6 @@ SCIP_RETCODE reduce_bound(
    if( graph->grad[graph->source] == 0 )
       return SCIP_OKAY;
 
-   reduce_unconnectedRpcRmw(scip, graph, offset);
-
    nterms = (graph->terms - ((graph->stp_type == STP_PCSPG)? 1 : 0));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );

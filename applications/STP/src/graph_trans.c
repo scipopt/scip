@@ -1186,7 +1186,9 @@ SCIP_RETCODE graph_transPcGetRsap(
 
 /** is a transformation stable? */
 SCIP_Bool graph_transRpcToSpgIsStable(
-   const GRAPH*          graph               /**< the graph */
+   const GRAPH*          graph,              /**< the graph */
+   SCIP_Real             primalbound         /**< primal bound for graph */
+
    )
 {
    SCIP_Real prizesum = 1.0;
@@ -1194,6 +1196,10 @@ SCIP_Bool graph_transRpcToSpgIsStable(
 
    assert(graph->stp_type == STP_RPCSPG);
    assert(graph->prize);
+   assert(GE(primalbound, 0.0));
+
+   if( GT(primalbound, TRANS_MAXPRIZESUM) )
+      return FALSE;
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1211,6 +1217,7 @@ SCIP_Bool graph_transRpcToSpgIsStable(
 SCIP_RETCODE graph_transRpcGetSpg(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< the graph */
+   SCIP_Real             primalbound,        /**< primal bound for graph */
    SCIP_Real*            offset,             /**< offset (in/out) */
    int**                 edgemap_new2org,    /**< maps edges */
    GRAPH**               newgraph            /**< the new graph */
@@ -1229,7 +1236,7 @@ SCIP_RETCODE graph_transRpcGetSpg(
 
    assert(scip && offset);
    assert(graph && graph->prize);
-   assert(graph_transRpcToSpgIsStable(graph));
+   assert(graph_transRpcToSpgIsStable(graph, primalbound));
    assert(!graph->extended);
    assert(graph_isMarked(graph));
 
@@ -1267,6 +1274,7 @@ SCIP_RETCODE graph_transRpcGetSpg(
 
    assert(ndummyterms == graph_pc_nProperPotentialTerms(graph) + graph_pc_nNonLeafTerms(graph));
 
+   prizesum = MAX(prizesum, primalbound);
    prizesum = floor(prizesum);
 
    SCIPdebugMessage("prizesum=%f \n", prizesum);
