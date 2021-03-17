@@ -153,6 +153,7 @@ SCIP_RETCODE runAsAmplSolver(
    const char*           defaultsetname      /**< name of default settings file */
    )
 {
+#ifdef SCIP_WITH_AMPL
    char* logfile;
    SCIP_Bool printstat;
 
@@ -203,6 +204,11 @@ SCIP_RETCODE runAsAmplSolver(
    SCIP_CALL( SCIPwriteSolutionNl(scip) );
 
    return SCIP_OKAY;
+
+#else /* SCIP_WITH_AMPL */
+   SCIPerrorMessage("SCIP has been compiled without AMPL support.\n");
+   return SCIP_PLUGINNOTFOUND;
+#endif
 }
 
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
