@@ -1026,7 +1026,7 @@ public:
          SCIP_CONS* objcons;
          SCIP_VAR* objvar;
 
-         SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &objvar, "nlobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
          SCIP_CALL_THROW( SCIPaddVar(scip, objvar) );
 
          SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &objcons, "objcons", objexpr,
