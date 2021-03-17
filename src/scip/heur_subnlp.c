@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -223,14 +223,13 @@ SCIP_RETCODE createSubSCIP(
    /* create problem in sub-SCIP */
    /* get name of the original problem and add "subnlp" */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subnlp", SCIPgetProbName(scip));
-   SCIP_CALL( SCIPcreateProb(heurdata->subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
-   SCIPsetSubscipDepth(heurdata->subscip, SCIPgetSubscipDepth(scip) + 1);
+   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
+   SCIP_CALL( SCIPcopyProb(scip, heurdata->subscip, varsmap, conssmap, TRUE, probname) );
 
    /* copy all variables */
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
-   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
    SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, varsmap, conssmap, TRUE, FALSE, &heurdata->subscipisvalid) );
    SCIPhashmapFree(&conssmap);
    if( !heurdata->subscipisvalid )
@@ -1607,7 +1606,7 @@ SCIP_RETCODE forbidFixation(
    if( nsubbinvars == 0 && nsubintvars == 0 )
    {
       /* If we did not fix any discrete variables but found the "sub"CIP infeasible, then also the CIP is infeasible. */
-      SCIPwarningMessage(scip, "heur_subnlp found subCIP infeasible after fixing no variables, something is strange here...\n");
+      SCIPdebugMsg(scip, "heur_subnlp found subCIP infeasible after fixing no variables, something is strange here...\n");
       return SCIP_OKAY;
    }
 

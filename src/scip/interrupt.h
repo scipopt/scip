@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -63,7 +63,10 @@ SCIP_Bool SCIPterminated(
    void
    );
 
-/** send a termination signal to the process so that SCIP tries to terminate as soon as possible */
+/** sends a termination signal to all SCIP processes so that they try to terminate as soon as possible
+ *
+ *  @note For terminating a specific SCIP process use SCIPinterruptSolve().
+ */
 void SCIPtryTerminate(
    void
    );

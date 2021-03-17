@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -10582,8 +10582,8 @@ SCIP_Bool consdataIsResidualIntegral(
    return TRUE;
 }
 
-/** check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i,
- *  check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
+/** check if \f$lhs/a_i - \sum_{j \neq i} a_j/a_i x_j\f$ is always inside the bounds of \f$x_i\f$,
+ *  check if \f$rhs/a_i - \sum_{j \neq i} a_j/a_i x_j\f$ is always inside the bounds of \f$x_i\f$
  */
 static
 void calculateMinvalAndMaxval(
@@ -11938,7 +11938,7 @@ SCIP_RETCODE simplifyInequalities(
 
          /* get new constraint data */
          nvars = consdata->nvars;
-         assert(nvars >= 2);
+         assert(nvars > 0);
 
          allcoefintegral = TRUE;
 

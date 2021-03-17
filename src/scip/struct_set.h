@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -526,6 +526,7 @@ struct SCIP_Set
                                               *   'd'iscrete) */
    char                  sepa_cutselrestart; /**< cut selection during restart ('a'ge, activity 'q'uotient) */
    char                  sepa_cutselsubscip; /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
+   SCIP_Bool             sepa_filtercutpoolrel; /**< should cutpool separate only cuts with high relative efficacy? */
    int                   sepa_maxruns;       /**< maximal number of runs for which separation is enabled (-1: unlimited) */
    int                   sepa_maxrounds;     /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   sepa_maxroundsroot; /**< maximal number of separation rounds in the root node (-1: unlimited) */

@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -695,6 +695,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
+			scip/sepa_mixing.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
@@ -1029,7 +1030,7 @@ test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON);
 
 .PHONY: testcount
 testcount:
@@ -1629,6 +1630,7 @@ help:
 		@echo "      xprs: XPress LP-solver"
 		@echo "      none: no LP-solver"
 		@echo "  - COMP={clang|gnu|intel}: Determine compiler."
+		@echo "  - TPI={none|omp|tny}: Determine parallel interface for concurrent solve (default: none)."
 		@echo "  - SHARED={true|false}: Build shared libraries or not (default)."
 		@echo
 		@echo "  More detailed options:"
@@ -1647,7 +1649,7 @@ help:
 		@echo "  - VERBOSE=<true|false>: Turn on verbose messages of makefile or off (default)."
 		@echo
 		@echo "  Main targets:"
-		@echo "  - all (default): Build SCIP libaries and binary."
+		@echo "  - all (default): Build SCIP libraries and binary."
 		@echo "  - libscipsolver: Build standalone SCIP library."
 		@echo "  - libscip: Build library for the main part of SCIP."
 		@echo "  - libobjscip: Build library for the C++-interface of SCIP."
@@ -1656,9 +1658,10 @@ help:
 		@echo "  - libtpi: Build library for the parallel task interface in SCIP."
 		@echo "  - links: Reconfigures the links in the \"lib\" directory."
 		@echo "  - doc: Creates documentation in the \"doc\" directory."
-		@echo "  - libs: Create all SCIP libaries."
-		@echo "  - lint: Run lint on all SCIP files. (Need flexelint.)"
-		@echo "  - splint: Run splint on all C SCIP files. (Need splint.)"
+		@echo "  - libs: Create all SCIP libraries."
+		@echo "  - lint: Run lint on all SCIP files. (Needs flexelint.)"
+		@echo "  - pclint: Run pclint on all SCIP files. (Needs pclint.)"
+		@echo "  - splint: Run splint on all C SCIP files. (Needs splint.)"
 		@echo "  - clean: Removes all object files."
 		@echo "  - cleanlibs: Remove all SCIP libraries."
 		@echo "  - depend: Updates dependencies files. This is only needed if you modify SCIP source."

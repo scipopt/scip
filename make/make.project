@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -78,10 +78,11 @@ OUTPUTDIR       =       results
 CLUSTERNODES    =       all
 SLURMACCOUNT    =       default
 GAMS		=	gams
+PYTHON  =   none
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	7.0.1.3
+SCIP_VERSION	=	7.0.2.4
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -214,9 +215,12 @@ DFLAGS		=	-MMD
 GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
-			-Wsign-compare -Wstrict-prototypes -Wno-unknown-warning-option \
+			-Wsign-compare -Wstrict-prototypes \
 			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
 # GCCWARN is not only used for GCC!
+ifeq ($(COMP),clang)
+GCCWARN += -Wno-unknown-warning-option
+endif
 ifeq ($(COMP),gnu)
 GCCWARN += -Wno-maybe-uninitialized
 endif
