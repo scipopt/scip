@@ -1517,7 +1517,7 @@ SCIP_RETCODE SCIPwriteSolutionNl(
          solve_result_num = 299;
          break;
       default:
-         solve_result_num = 500;
+         /* solve_result_num = 500; */
          SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
          return SCIP_INVALIDDATA;
    }
