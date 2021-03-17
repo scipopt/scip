@@ -29,6 +29,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
 #include "scip/message_default.h"
+#include "scip/reader_nl.h"
 
 /*
  * Message Handler
@@ -140,6 +141,66 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "==========\n\n");
 
    SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** runs SCIP as if it was called by AMPL */
+static
+SCIP_RETCODE runAsAmplSolver(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 nlfilename,         /**< name of .nl file */
+   const char*           defaultsetname      /**< name of default settings file */
+   )
+{
+   char* logfile;
+   SCIP_Bool printstat;
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
+      "whether to print statistics on a solve",
+      &printstat, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "display/logfile",
+      "name of file to write SCIP log to (additionally to writing to stdout)",
+      NULL, FALSE, "", NULL, NULL) );
+
+   SCIPprintVersion(scip, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   SCIPprintExternalCodes(scip, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   if( defaultsetname != NULL )
+   {
+      SCIP_CALL( readParams(scip, defaultsetname) );
+      SCIPinfoMessage(scip, NULL, "\n");
+   }
+
+   SCIP_CALL( SCIPgetStringParam(scip, "display/logfile", &logfile) );
+   if( *logfile )
+      SCIPsetMessagehdlrLogfile(scip, logfile);
+
+   SCIPinfoMessage(scip, NULL, "read problem <%s>\n", nlfilename);
+   SCIPinfoMessage(scip, NULL, "============\n");
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   SCIP_CALL( SCIPreadProb(scip, nlfilename, "nl") );
+
+   SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
+   SCIPinfoMessage(scip, NULL, "=============\n\n");
+
+   SCIP_CALL( SCIPsolve(scip) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "display/statistics", &printstat) );
+   if( printstat )
+   {
+      SCIPinfoMessage(scip, NULL, "\nStatistics\n");
+      SCIPinfoMessage(scip, NULL, "==========\n\n");
+
+      SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+   }
+
+   SCIP_CALL( SCIPwriteSolutionNl(scip) );
 
    return SCIP_OKAY;
 }
@@ -414,8 +475,12 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
          "  -r <randseed> : nonnegative integer to be used as random seed. "
          "Has priority over random seed specified through parameter settings (.set) file\n"
-         "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n\n",
+         "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n",
          argv[0]);
+#ifdef SCIP_WITH_AMPL
+      printf("\nas AMPL solver: %s <.nl-file> -AMPL\n", argv[0]);
+#endif
+      printf("\n");
    }
 
    return SCIP_OKAY;
@@ -448,7 +513,16 @@ SCIP_RETCODE SCIPrunShell(
    /**********************************
     * Process command line arguments *
     **********************************/
-   SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
+
+   /* quick preprocessing to check whether we run under AMPL */
+   if( argc >= 3 && strcmp(argv[2], "-AMPL") == 0 )
+   {
+      SCIP_CALL( runAsAmplSolver(scip, argv[1], defaultsetname) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
+   }
 
    /********************
     * Deinitialization *

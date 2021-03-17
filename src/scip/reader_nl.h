@@ -36,6 +36,15 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** writes AMPL solution file
+ *
+ * problem must have been read with .nl reader
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPwriteSolutionNl(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -51,7 +51,6 @@
 #endif
 
 #include "mp/nl-reader.h"
-#include "mp/sol.h"
 
 #define READER_NAME             "nlreader"
 #define READER_DESC             "AMPL .nl file reader"
@@ -74,8 +73,16 @@
 /// problem data stored in SCIP
 struct SCIP_ProbData
 {
+   char*                 filenamestub;       /**< name of input file, without .nl extension; array is long enough to hold 5 extra chars */
+   int                   filenamestublen;    /**< length of filenamestub string */
+
    SCIP_VAR**            vars;               /**< variables in the order given by AMPL */
    int                   nvars;              /**< number of variables */
+
+   SCIP_CONS**           conss;              /**< constraints in the order given by AMPL */
+   int                   nconss;             /**< number of constraints */
+
+   SCIP_Bool             islp;               /**< whether problem is an LP (only linear constraints, only continuous vars) */
 };
 
 /*
@@ -96,10 +103,6 @@ private:
    // created in OnHeader() and released in destructor
    // for reuse of var-expressions in OnVariableRef()
    std::vector<SCIP_EXPR*> varexprs;
-
-   // constraints (collected here and added to SCIP in EndInput())
-   // first nonliner, then linear
-   std::vector<SCIP_CONS*> conss;
 
    // linear parts for nonlinear constraints
    // first collect and then add to constraints in EndInput()
@@ -184,42 +187,50 @@ public:
       assert(scip != NULL);
       assert(filename != NULL);
 
-      const char* filebasename = strrchr(const_cast<char*>(filename), '/');
-      if( filebasename == NULL )
-         filebasename = filename;
-      else
-         ++filebasename;
-
       SCIP_CALL_THROW( SCIPallocClearMemory(scip, &probdata) );
 
+      /* get name of input file without file extension (if any) */
+      const char* extstart = strrchr(const_cast<char*>(filename), '.');
+      if( extstart != NULL )
+         probdata->filenamestublen = extstart - filename;
+      else
+         probdata->filenamestublen = strlen(filename);
+      assert(probdata->filenamestublen > 0);
+      SCIP_CALL_THROW( SCIPallocBlockMemoryArray(scip, &probdata->filenamestub, probdata->filenamestublen + 5) );
+      memcpy(probdata->filenamestub, filename, probdata->filenamestublen);
+      probdata->filenamestub[probdata->filenamestublen] = '\0';
+
+      /* derive probname from name of input file without path and extension */
+      const char* probname = strrchr(probdata->filenamestub, '/');
+      if( probname == NULL )
+         probname = probdata->filenamestub;
+      else
+         ++probname;
+
       // initialize empty SCIP problem
-      SCIP_CALL_THROW( SCIPcreateProb(scip, filebasename, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, probdata) );
+      SCIP_CALL_THROW( SCIPcreateProb(scip, probname, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, probdata) );
 
-      // open files with variable and constraint names
-      int len = filename != NULL ? strlen(filename) : 0;
-      if( len > 3 && filename[len-3] == '.' && filename[len-2] == 'n' && filename[len-1] == 'l' )
+      // try to open files with variable and constraint names
+      // temporarily add ".col" and ".row", respectively, to filenamestub
+      try
       {
-         char* filename2;
-         SCIP_CALL_THROW( SCIPallocBufferArray(scip, &filename2, len+1) );
+         probdata->filenamestub[probdata->filenamestublen] = '.';
+         probdata->filenamestub[probdata->filenamestublen+1] = 'c';
+         probdata->filenamestub[probdata->filenamestublen+2] = 'o';
+         probdata->filenamestub[probdata->filenamestublen+3] = 'l';
+         probdata->filenamestub[probdata->filenamestublen+4] = '\0';
+         colfile = new fmt::File(probdata->filenamestub, fmt::File::RDONLY);
 
-         try
-         {
-            sprintf(filename2, "%.*s.col", len-3, filename);
-            colfile = new fmt::File(filename2, fmt::File::RDONLY);
-
-            filename2[len-2] = 'r';
-            filename2[len-1] = 'o';
-            filename2[len] = 'w';
-            rowfile = new fmt::File(filename2, fmt::File::RDONLY);
-         }
-         catch( const fmt::SystemError& e )
-         {
-            // probably a file open error, probably because file not found
-            // ignore, we can make up our own names
-         }
-
-         SCIPfreeBufferArray(scip, &filename2);
+         probdata->filenamestub[probdata->filenamestublen+1] = 'r';
+         probdata->filenamestub[probdata->filenamestublen+3] = 'w';
+         rowfile = new fmt::File(probdata->filenamestub, fmt::File::RDONLY);
       }
+      catch( const fmt::SystemError& e )
+      {
+         // probably a file open error, probably because file not found
+         // ignore, we can make up our own names
+      }
+      probdata->filenamestub[probdata->filenamestublen] = '\0';
    }
 
    /// destructor
@@ -228,7 +239,6 @@ public:
    ~AMPLProblemHandler()
    {
       // exprs and linear constraint arrays should have been cleared up in cleanup()
-      assert(conss.empty());
       assert(varexprs.empty());
       assert(exprstorelease.empty());
 
@@ -244,10 +254,10 @@ public:
       )
    {
       char name[SCIP_MAXSTRLEN];
-      SCIP_CONS* cons;
       int nnlvars;
 
       assert(probdata->vars == NULL);
+      assert(probdata->conss == NULL);
 
       // read variable and constraint names from file, if available, into memory
       // if not available, we will get varnamesbegin==NULL and consnamesbegin==NULL
@@ -331,7 +341,8 @@ public:
       }
 
       // alloc some space for constraints
-      conss.reserve(h.num_algebraic_cons);
+      probdata->nconss = h.num_algebraic_cons;
+      SCIP_CALL_THROW( SCIPallocBlockMemoryArray(scip, &probdata->conss, probdata->nconss) );
       nlconslin.resize(h.num_nl_cons);
 
       // create empty nonlinear constraints
@@ -344,8 +355,7 @@ public:
          if( !nextName(consnamesbegin, consnamesend, name) )
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlc%d", i);
 
-         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &cons, name, dummyexpr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
-         conss.push_back(cons);
+         SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &probdata->conss[i], name, dummyexpr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
       }
       SCIP_CALL_THROW( SCIPreleaseExpr(scip, &dummyexpr) );
 
@@ -354,9 +364,11 @@ public:
       {
          if( !nextName(consnamesbegin, consnamesend, name) )
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "lc%d", i);
-         SCIP_CALL_THROW( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, -SCIPinfinity(scip), SCIPinfinity(scip)) );
-         conss.push_back(cons);
+         SCIP_CALL_THROW( SCIPcreateConsBasicLinear(scip, &probdata->conss[i], name, 0, NULL, NULL, -SCIPinfinity(scip), SCIPinfinity(scip)) );
       }
+
+      if( h.num_nl_cons == 0 && h.num_integer_vars() == 0 )
+         probdata->islp = true;
    }
 
    /// receive notification of a number in a nonlinear expression
@@ -624,7 +636,7 @@ public:
    {
       if( expr != NULL )
       {
-         SCIP_CALL_THROW( SCIPchgExprNonlinear(scip, conss[constraintIndex], expr) );
+         SCIP_CALL_THROW( SCIPchgExprNonlinear(scip, probdata->conss[constraintIndex], expr) );
       }
    }
 
@@ -672,29 +684,29 @@ public:
       )
    {
       assert(index >= 0);
-      assert(index < (int)conss.size());
+      assert(index < probdata->nconss);
 
       // nonlinear constraints are first
       if( index < (int)nlconslin.size() )
       {
          if( !SCIPisInfinity(scip, -lb) )
          {
-            SCIP_CALL_THROW( SCIPchgLhsNonlinear(scip, conss[index], lb) );
+            SCIP_CALL_THROW( SCIPchgLhsNonlinear(scip, probdata->conss[index], lb) );
          }
          if( !SCIPisInfinity(scip,  ub) )
          {
-            SCIP_CALL_THROW( SCIPchgRhsNonlinear(scip, conss[index], ub) );
+            SCIP_CALL_THROW( SCIPchgRhsNonlinear(scip, probdata->conss[index], ub) );
          }
       }
       else
       {
          if( !SCIPisInfinity(scip, -lb) )
          {
-            SCIP_CALL_THROW( SCIPchgLhsLinear(scip, conss[index], lb) );
+            SCIP_CALL_THROW( SCIPchgLhsLinear(scip, probdata->conss[index], lb) );
          }
          if( !SCIPisInfinity(scip,  ub) )
          {
-            SCIP_CALL_THROW( SCIPchgRhsLinear(scip, conss[index], ub) );
+            SCIP_CALL_THROW( SCIPchgRhsLinear(scip, probdata->conss[index], ub) );
          }
       }
    }
@@ -853,31 +865,31 @@ public:
                return;
 
             case CONSINITIAL:
-               SCIPsetConsInitial(amplph.scip, amplph.conss.at(index), value == 1);
+               SCIPsetConsInitial(amplph.scip, amplph.probdata->conss[index], value == 1);
                break;
 
             case CONSSEPARATE:
-               SCIPsetConsSeparated(amplph.scip, amplph.conss.at(index), value == 1);
+               SCIPsetConsSeparated(amplph.scip, amplph.probdata->conss[index], value == 1);
                break;
 
             case CONSENFORCE:
-               SCIPsetConsEnforced(amplph.scip, amplph.conss.at(index), value == 1);
+               SCIPsetConsEnforced(amplph.scip, amplph.probdata->conss[index], value == 1);
                break;
 
             case CONSCHECK:
-               SCIPsetConsChecked(amplph.scip, amplph.conss.at(index), value == 1);
+               SCIPsetConsChecked(amplph.scip, amplph.probdata->conss[index], value == 1);
                break;
 
             case CONSPROPAGATE:
-               SCIPsetConsPropagated(amplph.scip, amplph.conss.at(index), value == 1);
+               SCIPsetConsPropagated(amplph.scip, amplph.probdata->conss[index], value == 1);
                break;
 
             case CONSDYNAMIC:
-               SCIPsetConsDynamic(amplph.scip, amplph.conss.at(index), value == 1);
+               SCIPsetConsDynamic(amplph.scip, amplph.probdata->conss[index], value == 1);
                break;
 
             case CONSREMOVABLE:
-               SCIPsetConsRemovable(amplph.scip, amplph.conss.at(index), value == 1);
+               SCIPsetConsRemovable(amplph.scip, amplph.probdata->conss[index], value == 1);
                break;
 
             case VARINITIAL:
@@ -946,7 +958,7 @@ public:
         constraintIndex(constraintIndex_)
       {
          assert(constraintIndex_ >= 0);
-         assert(constraintIndex_ < (int)amplph.conss.size());
+         assert(constraintIndex_ < amplph.probdata->nconss);
       }
 
       // constructor for linear objective
@@ -978,7 +990,7 @@ public:
          }
          else
          {
-            SCIP_CONS* lincons = amplph.conss.at(constraintIndex);
+            SCIP_CONS* lincons = amplph.probdata->conss[constraintIndex];
             SCIP_CALL_THROW( SCIPaddCoefLinear(amplph.scip, lincons, amplph.probdata->vars[variableIndex], coefficient) );
          }
       }
@@ -1042,23 +1054,24 @@ public:
       {
          for( size_t j = 0; j < nlconslin[i].size(); ++j )
          {
-            SCIP_CALL_THROW( SCIPaddLinearTermConsNonlinear(scip, conss[i], nlconslin[i][j].first, nlconslin[i][j].second) );
+            SCIP_CALL_THROW( SCIPaddLinearTermConsNonlinear(scip, probdata->conss[i], nlconslin[i][j].first, nlconslin[i][j].second) );
          }
       }
 
-      // add and release constraints
-      for( size_t i = 0; i < conss.size(); ++i )
+      // add constraints
+      for( int i = 0; i < probdata->nconss; ++i )
       {
-         SCIP_CALL_THROW( SCIPaddCons(scip, conss[i]) );
-         SCIP_CALL_THROW( SCIPreleaseCons(scip, &conss[i]) );
+         SCIP_CALL_THROW( SCIPaddCons(scip, probdata->conss[i]) );
       }
-      conss.clear();
 
       // add SOS constraints
       std::vector<SCIP_VAR*> setvars;     // variables in one SOS
       std::vector<SCIP_Real> setweights;  // weights for one SOS
       if( !sosvars.empty() )
+      {
          setvars.resize(probdata->nvars);
+         probdata->islp = false;
+      }
       if( !sosweights.empty() )
          setweights.resize(probdata->nvars);
       for( std::map<int, std::vector<int> >::iterator sosit(sosvars.begin()); sosit != sosvars.end(); ++sosit )
@@ -1122,13 +1135,6 @@ public:
    /// this is not in the destructor, because we want to return SCIP_RETCODE
    SCIP_RETCODE cleanup()
    {
-      // release constraints (in case EndInput() wasn't called)
-      while( !conss.empty() )
-      {
-         SCIP_CALL( SCIPreleaseCons(scip, &conss.back()) );
-         conss.pop_back();
-      }
-
       // release initial sol (in case EndInput() wasn't called)
       if( initsol != NULL )
       {
@@ -1165,12 +1171,21 @@ SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
    int i;
 
    assert((*probdata)->vars != NULL || (*probdata)->nvars == 0);
+   assert((*probdata)->conss != NULL || (*probdata)->conss == 0);
+
+   for( i = 0; i < (*probdata)->nconss; ++i )
+   {
+      SCIP_CALL( SCIPreleaseCons(scip, &(*probdata)->conss[i]) );
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->conss, (*probdata)->nconss);
 
    for( i = 0; i < (*probdata)->nvars; ++i )
    {
       SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->vars[i]) );
    }
    SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->vars, (*probdata)->nvars);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->filenamestub, (*probdata)->filenamestublen+5);
 
    SCIPfreeMemory(scip, probdata);
 
@@ -1212,6 +1227,15 @@ SCIP_DECL_READERREAD(readerReadNl)
       catch( const mp::UnsupportedError& e )
       {
          SCIPerrorMessage("unsupported construct in AMPL .nl file %s: %s\n", filename, e.what());
+
+         SCIP_CALL( handler.cleanup() );
+
+         return SCIP_READERROR;
+      }
+      catch( const mp::Error& e )
+      {
+         // some other error from ampl/mp, maybe invalid .nl file
+         SCIPerrorMessage("%s\n", e.what());
 
          SCIP_CALL( handler.cleanup() );
 
@@ -1267,6 +1291,147 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP bb7d6166", "AMPL .nl file reader library (github.com/ampl/mp)") );
+
+   return SCIP_OKAY;
+}
+
+/** writes AMPL solution file
+ *
+ * problem must have been read with .nl reader
+ */
+SCIP_RETCODE SCIPwriteSolutionNl(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   if( probdata == NULL )
+   {
+      SCIPerrorMessage("No AMPL nl file read. Cannot write AMPL solution.\n");
+      return SCIP_ERROR;
+   }
+
+   probdata->filenamestub[probdata->filenamestublen] = '.';
+   probdata->filenamestub[probdata->filenamestublen+1] = 's';
+   probdata->filenamestub[probdata->filenamestublen+2] = 'o';
+   probdata->filenamestub[probdata->filenamestublen+3] = 'l';
+   probdata->filenamestub[probdata->filenamestublen+4] = '\0';
+
+   FILE* solfile = fopen(probdata->filenamestub, "w");
+   if( solfile == NULL )
+   {
+      SCIPerrorMessage("could not open file <%s> for writing\n", probdata->filenamestub);
+      probdata->filenamestub[probdata->filenamestublen] = '\0';
+
+      return SCIP_WRITEERROR;
+   }
+   probdata->filenamestub[probdata->filenamestublen] = '\0';
+
+   // see ampl/mp:sol.h:WriteSolFile() for solution file format
+   SCIP_CALL( SCIPprintStatus(scip, solfile) );
+   SCIPinfoMessage(scip, solfile, "\n\n");
+
+   bool haveprimal = SCIPgetBestSol(scip) != NULL;
+   bool havedual = probdata->islp && SCIPgetStage(scip) == SCIP_STAGE_SOLVED && !SCIPhasPerformedPresolve(scip);
+
+   SCIPinfoMessage(scip, solfile, "%d\n%d\n", havedual ? probdata->nconss : 0, havedual ? probdata->nconss : 0);
+   SCIPinfoMessage(scip, solfile, "%d\n%d\n", haveprimal ? probdata->nconss : 0, haveprimal ? probdata->nconss : 0);
+
+   if( haveprimal )
+      for( int i = 0; i < probdata->nvars; ++i )
+         SCIPinfoMessage(scip, solfile, "%.17g\n", SCIPgetSolVal(scip, SCIPgetBestSol(scip), probdata->vars[i]));
+
+   if( havedual )
+      for( int c = 0; c < probdata->nconss; ++c )
+      {
+         SCIP_CONS* transcons;
+         SCIP_Real dualval;
+
+         /* dual solution is created by LP solver and therefore only available for linear constraints */
+         SCIP_CALL( SCIPgetTransformedCons(scip, probdata->conss[c], &transcons) );
+         assert(transcons == NULL || strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(transcons)), "linear") == 0);
+
+         if( transcons == NULL )
+            dualval = 0.0;
+         else if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+            dualval = SCIPgetDualsolLinear(scip, transcons);
+         else
+            dualval = -SCIPgetDualsolLinear(scip, transcons);
+         assert(dualval != SCIP_INVALID);
+
+         SCIPinfoMessage(scip, solfile, "%.17g\n", dualval);
+      }
+
+
+   /* AMPL solve status codes are at http://www.ampl.com/NEW/statuses.html
+    *     number   string       interpretation
+    *    0 -  99   solved       optimal solution found
+    *  100 - 199   solved?      optimal solution indicated, but error likely
+    *  200 - 299   infeasible   constraints cannot be satisfied
+    *  300 - 399   unbounded    objective can be improved without limit
+    *  400 - 499   limit        stopped by a limit that you set (such as on iterations)
+    *  500 - 599   failure      stopped by an error condition in the solver routines
+    */
+   int solve_result_num;
+   switch( SCIPgetStatus(scip) )
+   {
+      case SCIP_STATUS_UNKNOWN:
+         solve_result_num = 500;
+         break;
+      case SCIP_STATUS_USERINTERRUPT:
+         solve_result_num = 450;
+         break;
+      case SCIP_STATUS_NODELIMIT:
+         solve_result_num = 400;
+         break;
+      case SCIP_STATUS_TOTALNODELIMIT:
+         solve_result_num = 401;
+         break;
+      case SCIP_STATUS_STALLNODELIMIT:
+         solve_result_num = 402;
+         break;
+      case SCIP_STATUS_TIMELIMIT:
+         solve_result_num = 403;
+         break;
+      case SCIP_STATUS_MEMLIMIT:
+         solve_result_num = 404;
+         break;
+      case SCIP_STATUS_GAPLIMIT:
+         solve_result_num = 405;
+         break;
+      case SCIP_STATUS_SOLLIMIT:
+         solve_result_num = 406;
+         break;
+      case SCIP_STATUS_BESTSOLLIMIT:
+         solve_result_num = 407;
+         break;
+      case SCIP_STATUS_OPTIMAL:
+         solve_result_num = 0;
+         break;
+      case SCIP_STATUS_INFEASIBLE:
+         solve_result_num = 200;
+         break;
+      case SCIP_STATUS_UNBOUNDED:
+         solve_result_num = 300;
+         break;
+      case SCIP_STATUS_INFORUNBD:
+         solve_result_num = 299;
+         break;
+      default:
+         solve_result_num = 500;
+         SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
+         return SCIP_INVALIDDATA;
+   }
+   SCIPinfoMessage(scip, solfile, "objno 0 %d\n", solve_result_num);
+
+   if( fclose(solfile) != 0 )
+   {
+      SCIPerrorMessage("could not close solution file after writing\n");
+      return SCIP_WRITEERROR;
+   }
 
    return SCIP_OKAY;
 }
