@@ -57,12 +57,13 @@
 #define READER_EXTENSION        "nl"
 
 // a variant of SCIP_CALL that throws a std::logic_error if not SCIP_OKAY
+// (using cast to long long to work around issues with old MSVC)
 #define SCIP_CALL_THROW(x) \
    do                                                                                                   \
    {                                                                                                    \
       SCIP_RETCODE throw_retcode;                                                                       \
       if( ((throw_retcode) = (x)) != SCIP_OKAY )                                                        \
-         throw std::logic_error("Error <" + std::to_string((int)throw_retcode) + "> in function call"); \
+         throw std::logic_error("Error <" + std::to_string((long long)throw_retcode) + "> in function call"); \
    }                                                                                                    \
    while( false )
 
@@ -1178,29 +1179,29 @@ public:
             OnUnhandled("SOS2 requires variable .ref suffix");
          }
 
-         int setlen = 0;
-         for( int& varidx : sosit->second )
+         for( size_t i = 0; i < sosit->second.size(); ++i )
          {
-            setvars[setlen] = probdata->vars[varidx];
+            int varidx = sosit->second[i];
+            setvars[i] = probdata->vars[varidx];
 
             if( issos2 && sosweights[varidx] == 0 )
                // 0 is the default if no ref was given for a variable; we don't allow this for SOS2
                OnUnhandled("Missing .ref value for SOS2 variable");
             if( !sosweights.empty() )
-               setweights[setlen] = (SCIP_Real)sosweights[varidx];
-            ++setlen;
+               setweights[i] = (SCIP_Real)sosweights[varidx];
          }
 
          SCIP_CONS* cons;
+         char name[20];
          if( !issos2 )
          {
-            std::string name = "sos1_" + std::to_string(sosit->first);
-            SCIP_CALL_THROW( SCIPcreateConsBasicSOS1(scip, &cons, name.c_str(), setlen, setvars.data(), setweights.empty() ? NULL : setweights.data()) );
+            (void) sprintf(name, "sos1_%d", sosit->first);
+            SCIP_CALL_THROW( SCIPcreateConsBasicSOS1(scip, &cons, name, sosit->second.size(), setvars.data(), setweights.empty() ? NULL : setweights.data()) );
          }
          else
          {
-            std::string name = "sos2_" + std::to_string(-sosit->first);
-            SCIP_CALL_THROW( SCIPcreateConsBasicSOS2(scip, &cons, name.c_str(), setlen, setvars.data(), setweights.data()) );
+            (void) sprintf(name, "sos2_%d", -sosit->first);
+            SCIP_CALL_THROW( SCIPcreateConsBasicSOS2(scip, &cons, name, sosit->second.size(), setvars.data(), setweights.data()) );
          }
          SCIP_CALL_THROW( SCIPaddCons(scip, cons) );
          SCIP_CALL_THROW( SCIPreleaseCons(scip, &cons) );
