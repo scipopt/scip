@@ -67,9 +67,11 @@ typedef struct nearest_special_distance_test_data
    int* RESTRICT         candidates_tail;
    int* RESTRICT         candidates_head;
    int* RESTRICT         nodes_isBlocked;
+   STP_Vectype(int)      edgesrecord;        /**< NON-OWNED! */
    int* RESTRICT         solnode;            /**< NON-OWNED! */
    SCIP_Real*            fixed;              /**< NON-OWNED offset pointer */
    int                   ncandidates;
+   SCIP_Bool             useRecording;
 } NSV;
 
 
@@ -322,12 +324,28 @@ SCIP_RETCODE nsvInitData(
    nsv->nodes_isBlocked = nodes_isBlocked;
    nsv->solnode = solnode;
    nsv->fixed = fixed;
-
+   nsv->useRecording = FALSE;
+   nsv->edgesrecord = NULL;
    nsv->ncandidates = ncandidates;
 
    return SCIP_OKAY;
 }
 
+
+/** initializes NSV recordings */
+static
+void nsvInitRecording(
+   STP_Vectype(int)      edgesrecord,
+   NSV*                  nsv                 /**< NSV */
+)
+{
+   assert(nsv);
+   assert(!nsv->edgesrecord);
+   assert(!nsv->useRecording);
+
+   nsv->useRecording = TRUE;
+   nsv->edgesrecord = edgesrecord;
+}
 
 /** frees NSV test data */
 static
@@ -495,12 +513,19 @@ SCIP_RETCODE nsvEdgeContract(
    nodes_isBlocked[end_remain] = TRUE;
    nodes_isBlocked[end_killed] = TRUE;
 
-   *(nsv->fixed) += g->cost[edge];
-
-   SCIP_CALL( graph_knot_contractFixed(scip, g, nsv->solnode, edge, end_remain, end_killed) );
-   graph_knot_chg(g, end_remain, STP_TERM);
-
-   (*nelims)++;
+   if( nsv->useRecording )
+   {
+      assert(!nelims);
+      StpVecPushBack(scip, nsv->edgesrecord, edge);
+   }
+   else
+   {
+      assert(nelims);
+      *(nsv->fixed) += g->cost[edge];
+      SCIP_CALL( graph_knot_contractFixed(scip, g, nsv->solnode, edge, end_remain, end_killed) );
+      graph_knot_chg(g, end_remain, STP_TERM);
+      (*nelims)++;
+   }
 
    return SCIP_OKAY;
 }
@@ -511,7 +536,6 @@ SCIP_RETCODE nsvExec(
    SCIP*                 scip,               /**< SCIP data structure */
    NSV*                  nsv,                /**< NSV */
    GRAPH*                g,                  /**< graph structure */
-   SCIP_Real*            fixed,              /**< offset pointer */
    int*                  nelims              /**< number of eliminations */
 )
 {
@@ -608,7 +632,29 @@ SCIP_RETCODE reduce_nsvImplied(
    assert(*nelims >= 0);
 
    SCIP_CALL( nsvInitData(scip, sdistance, g, solnode, fixed, &nsv) );
-   SCIP_CALL( nsvExec(scip, &nsv, g, fixed, nelims) );
+   SCIP_CALL( nsvExec(scip, &nsv, g, nelims) );
+   nsvFreeData(scip, &nsv);
+
+   return SCIP_OKAY;
+}
+
+
+/** implied version of NSV test. Does not perform the reductions, but rather records them */
+SCIP_RETCODE reduce_nsvImpliedRecord(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const SD*             sdistance,          /**< special distances storage */
+   GRAPH*                g,                  /**< graph structure */
+   STP_Vectype(int)*     edgerecord          /**< keeps number edges */
+)
+{
+   NSV nsv;
+   assert(scip && sdistance && edgerecord);
+
+   SCIP_CALL( nsvInitData(scip, sdistance, g, NULL, NULL, &nsv) );
+   nsvInitRecording(*edgerecord, &nsv);
+   SCIP_CALL( nsvExec(scip, &nsv, g, NULL) );
+
+   *edgerecord = nsv.edgesrecord;
    nsvFreeData(scip, &nsv);
 
    return SCIP_OKAY;
@@ -2631,6 +2677,7 @@ SCIP_RETCODE reduce_impliedProfitBasedRpc(
    int*                  nelims              /**< number of eliminations */
 )
 {
+   STP_Vectype(int) contractedges = NULL;
    GRAPH* graph_spg;
    SD* sdistance;
    int* edgemap_new2org;
@@ -2657,9 +2704,6 @@ SCIP_RETCODE reduce_impliedProfitBasedRpc(
    if( !graph_transRpcToSpgIsStable(g, primalbound) )
       return SCIP_OKAY;
 
-   printf("GO \n");
-
-
    /* NOTE: pruning is necessary, because we need remaining graph to be connected */
    reduce_unconnectedRpcRmw(scip, g, fixed);
 
@@ -2668,64 +2712,81 @@ SCIP_RETCODE reduce_impliedProfitBasedRpc(
    graph_mark(g);
    SCIP_CALL( graph_transRpcGetSpg(scip, g, primalbound, &fixednew, &edgemap_new2org, &graph_spg) );
 
-   graph_printInfoReduced(graph_spg);
-
-   /*
-   if( graph_spg->edges < 100 )
-   {
-      graph_writeGml(g, "fail.gml", NULL);
-   }
-
-   if( graph_spg->edges < 100 )
-   {
-      graph_writeGml(graph_spg, "transfail.gml", NULL);
-   }
-*/
-
    SCIP_CALL( graph_path_init(scip, graph_spg) );
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, graph_spg, &sdistance) );
    SCIP_CALL( reduce_sdBiased(scip, sdistance, graph_spg, &nelimsnew) );
 
-   for( int i = 0; i < graph_spg->edges; i += 2 )
+   if( nelimsnew > 0 )
    {
-      if( graph_spg->oeat[i] == EAT_FREE )
+      for( int i = 0; i < graph_spg->edges; i += 2 )
       {
-         const int orgedge = edgemap_new2org[i];
-         if( orgedge == -1 )
+         if( graph_spg->oeat[i] == EAT_FREE )
          {
-            assert(Is_term(graph_spg->term[graph_spg->tail[i]]) || Is_term(graph_spg->term[graph_spg->head[i]]));
-            continue;
+            const int orgedge = edgemap_new2org[i];
+            if( orgedge == -1 )
+            {
+               assert(Is_term(graph_spg->term[graph_spg->tail[i]]) || Is_term(graph_spg->term[graph_spg->head[i]]));
+               continue;
+            }
+            assert(graph_edge_isInRange(g, orgedge));
+
+#ifdef SCIP_DEBUG
+            printf("delete %d \n", orgedge);
+            graph_edge_printInfo(g, orgedge);
+#endif
+
+            graph_edge_del(scip, g, orgedge, TRUE);
+            (*nelims)++;
          }
+      }
+
+      assert(graph_valid(scip, g));
+
+      SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, graph_spg, sdistance->blctree, FALSE, sdistance->sdprofit) );
+      SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, graph_spg, sdistance->terminalpaths) );
+   }
+
+   /* now call edge contraction tests */
+   SCIP_CALL( reduce_nsvImpliedRecord(scip, sdistance, graph_spg, &contractedges) );
+
+   for( int i = 0; i < StpVecGetSize(contractedges); i++ )
+   {
+      const int edge = contractedges[i];
+      assert(graph_edge_isInRange(graph_spg, edge));
+
+      if( edgemap_new2org[edge] != -1 )
+      {
+         const int orgedge = edgemap_new2org[edge];
+         const int orgtail = g->tail[orgedge];
+         const int orghead = g->head[orgedge];
+
          assert(graph_edge_isInRange(g, orgedge));
 
-         printf("delete %d \n", orgedge);
+#ifdef SCIP_DEBUG
+         printf("try \n");
          graph_edge_printInfo(g, orgedge);
+#endif
 
-         graph_edge_del(scip, g, orgedge, TRUE);
+         if( (graph_pc_knotIsFixedTerm(g, orgtail) || graph_pc_knotIsPropPotTerm(g, orgtail)) && g->source != orghead )
+         {
+            SCIPdebugMessage("contract %d \n", orgedge);
+            *fixed += g->cost[orgedge];
+            SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, orgtail, orghead, orgtail));
+            continue;
+         }
+
+         if( graph_pc_knotIsFixedTerm(g, orghead) || graph_pc_knotIsPropPotTerm(g, orghead) )
+         {
+            SCIPdebugMessage("contract %d \n", orgedge);
+            *fixed += g->cost[orgedge];
+            SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, orghead, orgtail, orghead));
+
+            continue;
+         }
       }
    }
 
-   assert(graph_valid(scip, g));
-
-
-   graph_printInfoReduced(graph_spg);
-
-
-   // todo use later
-#ifdef XXX
-   if( nelimsnew > 0 )
-   {
-      SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
-      SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );
-      *nelims += nelimsnew;
-   }
-
- //  reduce_sdFree(scip, &sdistance);
- //  SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
-
-   /* now call edge contraction tests */
-   SCIP_CALL( reduce_nsvImplied(scip, sdistance, g, solnode, fixed, nelims) );
-#endif
+   StpVecFree(scip, contractedges);
 
    SCIPfreeMemoryArray(scip, &edgemap_new2org);
    graph_path_exit(scip, graph_spg);
