@@ -4,7 +4,7 @@ var x >= 0 ;
 var y >= 0 ;
 var z >= 0 ;
 
-maximize obj: x + 2*y + 3*z ;
+maximize obj: x + 2*y + z ;
 
 subject to
   e1: x + y <= 10;

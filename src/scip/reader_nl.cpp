@@ -1420,19 +1420,18 @@ SCIP_RETCODE SCIPwriteSolutionNl(
    }
    probdata->filenamestub[probdata->filenamestublen] = '\0';
 
-   // see ampl/mp:sol.h:WriteSolFile() for solution file format
+   // see ampl/mp:sol.h:WriteSolFile() (seems buggy) and asl/writesol.c for solution file format
    SCIP_CALL( SCIPprintStatus(scip, solfile) );
    SCIPinfoMessage(scip, solfile, "\n\n");
+   SCIPinfoMessage(scip, solfile, "Options\n3\n2\n1\n0\n");
 
    bool haveprimal = SCIPgetBestSol(scip) != NULL;
    bool havedual = probdata->islp && SCIPgetStage(scip) == SCIP_STAGE_SOLVED && !SCIPhasPerformedPresolve(scip);
 
-   SCIPinfoMessage(scip, solfile, "%d\n%d\n", havedual ? probdata->nconss : 0, havedual ? probdata->nconss : 0);
-   SCIPinfoMessage(scip, solfile, "%d\n%d\n", haveprimal ? probdata->nconss : 0, haveprimal ? probdata->nconss : 0);
+   SCIPinfoMessage(scip, solfile, "%d\n%d\n", probdata->nconss, havedual ? probdata->nconss : 0);
+   SCIPinfoMessage(scip, solfile, "%d\n%d\n", probdata->nvars, haveprimal ? probdata->nvars : 0);
 
-   if( haveprimal )
-      for( int i = 0; i < probdata->nvars; ++i )
-         SCIPinfoMessage(scip, solfile, "%.17g\n", SCIPgetSolVal(scip, SCIPgetBestSol(scip), probdata->vars[i]));
+   SCIPdebug( SCIPprintSol(scip, SCIPgetBestSol(scip), NULL, TRUE); )
 
    if( havedual )
       for( int c = 0; c < probdata->nconss; ++c )
@@ -1455,6 +1454,9 @@ SCIP_RETCODE SCIPwriteSolutionNl(
          SCIPinfoMessage(scip, solfile, "%.17g\n", dualval);
       }
 
+   if( haveprimal )
+      for( int i = 0; i < probdata->nvars; ++i )
+         SCIPinfoMessage(scip, solfile, "%.17g\n", SCIPgetSolVal(scip, SCIPgetBestSol(scip), probdata->vars[i]));
 
    /* AMPL solve status codes are at http://www.ampl.com/NEW/statuses.html
     *     number   string       interpretation
