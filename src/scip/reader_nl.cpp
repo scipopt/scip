@@ -668,6 +668,7 @@ public:
          {
             SCIP_CALL_THROW( SCIPcreateExprSum(amplph.scip, &commonexpr, 0, NULL, NULL, 0.0, NULL, NULL) );
             amplph.commonexprs[index] = commonexpr;
+            amplph.exprstorelease.push_back(commonexpr);
          }
       }
 
@@ -1242,13 +1243,6 @@ public:
       {
          SCIP_CALL( SCIPreleaseExpr(scip, &varexprs.back()) );
          varexprs.pop_back();
-      }
-
-      // release common expressions
-      while( !commonexprs.empty() )
-      {
-         SCIP_CALL( SCIPreleaseExpr(scip, &commonexprs.back()) );
-         commonexprs.pop_back();
       }
 
       return SCIP_OKAY;
