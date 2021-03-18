@@ -147,7 +147,7 @@ SCIP_RETCODE fromCommandLine(
 
 /** runs SCIP as if it was called by AMPL */
 static
-SCIP_RETCODE runAsAmplSolver(
+SCIP_RETCODE fromAmpl(
    SCIP*                 scip,               /**< SCIP data structure */
    char*                 nlfilename,         /**< name of .nl file */
    const char*           defaultsetname      /**< name of default settings file */
@@ -237,6 +237,14 @@ SCIP_RETCODE SCIPprocessShellArguments(
    /********************
     * Parse parameters *
     ********************/
+
+   /* recognize and handle case where we were called from AMPL first */
+   if( argc >= 3 && strcmp(argv[2], "-AMPL") == 0 )
+   {
+      SCIP_CALL( fromAmpl(scip, argv[1], defaultsetname) );
+
+      return SCIP_OKAY;
+   }
 
    quiet = FALSE;
    paramerror = FALSE;
@@ -520,15 +528,7 @@ SCIP_RETCODE SCIPrunShell(
     * Process command line arguments *
     **********************************/
 
-   /* quick preprocessing to check whether we run under AMPL */
-   if( argc >= 3 && strcmp(argv[2], "-AMPL") == 0 )
-   {
-      SCIP_CALL( runAsAmplSolver(scip, argv[1], defaultsetname) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
-   }
+   SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
 
    /********************
     * Deinitialization *
