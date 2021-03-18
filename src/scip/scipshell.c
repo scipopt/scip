@@ -149,11 +149,12 @@ SCIP_RETCODE fromCommandLine(
 static
 SCIP_RETCODE fromAmpl(
    SCIP*                 scip,               /**< SCIP data structure */
-   char*                 nlfilename,         /**< name of .nl file */
+   char*                 nlfilename,         /**< name of .nl file, without the .nl */
    const char*           defaultsetname      /**< name of default settings file */
    )
 {
 #ifdef SCIP_WITH_AMPL
+   char fullnlfilename[SCIP_MAXSTRLEN];
    char* logfile;
    SCIP_Bool printstat;
 
@@ -181,11 +182,12 @@ SCIP_RETCODE fromAmpl(
    if( *logfile )
       SCIPsetMessagehdlrLogfile(scip, logfile);
 
-   SCIPinfoMessage(scip, NULL, "read problem <%s>\n", nlfilename);
+   (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
+   SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
    SCIPinfoMessage(scip, NULL, "============\n");
    SCIPinfoMessage(scip, NULL, "\n");
 
-   SCIP_CALL( SCIPreadProb(scip, nlfilename, "nl") );
+   SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
 
    SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
    SCIPinfoMessage(scip, NULL, "=============\n\n");
@@ -492,7 +494,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n",
          argv[0]);
 #ifdef SCIP_WITH_AMPL
-      printf("\nas AMPL solver: %s <.nl-file> -AMPL\n", argv[0]);
+      printf("\nas AMPL solver: %s <.nl-file without the .nl> -AMPL\n", argv[0]);
 #endif
       printf("\n");
    }

@@ -190,7 +190,7 @@ Test(readernl, run, .description = "check running SCIP with -AMPL")
    args[1] = (char*)malloc(SCIP_MAXSTRLEN);
    strcpy(args[1], __FILE__);
    dirname(args[1]);
-   strcat(args[1], "/suffix1.nl");
+   strcat(args[1], "/suffix1");
 
    args[2] = (char*)"-AMPL";
 
@@ -236,7 +236,7 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
    args[1] = (char*)malloc(SCIP_MAXSTRLEN);
    strcpy(args[1], __FILE__);
    dirname(args[1]);
-   strcat(args[1], "/lp1.nl");
+   strcat(args[1], "/lp1");
 
    args[2] = (char*)"-AMPL";
 
