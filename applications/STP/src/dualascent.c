@@ -25,12 +25,15 @@
 
 #include <assert.h>
 #include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_setppc.h"
 #include "dualascent.h"
 #include "probdata_stp.h"
 #include "graph.h"
 #include "heur_ascendprune.h"
 #include "scip/scip.h"
 #include "scip/misc.h"
+
 
 
 #define DEFAULT_DAMAXDEVIATION  0.25  /**< max deviation for dual ascent */
@@ -51,6 +54,7 @@
 #define BitTrue(Arr, pos)    ( Arr[(pos/ARRLENGTH)] & (1 << (pos%ARRLENGTH)) )
 #endif
 
+enum DACONS_Type { dacons_linear = 0, dacons_logicor = 1, dacons_setppc = 2 };
 
 
 /** internal data for path based dual-ascent */
@@ -76,6 +80,67 @@ typedef struct dual_ascent_paths
  *
  * @{
  */
+
+/** creates empty constraint */
+static
+SCIP_RETCODE daconsCreateEmpty(
+   SCIP*                 scip,               /**< SCIP data structure */
+   enum DACONS_Type      constype,
+   SCIP_Bool             consUseInital,
+   SCIP_CONS**           cons                /**< to be initialized */
+   )
+{
+   // todo PcMw did not propagate before, keep it?
+
+   if( constype == dacons_linear )
+   {
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, "da", 0, NULL, NULL, 1.0, SCIPinfinity(scip),
+         consUseInital, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   }
+   else if( constype == dacons_logicor )
+   {
+      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, "da", 0, NULL,
+         consUseInital, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateConsSetcover(scip, cons, "da", 0, NULL,
+         consUseInital, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** gets parameter */
+static
+SCIP_RETCODE daconsGetParams(
+   SCIP*                 scip,               /**< SCIP data structure */
+   enum DACONS_Type*     constype,
+   SCIP_Bool*            consUseInital
+   )
+{
+   int type;
+   SCIP_CALL( SCIPgetBoolParam(scip, "stp/usedacutsinitial", consUseInital) );
+   SCIP_CALL( SCIPgetIntParam(scip, "stp/dacutstype", &type) );
+
+   if( type == 0 )
+   {
+      *constype = dacons_linear;
+   }
+   else if( type == 1 )
+   {
+      *constype = dacons_logicor;
+   }
+   else
+   {
+      assert(type == 2);
+      *constype = dacons_setppc;
+   }
+
+   return SCIP_OKAY;
+
+}
 
 
 /** sorts according to distance in solution */
@@ -605,6 +670,8 @@ SCIP_RETCODE daExec(
    const SCIP_Bool addcuts = daparams->addcuts;
    const SCIP_Bool is_pseudoroot = daparams->is_pseudoroot;
    const SCIP_Bool withInfinityArcs = graph_typeIsDirected(g) || g->stp_type == STP_DCSTP;
+   SCIP_Bool consUseInital = TRUE;
+   enum DACONS_Type constype = dacons_logicor;
 
    assert(rescap);
    assert(addconss || !addcuts);  /* should currently not  be activated */
@@ -615,8 +682,11 @@ SCIP_RETCODE daExec(
    if( root < 0 || !Is_term(g->term[root]) )
       root = g->source;
 
+
    if( addcuts )
    {
+      SCIP_CALL( daconsGetParams(scip, &constype, &consUseInital) );
+
       vars = SCIPprobdataGetVars(scip);
       assert(vars != NULL);
 
@@ -893,8 +963,7 @@ SCIP_RETCODE daExec(
             {
                if( addconss )
                {
-                  SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
-                        1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+                  SCIP_CALL( daconsCreateEmpty(scip, constype, consUseInital, &cons) );
                }
                else
                {
@@ -921,10 +990,20 @@ SCIP_RETCODE daExec(
 
                   if( !withInfinityArcs || LT(g->cost[edgearr[a]], FARAWAY) )
                   {
-                     if( addconss )
+                     assert(addconss);
+                     if( constype == dacons_linear )
                         SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[edgearr[a]], 1.0) );
+                     else if( constype == dacons_logicor )
+                        SCIP_CALL( SCIPaddCoefLogicor(scip, cons, vars[edgearr[a]]) );
+                     else
+                        SCIP_CALL( SCIPaddCoefSetppc(scip, cons, vars[edgearr[a]]) );
+
+#ifdef SCIP_DISABLED
+                     if( addconss )
+                        SCIP_CALL( SCIPaddCoefLogicor(scip, cons, vars[edgearr[a]]) );//, 1.0) );
                      else
                         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[edgearr[a]], 1.0) );
+#endif
                   }
                }
                rescap[a] -= min;
@@ -1298,6 +1377,8 @@ SCIP_RETCODE dualascent_execPcMw(
    STP_Bool* sat;
    STP_Bool* active;
    const SCIP_Bool addconss = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
+   SCIP_Bool consUseInital = TRUE;
+   enum DACONS_Type constype = dacons_logicor;
 
    /* should currently not  be activated */
    assert(addconss || !addcuts);
@@ -1307,15 +1388,17 @@ SCIP_RETCODE dualascent_execPcMw(
    assert(nruns >= 0);
    assert(objval != NULL);
 
-
    if( g->knots == 1 )
    {
       *objval = 0.0;
       return SCIP_OKAY;
    }
 
+
    if( addcuts )
    {
+      SCIP_CALL( daconsGetParams(scip, &constype, &consUseInital) );
+
       vars = SCIPprobdataGetVars(scip);
       assert(vars != NULL);
       if( !addconss )
@@ -1551,8 +1634,7 @@ SCIP_RETCODE dualascent_execPcMw(
             {
                if( addconss )
                {
-                  SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "da", 0, NULL, NULL,
-                        1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+                  SCIP_CALL( daconsCreateEmpty(scip, constype, consUseInital, &cons) );
                }
                else
                {
@@ -1570,16 +1652,25 @@ SCIP_RETCODE dualascent_execPcMw(
 
                if( addcuts && origedge[a] )
                {
-                  assert(vars != NULL);
-                  assert(cons != NULL);
+                  assert(vars && cons);
+                  assert(addconss);
 
                   if( g->tail[a] == root && g->head[a] == v )
                      in = TRUE;
 
+                  if( constype == dacons_linear )
+                     SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[a], 1.0) );
+                  else if( constype == dacons_logicor )
+                     SCIP_CALL( SCIPaddCoefLogicor(scip, cons, vars[a]) );
+                  else
+                     SCIP_CALL( SCIPaddCoefSetppc(scip, cons, vars[a]) );
+
+#ifdef SCIP_DISABLED
                   if( addconss )
                      SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[a], 1.0) );
                   else
                      SCIP_CALL( SCIPaddVarToRow(scip, row, vars[a], 1.0) );
+#endif
                }
                rescap[a] -= min;
 
@@ -1605,13 +1696,24 @@ SCIP_RETCODE dualascent_execPcMw(
                if( !in )
                {
                   for( i = g->outbeg[root]; i != EAT_LAST; i = g->oeat[i] )
+                  {
                      if( g->head[i] == v )
                      {
+                        if( constype == dacons_linear )
+                           SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i], 1.0) );
+                        else if( constype == dacons_logicor )
+                           SCIP_CALL( SCIPaddCoefLogicor(scip, cons, vars[i]) );
+                        else
+                           SCIP_CALL( SCIPaddCoefSetppc(scip, cons, vars[i]) );
+
+#ifdef SCIP_DISABLED
                         if( addconss )
                            SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i], 1.0) );
                         else
                            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i], 1.0) );
+#endif
                      }
+                  }
                }
 
                if( addconss )

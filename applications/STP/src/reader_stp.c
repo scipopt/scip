@@ -51,6 +51,8 @@
 #define   DEFAULT_SYMCONS      STP_CONS_AUTOMATIC         /**< symmetry constraints */
 #define   DEFAULT_CYCLECONS    STP_CONS_AUTOMATIC         /**< cycle constraints */
 #define   DEFAULT_DACUTS       STP_CONS_ALWAYS            /**< always use dual-ascent cuts */
+#define   DEFAULT_DACUTSTYPE   1                          /**< logicor */
+#define   DEFAULT_USEDACUTSINITIAL       TRUE             /**< use dual-ascent cuts for initial LP */
 #define   DEFAULT_USEDP        STP_USEDP_AUTOMATIC        /**< problem-specific */
 #define   DEFAULT_SDEXT        3                          /**< sd extended */
 #define   DEFAULT_MINELIMS     3                          /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
@@ -173,6 +175,11 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
          NULL, FALSE, DEFAULT_DACUTS, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/dacutstype",
+         "Type of dual ascent cuts: 0 linear, 1 logicor, 2 setppc",
+         NULL, FALSE, DEFAULT_DACUTSTYPE, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
          "stp/usedp",
          "Use dynamic programming: 0 never, 1 always, 2 problem specific",
          NULL, FALSE, DEFAULT_USEDP, 0, 2, NULL, NULL) );
@@ -201,6 +208,10 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
          "stp/emitgraph",
          "Emit graph",
          NULL, FALSE, DEFAULT_EMITGRAPH, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "stp/usedacutsinitial",
+         "use DA cuts for initial model?", NULL, FALSE, DEFAULT_USEDACUTSINITIAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "stp/bigt",
