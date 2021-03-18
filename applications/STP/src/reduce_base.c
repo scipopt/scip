@@ -58,7 +58,7 @@
 
 
 
-enum PC_REDTYPE {pc_sdc, pc_sdstar, pc_sdw1, pc_sdw2, pc_bd3};
+enum PC_REDTYPE {pc_sdc, pc_sdstar, pc_sdstar2, pc_sdw1, pc_sdw2, pc_bd3};
 enum STP_REDTYPE {stp_bdk, stp_sdstar, stp_sdstarbot};
 
 
@@ -128,6 +128,9 @@ int getWorkLimitsPc(
          break;
       case pc_sdstar:
          limit = (roundnumber > 0) ? STP_REDBOUND_SDSP2 : 2 * STP_REDBOUND_SDSP;
+         break;
+      case pc_sdstar2:
+         limit = (roundnumber > 0) ? STP_REDBOUND_SDSP :  STP_REDBOUND_SDSP;
          break;
       case pc_sdw1:
          limit = (roundnumber > 0) ? STP_REDBOUND_SDSP2 : STP_REDBOUND_SDSP;
@@ -269,6 +272,8 @@ SCIP_RETCODE execPc_SD(
    SCIP_Bool*            rerun               /**< use again? */
 )
 {
+   // todo test properly
+#ifdef SCIP_DISABLED
    SCIP_CALL( reduce_sdPc(scip, g, vnoi, heap, state, vbase, nodesid, nodesorg, nelims) );
 
    if( verbose )
@@ -276,6 +281,9 @@ SCIP_RETCODE execPc_SD(
 
    if( *nelims <= redbound )
       *rerun = FALSE;
+#else
+   *rerun = FALSE;
+#endif
 
    return SCIP_OKAY;
 }
@@ -951,7 +959,7 @@ SCIP_RETCODE redLoopInnerPc(
          SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsPc(g, rounds, pc_sdstar), usestrongreds, g, &sdstarnelims));
          if( verbose ) printf("sdstarnelims %d \n", sdstarnelims);
 
-         SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar), usestrongreds, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
+         SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar2), usestrongreds, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
          if( verbose ) printf("sdstarpcnelims %d \n", sdstarpcnelims);
 
          sdstarnelims += sdstarpcnelims;
