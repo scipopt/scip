@@ -244,6 +244,11 @@ SCIP_RETCODE separateCuts(
    *cutoff = FALSE;
    *ncuts = 0;
 
+   /* exit if there are no binary variables - ignore integer variables that have 0/1 bounds */
+   nmaxvars = SCIPgetNBinVars(scip);
+   if( nmaxvars <= 0 )
+      return SCIP_OKAY;
+
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
