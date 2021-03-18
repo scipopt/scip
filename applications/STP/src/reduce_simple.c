@@ -152,13 +152,29 @@ void reduce_nodesDeg1(
 )
 {
    const int nnodes = graph_get_nNodes(graph);
+   SCIP_Bool rerun = TRUE;
 
-   for( int i = 0; i < nnodes; ++i )
+   while( rerun )
    {
-      if( graph->grad[i] == 1 && !Is_term(graph->term[i]) )
+      rerun = FALSE;
+      for( int i = 0; i < nnodes; ++i )
       {
-         graph_knot_del(scip, graph, i, TRUE);
-         graph->mark[i] = FALSE;
+         if( graph->grad[i] == 1 && !Is_term(graph->term[i]) )
+         {
+            const int sibling = graph->head[graph->outbeg[i]];
+            assert(graph_knot_isInRange(graph, sibling));
+
+            graph_knot_del(scip, graph, i, TRUE);
+            graph->mark[i] = FALSE;
+
+            if( Is_term(graph->term[sibling]) )
+               continue;
+
+            if( graph->grad[sibling] == 0 )
+               graph->mark[sibling] = FALSE;
+            else if( graph->grad[sibling] == 1 )
+               rerun = TRUE;
+         }
       }
    }
 }
