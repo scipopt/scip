@@ -178,8 +178,8 @@ public:
    ///
    /// initializes SCIP problem and problem data
    AMPLProblemHandler(
-      SCIP*              scip_,              /**< SCIP data structure */
-      const char*        filename            /**< name of .nl file that is read */
+      SCIP*              scip_,              ///< SCIP data structure
+      const char*        filename            ///< name of .nl file that is read
       )
    : scip(scip_),
      probdata(NULL),
@@ -254,7 +254,7 @@ public:
    ///
    /// create and add variables, allocate constraints
    void OnHeader(
-      const mp::NLHeader& h
+      const mp::NLHeader& h                  ///< header data
       )
    {
       char name[SCIP_MAXSTRLEN];
@@ -380,7 +380,7 @@ public:
 
    /// receive notification of a number in a nonlinear expression
    SCIP_EXPR* OnNumber(
-      double             value
+      double             value               ///< value
       )
    {
       SCIP_EXPR* expr;
@@ -395,7 +395,7 @@ public:
 
    /// receive notification of a variable reference in a nonlinear expression
    SCIP_EXPR* OnVariableRef(
-      int                variableIndex
+      int                variableIndex       ///< AMPL index of variable
       )
    {
       assert(variableIndex >= 0);
@@ -407,8 +407,8 @@ public:
 
    /// receive notification of a unary expression
    SCIP_EXPR* OnUnary(
-      mp::expr::Kind     kind,
-      SCIP_EXPR*         child
+      mp::expr::Kind     kind,               ///< expression operator
+      SCIP_EXPR*         child               ///< argument
       )
    {
       SCIP_EXPR* expr;
@@ -475,9 +475,9 @@ public:
 
    /// receive notification of a binary expression
    SCIP_EXPR* OnBinary(
-      mp::expr::Kind     kind,
-      SCIP_EXPR*         firstChild,
-      SCIP_EXPR*         secondChild
+      mp::expr::Kind     kind,               ///< expression operand
+      SCIP_EXPR*         firstChild,         ///< first argument
+      SCIP_EXPR*         secondChild         ///< second argument
       )
    {
       SCIP_EXPR* expr;
@@ -568,16 +568,18 @@ public:
    public:
       std::shared_ptr<std::vector<SCIP_EXPR*> > v;
 
+      /// constructor
       NumericArgHandler(
-         int num_args
+         int             num_args            ///< number of terms to expect
          )
       : v(new std::vector<SCIP_EXPR*>())
       {
          v->reserve(num_args);
       }
 
+      /// adds term to sum
       void AddArg(
-         SCIP_EXPR*      term
+         SCIP_EXPR*      term                ///< term to add
          )
       {
          v->push_back(term);
@@ -586,7 +588,7 @@ public:
 
    /// receive notification of the beginning of a summation
    NumericArgHandler BeginSum(
-      int                num_args
+      int                num_args            ///< number of terms to expect
       )
    {
       NumericArgHandler h(num_args);
@@ -595,7 +597,7 @@ public:
 
    /// receive notification of the end of a summation
    SCIP_EXPR* EndSum(
-      NumericArgHandler handler
+      NumericArgHandler  handler             ///< handler that handled the sum
       )
    {
       SCIP_EXPR* expr;
@@ -607,9 +609,9 @@ public:
 
    /// receive notification of an objective type and the nonlinear part of an objective expression
    void OnObj(
-      int                objectiveIndex,
-      mp::obj::Type      type,
-      SCIP_EXPR*         nonlinearExpression
+      int                objectiveIndex,     ///< index of objective
+      mp::obj::Type      type,               ///< objective sense
+      SCIP_EXPR*         nonlinearExpression ///< nonlinaer part of objective function
       )
    {
       if( objectiveIndex >= 1 )
@@ -637,8 +639,8 @@ public:
 
    /// receive notification of an algebraic constraint expression
    void OnAlgebraicCon(
-      int                constraintIndex,
-      SCIP_EXPR*         expr
+      int                constraintIndex,    ///< index of constraint
+      SCIP_EXPR*         expr                ///< nonlinear part of constraint
       )
    {
       if( expr != NULL )
@@ -656,10 +658,11 @@ public:
       SCIP_EXPR*          commonexpr;
 
    public:
+      /// constructor
       LinearExprHandler(
-         AMPLProblemHandler& amplph_,
-         int                 index,
-         int                 num_linear_terms
+         AMPLProblemHandler& amplph_,        ///< problem handler
+         int                 index,          ///< index of common expression
+         int                 num_linear_terms///< number of terms to expect
          )
       : amplph(amplph_),
         commonexpr(NULL)
@@ -674,8 +677,8 @@ public:
 
       /// receives notification of a term in the linear expression
       void AddTerm(
-         int             var_index,
-         double          coef
+         int             var_index,          ///< AMPL index of variable
+         double          coef                ///< variable coefficient
          )
       {
          assert(commonexpr != NULL);
@@ -701,8 +704,8 @@ public:
 
    /// receive notification of the beginning of a common expression (defined variable)
    LinearExprHandler BeginCommonExpr(
-      int                index,
-      int                num_linear_terms
+      int                index,              ///< index of common expression
+      int                num_linear_terms    ///< number of terms to expect
       )
    {
       assert(index >= 0);
@@ -713,9 +716,9 @@ public:
 
    /// receive notification of the end of a common expression
    void EndCommonExpr(
-      int                index,
-      SCIP_EXPR*         expr,
-      int                /* position */  // doesn't seem to have any purpose
+      int                index,              ///< index of common expression
+      SCIP_EXPR*         expr,               ///< nonlinear part of common expression
+      int                /* position */      ///< argument that doesn't seem to have any purpose
       )
    {
       if( commonexprs[index] != NULL )
@@ -734,7 +737,7 @@ public:
 
    /// receive notification of a common expression (defined variable) reference
    SCIP_EXPR* OnCommonExprRef(
-      int                expr_index
+      int                expr_index          ///< index of common expression
       )
    {
       assert(expr_index >= 0);
@@ -745,9 +748,9 @@ public:
 
    /// receive notification of variable bounds
    void OnVarBounds(
-      int                variableIndex,
-      double             variableLB,
-      double             variableUB
+      int                variableIndex,      ///< AMPL index of variable
+      double             variableLB,         ///< variable lower bound
+      double             variableUB          ///< variable upper bound
       )
    {
       assert(variableIndex >= 0);
@@ -768,9 +771,9 @@ public:
 
    /// receive notification of constraint sides
    void OnConBounds(
-      int                index,
-      double             lb,
-      double             ub
+      int                index,              ///< AMPL index of constraint
+      double             lb,                 ///< constraint left-hand-side
+      double             ub                  ///< constraint right-hand-side
       )
    {
       assert(index >= 0);
@@ -803,8 +806,8 @@ public:
 
    /// receive notification of the initial value for a variable
    void OnInitialValue(
-      int                var_index,
-      double             value
+      int                var_index,          ///< AMPL index of variable
+      double             value               ///< initial primal value of variable
       )
    {
       if( initsol == NULL )
@@ -817,8 +820,8 @@ public:
 
    /// receives notification of the initial value for a dual variable
    void OnInitialDualValue(
-      int                /* con_index */,
-      double             /* value */
+      int                /* con_index */,    ///< AMPL index of constraint
+      double             /* value */         ///< initial dual value of constraint
       )
    {
       // ignore initial dual value
@@ -859,11 +862,11 @@ public:
       } suffix;
 
    public:
+      /// constructor
       SuffixHandler(
-         AMPLProblemHandler& amplph_,
-         fmt::StringRef      name,
-         mp::suf::Kind       kind,
-         int                 num_values
+         AMPLProblemHandler& amplph_,        ///< problem handler
+         fmt::StringRef      name,           ///< name of suffix
+         mp::suf::Kind       kind            ///< whether suffix applies to var, cons, etc
          )
       : amplph(amplph_),
         suffix(IGNORE)
@@ -944,8 +947,8 @@ public:
       }
 
       void SetValue(
-         int index,
-         T   value
+         int             index,              ///< index of variable, constraint, etc
+         T               value               ///< value of suffix
       )
       {
          assert(index >= 0);
@@ -1008,23 +1011,23 @@ public:
    typedef SuffixHandler<int> IntSuffixHandler;
    /// receive notification of an integer suffix
    IntSuffixHandler OnIntSuffix(
-      fmt::StringRef     name,               /**< suffix name, not null-terminated */
-      mp::suf::Kind      kind,               /**< suffix kind */
-      int                num_values
+      fmt::StringRef     name,               ///< suffix name, not null-terminated
+      mp::suf::Kind      kind,               ///< suffix kind
+      int                /*num_values*/      ///< number of values to expect
       )
    {
-      return IntSuffixHandler(*this, name, kind, num_values);
+      return IntSuffixHandler(*this, name, kind);
    }
 
    typedef SuffixHandler<SCIP_Real> DblSuffixHandler;
    /// receive notification of a double suffix
    DblSuffixHandler OnDblSuffix(
-      fmt::StringRef     name,               /**< suffix name, not null-terminated */
-      mp::suf::Kind      kind,               /**< suffix kind */
-      int                num_values
+      fmt::StringRef     name,               ///< suffix name, not null-terminated
+      mp::suf::Kind      kind,               ///< suffix kind
+      int                /*num_values*/      ///< number of values to expect
       )
    {
-      return DblSuffixHandler(*this, name, kind, num_values);
+      return DblSuffixHandler(*this, name, kind);
    }
 
    /// handles receiving the linear part of an objective or constraint
@@ -1041,8 +1044,8 @@ public:
    public:
       // constructor for constraint
       explicit LinearPartHandler(
-         AMPLProblemHandler& amplph_,
-         int                 constraintIndex_
+         AMPLProblemHandler& amplph_,        ///< problem handler
+         int                 constraintIndex_///< constraint index
          )
       : amplph(amplph_),
         constraintIndex(constraintIndex_)
@@ -1053,15 +1056,15 @@ public:
 
       // constructor for linear objective
       explicit LinearPartHandler(
-         AMPLProblemHandler& amplph_
+         AMPLProblemHandler& amplph_         ///< problem handler
          )
       : amplph(amplph_),
         constraintIndex(-1)
       { }
 
       void AddTerm(
-         int             variableIndex,
-         double          coefficient
+         int             variableIndex,      ///< AMPL index of variable
+         double          coefficient         ///< coefficient of variable
          )
       {
          assert(variableIndex >= 0);
@@ -1090,8 +1093,8 @@ public:
 
    /// receive notification of the linear part of an objective
    LinearPartHandler OnLinearObjExpr(
-      int                objectiveIndex,
-      int                /* numLinearTerms */
+      int                objectiveIndex,     ///< index of objective
+      int                /* numLinearTerms *////< number of terms to expect
       )
    {
       if( objectiveIndex >= 1 )
@@ -1104,8 +1107,8 @@ public:
 
    /// receive notification of the linear part of a constraint
    LinearConHandler OnLinearConExpr(
-      int                constraintIndex,
-      int                /* numLinearTerms */
+      int                constraintIndex,    ///< index of constraint
+      int                /* numLinearTerms *////< number of terms to expect
       )
    {
       return LinearConHandler(*this, constraintIndex);
