@@ -1423,7 +1423,7 @@ SCIP_RETCODE SCIPwriteSolutionNl(
    }
    probdata->filenamestub[probdata->filenamestublen] = '\0';
 
-   // see ampl/mp:sol.h:WriteSolFile() (seems buggy) and asl/writesol.c for solution file format
+   // see ampl/mp:sol.h:WriteSolFile() (seems buggy, https://github.com/ampl/mp/issues/135) and asl/writesol.c for solution file format
    SCIP_CALL( SCIPprintStatus(scip, solfile) );
    SCIPinfoMessage(scip, solfile, "\n\n");
    SCIPinfoMessage(scip, solfile, "Options\n3\n2\n1\n0\n");
