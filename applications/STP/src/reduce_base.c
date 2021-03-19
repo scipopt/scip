@@ -1922,7 +1922,6 @@ SCIP_RETCODE redLoopPc(
    SCIP_Real prizesum;
    // todo remove
    const SCIP_Bool verbose = FALSE && dualascent && userec && nodereplacing;
-   int nelims;
    int degnelims;
    int nadvruns = 0;
    SCIP_Bool isSpg = FALSE;
@@ -1953,12 +1952,12 @@ SCIP_RETCODE redLoopPc(
    /* main reduction loop */
    for( int outterrounds = 0; outterrounds < 3 && rerun; outterrounds++ )
    {
-      int ninnerelims = 0;
+      int nouterelims = 0;
       rerun = FALSE;
 
       SCIP_CALL( redLoopInnerPc(scip, g, redsollocal, dheap, vnoi, path, nodearrreal, heap, state,
              vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, fixed, randnumgen, prizesum,
-             dualascent, bred, reductbound, userec, nodereplacing, usestrongreds, &ninnerelims) );
+             dualascent, bred, reductbound, userec, nodereplacing, usestrongreds, &nouterelims) );
 
       if( advancedrun && g->terms > 2 )
       {
@@ -1971,9 +1970,9 @@ SCIP_RETCODE redLoopPc(
                .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = TRUE, .pcmw_markroots = TRUE, .pcmw_fastDa = FALSE };
 
          int danelims = 0;
+         int implnelims = 0;
 
          degnelims = 0;
-         nelims = 0;
          advancedrun = FALSE;
          nadvruns++;
 
@@ -1985,6 +1984,8 @@ SCIP_RETCODE redLoopPc(
                break;
             }
 
+            SCIP_CALL( reduce_impliedProfitBasedRpc(scip, g, redsollocal, fixed, &implnelims) );
+
             SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, fixed, &danelims, randnumgen) );
          }
          else
@@ -1995,10 +1996,10 @@ SCIP_RETCODE redLoopPc(
                   state, nodearrchar, &danelims, randnumgen, prizesum) );
          }
 
-         SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
-         ninnerelims += danelims + degnelims;
+         SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &degnelims, NULL, solnode) );
+         nouterelims += danelims + degnelims + implnelims;
 
-         if( ninnerelims > reductbound_global )
+         if( nouterelims + implnelims > reductbound_global )
          {
             if( danelims > reductbound_global )
                advancedrun = TRUE;

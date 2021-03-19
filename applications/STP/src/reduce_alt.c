@@ -2772,6 +2772,8 @@ SCIP_RETCODE reduce_impliedProfitBasedRpc(
             SCIPdebugMessage("contract %d \n", orgedge);
             *fixed += g->cost[orgedge];
             SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, orgtail, orghead, orgtail));
+            (*nelims)++;
+
             continue;
          }
 
@@ -2780,6 +2782,7 @@ SCIP_RETCODE reduce_impliedProfitBasedRpc(
             SCIPdebugMessage("contract %d \n", orgedge);
             *fixed += g->cost[orgedge];
             SCIP_CALL(graph_pc_contractEdge(scip, g, solnode, orghead, orgtail, orghead));
+            (*nelims)++;
 
             continue;
          }

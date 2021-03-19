@@ -1018,7 +1018,7 @@ int distgraphGetNedges(
    int maxnedges;
    const int nedges = graph_get_nEdges(g);
    const int nterms = g->terms;
-   const SCIP_Longint terms2 = (nterms - 1) * nterms;
+   const SCIP_Longint terms2 = (SCIP_Longint) (nterms - 1) * nterms;
 
    if( nedges >= terms2 )
    {
