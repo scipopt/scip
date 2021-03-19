@@ -3450,7 +3450,7 @@ SCIP_RETCODE reduce_daPcMw(
       SCIPdebugMessage("DA first minpathcost %f \n", minpathcost);
 
    /* initialize data structures for transgraph */
-   SCIP_CALL( graph_initHistory(scip, transgraph) );
+ //  SCIP_CALL( graph_initHistory(scip, transgraph) );
    computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
 
    /*
