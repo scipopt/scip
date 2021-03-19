@@ -82,8 +82,38 @@ void setCostToOrgPc(
    assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
 
    for( int e = 0; e < nedges; ++e )
-      if( !graph_edge_isBlocked(graph, e) )
+   {
+      assert(graph_edge_isBlocked(graph, e) == EQ(edgecosts[e], BLOCKED_MINOR) || EQ(edgecosts[e], BLOCKED));
+
+      if( !EQ(edgecosts[e], BLOCKED_MINOR) && !EQ(edgecosts[e], BLOCKED) )
          edgecosts[e] = cost_org[e];
+   }
+}
+
+
+/** gets original edge costs, when in extended mode and in presolving state */
+static
+void setCostToOrgPcPreState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< the graph */
+)
+{
+   const int nedges = graph->edges;
+   const SCIP_Real* const cost_org = graph->cost_org_pc;
+   SCIP_Real* const RESTRICT edgecosts = graph->cost;
+
+   assert(scip && edgecosts && cost_org);
+   assert(graph->extended && graph_pc_isPcMw(graph));
+
+   assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
+
+#ifndef NDEBUG
+   for( int e = 0; e < nedges; ++e )
+   {
+      assert(!graph_edge_isBlocked(graph, e));
+   }
+#endif
+   BMScopyMemoryArray(edgecosts, cost_org, nedges);
 }
 
 
@@ -1804,11 +1834,10 @@ void graph_pc_getReductionRatios(
 void graph_pc_getOrgCosts(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< the graph */
-   SCIP_Real*            edgecosts           /**< original costs */
+   SCIP_Real*            edgecosts           /**< original costs to be filled */
 )
 {
-   const SCIP_Real* const gCosts = graph->cost;
-   const int nedges = graph->edges;
+   const int nedges = graph_get_nEdges(graph);
    const SCIP_Real* const cost_org = graph->cost_org_pc;
 
    assert(scip && edgecosts);
@@ -1816,15 +1845,29 @@ void graph_pc_getOrgCosts(
 
    assert(graph_pc_transOrgAreConistent(scip, graph, TRUE));
 
-   BMScopyMemoryArray(edgecosts, graph->cost, nedges);
-
-   for( int e = 0; e < nedges; ++e )
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
    {
-      const SCIP_Bool edgeIsBlocked = EQ(gCosts[e], BLOCKED_MINOR) || EQ(gCosts[e], BLOCKED);
-      assert(edgeIsBlocked == graph_edge_isBlocked(graph, e));
+      BMScopyMemoryArray(edgecosts, cost_org, nedges);
 
-      if( !edgeIsBlocked )
-         edgecosts[e] = cost_org[e];
+#ifndef NDEBUG
+      for( int e = 0; e < nedges; ++e )
+      {
+         assert(!graph_edge_isBlocked(graph, e));
+      }
+#endif
+   }
+   else
+   {
+      BMScopyMemoryArray(edgecosts, graph->cost, nedges);
+
+      for( int e = 0; e < nedges; ++e )
+      {
+         const SCIP_Bool edgeIsBlocked = EQ(graph->cost[e], BLOCKED_MINOR) || EQ(graph->cost[e], BLOCKED);
+         assert(edgeIsBlocked == graph_edge_isBlocked(graph, e));
+
+         if( !edgeIsBlocked )
+            edgecosts[e] = cost_org[e];
+      }
    }
 }
 
@@ -1948,7 +1991,10 @@ void graph_pc_2org(
    /* restore original edge weights */
    if( graph_pc_isPc(graph) )
    {
-      setCostToOrgPc(scip, graph);
+      if( (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE) )
+         setCostToOrgPcPreState(scip, graph);
+      else
+         setCostToOrgPc(scip, graph);
    }
 
    /* swap terminal properties and mark original graph */
