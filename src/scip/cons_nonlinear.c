@@ -7706,10 +7706,6 @@ SCIP_RETCODE analyzeViolation(
          if( origviol == 0.0 )
             continue;
 
-         /* TODO remove? origviol shouldn't be mixed up with auxviol */
-         *maxauxviol = MAX(*maxauxviol, origviol);
-         *minauxviol = MIN(*minauxviol, origviol);
-
          /* compute aux-violation for each nonlinear handlers */
          for( e = 0; e < ownerdata->nenfos; ++e )
          {
@@ -7790,10 +7786,11 @@ SCIP_RETCODE consEnfo(
    SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxabsconsviol, &maxrelconsviol,
             &minauxviol, &maxauxviol, &maxvarboundviol) );
 
+
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e (rel=%e), "\
-            "auxviolations in %g..%g, variable bounds violated by at most %g\n",
+            "auxviolations in %g..%g, variable bounds violated by at most %g, LP feastol=%e\n",
             SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxabsconsviol, maxrelconsviol, minauxviol, maxauxviol,
-            maxvarboundviol); )
+            maxvarboundviol, SCIPgetLPFeastol(scip)); )
 
    assert(maxvarboundviol <= SCIPgetLPFeastol(scip));
 
@@ -7825,6 +7822,21 @@ SCIP_RETCODE consEnfo(
 
       ENFOLOG( SCIPinfoMessage(scip, enfologfile, " variable bound violation %g larger than auxiliary violation %g, "\
                "reducing LP feastol to %g\n", maxvarboundviol, maxauxviol, SCIPgetLPFeastol(scip)); )
+
+      return SCIP_OKAY;
+   }
+
+   /* tighten the LP tolerance if violation in auxiliaries is below LP feastol, as we could have problems to find a cut
+    * with violation above LP tolerance (especially when auxviolation is below 10*eps = ROWPREP_SCALEUP_VIOLNONZERO in misc_rowprep.c)
+    */
+   if( conshdlrdata->tightenlpfeastol && maxauxviol < SCIPgetLPFeastol(scip) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
+   {
+      SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), maxauxviol/2.0));
+      ++conshdlrdata->ntightenlp;
+
+      *result = SCIP_SOLVELP;
+
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " auxiliary violation %g below LP feastol, reducing LP feastol to %g\n", maxauxviol, SCIPgetLPFeastol(scip)); )
 
       return SCIP_OKAY;
    }
@@ -7861,6 +7873,8 @@ SCIP_RETCODE consEnfo(
        * in the next enforcement round, we would then also allow even weaker cuts, as we want a minimal cut violation of LP's feastol
        * unfortunately, we do not know the current LP solution primal infeasibility, so sometimes this just repeats without effect
        * until the LP feastol reaches epsilon
+       * (this is similar to the "tighten the LP tolerance if violation in auxiliaries is below LP feastol..." case above, but applies
+       * when maxauxviol is above LP feastol)
        */
       SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), MIN(maxauxviol / 2.0, SCIPgetLPFeastol(scip) / 10.0)));
       ++conshdlrdata->ndesperatetightenlp;
