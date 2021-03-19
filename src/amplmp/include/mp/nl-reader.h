@@ -51,11 +51,6 @@
 #include <limits>
 #include <string>
 
-// SV added to suppress warning
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
-#endif
-
 namespace mp {
 
 using fmt::internal::MakeUnsigned;
@@ -2477,6 +2472,12 @@ struct NLAdapter<Handler, true> {
   typedef NLProblemBuilder<typename Handler::Builder> Type;
   typedef Type RefType;
 };
+
+// SV added to suppress warning in following class
+// see also https://gcc.gnu.org/bugzilla/show_bug.cgi?id=71484#c5
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
+#endif
 
 // Checks if T has a member type Builder.
 template <typename T>
