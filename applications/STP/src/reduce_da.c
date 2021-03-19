@@ -3631,12 +3631,12 @@ SCIP_RETCODE reduce_daPcMw(
       transnnodes = transgraph->knots;
       transnedges = transgraph->edges;
 
-      for( int k = 0; k < transnnodes; k++ )
-         transgraph->mark[k] = (transgraph->grad[k] > 0);
+      graph_mark(transgraph);
 
       /* init data structures for shortest paths and history */
       SCIP_CALL( graph_path_init(scip, transgraph) );
-      SCIP_CALL( graph_initHistory(scip, transgraph ) );
+      // todo should not nenecessary, delete
+    //  SCIP_CALL( graph_initHistory(scip, transgraph ) );
 
       if( havenewsol && run > 1 )
       {
