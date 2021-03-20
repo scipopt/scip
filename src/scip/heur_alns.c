@@ -80,6 +80,7 @@
  * limit parameters for sub-SCIPs
  */
 #define DEFAULT_NODESQUOT        0.1
+#define DEFAULT_NODESQUOTMIN     0.0
 #define DEFAULT_NODESOFFSET      500LL
 #define DEFAULT_NSOLSLIM         3
 #define DEFAULT_MINNODES         50LL
@@ -405,6 +406,7 @@ struct SCIP_HeurData
    SCIP_Longint          usednodes;          /**< total number of nodes already spent in sub-SCIPs */
    SCIP_Longint          waitingnodes;       /**< number of nodes since last incumbent solution that the heuristic should wait */
    SCIP_Real             nodesquot;          /**< fraction of nodes compared to the main SCIP for budget computation */
+   SCIP_Real             nodesquotmin;       /**< lower bound on fraction of nodes compared to the main SCIP for budget computation */
    SCIP_Real             startminimprove;    /**< initial factor by which ALNS should at least improve the incumbent */
    SCIP_Real             minimprovelow;      /**< lower threshold for the minimal improvement over the incumbent */
    SCIP_Real             minimprovehigh;     /**< upper bound for the minimal improvement over the incumbent */
@@ -1956,6 +1958,8 @@ SCIP_RETCODE determineLimits(
    /* if the heuristic is used to measure all rewards, it will always be penalized here */
    if( heurdata->rewardfile == NULL )
       nodesquot *= (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+
+   nodesquot = MAX(nodesquot, heurdata->nodesquotmin);
 
    /* calculate the search node limit of the heuristic  */
    solvelimits->stallnodes = (SCIP_Longint)(nodesquot * SCIPgetNNodes(scip));
@@ -3940,6 +3944,9 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
          "fraction of nodes compared to the main SCIP for budget computation",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquotmin",
+         "lower bound fraction of nodes compared to the main SCIP for budget computation",
+         &heurdata->nodesquotmin, FALSE, DEFAULT_NODESQUOTMIN, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/startminimprove",
          "initial factor by which ALNS should at least improve the incumbent",
