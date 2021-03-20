@@ -2684,6 +2684,11 @@ DECL_VARFIXINGS(varFixingsRens)
    assert(nfixings != NULL);
    assert(valbuf != NULL);
 
+   int *fracidx = NULL;
+   SCIP_Real* frac = NULL;
+   int nfracs;
+
+
    *result = SCIP_DELAYED;
 
    if( ! SCIPhasCurrentNodeLP(scip) )
@@ -2700,17 +2705,39 @@ DECL_VARFIXINGS(varFixingsRens)
    if( nbinvars + nintvars == 0 )
       return SCIP_OKAY;
 
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &fracidx, nbinvars + nintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &frac, nbinvars + nintvars) );
    /* loop over binary and integer variables; determine those that should be fixed in the sub-SCIP */
-   for( i = 0; i < nbinvars + nintvars; ++i )
+   for( nfracs = 0, i = 0; i < nbinvars + nintvars; ++i )
    {
       SCIP_VAR* var = vars[i];
       SCIP_Real lpsolval = SCIPvarGetLPSol(var);
       assert((i < nbinvars && SCIPvarIsBinary(var)) || (i >= nbinvars && SCIPvarIsIntegral(var)));
 
       /* fix all binary and integer variables with integer LP solution value */
-      if( SCIPisFeasIntegral(scip, lpsolval) )
+      if( SCIPisFeasIntegral(scip, lpsolval) ) {
          tryAdd2variableBuffer(scip, var, lpsolval, varbuf, valbuf, nfixings, TRUE);
+      } else {
+         frac[nfracs] = SCIPfrac(scip, lpsolval);
+         frac[nfracs] = MIN(frac[nfracs], 1.0 - frac[nfracs]);
+         fracidx[nfracs++] = i;
+      }
    }
+
+   /* do some additional fixing */
+   if (*nfixings < neighborhood->fixingrate.targetfixingrate * (nbinvars + nintvars) && nfracs > 0) {
+      SCIPsortDownRealInt(frac, fracidx, nfracs);
+
+      /* prefer variables that are almost integer */
+      for ( i = 0; i < nfracs && *nfixings < neighborhood->fixingrate.targetfixingrate * (nbinvars + nintvars); i++)
+      {
+         tryAdd2variableBuffer(scip, vars[fracidx[i]], SCIPround(scip, SCIPvarGetLPSol(vars[fracidx[i]])), varbuf, valbuf, nfixings, TRUE);
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &frac);
+   SCIPfreeBufferArray(scip, &fracidx);
 
    *result = SCIP_SUCCESS;
 
