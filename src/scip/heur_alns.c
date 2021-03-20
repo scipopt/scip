@@ -71,7 +71,7 @@
 #define HEUR_FREQ             20
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define NNEIGHBORHOODS 9
@@ -88,6 +88,7 @@
 #define DEFAULT_TARGETNODEFACTOR 1.05
 #define LRATEMIN                 0.01 /**<  lower bound for learning rate for target nodes and minimum improvement */
 #define LPLIMFAC                 4.0
+#define DEFAULT_INITDURINGROOT FALSE
 
 /*
  * parameters for the minimum improvement
@@ -441,6 +442,7 @@ struct SCIP_HeurData
    SCIP_Bool             scalebyeffort;      /**< should the reward be scaled by the effort? */
    SCIP_Bool             copycuts;           /**< should cutting planes be copied to the sub-SCIP? */
    SCIP_Bool             uselocalredcost;    /**< should local reduced costs be used for generic (un)fixing? */
+   SCIP_Bool             initduringroot;     /**< should the heuristic be executed multiple times during the root node? */
 };
 
 /** event handler data */
@@ -2306,6 +2308,11 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    if( heurdata->nactiveneighborhoods == 0 )
       return SCIP_OKAY;
 
+   /* we only allow to run multiple times at a node during the root */
+   if( (heurtiming & SCIP_HEURTIMING_DURINGLPLOOP)
+    && (SCIPgetDepth(scip) > 0 || !heurdata->initduringroot) )
+    return SCIP_OKAY;
+
    /* wait for a sufficient number of nodes since last incumbent solution */
    if( SCIPgetDepth(scip) > 0 && SCIPgetBestSol(scip) != NULL
       && (SCIPgetNNodes(scip) - SCIPsolGetNodenum(SCIPgetBestSol(scip))) < heurdata->waitingnodes )
@@ -4049,6 +4056,9 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usepscost",
             "should pseudo cost scores be used for variable priorization?",
             &heurdata->usepscost, TRUE, DEFAULT_USEPSCOST, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/initduringroot",
+            "should the heuristic be executed multiple times during the root node?",
+            &heurdata->initduringroot, TRUE, DEFAULT_INITDURINGROOT, NULL, NULL) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_NEIGHBORHOOD) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NEIGHBORHOOD, TABLE_DESC_NEIGHBORHOOD, TRUE,
