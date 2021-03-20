@@ -1297,10 +1297,11 @@ static
 SCIP_Real getVariablePscostScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< the variable for which the score should be computed */
-   SCIP_Real             refsolval           /**< solution value in reference solution */
+   SCIP_Real             refsolval,          /**< solution value in reference solution */
+   SCIP_Bool             uselocallpsol       /**< should local LP solution be used? */
    )
 {
-   SCIP_Real rootsolval;
+   SCIP_Real lpsolval;
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -1309,13 +1310,13 @@ SCIP_Real getVariablePscostScore(
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       return 0.0;
 
-   rootsolval = SCIPvarGetRootSol(var);
+   lpsolval = uselocallpsol ? SCIPvarGetLPSol(var) : SCIPvarGetRootSol(var);
 
    /* the score is 0.0 if the values are equal */
-   if( SCIPisEQ(scip, rootsolval, refsolval) )
+   if( SCIPisEQ(scip, lpsolval, refsolval) )
       return 0.0;
    else
-      return SCIPgetVarPseudocostVal(scip, var, refsolval - rootsolval);
+      return SCIPgetVarPseudocostVal(scip, var, refsolval - lpsolval);
 }
 
 /** add variable and solution value to buffer data structure for variable fixings. The method checks if
@@ -1501,7 +1502,7 @@ SCIP_RETCODE alnsFixMoreVariables(
          continue;
 
       redcostscores[nunfixedvars] = getVariableRedcostScore(scip, var, solvals[b], heurdata->uselocalredcost);
-      pscostscores[nunfixedvars] = getVariablePscostScore(scip, var, solvals[b]);
+      pscostscores[nunfixedvars] = getVariablePscostScore(scip, var, solvals[b], heurdata->uselocalredcost);
 
       unfixedvars[nunfixedvars] = var;
       perm[nunfixedvars] = nunfixedvars;
@@ -1713,7 +1714,7 @@ SCIP_RETCODE alnsUnfixVariables(
 
       /* use negative reduced cost and pseudo cost scores to prefer variable fixings with small score */
       redcostscores[i] = - getVariableRedcostScore(scip, fixedvar, fixval, heurdata->uselocalredcost);
-      pscostscores[i] = - getVariablePscostScore(scip, fixedvar, fixval);
+      pscostscores[i] = - getVariablePscostScore(scip, fixedvar, fixval, heurdata->uselocalredcost);
       randscores[i] = SCIPrandomGetReal(rng, 0.0, 1.0);
       perm[i] = i;
 
