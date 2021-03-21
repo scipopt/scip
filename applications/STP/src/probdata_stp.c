@@ -378,17 +378,16 @@ SCIP_RETCODE presolveStp(
    SCIP_CALL( stptest_testAll(scip) );
 #endif
 
+#ifdef STP_WRITE_RED_STATS
+   SCIP_CALL( graph_writeReductionRatioStatsLive(scip, graph, SCIPgetProbName(scip)) );
+   exit(1);
+#endif
+
    /* the actual presolving; NOTE: we always want to have userec=TRUE */
    SCIP_CALL( reduce(scip, graph, redsol, reduction, probdata->minelims, TRUE) );
 
    probdata->presolub = reduce_solGetUpperBoundWithOffset(redsol);
    SCIPdebugMessage("presol ub: %f \n", probdata->presolub);
-
-#ifdef STP_WRITE_RED_STATS
-   graph_writeReductionStats(graph,
-         SCIPgetProbName(scip), "/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/redstats.txt");
-   exit(1);
-#endif
 
    {
       int verblvl = 0;

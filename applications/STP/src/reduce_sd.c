@@ -3938,11 +3938,11 @@ SCIP_RETCODE reduce_sdStarPc2(
 
    assert(g && scip && nelims && visited && visitlist && dheap && star_base);
    assert(graph_pc_isPcMw(g) && !g->extended);
-   assert(graph_isMarked(g));
 
    if( edgelimit <= 0 )
       return SCIP_OKAY;
 
+   graph_mark(g);
    graph_heap_clean(TRUE, dheap);
    graph_init_dcsr(scip, g);
 
@@ -5064,7 +5064,7 @@ SCIP_RETCODE reduce_bd34(
    int* pathmaxnodehead = NULL;
    int adjvert[STP_BD_MAXDEGREE];
    const int nnodes = g->knots;
-   const int limit4 = limit - limit / 3;
+   const int limit4 = limit / 2;
 
    SCIPdebugMessage("BD34-Reduction: ");
 

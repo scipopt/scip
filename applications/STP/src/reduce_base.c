@@ -27,7 +27,10 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 #define REDUCE_C
 #define STP_REDBOUND_SDSP    200         /**< visited edges bound for SDSP test  */
-#define STP_REDBOUND_SDSP2   1000        /**< visited edges bound for SDSP test  */
+#define STP_REDBOUND_SDSP2   800         /**< visited edges bound for SDSP test  */
+#define STP_REDBOUND_PCBDK   80          /**< visited edges bound for PC BDK test  */
+#define STP_REDBOUND_PCBDK2  400         /**< visited edges bound for PC BDK test  */
+
 #define STP_REDBOUND_BDK     400         /**< visited edges bound for BDK test  */
 #define STP_REDBOUND_BDK2    600         /**< visited edges bound for BDK test  */
 #define STP_REDBOUND_SDSTAR     400         /**< visited edges bound for SD Star test  */
@@ -38,7 +41,10 @@
 #define STP_RED_EXPENSIVEFACTOR   2
 #define STP_RED_FULLSEPAFACTOR   10
 #define STP_RED_GLBFACTOR  3
-#define STP_RED_EDGELIMIT 100000
+#define STP_RED_EDGELIMIT       100000
+#define STP_RED_EDGELIMIT_HUGE 1000000
+
+
 #define STP_BND_THRESHOLD 0.03
 #include "mincut.h"
 
@@ -121,37 +127,46 @@ int getWorkLimitsPc(
    assert(nedges >= 0);
    assert(sqrtnedges >= 0 && sqrtnedges <= nedges);
 
+   // todo try mabe 100 500?
+   // or somethin similar
+
    switch (redtype)
    {
       case pc_sdc:
          limit = (roundnumber > 0) ? STP_REDBOUND_SDSP2 : STP_REDBOUND_SDSP;
          break;
       case pc_sdstar:
-         limit = (roundnumber > 0) ? STP_REDBOUND_SDSP2 : 2 * STP_REDBOUND_SDSP;
-         break;
-      case pc_sdstar2:
-         limit = (roundnumber > 0) ? STP_REDBOUND_SDSP :  STP_REDBOUND_SDSP;
-         break;
-      case pc_sdw1:
          limit = (roundnumber > 0) ? STP_REDBOUND_SDSP2 : STP_REDBOUND_SDSP;
          break;
+      case pc_sdstar2:
+         limit = (roundnumber > 0) ? STP_REDBOUND_SDSP :  STP_REDBOUND_SDSP / 2;
+         break;
+      case pc_sdw1:
+         limit = (roundnumber > 0) ? STP_REDBOUND_SDSP2 : STP_REDBOUND_SDSP / 2;
+         break;
       case pc_sdw2:
-         limit = (roundnumber > 0) ? STP_REDBOUND_SDSP2 : 0;
+         limit = (roundnumber > 0) ? STP_REDBOUND_SDSP : 0;
          break;
       case pc_bd3:
-         limit = (roundnumber > 0) ? STP_REDBOUND_SDSP2 : STP_REDBOUND_SDSP / 2;
+         limit = (roundnumber > 0) ? STP_REDBOUND_PCBDK2 : STP_REDBOUND_PCBDK;
          break;
       default:
          assert(0);
    }
 
+   // todo try global bound and only set to
+   // todo more or less random number, tune them at least a bit
    if( nedges >= STP_RED_EDGELIMIT && roundnumber == 0 )
-      limit = (int) MAX(limit, limit * sqrtnedges / 5000.0);
+   {
+      limit = (int) MAX(limit, limit * sqrtnedges / 2000.0);
+   }
    else
-      limit = (int) MAX(limit, limit * sqrtnedges / 150.0);
+   {
+      limit = (int) MAX(limit, limit * sqrtnedges / 200.0);
+   }
 
- //  printf("limit %d \n", limit);
- //  printf("avg degree %f \n", graph_get_avgDeg(g));
+   // printf("limit %d \n", limit);
+   // printf("avg degree %f \n", graph_get_avgDeg(g));
 
    assert(limit >= 0);
 
@@ -752,6 +767,7 @@ SCIP_RETCODE redLoopInnerMw(
       int chain2elims = 0;
       int degelims = 0;
       int todo; // run nnp early to solve ACTMOD FASTER!
+      // also maybe initialize DCSR and use for all! Afterwards need to clean it, bit ahcky, but ok...
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -927,7 +943,7 @@ SCIP_RETCODE redLoopInnerPc(
    SCIP_Bool bd3 = nodereplacing;
    SCIP_Bool nvsl = TRUE;
    SCIP_Bool rerun = TRUE;
-   const SCIP_Bool verbose = FALSE && dualascent && userec && nodereplacing;
+   const SCIP_Bool verbose = TRUE && dualascent && userec && nodereplacing;
    const STP_Bool extensive = STP_RED_EXTENSIVE;
 
    *ninnerelims = 0;
@@ -959,16 +975,20 @@ SCIP_RETCODE redLoopInnerPc(
          SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimitsPc(g, rounds, pc_sdstar), usestrongreds, g, &sdstarnelims));
          if( verbose ) printf("sdstarnelims %d \n", sdstarnelims);
 
-         SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar2), usestrongreds, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
-         if( verbose ) printf("sdstarpcnelims %d \n", sdstarpcnelims);
-
-         sdstarnelims += sdstarpcnelims;
-
          if( sdstarnelims <= reductbound )
+         {
             sdstar = FALSE;
-      }
+         }
+         else
+         {
+            SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
+            SCIP_CALL( reduce_sdStarPc2(scip, getWorkLimitsPc(g, rounds, pc_sdstar2), usestrongreds, g, nodearrreal, nodearrint, nodearrint2, nodearrchar, dheap, &sdstarpcnelims));
+            if( verbose ) printf("sdstarpcnelims %d \n", sdstarpcnelims);
 
-      SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
+            sdstarnelims += sdstarpcnelims;
+
+         }
+      }
 
       if( (graph_pc_isRootedPcMw(g) && dapaths) || extensive )
       {
@@ -984,29 +1004,31 @@ SCIP_RETCODE redLoopInnerPc(
                reductbound, verbose, &sd) );
       }
 
-      if( sd )
-         SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
+      SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
 
       if( sdw || extensive )
       {
-         int sdwnelims2 = 0;
-
          SCIP_CALL( reduce_sdWalkTriangle(scip, getWorkLimitsPc(g, rounds, pc_sdw1), usestrongreds, g, nodearrint, nodearrreal, vbase, nodearrchar, dheap, &sdwnelims));
-         SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimitsPc(g, rounds, pc_sdw2), usestrongreds, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2) );
 
-         if( verbose ) printf("SDw: %d, SDwExt: %d\n", sdwnelims, sdwnelims2);
-
-         sdwnelims += sdwnelims2;
+         if( verbose ) printf("SDw:  %d\n", sdwnelims);
 
          if( sdwnelims <= reductbound )
+         {
             sdw = FALSE;
+         }
+         else
+         {
+            int sdwnelims2 = 0;
+            SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
+            SCIP_CALL( reduce_sdWalkExt(scip, getWorkLimitsPc(g, rounds, pc_sdw2), usestrongreds, g, nodearrreal, heap, state, vbase, nodearrchar, &sdwnelims2) );
+            sdwnelims += sdwnelims2;
+
+            if( verbose ) printf("SDwExt: %d\n", sdwnelims2);
+         }
       }
 
       if( SCIPgetTotalTime(scip) > timelimit )
           break;
-
-      if( sdw )
-         SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
 
       if( bd3 && dualascent )
       {
@@ -1031,7 +1053,8 @@ SCIP_RETCODE redLoopInnerPc(
       if( da || (dualascent && extensive) )
       {
          const RPDA paramsda = { .damode = STP_DAMODE_FAST, .useRec = userec, .extredMode = extred_none, .nodereplacing = nodereplacing, .useSlackPrune = FALSE,
-             .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
+             .pcmw_solbasedda = (rounds > 0 || g->edges > STP_RED_EDGELIMIT_HUGE),
+             .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
 
          SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
 
@@ -1921,7 +1944,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool advancedrun = dualascent;
    SCIP_Real prizesum;
    // todo remove
-   const SCIP_Bool verbose = FALSE && dualascent && userec && nodereplacing;
+   const SCIP_Bool verbose = TRUE && dualascent && userec && nodereplacing;
    int degnelims;
    int nadvruns = 0;
    SCIP_Bool isSpg = FALSE;
@@ -1961,12 +1984,13 @@ SCIP_RETCODE redLoopPc(
 
       if( advancedrun && g->terms > 2 )
       {
+         int todo; // try slack prune for huge graph
          const RPDA paramsda = {
                .damode = STP_DAMODE_MEDIUM,
                .useRec = userec,
                .extredMode = (nadvruns == 0 ? extred_fast : extred_full),
                .nodereplacing = nodereplacing,
-               .useSlackPrune = FALSE,
+               .useSlackPrune = (g->edges > STP_RED_EDGELIMIT_HUGE),
                .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = TRUE, .pcmw_markroots = TRUE, .pcmw_fastDa = FALSE };
 
          int danelims = 0;
@@ -1985,6 +2009,7 @@ SCIP_RETCODE redLoopPc(
             }
 
             SCIP_CALL( reduce_impliedProfitBasedRpc(scip, g, redsollocal, fixed, &implnelims) );
+            if( verbose ) printf("implnelims: %d \n", implnelims);
 
             SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, fixed, &danelims, randnumgen) );
          }
@@ -2001,7 +2026,7 @@ SCIP_RETCODE redLoopPc(
 
          if( nouterelims + implnelims > reductbound_global )
          {
-            if( danelims > reductbound_global )
+            if( danelims + implnelims > reductbound_global )
                advancedrun = TRUE;
 
             rerun = TRUE;

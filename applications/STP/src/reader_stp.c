@@ -243,6 +243,12 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
          NULL, FALSE, "",
          NULL, NULL) );
 
+   SCIP_CALL( SCIPaddStringParam(scip,
+           "stp/redstatsfile",
+           "log file reduction statistics",
+           NULL, FALSE, "",
+           NULL, NULL) );
+
    return SCIP_OKAY;
 }
 

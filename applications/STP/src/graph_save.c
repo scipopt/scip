@@ -31,8 +31,10 @@
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <time.h>
 #include "portab.h"
 #include "graph.h"
+#include "reduce.h"
 
 
 
@@ -307,6 +309,56 @@ void graph_writeReductionRatioStats(
    fclose(file);
 }
 
+
+/** Write (append) reduction ratio statistics of current graph to file.
+ *  NOTE: Only for testing! Graph will be killed */
+// todo to properly, copy graph etc.
+SCIP_RETCODE graph_writeReductionRatioStatsLive(
+   SCIP*                 scip,               /**< SCIP data */
+   GRAPH*                graph,              /**< Graph to be printed */
+   const char*           probname            /**< Name of the problem */
+)
+{
+   REDSOL* redsol;
+   FILE* file;
+   char* filename;
+   SCIP_Real ratio_nodes;
+   SCIP_Real ratio_edges;
+   int minelims;
+   const SCIP_Bool useNodeSol = (graph_pc_isPcMw(graph) || graph_typeIsSpgLike(graph));
+   SCIP_Real time_start;
+   SCIP_Real time_end;
+
+   assert(graph && probname);
+
+   SCIP_CALL( reduce_solInit(scip, graph, useNodeSol, &redsol) );
+   SCIP_CALL( SCIPgetIntParam(scip, "stp/minelims", &(minelims)) );
+
+   time_start = clock();
+   SCIP_CALL( reduce(scip, graph, redsol, STP_REDUCTION_ADVANCED, minelims, TRUE) );
+   time_end = clock();
+
+   SCIP_CALL( SCIPgetStringParam(scip, "stp/redstatsfile", &filename) );
+   assert(filename);
+
+   if( graph_pc_isPcMw(graph) )
+   {
+      getReductionRatiosPcMw(graph, &ratio_nodes, &ratio_edges);
+   }
+   else
+   {
+      getReductionRatios(graph, &ratio_nodes, &ratio_edges);
+   }
+
+   file = fopen(filename, "a+");
+
+   fprintf(file, "%s: %f %f %f  \n", probname, ratio_nodes, ratio_edges, (time_end - time_start) / CLOCKS_PER_SEC);
+   fclose(file);
+
+   reduce_solFree(scip, &redsol);
+
+   return SCIP_OKAY;
+}
 
 
 /*---------------------------------------------------------------------------*/
