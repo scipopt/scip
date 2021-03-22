@@ -2242,13 +2242,15 @@ int reducePcMw(
    const int*            result,             /**< sol int array */
    STP_Bool*             marked,             /**< edge array to mark which (directed) edge can be removed */
    STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
-   SCIP_Bool             solgiven            /**< is sol given? */
+   SCIP_Bool             solgiven,           /**< is sol given? */
+   SCIP_Bool             deleteTransEdges    /**< delete edges of transformed graph */
 )
 {
    const int nnodes = graph_get_nNodes(graph);
    int nfixed;
    SCIP_Real tmpcost;
    SCIP_Bool keepsol = FALSE;
+   STP_Vectype(int) edges_delete = NULL;
 
    assert(SCIPisGE(scip, minpathcost, 0.0));
 
@@ -2293,9 +2295,10 @@ int reducePcMw(
                {
                   assert(!Is_pseudoTerm(graph->term[graph->head[e]]));
 
-                  graph_edge_del(scip, graph, e, TRUE);
-                  graph_edge_del(scip, transgraph, e, FALSE);
-                  nfixed++;
+                  StpVecPushBack(scip, edges_delete, e);
+
+           //       graph_edge_del(scip, graph, e, TRUE);
+           //       graph_edge_del(scip, transgraph, e, FALSE);
                }
                else
                {
@@ -2312,15 +2315,13 @@ int reducePcMw(
       if( (SCIPisGT(scip, tmpcost, minpathcost) && !keepsol) ||
          (solgiven && tmpcost >= minpathcost && !nodearrchar[k]))
       {
-         while( transgraph->outbeg[k] != EAT_LAST )
+         for( int e = transgraph->outbeg[k]; e != EAT_LAST; e = transgraph->oeat[e] )
          {
-            const int e = transgraph->outbeg[k];
+            StpVecPushBack(scip, edges_delete, e);
 
-            graph_edge_del(scip, transgraph, e, FALSE);
-            graph_edge_del(scip, graph, e, TRUE);
-            nfixed++;
+            //graph_edge_del(scip, transgraph, e, FALSE);
+            //graph_edge_del(scip, graph, e, TRUE);
          }
-         assert(graph->outbeg[k] == EAT_LAST);
       }
       else
       {
@@ -2335,10 +2336,9 @@ int reducePcMw(
             {
                if( marked[flipedge(e)] )
                {
-                  graph_edge_del(scip, graph, e, TRUE);
-                  graph_edge_del(scip, transgraph, e, FALSE);
-
-                  nfixed++;
+                //  graph_edge_del(scip, graph, e, TRUE);
+                //  graph_edge_del(scip, transgraph, e, FALSE);
+                  StpVecPushBack(scip, edges_delete, e);
                }
                else
                {
@@ -2349,6 +2349,22 @@ int reducePcMw(
          }
       }
    }
+
+   for( int i = 0; i < StpVecGetSize(edges_delete); i++ )
+   {
+      const int e = edges_delete[i];
+
+      if( graph->oeat[e] == EAT_FREE )
+         continue;
+
+      graph_edge_del(scip, graph, e, TRUE);
+      nfixed++;
+
+      if( deleteTransEdges )
+         graph_edge_del(scip, transgraph, e, FALSE);
+   }
+
+   StpVecFree(scip, edges_delete);
    SCIPdebugMessage("DA: eliminations %d \n", nfixed);
 
    return nfixed;
@@ -2400,7 +2416,7 @@ int reducePcMwTryBest(
 
       computeTransVoronoi(scip, transgraph, vnoi, bestcost, costrev, pathdist, vbase, pathedge);
 
-      return reducePcMw(scip, graph, transgraph, vnoi, bestcost, pathdist, *minpathcost, result, marked, nodearrchar, *solgiven);
+      return reducePcMw(scip, graph, transgraph, vnoi, bestcost, pathdist, *minpathcost, result, marked, nodearrchar, *solgiven, TRUE);
    }
    return 0;
 }
@@ -3469,25 +3485,15 @@ SCIP_RETCODE reduce_daPcMw(
    updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, TRUE, FALSE);
    updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, TRUE);
 
-   nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol);
-
-   assert(!graph->extended);
+   {
+      const SCIP_Bool deleteTransEdges = (solbasedda || varyroot || markroots);
+      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar,
+            havenewsol, deleteTransEdges);
+   }
 
    /* edges from result might have been deleted! */
    havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
    assert(!havenewsol || solstp_isValid(scip, graph, result));
-
-#if 0
-   if( 0 && havenewsol )
-   {
-      SCIP_Bool success;
-      graph_pc_2trans(scip, graph);
-      assert(solstp_isValid(scip, graph, result));
-
-      SCIP_CALL( SCIPStpHeurLurkPruneRun(scip, NULL, edgefixingbounds, graph, TRUE, FALSE, result, &success) );
-      graph_pc_2org(scip, graph);
-   }
-#endif
 
    if( userec )
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
@@ -3518,7 +3524,7 @@ SCIP_RETCODE reduce_daPcMw(
       updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
       updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, FALSE);
 
-      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol);
+      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol, TRUE);
 
       nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
             &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &havenewsol, extnedges);
@@ -3549,7 +3555,6 @@ SCIP_RETCODE reduce_daPcMw(
       for( int run = 0; run < DEFAULT_NMAXROOTS && graph->terms > STP_RED_MINBNDTERMS; run++ )
       {
          SCIP_Real oldupperbound = upperbound;
-
          graph_pc_2trans(scip, graph);
 
          havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
@@ -3568,7 +3573,7 @@ SCIP_RETCODE reduce_daPcMw(
          updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
          updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, FALSE);
 
-         nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol);
+         nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol, TRUE);
 
          nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
                &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &havenewsol, extnedges);
@@ -3743,7 +3748,7 @@ SCIP_RETCODE reduce_daPcMw(
          marked[e] = FALSE;
 
       /* try to eliminate vertices and edges */
-      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol);
+      nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol, TRUE);
       nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
       nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
 
@@ -3773,7 +3778,6 @@ SCIP_RETCODE reduce_daPcMw(
    SCIPfreeBufferArray(scip, &marked);
    SCIPfreeBufferArray(scip, &transresult);
    SCIPfreeBufferArray(scip, &result);
-
 
    if( redprimal )
    {
