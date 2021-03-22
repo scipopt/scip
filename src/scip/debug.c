@@ -1143,7 +1143,7 @@ SCIP_RETCODE SCIPdebugCheckGlobalLowerbound(
    if( !debugSolutionAvailable(set) )
       return SCIP_OKAY;
 
-   if( SCIPgetStage(set->scip) <= SCIP_STAGE_INITSOLVE )
+   if( SCIPgetStage(set->scip) <= SCIP_STAGE_INITSOLVE || SCIPgetStage(set->scip) >= SCIP_STAGE_EXITSOLVE )
       return SCIP_OKAY;
 
    if( SCIPgetStatus(set->scip) == SCIP_STATUS_INFORUNBD || SCIPgetStatus(set->scip) == SCIP_STATUS_UNBOUNDED )
