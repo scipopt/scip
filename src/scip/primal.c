@@ -672,7 +672,7 @@ SCIP_RETCODE primalAddSol(
             SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
       }
 #ifdef WITH_DEBUG_SOLUTION
-      SCIP_ABORT();
+      SCIPABORT();
 #endif
    }
 
