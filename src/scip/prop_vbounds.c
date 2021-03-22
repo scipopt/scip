@@ -19,6 +19,7 @@
  * @author Stefan Heinz
  * @author Jens Schulz
  * @author Gerald Gamrath
+ * @author Marc Pfetsch
  *
  * This propagator uses global bound information provided by SCIP to deduce global and local bound changes.
  * It can take into account
@@ -1805,6 +1806,8 @@ SCIP_RETCODE propagateVbounds(
    SCIP_BOUNDTYPE starttype;
    SCIP_Real startbound;
    SCIP_Real globalbound;
+   int* queuelist = NULL;
+   int nqueuelist = 0;
    int startpos;
    int topopos;
    int v;
@@ -1879,6 +1882,7 @@ SCIP_RETCODE propagateVbounds(
    }
 
    nchgbds = 0;
+   SCIP_CALL( SCIPallocBufferArray(scip, &queuelist, nbounds) );
 
    SCIPdebugMsg(scip, "varbound propagator: %d elements in the propagation queue\n", SCIPpqueueNElems(propdata->propqueue));
 
@@ -1892,7 +1896,11 @@ SCIP_RETCODE propagateVbounds(
       assert(propdata->inqueue[topopos]);
       startpos = propdata->topoorder[topopos];
       assert(startpos >= 0);
-      propdata->inqueue[topopos] = FALSE;
+      queuelist[nqueuelist++] = topopos;
+      assert( nqueuelist <= nbounds );
+
+      /* do not directly set propdata->inqueue[topopos] = FALSE: we allow only one propagation sweep through the
+       * topologically ordered bounds; otherwise an infinite loop could occur */
 
       startvar = vars[getVarIndex(startpos)];
       starttype = getBoundtype(startpos);
@@ -1963,7 +1971,7 @@ SCIP_RETCODE propagateVbounds(
                   }
 
                   if( *result == SCIP_CUTOFF )
-                     return SCIP_OKAY;
+                     break;
                }
             }
          }
@@ -2015,8 +2023,9 @@ SCIP_RETCODE propagateVbounds(
                         SCIP_CALL( tightenVarLb(scip, prop, propdata, cliquevars[n], 1.0, global, startvar, starttype,
                               force, 0.0, 0.0, FALSE, &nchgbds, result) );
                      }
+
                      if( *result == SCIP_CUTOFF )
-                        return SCIP_OKAY;
+                        break;
                   }
                }
             }
@@ -2054,10 +2063,18 @@ SCIP_RETCODE propagateVbounds(
             }
 
             if( *result == SCIP_CUTOFF )
-               return SCIP_OKAY;
+               break;
          }
       }
    }
+
+   /* clean up inqueue */
+   for( v = 0; v < nqueuelist; ++v)
+   {
+      assert( 0 <= queuelist[v] && queuelist[v] < nbounds );
+      propdata->inqueue[queuelist[v]] = FALSE;
+   }
+   SCIPfreeBufferArray(scip, &queuelist);
 
    SCIPdebugMsg(scip, "tightened %d variable bounds\n", nchgbds);
 
@@ -3068,8 +3085,8 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    {
       SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) ); /*lint !e571 !e776*/
       propdata->inqueue[idx] = TRUE;
+      assert(SCIPpqueueNElems(propdata->propqueue) > 0);
    }
-   assert(SCIPpqueueNElems(propdata->propqueue) > 0);
 
    return SCIP_OKAY;
 }
