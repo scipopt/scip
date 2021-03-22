@@ -47,6 +47,16 @@
 #include <new>      /* for std::bad_alloc */
 #include <sstream>
 
+/* fallback to non-thread-safe version if C++ is too old to have mutex */
+#if __cplusplus < 201103L && defined(SCIP_THREADSAFE)
+#undef SCIP_THREADSAFE
+#endif
+
+#ifdef SCIP_THREADSAFE
+#include <mutex>
+static std::mutex solve_mutex;
+#endif
+
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
 #endif
@@ -1045,6 +1055,17 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    try
    {
       SmartPtr<SolveStatistics> stats;
+
+#ifdef SCIP_THREADSAFE
+      /* lock solve_mutex if Ipopt is going to use Mumps as linear solver
+       * unlocking will happen in the destructor of guard, which is called when this block is left
+       */
+      std::unique_lock<std::mutex> guard(solve_mutex, std::defer_lock);
+      std::string linsolver;
+      problem->ipopt->Options()->GetStringValue("linear_solver", linsolver, "");
+      if( linsolver == "mumps" )
+         guard.lock();
+#endif
 
       if( problem->firstrun )
       {
