@@ -172,7 +172,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectDefault)
    }
 
    /* remember estimatebelowusesactivity and estimateaboveusesactivity in nlhdlrexprdata */
-   *nlhdlrexprdata = (void*)(size_t)((estimatebelowusesactivity ? UNDERESTIMATEUSESACTIVITY : 0x0u)
+   *nlhdlrexprdata = (SCIP_NLHDLREXPRDATA*)(size_t)((estimatebelowusesactivity ? UNDERESTIMATEUSESACTIVITY : 0x0u)
       | (estimateaboveusesactivity ? OVERESTIMATEUSESACTIVITY : 0x0u));
 
    return SCIP_OKAY;
