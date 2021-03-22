@@ -5064,7 +5064,7 @@ SCIP_RETCODE reduce_bd34(
    int* pathmaxnodehead = NULL;
    int adjvert[STP_BD_MAXDEGREE];
    const int nnodes = g->knots;
-   const int limit4 = limit / 2;
+   const int limit4 = limit / 3;
 
    SCIPdebugMessage("BD34-Reduction: ");
 

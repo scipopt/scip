@@ -2005,6 +2005,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    int newsolindex;
    int nreadysols;
    int bestsolindex;
+   int nwaitingsols;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -2042,18 +2043,24 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    if( probtype == STP_DCSTP )
       return SCIP_OKAY;
 
-   /* suspend heuristic? */
-   if( pcmw || probtype == STP_DHCSTP || probtype == STP_DCSTP )
+   nwaitingsols = heurdata->nwaitingsols;
+
+   if( graph_pc_isPc(graph) && SCIPprobdataProbIsAversarial(scip) )
+   {
+      nwaitingsols--;
+   }
+
+   /* suspend heuristic?
+    * todo case distinction not really needed anymore... */
+   if( pcmw || probtype == STP_DHCSTP )
    {
       int i;
       if( heurdata->ncalls == 0 )
          i = 0;
       else if( heurdata->maxfreq )
          i = 1;
-      else if( probtype == STP_DCSTP )
-         i = MIN(2 * heurdata->nwaitingsols, 2 * heurdata->nfailures);
       else
-         i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
+         i = MIN(nwaitingsols, heurdata->nfailures);
 
       if( nallsols <= heurdata->nlastsols + i )
          return SCIP_OKAY;
@@ -2064,7 +2071,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       if( heurdata->maxfreq )
          i = 1;
       else
-         i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
+         i = MIN(nwaitingsols, heurdata->nfailures);
 
       if( nallsols <= heurdata->nlastsols + i && heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          return SCIP_OKAY;
