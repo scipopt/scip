@@ -397,6 +397,7 @@ struct SCIP_HeurData
 {
    NH**                  neighborhoods;      /**< array of neighborhoods */
    SCIP_BANDIT*          bandit;             /**< bandit algorithm */
+   SCIP_SOL*             lastcallsol;        /**< incumbent when the heuristic was last called */
    char*                 rewardfilename;     /**< file name to store all rewards and the selection of the bandit */
    FILE*                 rewardfile;         /**< reward file pointer, or NULL */
    SCIP_Longint          nodesoffset;        /**< offset added to the nodes budget */
@@ -429,6 +430,8 @@ struct SCIP_HeurData
    int                   seed;               /**< initial random seed for bandit algorithms and random decisions by neighborhoods */
    int                   currneighborhood;   /**< index of currently selected neighborhood */
    int                   ndelayedcalls;      /**< the number of delayed calls */
+   int                   maxcallssamesol;    /**< number of allowed executions of the heuristic on the same incumbent solution (-1: no limit, 0: number of active neighborhoods) */
+   SCIP_Longint          firstcallthissol;  /**< counter for the number of calls on this incumbent */
    char                  banditalgo;         /**< the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
    SCIP_Bool             useredcost;         /**< should reduced cost scores be used for variable prioritization? */
    SCIP_Bool             usedistances;       /**< should distances from fixed variables be used for variable prioritization */
@@ -2303,6 +2306,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    SCIP_Bool allrewardsmode;
    SCIP_Real rewards[NNEIGHBORHOODS];
    int banditidx;
+
    int i;
 
    heurdata = SCIPheurGetData(heur);
@@ -2317,6 +2321,24 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    if( (heurtiming & SCIP_HEURTIMING_DURINGLPLOOP)
     && (SCIPgetDepth(scip) > 0 || !heurdata->initduringroot) )
     return SCIP_OKAY;
+
+   /* update internal incumbent solution */
+   if (SCIPgetBestSol(scip) != heurdata->lastcallsol) {
+      heurdata->lastcallsol = SCIPgetBestSol(scip);
+      heurdata->firstcallthissol = SCIPheurGetNCalls(heur);
+   }
+
+   /* do not run more than a user-defined number of times on each incumbent (-1: no limit) */
+   if (heurdata->maxcallssamesol != -1) {
+      SCIP_Longint samesollimit = (heurdata->maxcallssamesol > 0) ?
+         heurdata->maxcallssamesol :
+         heurdata->nactiveneighborhoods;
+
+      if (SCIPheurGetNCalls(heur) - heurdata->firstcallthissol >= samesollimit) {
+         SCIPdebugMsg(scip, "Heuristic already called %d times on current incumbent\n");
+         return SCIP_OKAY;
+      }
+   }
 
    /* wait for a sufficient number of nodes since last incumbent solution */
    if( SCIPgetDepth(scip) > 0 && SCIPgetBestSol(scip) != NULL
@@ -3826,6 +3848,10 @@ SCIP_DECL_HEURINITSOL(heurInitsolAlns)
 
    heurdata->usednodes = 0;
    heurdata->ninitneighborhoods = heurdata->nactiveneighborhoods;
+
+   heurdata->lastcallsol = NULL;
+   heurdata->firstcallthissol = 0;
+
    resetCurrentNeighborhood(heurdata);
 
    SCIPfreeBufferArray(scip, &priorities);
@@ -4040,6 +4066,9 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/seed",
          "initial random seed for bandit algorithms and random decisions by neighborhoods",
          &heurdata->seed, FALSE, DEFAULT_SEED, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcallssamesol",
+         "number of allowed executions of the heuristic on the same incumbent solution (-1: no limit, 0: number of active neighborhoods)",
+         &heurdata->maxcallssamesol, TRUE, -1, -1, 100, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjustminimprove",
          "should the factor by which the minimum improvement is bound be dynamically updated?",
