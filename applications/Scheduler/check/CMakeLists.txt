@@ -35,7 +35,7 @@ set(instances
 # add a test to build the application
 #
 add_test(NAME applications-scheduler-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scheduler
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target scheduler
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -63,4 +63,12 @@ foreach(instance ${instances})
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
                             DEPENDS applications-scheduler-build
                         )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties("applications-scheduler-${basename}"
+                PROPERTIES
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 endforeach()

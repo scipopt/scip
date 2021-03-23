@@ -76,7 +76,7 @@ then
    echo "       This is needed by ${0} to work. Check your"
    echo "       \$PATH variable or install the tool \"$BINNAME\"."
    echo Skipping test since the binary $BINNAME does not exist.
-   exit 2
+   exit 1
 fi
 
 # create $OUTPUTDIR directory if it doesn't already exist
@@ -117,7 +117,7 @@ do
     if test $SETNAME != "default" && test ! -e $SETTINGS
     then
         echo Skipping test since the settings file $SETTINGS does not exist.
-        exit
+        exit 1
     fi
 done
 
@@ -131,7 +131,7 @@ then
     if test $SOLUFILE = ""
     then
         echo "Skipping test: SETCUTOFF=1 set, but no .solu file ($TSTNAME.solu or all.solu in testset/ or instancedata/testsets/) available"
-        exit
+        exit 1
     fi
 fi
 
@@ -195,7 +195,7 @@ else
 		TIMEFACTOR=1
 	    else
 		echo "Skipping test: no $TSTNAME.(t)test file found in testset/ or instancedata/testsets/"
-		exit
+		exit 1
 	    fi
 	fi
     fi
@@ -205,7 +205,6 @@ if [ ${TIMEFACTOR} -gt 5 ]
 then
     echo ERROR: Time factor ${TIMEFACTOR} is too large--did you accidentally use a time limit in seconds in combination with a TTEST file?
     echo Exiting, try again, SCIP script novice
-    echo
     exit 1
 fi
 
