@@ -546,7 +546,7 @@ SCIP_Bool dpterms_isPromisingPartly(
    // todo remove two fake-unit tests below! Might kill actual instances...
 
    // todo just a test, remove!
-   if( graph->terms == 106 && nedges >= PROMISING_PARTLY_LARGE_MINNEDGES && nedges <= 16000 )
+   if( graph->terms == 108 && nedges >= PROMISING_PARTLY_LARGE_MINNEDGES && nedges <= 16000 )
        return TRUE;
 
    // todo just a test, remove!
