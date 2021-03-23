@@ -581,7 +581,7 @@ void RatSetString(
    {
       std::string s(desc);
       /* case 1: string is given in nom/den format */
-      if( s.find('.') == std::string::npos )
+      if( s.find('.') == std::string::npos && findSubStringIC("e",s) == s.end() )
       {
          res->val = Rational(desc);
          res->isinf = FALSE;
@@ -590,29 +590,38 @@ void RatSetString(
       else
       {
          std::string::const_iterator it = findSubStringIC("e", s);
-         int exponent = 1;
-         int mult = 0;
+         int exponent = 0;
+         // split s in decimal part and exponent
          if( it != s.end() )
          {
             int exponentidx = it - s.begin();
-            mult = std::stoi(s.substr(exponentidx + 1, s.length()));
+            exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
             s = s.substr(0, exponentidx);
          }
          // std::cout << s << std::endl;
          if( s[0] == '.' )
             s.insert(0, "0");
-         size_t pos = s.find('.');
-         size_t exp = s.length() - 1 - pos;
-         std::string den("1");
-         for( int i = 0; i < exp; ++i )
-            den.append("0");
 
-         s.erase(pos, 1);
+         // transform decimal into fraction
+         size_t decimalpos = s.find('.');
+         size_t exponentpos = s.length() - 1 - decimalpos;
+         std::string denominator("1");
+
+         if( decimalpos != std::string::npos )
+         {
+            for( int i = 0; i < exponentpos; ++i )
+               denominator.append("0");
+
+            s.erase(decimalpos, 1);
+         }
          assert(std::all_of(s.begin()+1, s.end(), ::isdigit));
+
          s.append("/");
-         s.append(den);
+         s.append(denominator);
+
          res->val = Rational(s);
-         res->val *= pow(10, mult);
+         res->val *= pow(10, exponent);
+
          res->isinf = FALSE;
          // RatPrint(res);
       }
