@@ -48,7 +48,7 @@ endif()
 #
 macro(addbuildandtest target)
     add_test(NAME examples-callablelibrary_${target}-build
-            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${target}
+            COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target ${target}
             )
     #
     # avoid that several build jobs try to concurrently build the SCIP library
@@ -66,6 +66,14 @@ macro(addbuildandtest target)
                         PROPERTIES
                             DEPENDS examples-callablelibrary_${target}-build
                         )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties(examples-callablelibrary_${target}
+                PROPERTIES
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 endmacro(addbuildandtest)
 
 addbuildandtest(circle)
