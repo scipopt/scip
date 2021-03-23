@@ -55,7 +55,7 @@ set(SOURCE_FILES
 include_directories(${PROJECT_SOURCE_DIR}/${SRC})
 
 add_executable(${EXECUTABLE_NAME} ${SOURCE_FILES})
-target_link_libraries(polyscip ${SCIP_LIBRARIES})
+target_link_libraries(${EXECUTABLE_NAME} ${SCIP_LIBRARIES})
 if( TARGET applications )
     add_dependencies( applications ${EXECUTABLE_NAME} )
 endif()
@@ -66,8 +66,9 @@ include(CTest)
 # add tests to build the application and run on some easy instances
 #
 add_test(NAME applications-${EXECUTABLE_NAME}-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${EXECUTABLE_NAME}
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target "${EXECUTABLE_NAME}"
         )
+
 #
 # avoid that several build jobs try to concurrently build the SCIP library
 # note that this ressource lock name is not the actual libscip target
@@ -96,5 +97,13 @@ foreach(instance ${instances})
                             PASS_REGULAR_EXPRESSION "PolySCIP Status: Successfully finished"
                             DEPENDS applications-${EXECUTABLE_NAME}-build
                         )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties(applications-${EXECUTABLE_NAME}-${instance}
+                PROPERTIES
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 endforeach()
 
