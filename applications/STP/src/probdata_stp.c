@@ -379,8 +379,13 @@ SCIP_RETCODE presolveStp(
 #endif
 
 #ifdef STP_WRITE_RED_STATS
-   SCIP_CALL( graph_writeReductionRatioStatsLive(scip, graph, SCIPgetProbName(scip)) );
-   exit(1);
+   static int wasCalled = 0;
+   if( wasCalled == 0 )
+   {
+      wasCalled = 1;
+      SCIP_CALL( graph_writeReductionRatioStatsLive(scip, graph, SCIPgetProbName(scip)) );
+      exit(1);
+   }
 #endif
 
    /* the actual presolving; NOTE: we always want to have userec=TRUE */
