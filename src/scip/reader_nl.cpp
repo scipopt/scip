@@ -77,6 +77,9 @@ struct SCIP_ProbData
    char*                 filenamestub;       /**< name of input file, without .nl extension; array is long enough to hold 5 extra chars */
    int                   filenamestublen;    /**< length of filenamestub string */
 
+   int                   amplopts[mp::MAX_AMPL_OPTIONS];  /**< AMPL options from .nl header */
+   int                   namplopts;          /**< number of AMPL options from .nl header */
+
    SCIP_VAR**            vars;               /**< variables in the order given by AMPL */
    int                   nvars;              /**< number of variables */
 
@@ -262,6 +265,9 @@ public:
 
       assert(probdata->vars == NULL);
       assert(probdata->conss == NULL);
+
+      probdata->namplopts = h.num_ampl_options;
+      BMScopyMemoryArray(probdata->amplopts, h.ampl_options, h.num_ampl_options);
 
       // read variable and constraint names from file, if available, into memory
       // if not available, we will get varnamesbegin==NULL and consnamesbegin==NULL
@@ -1426,7 +1432,10 @@ SCIP_RETCODE SCIPwriteSolutionNl(
    // see ampl/mp:sol.h:WriteSolFile() (seems buggy, https://github.com/ampl/mp/issues/135) and asl/writesol.c for solution file format
    SCIP_CALL( SCIPprintStatus(scip, solfile) );
    SCIPinfoMessage(scip, solfile, "\n\n");
-   SCIPinfoMessage(scip, solfile, "Options\n3\n2\n1\n0\n");
+
+   SCIPinfoMessage(scip, solfile, "Options\n%d\n", probdata->namplopts);
+   for( int i = 0; i < probdata->namplopts; ++i )
+      SCIPinfoMessage(scip, solfile, "%d\n", probdata->amplopts[i]);
 
    bool haveprimal = SCIPgetBestSol(scip) != NULL;
    bool havedual = probdata->islp && SCIPgetStage(scip) == SCIP_STAGE_SOLVED && !SCIPhasPerformedPresolve(scip);
