@@ -2664,7 +2664,11 @@ SCIP_RETCODE preprocessConstraintPairs(
              * @note we need to force the bound change since we are deleting the constraint afterwards
              */
             SCIP_CALL( SCIPtightenVarUb(scip, consdata0->var, rhs, TRUE, &infeasible, &tightened) );
-            assert(!infeasible);
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               break;
+            }
             if( tightened )
                ++(*nchgbds);
 
@@ -2673,7 +2677,11 @@ SCIP_RETCODE preprocessConstraintPairs(
              * @note we need to force the bound change since we are deleting the constraint afterwards
              */
             SCIP_CALL( SCIPtightenVarLb(scip, consdata0->var, lhs, TRUE, &infeasible, &tightened) );
-            assert(!infeasible);
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               break;
+            }
             if( tightened )
                ++(*nchgbds);
 
