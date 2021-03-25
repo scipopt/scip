@@ -1375,6 +1375,47 @@ SCIP_RETCODE graph_transRpcGetSpg(
 }
 
 
+/** cleans up GSTP after transformation
+ *  todo also compute a better big M than just the trivial one, e.g. by building an SAP and computing bound
+ *  todo move the whole transformation here from graph_load, quite hacky at the moment */
+void graph_transGstpClean(
+   PRESOL*               presol,             /**< presolving struct */
+   GRAPH*                graph               /**< the graph */
+   )
+{
+   SCIP_Real costsum = 0.0;
+   const int nedges = graph_get_nEdges(graph);
+
+   assert(presol);
+   assert(graph->stp_type == STP_GSTP);
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      assert(LE(graph->cost[e], BLOCKED));
+
+      if( !EQ(graph->cost[e], BLOCKED) )
+         costsum += graph->cost[e];
+   }
+
+   presol->fixed -= (costsum * graph->terms);
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      if( EQ(graph->cost[e], BLOCKED) )
+      {
+         assert(EQ(graph->cost[e + 1], BLOCKED));
+         assert(Is_term(graph->term[graph->tail[e]]) || Is_term(graph->term[graph->head[e]]));
+
+         graph->cost[e] = costsum;
+         graph->cost[e + 1] = costsum;
+      }
+   }
+
+   graph->norgmodelknots = graph->knots - graph->terms;
+   graph->norgmodelterms = graph->terms;
+}
+
+
 /** alters the graph for node-weighted Steiner tree problems */
 SCIP_RETCODE graph_transNw2pc(
    SCIP*                 scip,               /**< SCIP data structure */

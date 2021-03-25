@@ -1405,7 +1405,6 @@ SCIP_RETCODE graph_load(
                case KEY_TERMINALS_GROUPS :
                   assert(stp_type == STP_GSTP);
                   tgroups = (int)para[0].n;
-                  presol->fixed -= tgroups * BLOCKED;
                   for( i = 0; i < tgroups; i++ )
                   {
                      graph_knot_add(g, 0);
@@ -1673,8 +1672,7 @@ SCIP_RETCODE graph_load(
 
       if( stp_type == STP_GSTP )
       {
-         g->norgmodelknots = nnodes - g->terms;
-         g->norgmodelterms = g->terms;
+         graph_transGstpClean(presol, g);
       }
 
 #ifndef WITH_UG
