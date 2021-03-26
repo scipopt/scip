@@ -1609,7 +1609,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    linearconshdlrs[3] = SCIPfindConshdlr(subproblem, "setppc");
    linearconshdlrs[4] = SCIPfindConshdlr(subproblem, "varbound");
 
-   /* Get pointers to nonlinear constraint handler, if we also have an NLP solver to solve NLPs.
+   /* Get pointer to the nonlinear constraint handler if we also have an NLP solver to solve NLPs.
     * If there is no NLP solver, but there are (convex) nonlinear constraints, then the LP relaxation of subproblems
     * will (currently) not be sufficient to solve subproblems to optimality. Thus, we also take the presence of convex
     * nonlinear constraints as signal for having to solve the CIP eventually, thus, by abuse of notation,
@@ -1689,7 +1689,7 @@ SCIP_RETCODE checkSubproblemConvexity(
             {
                /* if not found convex, compute curvature via nlhdlr_convex and decide again */
 
-               /* make sure activities are uptodate, SCIPhasExprCurvature currently assumes that this is already the case */
+               /* make sure activities are up to date. SCIPhasExprCurvature currently assumes that this is already the case */
                SCIP_CALL( SCIPevalExprActivity(subproblem, SCIPgetExprConsNonlinear(cons)) );
 
                SCIP_CALL( SCIPhasExprCurvature(subproblem, SCIPgetExprConsNonlinear(cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
