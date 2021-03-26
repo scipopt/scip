@@ -2778,7 +2778,7 @@ SCIP_RETCODE reduce_da(
          }
 
          // todo remove
-         if( SCIPisGT(scip, redcosts_getDualBoundTop(redcostdata), upperbound) )
+         if( SCIPisFeasGT(scip, redcosts_getDualBoundTop(redcostdata), upperbound) )
          {
            // graph_writeStpByName(scip, graph, "pcfail.stp", 0.0);
             printf("WRONG BOUND: upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
