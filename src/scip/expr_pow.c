@@ -46,6 +46,8 @@
 #define SIGNPOWEXPRHDLR_PRECEDENCE 56000
 #define SIGNPOWEXPRHDLR_HASHKEY    SCIPcalcFibHash(21163.1)
 
+#define INITLPMAXVARVAL          1000.0 /**< absolute value of variable bound to replace infinity in the convex case in initestimates */
+
 /*
  * Data structures
  */
@@ -1124,6 +1126,11 @@ void addTangentRefpoints(
 {
    assert(refpoints != NULL);
 
+   if( ub > -INITLPMAXVARVAL )
+      lb = MAX(lb, -INITLPMAXVARVAL);
+   if( lb <  INITLPMAXVARVAL )
+      ub = MIN(ub,  INITLPMAXVARVAL);
+
    /* make bounds finite */
    if( SCIPisInfinity(scip, -lb) )
       lb = MIN(-10.0, ub - 0.1*REALABS(ub));  /*lint !e666 */
@@ -1196,7 +1203,7 @@ SCIP_RETCODE addSignpowerRefpoints(
    return SCIP_OKAY;
 }
 
-/** choose reference points for adding initsepa cuts for a power expression */
+/** choose reference points for adding initestimates cuts for a power expression */
 static
 SCIP_RETCODE chooseRefpointsPow(
    SCIP*                 scip,               /**< SCIP data structure */
