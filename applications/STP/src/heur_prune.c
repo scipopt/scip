@@ -514,7 +514,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
       objnew = solstp_getObjBounded(prunegraph, soledge, 0.0, nedges);
 
       if( pcmw )
-         SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
+         SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, FALSE, path, prunegraph->cost, &objold, solnode) );
       else
          SCIPStpHeurTMBuildTree(scip, prunegraph, path, prunegraph->cost, &objold, solnode);
 

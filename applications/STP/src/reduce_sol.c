@@ -121,7 +121,7 @@ SCIP_RETCODE nodesolUpdate(
    assert(graph_typeIsSpgLike(g) || graph_pc_isPcMw(g));
 
    if( graph_pc_isPcMw(g) )
-      SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, g, solpath, g->cost, solval, nodesol) );
+      SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, g, TRUE, solpath, g->cost, solval, nodesol) );
    else
       SCIPStpHeurTMBuildTree(scip, g, solpath, g->cost, solval, nodesol);
 

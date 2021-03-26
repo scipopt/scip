@@ -96,6 +96,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
+   SCIP_Bool             useRootSym,         /**< use? */
    PATH*                 mst,                /**< path data structure array */
    const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            objresult,          /**< pointer to store objective value of result */

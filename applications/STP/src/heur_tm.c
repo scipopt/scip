@@ -3012,6 +3012,7 @@ void SCIPStpHeurTMBuildTree(
 SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
+   SCIP_Bool             useRootSym,         /**< use? */
    PATH*                 mst,                /**< path data structure array */
    const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            objresult,          /**< pointer to store objective value of result */
@@ -3087,6 +3088,28 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
 
       assert(g->mark[i]);
       mstroot = i;
+
+      if( useRootSym && graph_pc_isUnrootedPcMw(g) )
+      {
+         /* todo remove this hack... */
+         if( SCIPprobdataGetNTerms(scip) == g->terms && SCIPprobdataGetNNodes(scip) == nnodes )
+         {
+            int min = nnodes;
+            const int* termsorder = SCIPprobdataGetPctermsorder(scip);
+            assert(termsorder);
+
+            for( int k = 0; k < nnodes; k++ )
+            {
+               if( termsorder[k] < min && connected[k] == CONNECT )
+               {
+                  assert(Is_pseudoTerm(g->term[k]));
+
+                  min = termsorder[k];
+                  mstroot = k;
+               }
+            }
+         }
+      }
    }
    assert(mstroot >= 0);
    assert(mstroot < nnodes);
