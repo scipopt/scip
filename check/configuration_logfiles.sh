@@ -152,7 +152,7 @@ then
     if awk -v n1="$OBJECTIVEVAL" -v n2="$CHECKOBJECTIVEVAL" 'BEGIN { exit (n1 <= n2 + 0.0001 && n2 <= n1 + 0.0001) }' /dev/null;
     then
 	echo "Exiting test because objective value in solu file is inconsistent: $OBJECTIVEVAL vs. $CHECKOBJECTIVEVAL"
-        exit
+        exit 1
     fi
 else
     OBJECTIVEVAL=""

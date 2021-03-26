@@ -33,14 +33,14 @@ CLUSTERQUEUE=$QUEUE
 if test "$QUEUE" = ""
 then
     echo Skipping test since the queue name has not been defined.
-    exit
+    exit 1
 fi
 
 # check if number of nodes has been defined
 if test "$PPN" = ""
 then
     echo Skipping test since the number of nodes has not been defined.
-    exit
+    exit 1
 fi
 
 # check whether there is enough memory on the host system, otherwise we need to submit from the target system
@@ -52,7 +52,7 @@ then
         if [ `expr $HARDMEMLIMIT \* 1024` -gt $HOSTMEM ]
         then
             echo "Not enough memory on host system - please submit from target system (e.g. ssh opt201)."
-            exit
+            exit 1
         fi
     fi
 fi
