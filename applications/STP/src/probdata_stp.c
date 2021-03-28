@@ -3382,7 +3382,7 @@ SCIP_Bool SCIPprobdataObjIsIntegral(
 
 
 /** returns whether problem seems very hard */
-SCIP_Bool SCIPprobdataProbIsAversarial(
+SCIP_Bool SCIPprobdataProbIsAdversarial(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

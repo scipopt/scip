@@ -2809,7 +2809,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          runs = 0;
    }
 
-   if( (isPcMw || isSpg) && graph->edges < TM_HARD_MAXNEDGES && SCIPprobdataProbIsAversarial(scip) )
+   if( (isPcMw || isSpg) && graph->edges < TM_HARD_MAXNEDGES && SCIPprobdataProbIsAdversarial(scip) )
    {
       assert(heurdata->hardrunsmult >= 1);
       if( !(heurtiming & SCIP_HEURTIMING_BEFORENODE) )

@@ -63,7 +63,7 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
+   SCIP_Bool             branchtypeIsFixed;  /**< branching type fixed? */
    int                   branchtype;         /**< type of branching */
    SCIP_Bool             active;             /**< is branch-rule being used? */
 };
@@ -72,6 +72,7 @@ struct SCIP_BranchruleData
 /*
  * Local methods
  */
+
 
 /** check whether branching-rule is compatible with given problem type */
 static inline
@@ -90,6 +91,48 @@ SCIP_Bool probAllowsSolBranching(
 )
 {
    return (graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP));
+}
+
+
+/** check whether branching-rule is compatible with given problem type */
+static inline
+int branchruleGetType(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< data */
+)
+{
+   int branchtype;
+
+   if( !branchruledata->branchtypeIsFixed )
+   {
+      // todo add a user parameter "automatic"
+      if( SCIPprobdataProbIsAdversarial(scip) )
+      {
+         branchruledata->branchtype = BRANCH_STP_ON_SOL;
+      }
+
+      branchruledata->branchtypeIsFixed = TRUE;
+
+#ifndef WITH_UG
+      printf("using branching type %d \n", BRANCH_STP_ON_SOL);
+#endif
+   }
+
+   branchtype = branchruledata->branchtype;
+
+   // todo at least add a warning
+   if( !probAllowsSolBranching(g) )
+   {
+      branchtype = BRANCH_STP_ON_LP;
+   }
+
+   if( graph_pc_isPcMw(g) && (branchtype == BRANCH_STP_ON_LP || branchtype == BRANCH_STP_ON_LP2) )
+   {
+      branchtype = BRANCH_STP_ON_SOL; // todo do this properly
+   }
+
+   return branchtype;
 }
 
 
@@ -324,6 +367,7 @@ SCIP_RETCODE selectBranchingVertexBySol(
    assert(!pcmw || graph->extended);
    assert(graph_valid(scip, graph));
    assert(probAllowsSolBranching(graph));
+
 
    *vertex = UNKNOWN;
 
@@ -688,7 +732,7 @@ SCIP_DECL_BRANCHINIT(branchInitStp)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   branchruledata->lastcand = 0;
+   branchruledata->branchtypeIsFixed = FALSE;
 
    return SCIP_OKAY;
 }
@@ -754,18 +798,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
       return SCIP_OKAY;
    }
 
-   branchruletype = branchruledata->branchtype;
-
-   // todo at least add a warning
-   if( !probAllowsSolBranching(g) )
-   {
-      branchruletype = BRANCH_STP_ON_LP;
-   }
-
-   if( graph_pc_isPcMw(g) && (branchruletype == BRANCH_STP_ON_LP || branchruletype == BRANCH_STP_ON_LP2) )
-   {
-      branchruletype = BRANCH_STP_ON_SOL; // todo do this properly
-   }
+   branchruletype = branchruleGetType(scip, g, branchruledata);
 
    /* get vertex to branch on */
    if( branchruletype == BRANCH_STP_ON_LP )
@@ -846,7 +879,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsStp)
 
    branchvertex = UNKNOWN;
 
-   if( probAllowsSolBranching(g) && branchruledata->branchtype != BRANCH_STP_ON_DEGREE )
+   if( probAllowsSolBranching(g) && branchruleGetType(scip, g, branchruledata) != BRANCH_STP_ON_DEGREE )
       SCIP_CALL( selectBranchingVertexBySol(scip, &branchvertex, TRUE) );
 
    /* fall-back strategy */
@@ -1109,7 +1142,7 @@ SCIP_RETCODE SCIPincludeBranchruleStp(
 
    /* create stp branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   branchruledata->lastcand = 0;
+   branchruledata->branchtypeIsFixed = FALSE;
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,

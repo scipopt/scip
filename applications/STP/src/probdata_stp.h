@@ -250,7 +250,7 @@ SCIP_Bool SCIPprobdataIsSubproblem(
 
 /** returns whether problem seems very hard */
 SCIP_EXPORT
-SCIP_Bool SCIPprobdataProbIsAversarial(
+SCIP_Bool SCIPprobdataProbIsAdversarial(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

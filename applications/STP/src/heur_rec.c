@@ -2045,7 +2045,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    nwaitingsols = heurdata->nwaitingsols;
 
-   if( graph_pc_isPc(graph) && SCIPprobdataProbIsAversarial(scip) )
+   if( graph_pc_isPc(graph) && SCIPprobdataProbIsAdversarial(scip) )
    {
       nwaitingsols--;
    }

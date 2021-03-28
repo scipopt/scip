@@ -292,7 +292,7 @@ void initSolNumberBounds(
 {
    assert(heurdata->nbestsols == -1 && heurdata->nbestsols_min == -1);
 
-   if( SCIPprobdataProbIsAversarial(scip) )
+   if( SCIPprobdataProbIsAdversarial(scip) )
    {
       heurdata->nbestsols = DEFAULT_NBESTSOLS_HARD;
       heurdata->nbestsols_min = DEFAULT_MINNBESTSOLS_HARD;
