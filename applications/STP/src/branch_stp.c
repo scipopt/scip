@@ -111,12 +111,6 @@ int branchruleGetType(
       {
          branchruledata->branchtype = BRANCH_STP_ON_SOL;
       }
-
-      branchruledata->branchtypeIsFixed = TRUE;
-
-#ifndef WITH_UG
-      printf("using branching type %d \n", BRANCH_STP_ON_SOL);
-#endif
    }
 
    branchtype = branchruledata->branchtype;
@@ -131,6 +125,13 @@ int branchruleGetType(
    {
       branchtype = BRANCH_STP_ON_SOL; // todo do this properly
    }
+
+#ifndef WITH_UG
+   if( !branchruledata->branchtypeIsFixed )
+      printf("using branching type %d \n", branchtype);
+#endif
+
+   branchruledata->branchtypeIsFixed = TRUE;
 
    return branchtype;
 }
