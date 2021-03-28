@@ -65,6 +65,9 @@ CMAINOBJ	=	cmain.o \
 			completegraph.o \
 			cons_stp.o \
 			cons_stpcomponents.o \
+			dpborder_base.o \
+			dpborder_core.o \
+			dpborder_util.o \
 			dpterms_base.o \
 			dpterms_core.o \
 			dpterms_util.o \
