@@ -922,7 +922,7 @@ SCIP_DECL_EXPRINTEVAL(intevalSin)
 
 /** separation initialization callback */
 static
-SCIP_DECL_EXPRINITESTIMATES(initEstimateSin)
+SCIP_DECL_EXPRINITESTIMATES(initEstimatesSin)
 {  /*lint --e{715}*/
    SCIP_Real childlb;
    SCIP_Real childub;
@@ -1079,7 +1079,7 @@ SCIP_RETCODE SCIPincludeExprHdlrSin(
    SCIPexprhdlrSetSimplify(exprhdlr, simplifySin);
    SCIPexprhdlrSetParse(exprhdlr, parseSin);
    SCIPexprhdlrSetIntEval(exprhdlr, intevalSin);
-   SCIPexprhdlrSetEstimate(exprhdlr, initEstimateSin, estimateSin);
+   SCIPexprhdlrSetEstimate(exprhdlr, initEstimatesSin, estimateSin);
    SCIPexprhdlrSetReverseProp(exprhdlr, reversepropSin);
    SCIPexprhdlrSetHash(exprhdlr, hashSin);
    SCIPexprhdlrSetDiff(exprhdlr, bwdiffSin, fwdiffSin, bwfwdiffSin);

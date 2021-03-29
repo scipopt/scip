@@ -46,6 +46,9 @@
 #define SIGNPOWEXPRHDLR_PRECEDENCE 56000
 #define SIGNPOWEXPRHDLR_HASHKEY    SCIPcalcFibHash(21163.1)
 
+#define INITLPMAXPOWVAL          1e+06 /**< maximal allowed absolute value of power expression at bound,
+                                        *   used for adjusting bounds in the convex case in initestimates */
+
 /*
  * Data structures
  */
@@ -1117,14 +1120,25 @@ SCIP_RETCODE buildPowEstimator(
 static
 void addTangentRefpoints(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent of the power expression */
    SCIP_Real             lb,                 /**< lower bound on the child variable */
    SCIP_Real             ub,                 /**< upper bound on the child variable */
    SCIP_Real*            refpoints           /**< array to store the reference points */
 )
 {
+   SCIP_Real maxabsbnd;
+
    assert(refpoints != NULL);
 
-   /* make bounds finite */
+   maxabsbnd = pow(INITLPMAXPOWVAL, 1 / exponent);
+
+   /* make sure the absolute values of bounds are not too large */
+   if( ub > -maxabsbnd )
+      lb = MAX(lb, -maxabsbnd);
+   if( lb < maxabsbnd )
+      ub = MIN(ub,  maxabsbnd);
+
+   /* in the case when ub < -maxabsbnd or lb > maxabsbnd, we still want to at least make bounds finite */
    if( SCIPisInfinity(scip, -lb) )
       lb = MIN(-10.0, ub - 0.1*REALABS(ub));  /*lint !e666 */
    if( SCIPisInfinity(scip,  ub) )
@@ -1196,7 +1210,7 @@ SCIP_RETCODE addSignpowerRefpoints(
    return SCIP_OKAY;
 }
 
-/** choose reference points for adding initsepa cuts for a power expression */
+/** choose reference points for adding initestimates cuts for a power expression */
 static
 SCIP_RETCODE chooseRefpointsPow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1243,7 +1257,7 @@ SCIP_RETCODE chooseRefpointsPow(
    if( underestimate )
    {
       if( convex )
-         addTangentRefpoints(scip, lb, ub, refpointsunder);
+         addTangentRefpoints(scip, exponent, lb, ub, refpointsunder);
       else if( (concave && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub)) ||
                (exponent < 0.0 && even && mixedsign) ) /* concave with finite bounds or mixed even hyperbola */
          /* for secant, refpoint doesn't matter, but we add it to signal that the corresponding cut should be created */
@@ -1261,7 +1275,7 @@ SCIP_RETCODE chooseRefpointsPow(
       if( convex && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
          refpointsover[0] = (lb + ub) / 2.0;
       else if( concave )
-         addTangentRefpoints(scip, lb, ub, refpointsover);
+         addTangentRefpoints(scip, exponent, lb, ub, refpointsover);
       else if( exponent > 1.0 && !even && mixedsign ) /* mixed signpower */
       {
          SCIP_CALL( addSignpowerRefpoints(scip, exprdata, lb, ub, exponent, FALSE, refpointsover) );
@@ -2786,7 +2800,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
    if( childlb >= 0.0 )
    {
       if( !overestimate )
-         addTangentRefpoints(scip, childlb, childub, refpointsunder);
+         addTangentRefpoints(scip, exponent, childlb, childub, refpointsunder);
       if( overestimate && !SCIPisInfinity(scip, childub) )
          refpointsover[0] = (childlb + childub) / 2.0;
    }
@@ -2795,7 +2809,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
       if( !overestimate && !SCIPisInfinity(scip, -childlb) )
          refpointsunder[0] = (childlb + childub) / 2.0;
       if( overestimate )
-         addTangentRefpoints(scip, childlb, childub, refpointsunder);
+         addTangentRefpoints(scip, exponent, childlb, childub, refpointsunder);
    }
    else
    {

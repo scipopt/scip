@@ -1851,12 +1851,13 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
          lb = SCIPvarGetLbGlobal(var);
          ub = SCIPvarGetUbGlobal(var);
 
+         /* make sure the absolute values of bounds are not too large */
          if( ub > -INITLPMAXVARVAL )
             lb = MAX(lb, -INITLPMAXVARVAL);
          if( lb <  INITLPMAXVARVAL )
             ub = MIN(ub,  INITLPMAXVARVAL);
 
-         /* make bounds finite */
+         /* in the case when ub < -maxabsbnd or lb > maxabsbnd, we still want to at least make bounds finite */
          if( SCIPisInfinity(scip, -lb) )
             lb = MIN(-10.0, ub - 0.1*REALABS(ub));
          if( SCIPisInfinity(scip,  ub) )
