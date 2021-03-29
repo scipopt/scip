@@ -46,7 +46,7 @@
 #define SIGNPOWEXPRHDLR_PRECEDENCE 56000
 #define SIGNPOWEXPRHDLR_HASHKEY    SCIPcalcFibHash(21163.1)
 
-#define INITLPMAXVARVAL          1e+06 /**< maximal allowed absolute value of power expression at bound,
+#define INITLPMAXPOWVAL          1e+06 /**< maximal allowed absolute value of power expression at bound,
                                         *   used for adjusting bounds in the convex case in initestimates */
 
 /*
@@ -1130,7 +1130,7 @@ void addTangentRefpoints(
 
    assert(refpoints != NULL);
 
-   maxabsbnd = pow(INITLPMAXVARVAL, 1 / exponent);
+   maxabsbnd = pow(INITLPMAXPOWVAL, 1 / exponent);
 
    /* make sure the absolute values of bounds are not too large */
    if( ub > -maxabsbnd )
