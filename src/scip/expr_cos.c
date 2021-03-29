@@ -172,7 +172,7 @@ SCIP_DECL_EXPRINTEVAL(intevalCos)
 
 /** separation initialization callback */
 static
-SCIP_DECL_EXPRINITESTIMATES(initEstimateCos)
+SCIP_DECL_EXPRINITESTIMATES(initEstimatesCos)
 {
    SCIP_Real childlb;
    SCIP_Real childub;
@@ -349,7 +349,7 @@ SCIP_RETCODE SCIPincludeExprHdlrCos(
    SCIPexprhdlrSetSimplify(exprhdlr, simplifyCos);
    SCIPexprhdlrSetParse(exprhdlr, parseCos);
    SCIPexprhdlrSetIntEval(exprhdlr, intevalCos);
-   SCIPexprhdlrSetEstimate(exprhdlr, initEstimateCos, estimateCos);
+   SCIPexprhdlrSetEstimate(exprhdlr, initEstimatesCos, estimateCos);
    SCIPexprhdlrSetReverseProp(exprhdlr, reversepropCos);
    SCIPexprhdlrSetHash(exprhdlr, hashCos);
    SCIPexprhdlrSetDiff(exprhdlr, bwdiffCos, NULL, NULL);

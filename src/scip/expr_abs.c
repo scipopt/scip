@@ -332,7 +332,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
 
 /** expression estimate initialization callback */
 static
-SCIP_DECL_EXPRINITESTIMATES(initEstimateAbs)
+SCIP_DECL_EXPRINITESTIMATES(initEstimatesAbs)
 {  /*lint --e{715}*/
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
@@ -492,7 +492,7 @@ SCIP_RETCODE SCIPincludeExprHdlrAbs(
    SCIPexprhdlrSetSimplify(exprhdlr, simplifyAbs);
    SCIPexprhdlrSetParse(exprhdlr, parseAbs);
    SCIPexprhdlrSetIntEval(exprhdlr, intevalAbs);
-   SCIPexprhdlrSetEstimate(exprhdlr, initEstimateAbs, estimateAbs);
+   SCIPexprhdlrSetEstimate(exprhdlr, initEstimatesAbs, estimateAbs);
    SCIPexprhdlrSetHash(exprhdlr, hashAbs);
    SCIPexprhdlrSetReverseProp(exprhdlr, reversepropAbs);
    SCIPexprhdlrSetDiff(exprhdlr, bwdiffAbs, NULL, NULL);
