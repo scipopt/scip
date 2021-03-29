@@ -23,15 +23,193 @@
 #include "dpborder.h"
 #include "dpborderinterns.h"
 #include "stpvector.h"
+#include "solstp.h"
 
 
 /*
  * Local methods
  */
 
+
+/** initializes */
+static
+SCIP_RETCODE dpbsequenceInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< original graph */
+   DPBSEQUENCE**         dpbsequence         /**< to initialize */
+)
+{
+   DPBSEQUENCE* seq;
+   const int nnodes = graph_get_nNodes(graph);
+
+   SCIP_CALL( SCIPallocMemory(scip, dpbsequence) );
+   seq = *dpbsequence;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(seq->nodessquence), nnodes) );
+   seq->maxnpartitions = 0;
+   seq->maxbordersize = nnodes + 1;
+   seq->nnodes = nnodes;
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes helper */
+static
+SCIP_RETCODE dpborderInitHelper(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph of sub-problem */
+   DPBORDER*             dpborder           /**< border */
+   )
+{
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(nnodes == dpborder->nnodes);
+   assert(!dpborder->nodes_isBorder);
+   assert(!dpborder->nodes_outdeg);
+
+   SCIP_CALL( dpbsequenceInit(scip, graph, &(dpborder->dpbsequence)) );
+
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(dpborder->nodes_isBorder), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->nodes_outdeg), nnodes) );
+
+   BMScopyMemoryArray(dpborder->nodes_outdeg, graph->grad, nnodes);
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+static
+void dpbsequenceFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DPBSEQUENCE**         dpbsequence         /**< to free */
+)
+{
+   DPBSEQUENCE* seq =  *dpbsequence;
+
+   assert(seq);
+
+   SCIPfreeMemoryArray(scip, &(seq->nodessquence));
+   SCIPfreeMemory(scip, dpbsequence);
+}
+
+
 /*
  * Interface methods
  */
+
+
+/** initializes */
+SCIP_RETCODE dpborder_dpblevelInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DPBLEVEL**            dpblevel            /**< to initialize */
+)
+{
+   DPBLEVEL* level;
+
+   SCIP_CALL( SCIPallocMemory(scip, dpblevel) );
+   level = *dpblevel;
+
+   level->bordernodesMapToOrg = NULL;
+   level->nbordernodes = 0;
+   level->extnode = -1;
+   level->exnodeIsTerm = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+void dpborder_dpblevelFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DPBLEVEL**            dpblevel            /**< to be freed */
+)
+{
+   DPBLEVEL* level = *dpblevel;
+
+   assert(level);
+
+   StpVecFree(scip, level->bordernodesMapToOrg);
+   SCIPfreeMemory(scip, dpblevel);
+}
+
+
+/** checks whether DP border has potential
+ * NOTE: needs to be called before dpborder_solve! */
+SCIP_RETCODE dpborder_probePotential(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph of sub-problem */
+   DPBORDER*             dpborder,           /**< border */
+   SCIP_Bool*            hasPotential        /**< was problem solved to optimality? */
+)
+{
+   DPBSEQUENCE* dpbsequence;
+   assert(scip && graph && dpborder && hasPotential);
+   assert(!dpborder->dpbsequence);
+
+   *hasPotential = FALSE;
+
+   /* make rough check */
+   if( 0 )
+   {
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( graph_init_csrWithEdgeId(scip, graph) );
+
+   SCIP_CALL( dpborderInitHelper(scip, graph, dpborder) );
+   SCIP_CALL( dpborder_coreComputeOrdering(scip, graph, dpborder) );
+
+
+   dpbsequence = dpborder->dpbsequence;
+   *hasPotential = TRUE;
+
+   if( dpbsequence->maxnpartitions > BPBORDER_MAXNPARTITIONS )
+   {
+      *hasPotential = FALSE;
+   }
+
+   if( 0 )
+   {
+      *hasPotential = FALSE;
+   }
+
+   graph_free_csr(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+/** solves problem given by graph */
+SCIP_RETCODE dpborder_solve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph of sub-problem */
+   DPBORDER*             dpborder,           /**< border */
+   int*                  solution,           /**< optimal solution (out) */
+   SCIP_Bool*            wasSolved           /**< was problem solved to optimality? */
+)
+{
+   assert(scip && graph && solution);
+   assert(dpborder->dpbsequence);
+
+   SCIP_CALL( graph_init_csrWithEdgeId(scip, graph) );
+
+   SCIP_CALL( dpborder_coreSolve(scip, graph, dpborder, wasSolved) );
+
+   if( *wasSolved )
+   {
+     // int todo;
+     // assert(0);
+
+      // todo get solution
+      //assert(solstp_isValid(scip, graph, solution));
+   }
+
+   graph_free_csr(scip, graph);
+
+   return SCIP_OKAY;
+}
 
 
 /** initializes */
@@ -47,7 +225,22 @@ SCIP_RETCODE dpborder_init(
 
    assert(graph);
 
+   dpb->dpbsequence = NULL;
+   dpb->borderlevels = NULL;
+   dpb->bordernodes = NULL;
+   dpb->prevbordernodes = NULL;
+   dpb->global_partitions = NULL;
+   dpb->global_partstarts = NULL;
+   dpb->global_predparts = NULL;
+   dpb->global_partcosts = NULL;
+   dpb->nodes_isBorder = NULL;
+   dpb->nodes_outdeg = NULL;
+   dpb->global_obj = FARAWAY;
+   dpb->global_npartitions = 0;
+   dpb->global_partcap = 0;
    dpb->nnodes = graph->knots;
+   dpb->nterms = graph->terms;
+   dpb->ntermsvisited = 0;
 
    return SCIP_OKAY;
 }
@@ -59,5 +252,33 @@ void dpborder_free(
    DPBORDER**            dpborder            /**< to be freed */
 )
 {
+   DPBORDER* dpb = *dpborder;
+
+   StpVecFree(scip, dpb->global_partcosts);
+   StpVecFree(scip, dpb->global_predparts);
+   StpVecFree(scip, dpb->global_partstarts);
+   StpVecFree(scip, dpb->bordernodes);
+   StpVecFree(scip, dpb->prevbordernodes);
+
+   SCIPfreeMemoryArrayNull(scip, &(dpb->global_partitions));
+   SCIPfreeMemoryArrayNull(scip, &(dpb->nodes_isBorder));
+   SCIPfreeMemoryArrayNull(scip, &(dpb->nodes_outdeg));
+
+   if( dpb->dpbsequence )
+   {
+      dpbsequenceFree(scip, &(dpb->dpbsequence));
+   }
+
+   if( dpb->borderlevels )
+   {
+      for( int i = 0; i < StpVecGetSize(dpb->borderlevels); i++ )
+      {
+         dpborder_dpblevelFree(scip, &(dpb->borderlevels[i]));
+         assert(!dpb->borderlevels[i]);
+      }
+
+      StpVecFree(scip, dpb->borderlevels);
+   }
+
    SCIPfreeMemory(scip, dpborder);
 }

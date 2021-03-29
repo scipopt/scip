@@ -31,13 +31,53 @@
 #include "graph.h"
 #include "stpvector.h"
 
+#define BPBORDER_MAXNPARTITIONS 50000000
+#define BPBORDER_MAXBORDERSIZE  16
+
+/** nodes sequence structure */
+typedef struct dynamic_programming_border_nodes_sequence
+{
+   int*                  nodessquence;       /**< ordering of the nodes */
+   uint64_t              maxnpartitions;     /**< maximum number of partitions */
+   int                   maxbordersize;      /**< maximum size of any border */
+   int                   nnodes;             /**< number of nodes of underlying graph */
+} DPBSEQUENCE;
+
+
+/** nodes sequence structure */
+typedef struct dynamic_programming_border_level
+{
+   STP_Vectype(int)      bordernodesMapToOrg;/**< maps border nodes to original nodes */
+   int                   nbordernodes;       /**< size of border */
+   int                   extnode;            /**< extension nodes */
+   SCIP_Bool             exnodeIsTerm;       /**< is the extension node a terminal? */
+} DPBLEVEL;
+
+
 /** DP border structure */
 struct dynamic_programming_border
 {
+   DPBSEQUENCE*          dpbsequence;        /**< ordering of nodes */
+   STP_Vectype(DPBLEVEL*) borderlevels;       /**< data for each border */
+   SCIP_Bool*            nodes_isBorder;     /**< marks whether node is in current border */
+   int*                  nodes_outdeg;       /**< degree w.r.t. not yet visited nodes */
+   STP_Vectype(int)      bordernodes;        /**< current border nodes */
+   STP_Vectype(int)      prevbordernodes;    /**< nodes that are in previous but not current border */
+   int*                  global_partitions;  /**< partitions */
+   STP_Vectype(int)      global_partstarts;  /**< CSR like starts of partitions in array "global_partitions" */
+   STP_Vectype(int)      global_predparts;   /**< predecessor partitions; of size global_npartitions */
+   STP_Vectype(SCIP_Real) global_partcosts;  /**< costs of each partition */
+   SCIP_Real             global_obj;         /**< objective */
+   int                   global_npartitions; /**< number of global partitions */
+   int                   global_partcap;     /**< capacity of array global_partitions */
+   int                   ntermsvisited;      /**< number of already visited nodes */
+   int                   nterms;             /**< number of terminals */
    int                   nnodes;             /**< number of nodes of underlying graph */
 };
 
-
-
+extern SCIP_RETCODE  dpborder_dpblevelInit(SCIP*, DPBLEVEL**);
+extern void          dpborder_dpblevelFree(SCIP*, DPBLEVEL**);
+extern SCIP_RETCODE  dpborder_coreComputeOrdering(SCIP*, const GRAPH*, DPBORDER*);
+extern SCIP_RETCODE  dpborder_coreSolve(SCIP*, const GRAPH*, DPBORDER*, SCIP_Bool*);
 
 #endif /* APPLICATIONS_STP_SRC_DPBORDERINTERNS_H_ */

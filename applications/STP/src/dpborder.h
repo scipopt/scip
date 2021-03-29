@@ -38,8 +38,8 @@ typedef struct dynamic_programming_border DPBORDER;
 
 
 extern SCIP_RETCODE     dpborder_init(SCIP*, const GRAPH*, DPBORDER**);
-// todo dpborder_probePotential
-// todo dpborder_solve
+extern SCIP_RETCODE     dpborder_probePotential(SCIP*, GRAPH*, DPBORDER*, SCIP_Bool*);
+extern SCIP_RETCODE     dpborder_solve(SCIP*, GRAPH*, DPBORDER*, int*, SCIP_Bool*);
 extern void             dpborder_free(SCIP*, DPBORDER**);
 
 
