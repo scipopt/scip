@@ -97,7 +97,19 @@ STP_Vectype(int) dpborder_partGetCandstarts(
 
       if( LT(borderchardists[borderchar], FARAWAY) )
       {
-         StpVecPushBack(scip, candstarts, i);
+         int startpos;
+         for( startpos = i; startpos > 0; startpos-- )
+         {
+            if( partitionchars[startpos] == delimiter )
+               break;
+         }
+
+         if( partitionchars[startpos] == delimiter )
+            startpos++;
+
+         StpVecPushBack(scip, candstarts, startpos);
+
+         /* move to next set of the partition */
          for( ; i < partsize && partitionchars[i] != delimiter; i++ )
          {
             assert(partitionchars[i] < delimiter);
