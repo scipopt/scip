@@ -623,7 +623,7 @@ public:
       if( objectiveIndex >= 1 )
          OnUnhandled("multiple objective functions");
 
-      SCIPsetObjsense(scip, type == mp::obj::Type::MAX ? SCIP_OBJSENSE_MAXIMIZE : SCIP_OBJSENSE_MINIMIZE);
+      SCIP_CALL_THROW( SCIPsetObjsense(scip, type == mp::obj::Type::MAX ? SCIP_OBJSENSE_MAXIMIZE : SCIP_OBJSENSE_MINIMIZE) );
 
       assert(objexpr == NULL);
 
