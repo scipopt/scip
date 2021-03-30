@@ -197,25 +197,92 @@ SCIP_RETCODE updateFromPartition(
    DPBORDER*             dpborder            /**< border */
 )
 {
+   int* subbuffer;
+   STP_Vectype(int) candstarts;
    DPBLEVEL* const toplevel = dpborder_getTopLevel(dpborder);
+   DPB_Ptype* const global_partitions = dpborder->global_partitions;
    int part_start;
    int part_end;
+   int ncands;
    const SCIP_Real part_cost = dpborder->global_partcosts[globalposition];
+   const SCIP_Bool allTermsAreVisited = (dpborder->nterms == dpborder->ntermsvisited);
 
    partitionGetRangeGlobal(dpborder, globalposition, &part_start, &part_end);
 
    // todo check for P \ L
    if( !toplevel->exnodeIsTerm && 0  )
    {
-      int todo; // update cost of P -l
+
    }
 
-   // build candidates
-
-   // go over all candidates
    {
-      //
+      DPBPART partition = { .partchars = &(global_partitions[part_start]),
+                            .partsize = (part_end - part_start),
+                            .delimiter = dpborder_getDelimiter(dpborder, StpVecGetSize(dpborder->borderlevels) - 2) };
+
+      candstarts = dpborder_partGetCandstarts(scip, &partition, dpborder);
+      assert(StpVecGetSize(candstarts) > 0);
    }
+
+   ncands = StpVecGetSize(candstarts);
+   SCIP_CALL( SCIPallocBufferArray(scip, &subbuffer, BPBORDER_MAXBORDERSIZE) );
+
+   /* loop over all subsets */
+   for( uint32_t counter = ((uint32_t) pow(2.0, ncands) - 1); counter >= 1; counter-- )
+   {
+      int nsub = 0;
+      int globalposition_new;
+      SCIP_Bool partIsInvalid;
+      SCIP_Real cost_new;
+
+      SCIPdebugMessage("new partition:  \n");
+      for( uint32_t j = 0; j < (uint32_t) ncands; j++ )
+      {
+         if( counter & ((uint32_t) 1 << j) )
+         {
+            assert(nsub < BPBORDER_MAXBORDERSIZE);
+            subbuffer[nsub++] = candstarts[j];
+            SCIPdebugMessage("...%d \n", candstarts[j]);
+         }
+      }
+
+      // build pnew from subbuffer, nsub
+      // if partition is not yet included, add it to global data! set cost to FARAWAY
+      // method should just return global position
+
+      globalposition_new = 0;
+      partIsInvalid = TRUE;
+
+      /* non-valid partition? */
+      if( partIsInvalid )
+      {
+         SCIPdebugMessage("partition is invalid... \n");
+         continue;
+      }
+
+      // compute connection cost
+      cost_new = 0.0;
+      cost_new += part_cost;
+
+      if( GT(dpborder->global_partcosts[globalposition_new], cost_new) )
+      {
+         // update
+
+         if( allTermsAreVisited )
+         {
+            // check whether size of parition is 1!
+            if( 0 )
+            {
+               dpborder->global_obj = MIN(dpborder->global_obj, cost_new);
+            }
+         }
+      }
+
+      // if connection cost is better, update
+   }
+
+   SCIPfreeBufferArray(scip, &subbuffer);
+   StpVecFree(scip, candstarts);
 
    return SCIP_OKAY;
 }
@@ -232,10 +299,19 @@ SCIP_RETCODE addPartitions(
 {
    DPBLEVEL* const toplevel = dpborder->borderlevels[iteration];
    DPBLEVEL* const prevlevel = dpborder->borderlevels[iteration - 1];
-   const int extnode = toplevel->extnode;
-   int nbordernodes = 0;
    const int global_start = prevlevel->globalstartidx;
    const int global_end = toplevel->globalstartidx;
+
+
+   {
+      int todo;
+
+      if( iteration == 2 )
+         SCIP_CALL( updateFromPartition(scip, 0, graph, dpborder) );
+
+
+      return SCIP_OKAY;
+   }
 
    assert(iteration >= 1);
    assert(global_start < global_end);
@@ -281,7 +357,7 @@ SCIP_RETCODE addLevel(
       dpborder->ntermsvisited++;
 
    updateBorder(scip, graph, iteration, dpborder);
-//   SCIP_CALL( addPartitions(scip, graph, iteration, dpborder) );
+   SCIP_CALL( addPartitions(scip, graph, iteration, dpborder) );
 
 #ifdef SCIP_DEBUG
    printBorder(graph, iteration, dpborder);
