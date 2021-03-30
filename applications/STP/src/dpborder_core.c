@@ -73,11 +73,23 @@ void printBorder(
 /** does reallocation of global array if necessary */
 static inline
 SCIP_RETCODE partitionTryRealloc(
-   int                   globalposition,      /**< position of partition */
-   int                   part,
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   newadds,
    DPBORDER*             dpborder             /**< border */
    )
 {
+   const int size = dpborder->global_partstarts[dpborder->global_npartitions];
+   assert(size >= 0);
+   assert(newadds > 0);
+
+
+   if( newadds + size > dpborder->global_partcap )
+   {
+      dpborder->global_partcap *= 2;
+      assert(newadds + dpborder->global_npartitions > size);
+      SCIPdebugMessage("reallocating memory (to %d) \n", dpborder->global_partcap);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(dpborder->global_partitions), dpborder->global_partcap) );
+   }
 
    return SCIP_OKAY;
 }
@@ -204,6 +216,7 @@ SCIP_RETCODE updateFromPartition(
    int part_start;
    int part_end;
    int ncands;
+   uint32_t powsize;
    const SCIP_Real part_cost = dpborder->global_partcosts[globalposition];
    const SCIP_Bool allTermsAreVisited = (dpborder->nterms == dpborder->ntermsvisited);
 
@@ -225,10 +238,17 @@ SCIP_RETCODE updateFromPartition(
    }
 
    ncands = StpVecGetSize(candstarts);
+   assert(ncands > 0);
+   powsize = ((uint32_t) pow(2.0, ncands) - 1);
    SCIP_CALL( SCIPallocBufferArray(scip, &subbuffer, BPBORDER_MAXBORDERSIZE) );
 
+   /* make sure that partition storage is large enough */
+   SCIP_CALL( partitionTryRealloc(scip, powsize * BPBORDER_MAXBORDERSIZE * 2, dpborder) );
+
+   SCIPdebugMessage("partition ncands=%d \n", ncands);
+
    /* loop over all subsets */
-   for( uint32_t counter = ((uint32_t) pow(2.0, ncands) - 1); counter >= 1; counter-- )
+   for( uint32_t counter = powsize; counter >= 1; counter-- )
    {
       int nsub = 0;
       int globalposition_new;
@@ -249,6 +269,7 @@ SCIP_RETCODE updateFromPartition(
       // build pnew from subbuffer, nsub
       // if partition is not yet included, add it to global data! set cost to FARAWAY
       // method should just return global position
+      // for testing just add everything!
 
       globalposition_new = 0;
       partIsInvalid = TRUE;
@@ -302,12 +323,34 @@ SCIP_RETCODE addPartitions(
    const int global_start = prevlevel->globalstartidx;
    const int global_end = toplevel->globalstartidx;
 
+   SCIPdebugMessage("adding partitions: \n");
 
    {
       int todo;
 
-      if( iteration == 2 )
+      if( iteration == 3 )
+      {
+         StpVecPushBack(scip, dpborder->global_partcosts, 2.0);
+         StpVecPushBack(scip, dpborder->global_partstarts, 4);
+         dpborder->global_partitions[0] = 0;
+         dpborder->global_partitions[1] = 1;
+         dpborder->global_partitions[2] = 3;
+         dpborder->global_partitions[3] = 2;
+
+
+         //StpVecPushBack(scip, dpborder->global_partitions, 0);
+         //StpVecPushBack(scip, dpborder->global_partitions, 1);
+         //StpVecPushBack(scip, dpborder->global_partitions, 3); // delim
+         //StpVecPushBack(scip, dpborder->global_partitions, 2);
+
+         dpborder->global_npartitions++;
+         dpborder->borderchardists[1] = 2.0;
+         dpborder->borderchardists[2] = 2.0;
+
          SCIP_CALL( updateFromPartition(scip, 0, graph, dpborder) );
+         assert(0);
+
+      }
 
 
       return SCIP_OKAY;
@@ -357,7 +400,6 @@ SCIP_RETCODE addLevel(
       dpborder->ntermsvisited++;
 
    updateBorder(scip, graph, iteration, dpborder);
-   SCIP_CALL( addPartitions(scip, graph, iteration, dpborder) );
 
 #ifdef SCIP_DEBUG
    printBorder(graph, iteration, dpborder);
@@ -424,7 +466,7 @@ SCIP_RETCODE initSolve(
       return SCIP_ERROR;
    }
 
-   dpborder->global_partcap = maxnpartitions / 2;
+   dpborder->global_partcap = MAX(maxnpartitions / 2, BPBORDER_MAXBORDERSIZE);
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->global_partitions), dpborder->global_partcap) );
 
    SCIP_CALL( addLevelFirst(scip, graph, dpborder) );
@@ -528,8 +570,7 @@ SCIP_RETCODE dpborder_coreSolve(
    for( int s = 1; s < nnodes; s++ )
    {
       SCIP_CALL( addLevel(scip, graph, s, dpborder) );
-
-      // todo update partitions
+      SCIP_CALL( addPartitions(scip, graph, s, dpborder) );
 
       if( SCIPisStopped(scip) )
       {
