@@ -35,6 +35,80 @@
  */
 
 
+/** is partition valid? */
+SCIP_Bool dpborder_partIsValid(
+   const DPBPART*        borderpartition     /**< partition */
+)
+{
+   const DPB_Ptype* const partitionchars = borderpartition->partchars;
+   const DPB_Ptype delimiter = borderpartition->delimiter;
+   const int partsize = borderpartition->partsize;
+
+   for( int i = 0; i < partsize; i++ )
+   {
+      const DPB_Ptype borderchar = partitionchars[i];
+      if( borderchar > delimiter )
+      {
+         SCIPdebugMessage("char %d to large \n", i);
+         return FALSE;
+      }
+
+      if( borderchar == delimiter )
+         continue;
+
+      for( int j = 0; j < partsize; j++ )
+      {
+         const DPB_Ptype borderchar2 = partitionchars[j];
+
+         if( i != j && borderchar == borderchar2 )
+         {
+            SCIPdebugMessage("duplicate char, positions %d %d \n", i, j);
+            return FALSE;
+         }
+      }
+   }
+
+   return TRUE;
+}
+
+
+/** gets candidates start for given partition */
+STP_Vectype(int) dpborder_partGetCandstarts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const DPBPART*        borderpartition,    /**< partition */
+   const DPBORDER*       dpborder            /**< border */
+)
+{
+   STP_Vectype(int) candstarts = NULL;
+   const DPB_Ptype* const partitionchars = borderpartition->partchars;
+   const DPB_Ptype delimiter = borderpartition->delimiter;
+   const int partsize = borderpartition->partsize;
+   const SCIP_Real* const borderchardists = dpborder->borderchardists;
+
+   assert(dpborder_partIsValid(borderpartition));
+
+   for( int i = 0; i < partsize; i++ )
+   {
+      const DPB_Ptype borderchar = partitionchars[i];
+      assert(borderchar <= delimiter);
+
+      if( borderchar == delimiter )
+         continue;
+
+      if( LT(borderchardists[borderchar], FARAWAY) )
+      {
+         StpVecPushBack(scip, candstarts, i);
+         for( ; i < partsize && partitionchars[i] != delimiter; i++ )
+         {
+            assert(partitionchars[i] < delimiter);
+         }
+      }
+   }
+
+   return candstarts;
+}
+
+
 /** builds map between old and new border char representation */
 void dpborder_buildBorderMap(
    DPBORDER*             dpborder            /**< border */

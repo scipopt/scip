@@ -33,6 +33,7 @@
 
 #define BPBORDER_MAXNPARTITIONS 50000000
 #define BPBORDER_MAXBORDERSIZE  16
+#define DPB_Ptype unsigned char
 
 /** nodes sequence structure */
 typedef struct dynamic_programming_border_nodes_sequence
@@ -55,6 +56,16 @@ typedef struct dynamic_programming_border_level
 } DPBLEVEL;
 
 
+/** single partition */
+typedef struct dynamic_programming_border_partition
+{
+   const DPB_Ptype*      partchars;          /**< partition characters */
+   int                   partsize;           /**< size of partition */
+   DPB_Ptype             delimiter;          /**< delimiter */
+} DPBPART;
+
+
+
 /** DP border structure */
 struct dynamic_programming_border
 {
@@ -66,7 +77,7 @@ struct dynamic_programming_border
    SCIP_Real*            borderchardists;    /**< distance for last border nodes (chars) to extension nodes */
    STP_Vectype(int)      bordernodes;        /**< current border nodes */
    STP_Vectype(int)      prevbordernodes;    /**< nodes that are in previous but not current border */
-   int*                  global_partitions;  /**< partitions */
+   DPB_Ptype*            global_partitions;  /**< partitions */
    STP_Vectype(int)      global_partstarts;  /**< CSR like starts of partitions in array "global_partitions" */
    STP_Vectype(int)      global_predparts;   /**< predecessor partitions; of size global_npartitions */
    STP_Vectype(SCIP_Real) global_partcosts;  /**< costs of each partition */
@@ -130,6 +141,8 @@ DPBLEVEL* dpborder_getPredLevel(
  */
 
 
+extern SCIP_Bool  dpborder_partIsValid(const DPBPART*);
+extern STP_Vectype(int)  dpborder_partGetCandstarts(SCIP*, const DPBPART*, const DPBORDER*);
 extern void          dpborder_buildBorderMap(DPBORDER*);
 extern void          dpborder_buildBorderDists(const GRAPH*, DPBORDER*);
 extern SCIP_RETCODE  dpborder_dpblevelInit(SCIP*, DPBLEVEL**);
