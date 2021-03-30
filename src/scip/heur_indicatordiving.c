@@ -186,6 +186,18 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 {
+   /*input:
+    * - scip : SCIP main data structure
+    * - diveset : diving settings for scoring
+    * - divetype : represents different methods for a dive set to explore the next children
+    * - cand : candidate variable for which the score should be determined
+    * - candsol : solution value of variable in LP relaxation solution
+    * - candsfrac : fractional part of solution value of variable
+    * - score : pointer for diving score value - the best candidate maximizes this score
+    * - roundup : pointer to store whether the preferred rounding direction is upwards
+    *
+    * todo: implement this callback
+    */
 
    return SCIP_OKAY;
 }
