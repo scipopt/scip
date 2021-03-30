@@ -71,6 +71,7 @@
 /** locally defined heuristic data */
 struct SCIP_HeurData
 {
+   SCIP_SOL*             sol;                /**< working solution */
 };
 
 /*
@@ -133,6 +134,9 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* create working solution */
+   SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
+
    return SCIP_OKAY;
 }
 
@@ -151,6 +155,9 @@ SCIP_DECL_HEUREXIT(heurExitIndicatordiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* free working solution */
+   SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
+
    return SCIP_OKAY;
 }
 
@@ -159,8 +166,18 @@ SCIP_DECL_HEUREXIT(heurExitIndicatordiving) /*lint --e{715}*/
 static
 SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_HEURDATA* heurdata;
+   SCIP_DIVESET* diveset;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(SCIPheurGetDivesets(heur) != NULL);
+   diveset = SCIPheurGetDivesets(heur)[0];
+   assert(diveset != NULL);
+
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
 
    return SCIP_OKAY;
 }
@@ -188,7 +205,7 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_HEUR* heur;
 
    /* create indicatordiving primal heuristic data */
-   heurdata = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    heur = NULL;
 
