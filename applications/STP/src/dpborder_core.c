@@ -43,7 +43,7 @@ void printBorder(
    const DPBLEVEL* const toplevel = dpborder->borderlevels[iteration];
    const int nbordernodes = toplevel->nbordernodes;
 
-   printf("\n---PRINTING BORDER: \n");
+   printf("---PRINTING BORDER: \n");
    printf("extnode=%d, nbordernodes=%d \n", toplevel->extnode, nbordernodes);
    printf("bordernodes: \n");
 
@@ -52,7 +52,8 @@ void printBorder(
       const int node = dpborder->bordernodes[i];
       assert(dpborder->nodes_isBorder[node]);
 
-      graph_knot_printInfo(graph, node);
+      printf("char=%d node=%d \n", i, node);
+
    }
 
    printf("prev-bordernodes: \n");
@@ -69,7 +70,40 @@ void printBorder(
 #endif
 
 
-/** adapts degree of nodes */
+/** does reallocation of global array if necessary */
+static inline
+SCIP_RETCODE partitionTryRealloc(
+   int                   globalposition,      /**< position of partition */
+   int                   part,
+   DPBORDER*             dpborder             /**< border */
+   )
+{
+
+   return SCIP_OKAY;
+}
+
+
+/** gets partition range */
+static inline
+void partitionGetRangeGlobal(
+   const DPBORDER*       dpborder,            /**< border */
+   int                   globalposition,     /**< position of partition */
+   int*                  start,
+   int*                  end
+   )
+{
+   const int* const starts = dpborder->global_partstarts;
+   assert(globalposition >= 0);
+   assert(globalposition < dpborder->global_npartitions);
+
+   *start = starts[globalposition];
+   *end = starts[globalposition + 1];
+
+   assert(*start < *end);
+}
+
+
+/** adapts border */
 static
 void updateBorder(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -90,6 +124,9 @@ void updateBorder(
    assert(iteration >= 1);
    assert(!nodes_isBorder[extnode]);
    assert(dpborder->borderlevels[iteration - 1]->nbordernodes == StpVecGetSize(dpborder->bordernodes));
+
+   /* NOTE: needs to be called before border is updated! */
+   dpborder_buildBorderDists(graph, dpborder);
 
    if( dpborder->prevbordernodes )
       StpVecClear(dpborder->prevbordernodes);
@@ -115,23 +152,25 @@ void updateBorder(
    if( nodes_outdegree[extnode] == 0 )
       StpVecPushBack(scip, dpborder->prevbordernodes, extnode);
 
-   /* remove outdated border nodes */
    for( int i = 0; i < StpVecGetSize(dpborder->bordernodes); i++ )
    {
       const int bordernode = dpborder->bordernodes[i];
       assert(graph_knot_isInRange(graph, bordernode));
 
-      if( nodes_isBorder[bordernode] )
-      {
-         /* NOTE: might happen for previous border node */
-         if( nodes_outdegree[bordernode] == 0 )
-         {
-            nodes_isBorder[bordernode] = FALSE;
-            continue;
-         }
+      /* NOTE: might happen for previous border node */
+      if( nodes_isBorder[bordernode] && nodes_outdegree[bordernode] == 0 )
+         nodes_isBorder[bordernode] = FALSE;
+   }
 
+   dpborder_buildBorderMap(dpborder);
+
+   /* remove outdated border nodes */
+   for( int i = 0; i < StpVecGetSize(dpborder->bordernodes); i++ )
+   {
+      const int bordernode = dpborder->bordernodes[i];
+
+      if( nodes_isBorder[bordernode] )
          dpborder->bordernodes[nbordernodes++] = dpborder->bordernodes[i];
-      }
    }
 
    for( int i = StpVecGetSize(dpborder->bordernodes) - nbordernodes; i > 0; i-- )
@@ -146,6 +185,68 @@ void updateBorder(
 
    toplevel->nbordernodes = nbordernodes;
    assert(toplevel->nbordernodes == StpVecGetSize(dpborder->bordernodes));
+}
+
+
+/** updates partition from given partition */
+static
+SCIP_RETCODE updateFromPartition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   globalposition,     /**< position of partition */
+   const GRAPH*          graph,              /**< graph */
+   DPBORDER*             dpborder            /**< border */
+)
+{
+   DPBLEVEL* const toplevel = dpborder_getTopLevel(dpborder);
+   int part_start;
+   int part_end;
+   const SCIP_Real part_cost = dpborder->global_partcosts[globalposition];
+
+   partitionGetRangeGlobal(dpborder, globalposition, &part_start, &part_end);
+
+   // todo check for P \ L
+   if( !toplevel->exnodeIsTerm && 0  )
+   {
+      int todo; // update cost of P -l
+   }
+
+   // build candidates
+
+   // go over all candidates
+   {
+      //
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** adds partitions for new border */
+static
+SCIP_RETCODE addPartitions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph */
+   int                   iteration,          /**< iteration number */
+   DPBORDER*             dpborder            /**< border */
+)
+{
+   DPBLEVEL* const toplevel = dpborder->borderlevels[iteration];
+   DPBLEVEL* const prevlevel = dpborder->borderlevels[iteration - 1];
+   const int extnode = toplevel->extnode;
+   int nbordernodes = 0;
+   const int global_start = prevlevel->globalstartidx;
+   const int global_end = toplevel->globalstartidx;
+
+   assert(iteration >= 1);
+   assert(global_start < global_end);
+
+   /* loop over all valid partitions of previous border */
+   for( int i = global_start; i != global_end; i++ )
+   {
+      SCIP_CALL( updateFromPartition(scip, i, graph, dpborder) );
+   }
+
+   return SCIP_OKAY;
 }
 
 
@@ -165,16 +266,22 @@ SCIP_RETCODE addLevel(
 
    assert(graph_knot_isInRange(graph, node));
 
+#ifdef SCIP_DEBUG
+   printf("\n----- Starting level %d ----- \n", iteration);
+#endif
+
    SCIP_CALL( dpborder_dpblevelInit(scip, &level) );
    StpVecPushBack(scip, dpborder->borderlevels, level);
 
    level->extnode = node;
    level->exnodeIsTerm = Is_term(graph->term[node]);
+   level->globalstartidx = dpborder->global_npartitions;
 
    if( level->exnodeIsTerm )
       dpborder->ntermsvisited++;
 
    updateBorder(scip, graph, iteration, dpborder);
+//   SCIP_CALL( addPartitions(scip, graph, iteration, dpborder) );
 
 #ifdef SCIP_DEBUG
    printBorder(graph, iteration, dpborder);
@@ -213,6 +320,7 @@ SCIP_RETCODE addLevelFirst(
    level->extnode = root;
    level->exnodeIsTerm = TRUE;
    level->nbordernodes = 1;
+   level->globalstartidx = 0;
 
    assert(StpVecGetSize(dpborder->bordernodes) == 1);
 

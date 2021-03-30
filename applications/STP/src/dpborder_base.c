@@ -73,6 +73,9 @@ SCIP_RETCODE dpborderInitHelper(
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &(dpborder->nodes_isBorder), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->nodes_outdeg), nnodes) );
 
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->bordercharmap), BPBORDER_MAXBORDERSIZE + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->borderchardists), BPBORDER_MAXBORDERSIZE) );
+
    BMScopyMemoryArray(dpborder->nodes_outdeg, graph->grad, nnodes);
 
    return SCIP_OKAY;
@@ -114,6 +117,7 @@ SCIP_RETCODE dpborder_dpblevelInit(
    level->bordernodesMapToOrg = NULL;
    level->nbordernodes = 0;
    level->extnode = -1;
+   level->globalstartidx = -1;
    level->exnodeIsTerm = FALSE;
 
    return SCIP_OKAY;
@@ -225,6 +229,8 @@ SCIP_RETCODE dpborder_init(
 
    assert(graph);
 
+   dpb->bordercharmap = NULL;
+   dpb->borderchardists = NULL;
    dpb->dpbsequence = NULL;
    dpb->borderlevels = NULL;
    dpb->bordernodes = NULL;
@@ -260,6 +266,8 @@ void dpborder_free(
    StpVecFree(scip, dpb->bordernodes);
    StpVecFree(scip, dpb->prevbordernodes);
 
+   SCIPfreeMemoryArrayNull(scip, &(dpb->bordercharmap));
+   SCIPfreeMemoryArrayNull(scip, &(dpb->borderchardists));
    SCIPfreeMemoryArrayNull(scip, &(dpb->global_partitions));
    SCIPfreeMemoryArrayNull(scip, &(dpb->nodes_isBorder));
    SCIPfreeMemoryArrayNull(scip, &(dpb->nodes_outdeg));

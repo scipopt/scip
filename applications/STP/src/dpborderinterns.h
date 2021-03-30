@@ -48,6 +48,7 @@ typedef struct dynamic_programming_border_nodes_sequence
 typedef struct dynamic_programming_border_level
 {
    STP_Vectype(int)      bordernodesMapToOrg;/**< maps border nodes to original nodes */
+   int                   globalstartidx;     /**< start position of level in global data */
    int                   nbordernodes;       /**< size of border */
    int                   extnode;            /**< extension nodes */
    SCIP_Bool             exnodeIsTerm;       /**< is the extension node a terminal? */
@@ -58,9 +59,11 @@ typedef struct dynamic_programming_border_level
 struct dynamic_programming_border
 {
    DPBSEQUENCE*          dpbsequence;        /**< ordering of nodes */
-   STP_Vectype(DPBLEVEL*) borderlevels;       /**< data for each border */
+   STP_Vectype(DPBLEVEL*) borderlevels;      /**< data for each border */
    SCIP_Bool*            nodes_isBorder;     /**< marks whether node is in current border */
    int*                  nodes_outdeg;       /**< degree w.r.t. not yet visited nodes */
+   int*                  bordercharmap;      /**< maps last border chars to current border chars */
+   SCIP_Real*            borderchardists;    /**< distance for last border nodes (chars) to extension nodes */
    STP_Vectype(int)      bordernodes;        /**< current border nodes */
    STP_Vectype(int)      prevbordernodes;    /**< nodes that are in previous but not current border */
    int*                  global_partitions;  /**< partitions */
@@ -75,6 +78,60 @@ struct dynamic_programming_border
    int                   nnodes;             /**< number of nodes of underlying graph */
 };
 
+/*
+ * Inline methods
+ */
+
+
+/** gets border delimiter for given iteration */
+static inline
+int dpborder_getDelimiter(
+   const DPBORDER*       dpborder,           /**< border */
+   int                   iteration           /**< iteration number */
+)
+{
+   assert(iteration >= 0);
+   assert(dpborder->borderlevels[iteration]->nbordernodes > 0);
+   assert(dpborder->borderlevels[iteration]->nbordernodes <= BPBORDER_MAXBORDERSIZE);
+
+   return dpborder->borderlevels[iteration]->nbordernodes;
+}
+
+
+/** gets top level */
+static inline
+DPBLEVEL* dpborder_getTopLevel(
+   const DPBORDER*       dpborder            /**< border */
+)
+{
+   const int pos = StpVecGetSize(dpborder->borderlevels) - 1;
+   assert(pos >= 0);
+   assert(dpborder->borderlevels[pos]);
+
+   return dpborder->borderlevels[pos];
+}
+
+
+/** gets previous level */
+static inline
+DPBLEVEL* dpborder_getPredLevel(
+   const DPBORDER*       dpborder            /**< border */
+)
+{
+   const int pos = StpVecGetSize(dpborder->borderlevels) - 1;
+   assert(pos >= 1);
+   assert(dpborder->borderlevels[pos - 1]);
+
+   return dpborder->borderlevels[pos - 1];
+}
+
+/*
+ * Internal interface methods
+ */
+
+
+extern void          dpborder_buildBorderMap(DPBORDER*);
+extern void          dpborder_buildBorderDists(const GRAPH*, DPBORDER*);
 extern SCIP_RETCODE  dpborder_dpblevelInit(SCIP*, DPBLEVEL**);
 extern void          dpborder_dpblevelFree(SCIP*, DPBLEVEL**);
 extern SCIP_RETCODE  dpborder_coreComputeOrdering(SCIP*, const GRAPH*, DPBORDER*);
