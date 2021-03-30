@@ -36,6 +36,9 @@
  */
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
+#define UNDERESTIMATEUSESACTIVITY 0x1u  /**< whether underestimation uses activity */
+#define OVERESTIMATEUSESACTIVITY  0x2u  /**< whether overestimation uses activity */
+
 /*lint -e666*/
 /*lint -e850*/
 
@@ -168,6 +171,10 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectDefault)
          *participating & SCIP_NLHDLR_METHOD_ACTIVITY, estimatebelowusesactivity, estimateaboveusesactivity) );
    }
 
+   /* remember estimatebelowusesactivity and estimateaboveusesactivity in nlhdlrexprdata */
+   *nlhdlrexprdata = (SCIP_NLHDLREXPRDATA*)(size_t)((estimatebelowusesactivity ? UNDERESTIMATEUSESACTIVITY : 0x0u)
+      | (estimateaboveusesactivity ? OVERESTIMATEUSESACTIVITY : 0x0u));
+
    return SCIP_OKAY;
 }
 
@@ -206,17 +213,34 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
    SCIPdebug( SCIPprintExpr(scip, expr, NULL) );
    SCIPdebug( SCIPinfoMessage(scip, NULL, "\n") );
 
-   /* get global bounds of auxiliary variables */
+   /* use global bounds of auxvar as global valid bounds for children
+    * if at root node (thus local=global) and estimate actually uses bounds, then intersect with (local) activity of expression
+    */
    SCIP_CALL( SCIPallocBufferArray(scip, &childrenbounds, SCIPexprGetNChildren(expr)) );
    for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
    {
       auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]);
       assert(auxvar != NULL);
 
-      /*TODO use SCIPgetExprBoundsNonlinear if at root?*/
       SCIPintervalSetBounds(&childrenbounds[i],
          -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(auxvar)),
           infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(auxvar)));
+
+      if( SCIPgetDepth(scip) == 0 &&
+          ((underestimate && ((size_t)nlhdlrexprdata & UNDERESTIMATEUSESACTIVITY)) ||
+           (overestimate  && ((size_t)nlhdlrexprdata & OVERESTIMATEUSESACTIVITY ))) )
+      {
+         SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(expr)[i]) );
+         SCIPintervalIntersect(&childrenbounds[i], childrenbounds[i], SCIPexprGetActivity(SCIPexprGetChildren(expr)[i]));
+      }
+
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childrenbounds[i]) )
+      {
+         SCIPdebugMsg(scip, "activity for expression %d (unexpectedly) empty in initsepa\n");
+         *infeasible = TRUE;
+         SCIPfreeBufferArray(scip, &childrenbounds);
+         return SCIP_OKAY;
+      }
    }
 
    /* allocate each coefficients array */
@@ -352,15 +376,9 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 
    nchildren = SCIPexprGetNChildren(expr);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &localbounds, SCIPexprGetNChildren(expr)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &globalbounds, SCIPexprGetNChildren(expr)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &refpoint, SCIPexprGetNChildren(expr)) );
-
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
-
-   /* make sure enough space is available in rowprep arrays */
-   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
-
+   SCIP_CALL( SCIPallocBufferArray(scip, &localbounds, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &globalbounds, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &refpoint, nchildren) );
    /* we need to pass a branchcand array to exprhdlr's estimate also if not asked to add branching scores */
    SCIP_CALL( SCIPallocBufferArray(scip, &branchcand, nchildren) );
 
@@ -369,10 +387,28 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[c]);
       assert(auxvar != NULL);
 
-      /*TODO use SCIPgetExprBoundsNonlinear*/
-      SCIPintervalSetBounds(&localbounds[c],
-         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbLocal(auxvar)),
-          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbLocal(auxvar)));
+      if( (size_t)nlhdlrexprdata & (overestimate ? OVERESTIMATEUSESACTIVITY : UNDERESTIMATEUSESACTIVITY) )
+      {
+         /* if expr estimate uses bounds, then
+          * - ensure we have a current activity stored in the expression and
+          * - use the activity intersected with the auxvar bounds for estimation
+          */
+         SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(expr)[c]) );
+         localbounds[c] = SCIPgetExprBoundsNonlinear(scip, SCIPexprGetChildren(expr)[c]);
+
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, localbounds[c]) )
+         {
+            *success = FALSE;
+            goto TERMINATE;
+         }
+      }
+      else
+      {
+         /* if we think that expr estimate wouldn't use bounds, then just set something valid */
+         SCIPintervalSetBounds(&localbounds[c],
+            -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbLocal(auxvar)),
+             infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbLocal(auxvar)));
+      }
 
       SCIPintervalSetBounds(&globalbounds[c],
          -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(auxvar)),
@@ -382,6 +418,11 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 
       branchcand[c] = TRUE;
    }
+
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
+   /* make sure enough space is available in rowprep arrays */
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
 
    /* call the estimation callback of the expression handler */
    SCIP_CALL( SCIPcallExprEstimate(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, SCIProwprepGetCoefs(rowprep), &constant, &local, success, branchcand) );
@@ -458,6 +499,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       }
    }
 
+TERMINATE:
    SCIPfreeBufferArray(scip, &branchcand);
    SCIPfreeBufferArray(scip, &refpoint);
    SCIPfreeBufferArray(scip, &globalbounds);
@@ -512,6 +554,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
    return SCIP_OKAY;
 }
 
+/** nonlinear handler copy callback */
 static
 SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrDefault)
 { /*lint --e{715}*/
@@ -520,6 +563,17 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrDefault)
    assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME) == 0);
 
    SCIP_CALL( SCIPincludeNlhdlrDefault(targetscip) );
+
+   return SCIP_OKAY;
+}
+
+/** callback to free expression specific data */
+static
+SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataDefault)
+{  /*lint --e{715}*/
+   assert(nlhdlrexprdata != NULL);
+
+   *nlhdlrexprdata = NULL;
 
    return SCIP_OKAY;
 }
@@ -537,6 +591,7 @@ SCIP_RETCODE SCIPincludeNlhdlrDefault(
    assert(nlhdlr != NULL);
 
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrDefault);
+   SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataDefault);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaDefault, NULL, nlhdlrEstimateDefault, NULL);
    SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
 

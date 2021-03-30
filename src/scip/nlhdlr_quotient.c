@@ -613,7 +613,7 @@ static
 SCIP_RETCODE estimateUnivariateQuotient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
-   SCIP_VAR*             x,                  /**< argument variable */
+   SCIP_EXPR*            xexpr,              /**< argument expression */
    SCIP_Real             a,                  /**< coefficient in numerator */
    SCIP_Real             b,                  /**< constant in numerator */
    SCIP_Real             c,                  /**< coefficient in denominator */
@@ -625,6 +625,7 @@ SCIP_RETCODE estimateUnivariateQuotient(
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
+   SCIP_VAR* x;
    SCIP_Real constant;
    SCIP_Real coef;
    SCIP_Real gllbx;
@@ -633,23 +634,27 @@ SCIP_RETCODE estimateUnivariateQuotient(
    SCIP_Real ubx;
    SCIP_Real solx;
    SCIP_Bool local;
+   SCIP_INTERVAL bnd;
 
    assert(rowprep != NULL);
    assert(branchinguseful != NULL);
    assert(success != NULL);
 
-   /* get variable bounds */
-   lbx = SCIPvarGetLbLocal(x);
-   ubx = SCIPvarGetUbLocal(x);
+   /* get local bounds on xexpr */
+   SCIP_CALL( SCIPevalExprActivity(scip, xexpr) );
+   bnd = SCIPgetExprBoundsNonlinear(scip, xexpr);
+   lbx = bnd.inf;
+   ubx = bnd.sup;
 
-   /* check whether variable has been fixed */
-   if( SCIPisEQ(scip, lbx, ubx) )
+   /* check whether variable has been fixed or has empty interval */
+   if( SCIPisEQ(scip, lbx, ubx) || ubx < lbx )
    {
       *success = FALSE;
       return SCIP_OKAY;
    }
 
    /* get global variable bounds */
+   x = SCIPgetExprAuxVarNonlinear(xexpr);
    gllbx = SCIPvarGetLbGlobal(x);
    glubx = SCIPvarGetUbGlobal(x);
 
@@ -885,8 +890,8 @@ SCIP_RETCODE estimateBivariate(
 static
 SCIP_RETCODE estimateBivariateQuotient(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             x,                  /**< numerator variable */
-   SCIP_VAR*             y,                  /**< denominator variable */
+   SCIP_EXPR*            xexpr,              /**< numerator expression */
+   SCIP_EXPR*            yexpr,              /**< denominator expression */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
    SCIP_SOL*             sol,                /**< solution point (or NULL for the LP solution) */
    SCIP_Real             a,                  /**< coefficient of numerator */
@@ -901,7 +906,7 @@ SCIP_RETCODE estimateBivariateQuotient(
    SCIP_Bool*            success             /**< buffer to store whether separation was successful */
    )
 {
-   SCIP_VAR* vars[2] = {x, y};
+   SCIP_VAR* vars[2];
    SCIP_Real coefs[2] = {0.0, 0.0};
    SCIP_Real constant = 0.0;
    SCIP_Real solx;
@@ -913,34 +918,44 @@ SCIP_RETCODE estimateBivariateQuotient(
    SCIP_Real uby;
    SCIP_Real lbz;
    SCIP_Real ubz;
+   SCIP_INTERVAL bnd;
 
-   assert(x != NULL);
-   assert(y != NULL);
-   assert(x != y);
+   assert(xexpr != NULL);
+   assert(yexpr != NULL);
+   assert(xexpr != yexpr);
    assert(auxvar != NULL);
    assert(rowprep != NULL);
    assert(branchingusefulx != NULL);
    assert(branchingusefuly != NULL);
    assert(success != NULL);
 
-   /* get variable bounds */
-   lbx = SCIPvarGetLbLocal(x);
-   ubx = SCIPvarGetUbLocal(x);
-   lby = SCIPvarGetLbLocal(y);
-   uby = SCIPvarGetUbLocal(y);
+   /* get bounds for x, y, and z */
+   SCIP_CALL( SCIPevalExprActivity(scip, xexpr) );
+   bnd = SCIPgetExprBoundsNonlinear(scip, xexpr);
+   lbx = bnd.inf;
+   ubx = bnd.sup;
+
+   SCIP_CALL( SCIPevalExprActivity(scip, yexpr) );
+   bnd = SCIPgetExprBoundsNonlinear(scip, yexpr);
+   lby = bnd.inf;
+   uby = bnd.sup;
+
    lbz = SCIPvarGetLbLocal(auxvar);
    ubz = SCIPvarGetUbLocal(auxvar);
 
-   /* check whether one of the variables has been fixed */
-   if( SCIPisEQ(scip, lbx, ubx) || SCIPisEQ(scip, lby, uby) )
+   /* check whether one of the variables has been fixed or has empty domain */
+   if( SCIPisEQ(scip, lbx, ubx) || SCIPisEQ(scip, lby, uby) || ubx < lbx || uby < lby )
    {
       *success = FALSE;
       return SCIP_OKAY;
    }
 
+   vars[0] = SCIPgetExprAuxVarNonlinear(xexpr);
+   vars[1] = SCIPgetExprAuxVarNonlinear(yexpr);
+
    /* get and adjust solution values */
-   solx = SCIPgetSolVal(scip, sol, x);
-   soly = SCIPgetSolVal(scip, sol, y);
+   solx = SCIPgetSolVal(scip, sol, vars[0]);
+   soly = SCIPgetSolVal(scip, sol, vars[1]);
    solz = SCIPgetSolVal(scip, sol, auxvar);
    solx = MIN(MAX(solx, lbx), ubx);
    soly = MIN(MAX(soly, lby), uby);
@@ -964,7 +979,7 @@ SCIP_RETCODE estimateBivariateQuotient(
       coefs[1] *= c;
 
       /* prepare rowprep */
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(x), SCIPvarGetName(y),
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]),
          SCIPgetNLPs(scip));
       SCIP_CALL( createRowprep(scip, rowprep, vars, coefs, constant, 2) );
    }
@@ -1076,8 +1091,6 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxQuotient)
 static
 SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
 { /*lint --e{715}*/
-   SCIP_VAR* auxvarx;
-   SCIP_VAR* auxvary;
    SCIP_Bool branchingusefulx = FALSE;
    SCIP_Bool branchingusefuly = FALSE;
    SCIP_ROWPREP* rowprep;
@@ -1090,27 +1103,19 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateQuotient)
    *addedbranchscores = FALSE;
    *success = FALSE;
 
-   /* get auxiliary variables */
-   auxvarx = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->numexpr);
-   auxvary = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->denomexpr);
-
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
-   if( auxvarx == auxvary )
+   if( nlhdlrexprdata->numexpr == nlhdlrexprdata->denomexpr )
    {
-      assert(nlhdlrexprdata->numexpr == nlhdlrexprdata->denomexpr);
-
       /* univariate case */
-      SCIP_CALL( estimateUnivariateQuotient(scip, sol, auxvarx, nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst,
+      SCIP_CALL( estimateUnivariateQuotient(scip, sol, nlhdlrexprdata->numexpr, nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst,
          nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant, overestimate, rowprep,
          &branchingusefulx, success) );
    }
    else
    {
-      assert(nlhdlrexprdata->numexpr != nlhdlrexprdata->denomexpr);
-
       /* bivariate case */
-      SCIP_CALL( estimateBivariateQuotient(scip, auxvarx, auxvary, SCIPgetExprAuxVarNonlinear(expr), sol,
+      SCIP_CALL( estimateBivariateQuotient(scip, nlhdlrexprdata->numexpr, nlhdlrexprdata->denomexpr, SCIPgetExprAuxVarNonlinear(expr), sol,
          nlhdlrexprdata->numcoef, nlhdlrexprdata->numconst, nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst,
          nlhdlrexprdata->constant, overestimate, rowprep,
          &branchingusefulx, &branchingusefuly, success) );
