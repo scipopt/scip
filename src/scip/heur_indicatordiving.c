@@ -36,26 +36,42 @@
 
 #define HEUR_NAME             "indicatordiving"
 #define HEUR_DESC             "indicator diving heuristic"
-#define HEUR_DISPCHAR         '?'
+#define HEUR_DISPCHAR         '?' /**< todo: change to SCIP_HEURDISPCHAR_DIVING */
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             1
-#define HEUR_FREQOFS          0
+#define HEUR_FREQOFS          1
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+#define DIVESET_ISPUBLIC      FALSE   /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
 
 /*
- * Data structures
+ * Default parameter settings
  */
 
-/* TODO: fill in the necessary primal heuristic data */
+#define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
+#define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
+#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
+#define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
+                                         *   where diving is performed (0.0: no limit) */
+#define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                         *   where diving is performed (0.0: no limit) */
+#define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
+#define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+#define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
+#define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
+                                         *   more general constraint handler diving variable selection? */
+#define DEFAULT_RANDSEED            11  /**< initial seed for random number generation */
 
-/** primal heuristic data */
+/** locally defined heuristic data */
 struct SCIP_HeurData
 {
 };
-
 
 /*
  * Local methods
@@ -149,6 +165,15 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    return SCIP_OKAY;
 }
 
+/** calculate score and preferred rounding direction for the candidate variable */
+static
+SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
+{
+
+   return SCIP_OKAY;
+}
+
+#define divesetAvailableIndicatordiving NULL
 
 /*
  * heuristic specific interface methods
@@ -181,8 +206,11 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitIndicatordiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitIndicatordiving) );
 
-   /* add xyz primal heuristic parameters */
-   /* TODO: (optional) add primal heuristic specific parameters with SCIPaddTypeParam() here */
+   /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
+   SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetAvailableIndicatordiving) );
 
    return SCIP_OKAY;
 }
