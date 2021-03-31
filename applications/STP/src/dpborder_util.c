@@ -241,6 +241,7 @@ int dpborder_partGetIdxNew(
    SCIP_Bool doCopy;
 
    assert(dpborder_partIsValid(borderpartition));
+   assert(globalstart + partsize + 2 < dpborder->global_partcap);
 
    for( i = 0; i < ncandstarts_sub; i++ )
    {
@@ -360,6 +361,72 @@ int dpborder_partGetIdxNew(
    return -1;
 }
 
+
+
+/** Gets global index of new global partition, similar to above, but merely removes prev. border
+ *  nodes.
+ *  Returns -1 if no valid partition could be built. */
+int dpborder_partGetIdxNewExclusive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const DPBPART*        borderpartition,    /**< base partition */
+   DPBORDER*             dpborder            /**< border */
+)
+{
+   int globalstart = dpborder->global_partstarts[dpborder->global_npartitions];
+   int globalend = globalstart;
+   DPB_Ptype* RESTRICT global_partitions = dpborder->global_partitions;
+   const int* const bordercharmap = dpborder->bordercharmap;
+   const DPB_Ptype* const partitionchars = borderpartition->partchars;
+   const DPB_Ptype delimiter_new = dpborder_getTopDelimiter(dpborder);
+   const int partsize = borderpartition->partsize;
+
+   assert(dpborder_partIsValid(borderpartition));
+   assert(globalstart + partsize < dpborder->global_partcap);
+
+   for( int i = 0; i < partsize; i++ )
+   {
+      const DPB_Ptype partchar = partitionchars[i];
+      assert(0 <= partchar && partchar <= borderpartition->delimiter);
+      assert(partchar != borderpartition->delimiter || bordercharmap[partchar] == delimiter_new);
+
+      if( bordercharmap[partchar] != -1 )
+         global_partitions[globalend++] = bordercharmap[partchar];
+   }
+
+   /* check for empty subset */
+   for( int i = globalstart + 1; i != globalend; i++ )
+   {
+      if( global_partitions[i] == delimiter_new && global_partitions[i - 1] == delimiter_new )
+      {
+         globalstart = -1;
+         break;
+      }
+   }
+
+#ifdef SCIP_DEBUG
+   if( globalstart != -1 )
+   {
+      DPBPART partition;
+      partition.partchars = &(global_partitions[globalstart]);
+      partition.partsize = (globalend - globalstart);
+      partition.delimiter = delimiter_new;
+      printf("new (exclusive sub) partition: \n");
+      dpborder_partPrint(&partition);
+   }
+#endif
+
+   if( globalstart != -1 )
+   {
+      StpVecPushBack(scip, dpborder->global_partstarts, globalend);
+      StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
+      dpborder->global_npartitions++;
+      return dpborder->global_npartitions - 1;
+   }
+
+   SCIPdebugMessage("exlusive sub-partition is invalid... \n");
+
+   return -1;
+}
 
 /** builds map between old and new border char representation */
 void dpborder_buildBorderMap(

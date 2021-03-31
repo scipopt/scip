@@ -223,13 +223,6 @@ SCIP_RETCODE updateFromPartition(
    const int delimiter_new = dpborder_getTopDelimiter(dpborder);
 
    partitionGetRangeGlobal(dpborder, globalposition, &part_start, &part_end);
-
-   // todo check for P \ L
-   if( !toplevel->exnodeIsTerm && 0  )
-   {
-
-   }
-
    partition.partchars = &(global_partitions[part_start]);
    partition.partsize = (part_end - part_start);
    partition.delimiter = dpborder_getDelimiter(dpborder, StpVecGetSize(dpborder->borderlevels) - 2);
@@ -243,13 +236,25 @@ SCIP_RETCODE updateFromPartition(
    SCIP_CALL( SCIPallocBufferArray(scip, &subbuffer, BPBORDER_MAXBORDERSIZE) );
 
    /* make sure that partition storage is large enough */
-   SCIP_CALL( partitionTryRealloc(scip, powsize * BPBORDER_MAXBORDERSIZE * 2, dpborder) );
+   SCIP_CALL( partitionTryRealloc(scip, (powsize + 1) * BPBORDER_MAXBORDERSIZE * 2, dpborder) );
    global_partitions = dpborder->global_partitions;
    partition.partchars = &(global_partitions[part_start]);
 
-   SCIPdebugMessage("partition ncands=%d \n", ncands);
+   if( !toplevel->exnodeIsTerm )
+   {
+      /* try to add/update the partition that does not include the extension node */
+      const int globalposition_new = dpborder_partGetIdxNewExclusive(scip, &partition, dpborder);
+      if( globalposition_new != -1 )
+      {
+         dpborder->global_partcosts[globalposition_new] = part_cost;
+         // todo also need to set ancestor!
+      }
+   }
 
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("partition ncands=%d, isTerm=%d ...base partition: \n", ncands, toplevel->exnodeIsTerm);
    dpborder_partPrint(&partition);
+#endif
 
    /* loop over all subsets (also the empty set) */
    for( uint32_t counter = powsize; counter >= 1; counter-- )
@@ -293,6 +298,7 @@ SCIP_RETCODE updateFromPartition(
       {
          assert(LT(cost_new, FARAWAY));
          dpborder->global_partcosts[globalposition_new] = cost_new;
+         // todo also need to set ancestor! maybe extra method, also used above...
 
          if( allTermsAreVisited )
          {
@@ -338,8 +344,8 @@ SCIP_RETCODE addPartitions(
          dpborder->global_partitions[0] = 1;
          dpborder->global_partitions[1] = 4;
          dpborder->global_partitions[2] = 0;
-         dpborder->global_partitions[3] = 4;
-         dpborder->global_partitions[4] = 2;
+         dpborder->global_partitions[3] = 2;
+         dpborder->global_partitions[4] = 4;
          dpborder->global_partitions[5] = 3;
 
 
