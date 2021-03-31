@@ -82,11 +82,11 @@ SCIP_RETCODE partitionTryRealloc(
    assert(size >= 0);
    assert(newadds > 0);
 
-
    if( newadds + size > dpborder->global_partcap )
    {
-      dpborder->global_partcap *= 2;
-      assert(newadds + dpborder->global_npartitions > size);
+      while( newadds + size > dpborder->global_partcap )
+         dpborder->global_partcap *= 2;
+
       SCIPdebugMessage("reallocating memory (to %d) \n", dpborder->global_partcap);
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(dpborder->global_partitions), dpborder->global_partcap) );
    }
@@ -272,8 +272,6 @@ SCIP_RETCODE updateFromPartition(
 
       globalposition_new = dpborder_partGetIdxNew(scip, &partition, subbuffer, nsub, dpborder);
 
-
-
       /* non-valid partition? */
       if( globalposition_new == -1 )
       {
@@ -284,7 +282,6 @@ SCIP_RETCODE updateFromPartition(
       // todo
       printf("card=%d \n", dpborder_partglobalGetCard(globalposition_new, delimiter_new, dpborder) );
 
-
       assert(globalposition_new >= 0);
 
       // todo compute connection cost
@@ -293,15 +290,14 @@ SCIP_RETCODE updateFromPartition(
 
       if( GT(dpborder->global_partcosts[globalposition_new], cost_new) )
       {
-         // todo update
+         dpborder->global_partcosts[globalposition_new] = cost_new;
 
          if( allTermsAreVisited )
          {
-            // check whether size of parition is 1!
-            // todo extra method to get cardinality!
             if( 1 == dpborder_partglobalGetCard(globalposition_new, delimiter_new, dpborder) )
             {
                dpborder->global_obj = MIN(dpborder->global_obj, cost_new);
+               SCIPdebugMessage("updated global obj to %f \n", dpborder->global_obj);
             }
          }
       }
@@ -333,14 +329,16 @@ SCIP_RETCODE addPartitions(
    {
       int todo;
 
-      if( iteration == 3 )
+      if( iteration == 4 )
       {
          StpVecPushBack(scip, dpborder->global_partcosts, 2.0);
-         StpVecPushBack(scip, dpborder->global_partstarts, 4);
-         dpborder->global_partitions[0] = 0;
-         dpborder->global_partitions[1] = 1;
-         dpborder->global_partitions[2] = 3;
-         dpborder->global_partitions[3] = 2;
+         StpVecPushBack(scip, dpborder->global_partstarts, 6);
+         dpborder->global_partitions[0] = 1;
+         dpborder->global_partitions[1] = 4;
+         dpborder->global_partitions[2] = 0;
+         dpborder->global_partitions[3] = 4;
+         dpborder->global_partitions[4] = 2;
+         dpborder->global_partitions[5] = 3;
 
 
          //StpVecPushBack(scip, dpborder->global_partitions, 0);
@@ -351,6 +349,8 @@ SCIP_RETCODE addPartitions(
          dpborder->global_npartitions++;
          dpborder->borderchardists[1] = 2.0;
          dpborder->borderchardists[2] = 2.0;
+         dpborder->borderchardists[3] = 2.0;
+         dpborder->borderchardists[4] = 2.0;
 
          SCIP_CALL( updateFromPartition(scip, 0, graph, dpborder) );
          assert(0);
