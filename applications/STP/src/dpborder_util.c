@@ -149,6 +149,32 @@ STP_Vectype(int) dpborder_partGetCandstarts(
 }
 
 
+/** gets cardinality from global index of new global partition. */
+int dpborder_partglobalGetCard(
+   int                   globalindex,        /**< global index */
+   int                   delimiter,          /**< delimiter */
+   const DPBORDER*       dpborder            /**< border */
+)
+{
+   int card = 1;
+   const int globalstart = dpborder->global_partstarts[globalindex];
+   const int globalend = dpborder->global_partstarts[globalindex + 1];
+   const DPB_Ptype* const global_partitions = dpborder->global_partitions;
+
+   assert(0 <= globalindex && globalindex < dpborder->global_npartitions);
+   assert(0 <= delimiter);
+   assert(globalstart < globalend);
+
+   for( int i = globalstart; i != globalend; i++ )
+   {
+      if( global_partitions[i] == delimiter )
+         card++;
+   }
+
+   return card;
+}
+
+
 /** Gets global index of new global partition.
  *  Returns -1 if no valid partition could be built. */
 int dpborder_partGetIdxNew(
@@ -282,7 +308,12 @@ int dpborder_partGetIdxNew(
    }
 #endif
 
-   return globalstart;
+   if( globalstart != -1 )
+   {
+      return dpborder->global_npartitions - 1;
+   }
+
+   return -1;
 }
 
 

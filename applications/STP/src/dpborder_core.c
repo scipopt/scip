@@ -220,6 +220,7 @@ SCIP_RETCODE updateFromPartition(
    uint32_t powsize;
    const SCIP_Real part_cost = dpborder->global_partcosts[globalposition];
    const SCIP_Bool allTermsAreVisited = (dpborder->nterms == dpborder->ntermsvisited);
+   const int delimiter_new = dpborder_getTopDelimiter(dpborder);
 
    partitionGetRangeGlobal(dpborder, globalposition, &part_start, &part_end);
 
@@ -271,12 +272,18 @@ SCIP_RETCODE updateFromPartition(
 
       globalposition_new = dpborder_partGetIdxNew(scip, &partition, subbuffer, nsub, dpborder);
 
+
+
       /* non-valid partition? */
       if( globalposition_new == -1 )
       {
          SCIPdebugMessage("partition is invalid... \n");
          continue;
       }
+
+      // todo
+      printf("card=%d \n", dpborder_partglobalGetCard(globalposition_new, delimiter_new, dpborder) );
+
 
       assert(globalposition_new >= 0);
 
@@ -292,7 +299,7 @@ SCIP_RETCODE updateFromPartition(
          {
             // check whether size of parition is 1!
             // todo extra method to get cardinality!
-            if( 0 )
+            if( 1 == dpborder_partglobalGetCard(globalposition_new, delimiter_new, dpborder) )
             {
                dpborder->global_obj = MIN(dpborder->global_obj, cost_new);
             }
