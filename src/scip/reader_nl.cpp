@@ -130,6 +130,8 @@ private:
 
    // SOS constraints
    // collected while handling suffixes in SuffixHandler
+   // sosvars maps the SOS index (can be negative) to the indices of the variables in the SOS
+   // sosweights gives for each variable its weight in the SOS it appears in (if any)
    std::map<int, std::vector<int> > sosvars;
    std::vector<int> sosweights;
 
