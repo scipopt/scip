@@ -334,41 +334,6 @@ SCIP_RETCODE addPartitions(
 
    SCIPdebugMessage("adding partitions: \n");
 
-   {
-      int todo;
-
-      if( iteration == 4 )
-      {
-         StpVecPushBack(scip, dpborder->global_partcosts, 2.0);
-         StpVecPushBack(scip, dpborder->global_partstarts, 6);
-         dpborder->global_partitions[0] = 1;
-         dpborder->global_partitions[1] = 4;
-         dpborder->global_partitions[2] = 0;
-         dpborder->global_partitions[3] = 2;
-         dpborder->global_partitions[4] = 4;
-         dpborder->global_partitions[5] = 3;
-
-
-         //StpVecPushBack(scip, dpborder->global_partitions, 0);
-         //StpVecPushBack(scip, dpborder->global_partitions, 1);
-         //StpVecPushBack(scip, dpborder->global_partitions, 3); // delim
-         //StpVecPushBack(scip, dpborder->global_partitions, 2);
-
-         dpborder->global_npartitions++;
-   /*     dpborder->borderchardists[1] = 2.0;
-         dpborder->borderchardists[2] = 2.0;
-         dpborder->borderchardists[3] = 2.0;
-         dpborder->borderchardists[4] = 2.0;
-*/
-         SCIP_CALL( updateFromPartition(scip, 0, graph, dpborder) );
-         assert(0);
-
-      }
-
-
-      return SCIP_OKAY;
-   }
-
    assert(iteration >= 1);
    assert(global_start < global_end);
 
@@ -452,6 +417,11 @@ SCIP_RETCODE addLevelFirst(
    level->exnodeIsTerm = TRUE;
    level->nbordernodes = 1;
    level->globalstartidx = 0;
+
+   dpborder->global_partitions[0] = 0;
+   StpVecPushBack(scip, dpborder->global_partstarts, 1);
+   StpVecPushBack(scip, dpborder->global_partcosts, 0.0);
+   dpborder->global_npartitions = 1;
 
    assert(StpVecGetSize(dpborder->bordernodes) == 1);
 
