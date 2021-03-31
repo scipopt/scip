@@ -147,7 +147,7 @@ private:
    bool nextName(
       const char*&       namesbegin,         /**< current pointer into names string, or NULL */
       const char*        namesend,           /**< pointer to end of names string */
-      char*              name                /**< buffer to store name, should have lenght SCIP_MAXSTRLEN */
+      char*              name                /**< buffer to store name, should have length SCIP_MAXSTRLEN */
    )
    {
       if( namesbegin == NULL )
@@ -531,7 +531,7 @@ public:
 
             if( SCIPisExprValue(scip, firstChild) && SCIPgetValueExprValue(firstChild) > 0.0 )
             {
-               // reformulate constant^x as exp(y*log(constant)), if constant > 0.0
+               // reformulate constant^y as exp(y*log(constant)), if constant > 0.0
                // if constant < 0, we create an expression and let cons_nonlinear figure out infeasibility somehow
                SCIP_EXPR* prod;
 
@@ -620,7 +620,7 @@ public:
    void OnObj(
       int                objectiveIndex,     ///< index of objective
       mp::obj::Type      type,               ///< objective sense
-      SCIP_EXPR*         nonlinearExpression ///< nonlinaer part of objective function
+      SCIP_EXPR*         nonlinearExpression ///< nonlinear part of objective function
       )
    {
       if( objectiveIndex >= 1 )
