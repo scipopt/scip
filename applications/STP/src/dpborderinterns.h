@@ -33,7 +33,7 @@
 
 #define BPBORDER_MAXNPARTITIONS 50000000
 #define BPBORDER_MAXBORDERSIZE  16
-#define DPB_Ptype unsigned char
+#define DPB_Ptype int8_t
 
 /** nodes sequence structure */
 typedef struct dynamic_programming_border_nodes_sequence
@@ -59,7 +59,7 @@ typedef struct dynamic_programming_border_level
 /** single partition */
 typedef struct dynamic_programming_border_partition
 {
-   const DPB_Ptype*      partchars;          /**< partition characters */
+   DPB_Ptype*            partchars;          /**< partition characters */
    int                   partsize;           /**< size of partition */
    DPB_Ptype             delimiter;          /**< delimiter */
 } DPBPART;
@@ -109,6 +109,22 @@ int dpborder_getDelimiter(
 }
 
 
+/** gets border delimiter */
+static inline
+int dpborder_getTopDelimiter(
+   const DPBORDER*       dpborder            /**< border */
+)
+{
+   const int pos = StpVecGetSize(dpborder->borderlevels) - 1;
+
+   assert(pos >= 0);
+   assert(dpborder->borderlevels[pos]->nbordernodes > 0);
+   assert(dpborder->borderlevels[pos]->nbordernodes <= BPBORDER_MAXBORDERSIZE);
+
+   return dpborder->borderlevels[pos]->nbordernodes;
+}
+
+
 /** gets top level */
 static inline
 DPBLEVEL* dpborder_getTopLevel(
@@ -141,8 +157,10 @@ DPBLEVEL* dpborder_getPredLevel(
  */
 
 
-extern SCIP_Bool  dpborder_partIsValid(const DPBPART*);
+extern int dpborder_partGetIdxNew(SCIP*, const DPBPART*, const int*, int, DPBORDER*);
 extern STP_Vectype(int)  dpborder_partGetCandstarts(SCIP*, const DPBPART*, const DPBORDER*);
+extern SCIP_Bool  dpborder_partIsValid(const DPBPART*);
+extern void  dpborder_partPrint(const DPBPART*);
 extern void          dpborder_buildBorderMap(DPBORDER*);
 extern void          dpborder_buildBorderDists(const GRAPH*, DPBORDER*);
 extern SCIP_RETCODE  dpborder_dpblevelInit(SCIP*, DPBLEVEL**);

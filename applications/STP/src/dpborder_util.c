@@ -72,6 +72,34 @@ SCIP_Bool dpborder_partIsValid(
 }
 
 
+/** prints partition */
+void dpborder_partPrint(
+   const DPBPART*        borderpartition     /**< partition */
+)
+{
+   const DPB_Ptype* const partitionchars = borderpartition->partchars;
+   const DPB_Ptype delimiter = borderpartition->delimiter;
+   const int partsize = borderpartition->partsize;
+
+   for( int i = 0; i < partsize; i++ )
+   {
+      const DPB_Ptype borderchar = partitionchars[i];
+
+      if( borderchar == delimiter )
+      {
+         printf("X ");
+         continue;
+      }
+
+      printf("%d ", borderchar);
+   }
+
+   printf(" \n");
+
+   assert(dpborder_partIsValid(borderpartition));
+}
+
+
 /** gets candidates start for given partition */
 STP_Vectype(int) dpborder_partGetCandstarts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -90,7 +118,7 @@ STP_Vectype(int) dpborder_partGetCandstarts(
    for( int i = 0; i < partsize; i++ )
    {
       const DPB_Ptype borderchar = partitionchars[i];
-      assert(borderchar <= delimiter);
+      assert(0 <= borderchar && borderchar <= delimiter);
 
       if( borderchar == delimiter )
          continue;
@@ -118,6 +146,143 @@ STP_Vectype(int) dpborder_partGetCandstarts(
    }
 
    return candstarts;
+}
+
+
+/** Gets global index of new global partition.
+ *  Returns -1 if no valid partition could be built. */
+int dpborder_partGetIdxNew(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const DPBPART*        borderpartition,    /**< base partition */
+   const int*            candstarts_sub,     /**< candidate starts from which to construct new partition */
+   int                   ncandstarts_sub,    /**< number of candidate starts */
+   DPBORDER*             dpborder            /**< border */
+)
+{
+   int i;
+   int globalstart = dpborder->global_partstarts[dpborder->global_npartitions];
+   int globalend = globalstart;
+   DPB_Ptype* RESTRICT global_partitions = dpborder->global_partitions;
+   const int* const bordercharmap = dpborder->bordercharmap;
+   DPB_Ptype* RESTRICT partitionchars = borderpartition->partchars;
+   const DPB_Ptype delimiter_prev = borderpartition->delimiter;
+   const DPB_Ptype delimiter_new = dpborder_getTopDelimiter(dpborder);
+   const int partsize = borderpartition->partsize;
+   SCIP_Bool doCopy;
+
+   assert(dpborder_partIsValid(borderpartition));
+
+   for( i = 0; i < ncandstarts_sub; i++ )
+   {
+      const int candstart = candstarts_sub[i];
+      assert(0 <= candstart && candstart < partsize);
+
+      for( int j = candstart; j < partsize; j++ )
+      {
+         const DPB_Ptype partchar = partitionchars[j];
+         assert(0 <= partchar && partchar <= delimiter_prev);
+
+         if( partchar == delimiter_prev )
+            break;
+
+         if( bordercharmap[partchar] != -1 )
+            global_partitions[globalend++] = bordercharmap[partchar];
+      }
+
+      assert(partitionchars[candstart] < delimiter_prev);
+
+      /* we mark the starts to skip them later on */
+      partitionchars[candstart] = -partitionchars[candstart] - 1;
+      assert(partitionchars[candstart] < 0);
+   }
+
+   /* adds char for extension node... */
+   global_partitions[globalend++] = dpborder_getTopLevel(dpborder)->nbordernodes - 1;
+   assert(dpborder_getTopLevel(dpborder)->extnode
+      == dpborder->bordernodes[dpborder_getTopLevel(dpborder)->nbordernodes - 1]);
+
+   doCopy = TRUE;
+
+   if( partitionchars[0] >= 0 )
+   {
+      assert(delimiter_prev != partitionchars[0]);
+      global_partitions[globalend++] = delimiter_new;
+   }
+
+   /* now we add the remaining sets of the partition */
+   for( i = 0; i < partsize; i++ )
+   {
+      const DPB_Ptype partchar = partitionchars[i];
+      if( partchar < 0 )
+      {
+         partitionchars[i] = -(partitionchars[i] + 1);
+         doCopy = FALSE;
+         continue;
+      }
+
+      if( partchar == delimiter_prev )
+      {
+         assert(i < partsize);
+
+         if( partitionchars[i + 1] >= 0 )
+         {
+            /* empty subset? */
+            if( delimiter_new == global_partitions[globalend - 1] )
+            {
+               globalstart = -1;
+               break;
+            }
+
+            global_partitions[globalend++] = delimiter_new;
+            doCopy = TRUE;
+         }
+         continue;
+      }
+
+      if( !doCopy )
+         continue;
+
+      if( bordercharmap[partchar] != -1 )
+         global_partitions[globalend++] = bordercharmap[partchar];
+   }
+
+   if( delimiter_new == global_partitions[globalend - 1] )
+      globalstart = -1;
+
+   if( globalstart == -1 )
+   {
+      for( int j = i + 1; j < partsize; j++ )
+      {
+         if( partitionchars[j] < 0 )
+            partitionchars[j] = -(partitionchars[j] + 1);
+      }
+   }
+   else
+   {
+      StpVecPushBack(scip, dpborder->global_partstarts, globalend);
+      StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
+      dpborder->global_npartitions++;
+   }
+
+
+#ifndef NDEBUG
+   for( int j = 0; j < partsize; j++ )
+      assert(0 <= partitionchars[j] && partitionchars[j] <= delimiter_prev);
+#endif
+
+#ifdef SCIP_DEBUG
+   if( globalstart != -1 )
+   {
+      DPBPART partition;
+      partition.partchars = &(global_partitions[globalstart]);
+      partition.partsize = (globalend - globalstart);
+      partition.delimiter = delimiter_new;
+      printf("new partition: \n");
+      dpborder_partPrint(&partition);
+   }
+#endif
+
+   return globalstart;
 }
 
 
