@@ -116,7 +116,8 @@ private:
    // used to create a corresponding constraint in EndInput(), unless NULL
    SCIP_EXPR* objexpr;
 
-   // common expressions (defined variables)
+   // common expressions (defined variables from statements like "var xsqr = x^2;" in an AMPL model)
+   // they are constructed by BeginCommonExpr/EndCommonExpr below and are referenced by index in OnCommonExprRef
    std::vector<SCIP_EXPR*> commonexprs;
 
    // collect expressions that need to be released eventually
