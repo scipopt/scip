@@ -284,12 +284,14 @@ SCIP_RETCODE updateFromPartition(
 
       assert(globalposition_new >= 0);
 
-      // todo compute connection cost
-      cost_new = 0.0;
+      cost_new = dpborder_partGetConnectionCost(dpborder, &partition, subbuffer, nsub);
+      printf("cost_new=%f \n", cost_new);
+
       cost_new += part_cost;
 
       if( GT(dpborder->global_partcosts[globalposition_new], cost_new) )
       {
+         assert(LT(cost_new, FARAWAY));
          dpborder->global_partcosts[globalposition_new] = cost_new;
 
          if( allTermsAreVisited )
@@ -347,11 +349,11 @@ SCIP_RETCODE addPartitions(
          //StpVecPushBack(scip, dpborder->global_partitions, 2);
 
          dpborder->global_npartitions++;
-         dpborder->borderchardists[1] = 2.0;
+   /*     dpborder->borderchardists[1] = 2.0;
          dpborder->borderchardists[2] = 2.0;
          dpborder->borderchardists[3] = 2.0;
          dpborder->borderchardists[4] = 2.0;
-
+*/
          SCIP_CALL( updateFromPartition(scip, 0, graph, dpborder) );
          assert(0);
 

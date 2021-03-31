@@ -156,6 +156,7 @@ DPBLEVEL* dpborder_getPredLevel(
  * Internal interface methods
  */
 
+extern SCIP_Real dpborder_partGetConnectionCost(const DPBORDER*, const DPBPART*, const int*, int);
 extern int dpborder_partglobalGetCard(int, int, const DPBORDER*);
 extern int dpborder_partGetIdxNew(SCIP*, const DPBPART*, const int*, int, DPBORDER*);
 extern STP_Vectype(int)  dpborder_partGetCandstarts(SCIP*, const DPBPART*, const DPBORDER*);

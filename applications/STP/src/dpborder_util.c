@@ -175,6 +175,50 @@ int dpborder_partglobalGetCard(
 }
 
 
+/** gets minimum connection cost of connection selected sets of partition to extension vertex */
+SCIP_Real dpborder_partGetConnectionCost(
+   const DPBORDER*       dpborder,           /**< border */
+   const DPBPART*        borderpartition,    /**< base partition */
+   const int*            candstarts_sub,     /**< candidate starts from which to construct new partition */
+   int                   ncandstarts_sub     /**< number of candidate starts */
+)
+{
+   SCIP_Real costsum = 0.0;
+   const SCIP_Real* const borderchardists = dpborder->borderchardists;
+   const DPB_Ptype* const partitionchars = borderpartition->partchars;
+   const DPB_Ptype delimiter_prev = borderpartition->delimiter;
+   const int partsize = borderpartition->partsize;
+
+   assert(dpborder_partIsValid(borderpartition));
+
+   for( int i = 0; i < ncandstarts_sub; i++ )
+   {
+      SCIP_Real minedgecost = FARAWAY;
+      const int candstart = candstarts_sub[i];
+      assert(0 <= candstart && candstart < partsize);
+
+      for( int j = candstart; j < partsize; j++ )
+      {
+         const DPB_Ptype partchar = partitionchars[j];
+         assert(0 <= partchar && partchar <= delimiter_prev);
+
+         if( partchar == delimiter_prev )
+            break;
+
+         if( LT(borderchardists[partchar], minedgecost) )
+            minedgecost = borderchardists[partchar];
+      }
+
+      costsum += minedgecost;
+
+      if( GE(costsum, FARAWAY) )
+         break;
+   }
+
+   return costsum;
+}
+
+
 /** Gets global index of new global partition.
  *  Returns -1 if no valid partition could be built. */
 int dpborder_partGetIdxNew(
@@ -303,7 +347,7 @@ int dpborder_partGetIdxNew(
       partition.partchars = &(global_partitions[globalstart]);
       partition.partsize = (globalend - globalstart);
       partition.delimiter = delimiter_new;
-      printf("new partition: \n");
+      printf("new (sub) partition: \n");
       dpborder_partPrint(&partition);
    }
 #endif
