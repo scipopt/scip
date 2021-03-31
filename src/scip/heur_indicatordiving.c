@@ -21,13 +21,18 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#define SCIP_DEBUG
 
 #include <assert.h>
 
+#include "scip/cons_indicator.h"
 #include "scip/heur_indicatordiving.h"
 #include "scip/heuristics.h"
+#include "scip/pub_cons.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
+#include "scip/pub_var.h"
+#include "scip/scip_cons.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
@@ -198,6 +203,44 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
     *
     * todo: implement this callback
     */
+
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** indicatorconss;
+   SCIP_Bool isindicatorvar;
+   int c;
+
+   /* check if cand variable is indicator variable */
+   if( SCIPvarGetType(cand) != 0 )
+   {
+      return SCIP_OKAY;
+   }
+   conshdlr = SCIPfindConshdlr(scip, "indicator");
+   indicatorconss = SCIPconshdlrGetConss(conshdlr);
+
+   isindicatorvar = FALSE;
+   for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
+   {
+      SCIP_VAR* indicatorvar;
+      indicatorvar = SCIPgetBinaryVarIndicator(indicatorconss[c]);
+
+      if( cand == indicatorvar )
+      {
+         isindicatorvar = TRUE;
+         break;
+      }
+   }
+
+   if( !isindicatorvar )
+      return SCIP_OKAY;
+
+   //assert(!SCIPisFeasIntegral(scip, candsol));
+   //assert(!(SCIPvarGetLbLocal(cand) < SCIPvarGetUbLocal(cand) - 0.5));
+
+   SCIPdebugMessage("cand: %s, candsol: %.2f\n", SCIPvarGetName(cand), candsol);
+
+   /* round down fractional indicator variable */
+   *roundup = FALSE;
+   *score = 100;
 
    return SCIP_OKAY;
 }
