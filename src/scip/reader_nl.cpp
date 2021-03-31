@@ -1389,7 +1389,6 @@ SCIP_RETCODE SCIPincludeReaderNl(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) );
-   /* SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeNl) ); */
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP bb7d6166", "AMPL .nl file reader library (github.com/ampl/mp)") );
