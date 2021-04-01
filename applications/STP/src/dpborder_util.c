@@ -457,15 +457,17 @@ void dpborder_markSolNodes(
    const STP_Vectype(int) global_partstarts = dpborder->global_partstarts;
    const int nnodes = dpborder->nnodes;
    const int optposition = dpborder->global_optposition;
-   int pos;
-   int level;
+   int nlevels = 0;
 
    assert(dpborder && nodes_isSol);
 
    BMSclearMemoryArray(nodes_isSol, nnodes);
    SCIPdebugMessage("marking solution nodes: \n");
 
-   for( pos = optposition, level = nnodes - 1; pos != 0; pos = dpborder->global_predparts[pos], level-- )
+   for( int pos = optposition; pos != 0; pos = dpborder->global_predparts[pos] )
+      nlevels++;
+
+   for( int pos = optposition, level = nlevels; pos != 0; pos = dpborder->global_predparts[pos], level-- )
    {
       const int globalend = global_partstarts[pos + 1];
       const STP_Vectype(int) nodemap = dpborder->borderlevels[level]->bordernodesMapToOrg;
@@ -495,4 +497,7 @@ void dpborder_markSolNodes(
          }
       }
    }
+
+   SCIPdebugMessage("final solnode=%d \n", dpborder->borderlevels[0]->extnode);
+   nodes_isSol[dpborder->borderlevels[0]->extnode] = TRUE;
 }
