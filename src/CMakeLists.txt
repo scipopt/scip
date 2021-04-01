@@ -363,6 +363,7 @@ set(scipsources
     tclique/tclique_graph.c
     dijkstra/dijkstra.c
     xml/xmlparse.c
+    ${amplsrc}
 )
 
 set(objscipsources
@@ -720,6 +721,7 @@ set(scipheaders
     scip/reader_lp.h
     scip/reader_mps.h
     scip/reader_mst.h
+    scip/reader_nl.h
     scip/reader_opb.h
     scip/reader_osil.h
     scip/reader_pbm.h

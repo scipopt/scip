@@ -24,7 +24,6 @@
 #ifndef __SCIP_READER_NL_H__
 #define __SCIP_READER_NL_H__
 
-
 #include "scip/scip.h"
 
 #ifdef __cplusplus
@@ -37,11 +36,13 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** writes AMPL solution file */
+/** writes AMPL solution file
+ *
+ * problem must have been read with .nl reader
+ */
 SCIP_EXPORT
-SCIP_RETCODE SCIPwriteAmplSolReaderNl(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          nlreader            /**< AMPL .nl file reader */
+SCIP_RETCODE SCIPwriteSolutionNl(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

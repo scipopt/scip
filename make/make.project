@@ -132,6 +132,7 @@ READLINE	=	true
 ZLIB		=	true
 GMP		=	true
 ZIMPL		=	false
+AMPL		=	true
 IPOPT		=	false
 FILTERSQP	=	false
 WORHP		=	false
@@ -256,6 +257,8 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/blockmemshell \
 			$(LIBOBJDIR)/tclique \
 			$(LIBOBJDIR)/lpi \
+			$(LIBOBJDIR)/amplmp/src \
+			$(LIBOBJDIR)/amplmp/ \
 			$(LIBOBJDIR)/tpi \
 			$(LIBOBJDIR)/xml \
 			$(LIBOBJDIR)/dijkstra \

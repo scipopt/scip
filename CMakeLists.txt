@@ -89,6 +89,7 @@ option(GMP "should gmp be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
 option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
+option(AMPL "should ampl interface be compiled" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
 # for backward compability
@@ -108,7 +109,6 @@ option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
-option(AMPL "Enable AMPL support" OFF)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -498,6 +498,15 @@ else()
     set(SCIP_WITH_ZIMPL OFF)
 endif()
 
+if(AMPL)
+    set(SCIP_WITH_AMPL ON)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/amplmp/include)
+    set(amplsrc scip/reader_nl.cpp amplmp/src/format.cpp amplmp/src/expr-info.cpp amplmp/src/nl-reader.cpp amplmp/src/os.cpp amplmp/src/posix.cpp)
+else()
+    message(STATUS "Support AMPL: OFF")
+    set(SCIP_WITH_AMPL OFF)
+endif()
+
 # IPOPT
 if(IPOPT)
     message(STATUS "Finding IPOPT")
@@ -595,16 +604,6 @@ if(BUILD_TESTING)
     add_subdirectory(applications)
 
     add_custom_target(all_executables DEPENDS scip unittests examples applications)
-endif()
-
-if(AMPL)
-    #
-    # add AMPL interface
-    #
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
-    add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
-else()
-    message(STATUS "Support AMPL: OFF")
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})

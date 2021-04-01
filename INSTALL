@@ -228,6 +228,9 @@ Here is what you have to do to get SCIP running:
    - "ZIMPL=false"     to disable ZIMPL file reader
    - "ZIMPL=auto"      to automatically enable ZIMPL support if and only if the GMP library is available (default)
 
+   - "AMPL=true"       to enable AMPL .nl file reader and allow to run SCIP executable as solver under AMPL
+   - "AMPL=false"      to disable AMPL support
+
    - "FILTERSQP=true"  to enable FilterSQP interface
    - "FILTERSQP=false" to disable FilterSQP interface (default)
 

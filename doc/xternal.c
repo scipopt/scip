@@ -650,6 +650,7 @@
  * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_DIR |
  * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked; specify WORHP_DIR if not found automatically |
  * ZIMPL                | on, off                        | ZIMPL=[true, false]    | specify ZIMPL_DIR if not found automatically |
+ * AMPL                 | on, off                        | AMPL=[true, false]     |                                            |
  * READLINE             | on, off                        | READLINE=[true, false] |                                            |
  * ..._DIR              | <custom/path/to/.../package>   | --                     | e.g. IPOPT_DIR, CPLEX_DIR, WORHP_DIR, Readline_DIR ...  |
  * CMAKE_INSTALL_PREFIX | \<path\>                       | INSTALLDIR=\<path\>    |                                            |
@@ -812,6 +813,9 @@
  *
  * - <code>ZIMPLOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized (default) (or old GCC optimized)
  *   version of ZIMPL, if ZIMPL support is enabled.
+ *
+ * - <code>AMPL=\<true|false\></code> Turns support for AMPL .nl files in \SCIP on (default) or off, respectively.\n
+ *   If the AMPL-support is enabled, the \SCIP executable can be used as solver in AMPL.
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
@@ -8284,6 +8288,7 @@
  * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc</td></tr>
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>
  * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programs</td></tr>
+ * <tr><td>\ref reader_nl.h "NL format"</td> <td>for <a href="http://www.ampl.com">AMPL</a> .nl files, e.g., mixed-integer linear and nonlinear
  * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for pseudo-Boolean optimization instances</td></tr>
  * <tr><td>\ref reader_osil.h "OSiL format"</td> <td>for mixed-integer nonlinear programs</td></tr>
  * <tr><td>\ref reader_pip.h "PIP format"</td> <td>for <a href="http://polip.zib.de/pipformat.php">mixed-integer polynomial programming problems</a></td></tr>

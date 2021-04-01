@@ -515,6 +515,39 @@ SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
    SCIP_Bool*               isquadratic         /**< buffer to store whether constraint is quadratic */
    );
 
+/** changes left-hand-side of a nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgLhsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             lhs                 /**< new left-hand-side */
+   );
+
+/** changes right-hand-side of a nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgRhsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             rhs                 /**< new right-hand-side */
+   );
+
+/** changes expression of a nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgExprNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_EXPR*            expr                /**< new expression */
+   );
+
 /** adds coef * var to expression constraint
  *
  * @attention This method can only be called in the problem stage.
