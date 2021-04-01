@@ -87,6 +87,7 @@ struct dynamic_programming_border
    int                   ntermsvisited;      /**< number of already visited nodes */
    int                   nterms;             /**< number of terminals */
    int                   nnodes;             /**< number of nodes of underlying graph */
+   DPB_Ptype             extborderchar;      /**< -1 if extnode is not contained! */
 };
 
 /*
@@ -118,7 +119,7 @@ int dpborder_getTopDelimiter(
    const int pos = StpVecGetSize(dpborder->borderlevels) - 1;
 
    assert(pos >= 0);
-   assert(dpborder->borderlevels[pos]->nbordernodes > 0);
+   assert(dpborder->borderlevels[pos]->nbordernodes >= 0);
    assert(dpborder->borderlevels[pos]->nbordernodes <= BPBORDER_MAXBORDERSIZE);
 
    return dpborder->borderlevels[pos]->nbordernodes;
@@ -151,6 +152,7 @@ DPBLEVEL* dpborder_getPredLevel(
 
    return dpborder->borderlevels[pos - 1];
 }
+
 
 /*
  * Internal interface methods

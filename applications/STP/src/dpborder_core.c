@@ -188,11 +188,16 @@ void updateBorder(
    for( int i = StpVecGetSize(dpborder->bordernodes) - nbordernodes; i > 0; i-- )
       StpVecPopBack(dpborder->bordernodes);
 
-   if( nodes_outdegree[extnode] != 0 )
+   if( (nodes_outdegree[extnode] != 0) || (iteration == graph->knots - 1) )
    {
+      dpborder->extborderchar = nbordernodes;
       nbordernodes++;
       StpVecPushBack(scip, dpborder->bordernodes, extnode);
       nodes_isBorder[extnode] = TRUE;
+   }
+   else
+   {
+      dpborder->extborderchar = -1;
    }
 
    toplevel->nbordernodes = nbordernodes;
@@ -228,11 +233,10 @@ SCIP_RETCODE updateFromPartition(
    partition.delimiter = dpborder_getDelimiter(dpborder, StpVecGetSize(dpborder->borderlevels) - 2);
 
    candstarts = dpborder_partGetCandstarts(scip, &partition, dpborder);
-   assert(StpVecGetSize(candstarts) > 0);
-
    ncands = StpVecGetSize(candstarts);
-   assert(ncands > 0);
+   assert(ncands >= 0);
    powsize = (uint32_t) pow(2.0, ncands);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &subbuffer, BPBORDER_MAXBORDERSIZE) );
 
    /* make sure that partition storage is large enough */
@@ -561,7 +565,6 @@ SCIP_RETCODE dpborder_coreSolve(
          break;
       }
    }
-
 
    if( *wasSolved )
    {

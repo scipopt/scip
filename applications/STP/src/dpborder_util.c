@@ -267,10 +267,11 @@ int dpborder_partGetIdxNew(
       assert(partitionchars[candstart] < 0);
    }
 
-   /* adds char for extension node... */
-   global_partitions[globalend++] = dpborder_getTopLevel(dpborder)->nbordernodes - 1;
-   assert(dpborder_getTopLevel(dpborder)->extnode
-      == dpborder->bordernodes[dpborder_getTopLevel(dpborder)->nbordernodes - 1]);
+   if( dpborder->extborderchar >= 0 )
+   {
+      assert(dpborder_getTopLevel(dpborder)->extnode == dpborder->bordernodes[dpborder->extborderchar]);
+      global_partitions[globalend++] = dpborder->extborderchar;
+   }
 
    doCopy = TRUE;
 
