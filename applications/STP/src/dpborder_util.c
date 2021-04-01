@@ -350,7 +350,7 @@ int dpborder_partGetIdxNew(
       partition.partchars = &(global_partitions[globalstart]);
       partition.partsize = (globalend - globalstart);
       partition.delimiter = delimiter_new;
-      printf("new (sub) partition: \n");
+      printf("new (sub) partition (range %d-%d): \n", globalstart, globalend);
       dpborder_partPrint(&partition);
    }
 #endif
@@ -395,6 +395,12 @@ int dpborder_partGetIdxNewExclusive(
          global_partitions[globalend++] = bordercharmap[partchar];
    }
 
+   if( globalstart == globalend )
+   {
+      SCIPdebugMessage("exlusive sub-partition is invalid (empty)... \n");
+      return -1;
+   }
+
    /* check for empty subset */
    for( int i = globalstart + 1; i != globalend; i++ )
    {
@@ -412,7 +418,7 @@ int dpborder_partGetIdxNewExclusive(
       partition.partchars = &(global_partitions[globalstart]);
       partition.partsize = (globalend - globalstart);
       partition.delimiter = delimiter_new;
-      printf("new (exclusive sub) partition: \n");
+      printf("new (exclusive sub) partition (range %d-%d): \n", globalstart, globalend);
       dpborder_partPrint(&partition);
    }
 #endif

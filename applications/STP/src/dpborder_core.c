@@ -335,6 +335,11 @@ SCIP_RETCODE updateFromPartition(
    global_partitions = dpborder->global_partitions;
    partition.partchars = &(global_partitions[part_start]);
 
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("partition ncands=%d, isTerm=%d ...base partition: \n", ncands, toplevel->exnodeIsTerm);
+   dpborder_partPrint(&partition);
+#endif
+
    if( !toplevel->exnodeIsTerm )
    {
       /* try to add/update the partition that does not include the extension node */
@@ -345,11 +350,6 @@ SCIP_RETCODE updateFromPartition(
          dpborder->global_predparts[globalposition_new] = globalposition;
       }
    }
-
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("partition ncands=%d, isTerm=%d ...base partition: \n", ncands, toplevel->exnodeIsTerm);
-   dpborder_partPrint(&partition);
-#endif
 
    /* loop over all subsets (also the empty set) */
    for( uint32_t counter = powsize; counter >= 1; counter-- )
