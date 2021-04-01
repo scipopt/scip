@@ -119,6 +119,7 @@ void partitionGetRangeGlobal(
 /** builds map between old and new border char representation */
 static
 void borderBuildCharMap(
+   int                   iteration,          /**< iteration number */
    DPBORDER*             dpborder            /**< border */
 )
 {
@@ -137,7 +138,7 @@ void borderBuildCharMap(
          bordercharmap[i] = -1;
    }
 
-   if( dpborder->nodes_outdeg[extnode] != 0 )
+   if( dpborder->nodes_outdeg[extnode] || (iteration == dpborder->nnodes - 1) )
    {
       nbordernew++;
    }
@@ -260,7 +261,7 @@ void updateBorder(
          nodes_isBorder[bordernode] = FALSE;
    }
 
-   borderBuildCharMap(dpborder);
+   borderBuildCharMap(iteration, dpborder);
    assert(!toplevel->bordernodesMapToOrg);
 
    /* remove outdated border nodes */
@@ -278,7 +279,7 @@ void updateBorder(
    for( int i = StpVecGetSize(dpborder->bordernodes) - nbordernodes; i > 0; i-- )
       StpVecPopBack(dpborder->bordernodes);
 
-   if( (nodes_outdegree[extnode] != 0) || (iteration == graph->knots - 1) )
+   if( (nodes_outdegree[extnode] != 0) || (iteration == dpborder->nnodes - 1) )
    {
       dpborder->extborderchar = nbordernodes;
       nbordernodes++;

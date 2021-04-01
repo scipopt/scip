@@ -412,7 +412,7 @@ int dpborder_partGetIdxNewExclusive(
 
    if( globalstart == globalend || global_partitions[globalstart] == delimiter_new )
    {
-      assert(globalend - globalstart <= 1);
+      assert(globalend - globalstart <= 1 || global_partitions[globalstart + 1] == delimiter_new);
       SCIPdebugMessage("exlusive sub-partition is invalid (empty)... \n");
       return -1;
    }
