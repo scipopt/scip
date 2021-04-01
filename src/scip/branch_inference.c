@@ -485,14 +485,18 @@ SCIP_RETCODE performBranchingSol(
    bestval = candsols[0];
 
    /* loop over cands, find bestcands[0], and store corresponding candsols value in bestval */
-   for( c = 1; c < ncands; ++c)
+   SCIP_Bool found = FALSE;
+   for( c = 1; c < ncands; ++c )
    {
       if( bestaggrcand == cands[c] )
       {
+         found = TRUE;
          bestval = candsols[c];
          break;
       }
    }
+
+   assert(found == TRUE);
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &bestcands);
