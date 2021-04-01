@@ -455,6 +455,7 @@ void dpborder_markSolNodes(
    assert(dpborder && nodes_isSol);
 
    BMSclearMemoryArray(nodes_isSol, nnodes);
+   SCIPdebugMessage("marking solution nodes: \n");
 
    for( pos = optposition, level = nnodes - 1; pos != 0; pos = dpborder->global_predparts[pos], level-- )
    {
@@ -468,17 +469,23 @@ void dpborder_markSolNodes(
       assert(nodemap);
       assert(delimiter == StpVecGetSize(nodemap));
 
-      printf("pos=%d, size %d \n", pos, global_partstarts[pos + 1] - global_partstarts[pos]);
+      SCIPdebugMessage("pos=%d, size %d range: %d-%d \n", pos,
+            global_partstarts[pos + 1] - global_partstarts[pos], global_partstarts[pos], globalend);
 
       for( int i = global_partstarts[pos]; i != globalend; i++ )
       {
          const DPB_Ptype borderchar = global_partitions[i];
          assert(0 <= borderchar && borderchar <= delimiter);
 
-         if( borderchar == delimiter )
-            continue;
+         if( borderchar != delimiter )
+         {
+            const int node = nodemap[borderchar];
+            SCIPdebugMessage("solnode=%d \n", node);
+            assert(0 <= node && node < nnodes);
+            assert(!nodes_isSol[node]);
 
-         printf("solnode=%d \n", nodemap[borderchar]);
+            nodes_isSol[node] = TRUE;
+         }
       }
    }
 }

@@ -346,6 +346,7 @@ SCIP_RETCODE updateFromPartition(
       const int globalposition_new = dpborder_partGetIdxNewExclusive(scip, &partition, dpborder);
       if( globalposition_new != -1 )
       {
+         SCIPdebugMessage("...added partition at %d with cost=%f \n", globalposition_new, part_cost);
          dpborder->global_partcosts[globalposition_new] = part_cost;
          dpborder->global_predparts[globalposition_new] = globalposition;
       }
@@ -388,6 +389,7 @@ SCIP_RETCODE updateFromPartition(
       if( GT(dpborder->global_partcosts[globalposition_new], cost_new) )
       {
          assert(LT(cost_new, FARAWAY));
+         SCIPdebugMessage("...added partition at %d with cost=%f \n", globalposition_new, cost_new);
          dpborder->global_partcosts[globalposition_new] = cost_new;
          dpborder->global_predparts[globalposition_new] = globalposition;
 
@@ -395,9 +397,12 @@ SCIP_RETCODE updateFromPartition(
          {
             if( 1 == dpborder_partglobalGetCard(globalposition_new, delimiter_new, dpborder) )
             {
-               dpborder->global_obj = MIN(dpborder->global_obj, cost_new);
-               dpborder->global_optposition = globalposition_new;
-               SCIPdebugMessage("updated global obj to %f \n", dpborder->global_obj);
+               if( LT(cost_new, dpborder->global_obj) )
+               {
+                  dpborder->global_obj = cost_new;
+                  dpborder->global_optposition = globalposition_new;
+                  SCIPdebugMessage("updated global obj to %f \n", dpborder->global_obj);
+               }
             }
          }
       }

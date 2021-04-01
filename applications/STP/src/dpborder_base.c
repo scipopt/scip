@@ -207,13 +207,21 @@ SCIP_RETCODE dpborder_solve(
       SCIP_CALL( SCIPallocBufferArray(scip, &connected, graph->knots) );
 
       dpborder_markSolNodes(dpborder, connected);
-      assert(0);
-
       SCIP_CALL( solstp_pruneFromNodes(scip, graph, solution, connected) );
       assert(solstp_isValid(scip, graph, solution));
 
       SCIPfreeBufferArray(scip, &connected);
+
+
    }
+
+#ifndef NDEBUG
+   if( *wasSolved )
+   {
+      const SCIP_Real solval =  solstp_getObj(graph, solution, 0.0);
+      assert(EQ(solval, dpborder->global_obj));
+   }
+#endif
 
    graph_free_csr(scip, graph);
 
