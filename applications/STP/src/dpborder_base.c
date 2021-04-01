@@ -211,8 +211,6 @@ SCIP_RETCODE dpborder_solve(
       assert(solstp_isValid(scip, graph, solution));
 
       SCIPfreeBufferArray(scip, &connected);
-
-
    }
 
 #ifndef NDEBUG

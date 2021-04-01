@@ -44,6 +44,21 @@ SCIP_Bool dpborder_partIsValid(
    const DPB_Ptype delimiter = borderpartition->delimiter;
    const int partsize = borderpartition->partsize;
 
+   if( partitionchars[0] == delimiter )
+   {
+      SCIPdebugMessage("partition starts with delimiter\n");
+      return FALSE;
+   }
+
+   for( int i = 1; i < partsize; i++ )
+   {
+      if( partitionchars[i] == delimiter && partitionchars[i - 1] == delimiter )
+      {
+         SCIPdebugMessage("empty subset at %d %d \n", i - 1, i);
+         return FALSE;
+      }
+   }
+
    for( int i = 0; i < partsize; i++ )
    {
       const DPB_Ptype borderchar = partitionchars[i];
@@ -395,24 +410,23 @@ int dpborder_partGetIdxNewExclusive(
          global_partitions[globalend++] = bordercharmap[partchar];
    }
 
-   if( globalstart == globalend )
+   if( globalstart == globalend || global_partitions[globalstart] == delimiter_new )
    {
+      assert(globalend - globalstart <= 1);
       SCIPdebugMessage("exlusive sub-partition is invalid (empty)... \n");
       return -1;
    }
 
-   /* check for empty subset */
    for( int i = globalstart + 1; i != globalend; i++ )
    {
       if( global_partitions[i] == delimiter_new && global_partitions[i - 1] == delimiter_new )
       {
-         globalstart = -1;
-         break;
+         SCIPdebugMessage("exlusive sub-partition is invalid (empty subset)... \n");
+         return -1;
       }
    }
 
 #ifdef SCIP_DEBUG
-   if( globalstart != -1 )
    {
       DPBPART partition;
       partition.partchars = &(global_partitions[globalstart]);
@@ -423,18 +437,12 @@ int dpborder_partGetIdxNewExclusive(
    }
 #endif
 
-   if( globalstart != -1 )
-   {
-      StpVecPushBack(scip, dpborder->global_partstarts, globalend);
-      StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
-      StpVecPushBack(scip, dpborder->global_predparts, -1);
-      dpborder->global_npartitions++;
-      return dpborder->global_npartitions - 1;
-   }
+   StpVecPushBack(scip, dpborder->global_partstarts, globalend);
+   StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
+   StpVecPushBack(scip, dpborder->global_predparts, -1);
+   dpborder->global_npartitions++;
 
-   SCIPdebugMessage("exlusive sub-partition is invalid... \n");
-
-   return -1;
+   return dpborder->global_npartitions - 1;
 }
 
 
@@ -482,7 +490,6 @@ void dpborder_markSolNodes(
             const int node = nodemap[borderchar];
             SCIPdebugMessage("solnode=%d \n", node);
             assert(0 <= node && node < nnodes);
-            assert(!nodes_isSol[node]);
 
             nodes_isSol[node] = TRUE;
          }
