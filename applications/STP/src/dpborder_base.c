@@ -203,11 +203,16 @@ SCIP_RETCODE dpborder_solve(
 
    if( *wasSolved )
    {
-     // int todo;
-     // assert(0);
+      STP_Bool* connected;
+      SCIP_CALL( SCIPallocBufferArray(scip, &connected, graph->knots) );
 
-      // todo get solution
-      //assert(solstp_isValid(scip, graph, solution));
+      dpborder_markSolNodes(dpborder, connected);
+      assert(0);
+
+      SCIP_CALL( solstp_pruneFromNodes(scip, graph, solution, connected) );
+      assert(solstp_isValid(scip, graph, solution));
+
+      SCIPfreeBufferArray(scip, &connected);
    }
 
    graph_free_csr(scip, graph);
@@ -247,6 +252,7 @@ SCIP_RETCODE dpborder_init(
    dpb->nnodes = graph->knots;
    dpb->nterms = graph->terms;
    dpb->ntermsvisited = 0;
+   dpb->global_optposition = -1;
 
    return SCIP_OKAY;
 }

@@ -333,6 +333,7 @@ int dpborder_partGetIdxNew(
    {
       StpVecPushBack(scip, dpborder->global_partstarts, globalend);
       StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
+      StpVecPushBack(scip, dpborder->global_predparts, -1);
       dpborder->global_npartitions++;
    }
 
@@ -420,6 +421,7 @@ int dpborder_partGetIdxNewExclusive(
    {
       StpVecPushBack(scip, dpborder->global_partstarts, globalend);
       StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
+      StpVecPushBack(scip, dpborder->global_predparts, -1);
       dpborder->global_npartitions++;
       return dpborder->global_npartitions - 1;
    }
@@ -429,85 +431,48 @@ int dpborder_partGetIdxNewExclusive(
    return -1;
 }
 
-/** builds map between old and new border char representation */
-void dpborder_buildBorderMap(
-   DPBORDER*             dpborder            /**< border */
+
+/** marks optimal solution nodes */
+void dpborder_markSolNodes(
+   const DPBORDER*       dpborder,           /**< border */
+   STP_Bool* RESTRICT    nodes_isSol         /**< solution nodes */
 )
 {
-   const int extnode = dpborder_getTopLevel(dpborder)->extnode;
-   const SCIP_Bool* const nodes_isBorder = dpborder->nodes_isBorder;
-   int* RESTRICT bordercharmap = dpborder->bordercharmap;
-   int nbordernew = 0;
 
-   for( int i = 0; i < StpVecGetSize(dpborder->bordernodes); i++ )
+   const DPB_Ptype* const global_partitions = dpborder->global_partitions;
+   const STP_Vectype(int) global_partstarts = dpborder->global_partstarts;
+   const int nnodes = dpborder->nnodes;
+   const int optposition = dpborder->global_optposition;
+   int pos;
+   int level;
+
+   assert(dpborder && nodes_isSol);
+
+   BMSclearMemoryArray(nodes_isSol, nnodes);
+
+   for( pos = optposition, level = nnodes - 1; pos != 0; pos = dpborder->global_predparts[pos], level-- )
    {
-      const int bordernode = dpborder->bordernodes[i];
+      const int globalend = global_partstarts[pos + 1];
+      const STP_Vectype(int) nodemap = dpborder->borderlevels[level]->bordernodesMapToOrg;
+      const DPB_Ptype delimiter = dpborder_getDelimiter(dpborder, level);
 
-      if( nodes_isBorder[bordernode] )
-         bordercharmap[i] = nbordernew++;
-      else
-         bordercharmap[i] = -1;
-   }
+      assert(level > 0);
+      assert(0 <= pos && pos < dpborder->global_npartitions);
+      assert(global_partstarts[pos + 1] > global_partstarts[pos]);
+      assert(nodemap);
+      assert(delimiter == StpVecGetSize(nodemap));
 
-   if( dpborder->nodes_outdeg[extnode] != 0 )
-   {
-      nbordernew++;
-   }
+      printf("pos=%d, size %d \n", pos, global_partstarts[pos + 1] - global_partstarts[pos]);
 
-   /* now we set the delimiter */
-   bordercharmap[StpVecGetSize(dpborder->bordernodes)] = nbordernew;
-
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("char border map, old to new: \n");
-   for( int i = 0; i < StpVecGetSize(dpborder->bordernodes); i++ )
-   {
-      SCIPdebugMessage("%d->%d \n", i, bordercharmap[i]);
-   }
-   SCIPdebugMessage("delimiter: %d->%d \n", StpVecGetSize(dpborder->bordernodes),
-         bordercharmap[StpVecGetSize(dpborder->bordernodes)]);
-
-#endif
-}
-
-/** builds distances to extension node */
-void dpborder_buildBorderDists(
-   const GRAPH*          graph,              /**< graph */
-   DPBORDER*             dpborder            /**< border */
-)
-{
-   SCIP_Real* RESTRICT borderchardists = dpborder->borderchardists;
-   const SCIP_Bool* const nodes_isBorder = dpborder->nodes_isBorder;
-   const int* const bordernodes = dpborder->bordernodes;
-   const CSR* const csr = graph->csr_storage;
-   const int* const start_csr = csr->start;
-   const int extnode = dpborder_getTopLevel(dpborder)->extnode;
-   const int nbordernodes = StpVecGetSize(bordernodes);
-
-   SCIPdebugMessage("setting up border distances for extnode=%d \n", extnode);
-
-   for( int i = 0; i < nbordernodes; i++ )
-      borderchardists[i] = FARAWAY;
-
-   for( int e = start_csr[extnode]; e != start_csr[extnode + 1]; e++ )
-   {
-      const int head = csr->head[e];
-      if( nodes_isBorder[head] )
+      for( int i = global_partstarts[pos]; i != globalend; i++ )
       {
-         int i;
-         for( i = 0; i < BPBORDER_MAXBORDERSIZE; i++ )
-         {
-            const int bordernode = bordernodes[i];
-            assert(bordernode != extnode);
+         const DPB_Ptype borderchar = global_partitions[i];
+         assert(0 <= borderchar && borderchar <= delimiter);
 
-            if( head == bordernode )
-            {
-               SCIPdebugMessage("setting edge distance for border node %d to %f \n", head, csr->cost[e]);
-               assert(EQ(borderchardists[i], FARAWAY));
-               borderchardists[i] = csr->cost[e];
-               break;
-            }
-         }
-         assert(i != BPBORDER_MAXBORDERSIZE);
+         if( borderchar == delimiter )
+            continue;
+
+         printf("solnode=%d \n", nodemap[borderchar]);
       }
    }
 }

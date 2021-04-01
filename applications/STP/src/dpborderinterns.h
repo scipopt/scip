@@ -84,6 +84,7 @@ struct dynamic_programming_border
    SCIP_Real             global_obj;         /**< objective */
    int                   global_npartitions; /**< number of global partitions */
    int                   global_partcap;     /**< capacity of array global_partitions */
+   int                   global_optposition; /**< index of best solution partition */
    int                   ntermsvisited;      /**< number of already visited nodes */
    int                   nterms;             /**< number of terminals */
    int                   nnodes;             /**< number of nodes of underlying graph */
@@ -165,8 +166,7 @@ extern int dpborder_partGetIdxNewExclusive(SCIP*, const DPBPART*, DPBORDER*);
 extern STP_Vectype(int)  dpborder_partGetCandstarts(SCIP*, const DPBPART*, const DPBORDER*);
 extern SCIP_Bool  dpborder_partIsValid(const DPBPART*);
 extern void  dpborder_partPrint(const DPBPART*);
-extern void          dpborder_buildBorderMap(DPBORDER*);
-extern void          dpborder_buildBorderDists(const GRAPH*, DPBORDER*);
+extern void  dpborder_markSolNodes(const DPBORDER*, STP_Bool* RESTRICT);
 extern SCIP_RETCODE  dpborder_dpblevelInit(SCIP*, DPBLEVEL**);
 extern void          dpborder_dpblevelFree(SCIP*, DPBLEVEL**);
 extern SCIP_RETCODE  dpborder_coreComputeOrdering(SCIP*, const GRAPH*, DPBORDER*);
