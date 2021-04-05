@@ -138,7 +138,7 @@ void borderBuildCharMap(
          bordercharmap[i] = -1;
    }
 
-   if( dpborder->nodes_outdeg[extnode] || (iteration == dpborder->nnodes - 1) )
+   if( dpborder->nodes_outdeg[extnode] != 0 || (iteration == dpborder->nnodes - 1) )
    {
       nbordernew++;
    }
@@ -177,6 +177,11 @@ void borderBuildCharDists(
 
    for( int i = 0; i < nbordernodes; i++ )
       borderchardists[i] = FARAWAY;
+
+#ifndef NDEBUG
+   for( int i = nbordernodes; i < BPBORDER_MAXBORDERSIZE; i++ )
+      borderchardists[i] = -BLOCKED;
+#endif
 
    for( int e = start_csr[extnode]; e != start_csr[extnode + 1]; e++ )
    {
@@ -268,6 +273,7 @@ void updateBorder(
    for( int i = 0; i < StpVecGetSize(dpborder->bordernodes); i++ )
    {
       const int bordernode = dpborder->bordernodes[i];
+      assert(graph_knot_isInRange(graph, bordernode));
 
       if( nodes_isBorder[bordernode] )
       {
@@ -521,6 +527,7 @@ SCIP_RETCODE addLevelFirst(
    StpVecPushBack(scip, dpborder->global_partstarts, 1);
    StpVecPushBack(scip, dpborder->global_partcosts, 0.0);
    StpVecPushBack(scip, dpborder->global_predparts, 0);
+   StpVecPushBack(scip, dpborder->global_partsUseExt, TRUE);
    dpborder->global_npartitions = 1;
 
    assert(StpVecGetSize(dpborder->bordernodes) == 1);

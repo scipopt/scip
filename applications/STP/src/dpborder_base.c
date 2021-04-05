@@ -197,7 +197,7 @@ SCIP_RETCODE dpborder_solve(
    assert(scip && graph && solution);
    assert(dpborder->dpbsequence);
 
-   SCIP_CALL( graph_init_csrWithEdgeId(scip, graph) );
+   SCIP_CALL( graph_init_csr(scip, graph) );
 
    SCIP_CALL( dpborder_coreSolve(scip, graph, dpborder, wasSolved) );
 
@@ -240,6 +240,7 @@ SCIP_RETCODE dpborder_init(
 
    assert(graph);
 
+   dpb->global_partsUseExt = NULL;
    dpb->bordercharmap = NULL;
    dpb->borderchardists = NULL;
    dpb->dpbsequence = NULL;
@@ -277,6 +278,7 @@ void dpborder_free(
    StpVecFree(scip, dpb->global_partstarts);
    StpVecFree(scip, dpb->bordernodes);
    StpVecFree(scip, dpb->prevbordernodes);
+   StpVecFree(scip, dpb->global_partsUseExt);
 
    SCIPfreeMemoryArrayNull(scip, &(dpb->bordercharmap));
    SCIPfreeMemoryArrayNull(scip, &(dpb->borderchardists));

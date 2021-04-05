@@ -44,9 +44,17 @@ SCIP_Bool dpborder_partIsValid(
    const DPB_Ptype delimiter = borderpartition->delimiter;
    const int partsize = borderpartition->partsize;
 
+   assert(partsize > 0);
+
    if( partitionchars[0] == delimiter )
    {
       SCIPdebugMessage("partition starts with delimiter\n");
+      return FALSE;
+   }
+
+   if( partitionchars[partsize - 1] == delimiter )
+   {
+      SCIPdebugMessage("partition ends with delimiter\n");
       return FALSE;
    }
 
@@ -229,6 +237,7 @@ SCIP_Real dpborder_partGetConnectionCost(
       if( GE(costsum, FARAWAY) )
          break;
    }
+   assert(GE(costsum, 0.0));
 
    return costsum;
 }
@@ -258,6 +267,7 @@ int dpborder_partGetIdxNew(
    assert(dpborder_partIsValid(borderpartition));
    assert(globalstart + partsize + 2 < dpborder->global_partcap);
 
+   /* form the union of marked subsets, as well as of extension node (if in border) */
    for( i = 0; i < ncandstarts_sub; i++ )
    {
       const int candstart = candstarts_sub[i];
@@ -286,6 +296,23 @@ int dpborder_partGetIdxNew(
    {
       assert(dpborder_getTopLevel(dpborder)->extnode == dpborder->bordernodes[dpborder->extborderchar]);
       global_partitions[globalend++] = dpborder->extborderchar;
+   }
+
+   if( globalend == globalstart )
+   {
+      SCIPdebugMessage("...empty first subset... \n");
+      for( int j = 0; j < partsize; j++ )
+      {
+         if( partitionchars[j] < 0 )
+            partitionchars[j] = -(partitionchars[j] + 1);
+      }
+
+#ifndef NDEBUG
+      for( int j = 0; j < partsize; j++ )
+         assert(0 <= partitionchars[j] && partitionchars[j] <= delimiter_prev);
+#endif
+
+      return -1;
    }
 
    doCopy = TRUE;
@@ -348,6 +375,7 @@ int dpborder_partGetIdxNew(
    {
       StpVecPushBack(scip, dpborder->global_partstarts, globalend);
       StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
+      StpVecPushBack(scip, dpborder->global_partsUseExt, TRUE);
       StpVecPushBack(scip, dpborder->global_predparts, -1);
       dpborder->global_npartitions++;
    }
@@ -365,7 +393,7 @@ int dpborder_partGetIdxNew(
       partition.partchars = &(global_partitions[globalstart]);
       partition.partsize = (globalend - globalstart);
       partition.delimiter = delimiter_new;
-      printf("new (sub) partition (range %d-%d): \n", globalstart, globalend);
+      printf("new (sub) partition (range %d-%d, glbpos=%d): \n", globalstart, globalend, dpborder->global_npartitions - 1);
       dpborder_partPrint(&partition);
    }
 #endif
@@ -374,6 +402,8 @@ int dpborder_partGetIdxNew(
    {
       return dpborder->global_npartitions - 1;
    }
+
+   SCIPdebugMessage("invalid partition... \n");
 
    return -1;
 }
@@ -410,9 +440,10 @@ int dpborder_partGetIdxNewExclusive(
          global_partitions[globalend++] = bordercharmap[partchar];
    }
 
-   if( globalstart == globalend || global_partitions[globalstart] == delimiter_new )
+   if( globalstart == globalend
+      || global_partitions[globalstart] == delimiter_new
+      || global_partitions[globalend - 1] == delimiter_new )
    {
-      assert(globalend - globalstart <= 1 || global_partitions[globalstart + 1] == delimiter_new);
       SCIPdebugMessage("exlusive sub-partition is invalid (empty)... \n");
       return -1;
    }
@@ -432,7 +463,7 @@ int dpborder_partGetIdxNewExclusive(
       partition.partchars = &(global_partitions[globalstart]);
       partition.partsize = (globalend - globalstart);
       partition.delimiter = delimiter_new;
-      printf("new (exclusive sub) partition (range %d-%d): \n", globalstart, globalend);
+      printf("new (exclusive sub) partition (range %d-%d, glbpos=%d): \n", globalstart, globalend, dpborder->global_npartitions);
       dpborder_partPrint(&partition);
    }
 #endif
@@ -440,7 +471,12 @@ int dpborder_partGetIdxNewExclusive(
    StpVecPushBack(scip, dpborder->global_partstarts, globalend);
    StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
    StpVecPushBack(scip, dpborder->global_predparts, -1);
+   StpVecPushBack(scip, dpborder->global_partsUseExt, FALSE);
    dpborder->global_npartitions++;
+   assert(dpborder->global_npartitions == StpVecGetSize(dpborder->global_predparts));
+   assert(dpborder->global_npartitions == StpVecGetSize(dpborder->global_partcosts));
+   assert(dpborder->global_npartitions == StpVecGetSize(dpborder->global_partsUseExt));
+   assert(dpborder->global_npartitions + 1 == StpVecGetSize(dpborder->global_partstarts));
 
    return dpborder->global_npartitions - 1;
 }
@@ -481,6 +517,15 @@ void dpborder_markSolNodes(
 
       SCIPdebugMessage("pos=%d, size %d range: %d-%d \n", pos,
             global_partstarts[pos + 1] - global_partstarts[pos], global_partstarts[pos], globalend);
+
+      if( dpborder->global_partsUseExt[pos] )
+      {
+         const int extnode = dpborder->borderlevels[level]->extnode;
+         assert(0 <= extnode && extnode < nnodes);
+         SCIPdebugMessage("solnode=%d (ext) \n", extnode);
+
+         nodes_isSol[extnode] = TRUE;
+      }
 
       for( int i = global_partstarts[pos]; i != globalend; i++ )
       {
