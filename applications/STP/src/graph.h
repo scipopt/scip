@@ -180,6 +180,7 @@ extern void   graph_freeHistory(SCIP*, GRAPH*);
 extern void   graph_freeHistoryDeep(SCIP*, GRAPH*);
 extern void   graph_getIsTermArray(const GRAPH*, SCIP_Bool*);
 extern void   graph_getTerms(const GRAPH*, int*);
+extern SCIP_RETCODE   graph_getTermsRandom(SCIP*, const GRAPH*, int*);
 extern void   graph_getEdgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* RESTRICT);
 extern void   graph_getEdgeRevCosts(const GRAPH*, SCIP_Real* RESTRICT);
 extern void   graph_getCsr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);

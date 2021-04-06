@@ -591,6 +591,25 @@ void graph_getTerms(
 }
 
 
+/** gets randomly permuted terminals */
+SCIP_RETCODE graph_getTermsRandom(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int*                  terms               /**< array of size g->terms */
+)
+{
+   SCIP_RANDNUMGEN* rand;
+   SCIP_CALL( SCIPcreateRandom(scip, &rand, g->terms, TRUE) );
+
+   graph_getTerms(g, terms);
+   SCIPrandomPermuteIntArray(rand, terms, 0, g->terms);
+
+   SCIPfreeRandom(scip, &rand);
+
+   return SCIP_OKAY;
+}
+
+
 /** initialize graph */
 SCIP_RETCODE graph_init(
    SCIP*                 scip,               /**< SCIP data structure */
