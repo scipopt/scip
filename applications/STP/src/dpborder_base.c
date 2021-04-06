@@ -31,9 +31,42 @@
  */
 
 
-/** initializes */
+
+/** initializes helper */
 static
-SCIP_RETCODE dpbsequenceInit(
+SCIP_RETCODE dpborderInitHelper(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph of sub-problem */
+   DPBORDER*             dpborder           /**< border */
+   )
+{
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(nnodes == dpborder->nnodes);
+   assert(!dpborder->nodes_isBorder);
+   assert(!dpborder->nodes_outdeg);
+
+   SCIP_CALL( dpborder_dpbsequenceInit(scip, graph, &(dpborder->dpbsequence)) );
+
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(dpborder->nodes_isBorder), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->nodes_outdeg), nnodes) );
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->bordercharmap), BPBORDER_MAXBORDERSIZE + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->borderchardists), BPBORDER_MAXBORDERSIZE) );
+
+   BMScopyMemoryArray(dpborder->nodes_outdeg, graph->grad, nnodes);
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Interface methods
+ */
+
+
+/** initializes */
+SCIP_RETCODE dpborder_dpbsequenceInit(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< original graph */
    DPBSEQUENCE**         dpbsequence         /**< to initialize */
@@ -54,37 +87,23 @@ SCIP_RETCODE dpbsequenceInit(
 }
 
 
-/** initializes helper */
-static
-SCIP_RETCODE dpborderInitHelper(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph,              /**< graph of sub-problem */
-   DPBORDER*             dpborder           /**< border */
-   )
+/** copies */
+void dpborder_dpbsequenceCopy(
+   const DPBSEQUENCE*    dpbsequence_source, /**< to copy */
+   DPBSEQUENCE*          dpbsequence_target  /**< to copy to */
+)
 {
-   const int nnodes = graph_get_nNodes(graph);
+   const int nnodes = dpbsequence_source->nnodes;
+   assert(dpbsequence_source->nnodes == dpbsequence_target->nnodes);
 
-   assert(nnodes == dpborder->nnodes);
-   assert(!dpborder->nodes_isBorder);
-   assert(!dpborder->nodes_outdeg);
-
-   SCIP_CALL( dpbsequenceInit(scip, graph, &(dpborder->dpbsequence)) );
-
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(dpborder->nodes_isBorder), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->nodes_outdeg), nnodes) );
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->bordercharmap), BPBORDER_MAXBORDERSIZE + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->borderchardists), BPBORDER_MAXBORDERSIZE) );
-
-   BMScopyMemoryArray(dpborder->nodes_outdeg, graph->grad, nnodes);
-
-   return SCIP_OKAY;
+   BMScopyMemoryArray(dpbsequence_target->nodessquence, dpbsequence_source->nodessquence, nnodes);
+   dpbsequence_target->maxbordersize = dpbsequence_source->maxbordersize;
+   dpbsequence_target->maxnpartitions = dpbsequence_source->maxnpartitions;
 }
 
 
 /** frees */
-static
-void dpbsequenceFree(
+void dpborder_dpbsequenceFree(
    SCIP*                 scip,               /**< SCIP data structure */
    DPBSEQUENCE**         dpbsequence         /**< to free */
 )
@@ -96,11 +115,6 @@ void dpbsequenceFree(
    SCIPfreeMemoryArray(scip, &(seq->nodessquence));
    SCIPfreeMemory(scip, dpbsequence);
 }
-
-
-/*
- * Interface methods
- */
 
 
 /** initializes */
@@ -163,18 +177,17 @@ SCIP_RETCODE dpborder_probePotential(
    SCIP_CALL( graph_init_csrWithEdgeId(scip, graph) );
 
    SCIP_CALL( dpborderInitHelper(scip, graph, dpborder) );
-   SCIP_CALL( dpborder_coreComputeOrdering(scip, graph, dpborder) );
-
+   SCIP_CALL( dpborder_coreComputeOrderingSimple(scip, graph, dpborder) );
 
    dpbsequence = dpborder->dpbsequence;
    *hasPotential = TRUE;
 
-   if( dpbsequence->maxnpartitions > BPBORDER_MAXNPARTITIONS )
+   if( dpbsequence->maxnpartitions >= BPBORDER_MAXNPARTITIONS )
    {
       *hasPotential = FALSE;
    }
 
-   if( 0 )
+   if( dpbsequence->maxbordersize >= BPBORDER_MAXBORDERSIZE )
    {
       *hasPotential = FALSE;
    }
@@ -199,6 +212,7 @@ SCIP_RETCODE dpborder_solve(
 
    SCIP_CALL( graph_init_csr(scip, graph) );
 
+   SCIP_CALL( dpborder_coreUpdateOrdering(scip, graph, dpborder) );
    SCIP_CALL( dpborder_coreSolve(scip, graph, dpborder, wasSolved) );
 
    if( *wasSolved )
@@ -288,7 +302,7 @@ void dpborder_free(
 
    if( dpb->dpbsequence )
    {
-      dpbsequenceFree(scip, &(dpb->dpbsequence));
+      dpborder_dpbsequenceFree(scip, &(dpb->dpbsequence));
    }
 
    if( dpb->borderlevels )

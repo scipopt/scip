@@ -26,6 +26,15 @@
 #include "dpborder.h"
 #include "dpborderinterns.h"
 #include "stpvector.h"
+#include "misc_stp.h"
+
+#define DPB_ORDERMULT_PREVS    2
+#define DPB_ORDERMULT_TERM     2
+#define DPB_ORDERMULT_OUTDEG   1
+#define DPB_ORDERMULT_OUTDELTA 2
+
+#define DPB_ORDER_MAXNROOTS 50
+
 
 /*
  * Local methods
@@ -265,6 +274,9 @@ void updateBorder(
       if( nodes_isBorder[bordernode] && nodes_outdegree[bordernode] == 0 )
          nodes_isBorder[bordernode] = FALSE;
    }
+
+   printf("iter=%d bordersize=%d\n", iteration, StpVecGetSize(dpborder->bordernodes));
+   printf("global_npartitions=%d \n", dpborder->global_npartitions);
 
    borderBuildCharMap(iteration, dpborder);
    assert(!toplevel->bordernodesMapToOrg);
@@ -564,7 +576,8 @@ SCIP_RETCODE initSolve(
    return SCIP_OKAY;
 }
 
-
+// #define DPB_ORDERING_BFS
+#ifdef DPB_ORDERING_BFS
 /** computes node ordering and updates if better */
 static
 SCIP_RETCODE computeOrderingFromNode(
@@ -614,6 +627,187 @@ SCIP_RETCODE computeOrderingFromNode(
 
    return SCIP_OKAY;
 }
+#else
+/** computes node ordering and updates if better */
+static
+SCIP_RETCODE computeOrderingFromNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph */
+   int                   root,               /**< node to start from */
+   DPBSEQUENCE*          dpbsequence         /**< sequence */
+)
+{
+   STP_Vectype(int) frontier = NULL;
+   SCIP_Bool* RESTRICT nodes_isVisited;
+   SCIP_Bool* RESTRICT nodes_isFrontier;
+   int* RESTRICT nodessquence = dpbsequence->nodessquence;
+   const CSR* const csr = graph->csr_storage;
+   const int* const head_csr = csr->head;
+   const int* const start_csr = csr->start;
+   int* RESTRICT nodes_outdegree;
+   const int* const nodes_degree = graph->grad;
+   const int nnodes = graph_get_nNodes(graph);
+   int bordersize;
+   int bordertermsize;
+
+   assert(graph_knot_isInRange(graph, root));
+   assert(Is_term(graph->term[root]));
+
+   StpVecReserve(scip, frontier, nnodes);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nodes_isVisited, nnodes) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nodes_isFrontier, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_outdegree, nnodes) );
+
+   BMScopyMemoryArray(nodes_outdegree, nodes_degree, nnodes);
+
+   dpbsequence->maxbordersize = 0;
+   dpbsequence->maxnpartitions = 0;
+   nodessquence[0] = root;
+   nodes_isVisited[root] = TRUE;
+   bordersize = 1;
+   bordertermsize = 1;
+
+   for( int e = start_csr[root]; e != start_csr[root + 1]; e++ )
+   {
+      const int head = head_csr[e];
+      nodes_outdegree[head]--;
+
+      StpVecPushBack(scip, frontier, head);
+      nodes_isFrontier[head] = TRUE;
+   }
+
+   for( int s = 1; s < nnodes; s++ )
+   {
+      int priority_best = -nnodes * DPB_ORDERMULT_OUTDELTA;
+      int node_best = -1;
+      const int frontier_size = StpVecGetSize(frontier);
+
+      assert(frontier_size > 0);
+
+      for( int i = 0; i < frontier_size; i++ )
+      {
+         const int fnode = frontier[i];
+         int priority_new = 0;
+         int nprevs = 0;
+         const int outdegree = nodes_outdegree[fnode];
+         assert(!nodes_isVisited[fnode] && nodes_isFrontier[fnode]);
+
+         /* count vertices that would be removed from border */
+         for( int e = start_csr[fnode]; e != start_csr[fnode + 1]; e++ )
+         {
+            const int head = head_csr[e];
+            assert(nodes_outdegree[head] >= 1);
+
+            if( !nodes_isVisited[head] )
+               continue;
+
+            if( nodes_outdegree[head] == 1 )
+               nprevs++;
+         }
+         assert(outdegree >= 0 && nodes_degree[fnode] >= outdegree);
+         SCIPdebugMessage("(old) frontier node %d: outdegree=%d outdelta=%d nprevs=%d \n",
+               fnode, outdegree, outdegree - nprevs, nprevs);
+
+         priority_new += DPB_ORDERMULT_PREVS * nprevs;
+
+         if( Is_term(graph->term[fnode]) )
+            priority_new += DPB_ORDERMULT_TERM * 1;
+
+         /* number of visited nodes in adjacency list of fnode */
+         priority_new += DPB_ORDERMULT_OUTDEG * (nodes_degree[fnode] - outdegree);
+
+         /* (negative) delta of number of edges going out of visited region */
+         priority_new += DPB_ORDERMULT_OUTDELTA * (nprevs - outdegree);
+
+         if( priority_new > priority_best )
+         {
+            node_best = fnode;
+            priority_best = priority_new;
+         }
+      }
+      assert(node_best >= 0);
+
+      /* update frontier */
+      for( int e = start_csr[node_best]; e != start_csr[node_best + 1]; e++ )
+      {
+         const int head = head_csr[e];
+         nodes_outdegree[head]--;
+         assert(nodes_outdegree[head] >= 0);
+
+         if( nodes_isVisited[head] )
+         {
+            if( nodes_outdegree[head] == 0 )
+            {
+               if( Is_term(graph->term[head]) )
+                  bordertermsize--;
+               bordersize--;
+            }
+         }
+         else if( !nodes_isFrontier[head] )
+         {
+            nodes_isFrontier[head] = TRUE;
+            StpVecPushBack(scip, frontier, head);
+         }
+      }
+      nodes_isFrontier[node_best] = FALSE;
+      nodes_isVisited[node_best] = TRUE;
+      nodessquence[s] = node_best;
+
+      assert(StpVecGetSize(frontier) > 0);
+      {
+         int i;
+         for( i = 0; i < StpVecGetSize(frontier); i++ )
+         {
+            if( frontier[i] == node_best )
+               break;
+         }
+         assert(i < StpVecGetSize(frontier));
+         SWAP_INTS(frontier[i], frontier[StpVecGetSize(frontier) - 1]);
+         StpVecPopBack(frontier);
+      }
+
+      if( nodes_outdegree[node_best] != 0 )
+      {
+         if( Is_term(graph->term[node_best]) )
+            bordertermsize++;
+         bordersize++;
+      }
+
+      assert(bordersize >= bordertermsize);
+      dpbsequence->maxnpartitions += bordersize * bordersize * (bordersize - bordertermsize);
+
+      SCIPdebugMessage("ADDED node %d to border \n", node_best);
+      SCIPdebugMessage("new size of border: %d (termsize=%d) \n", bordersize, bordertermsize);
+      SCIPdebugMessage("new size of frontier: %d \n", StpVecGetSize(frontier));
+      SCIPdebugMessage("new total number of partitions: %ld \n", dpbsequence->maxnpartitions);
+
+      if( bordersize > dpbsequence->maxbordersize )
+      {
+         dpbsequence->maxbordersize = bordersize;
+         if( bordersize >= BPBORDER_MAXBORDERSIZE )
+         {
+            SCIPdebugMessage("aborting early, border too large! \n");
+            nodessquence[0] = -1;
+            break;
+         }
+      }
+
+      if( dpbsequence->maxnpartitions >= BPBORDER_MAXNPARTITIONS )
+      {
+         SCIPdebugMessage("aborting early, too many partitions! \n");
+         nodessquence[0] = -1;
+         break;
+      }
+   }
+
+   StpVecFree(scip, frontier);
+   SCIPfreeBufferArray(scip, &nodes_outdegree);
+   SCIPfreeBufferArray(scip, &nodes_isFrontier);
+   SCIPfreeBufferArray(scip, &nodes_isVisited);
+
+   return SCIP_OKAY;
+}
+#endif
 
 
 /*
@@ -625,15 +819,77 @@ SCIP_RETCODE computeOrderingFromNode(
 
 
 /** computes node ordering */
-SCIP_RETCODE dpborder_coreComputeOrdering(
+SCIP_RETCODE dpborder_coreComputeOrderingSimple(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph */
    DPBORDER*             dpborder            /**< border */
 )
 {
-   // todo try some sources...
-
    SCIP_CALL( computeOrderingFromNode(scip, graph, graph->source, dpborder->dpbsequence) );
+
+   return SCIP_OKAY;
+}
+
+
+/** updates given ordering */
+SCIP_RETCODE dpborder_coreUpdateOrdering(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph */
+   DPBORDER*             dpborder            /**< border */
+)
+{
+   DPBSEQUENCE* const sequence_base = dpborder->dpbsequence;
+   DPBSEQUENCE* sequence_tmp;
+   int* terms;
+   const int nterms = graph->terms;
+   const int root_org = sequence_base->nodessquence[0];
+
+   assert(nterms > 1);
+   assert(graph_knot_isInRange(graph, root_org));
+   assert(Is_term(graph->term[root_org]));
+
+   SCIP_CALL( dpborder_dpbsequenceInit(scip, graph, &sequence_tmp) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &terms, nterms) );
+   SCIP_CALL( graph_getTermsRandom(scip, graph, terms) );
+
+   for( int i = 0; i < MIN(nterms, DPB_ORDER_MAXNROOTS); i++ )
+   {
+      SCIP_Bool isBetter;
+      const int root = terms[i];
+      if( root == root_org )
+         continue;
+
+      SCIP_CALL( computeOrderingFromNode(scip, graph, root, sequence_tmp) );
+
+      if( sequence_tmp->maxbordersize >= BPBORDER_MAXBORDERSIZE )
+         continue;
+
+      if( sequence_tmp->maxnpartitions >= BPBORDER_MAXNPARTITIONS )
+         continue;
+
+      isBetter = sequence_tmp->maxnpartitions < sequence_base->maxnpartitions
+              && sequence_tmp->maxbordersize <= sequence_base->maxbordersize;
+
+      // todo use parameter
+      if( !isBetter )
+         isBetter = (1.2 * (SCIP_Real) sequence_tmp->maxnpartitions < (SCIP_Real) sequence_base->maxnpartitions);
+
+      if( isBetter )
+      {
+         SCIPdebugMessage("updating ordering: \n" );
+         SCIPdebugMessage("---max n. partitions %ld->%ld \n", sequence_base->maxnpartitions, sequence_tmp->maxnpartitions);
+         SCIPdebugMessage("---max bordersize %d->%d \n", sequence_base->maxbordersize, sequence_tmp->maxbordersize);
+
+         dpborder_dpbsequenceCopy(sequence_tmp, sequence_base);
+      }
+   }
+
+   SCIPdebugMessage("final ordering: \n" );
+   SCIPdebugMessage("---max n. partitions %ld \n", sequence_base->maxnpartitions);
+   SCIPdebugMessage("---max bordersize %d \n", sequence_base->maxbordersize);
+
+   SCIPfreeMemory(scip, &terms);
+   dpborder_dpbsequenceFree(scip, &sequence_tmp);
 
    return SCIP_OKAY;
 }
@@ -676,7 +932,6 @@ SCIP_RETCODE dpborder_coreSolve(
       assert(dpborder->global_optposition != -1);
 
    }
-
 
    return SCIP_OKAY;
 }

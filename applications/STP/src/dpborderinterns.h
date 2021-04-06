@@ -168,9 +168,13 @@ extern STP_Vectype(int)  dpborder_partGetCandstarts(SCIP*, const DPBPART*, const
 extern SCIP_Bool  dpborder_partIsValid(const DPBPART*);
 extern void  dpborder_partPrint(const DPBPART*);
 extern void  dpborder_markSolNodes(const DPBORDER*, STP_Bool* RESTRICT);
+extern SCIP_RETCODE  dpborder_dpbsequenceInit(SCIP*, const GRAPH*, DPBSEQUENCE**);
+extern void          dpborder_dpbsequenceFree(SCIP*, DPBSEQUENCE**);
+extern void          dpborder_dpbsequenceCopy(const DPBSEQUENCE*, DPBSEQUENCE*);
 extern SCIP_RETCODE  dpborder_dpblevelInit(SCIP*, DPBLEVEL**);
 extern void          dpborder_dpblevelFree(SCIP*, DPBLEVEL**);
-extern SCIP_RETCODE  dpborder_coreComputeOrdering(SCIP*, const GRAPH*, DPBORDER*);
+extern SCIP_RETCODE  dpborder_coreComputeOrderingSimple(SCIP*, const GRAPH*, DPBORDER*);
+extern SCIP_RETCODE  dpborder_coreUpdateOrdering(SCIP*, const GRAPH*, DPBORDER*);
 extern SCIP_RETCODE  dpborder_coreSolve(SCIP*, const GRAPH*, DPBORDER*, SCIP_Bool*);
 
 #endif /* APPLICATIONS_STP_SRC_DPBORDERINTERNS_H_ */
