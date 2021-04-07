@@ -14,27 +14,31 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+# compares averages of several SCIP result files
+#
+# Usage: average.sh <awkargs> <check* files>
+
 AWKARGS=""
 FILES=""
 for i in $@
 do
-    if test ! -e $i
+    if test ! -e "${i}"
     then
-	AWKARGS="$AWKARGS $i"
+        AWKARGS="${AWKARGS} ${i}"
     else
-	f1=`basename $i .res`
-	f2=`basename $i`
-	if test "$f1" != "$f2"
-	then
-	    FILES="$FILES $i"
-	fi
+        f1=$(basename "${i}" .res)
+        f2=$(basename "${i}")
+        if test "${f1}" != "${f2}"
+        then
+            FILES="${FILES} ${i}"
+        fi
     fi
 done
 
 export LC_NUMERIC=C
 
-if test -n "$FILES"
+if test -n "${FILES}"
 then
-    awk -f average.awk $AWKARGS $FILES
+    awk -f average.awk "${AWKARGS}" "${FILES}"
 fi
 

@@ -14,20 +14,24 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+# compare different versions of runs with permuations
+#
+# Usage: permcmpresall.sh <awkargs> <check* files>
+
 AWKARGS=""
 FILES=""
 for i in $@
 do
-    if test ! -e $i
+    if test ! -e "${i}"
     then
-	AWKARGS="$AWKARGS $i"
+        AWKARGS="${AWKARGS} ${i}"
     else
-	FILES="$FILES $i"
+        FILES="${FILES} ${i}"
     fi
 done
 
 export LC_NUMERIC=C
 
-awk -f permcmpresall.awk $AWKARGS $FILES
+awk -f permcmpresall.awk "${AWKARGS}" "${FILES}"
 
 
