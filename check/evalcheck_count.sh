@@ -14,41 +14,45 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+# Calls check_count.awk on the testrun files and writes the output in a .res file.
+#
+# To be invoked by 'check_count.sh'.
+
 export LANG=C
 
 AWKARGS=""
 FILES=""
 for i in $@
 do
-    if test ! -e $i
+    if test ! -e ${i}
     then
-        AWKARGS="$AWKARGS $i"
+        AWKARGS="${AWKARGS} ${i}"
     else
-        FILES="$FILES $i"
+        FILES="${FILES} ${i}"
     fi
 done
 
-for i in $FILES
+for i in ${FILES}
 do
-    NAME=`basename $i .out`
-    DIR=`dirname $i`
-    OUTFILE=$DIR/$NAME.out
-    RESFILE=$DIR/$NAME.res
-    TEXFILE=$DIR/$NAME.tex
-    PAVFILE=$DIR/$NAME.pav
+    NAME=$(basename ${i} .out)
+    DIR=$(dirname ${i})
+    OUTFILE="${DIR}/${NAME}.out"
+    RESFILE="${DIR}/${NAME}.res"
+    TEXFILE="${DIR}/${NAME}.tex"
+    PAVFILE="${DIR}/${NAME}.pav"
 
-    TSTNAME=`echo $NAME | sed 's/checkcount.\([a-zA-Z0-9_]*\).*/\1/g'`
+    TSTNAME=$(echo "${NAME}" | sed 's/checkcount.\([a-zA-Z0-9_]*\).*/\1/g')
 
-    if test -f testset/$TSTNAME.test
+    if test -f "testset/${TSTNAME}.test"
     then
-        TESTFILE=testset/$TSTNAME.test
+        TESTFILE="testset/${TSTNAME}.test"
     else
         TESTFILE=""
     fi
 
     # call method to obtain solution file
     # defines the following environment variable: SOLUFILE
-    . ./configuration_solufile.sh $TSTNAME
+    . ./configuration_solufile.sh "${TSTNAME}"
 
-    awk -f check_count.awk $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+    awk -f check_count.awk "${AWKARGS}" "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
 done
