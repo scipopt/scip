@@ -30,6 +30,56 @@
  */
 
 
+/** sorts all subsets
+ * NOTE: partition needs to have entry [-1]! */
+static inline
+void partitionSortSubsets(
+   DPB_Ptype* RESTRICT   partition,          /**< array of size 'nentries' */
+   DPB_Ptype             delimiter,          /**< delimiter */
+   int                   size                /**< size */
+)
+{
+   assert(size >= 1);
+
+   for( int iter = 0; iter < size; iter++ )
+   {
+      int iter2;
+      for( iter2 = iter + 1; iter2 < size; iter2++ )
+      {
+         if( partition[iter2] == delimiter )
+            break;
+      }
+
+      /* NOTE: sentinel */
+      partition[iter - 1] *= -1;
+      for( int i = iter + 1; i < iter2; i++ )
+      {
+         int j;
+         const DPB_Ptype curr = partition[i];
+
+         for( j = i - 1; curr < partition[j]; j-- )
+         {
+            assert(j >= 0);
+            partition[j + 1] = partition[j];
+         }
+         partition[j + 1] = curr;
+      }
+      assert(partition[iter - 1] <= 0);
+      partition[iter - 1] *= -1;
+      iter = iter2;
+   }
+
+#ifndef NDEBUG
+   for( int iter = 1; iter < size; iter++ )
+   {
+      if( partition[iter - 1] == delimiter )
+         continue;
+
+      assert(partition[iter - 1] < partition[iter]);
+   }
+#endif
+}
+
 /*
  * Interface methods
  */
@@ -263,9 +313,13 @@ int dpborder_partGetIdxNew(
    const DPB_Ptype delimiter_new = dpborder_getTopDelimiter(dpborder);
    const int partsize = borderpartition->partsize;
    SCIP_Bool doCopy;
+#ifdef SCIP_DEBUG
+   DPBPART partition;
+#endif
 
    assert(dpborder_partIsValid(borderpartition));
    assert(globalstart + partsize + 2 < dpborder->global_partcap);
+   assert(globalstart >= 1);
 
    /* form the union of marked subsets, as well as of extension node (if in border) */
    for( i = 0; i < ncandstarts_sub; i++ )
@@ -386,20 +440,23 @@ int dpborder_partGetIdxNew(
       assert(0 <= partitionchars[j] && partitionchars[j] <= delimiter_prev);
 #endif
 
-#ifdef SCIP_DEBUG
    if( globalstart != -1 )
    {
-      DPBPART partition;
+#ifdef SCIP_DEBUG
       partition.partchars = &(global_partitions[globalstart]);
       partition.partsize = (globalend - globalstart);
       partition.delimiter = delimiter_new;
       printf("new (sub) partition (range %d-%d, glbpos=%d): \n", globalstart, globalend, dpborder->global_npartitions - 1);
       dpborder_partPrint(&partition);
-   }
 #endif
 
-   if( globalstart != -1 )
-   {
+      partitionSortSubsets(&global_partitions[globalstart], delimiter_new, globalend - globalstart);
+
+#ifdef SCIP_DEBUG
+      printf("sorted: \n");
+      dpborder_partPrint(&partition);
+#endif
+
       return dpborder->global_npartitions - 1;
    }
 
@@ -426,9 +483,13 @@ int dpborder_partGetIdxNewExclusive(
    const DPB_Ptype* const partitionchars = borderpartition->partchars;
    const DPB_Ptype delimiter_new = dpborder_getTopDelimiter(dpborder);
    const int partsize = borderpartition->partsize;
+#ifdef SCIP_DEBUG
+   DPBPART partition;
+#endif
 
    assert(dpborder_partIsValid(borderpartition));
    assert(globalstart + partsize < dpborder->global_partcap);
+   assert(globalstart >= 1);
 
    for( int i = 0; i < partsize; i++ )
    {
@@ -458,14 +519,17 @@ int dpborder_partGetIdxNewExclusive(
    }
 
 #ifdef SCIP_DEBUG
-   {
-      DPBPART partition;
-      partition.partchars = &(global_partitions[globalstart]);
-      partition.partsize = (globalend - globalstart);
-      partition.delimiter = delimiter_new;
-      printf("new (exclusive sub) partition (range %d-%d, glbpos=%d): \n", globalstart, globalend, dpborder->global_npartitions);
-      dpborder_partPrint(&partition);
-   }
+   partition.partchars = &(global_partitions[globalstart]);
+   partition.partsize = (globalend - globalstart);
+   partition.delimiter = delimiter_new;
+   printf("new (exclusive sub) partition (range %d-%d, glbpos=%d): \n", globalstart, globalend, dpborder->global_npartitions);
+   dpborder_partPrint(&partition);
+#endif
+
+   partitionSortSubsets(&global_partitions[globalstart], delimiter_new, globalend - globalstart);
+#ifdef SCIP_DEBUG
+   printf("sorted: \n");
+   dpborder_partPrint(&partition);
 #endif
 
    StpVecPushBack(scip, dpborder->global_partstarts, globalend);
