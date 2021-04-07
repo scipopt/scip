@@ -27,76 +27,77 @@
 #    INSTANCELIST - list of all instances with complete path
 #    TIMELIMLIST - list of time limits for the individual instances
 #    HARDTIMELIMLIST - list of hard time limits for the individual instances, that are given to slurm
+#    FULLTSTNAME - path to .test file either in testset/ or in instancedata/testset
 
 # function to capitalize a whole string
-function capitalize {
-    echo "$1" | tr '[:lower:]' '[:upper:]'
+capitalize() {
+    echo "${1}" | tr '[:lower:]' '[:upper:]'
 }
 
 # function to strip version of, e.g., scip-3.2... to only scip and scipampl.* to scipampl
-function stripversion {
-    NAMENOPATH=`basename $1`
+stripversion() {
+    NAMENOPATH=$(basename "${1}")
     # by '%%', Trim the longest match from the end
     NAMENOVERSION=${NAMENOPATH%%-*}
     NAMENOVERSION=${NAMENOVERSION%%\.*}
-    echo $NAMENOVERSION
+    echo "${NAMENOVERSION}"
 }
 
 # format time in seconds into format  dd-hh:mm:ss
-function formattime {
-    local T=$1
-    local D=$((T/60/60/24))
-    local H=$((T/60/60%24))
-    local M=$((T/60%60))
-    local S=$((T%60))
+formattime() {
+    local T="${1}"
+    local D=$((T / 60 / 60 / 24))
+    local H=$((T / 60 / 60 % 24))
+    local M=$((T / 60 % 60))
+    local S=$((T % 60))
     local F="%02d"
-    printf -v PRETTYTIME "${F}-${F}:${F}:${F}" $D $H $M $S
-    echo ${PRETTYTIME}
+    printf -v PRETTYTIME "${F}-${F}:${F}:${F}" "${D}" "${H}" "${M}" "${S}"
+    echo "${PRETTYTIME}"
 }
 
 # input environment - these environment variables should be set before invoking this script
-BINNAME=$1       # name of the binary
-TSTNAME=$2       # name of the test set
-SETNAMES=$3      # a comma-separated string of setting file basenames (without .set extension)
-TIMELIMIT=$4     # the time limit in seconds
-TIMEFORMAT=$5    # the format for the time (sec or format)
-MEMLIMIT=$6      # the memory limit in MB
-MEMFORMAT=$7     # the format for hard memory limit (kB or MB)
-DEBUGTOOL=$8     # which debug tool should be used, if any?
-SETCUTOFF=$9     # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the solver
+BINNAME="${1}"       # name of the binary
+TSTNAME="${2}"       # name of the test set
+SETNAMES="${3}"      # a comma-separated string of setting file basenames (without .set extension)
+TIMELIMIT="${4}"     # the time limit in seconds
+TIMEFORMAT="${5}"    # the format for the time (sec or format)
+MEMLIMIT="${6}"      # the memory limit in MB
+MEMFORMAT="${7}"     # the format for hard memory limit (kB or MB)
+DEBUGTOOL="${8}"     # which debug tool should be used, if any?
+SETCUTOFF="${9}"     # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the solver
 
 # get current SCIP path
-SCIPPATH=`pwd`
+SCIPPATH=$(pwd)
 
 # check if binary exists. The second condition checks whether there is a binary of that name directly available
 # independent of whether it is a symlink, file in the working directory, or application in the path
-if test ! -e $SCIPPATH/../$BINNAME && ! type $BINNAME >/dev/null 2>&1
+if test ! -e "${SCIPPATH}/../${BINNAME}" && ! type "${BINNAME}" >/dev/null 2>&1
 then
-   echo "ERROR: \"$BINNAME\" not found."
-   echo "       This is needed by ${0} to work. Check your"
-   echo "       \$PATH variable or install the tool \"$BINNAME\"."
-   echo Skipping test since the binary $BINNAME does not exist.
-   exit 1
+    echo "ERROR: \"${BINNAME}\" not found."
+    echo "       This is needed by ${0} to work. Check your"
+    echo "       \${PATH} variable or install the tool \"${BINNAME}\"."
+    echo Skipping test since the binary ${BINNAME} does not exist.
+    exit 1
 fi
 
-# create $OUTPUTDIR directory if it doesn't already exist
-if test ! -e $SCIPPATH/$OUTPUTDIR
+# create ${OUTPUTDIR} directory if it doesn't already exist
+if test ! -e "${SCIPPATH}/${OUTPUTDIR}"
 then
-    mkdir $SCIPPATH/$OUTPUTDIR
+    mkdir "${SCIPPATH}/${OUTPUTDIR}"
 fi
 
 # create settings directory if non-existent
-if test ! -d $SCIPPATH/../settings/
+if test ! -d "${SCIPPATH}/../settings/"
 then
-    echo Create directory settings
-    mkdir $SCIPPATH/../settings
+    echo "Create directory settings"
+    mkdir "${SCIPPATH}/../settings"
 fi
 
 # find out the solver that should be used
-SOLVER=`stripversion $BINNAME`
+SOLVER=$(stripversion "${BINNAME}")
 
 # figure out the correct settings file extension
-if test $SOLVER = cplex
+if test "${SOLVER}" = cplex
 then
     SETEXTEXTENSION="prm"
 else
@@ -106,58 +107,58 @@ fi
 
 # check if all settings files exist
 SETTINGSLIST=(${SETNAMES//,/ })
-for SETNAME in ${SETTINGSLIST[@]}
+for SETNAME in "${SETTINGSLIST[@]}"
 do
-    if test $SOLVER = fscip
+    if test "${SOLVER}" = fscip
     then
-	SETTINGS="${SCIPPATH}/../../ug/settings/${SETNAME}.${SETEXTEXTENSION}"
+        SETTINGS="${SCIPPATH}/../../ug/settings/${SETNAME}.${SETEXTEXTENSION}"
     else
-	SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
+        SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
     fi
-    if test $SETNAME != "default" && test ! -e $SETTINGS
+    if test "${SETNAME}" != "default" && test ! -e "${SETTINGS}"
     then
-        echo Skipping test since the settings file $SETTINGS does not exist.
+        echo "Skipping test since the settings file ${SETTINGS} does not exist."
         exit 1
     fi
 done
 
 # call method to obtain solution file
 # defines the following environment variable: SOLUFILE
-. ./configuration_solufile.sh $TSTNAME
+. ./configuration_solufile.sh "${TSTNAME}"
 
 # if cutoff should be passed, solu file must exist
-if test $SETCUTOFF = 1 || test $SETCUTOFF = true
+if test "${SETCUTOFF}" = 1 || test "${SETCUTOFF}" = true
 then
-    if test $SOLUFILE = ""
+    if test "${SOLUFILE}" = ""
     then
-        echo "Skipping test: SETCUTOFF=1 set, but no .solu file ($TSTNAME.solu or all.solu in testset/ or instancedata/testsets/) available"
+        echo "Skipping test: SETCUTOFF=1 set, but no .solu file (${TSTNAME}.solu or all.solu in testset/ or instancedata/testsets/) available"
         exit 1
     fi
 fi
 
 # we add 10% to the hard memory limit and additional 100MB to the hard memory limit
-HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
+HARDMEMLIMIT=$(((MEMLIMIT + 100) + (MEMLIMIT / 10)))
 
 # qsub requires the memory limit to be displayed in kB
-if test "$MEMFORMAT" = "kB"
+if test "${MEMFORMAT}" = "kB"
 then
-    HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
-elif test "$MEMFORMAT" = "B"
+    HARDMEMLIMIT=$((HARDMEMLIMIT * 1024))
+elif test "${MEMFORMAT}" = "B"
 then
-    HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
+    HARDMEMLIMIT=$((HARDMEMLIMIT * 1024000))
 fi
 # check if the test run should be processed in a debug tool environment
-if test "$DEBUGTOOL" = "valgrind"
+if test "${DEBUGTOOL}" = "valgrind"
 then
     DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --suppressions=${SCIPPATH}/../suppressions.valgrind "
-elif test "$DEBUGTOOL" = "rr"
+elif test "${DEBUGTOOL}" = "rr"
 then
     DEBUGTOOLCMD="rr record --chaos -o RRTRACEFOLDER_PLACEHOLDER.rr "
-elif test "$DEBUGTOOL" = "gdb"
+elif test "${DEBUGTOOL}" = "gdb"
 then
     #  set a gdb command, but leave a place holder for the error file we want to log to, which gets replaced in 'run.sh'
     DEBUGTOOLCMD='gdb -batch-silent -return-child-result -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "thread apply all bt full" --args '
-    if test "$SOLVER" = "fscip"
+    if test "${SOLVER}" = "fscip"
     then
         DEBUGTOOLCMD='gdb -batch-silent -return-child-result -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "set verbose on" -ex "thread apply all bt full" --args '
     fi
@@ -165,92 +166,71 @@ else
     DEBUGTOOLCMD=""
 fi
 
-#check if additional instance paths are given
-POSSIBLEPATHS=$SCIPPATH
-if test -e paths.txt
-then
-    POSSIBLEPATHS="${POSSIBLEPATHS} `cat paths.txt`"
-fi
-POSSIBLEPATHS="${POSSIBLEPATHS} / DONE"
-
 #search for test file and check if we use a ttest or a test file
-if [ -f instancedata/testsets/$TSTNAME.ttest ];
+if [ -f "instancedata/testsets/${TSTNAME}.ttest" ]
 then
-    FULLTSTNAME="instancedata/testsets/$TSTNAME.ttest"
-    TIMEFACTOR=$TIMELIMIT
+    FULLTSTNAME="instancedata/testsets/${TSTNAME}.ttest"
+    TIMEFACTOR=${TIMELIMIT}
+elif [ -f "instancedata/testsets/${TSTNAME}.test" ]
+then
+    FULLTSTNAME="instancedata/testsets/${TSTNAME}.test"
+    TIMEFACTOR=1
+elif [ -f "testset/${TSTNAME}.ttest" ]
+then
+    FULLTSTNAME="testset/${TSTNAME}.ttest"
+    TIMEFACTOR=${TIMELIMIT}
+elif [ -f "testset/${TSTNAME}.test" ]
+then
+    FULLTSTNAME="testset/${TSTNAME}.test"
+    TIMEFACTOR=1
 else
-    if [ -f instancedata/testsets/$TSTNAME.test ];
-    then
-	FULLTSTNAME="instancedata/testsets/$TSTNAME.test"
-	TIMEFACTOR=1
-    else
-	if [ -f testset/$TSTNAME.ttest ];
-	then
-	    FULLTSTNAME="testset/$TSTNAME.ttest"
-	    TIMEFACTOR=$TIMELIMIT
-	else
-	    if [ -f testset/$TSTNAME.test ];
-	    then
-		FULLTSTNAME="testset/$TSTNAME.test"
-		TIMEFACTOR=1
-	    else
-		echo "Skipping test: no $TSTNAME.(t)test file found in testset/ or instancedata/testsets/"
-		exit 1
-	    fi
-	fi
-    fi
+    echo "Skipping test: no ${TSTNAME}.(t)test file found in testset/ or instancedata/testsets/"
+    exit 1
 fi
 
-if [ ${TIMEFACTOR} -gt 5 ]
+if [ "${TIMEFACTOR}" -gt 5 ]
 then
-    echo ERROR: Time factor ${TIMEFACTOR} is too large--did you accidentally use a time limit in seconds in combination with a TTEST file?
-    echo Exiting, try again, SCIP script novice
+    echo "ERROR: Time factor ${TIMEFACTOR} is too large--did you accidentally use a time limit in seconds in combination with a TTEST file?"
+    echo "Exiting, try again, SCIP script novice"
     exit 1
 fi
 
 #write instance names to an array
 COUNT=0
-for INSTANCE in `cat $FULLTSTNAME | awk '{print $1}'`
+for INSTANCE in $(cat "${FULLTSTNAME}" | awk '{print $1}')
 do
     # if the key word DONE appears in the test file, skip the remaining test file
-    if test "$INSTANCE" = "DONE"
+    if test "${INSTANCE}" = "DONE"
     then
         break
     fi
     # check if problem instance exists
-    for IPATH in ${POSSIBLEPATHS[@]}
-    do
-        #echo $IPATH
-        if test "$IPATH" = "DONE"
-        then
-            echo "input file $INSTANCE not found!"
-        elif test -f $IPATH/$INSTANCE
-        then
-            INSTANCELIST[$COUNT]="${IPATH}/${INSTANCE}"
-            break
-        fi
-    done
-    COUNT=$(( $COUNT + 1 ))
+    if test -f "${SCIPPATH}/${INSTANCE}"
+    then
+        INSTANCELIST[${COUNT}]="${SCIPPATH}/${INSTANCE}"
+        COUNT=$(( COUNT + 1 ))
+    else
+        echo "input file ${SCIPPATH}/${INSTANCE} not found!"
+    fi
 done
-INSTANCELIST[$COUNT]="DONE"
-COUNT=$(( $COUNT + 1 ))
+INSTANCELIST[${COUNT}]="DONE"
 
 #write timelimits to an array
 #if no second column with timelimits exists in the test file the normal timelimit will be returned by the awk command
 COUNT=0
-for TL in `cat $FULLTSTNAME | awk '{print match($2, /[^ ]/) ? $2 : "'$TIMELIMIT'"}'`
+for TL in $(cat "${FULLTSTNAME}" | awk '{print match($2, /[^ ]/) ? $2 : "'${TIMELIMIT}'"}')
 do
-    TMPTL=$(( $TL * $TIMEFACTOR ))
-    TIMELIMLIST[$COUNT]=$TMPTL
+    TMPTL=$(( TL * TIMEFACTOR ))
+    TIMELIMLIST[${COUNT}]=${TMPTL}
     # we add 100% to the hard time limit and additional 600 seconds in case of small time limits
-    HARDTIMELIMIT=`expr \`expr $TMPTL + 600\` + $TMPTL`
+    HARDTIMELIMIT=$(((TMPTL + 600) + TMPTL))
 
-    if test $TIMEFORMAT = "format"
+    if test "${TIMEFORMAT}" = "format"
     then
         #format is (d-)HH:MM:SS
-        HARDTIMELIMIT=$(formattime $HARDTIMELIMIT)
-        # echo ${HARDTIMELIMIT}
+        HARDTIMELIMIT=$(formattime "${HARDTIMELIMIT}")
+        # echo "${HARDTIMELIMIT}"
     fi
-    HARDTIMELIMLIST[$COUNT]=$HARDTIMELIMIT
-    COUNT=$(( $COUNT + 1 ))
+    HARDTIMELIMLIST[${COUNT}]="${HARDTIMELIMIT}"
+    COUNT=$(( COUNT + 1 ))
 done
