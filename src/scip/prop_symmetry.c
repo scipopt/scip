@@ -1465,7 +1465,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
                   assert( matrixdata->matvaridx[j] < matrixdata->npermvars );
 
                   /* loop through row r2 and check whether it is equal to permuted row r */
-                  while (j < matrixdata->nmatcoef && matrixdata->matrhsidx[j] == r2 && SCIPisEQ(scip, permrow[matrixdata->matvaridx[j]], matrixdata->matcoef[j]) )
+                  while ( j < matrixdata->nmatcoef && matrixdata->matrhsidx[j] == r2 && SCIPisEQ(scip, permrow[matrixdata->matvaridx[j]], matrixdata->matcoef[j] ) )
                      ++j;
 
                   /* check whether rows are completely equal */
@@ -1504,13 +1504,13 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       SCIPdebugMsg(scip, "Verifying automorphism group generator #%d for non-linear part ...\n", p);
 
       /* fill hashmap according to permutation */
-      for( j = 0; j < matrixdata->npermvars; ++j )
+      for (j = 0; j < matrixdata->npermvars; ++j)
       {
          SCIP_CALL( SCIPhashmapInsert(varmap, matrixdata->permvars[j], matrixdata->permvars[P[j]]) );
       }
 
       /* check all non-linear constraints */
-      for( i = 0; i < nconss; ++i )
+      for (i = 0; i < nconss; ++i)
       {
          SCIP_CONS* cons1;
          SCIP_Bool permuted = FALSE;
@@ -1523,16 +1523,19 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
          assert(success);
 
          /* count number of affected variables in this constraint */
-         for( j = 0; j < noccuringvars && ! permuted; ++j )
+         for (j = 0; j < noccuringvars && ! permuted; ++j)
          {
-            int varidx = SCIPvarGetProbindex(occuringvars[j]);
-            assert(varidx >= 0 && varidx < matrixdata->npermvars);
-            if( P[varidx] != varidx )
+            int varidx;
+
+            varidx = SCIPvarGetProbindex(occuringvars[j]);
+            assert( varidx >= 0 && varidx < matrixdata->npermvars );
+
+            if ( P[varidx] != varidx )
                permuted = TRUE;
          }
 
          /* if constraint is not affected by permutation, we do not have to check it */
-         if( permuted )
+         if ( permuted )
          {
             SCIP_CONS* permutedcons = NULL;
             SCIP_EXPR* permutedexpr;
@@ -1551,16 +1554,16 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             /* simplify permuted expr in order to guarantee sorted variables */
             permutedexpr = SCIPgetExprConsNonlinear(permutedcons);
             SCIP_CALL( SCIPsimplifyExpr(scip, permutedexpr, &permutedexpr, &success, &infeasible, NULL, NULL) );
-            assert(!infeasible);
+            assert( !infeasible );
 
             /* look for a constraint with same lhs, rhs and expression */
-            for( j = 0; j < nconss; ++j )
+            for (j = 0; j < nconss; ++j)
             {
                SCIP_CONS* cons2;
 
                cons2 = SCIPconshdlrGetConss(conshdlr)[j];
 
-               if( SCIPisEQ(scip, SCIPgetRhsConsNonlinear(cons2), SCIPgetRhsConsNonlinear(permutedcons))
+               if ( SCIPisEQ(scip, SCIPgetRhsConsNonlinear(cons2), SCIPgetRhsConsNonlinear(permutedcons))
                   && SCIPisEQ(scip, SCIPgetLhsConsNonlinear(cons2), SCIPgetLhsConsNonlinear(permutedcons))
                   && (SCIPcompareExpr(scip, SCIPgetExprConsNonlinear(cons2), permutedexpr) == 0) )
                {
@@ -1573,7 +1576,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             SCIP_CALL( SCIPreleaseExpr(scip, &permutedexpr) );
             SCIP_CALL( SCIPreleaseCons(scip, &permutedcons) );
 
-            assert(found);
+            assert( found );
             if( !found ) /*lint !e774*/
             {
                SCIPerrorMessage("Found permutation that is not a symmetry.\n");
@@ -2258,52 +2261,44 @@ SCIP_RETCODE computeSymmetryGroup(
       else if ( strcmp(conshdlrname, "nonlinear") == 0 )
       {
          SCIP_EXPR* expr;
-         SCIP_EXPR* rootexpr = SCIPgetExprConsNonlinear(cons);
+         SCIP_EXPR* rootexpr;
+
+         rootexpr = SCIPgetExprConsNonlinear(cons);
+         assert(rootexpr != NULL);
 
          /* for expression constraints, only collect auxiliary variables for now */
          SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
          SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
 
-         for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/
+         for (expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/
          {
-            switch( SCIPexpriterGetStageDFS(it) )
+            assert( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR );
+
+            /* for variables, we check whether they appear nonlinearly and store the result in the resp. array */
+            if ( SCIPisExprVar(scip, expr) )
             {
-               case SCIP_EXPRITER_ENTEREXPR:
+               assert(*isnonlinvar != NULL);
+               (*isnonlinvar)[SCIPvarGetProbindex(SCIPgetVarExprVar(expr))] = (SCIPexpriterGetParentDFS(it) != rootexpr || !SCIPisExprSum(scip, rootexpr));
+            }
+            else
+            {
+               SCIP_VAR* auxvar = SCIPgetExprAuxVarNonlinear(expr);
+
+               if ( auxvar != NULL && !SCIPhashsetExists(auxvars, (void*) auxvar) )
                {
-                  /* for variables, we check whether they appear nonlinearly and store the result in the resp. array */
-                  if( SCIPisExprVar(scip, expr) )
-                  {
-                     assert(*isnonlinvar != NULL);
-                     (*isnonlinvar)[SCIPvarGetProbindex(SCIPgetVarExprVar(expr))]
-                        = (SCIPexpriterGetParentDFS(it) != rootexpr || !SCIPisExprSum(scip, rootexpr));
-                  }
-                  else
-                  {
-                     SCIP_VAR* auxvar = SCIPgetExprAuxVarNonlinear(expr);
-
-                     if( auxvar != NULL && !SCIPhashsetExists(auxvars, (void*) auxvar) )
-                     {
-                        SCIP_CALL( SCIPhashsetInsert(auxvars, SCIPblkmem(scip), (void*) auxvar) );
-                     }
-
-                     if( SCIPisExprValue(scip, expr) )
-                        ++exprdata.nuniqueconstants;
-                     else if( SCIPisExprSum(scip, expr) )
-                     {
-                        ++exprdata.nuniqueoperators;
-                        ++exprdata.nuniqueconstants;
-                        exprdata.nuniquecoefs += SCIPexprGetNChildren(expr);
-                     }
-                     else
-                        ++exprdata.nuniqueoperators;
-                  }
-
-                  break;
+                  SCIP_CALL( SCIPhashsetInsert(auxvars, SCIPblkmem(scip), (void*) auxvar) );
                }
 
-               default:
-                  SCIPABORT(); /* we should never be called in this stage */
-                  break;
+               if ( SCIPisExprValue(scip, expr) )
+                  ++exprdata.nuniqueconstants;
+               else if ( SCIPisExprSum(scip, expr) )
+               {
+                  ++exprdata.nuniqueoperators;
+                  ++exprdata.nuniqueconstants;
+                  exprdata.nuniquecoefs += SCIPexprGetNChildren(expr);
+               }
+               else
+                  ++exprdata.nuniqueoperators;
             }
          }
       }
@@ -2362,7 +2357,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.rhscoefcolors, matrixdata.nrhscoef) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquevararray, nvars) );
 
-   /* determine number of different coefficents */
+   /* determine number of different coefficients */
 
    /* find non-equivalent variables: same objective, lower and upper bounds, and variable type */
    for (j = 0; j < nvars; ++j)
@@ -2438,7 +2433,7 @@ SCIP_RETCODE computeSymmetryGroup(
       if ( usecolumnsparsity )
          SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvars);
 
-      if( nnlconss > 0 )
+      if ( nnlconss > 0 )
       {
          SCIPfreeExpriter(&it);
          SCIPhashsetFree(&auxvars, SCIPblkmem(scip));
@@ -2569,10 +2564,10 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIPfreeBlockMemoryArrayNull(scip, &nconssforvar, nvarsorig);
 
    /* free cons expr specific data */
-   if( nnlconss > 0 )
+   if ( nnlconss > 0 )
    {
-      assert(it != NULL);
-      assert(auxvars != NULL);
+      assert( it != NULL );
+      assert( auxvars != NULL );
 
       SCIPfreeExpriter(&it);
       SCIPhashsetFree(&auxvars, SCIPblkmem(scip));
