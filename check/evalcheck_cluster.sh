@@ -193,12 +193,15 @@ do
             if test "${EXPIRE}" = "1"
             then
                 RB_EXP_DATE=$(date '+%Y-%b-%d' -d "+6 weeks")
+                echo "rbcli -e ${RB_EXP_DATE} up ${OUTFILE} ${ERRFILE} ${SETFILE} ${METAFILE}"
                 rbcli -e "${RB_EXP_DATE}" up "${OUTFILE}" "${ERRFILE}" "${SETFILE}" "${METAFILE}"
             else
                 if test -z "${RBCLI_TAG}"
                 then
+                    echo "rbcli up ${OUTFILE} ${ERRFILE} ${SETFILE} ${METAFILE}"
                     rbcli up "${OUTFILE}" "${ERRFILE}" "${SETFILE}" "${METAFILE}"
                 else
+                    echo "rbcli --tags ${RBCLI_TAG} up ${OUTFILE} ${ERRFILE} ${SETFILE} ${METAFILE}"
                     rbcli --tags "${RBCLI_TAG}" up "${OUTFILE}" "${ERRFILE}" "${SETFILE}" "${METAFILE}"
                 fi
             fi
