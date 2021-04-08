@@ -511,6 +511,10 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    assert(nnodes == (int) G->get_nof_vertices());
    assert(nnodes >= nusedcolors);
 
+   success = TRUE; /*lint !e838*/
+   if ( nconss == 0 )
+      return SCIP_OKAY;
+
    SCIPdebugMsg(scip, "Filling graph with colored coefficient nodes for non-linear part.\n");
 
    /* create maps for optypes, constants, sum coefficients and rhs to indices */
@@ -536,8 +540,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
    SCIP_EXPRITER* it;
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-
-   success = TRUE; /*lint !e838*/
 
    /* iterate over all expressions and add the corresponding nodes to the graph */
    for( int i = 0; i < nconss; ++i )
