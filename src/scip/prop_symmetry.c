@@ -1513,7 +1513,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       for( i = 0; i < nconss; ++i )
       {
          SCIP_CONS* cons1;
-         int npermuted = 0;
+         SCIP_Bool permuted = FALSE;
 
          cons1 = SCIPconshdlrGetConss(conshdlr)[i];
 
@@ -1523,16 +1523,16 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
          assert(success);
 
          /* count number of affected variables in this constraint */
-         for( j = 0; j < noccuringvars; ++j )
+         for( j = 0; j < noccuringvars && ! permuted; ++j )
          {
             int varidx = SCIPvarGetProbindex(occuringvars[j]);
             assert(varidx >= 0 && varidx < matrixdata->npermvars);
             if( P[varidx] != varidx )
-               ++npermuted;
+               permuted = TRUE;
          }
 
          /* if constraint is not affected by permutation, we do not have to check it */
-         if( npermuted > 0 )
+         if( permuted )
          {
             SCIP_CONS* permutedcons = NULL;
             SCIP_EXPR* permutedexpr;
