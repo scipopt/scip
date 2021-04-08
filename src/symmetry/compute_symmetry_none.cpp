@@ -54,6 +54,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 {  /*lint --e{715}*/
    assert( scip != NULL );
    assert( matrixdata != NULL );
+   assert( exprdata != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );

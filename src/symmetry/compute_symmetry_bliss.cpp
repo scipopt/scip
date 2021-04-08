@@ -507,6 +507,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
    assert(scip != NULL);
    assert(G != NULL);
+   assert(exprdata != NULL);
    assert(nnodes == (int) G->get_nof_vertices());
    assert(nnodes >= nusedcolors);
 
@@ -979,6 +980,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 {
    assert( scip != NULL );
    assert( matrixdata != NULL );
+   assert( exprdata != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
