@@ -50,14 +50,14 @@ struct SYM_Optype
    int                   color;              /**< store color */
 };
 
-/** data of constants that have the same value */
+/** data of constants that are considered to be equivalent */
 struct SYM_Consttype
 {
    SCIP_Real             value;              /**< value of constant */
    int                   color;              /**< store color */
 };
 
-/** data of coefficients that have the same value */
+/** data of coefficients that are considered to be equivalent */
 struct SYM_Rhstype
 {
    SCIP_Real             lhs;                /**< value of left-hand-side */
