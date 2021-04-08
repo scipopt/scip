@@ -637,7 +637,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         G->add_edge((unsigned) internode, (unsigned) parentnode);
                         ++nedges;
 
-                        /* connect the intermediate node to ints corresponding variable node */
+                        /* connect the intermediate node to its corresponding variable node */
                         node = SCIPvarGetProbindex(vars[k]);
                         assert(node < (int) G->get_nof_vertices());
 

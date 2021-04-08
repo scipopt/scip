@@ -91,7 +91,7 @@ struct SYM_Matrixdata
 /** data for symmetry group computation on nonlinear constraints */
 struct SYM_Exprdata
 {
-   int                   nuniqueconstants;   /**< number of unique constaints */
+   int                   nuniqueconstants;   /**< number of unique constants */
    int                   nuniqueoperators;   /**< number of unique operators */
    int                   nuniquecoefs;       /**< number of unique coefficients */
 };
