@@ -350,7 +350,7 @@ SCIP_RETCODE updateFromPartition(
    SCIP_CALL( SCIPallocBufferArray(scip, &subbuffer, BPBORDER_MAXBORDERSIZE) );
 
    /* make sure that partition storage is large enough */
-   SCIP_CALL( partitionTryRealloc(scip, (powsize + 1) * BPBORDER_MAXBORDERSIZE * 2, dpborder) );
+   SCIP_CALL( partitionTryRealloc(scip, (powsize + 2) * BPBORDER_MAXBORDERSIZE * 2, dpborder) );
    global_partitions = dpborder->global_partitions;
    partition.partchars = &(global_partitions[part_start]);
 

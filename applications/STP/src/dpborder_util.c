@@ -29,17 +29,85 @@
  * Local methods
  */
 
-
-/** sorts all subsets
- * NOTE: partition needs to have entry [-1]! */
-static inline
-void partitionSortSubsets(
-   DPB_Ptype* RESTRICT   partition,          /**< array of size 'nentries' */
+#ifndef NDEBUG
+/** fully sorted? */
+static
+SCIP_Bool partitionIsSorted(
+   const DPB_Ptype*      partition,          /**< array of size 'size' with delimiter at [size] */
    DPB_Ptype             delimiter,          /**< delimiter */
    int                   size                /**< size */
 )
 {
+   int nsubsets = 0;
+   int substarts[BPBORDER_MAXBORDERSIZE + 1];
+
+   assert(size > 0);
+   assert(partition[size] == delimiter);
+
+   substarts[0] = 0;
+
+   for( int iter = 1; iter < size; iter++ )
+   {
+      if( partition[iter - 1] == delimiter )
+      {
+         substarts[++nsubsets] = iter;
+         continue;
+      }
+
+      if( partition[iter - 1] >= partition[iter] )
+      {
+         SCIPdebugMessage("unsorted subset \n");
+         return FALSE;
+      }
+   }
+   substarts[++nsubsets] = size + 1;
+
+   for( int iter = 1; iter < nsubsets; iter++ )
+   {
+      const int start_curr = substarts[iter];
+      const int start_prev = substarts[iter - 1];
+      const int start_next = substarts[iter + 1];
+
+      assert(start_prev < start_curr && start_curr < start_next);
+
+      if( (start_curr - start_prev) < (start_next - start_curr) )
+         continue;
+
+      if( (start_curr - start_prev) > (start_next - start_curr) )
+      {
+         SCIPdebugMessage("wrongly ordered sizes \n");
+         return FALSE;
+      }
+
+      if( memcmp(&partition[start_prev], &partition[start_curr], start_curr - start_prev) >= 0 )
+      {
+         SCIPdebugMessage("wrongly ordered substrings \n");
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+#endif
+
+
+/** sorts all subsets
+ * NOTE: partition needs to have allocated entry [-1] and [size] */
+static inline
+void partitionSortSubsets(
+   DPB_Ptype* RESTRICT   partition,          /**< array of size 'size' */
+   DPB_Ptype             delimiter,          /**< delimiter */
+   int                   size                /**< size */
+)
+{
+   int nsubsets = 0;
+   int dummy[BPBORDER_MAXBORDERSIZE + 1];
+   DPB_Ptype subbuffer[BPBORDER_MAXBORDERSIZE + 1];
+   int* subsizes = &dummy[1];
    assert(size >= 1);
+
+   /* sentinel */
+   dummy[0] = 0;
 
    for( int iter = 0; iter < size; iter++ )
    {
@@ -50,7 +118,9 @@ void partitionSortSubsets(
             break;
       }
 
-      /* NOTE: sentinel */
+      subsizes[nsubsets++] = (iter2 - iter) + 1;
+
+      /* sentinel */
       partition[iter - 1] *= -1;
       for( int i = iter + 1; i < iter2; i++ )
       {
@@ -78,7 +148,43 @@ void partitionSortSubsets(
       assert(partition[iter - 1] < partition[iter]);
    }
 #endif
+
+   assert(nsubsets >= 1);
+
+   // todo extra method
+
+   /* add delimiter so that each subset ends with a delimiter */
+   partition[size] = delimiter;
+
+   for( int i = 1, curr_pos = subsizes[0]; i < nsubsets; i++ )
+   {
+      const int curr_size = subsizes[i];
+      int j;
+      int j_pos;
+      assert(curr_size > 0);
+
+      memcpy(subbuffer, &partition[curr_pos], curr_size * sizeof(partition[0]));
+
+      for( j = i - 1, j_pos = curr_pos - subsizes[i - 1];
+         curr_size < subsizes[j] ||
+        (curr_size == subsizes[j] && memcmp(&partition[curr_pos], &partition[j_pos], curr_size) < 0 );
+         j-- )
+      {
+         assert(j >= 0 && j_pos >= 0);
+         j_pos -= subsizes[j - 1];
+         subsizes[j + 1] = subsizes[j];
+      }
+      j_pos += subsizes[j];
+      memmove(&partition[j_pos + curr_size], &partition[j_pos], (curr_pos - j_pos) * sizeof(partition[0]));
+      memcpy(&partition[j_pos], subbuffer, curr_size * sizeof(partition[0]));
+      subsizes[j + 1] = curr_size;
+      curr_pos += curr_size;
+   }
+
+   assert(partition[size] == delimiter);
+   assert(partitionIsSorted(partition, delimiter, size));
 }
+
 
 /*
  * Interface methods
