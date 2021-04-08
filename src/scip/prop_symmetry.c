@@ -1785,7 +1785,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
    int*                  nmovedvars,         /**< pointer to store number of moved vars */
-   SCIP_Bool**           isnonlinvar,        /**< pointer to store whether each variable appears nonlinear */
+   SCIP_Bool**           isnonlinvar,        /**< pointer to store which variables appear nonlinearly */
    SCIP_Bool*            binvaraffected,     /**< pointer to store wether a binary variable is affected by symmetry */
    SCIP_Bool*            compressed,         /**< pointer to store whether compression has been performed */
    SCIP_Bool*            success             /**< pointer to store whether symmetry computation was successful */
@@ -1917,8 +1917,8 @@ SCIP_RETCODE computeSymmetryGroup(
 
    /* fill exprdata */
    exprdata.nuniqueoperators = 0;
-	exprdata.nuniquecoefs = 0;
-	exprdata.nuniqueconstants = 0;
+   exprdata.nuniquecoefs = 0;
+   exprdata.nuniqueconstants = 0;
 
    /* prepare matrix data (use block memory, since this can become large) */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &matrixdata.matcoef, matrixdata.nmaxmatcoef) );
@@ -1943,9 +1943,7 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIP_CALL( SCIPcreateExpriter(scip, &it) );
    }
    else
-   {
       *isnonlinvar = NULL;
-   }
 
    /* allocate memory for getting the number of constraints that contain a variable */
    if ( usecolumnsparsity )
