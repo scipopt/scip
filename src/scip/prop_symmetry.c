@@ -2860,13 +2860,14 @@ SCIP_RETCODE determineSymmetry(
 
       /* disable OF and symmetry handling constraints based on symretopes */
       propdata->ofenabled = FALSE;
-
-      if( propdata->islinearproblem )
+      propdata->symconsenabled = FALSE;
+      if ( ! propdata->sstenabled ||
+         ! ( ISSSTINTACTIVE(propdata->sstleadervartype) || ISSSTIMPLINTACTIVE(propdata->sstleadervartype)
+            || ISSSTCONTACTIVE(propdata->sstleadervartype) ) )
       {
-         propdata->symconsenabled = FALSE;
          propdata->sstenabled = FALSE;
 
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) -> problem is linear, so free symmetry data.\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) -> no handable symmetry found, free symmetry data.\n",
             SCIPgetSolvingTime(scip));
 
          /* free data and exit */
@@ -2874,10 +2875,6 @@ SCIP_RETCODE determineSymmetry(
 
          return SCIP_OKAY;
       }
-
-      /* currently we can only handle non-binary symmetries by Schreier-Sims constraints */
-      if ( ! propdata->sstenabled && propdata->islinearproblem )
-         return SCIP_OKAY;
    }
 
    assert( propdata->nperms > 0 );
@@ -2892,8 +2889,9 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) component computation started\n", SCIPgetSolvingTime(scip));
 #endif
 
-   /* in linear case, we only need the components for orbital fixing, orbitope and subgroup detection, and Schreier Sims constraints */
-   if ( !propdata->islinearproblem || propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes ) || propdata->detectsubgroups || propdata->sstenabled )
+   /* we only need the components for orbital fixing, orbitope and subgroup detection, and Schreier Sims constraints */
+   if ( propdata->ofenabled || ( propdata->symconsenabled && propdata->detectorbitopes )
+      || propdata->detectsubgroups || propdata->sstenabled )
    {
       SCIP_CALL( SCIPcomputeComponentsSym(scip, propdata->perms, propdata->nperms, propdata->permvars,
             propdata->npermvars, FALSE, &propdata->components, &propdata->componentbegins,
@@ -3019,7 +3017,7 @@ SCIP_RETCODE determineSymmetry(
     *
     * note: binary variables are in the beginning of permvars
     */
-   if ( propdata->binvaraffected || ! propdata->islinearproblem )
+   if ( propdata->binvaraffected )
    {
       for (j = 0; j < propdata->nbinpermvars; ++j)
       {
@@ -6357,11 +6355,10 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    if ( propdata->nperms <= 0 || (! propdata->symconsenabled && ! propdata->sstenabled) )
       return SCIP_OKAY;
 
-   if ( propdata->islinearproblem && ! propdata->binvaraffected )
+   if ( ! propdata->binvaraffected )
    {
-      SCIPdebugMsg(scip, "Symmetry propagator: problem is linear and no symmetry on binary variables has been found, turning propagator off.\n");
+      SCIPdebugMsg(scip, "Symmetry propagator: problem is linear and no symmetry on binary variables has been found, turning symretope constraints off.\n");
       propdata->symconsenabled = FALSE;
-      return SCIP_OKAY;
    }
    assert( propdata->nperms > 0 );
    assert( !propdata->islinearproblem || propdata->binvaraffected || propdata->sstenabled );
