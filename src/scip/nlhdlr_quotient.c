@@ -640,9 +640,13 @@ SCIP_RETCODE estimateUnivariateQuotient(
    assert(branchinguseful != NULL);
    assert(success != NULL);
 
+   x = SCIPgetExprAuxVarNonlinear(xexpr);
+
    /* get local bounds on xexpr */
+   bnd.inf = SCIPvarGetLbLocal(x);
+   bnd.sup = SCIPvarGetUbLocal(x);
    SCIP_CALL( SCIPevalExprActivity(scip, xexpr) );
-   bnd = SCIPgetExprBoundsNonlinear(scip, xexpr);
+   SCIPintervalIntersectEps(&bnd, SCIPepsilon(scip), bnd, SCIPexprGetActivity(xexpr));
    lbx = bnd.inf;
    ubx = bnd.sup;
 
@@ -654,7 +658,6 @@ SCIP_RETCODE estimateUnivariateQuotient(
    }
 
    /* get global variable bounds */
-   x = SCIPgetExprAuxVarNonlinear(xexpr);
    gllbx = SCIPvarGetLbGlobal(x);
    glubx = SCIPvarGetUbGlobal(x);
 
@@ -929,14 +932,21 @@ SCIP_RETCODE estimateBivariateQuotient(
    assert(branchingusefuly != NULL);
    assert(success != NULL);
 
+   vars[0] = SCIPgetExprAuxVarNonlinear(xexpr);
+   vars[1] = SCIPgetExprAuxVarNonlinear(yexpr);
+
    /* get bounds for x, y, and z */
+   bnd.inf = SCIPvarGetLbLocal(vars[0]);
+   bnd.sup = SCIPvarGetUbLocal(vars[0]);
    SCIP_CALL( SCIPevalExprActivity(scip, xexpr) );
-   bnd = SCIPgetExprBoundsNonlinear(scip, xexpr);
+   SCIPintervalIntersectEps(&bnd, SCIPepsilon(scip), bnd, SCIPexprGetActivity(xexpr));
    lbx = bnd.inf;
    ubx = bnd.sup;
 
+   bnd.inf = SCIPvarGetLbLocal(vars[1]);
+   bnd.sup = SCIPvarGetUbLocal(vars[1]);
    SCIP_CALL( SCIPevalExprActivity(scip, yexpr) );
-   bnd = SCIPgetExprBoundsNonlinear(scip, yexpr);
+   SCIPintervalIntersectEps(&bnd, SCIPepsilon(scip), bnd, SCIPexprGetActivity(yexpr));
    lby = bnd.inf;
    uby = bnd.sup;
 
@@ -949,9 +959,6 @@ SCIP_RETCODE estimateBivariateQuotient(
       *success = FALSE;
       return SCIP_OKAY;
    }
-
-   vars[0] = SCIPgetExprAuxVarNonlinear(xexpr);
-   vars[1] = SCIPgetExprAuxVarNonlinear(yexpr);
 
    /* get and adjust solution values */
    solx = SCIPgetSolVal(scip, sol, vars[0]);

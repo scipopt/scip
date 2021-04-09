@@ -382,19 +382,24 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    /* we need to pass a branchcand array to exprhdlr's estimate also if not asked to add branching scores */
    SCIP_CALL( SCIPallocBufferArray(scip, &branchcand, nchildren) );
 
+   SCIPdebug( SCIPinfoMessage(scip, NULL, "estimate exprhdlr %s for expr ", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr))) );
+   SCIPdebug( SCIPprintExpr(scip, expr, NULL) );
+   SCIPdebug( SCIPinfoMessage(scip, NULL, "\n") );
+
    for( c = 0; c < nchildren; ++c )
    {
       auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[c]);
       assert(auxvar != NULL);
 
-      if( (size_t)nlhdlrexprdata & (overestimate ? OVERESTIMATEUSESACTIVITY : UNDERESTIMATEUSESACTIVITY) )
+      SCIPintervalSetBounds(&localbounds[c],
+         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbLocal(auxvar)),
+          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbLocal(auxvar)));
+
+      if( ((size_t)nlhdlrexprdata & (overestimate ? OVERESTIMATEUSESACTIVITY : UNDERESTIMATEUSESACTIVITY)) )
       {
-         /* if expr estimate uses bounds, then
-          * - ensure we have a current activity stored in the expression and
-          * - use the activity intersected with the auxvar bounds for estimation
-          */
+         /* if expr estimate uses bounds, then intersect the auxvar bounds with the current activity, in case the latter is a bit tighter */
          SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(expr)[c]) );
-         localbounds[c] = SCIPgetExprBoundsNonlinear(scip, SCIPexprGetChildren(expr)[c]);
+         SCIPintervalIntersectEps(&localbounds[c], SCIPepsilon(scip), localbounds[c], SCIPexprGetActivity(SCIPexprGetChildren(expr)[c]));
 
          if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, localbounds[c]) )
          {
@@ -405,9 +410,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       else
       {
          /* if we think that expr estimate wouldn't use bounds, then just set something valid */
-         SCIPintervalSetBounds(&localbounds[c],
-            -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbLocal(auxvar)),
-             infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbLocal(auxvar)));
       }
 
       SCIPintervalSetBounds(&globalbounds[c],
@@ -440,6 +442,9 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       }
 
       SCIProwprepAddConstant(rowprep, constant);
+
+      SCIPdebug( SCIPinfoMessage(scip, NULL, "  found rowprep ") );
+      SCIPdebug( SCIPprintRowprepSol(scip, rowprep, sol, NULL) );
 
       SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
 
