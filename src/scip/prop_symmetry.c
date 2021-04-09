@@ -795,7 +795,7 @@ SCIP_RETCODE freeSymmetryData(
       propdata->nonbinpermvarcaptured = NULL;
    }
 
-   if ( propdata->binvaraffected || ! propdata->islinearproblem )
+   if ( propdata->binvaraffected )
    {
       for (i = 0; i < propdata->nbinpermvars; ++i)
       {
