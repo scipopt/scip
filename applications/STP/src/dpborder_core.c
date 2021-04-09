@@ -22,14 +22,14 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #include "dpborder.h"
 #include "dpborderinterns.h"
 #include "stpvector.h"
 #include "misc_stp.h"
 
 #define DPB_ORDERMULT_PREVS    2
-#define DPB_ORDERMULT_TERM     2
+#define DPB_ORDERMULT_TERM     1
 #define DPB_ORDERMULT_OUTDEG   1
 #define DPB_ORDERMULT_OUTDELTA 2
 
@@ -84,7 +84,7 @@ static inline
 SCIP_RETCODE partitionTryRealloc(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   newadds,
-   DPBORDER*             dpborder             /**< border */
+   DPBORDER*             dpborder            /**< border */
    )
 {
    const int size = dpborder->global_partstarts[dpborder->global_npartitions];
@@ -94,10 +94,12 @@ SCIP_RETCODE partitionTryRealloc(
    if( newadds + size > dpborder->global_partcap )
    {
       while( newadds + size > dpborder->global_partcap )
-         dpborder->global_partcap *= 2;
+         dpborder->global_partcap *= DPBORDER_GROWTH_FACTOR;
 
       SCIPdebugMessage("reallocating memory (to %d) \n", dpborder->global_partcap);
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(dpborder->global_partitions), dpborder->global_partcap) );
+
+      hashmap_updateKeyarr(dpborder->global_partitions, &dpborder->hashmap);
    }
 
    return SCIP_OKAY;
@@ -345,7 +347,8 @@ SCIP_RETCODE updateFromPartition(
    candstarts = dpborder_partGetCandstarts(scip, &partition, dpborder);
    ncands = StpVecGetSize(candstarts);
    assert(ncands >= 0);
-   powsize = (uint32_t) pow(2.0, ncands);
+   powsize = (uint32_t) 1 << (uint32_t) ncands;
+   assert(powsize == (uint32_t) pow(2.0, ncands));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &subbuffer, BPBORDER_MAXBORDERSIZE) );
 
@@ -363,7 +366,7 @@ SCIP_RETCODE updateFromPartition(
    {
       /* try to add/update the partition that does not include the extension node */
       const int globalposition_new = dpborder_partGetIdxNewExclusive(scip, &partition, dpborder);
-      if( globalposition_new != -1 )
+      if( globalposition_new != -1 && LT(part_cost, dpborder->global_partcosts[globalposition_new]) )
       {
          SCIPdebugMessage("...added partition at %d with cost=%f \n", globalposition_new, part_cost);
          dpborder->global_partcosts[globalposition_new] = part_cost;
@@ -410,6 +413,7 @@ SCIP_RETCODE updateFromPartition(
          assert(LT(cost_new, FARAWAY));
          SCIPdebugMessage("...added partition at %d with cost=%f \n", globalposition_new, cost_new);
          dpborder->global_partcosts[globalposition_new] = cost_new;
+         dpborder->global_partsUseExt[globalposition_new] = TRUE;
          dpborder->global_predparts[globalposition_new] = globalposition;
 
          if( allTermsAreVisited )
@@ -483,6 +487,36 @@ SCIP_RETCODE addLevel(
    printf("\n----- Starting level %d ----- \n", iteration);
 #endif
 
+   if( iteration > 1 )
+   {
+      // todo extra method
+      DPBHASHMAP* hashmap = &(dpborder->hashmap);
+      const STP_Vectype(int) global_partstarts = dpborder->global_partstarts;
+      const int levelstart = dpborder_getTopLevel(dpborder)->globalstartidx;
+      const int levelend = dpborder->global_npartitions;
+
+      assert(levelstart < levelend);
+
+      for( int i = levelstart; i != levelend; i++ )
+      {
+         const int partstart = global_partstarts[i];
+         const int partend = global_partstarts[i + 1];
+
+         assert(partstart < partend);
+
+#ifdef NDEBUG
+         (void) hashmap_remove(hashmap, partstart, partend - partstart);
+#else
+         {
+            int ret = hashmap_remove(hashmap, partstart, partend - partstart);
+            assert(ret == 0);
+         }
+#endif
+      }
+
+      assert(hashmap_isEmpty(&dpborder->hashmap));
+   }
+
    SCIP_CALL( dpborder_dpblevelInit(scip, &level) );
    StpVecPushBack(scip, dpborder->borderlevels, level);
 
@@ -494,6 +528,7 @@ SCIP_RETCODE addLevel(
       dpborder->ntermsvisited++;
 
    updateBorder(scip, graph, iteration, dpborder);
+
 
 #ifdef SCIP_DEBUG
    printBorder(graph, iteration, dpborder);
@@ -568,8 +603,10 @@ SCIP_RETCODE initSolve(
       return SCIP_ERROR;
    }
 
-   dpborder->global_partcap = MAX(maxnpartitions / 2, BPBORDER_MAXBORDERSIZE);
+   dpborder->global_partcap = MAX(DPBORDER_GROWTH_FACTOR * maxnpartitions, BPBORDER_MAXBORDERSIZE);
    SCIP_CALL( SCIPallocMemoryArray(scip, &(dpborder->global_partitions), dpborder->global_partcap) );
+
+   hashmap_updateKeyarr(dpborder->global_partitions, &dpborder->hashmap);
 
    SCIP_CALL( addLevelFirst(scip, graph, dpborder) );
 
@@ -883,6 +920,9 @@ SCIP_RETCODE dpborder_coreUpdateOrdering(
          dpborder_dpbsequenceCopy(sequence_tmp, sequence_base);
       }
    }
+
+   /* NOTE: might happen that the partitions are actually 0 if only terminals are all borders */
+   sequence_base->maxnpartitions = MAX(sequence_base->maxnpartitions, 2);
 
    SCIPdebugMessage("final ordering: \n" );
    SCIPdebugMessage("---max n. partitions %ld \n", sequence_base->maxnpartitions);

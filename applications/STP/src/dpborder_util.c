@@ -21,7 +21,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #include "dpborder.h"
 #include "dpborderinterns.h"
 
@@ -30,6 +30,39 @@
  */
 
 #ifndef NDEBUG
+static
+SCIP_Bool partitionIsIncluded(
+   const DPBORDER*       dpborder,           /**< border */
+   const DPB_Ptype*      partition,          /**< array of size 'size' */
+   int                   size                /**< size */
+)
+{
+   const int levelstart = dpborder_getTopLevel(dpborder)->globalstartidx;
+   const int levelend = dpborder->global_npartitions - 1;
+
+   assert(levelstart <= levelend);
+
+   for( int i = levelstart; i != levelend; i++ )
+   {
+      const int start = dpborder->global_partstarts[i];
+      const int end = dpborder->global_partstarts[i + 1];
+      assert(start < end);
+
+      if( size != end - start )
+         continue;
+
+      if( memcmp(partition, &(dpborder->global_partitions[start]), size) == 0 )
+      {
+         SCIPdebugMessage("included at pos=%d \n", i);
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
+
 /** fully sorted? */
 static
 SCIP_Bool partitionIsSorted(
@@ -121,21 +154,21 @@ void partitionSortSubsets(
       subsizes[nsubsets++] = (iter2 - iter) + 1;
 
       /* sentinel */
-      partition[iter - 1] *= -1;
+//     partition[iter - 1] *= -1;
       for( int i = iter + 1; i < iter2; i++ )
       {
          int j;
          const DPB_Ptype curr = partition[i];
 
-         for( j = i - 1; curr < partition[j]; j-- )
+         for( j = i - 1; curr < partition[j] && j >= 0; j-- )
          {
             assert(j >= 0);
             partition[j + 1] = partition[j];
          }
          partition[j + 1] = curr;
       }
-      assert(partition[iter - 1] <= 0);
-      partition[iter - 1] *= -1;
+    //  assert(partition[iter - 1] <= 0);
+   //   partition[iter - 1] *= -1;
       iter = iter2;
    }
 
@@ -302,7 +335,7 @@ STP_Vectype(int) dpborder_partGetCandstarts(
       if( borderchar == delimiter )
          continue;
 
-      if( LT(borderchardists[borderchar], FARAWAY) )
+      if( LT(borderchardists[(unsigned char)borderchar], FARAWAY) )
       {
          int startpos;
          for( startpos = i; startpos > 0; startpos-- )
@@ -384,8 +417,8 @@ SCIP_Real dpborder_partGetConnectionCost(
          if( partchar == delimiter_prev )
             break;
 
-         if( LT(borderchardists[partchar], minedgecost) )
-            minedgecost = borderchardists[partchar];
+         if( LT(borderchardists[(unsigned char)partchar], minedgecost) )
+            minedgecost = borderchardists[(unsigned char)partchar];
       }
 
       costsum += minedgecost;
@@ -441,8 +474,8 @@ int dpborder_partGetIdxNew(
          if( partchar == delimiter_prev )
             break;
 
-         if( bordercharmap[partchar] != -1 )
-            global_partitions[globalend++] = bordercharmap[partchar];
+         if( bordercharmap[(unsigned char)partchar] != -1 )
+            global_partitions[globalend++] = bordercharmap[(unsigned char)partchar];
       }
 
       assert(partitionchars[candstart] < delimiter_prev);
@@ -454,7 +487,7 @@ int dpborder_partGetIdxNew(
 
    if( dpborder->extborderchar >= 0 )
    {
-      assert(dpborder_getTopLevel(dpborder)->extnode == dpborder->bordernodes[dpborder->extborderchar]);
+      assert(dpborder_getTopLevel(dpborder)->extnode == dpborder->bordernodes[(unsigned char)dpborder->extborderchar]);
       global_partitions[globalend++] = dpborder->extborderchar;
    }
 
@@ -516,8 +549,8 @@ int dpborder_partGetIdxNew(
       if( !doCopy )
          continue;
 
-      if( bordercharmap[partchar] != -1 )
-         global_partitions[globalend++] = bordercharmap[partchar];
+      if( bordercharmap[(unsigned char)partchar] != -1 )
+         global_partitions[globalend++] = bordercharmap[(unsigned char)partchar];
    }
 
    if( delimiter_new == global_partitions[globalend - 1] )
@@ -531,15 +564,6 @@ int dpborder_partGetIdxNew(
             partitionchars[j] = -(partitionchars[j] + 1);
       }
    }
-   else
-   {
-      StpVecPushBack(scip, dpborder->global_partstarts, globalend);
-      StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
-      StpVecPushBack(scip, dpborder->global_partsUseExt, TRUE);
-      StpVecPushBack(scip, dpborder->global_predparts, -1);
-      dpborder->global_npartitions++;
-   }
-
 
 #ifndef NDEBUG
    for( int j = 0; j < partsize; j++ )
@@ -548,22 +572,54 @@ int dpborder_partGetIdxNew(
 
    if( globalstart != -1 )
    {
+      int position;
+      const int partition_length = globalend - globalstart;
+
 #ifdef SCIP_DEBUG
       partition.partchars = &(global_partitions[globalstart]);
       partition.partsize = (globalend - globalstart);
       partition.delimiter = delimiter_new;
-      printf("new (sub) partition (range %d-%d, glbpos=%d): \n", globalstart, globalend, dpborder->global_npartitions - 1);
+      printf("new (sub) partition \n");
       dpborder_partPrint(&partition);
 #endif
 
-      partitionSortSubsets(&global_partitions[globalstart], delimiter_new, globalend - globalstart);
+      partitionSortSubsets(&global_partitions[globalstart], delimiter_new, partition_length);
 
 #ifdef SCIP_DEBUG
       printf("sorted: \n");
       dpborder_partPrint(&partition);
 #endif
 
-      return dpborder->global_npartitions - 1;
+      position = hashmap_get(&dpborder->hashmap, globalstart, partition_length);
+
+      /* not found? */
+      if( -1 == position )
+      {
+         SCIPdebugMessage("...partition is new \n");
+         StpVecPushBack(scip, dpborder->global_partstarts, globalend);
+         StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
+         StpVecPushBack(scip, dpborder->global_partsUseExt, TRUE);
+         StpVecPushBack(scip, dpborder->global_predparts, -1);
+         position = dpborder->global_npartitions;
+         dpborder->global_npartitions++;
+
+         assert(!partitionIsIncluded(dpborder, &global_partitions[globalstart], partition_length));
+         hashmap_put(&dpborder->hashmap, globalstart, partition_length, position);
+      }
+      else
+      {
+         assert(LT(dpborder->global_partcosts[position], FARAWAY));
+         assert(0 == memcmp(&global_partitions[globalstart], &global_partitions[dpborder->global_partstarts[position]], partition_length));
+      }
+
+#ifdef SCIP_DEBUG
+      printf("final new (sub) partition glbpos=%d \n", position);
+#endif
+
+      assert(1 <= position && position < dpborder->global_npartitions);
+      assert(dpborder_getTopLevel(dpborder)->globalstartidx <= position);
+
+      return position;
    }
 
    SCIPdebugMessage("invalid partition... \n");
@@ -582,6 +638,8 @@ int dpborder_partGetIdxNewExclusive(
    DPBORDER*             dpborder            /**< border */
 )
 {
+   int position;
+   int partition_length;
    int globalstart = dpborder->global_partstarts[dpborder->global_npartitions];
    int globalend = globalstart;
    DPB_Ptype* RESTRICT global_partitions = dpborder->global_partitions;
@@ -601,10 +659,10 @@ int dpborder_partGetIdxNewExclusive(
    {
       const DPB_Ptype partchar = partitionchars[i];
       assert(0 <= partchar && partchar <= borderpartition->delimiter);
-      assert(partchar != borderpartition->delimiter || bordercharmap[partchar] == delimiter_new);
+      assert(partchar != borderpartition->delimiter || bordercharmap[(unsigned char)partchar] == delimiter_new);
 
-      if( bordercharmap[partchar] != -1 )
-         global_partitions[globalend++] = bordercharmap[partchar];
+      if( bordercharmap[(unsigned char)partchar] != -1 )
+         global_partitions[globalend++] = bordercharmap[(unsigned char)partchar];
    }
 
    if( globalstart == globalend
@@ -624,31 +682,56 @@ int dpborder_partGetIdxNewExclusive(
       }
    }
 
+   partition_length = (globalend - globalstart);
+
 #ifdef SCIP_DEBUG
    partition.partchars = &(global_partitions[globalstart]);
-   partition.partsize = (globalend - globalstart);
+   partition.partsize = partition_length;
    partition.delimiter = delimiter_new;
-   printf("new (exclusive sub) partition (range %d-%d, glbpos=%d): \n", globalstart, globalend, dpborder->global_npartitions);
+   printf("new (exclusive sub) partition \n");
    dpborder_partPrint(&partition);
 #endif
 
-   partitionSortSubsets(&global_partitions[globalstart], delimiter_new, globalend - globalstart);
+   partitionSortSubsets(&global_partitions[globalstart], delimiter_new, partition_length);
 #ifdef SCIP_DEBUG
    printf("sorted: \n");
    dpborder_partPrint(&partition);
 #endif
 
-   StpVecPushBack(scip, dpborder->global_partstarts, globalend);
-   StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
-   StpVecPushBack(scip, dpborder->global_predparts, -1);
-   StpVecPushBack(scip, dpborder->global_partsUseExt, FALSE);
-   dpborder->global_npartitions++;
+   position = hashmap_get(&dpborder->hashmap, globalstart, partition_length);
+
+   /* not found? */
+   if( -1 == position )
+   {
+      SCIPdebugMessage("...partition is new \n");
+      StpVecPushBack(scip, dpborder->global_partstarts, globalend);
+      StpVecPushBack(scip, dpborder->global_partcosts, FARAWAY);
+      StpVecPushBack(scip, dpborder->global_predparts, -1);
+      StpVecPushBack(scip, dpborder->global_partsUseExt, FALSE);
+      position = dpborder->global_npartitions;
+      dpborder->global_npartitions++;
+
+      assert(!partitionIsIncluded(dpborder, &global_partitions[globalstart], partition_length));
+      hashmap_put(&dpborder->hashmap, globalstart, partition_length, position);
+   }
+   else
+   {
+      assert(LT(dpborder->global_partcosts[position], FARAWAY));
+      assert(0 == memcmp(&global_partitions[globalstart], &global_partitions[dpborder->global_partstarts[position]], partition_length));
+   }
+
+#ifdef SCIP_DEBUG
+      printf("final new (sub) partition glbpos=%d \n", position);
+#endif
+   assert(1 <= position && position < dpborder->global_npartitions);
+   assert(dpborder_getTopLevel(dpborder)->globalstartidx <= position);
+   assert(!dpborder->global_partsUseExt[position]);
    assert(dpborder->global_npartitions == StpVecGetSize(dpborder->global_predparts));
    assert(dpborder->global_npartitions == StpVecGetSize(dpborder->global_partcosts));
    assert(dpborder->global_npartitions == StpVecGetSize(dpborder->global_partsUseExt));
    assert(dpborder->global_npartitions + 1 == StpVecGetSize(dpborder->global_partstarts));
 
-   return dpborder->global_npartitions - 1;
+   return position;
 }
 
 
@@ -704,7 +787,7 @@ void dpborder_markSolNodes(
 
          if( borderchar != delimiter )
          {
-            const int node = nodemap[borderchar];
+            const int node = nodemap[(unsigned char)borderchar];
             SCIPdebugMessage("solnode=%d \n", node);
             assert(0 <= node && node < nnodes);
 

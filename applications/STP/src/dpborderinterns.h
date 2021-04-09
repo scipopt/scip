@@ -30,10 +30,13 @@
 #include "scip/scip.h"
 #include "graph.h"
 #include "stpvector.h"
+#include "dpborder_hashmap.h"
 
 #define BPBORDER_MAXNPARTITIONS 50000000
 #define BPBORDER_MAXBORDERSIZE  16
-#define DPB_Ptype int8_t
+#define DPB_Ptype char
+#define DPBORDER_GROWTH_FACTOR 4
+
 
 /** nodes sequence structure */
 typedef struct dynamic_programming_border_nodes_sequence
@@ -69,6 +72,7 @@ typedef struct dynamic_programming_border_partition
 /** DP border structure */
 struct dynamic_programming_border
 {
+   DPBHASHMAP            hashmap;            /**< hash map */
    DPBSEQUENCE*          dpbsequence;        /**< ordering of nodes */
    STP_Vectype(DPBLEVEL*) borderlevels;      /**< data for each border */
    SCIP_Bool*            nodes_isBorder;     /**< marks whether node is in current border */

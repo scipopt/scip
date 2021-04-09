@@ -207,12 +207,17 @@ SCIP_RETCODE dpborder_solve(
    SCIP_Bool*            wasSolved           /**< was problem solved to optimality? */
 )
 {
+   uint64_t maxnpartitions;
    assert(scip && graph && solution);
    assert(dpborder->dpbsequence);
 
    SCIP_CALL( graph_init_csr(scip, graph) );
 
    SCIP_CALL( dpborder_coreUpdateOrdering(scip, graph, dpborder) );
+   maxnpartitions = pow(2, ceil(log(dpborder->dpbsequence->maxnpartitions)/log(2)));
+   assert(maxnpartitions >= dpborder->dpbsequence->maxnpartitions);
+
+   SCIP_CALL( hashmap_create(DPBORDER_GROWTH_FACTOR * maxnpartitions, NULL, &dpborder->hashmap) );
    SCIP_CALL( dpborder_coreSolve(scip, graph, dpborder, wasSolved) );
 
    if( *wasSolved )
@@ -274,6 +279,7 @@ SCIP_RETCODE dpborder_init(
    dpb->nterms = graph->terms;
    dpb->ntermsvisited = 0;
    dpb->global_optposition = -1;
+   dpb->hashmap.elements = NULL;
 
    return SCIP_OKAY;
 }
@@ -299,6 +305,12 @@ void dpborder_free(
    SCIPfreeMemoryArrayNull(scip, &(dpb->global_partitions));
    SCIPfreeMemoryArrayNull(scip, &(dpb->nodes_isBorder));
    SCIPfreeMemoryArrayNull(scip, &(dpb->nodes_outdeg));
+
+   // todo make clean
+   if( dpb->hashmap.elements )
+   {
+      hashmap_destroy(&dpb->hashmap);
+   }
 
    if( dpb->dpbsequence )
    {
