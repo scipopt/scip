@@ -50,14 +50,14 @@ struct SYM_Optype
    int                   color;              /**< store color */
 };
 
-/** data of constants that have the same value */
+/** data of constants that are considered to be equivalent */
 struct SYM_Consttype
 {
    SCIP_Real             value;              /**< value of constant */
    int                   color;              /**< store color */
 };
 
-/** data of coefficients that have the same value */
+/** data of coefficients that are considered to be equivalent */
 struct SYM_Rhstype
 {
    SCIP_Real             lhs;                /**< value of left-hand-side */
@@ -91,7 +91,7 @@ struct SYM_Matrixdata
 /** data for symmetry group computation on nonlinear constraints */
 struct SYM_Exprdata
 {
-   int                   nuniqueconstants;   /**< number of unique constaints */
+   int                   nuniqueconstants;   /**< number of unique constants */
    int                   nuniqueoperators;   /**< number of unique operators */
    int                   nuniquecoefs;       /**< number of unique coefficients */
 };

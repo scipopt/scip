@@ -80,11 +80,9 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQOptype)
       return FALSE;
 
    /* for pow expressions, also check exponent (TODO should that happen for signpow as well?) */
-   if( SCIPisExprPower((SCIP*)userptr, k1->expr)
+   if ( SCIPisExprPower((SCIP*)userptr, k1->expr )
       && SCIPgetExponentExprPow(k1->expr) != SCIPgetExponentExprPow(k2->expr) )
-   {
-         return FALSE;
-   }
+      return FALSE;
 
    /* if still undecided, take level */
    if ( k1->level != k2->level )
@@ -102,7 +100,7 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
 
    k = (SYM_OPTYPE*) key;
 
-   if( SCIPisExprPower((SCIP*)userptr, k->expr) )
+   if ( SCIPisExprPower((SCIP*)userptr, k->expr) )
       exponent = SCIPgetExponentExprPow(k->expr);
    else
       exponent = 1.0;
@@ -169,7 +167,7 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQRhstype)
    k1 = (SYM_RHSTYPE*) key1;
    k2 = (SYM_RHSTYPE*) key2;
 
-   if( k1->lhs != k2->lhs )
+   if ( k1->lhs != k2->lhs )
       return FALSE;
 
    return k1->rhs == k2->rhs;
@@ -268,17 +266,17 @@ SCIP_RETCODE createVariableNodes(
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
-   assert(scip != NULL);
-   assert(G != NULL);
-   assert(nnodes == 0);
-   assert(nedges == 0);
-   assert(nusedcolors == 0);
+   assert( scip != NULL );
+   assert( G != NULL );
+   assert( nnodes == 0 );
+   assert( nedges == 0 );
+   assert( nusedcolors == 0 );
    SCIPdebugMsg(scip, "Creating graph with colored nodes for variables.\n");
 
    success = TRUE;
 
    /* add nodes for variables */
-   for( int v = 0; v < matrixdata->npermvars; ++v )
+   for (int v = 0; v < matrixdata->npermvars; ++v)
    {
       const int color = matrixdata->permvarcolors[v];
       assert( 0 <= color && color < matrixdata->nuniquevars );
@@ -323,8 +321,8 @@ SCIP_RETCODE fillGraphByLinearConss(
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
-   assert(nnodes == (int) G->get_nof_vertices());
-   assert(nusedcolors <= nnodes);
+   assert( nnodes == (int) G->get_nof_vertices() );
+   assert( nusedcolors <= nnodes );
 
    SCIPdebugMsg(scip, "Filling graph with colored coefficient nodes for linear part.\n");
 
@@ -493,9 +491,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SYM_CONSTTYPE* uniqueconstarray = NULL;
    SYM_CONSTTYPE* sumcoefarray = NULL;
    SYM_RHSTYPE* uniquerhsarray = NULL;
-   SCIP_CONSHDLR* conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   SCIP_CONS** conss = SCIPconshdlrGetConss(conshdlr);
-   int nconss = SCIPconshdlrGetNConss(conshdlr);
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
    int nuniqueops = 0;
    int nuniqueconsts = 0;
    int nuniquecoefs = 0;
@@ -503,12 +501,23 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    int oparraysize = exprdata->nuniqueoperators;
    int constarraysize = exprdata->nuniqueconstants;
    int coefarraysize = exprdata->nuniquecoefs;
-   int rhsarraysize = nconss;
+   int rhsarraysize;
 
-   assert(scip != NULL);
-   assert(G != NULL);
-   assert(nnodes == (int) G->get_nof_vertices());
-   assert(nnodes >= nusedcolors);
+   assert( scip != NULL );
+   assert( G != NULL );
+   assert( exprdata != NULL );
+   assert( nnodes == (int) G->get_nof_vertices() );
+   assert( nnodes >= nusedcolors );
+
+   success = TRUE; /*lint !e838*/
+
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   nconss = conshdlr != NULL ? SCIPconshdlrGetNConss(conshdlr) : 0;
+   if ( nconss == 0 )
+      return SCIP_OKAY;
+
+   conss = SCIPconshdlrGetConss(conshdlr);
+   rhsarraysize = nconss;
 
    SCIPdebugMsg(scip, "Filling graph with colored coefficient nodes for non-linear part.\n");
 
@@ -522,10 +531,10 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_CALL( SCIPhashtableCreate(&rhstypemap, SCIPblkmem(scip), rhsarraysize, SYMhashGetKeyRhstype,
          SYMhashKeyEQRhstype, SYMhashKeyValRhstype, (void*) scip) );
 
-   assert(optypemap != NULL);
-   assert(consttypemap != NULL);
-   assert(sumcoefmap != NULL);
-   assert(rhstypemap != NULL);
+   assert( optypemap != NULL );
+   assert( consttypemap != NULL );
+   assert( sumcoefmap != NULL );
+   assert( rhstypemap != NULL );
 
    /* allocate space for mappings from optypes, constants, sum coefficients and rhs to colors */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniqueoparray, oparraysize) );
@@ -536,20 +545,20 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_EXPRITER* it;
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
 
-   success = TRUE; /*lint !e838*/
-
    /* iterate over all expressions and add the corresponding nodes to the graph */
-   for( int i = 0; i < nconss; ++i )
+   for (int i = 0; i < nconss; ++i)
    {
-      SCIP_EXPR* rootexpr = SCIPgetExprConsNonlinear(conss[i]);
+      SCIP_EXPR* rootexpr;
       vector<int> visitednodes(0);
       vector<SCIP_Bool> ischildofsum(0);
       int currentlevel = 0;
 
+      rootexpr = SCIPgetExprConsNonlinear(conss[i]);
+
       SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
       SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
 
-      for( SCIP_EXPR* expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
+      for (SCIP_EXPR* expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/
       {
          switch( SCIPexpriterGetStageDFS(it) )
          {
@@ -561,7 +570,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                int color = -1;
 
                /* for variable expressions, get the corresponding node that is already in the graph */
-               if( SCIPisExprVar(scip, expr))
+               if ( SCIPisExprVar(scip, expr) )
                {
                   SCIP_VAR* var = SCIPgetVarExprVar(expr);
 
@@ -569,10 +578,10 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                    * or its fixed value; note that this step is equivalent as representing an inactive variable as sum
                    * expression
                    */
-                  if( SCIPvarIsActive(var) )
+                  if ( SCIPvarIsActive(var) )
                   {
                      node = SCIPvarGetProbindex(var);
-                     assert(node < (int) G->get_nof_vertices());
+                     assert( node < (int) G->get_nof_vertices() );
                   }
                   else
                   {
@@ -591,32 +600,32 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, varsize, &constant, &requiredsize, TRUE) );
 
-                     if( requiredsize > varsize )
+                     if ( requiredsize > varsize )
                      {
                         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
                         SCIP_CALL( SCIPreallocBufferArray(scip, &vals, requiredsize) );
 
                         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, requiredsize, &constant, &requiredsize, TRUE) );
-                        assert(requiredsize <= varsize);
+                        assert( requiredsize <= varsize );
                      }
 
                      parentnode = visitednodes[visitednodes.size() - 1];
-                     assert(parentnode < (int) G->get_nof_vertices());
+                     assert( parentnode < (int) G->get_nof_vertices() );
 
                      /* create nodes for all aggregation variables and coefficients and connect them to the parent node */
-                     for( k = 0; k < requiredsize; ++k )
+                     for ( k = 0; k < requiredsize; ++k )
                      {
                         SYM_CONSTTYPE* ct;
                         int internode;
 
-                        assert(vars[k] != NULL);
-                        assert(vals[k] != 0.0);
-                        assert(nuniquecoefs < coefarraysize);
+                        assert( vars[k] != NULL );
+                        assert( vals[k] != 0.0 );
+                        assert( nuniquecoefs < coefarraysize );
 
                         ct = &sumcoefarray[nuniquecoefs];
                         ct->value = vals[k];
 
-                        if( !SCIPhashtableExists(sumcoefmap, (void *) ct))
+                        if ( !SCIPhashtableExists(sumcoefmap, (void *) ct) )
                         {
                            SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                            ct->color = nusedcolors++;
@@ -632,39 +641,39 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         internode = (int) G->add_vertex((unsigned) color);
                         ++nnodes;
 
-                        assert(internode < (int) G->get_nof_vertices());
+                        assert( internode < (int) G->get_nof_vertices() );
 
                         G->add_edge((unsigned) internode, (unsigned) parentnode);
                         ++nedges;
 
-                        /* connect the intermediate node to ints corresponding variable node */
+                        /* connect the intermediate node to its corresponding variable node */
                         node = SCIPvarGetProbindex(vars[k]);
-                        assert(node < (int) G->get_nof_vertices());
+                        assert( node < (int) G->get_nof_vertices() );
 
                         G->add_edge((unsigned) node, (unsigned) internode);
                         ++nedges;
                      }
 
                      /* add the node for the constant */
-                     if( constant != 0.0 )
+                     if ( constant != 0.0 )
                      {
                         SYM_CONSTTYPE* ct;
 
                         /* check whether we have to resize */
-                        if( nuniqueconsts >= constarraysize )
+                        if ( nuniqueconsts >= constarraysize )
                         {
                            int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                           assert(newsize >= 0);
+                           assert( newsize >= 0 );
                            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
                            constarraysize = newsize;
                         }
 
-                        assert(nuniqueconsts < constarraysize);
+                        assert( nuniqueconsts < constarraysize );
 
                         ct = &uniqueconstarray[nuniqueconsts];
                         ct->value = constant;
 
-                        if( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                        if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
                         {
                            SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                            ct->color = nusedcolors++;
@@ -680,7 +689,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         node = (int) G->add_vertex((unsigned) color);
                         ++nnodes;
 
-                        assert(node < (int) G->get_nof_vertices());
+                        assert( node < (int) G->get_nof_vertices() );
 
                         G->add_edge((unsigned) node, (unsigned) parentnode);
                         ++nedges;
@@ -698,16 +707,16 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
                }
                /* for constant expressions, get the color of its type (value) or assign a new one */
-               else if( SCIPisExprValue(scip, expr) )
+               else if ( SCIPisExprValue(scip, expr) )
                {
                   SYM_CONSTTYPE* ct;
 
-                  assert(nuniqueconsts < constarraysize);
+                  assert( nuniqueconsts < constarraysize );
 
                   ct = &uniqueconstarray[nuniqueconsts];
                   ct->value = SCIPgetValueExprValue(expr);
 
-                  if( !SCIPhashtableExists(consttypemap, (void *) ct))
+                  if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                      ct->color = nusedcolors++;
@@ -724,14 +733,14 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                {
                   SYM_OPTYPE* ot;
 
-                  assert(nuniqueops < oparraysize);
+                  assert( nuniqueops < oparraysize );
 
                   ot = &uniqueoparray[nuniqueops];
 
                   ot->expr = expr;
                   ot->level = currentlevel;
 
-                  if( !SCIPhashtableExists(optypemap, (void *) ot) )
+                  if ( !SCIPhashtableExists(optypemap, (void *) ot) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(optypemap, (void *) ot) );
                      ot->color = nusedcolors++;
@@ -745,19 +754,19 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                }
 
                /* if this is the root expression, add the constraint side node (will be parent of expression node) */
-               if( SCIPexpriterGetParentDFS(it) == NULL )
+               if ( SCIPexpriterGetParentDFS(it) == NULL )
                {
                   /* add the node corresponding to the constraint */
                   SYM_RHSTYPE* rt;
                   int parentcolor;
 
-                  assert(nuniquerhs < rhsarraysize);
+                  assert( nuniquerhs < rhsarraysize );
 
                   rt = &uniquerhsarray[nuniquerhs];
                   rt->lhs = SCIPgetLhsConsNonlinear(conss[i]);
                   rt->rhs = SCIPgetRhsConsNonlinear(conss[i]);
 
-                  if( !SCIPhashtableExists(rhstypemap, (void *) rt))
+                  if ( !SCIPhashtableExists(rhstypemap, (void *) rt) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(rhstypemap, (void *) rt) );
                      rt->color = nusedcolors++;
@@ -773,51 +782,51 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   parentnode = (int) G->add_vertex((unsigned) parentcolor);
                   ++nnodes;
 
-                  assert(parentnode < (int) G->get_nof_vertices());
+                  assert( parentnode < (int) G->get_nof_vertices() );
                }
                /* otherwise, get the parentnode stored in visitednodes */
                else
                {
                   parentnode = visitednodes[visitednodes.size() - 1];
-                  assert(parentnode < (int) G->get_nof_vertices());
+                  assert( parentnode < (int) G->get_nof_vertices() );
                }
 
                /* in all cases apart from variable expressions, the new node is added with the corresponding color */
-               if( color != -1 )
+               if ( color != -1 )
                {
                   node = (int) G->add_vertex((unsigned) color);
                   ++nnodes;
 
-                  assert(node < (int) G->get_nof_vertices());
+                  assert( node < (int) G->get_nof_vertices() );
                }
 
                /* store the new node so that it can be used as parentnode later */
-               assert(node != -1);
+               assert( node != -1 );
                visitednodes.push_back(node);
                ischildofsum.push_back(FALSE);
 
                /* connect the current node with its parent */
-               assert(parentnode != -1);
+               assert( parentnode != -1 );
                G->add_edge((unsigned) node, (unsigned) parentnode);
                ++nedges;
 
                /* for sum expression, also add intermediate nodes for the coefficients */
-               if( SCIPisExprSum(scip, expr) )
+               if ( SCIPisExprSum(scip, expr) )
                {
                   SCIP_Real* coefs = SCIPgetCoefsExprSum(expr);
                   int internode;
 
                   /* iterate over children from last to first, such that visitednodes array is in correct order */
-                  for( int j = SCIPexprGetNChildren(expr) - 1; j >= 0; --j )
+                  for (int j = SCIPexprGetNChildren(expr) - 1; j >= 0; --j)
                   {
                      SYM_CONSTTYPE* ct;
 
-                     assert(nuniquecoefs < coefarraysize);
+                     assert( nuniquecoefs < coefarraysize );
 
                      ct = &sumcoefarray[nuniquecoefs];
                      ct->value = coefs[j];
 
-                     if( !SCIPhashtableExists(sumcoefmap, (void *) ct))
+                     if ( !SCIPhashtableExists(sumcoefmap, (void *) ct) )
                      {
                         SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                         ct->color = nusedcolors++;
@@ -835,7 +844,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      visitednodes.push_back(internode);
                      ischildofsum.push_back(TRUE);
 
-                     assert(internode < (int) G->get_nof_vertices());
+                     assert( internode < (int) G->get_nof_vertices() );
 
                      G->add_edge((unsigned) internode, (unsigned) node);
                      ++nedges;
@@ -843,7 +852,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                   /* add node for the constant term of the sum expression */
                   SCIP_Real constval = SCIPgetConstantExprSum(expr);
-                  if( constval != 0.0 )
+                  if ( constval != 0.0 )
                   {
                      SYM_CONSTTYPE* ct;
 
@@ -851,17 +860,17 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      if ( nuniqueconsts >= constarraysize )
                      {
                         int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                        assert(newsize >= 0);
+                        assert( newsize >= 0 );
                         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
                         constarraysize = newsize;
                      }
 
-                     assert(nuniqueconsts < constarraysize);
+                     assert( nuniqueconsts < constarraysize );
 
                      ct = &uniqueconstarray[nuniqueconsts];
                      ct->value = constval;
 
-                     if( !SCIPhashtableExists(consttypemap, (void *) ct))
+                     if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
                      {
                         SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                         ct->color = nusedcolors++;
@@ -877,7 +886,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      internode = (int) G->add_vertex((unsigned) color);
                      ++nnodes;
 
-                     assert(node < (int) G->get_nof_vertices());
+                     assert( node < (int) G->get_nof_vertices() );
 
                      G->add_edge((unsigned) internode, (unsigned) node);
                      ++nedges;
@@ -898,7 +907,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                /* When leaving the child of a sum expression, we have to pop again to get rid of the intermediate nodes
                 * used for the coefficients of summands
                 */
-               if( !ischildofsum.empty() && ischildofsum[ischildofsum.size() - 1] )
+               if ( !ischildofsum.empty() && ischildofsum[ischildofsum.size() - 1] )
                {
                   visitednodes.pop_back();
                   ischildofsum.pop_back();
@@ -913,9 +922,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
          }
       }
 
-      assert(currentlevel == 0);
-      assert(visitednodes.empty());
-      assert(ischildofsum.empty());
+      assert( currentlevel == 0 );
+      assert( visitednodes.empty() );
+      assert( ischildofsum.empty() );
 
       /* determine whether graph would be too large for bliss (can only handle int) */
       if ( nnodes >= INT_MAX/2 )
@@ -979,6 +988,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 {
    assert( scip != NULL );
    assert( matrixdata != NULL );
+   assert( exprdata != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
@@ -1002,19 +1012,19 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* create nodes corresponding to variables */
    SCIP_CALL( createVariableNodes(scip, &G, matrixdata, nnodes, nedges, nusedcolors, success) );
 
-   if( !success )
+   if ( !success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed during creation of var nodes.\n");
       return SCIP_OKAY;
    }
 
-   assert(nnodes == matrixdata->npermvars);
-   assert(nusedcolors == matrixdata->nuniquevars);
+   assert( nnodes == matrixdata->npermvars );
+   assert( nusedcolors == matrixdata->nuniquevars );
 
    /* fill graph with nodes for variables and linear constraints */
    SCIP_CALL( fillGraphByLinearConss(scip, &G, matrixdata, nnodes, nedges, nusedcolors, success) );
 
-   if( !success )
+   if ( !success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed during linear part.\n");
       return SCIP_OKAY;
@@ -1023,7 +1033,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* add the nodes for expression constraints to the graph */
    SCIP_CALL( fillGraphByNonlinearConss(scip, &G, exprdata, nnodes, nedges, nusedcolors, success) );
 
-   if( !success )
+   if ( !success )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed during non-linear part.\n");
       return SCIP_OKAY;
