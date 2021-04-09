@@ -2848,7 +2848,7 @@ SCIP_RETCODE determineSymmetry(
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ")\n");
 
-   /* exit if problem is linear and no binary variables are affected by symmetry and we cannot handle non-binary symmetries */
+   /* exit if no binary variables are affected by symmetry and we cannot handle non-binary symmetries */
    if ( ! propdata->binvaraffected )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry on binary variables present.\n", SCIPgetSolvingTime(scip));
@@ -3073,7 +3073,7 @@ SCIP_RETCODE determineSymmetry(
    }
 
    /* free original perms matrix if no symmetry constraints are added */
-   if ( ! propdata->symconsenabled )
+   if ( ! propdata->symconsenabled && ! propdata->sstenabled )
    {
       for (p = 0; p < propdata->nperms; ++p)
       {
