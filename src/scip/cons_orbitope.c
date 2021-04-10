@@ -1496,7 +1496,6 @@ static
 SCIP_RETCODE findLexMinFace(
    SCIP_VAR***           vars,               /**< variable matrix */
    int**                 lexminfixes,        /**< fixings characterzing lex-min face */
-   int*                  roworder,           /**< dynamic row order */
    int*                  minfixedrowlexmin,  /**< index of minimum fixed row for each column or
                                               *   NULL (if in prop) */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been
@@ -1504,7 +1503,6 @@ SCIP_RETCODE findLexMinFace(
    int                   m,                  /**< number of rows in vars */
    int                   n,                  /**< number of columns in vars */
    int                   nrowsused,          /**< number of rows considered in propagation */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bdchgidx in resprop or NULL (if not in resprop) */
    SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
    )
 {
@@ -1597,7 +1595,6 @@ static
 SCIP_RETCODE findLexMaxFace(
    SCIP_VAR***           vars,               /**< variable matrix */
    int**                 lexmaxfixes,        /**< fixings characterzing lex-max face */
-   int*                  roworder,           /**< dynamic row order */
    int*                  minfixedrowlexmax,  /**< index of minimum fixed row for each column or
                                               *   NULL (if in prop) */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been
@@ -1605,7 +1602,6 @@ SCIP_RETCODE findLexMaxFace(
    int                   m,                  /**< number of rows in vars */
    int                   n,                  /**< number of columns in vars */
    int                   nrowsused,          /**< number of rows considered in propagation */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< bdchgidx in resprop or NULL (if not in resprop) */
    SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
    )
 {
@@ -1781,8 +1777,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    }
 
    /* find lexicographically minimal face of hypercube containing lexmin fixes */
-   SCIP_CALL( findLexMinFace(vars, lexminfixes, roworder, NULL, infeasible, m, n,
-         nrowsused, NULL, FALSE) );
+   SCIP_CALL( findLexMinFace(vars, lexminfixes, NULL, infeasible, m, n, nrowsused, FALSE) );
 
    if ( *infeasible == TRUE )
       goto FREELEXMIN;
@@ -1814,8 +1809,7 @@ SCIP_RETCODE propagateFullOrbitopeCons(
    }
 
    /* find lexicographically maximal face of hypercube containing lexmax fixes */
-   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, roworder, NULL, infeasible, m, n,
-         nrowsused, NULL, FALSE) );
+   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, NULL, infeasible, m, n, nrowsused, FALSE) );
 
    if ( *infeasible )
       goto FREELEXMAX;
@@ -1998,8 +1992,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    }
 
    /* find lexicographically minimal face of hypercube containing lexmin fixes */
-   SCIP_CALL( findLexMinFace(vars, lexminfixes, roworder, minfixedrowlexmin, &terminate, m, n,
-         nrowsused, bdchgidx, TRUE) );
+   SCIP_CALL( findLexMinFace(vars, lexminfixes, minfixedrowlexmin, &terminate, m, n, nrowsused, TRUE) );
 
    if ( terminate )
       goto FREELEXMIN;
@@ -2035,8 +2028,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    }
 
    /* find lexicographically maximal face of hypercube containing lexmax fixes */
-   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, roworder, minfixedrowlexmax, &terminate, m, n,
-         nrowsused, bdchgidx, TRUE) );
+   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, minfixedrowlexmax, &terminate, m, n, nrowsused, TRUE) );
 
    if ( terminate )
       goto FREELEXMAX;
