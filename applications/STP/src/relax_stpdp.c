@@ -26,6 +26,7 @@
 #include "probdata_stp.h"
 #include "solstp.h"
 #include "dpterms.h"
+#include "dpborder.h"
 #ifndef NDEBUG
 #include "substpsolver.h"
 #endif
@@ -35,6 +36,9 @@
 #define RELAX_PRIORITY         100000000
 #define RELAX_FREQ             1
 
+enum DP_TYPE {dp_border, dp_terms};
+
+
 /*
  * Data structures
  */
@@ -42,6 +46,8 @@
 /** relaxator data */
 struct SCIP_RelaxData
 {
+   DPBORDER*             dpborder;           /**< DP border */
+   enum DP_TYPE          mode;               /**< DP algo to be used */
    SCIP_Bool             isActive;           /**< is the relaxator being used? */
 };
 
@@ -49,6 +55,47 @@ struct SCIP_RelaxData
 /*
  * Local methods
  */
+
+
+/** solves problem with border-FPT DP */
+static
+SCIP_RETCODE solveWithDpBorder(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   DPBORDER*             dpborder,
+   SCIP_Real*            obj,
+   SCIP_Bool*            wasSolved
+   )
+{
+   int* soledges;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &soledges, graph->edges) );
+
+   printf("solving problem with DPB... \n");
+
+   SCIP_CALL( dpborder_solve(scip, graph, dpborder, soledges, wasSolved) );
+
+   if( !(*wasSolved) )
+   {
+      printf("...aborted \n");
+
+      SCIPfreeMemoryArray(scip, &soledges);
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( solstp_addSolToProb(scip, graph, soledges, NULL, &success) );
+
+   printf("...finished \n");
+
+   *obj = solstp_getObj(graph, soledges, 0.0);
+
+   SCIPfreeMemoryArray(scip, &soledges);
+
+   return SCIP_OKAY;
+}
+
 
 /** solves problem with terminals-FPT DP */
 static
@@ -109,8 +156,10 @@ SCIP_DECL_RELAXFREE(relaxFreeStpdp)
    SCIP_RELAXDATA* relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata);
 
-   SCIPfreeMemory(scip, &relaxdata);
+   if( relaxdata->dpborder )
+      dpborder_free(scip, &(relaxdata->dpborder));
 
+   SCIPfreeMemory(scip, &relaxdata);
    SCIPrelaxSetData(relax, NULL);
 
    return SCIP_OKAY;
@@ -156,7 +205,17 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
    graph = SCIPprobdataGetGraph2(scip);
    assert(graph);
 
-   SCIP_CALL( solveWithDpTerms(scip, graph, lowerbound, &success) );
+   if( relaxdata->mode == dp_terms )
+   {
+      SCIP_CALL( solveWithDpTerms(scip, graph, lowerbound, &success) );
+   }
+   else
+   {
+      assert(relaxdata->mode == dp_border);
+      assert(relaxdata->dpborder);
+
+      SCIP_CALL( solveWithDpBorder(scip, graph, relaxdata->dpborder, lowerbound, &success) );
+   }
 
    if( !success )
    {
@@ -178,18 +237,33 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
 /** is using the relaxator promising? */
 SCIP_Bool SCIPStpDpRelaxIsPromising(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph               /**< graph */
+   GRAPH*                graph               /**< graph */
    )
 {
-   /*
+   SCIP_Bool dpbHasPotential;
    SCIP_RELAX* relax = SCIPfindRelax(scip, "stpdp");
    SCIP_RELAXDATA* relaxdata = SCIPrelaxGetData(relax);
 
-   assert(relaxdata);
-*/
    assert(graph);
+   assert(relaxdata);
+   assert(!relaxdata->dpborder);
 
-   return dpterms_isPromisingPartly(graph);
+   if( dpterms_isPromisingPartly(graph) )
+   {
+      relaxdata->mode = dp_terms;
+      return TRUE;
+   }
+
+   SCIP_CALL( dpborder_init(scip, graph, &(relaxdata->dpborder)) );
+   SCIP_CALL( dpborder_probePotential(scip, graph, relaxdata->dpborder, &dpbHasPotential) );
+
+   if( dpbHasPotential )
+   {
+      relaxdata->mode = dp_border;
+      return TRUE;
+   }
+
+   return FALSE;
 }
 
 
@@ -202,8 +276,6 @@ SCIP_RETCODE SCIPStpDpRelaxActivate(
    SCIP_RELAXDATA* relaxdata = SCIPrelaxGetData(relax);
 
    assert(relaxdata);
-
-   // todo want to check which DP algo to use!
 
    // todo maybe also turn SCIP presolving off
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/TM/initruns", 0) );
@@ -234,6 +306,8 @@ SCIP_RETCODE SCIPincludeRelaxStpdp(
    SCIP_CALL( SCIPsetRelaxFree(scip, relax, relaxFreeStpdp) );
 
    relaxdata->isActive = FALSE;
+   relaxdata->mode = dp_terms;
+   relaxdata->dpborder = NULL;
 
    return SCIP_OKAY;
 }

@@ -43,7 +43,7 @@ SCIP_RETCODE SCIPincludeRelaxStpdp(
 SCIP_EXPORT
 SCIP_Bool SCIPStpDpRelaxIsPromising(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph               /**< graph */
+   GRAPH*                graph               /**< graph */
    );
 
 

@@ -26,9 +26,33 @@
 #include "solstp.h"
 
 
+#define DPB_MINTERMRATIO 0.25
+#define DPB_MAXNNODES    2000
+#define DPB_MINNNODES    50
+
+
 /*
  * Local methods
  */
+
+
+/** non-promising? quick check */
+static
+SCIP_Bool dpborderIsNonPromising(
+   const GRAPH*          graph               /**< original graph */
+)
+{
+   if( graph->knots > DPB_MAXNNODES )
+      return TRUE;
+
+   if( graph->knots < DPB_MINNNODES )
+      return TRUE;
+
+   if( ((SCIP_Real) graph->terms / (SCIP_Real) graph->knots) < DPB_MINTERMRATIO )
+      return TRUE;
+
+   return FALSE;
+}
 
 
 
@@ -169,7 +193,7 @@ SCIP_RETCODE dpborder_probePotential(
    *hasPotential = FALSE;
 
    /* make rough check */
-   if( 0 )
+   if( dpborderIsNonPromising(graph) )
    {
       return SCIP_OKAY;
    }
