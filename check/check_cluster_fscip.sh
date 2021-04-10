@@ -218,9 +218,9 @@ do
                 # CLUSTERNODES will never be empty (see check on top)
                 if test "${CLUSTERNODES}" = "all"
                 then
-                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 "${EXCLUSIVE}" --output=/dev/null run_fscip.sh
+                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run_fscip.sh
                 else
-                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 "${EXCLUSIVE}" -w "${CLUSTERNODES}" --output=/dev/null run_fscip.sh
+                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run_fscip.sh
                 fi
                 else
                     # -V to copy all environment variables
