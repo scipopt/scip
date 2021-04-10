@@ -1555,38 +1555,20 @@ SCIP_RETCODE findLexMinFace(
                return SCIP_OKAY;
             }
          }
-
-         if ( lexminfixes[i][j] == 2 )
-         {
-            if ( minfixed == -1 )
-               lexminfixes[i][j] = lexminfixes[i][j + 1];
-            else
-               lexminfixes[i][j] = 0;
-         }
       }
 
       /* ensure that column j is lexicographically not smaller than column j + 1 */
-      if ( minfixed > -1 && maxdiscriminating < m )
+      for (i = 0; i < nrowsused; ++i)
       {
-#ifndef NDEBUG
-         int origrow;
-
-         assert( maxdiscriminating >= 0 );
-         assert( maxdiscriminating < nrowsused );
-
-         origrow = roworder[maxdiscriminating];
-
-         if ( resprop )
+         if ( lexminfixes[i][j] == 2 )
          {
-            assert( SCIPvarGetUbAtIndex(vars[origrow][j], bdchgidx, FALSE) > 0.5 );
+            if ( i < maxdiscriminating )
+               lexminfixes[i][j] = lexminfixes[i][j + 1];
+            else if ( i == maxdiscriminating )
+               lexminfixes[i][j] = 1;
+            else
+               lexminfixes[i][j] = 0;
          }
-         else
-         {
-            assert( SCIPvarGetUbLocal(vars[origrow][j]) > 0.5 );
-         }
-#endif
-
-         lexminfixes[maxdiscriminating][j] = 1;
       }
 
       if ( resprop )
@@ -1671,38 +1653,20 @@ SCIP_RETCODE findLexMaxFace(
                return SCIP_OKAY;
             }
          }
-
-         if ( lexmaxfixes[i][j] == 2 )
-         {
-            if ( minfixed == -1 )
-               lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
-            else
-               lexmaxfixes[i][j] = 1;
-         }
       }
 
       /* ensure that column j is lexicographically not greater than column j - 1 */
-      if ( minfixed > -1 && maxdiscriminating < m )
+      for (i = 0; i < nrowsused; ++i)
       {
-#ifndef NDEBUG
-         int origrow;
-
-         assert( maxdiscriminating >= 0 );
-         assert( maxdiscriminating < nrowsused );
-
-         origrow = roworder[maxdiscriminating];
-
-         if ( resprop )
+         if ( lexmaxfixes[i][j] == 2 )
          {
-            assert( SCIPvarGetLbAtIndex(vars[origrow][j], bdchgidx, FALSE) < 0.5 );
+            if ( i < maxdiscriminating )
+               lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
+            else if ( i == maxdiscriminating )
+               lexmaxfixes[i][j] = 0;
+            else
+               lexmaxfixes[i][j] = 1;
          }
-         else
-         {
-            assert( SCIPvarGetLbLocal(vars[origrow][j]) < 0.5 );
-         }
-#endif
-
-         lexmaxfixes[maxdiscriminating][j] = 0;
       }
 
       if ( resprop )
