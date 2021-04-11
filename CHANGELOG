@@ -184,6 +184,8 @@ Interface changes
 
 ### Interfaces to external software
 
+- removed MATLAB interface from interfaces/matlab
+
 ### Changed parameters
 
 ### New parameters
