@@ -725,7 +725,6 @@ int dpborder_partGetIdxNewExclusive(
 #endif
    assert(1 <= position && position < dpborder->global_npartitions);
    assert(dpborder_getTopLevel(dpborder)->globalstartidx <= position);
-   assert(!dpborder->global_partsUseExt[position]);
    assert(dpborder->global_npartitions == StpVecGetSize(dpborder->global_predparts));
    assert(dpborder->global_npartitions == StpVecGetSize(dpborder->global_partcosts));
    assert(dpborder->global_npartitions == StpVecGetSize(dpborder->global_partsUseExt));

@@ -29,11 +29,11 @@
 #include "misc_stp.h"
 
 #define DPB_ORDERMULT_PREVS    2
-#define DPB_ORDERMULT_TERM     1
+#define DPB_ORDERMULT_TERM     5
 #define DPB_ORDERMULT_OUTDEG   1
-#define DPB_ORDERMULT_OUTDELTA 2
+#define DPB_ORDERMULT_OUTDELTA 1
 
-#define DPB_ORDER_MAXNROOTS 50
+#define DPB_ORDER_MAXNROOTS 100
 
 
 /*
@@ -373,6 +373,7 @@ SCIP_RETCODE updateFromPartition(
          SCIPdebugMessage("...added partition at %d with cost=%f \n", globalposition_new, part_cost);
          dpborder->global_partcosts[globalposition_new] = part_cost;
          dpborder->global_predparts[globalposition_new] = globalposition;
+         dpborder->global_partsUseExt[globalposition_new] = FALSE;
       }
    }
 
