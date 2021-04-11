@@ -277,8 +277,10 @@ void updateBorder(
          nodes_isBorder[bordernode] = FALSE;
    }
 
+#ifdef SCIP_DEBUG
    printf("iter=%d bordersize=%d\n", iteration, StpVecGetSize(dpborder->bordernodes));
    printf("global_npartitions=%d \n", dpborder->global_npartitions);
+#endif
 
    borderBuildCharMap(iteration, dpborder);
    assert(!toplevel->bordernodesMapToOrg);
@@ -971,6 +973,7 @@ SCIP_RETCODE dpborder_coreSolve(
       assert(graph->terms == dpborder->ntermsvisited);
       assert(dpborder->global_optposition != -1);
 
+      printf("solved with  partitions=%d, max. bordersize=%d \n", dpborder->global_npartitions, dpborder->dpbsequence->maxbordersize);
    }
 
    return SCIP_OKAY;

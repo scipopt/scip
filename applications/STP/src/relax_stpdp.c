@@ -72,7 +72,8 @@ SCIP_RETCODE solveWithDpBorder(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &soledges, graph->edges) );
 
-   printf("solving problem with DPB... \n");
+   printf("solving problem with DPB... ");
+   graph_printInfo(graph);
 
    SCIP_CALL( dpborder_solve(scip, graph, dpborder, soledges, wasSolved) );
 

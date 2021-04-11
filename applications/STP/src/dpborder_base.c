@@ -26,9 +26,11 @@
 #include "solstp.h"
 
 
-#define DPB_MINTERMRATIO 0.25
-#define DPB_MAXNNODES    2000
-#define DPB_MINNNODES    50
+#define DPB_MINTERMRATIO 0.4
+#define DPB_MAXNNODES    1000
+#define DPB_MINNNODES    100
+#define DPB_MAXAVGDEG    4.5
+
 
 
 /*
@@ -51,9 +53,11 @@ SCIP_Bool dpborderIsNonPromising(
    if( ((SCIP_Real) graph->terms / (SCIP_Real) graph->knots) < DPB_MINTERMRATIO )
       return TRUE;
 
+   if( ((SCIP_Real) graph->edges / (SCIP_Real) graph->knots) > DPB_MAXAVGDEG )
+      return TRUE;
+
    return FALSE;
 }
-
 
 
 /** initializes helper */
