@@ -2809,6 +2809,22 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( extreduce_init(scip, useSd, paramsda->extredMode, graph, redcostdata, &extpermanent) );
             extreduce_extPermaAddRandnumgen(randnumgen, extpermanent);
             havebestsol = havebestsol && solstp_isUnreduced(scip, graph, bestresult);
+
+
+            {
+            static int first = TRUE;
+            // deleteme to trigger DP algo for OGE instance id_331 that cannot be solved yet, remove once
+            // ext full backtracking is there
+            // remove before release!
+            if( first && graph->terms == 200 && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 851810086400 )
+            {
+               printf("test DP\n");
+               havebestsol = FALSE;
+               upperbound *= 0.985;
+            }
+            first = FALSE;
+            }
+
             extpermanent->solIsValid = havebestsol;
             extpermanent->result = havebestsol ? bestresult : NULL;
 

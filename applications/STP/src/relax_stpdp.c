@@ -188,7 +188,7 @@ SCIP_DECL_RELAXEXITSOL(relaxExitsolStpdp)
    return SCIP_OKAY;
 }
 
-
+#include <unistd.h>
 /** execution method of relaxator */
 static
 SCIP_DECL_RELAXEXEC(relaxExecStpdp)
@@ -196,6 +196,28 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
    GRAPH* graph;
    SCIP_RELAXDATA* const relaxdata = SCIPrelaxGetData(relax);
    SCIP_Bool success;
+
+   {
+      static int first = 1;
+      // deleteme
+      // to test parallel running DP algo remove once
+      // ONLY FOR TESTING REMOVE ASAP
+      graph = SCIPprobdataGetGraph2(scip);
+      if( first && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 903700113888 )
+      {
+         graph_printInfo(graph);
+         *lowerbound = 30202.0;
+//#ifdef _OPENMP
+//#include <omp.h>      //  SCIP_CALL( dpheur_runparallel(scip, graph) );
+         //#endif
+         sleep(50); // give the other (DP) thread the chance to find the optimal solution before!
+         SCIPsetObjlimit(scip,  *lowerbound +  SCIPgetTransObjoffset(scip));
+         *result = SCIP_SUCCESS;
+         return SCIP_OKAY;
+      }
+      first = 0;
+   }
+
 
    *lowerbound = -SCIPinfinity(scip);
    *result = SCIP_DIDNOTRUN;
