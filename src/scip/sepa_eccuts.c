@@ -371,6 +371,7 @@ SCIP_RETCODE nlrowaggrAddLinearTerm(
    return SCIP_OKAY;
 }
 
+/** @todo I think this disabled-code function can safely be removed */
 #ifdef SCIP_DISABLED_CODE
 /** stores quadratic variables in a given nonlinear row aggregation */
 static
@@ -406,6 +407,7 @@ SCIP_RETCODE nlrowaggrAddQuadraticVar(
    assert(nlrowaggr != NULL);
    assert(quadvar != NULL);
 
+   /** @todo always extending by one could be inefficient */
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &nlrowaggr->quadvars, &nlrowaggr->quadvarssize, nlrowaggr->nquadvars+1) );
    assert(nlrowaggr->quadvarssize > nlrowaggr->nquadvars);
    nlrowaggr->quadvars[nlrowaggr->nquadvars] = quadvar;

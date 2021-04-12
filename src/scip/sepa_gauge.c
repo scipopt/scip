@@ -569,6 +569,7 @@ SCIP_RETCODE generateCut(
    /* linear part */
    for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )
    {
+      /** @todo: don't we also need the gradx0 += part here? */
       SCIP_CALL( SCIPaddVarToRow(scip, row, SCIPnlrowGetLinearVars(nlrow)[i], SCIPnlrowGetLinearCoefs(nlrow)[i]) );
    }
 
@@ -735,6 +736,7 @@ SCIP_RETCODE separateCuts(
       }
    }
 
+   /** @todo: could probably be moved inside generateCut */
    SCIP_CALL( SCIPcreateExpriter(scip, &exprit) );
 
    /* generate cuts at sol */
