@@ -1560,7 +1560,7 @@ SCIP_RETCODE findLexMinFace(
       {
          if ( lexminfixes[i][j] == 2 )
          {
-            if ( i < maxdiscriminating )
+            if ( i < maxdiscriminating || minfixed == -1 )
                lexminfixes[i][j] = lexminfixes[i][j + 1];
             else if ( i == maxdiscriminating )
                lexminfixes[i][j] = 1;
@@ -1656,7 +1656,7 @@ SCIP_RETCODE findLexMaxFace(
       {
          if ( lexmaxfixes[i][j] == 2 )
          {
-            if ( i < maxdiscriminating )
+            if ( i < maxdiscriminating || minfixed == -1 )
                lexmaxfixes[i][j] = lexmaxfixes[i][j - 1];
             else if ( i == maxdiscriminating )
                lexmaxfixes[i][j] = 0;
