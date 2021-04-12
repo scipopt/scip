@@ -434,6 +434,7 @@ SCIP_RETCODE separateCuts(
          }
          SCIPdebug( SCIPprintSol(scip, projection, NULL, TRUE) );
 
+         /** @todo this could just be created inside generateCut and the extra argument removed */
          SCIP_CALL( SCIPcreateExpriter(scip, &exprit) );
 
          /* check for active or violated constraints */

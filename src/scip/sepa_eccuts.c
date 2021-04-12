@@ -371,29 +371,6 @@ SCIP_RETCODE nlrowaggrAddLinearTerm(
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_DISABLED_CODE
-/** stores quadratic variables in a given nonlinear row aggregation */
-static
-SCIP_RETCODE nlrowaggrStoreQuadraticVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROWAGGR*       nlrowaggr,          /**< nonlinear row aggregation */
-   SCIP_VAR**            quadvars,           /**< quadratic variables */
-   int                   nquadvars           /**< number of quadratic variables */
-   )
-{
-   assert(scip != NULL);
-   assert(nlrowaggr != NULL);
-   assert(quadvars != NULL);
-   assert(nquadvars > 0);
-
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &nlrowaggr->quadvars, quadvars, nquadvars) );
-   nlrowaggr->nquadvars = nquadvars;
-   nlrowaggr->quadvarssize = nquadvars;
-
-   return SCIP_OKAY;
-}
-#endif
-
 /** adds quadratic variable to a given nonlinear row aggregation */
 static
 SCIP_RETCODE nlrowaggrAddQuadraticVar(
