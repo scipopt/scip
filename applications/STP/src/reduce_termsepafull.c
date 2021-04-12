@@ -45,6 +45,7 @@
 #define SEPARATOR_MAXSIZE 4
 #define SEPARATOR_MAXNCHECKS 75
 #define SEPARATOR_MINTERMRATIO 0.1
+#define SEPARATOR_MINEFFTERMRATIO 0.3
 #define COMPONENT_MAXNODESRATIO_2SEPA 0.5
 #define COMPONENT_MAXNODESRATIO_3SEPA 0.1
 #define COMPONENT_MAXNODESRATIO_4SEPA 0.025
@@ -1048,12 +1049,25 @@ SCIP_RETCODE initHelpers(
    const int mincheckbound = (int) (SEPARATOR_MINTERMRATIO * g->terms);
    const int maxsepasize = SEPARATOR_MAXSIZE;
    int maxncompchecks = SEPARATOR_MAXNCHECKS;
+   int nnodes_real;
+   SCIP_Real termratio;
+
+   graph_get_nVET(g, &nnodes_real, NULL, NULL);
+   termratio = (SCIP_Real) g->terms / (SCIP_Real) nnodes_real;
+
+
 
    if( maxncompchecks < mincheckbound )
    {
       SCIPdebugMessage("update nChecks %d->%d \n", maxncompchecks, mincheckbound);
       maxncompchecks = mincheckbound;
    }
+
+   if( termratio >= SEPARATOR_MINEFFTERMRATIO )
+   {
+      maxncompchecks *= 1.5;
+   }
+
 #ifdef SCIP_DEBUG
    graph_printInfoReduced(g);
    printf("max. number of components to be checked: %d \n", maxncompchecks);
