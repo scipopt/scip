@@ -496,6 +496,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
 #else
       case ReductionType::kFixedInfCol: {
+          if(!constraintsReplaced)
+              continue;
           SCIP_Bool infeas;
           SCIP_Bool fixed;
           SCIP_Real value = SCIPinfinity(scip);
