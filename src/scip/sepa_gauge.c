@@ -553,7 +553,7 @@ SCIP_RETCODE generateCut(
    )
 {
    SCIP_EXPR* expr;
-   SCIP_Real activity;
+   SCIP_Real exprval;
    SCIP_Real gradx0; /* <grad f(x_0), x_0> */
    int i;
 
@@ -569,7 +569,6 @@ SCIP_RETCODE generateCut(
    /* linear part */
    for( i = 0; i < SCIPnlrowGetNLinearVars(nlrow); i++ )
    {
-      /** @todo: don't we also need the gradx0 += part here? */
       SCIP_CALL( SCIPaddVarToRow(scip, row, SCIPnlrowGetLinearVars(nlrow)[i], SCIPnlrowGetLinearCoefs(nlrow)[i]) );
    }
 
@@ -614,18 +613,19 @@ SCIP_RETCODE generateCut(
    SCIPdebugMsg(scip, "gradient dot x_0: %g\n", gradx0);
 #endif
 
-   /* gradient cut is f(x_0) - <grad f(x_0), x_0> + <grad f(x_0), x> <= rhs or >= lhs */
-   SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrow, sol, &activity) );
+   /* gradient cut is linear part + f(x_0) - <grad f(x_0), x_0> + <grad f(x_0), x> <= rhs or >= lhs */
+   exprval = SCIPexprGetEvalValue(SCIPnlrowGetExpr(nlrow));
+   assert(exprval != SCIP_INVALID);  /* we should have noticed a domain error above */  /*lint !e777*/
    if( convexside == RHS )
    {
       assert(!SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)));
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIPnlrowGetRhs(nlrow) - activity + gradx0) );
+      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIPnlrowGetRhs(nlrow) - exprval + gradx0) );
    }
    else
    {
       assert(convexside == LHS);
       assert(!SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)));
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIPnlrowGetLhs(nlrow) - activity + gradx0) );
+      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIPnlrowGetLhs(nlrow) - exprval + gradx0) );
    }
 
 #ifdef CUT_DEBUG
