@@ -130,6 +130,9 @@ SCIP_DECL_BENDERSCREATESUB(bendersCreatesubTest)
    /* adding NULL subproblems */
    SCIP_CALL( SCIPaddBendersSubproblem(scip, benders, NULL) );
 
+   /* specifying the subproblem type */
+   SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_CONVEXCONT);
+
    return SCIP_OKAY;
 }
 

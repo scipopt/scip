@@ -1859,7 +1859,7 @@ SCIP_RETCODE createSubproblems(
        * not required.
        *
        * NOTE: since the subproblems are supplied as NULL pointers, the internal convexity check can not be performed.
-       * The user needs to specify whether the subproblems are convex or not.
+       * The user needs to explicitly specify the subproblem type.
        */
       if( subproblem != NULL )
       {
@@ -1985,6 +1985,17 @@ SCIP_RETCODE createSubproblems(
                SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersUpperbound) );
                assert(eventhdlr != NULL);
             }
+         }
+      }
+      else
+      {
+         /* a user must specify the subproblem type if they are not supplying a SCIP instance. */
+         if( SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_UNKNOWN )
+         {
+            SCIPerrorMessage("If the subproblem is set to NULL, then the subproblem type must be specified.\n");
+            SCIPerrorMessage("In the subproblem creation callback, call SCIPbendersSetSubproblemType with the appropriate problem type.\n");
+
+            return SCIP_ERROR;
          }
       }
    }
