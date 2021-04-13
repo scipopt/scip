@@ -175,7 +175,7 @@ char* SCIPdecompPrintStats(
    char*                 strbuf              /**< string buffer storage */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

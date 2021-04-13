@@ -14,22 +14,30 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-if test -z "$GMSDIR"
+# Cleans up after gams testrun, calls 'evalcheck_gamscluster.sh'.
+# To be invoked by 'check_gamscluster.sh'.
+
+# Input environment variables
+# GMSDIR needs to be defined, the corresponding directory will be deleted.
+
+# New environment variables defined by this script: None
+
+if test -z "${GMSDIR}"
 then
-  echo "Error: finishgamscluster.sh called with empty GMSDIR variable."
-  exit 0
+    echo "Error: finishgamscluster.sh called with empty GMSDIR variable."
+    exit 0
 fi
 
-if test -d "$GMSDIR"
+if test -d "${GMSDIR}"
 then
-  rm $GMSDIR/*
-  rmdir $GMSDIR
+    rm "${GMSDIR}/*"
+    rmdir "${GMSDIR}"
 fi
 
-if test -z "$EVALFILE"
+if test -z "${EVALFILE}"
 then
-  echo "Error: finishgamscluster.sh called with empty EVALFILE variable."
-  exit 0
+    echo "Error: finishgamscluster.sh called with empty EVALFILE variable."
+    exit 0
 fi
 
-./evalcheck_gamscluster.sh $EVALFILE
+./evalcheck_gamscluster.sh "${EVALFILE}"

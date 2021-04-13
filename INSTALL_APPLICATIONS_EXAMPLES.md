@@ -1,5 +1,5 @@
-Building and installing the applications and examples                       {#INSTALL_APPLICATIONS_EXAMPLES}
-========================================
+Building and installing the applications and examples  {#INSTALL_APPLICATIONS_EXAMPLES}
+=====================================================
 
 Each application and example may be built in two ways, either by using Cmake
 or by using SCIP's own Makefile system. The choice of the
@@ -158,9 +158,7 @@ Here is what you have to do to compile and run the application or example projec
    - `LPS=none`      to use no LP solver
    - `COMP=gnu`      to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
-
-  For CallableLibrary:
-   - `IPOPT=true`    to enable using Ipopt as NLP solver
+   - `IPOPT=true`    to enable using Ipopt as NLP solver for CallableLibrary:
 
 4. To run the program enter `bin/scip_project_binary.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)`
    (e.g. `bin/scip_project_binary.linux.x86.gnu.opt.spx`) or `bin/scip_project_binary` which is a link
