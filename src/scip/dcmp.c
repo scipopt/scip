@@ -295,6 +295,26 @@ SCIP_Real SCIPdecompGetModularity(
    return decomp->modularity;
 }
 
+/** gets number of border variables of this decomposition */
+int SCIPdecompGetNBorderVars(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->labels[0] == SCIP_DECOMP_LINKVAR ? decomp->varssize[0] : 0;
+}
+
+/** gets number of border constraints of this decomposition */
+int SCIPdecompGetNBorderConss(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->labels[0] == SCIP_DECOMP_LINKVAR ? decomp->consssize[0] : 0;
+}
+
 /** gets number of edges in the block-decomposition graph of this decomposition */
 int SCIPdecompGetNBlockGraphEdges(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */

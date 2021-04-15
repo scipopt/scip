@@ -94,6 +94,18 @@ SCIP_Real SCIPdecompGetModularity(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
+/** gets number of border variables of this decomposition */
+SCIP_EXPORT
+int SCIPdecompGetNBorderVars(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** gets number of border constraints of this decomposition */
+SCIP_EXPORT
+int SCIPdecompGetNBorderConss(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
 /** gets number of edges in the block-decomposition graph of this decomposition */
 SCIP_EXPORT
 int SCIPdecompGetNBlockGraphEdges(
