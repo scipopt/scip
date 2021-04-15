@@ -311,6 +311,11 @@ SCIP_RETCODE addRedsol(
    GRAPH* graph = probdata->graph;
    assert(graph && redsol);
 
+   if( probdata->mode != STP_MODE_CUT )
+   {
+      return SCIP_OKAY;
+   }
+
    if( graph->terms == 1 )
    {
       return SCIP_OKAY;
@@ -2903,8 +2908,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
 
    probdata->graph = graph;
 
-   // todo extra method and adapt for PCMW!
-   if( probdata->mode == STP_MODE_CUT )
+   // todo extra method
    {
       int reduction;
       SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
