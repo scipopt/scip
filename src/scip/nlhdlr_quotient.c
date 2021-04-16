@@ -35,6 +35,14 @@
 #define NLHDLR_DETECTPRIORITY   20
 #define NLHDLR_ENFOPRIORITY     20
 
+/** translate from one value of infinity to another
+ *
+ *  if val is >= infty1, then give infty2, else give val
+ */
+#define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
+
+/*lint -e666*/
+
 /*
  * Data structures
  */
@@ -643,8 +651,9 @@ SCIP_RETCODE estimateUnivariateQuotient(
    x = SCIPgetExprAuxVarNonlinear(xexpr);
 
    /* get local bounds on xexpr */
-   bnd.inf = SCIPvarGetLbLocal(x);
-   bnd.sup = SCIPvarGetUbLocal(x);
+   SCIPintervalSetBounds(&bnd,
+      -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(x)),
+       infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(x)));
    SCIP_CALL( SCIPevalExprActivity(scip, xexpr) );
    SCIPintervalIntersectEps(&bnd, SCIPepsilon(scip), bnd, SCIPexprGetActivity(xexpr));
    lbx = bnd.inf;
@@ -936,15 +945,17 @@ SCIP_RETCODE estimateBivariateQuotient(
    vars[1] = SCIPgetExprAuxVarNonlinear(yexpr);
 
    /* get bounds for x, y, and z */
-   bnd.inf = SCIPvarGetLbLocal(vars[0]);
-   bnd.sup = SCIPvarGetUbLocal(vars[0]);
+   SCIPintervalSetBounds(&bnd,
+      -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(vars[0])),
+       infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(vars[0])));
    SCIP_CALL( SCIPevalExprActivity(scip, xexpr) );
    SCIPintervalIntersectEps(&bnd, SCIPepsilon(scip), bnd, SCIPexprGetActivity(xexpr));
    lbx = bnd.inf;
    ubx = bnd.sup;
 
-   bnd.inf = SCIPvarGetLbLocal(vars[1]);
-   bnd.sup = SCIPvarGetUbLocal(vars[1]);
+   SCIPintervalSetBounds(&bnd,
+      -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(vars[1])),
+       infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(vars[1])));
    SCIP_CALL( SCIPevalExprActivity(scip, yexpr) );
    SCIPintervalIntersectEps(&bnd, SCIPepsilon(scip), bnd, SCIPexprGetActivity(yexpr));
    lby = bnd.inf;
