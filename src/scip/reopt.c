@@ -82,9 +82,11 @@ SCIP_DECL_EVENTEXEC(eventExecReopt)
    oldbound = SCIPeventGetOldbound(event);
    newbound = SCIPeventGetNewbound(event);
 
-   assert( eventnode != NULL );
+   /* if we are called from the last node in the tree that is cut off, eventnode will be NULL and we do not have to store the bound changes */
+   if( eventnode == NULL )
+      return SCIP_OKAY;
 
-   /* skip if the node is not the focus nodes */
+   /* skip if the node is not the focus node */
    if( SCIPnodeGetType(eventnode) != SCIP_NODETYPE_FOCUSNODE || SCIPnodeGetDepth(eventnode) != SCIPgetEffectiveRootDepth(scip) )
       return SCIP_OKAY;
 

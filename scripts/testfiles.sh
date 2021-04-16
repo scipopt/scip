@@ -14,29 +14,13 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-# configures SOLUFILE environment variable for test runs and evaluation runs
+# Test the file names contained in all "*.test" files in the current directory.
+# Output names of files that do not exist.
 
-# input environment - these environment variables should be set before invoking this script
-TSTNAME="${1}"       # name of the test set
-
-# new environment variables defined by this script:
-#    SOLUFILE - .solu file for this test set, for parsing optimal solution values
-
-# look for solufiles under the name of the test, the name of the test with everything after the first "_" or "-" stripped, and all;
-# prefer more specific solufile names over general ones and the instance database solufiles over those in testset/
-SOLUFILE=""
-for f in "${TSTNAME}" ${TSTNAME%%_*} ${TSTNAME%%-*} all
-do
-    for d in instancedata/testsets testset
-    do
-        if test -f "${d}/${f}.solu"
-        then
-            SOLUFILE="${d}/${f}.solu"
-            break
-        fi
-    done
-    if ! test "${SOLUFILE}" = ""
-    then
-        break
-    fi
+for j in *.test; do
+   for i in `cat $j`; do
+      if test ! -f $i; then
+         echo "In "$j": could not find: " $i
+      fi
+   done
 done
