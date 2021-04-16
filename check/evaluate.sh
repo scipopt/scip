@@ -64,26 +64,26 @@ echo "${OUTFILE}"
 
 if test "${SOLVER}" = "gurobi_cl"
 then
-    awk -f check_gurobi.awk -v "TEXFILE=${TEXFILE}" -v "PAVFILE=${PAVFILE}" "${AWKARGS}" "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
+    awk -f check_gurobi.awk -v "TEXFILE=${TEXFILE}" -v "PAVFILE=${PAVFILE}" ${AWKARGS} "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
 elif test  "${SOLVER}" = "cplex"
 then
-    awk -f check_cplex.awk -v "TEXFILE=${TEXFILE}" "${AWKARGS}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
+    awk -f check_cplex.awk -v "TEXFILE=${TEXFILE}" ${AWKARGS} "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
 elif test  "${SOLVER}" = "xpress"
 then
-    awk -f check_xpress.awk -v "TEXFILE=${TEXFILE}" "${AWKARGS}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
+    awk -f check_xpress.awk -v "TEXFILE=${TEXFILE}" ${AWKARGS} "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
 elif test  "${SOLVER}" = "mosek"
 then
-    awk -f check_mosek.awk -v "TEXFILE=${TEXFILE}" "${AWKARGS}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
+    awk -f check_mosek.awk -v "TEXFILE=${TEXFILE}" ${AWKARGS} "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
 elif test  "${SOLVER}" = "glpk"
 then
-    awk -f check_glpk.awk -v "TEXFILE=${TEXFILE}" "${AWKARGS}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
+    awk -f check_glpk.awk -v "TEXFILE=${TEXFILE}" ${AWKARGS} "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
 elif test  "${SOLVER}" = "symphony"
 then
-    awk -f check_symphony.awk -v "TEXFILE=${TEXFILE}" "${AWKARGS}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
+    awk -f check_symphony.awk -v "TEXFILE=${TEXFILE}" ${AWKARGS} "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
 elif test  "${SOLVER}" = "cbc"
 then
-    awk -f check_cbc.awk -v "TEXFILE=${TEXFILE}" "${AWKARGS}" "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
+    awk -f check_cbc.awk -v "TEXFILE=${TEXFILE}" ${AWKARGS} "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
     # we should not check for SOLVER = scip here, because check.awk needs also to be called for examples with other names
 else
-    awk -f check.awk -v "TEXFILE=${TEXFILE}" -v "PAVFILE=${PAVFILE}" -v "ERRFILE=${ERRFILE}" "${AWKARGS}" "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
+    awk -f check.awk -v "TEXFILE=${TEXFILE}" -v "PAVFILE=${PAVFILE}" -v "ERRFILE=${ERRFILE}" ${AWKARGS} "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
 fi
