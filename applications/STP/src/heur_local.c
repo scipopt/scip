@@ -33,6 +33,7 @@
 #include "probdata_stp.h"
 #include "cons_stp.h"
 #include "solstp.h"
+#include "stpvector.h"
 
 
 /* @note if heuristic is running in root node timing is changed there to (SCIP_HEURTIMING_DURINGLPLOOP |
@@ -102,8 +103,8 @@ typedef struct Voronoi_data_structures
 /** Connectivity data */
 typedef struct connectivity_data
 {
-   IDX**                 blists_start;       /**< boundary lists starts (on nodes) */
-   IDX**                 lvledges_start;     /**< horizontal edges starts (on nodes) */
+   STP_Vectype(int)*     blists_start;       /**< boundary lists starts (on nodes) */
+   STP_Vectype(int)*     lvledges_start;     /**< horizontal edges starts (on nodes) */
    PHNODE**              pheap_boundpaths;   /**< boundary paths (on nodes) */
    int*                  pheap_sizes;        /**< size (on nodes) */
    PHNODE*               pheap_elements;     /**< elements, one per edge! */
@@ -546,7 +547,7 @@ SCIP_RETCODE lca(
    UF*                   uf,
    STP_Bool*             nodesmark,
    const int*            steineredges,
-   IDX**                 lcalists,
+   STP_Vectype(int)*     lcalists,
    PHNODE**              boundpaths,
    const int*            heapsize,
    const int*            vbase
@@ -582,12 +583,7 @@ SCIP_RETCODE lca(
          /* if the ancestor of 'u' and 'v' is one of the two, the boundary-edge is already in boundpaths[u] */
          if( ancestor != u && ancestor != v)
          {
-            IDX* curr;
-
-            SCIP_CALL( SCIPallocBlockMemory(scip, &curr) );
-            curr->index = oedge;
-            curr->parent = lcalists[ancestor];
-            lcalists[ancestor] = curr;
+            StpVecPushBack(scip, lcalists[ancestor], oedge);
          }
       }
    }
@@ -610,7 +606,7 @@ SCIP_RETCODE getLowestCommonAncestors(
 )
 {
    PHNODE** const boundpaths = connectData->pheap_boundpaths;
-   IDX** const lvledges_start = connectData->lvledges_start;
+   STP_Vectype(int)* lvledges_start = connectData->lvledges_start;
    const int* const solEdges = soltreeData->solEdges;
    int* const pheapsize = connectData->pheap_sizes;
    const int* const vnoibase = vnoiData->vnoi_base;
@@ -1057,7 +1053,8 @@ SCIP_RETCODE connectivityDataKeyElimUpdate(
 )
 {
    PHNODE** const boundpaths = connectData->pheap_boundpaths;
-   IDX** const lvledges_start = connectData->lvledges_start;
+   STP_Vectype(int)* lvledges_start = connectData->lvledges_start;
+   STP_Vectype(int) lvledges_curr = NULL;
    UF* const uf = connectData->uf;
    int* const pheapsize = connectData->pheap_sizes;
    const int* const supernodes = supergraphData->supernodes;
@@ -1095,10 +1092,12 @@ SCIP_RETCODE connectivityDataKeyElimUpdate(
       }
    }
 
+   lvledges_curr = lvledges_start[crucnode];
+
    /* add horizontal boundary-paths (between the child-components) */
-   for( IDX* lvledges_curr = lvledges_start[crucnode]; lvledges_curr != NULL; lvledges_curr = lvledges_curr->parent )
+   for( int i = 0; i < StpVecGetSize(lvledges_curr); i++ )
    {
-      const int edge = lvledges_curr->index;
+      const int edge = lvledges_curr[i];
       const int basetail = vnoibase[graph->tail[edge]];
       const int basehead = vnoibase[graph->head[edge]];
       const int node = (basehead == UNKNOWN)? UNKNOWN : SCIPStpunionfindFind(uf, basehead);
@@ -1130,8 +1129,8 @@ SCIP_RETCODE connectivityDataInit(
 )
 {
    PHNODE** const boundpaths = connectData->pheap_boundpaths;
-   IDX** const blists_start = connectData->blists_start;
-   IDX** const lvledges_start = connectData->lvledges_start;
+   STP_Vectype(int)* blists_start = connectData->blists_start;
+   STP_Vectype(int)* lvledges_start = connectData->lvledges_start;
    int* const pheapsize = connectData->pheap_sizes;
    const int* const vnoibase = vnoiData->vnoi_base;
    const int* const graphmark = graph->mark;
@@ -1144,26 +1143,26 @@ SCIP_RETCODE connectivityDataInit(
    for( int k = 0; k < nnodes; k++ )
       assert(graph->path_state[k] == CONNECT || !graph->mark[k]);
 
-   BMSclearMemoryArray(blists_start, nnodes);
-
    for( int k = 0; k < nnodes; ++k )
    {
-      IDX* blists_curr;
+      if( blists_start[k] )
+         StpVecClear(blists_start[k]);
+      if( lvledges_start[k] )
+         StpVecClear(lvledges_start[k]);
+   }
 
-      /* initialize pairing heaps */
-      pheapsize[k] = 0;
-      boundpaths[k] = NULL;
+   BMSclearMemoryArray(pheapsize, nnodes);
+   BMSclearMemoryArray(boundpaths, nnodes);
 
-      lvledges_start[k] = NULL;
+   /* link all nodes to their (respective) Voronoi base */
+   for( int k = 0; k < nnodes; ++k )
+   {
+      assert(pheapsize[k] == 0 && boundpaths[k] == NULL);
 
       if( !graphmark[k] )
          continue;
 
-      /* link all nodes to their (respective) Voronoi base */
-      SCIP_CALL( SCIPallocBlockMemory(scip, &blists_curr) );
-      blists_curr->index = k;
-      blists_curr->parent = blists_start[vnoibase[k]];
-      blists_start[vnoibase[k]] = blists_curr;
+      StpVecPushBack(scip, blists_start[vnoibase[k]], k);
    }
 
    /* for each node, store all of its outgoing boundary-edges in a (respective) heap*/
@@ -2206,7 +2205,7 @@ void vnoiDataRepairPreprocess(
    int*                  nheapelems          /**< to store */
 )
 {
-   IDX** const blists_start = connectData->blists_start;
+   STP_Vectype(int)* blists_start = connectData->blists_start;
    PATH* const vnoipath = vnoiData->vnoi_path;
    const int* const kpnodes = keypathsData->kpnodes;
    int* const vnoibase = vnoiData->vnoi_base;
@@ -2220,13 +2219,15 @@ void vnoiDataRepairPreprocess(
 
    for( int k = 0; k < nkpnodes; k++ )
    {
-      IDX* blists_curr = blists_start[kpnodes[k]];
+      STP_Vectype(int) blists_curr = blists_start[kpnodes[k]];
+      const int size = StpVecGetSize(blists_curr);
 
-      assert( blists_curr != NULL );
+      assert(blists_curr != NULL);
 
-      while( blists_curr != NULL )
+      for( int i = 0; i < size; i++ )
       {
-         const int node = blists_curr->index;
+         const int node = blists_curr[i];
+         assert(graph_knot_isInRange(graph, node));
 
          for( int edge_in = graph->inpbeg[node]; edge_in != EAT_LAST; edge_in = graph->ieat[edge_in] )
          {
@@ -2251,8 +2252,6 @@ void vnoiDataRepairPreprocess(
          {
             graph_pathHeapAdd(vnoipath, node, graph->path_heap, state, &count);
          }
-
-         blists_curr = blists_curr->parent;
       }
    }
 
@@ -2269,7 +2268,7 @@ void vnoiDataRestore(
    VNOILOC*              vnoiData            /**< data */
 )
 {
-   IDX** blists_start = connectData->blists_start;
+   STP_Vectype(int)* blists_start = connectData->blists_start;
    PATH* vnoipath = vnoiData->vnoi_path;
    int* memvbase = vnoiData->memvbase;
    int* meminedges = vnoiData->meminedges;
@@ -2277,24 +2276,25 @@ void vnoiDataRestore(
    const int* kpnodes = keypathsData->kpnodes;
    SCIP_Real* memvdist = vnoiData->memvdist;
    const int nkpnodes = keypathsData->nkpnodes;
-   int l = 0;
+   int memcount = 0;
 
    for( int k = 0; k < nkpnodes; k++ )
    {
       /* restore data of all nodes having the current (internal) key-path node as their voronoi base */
-      IDX* blists_curr = blists_start[kpnodes[k]];
-      while( blists_curr != NULL )
+      STP_Vectype(int) blists_curr = blists_start[kpnodes[k]];
+      const int size = StpVecGetSize(blists_curr);
+
+      for( int i = 0; i < size; i++ )
       {
-         const int node = blists_curr->index;
-         vnoibase[node] = memvbase[l];
-         vnoipath[node].dist = memvdist[l];
-         vnoipath[node].edge = meminedges[l];
-         l++;
-         blists_curr = blists_curr->parent;
+         const int node = blists_curr[i];
+         vnoibase[node] = memvbase[memcount];
+         vnoipath[node].dist = memvdist[memcount];
+         vnoipath[node].edge = meminedges[memcount];
+         memcount++;
       }
    }
 
-   assert(l == vnoiData->nmems);
+   assert(memcount == vnoiData->nmems);
    assert(vnoiData->nkpnodes == nkpnodes);
 }
 
@@ -2307,7 +2307,7 @@ void vnoiDataReset(
    VNOILOC*              vnoiData            /**< data */
 )
 {
-   IDX** blists_start = connectData->blists_start;
+   STP_Vectype(int)* blists_start = connectData->blists_start;
    PATH* vnoipath = vnoiData->vnoi_path;
    int* memvbase = vnoiData->memvbase;
    int* meminedges = vnoiData->meminedges;
@@ -2322,10 +2322,12 @@ void vnoiDataReset(
    for( int k = 0; k < nkpnodes; k++ )
    {
       /* reset all nodes having the current (internal) key-path node as their Voronoi base */
-      IDX* blists_curr = blists_start[kpnodes[k]];
-      while( blists_curr != NULL )
+      STP_Vectype(int) blists_curr = blists_start[kpnodes[k]];
+      const int size = StpVecGetSize(blists_curr);
+
+      for( int i = 0; i < size; i++ )
       {
-         const int node = blists_curr->index;
+         const int node = blists_curr[i];
 
          assert(graphmark[node]);
 
@@ -2340,7 +2342,6 @@ void vnoiDataReset(
          vnoipath[node].dist = FARAWAY;
          vnoipath[node].edge = UNKNOWN;
          state[node] = UNKNOWN;
-         blists_curr = blists_curr->parent;
       }
    }
 
@@ -3139,10 +3140,9 @@ SCIP_RETCODE localKeyVertexHeuristics(
    )
 {
    UF uf;  /* union-find */
-   IDX** blists_start = NULL;  /* array [1,..,nnodes],
-                         * if node i is in the current ST, blists_start[i] points to a linked list of all nodes having i as their base */
+   STP_Vectype(int)* blists_start = NULL;
    PATH* vnoipath = NULL;
-   IDX** lvledges_start = NULL;  /* horizontal edges */
+   STP_Vectype(int)* lvledges_start = NULL;  /* horizontal edges */
    PHNODE** boundpaths = NULL;
    PHNODE* pheapelements = NULL;
    SCIP_Real* memvdist = NULL;
@@ -3240,6 +3240,9 @@ SCIP_RETCODE localKeyVertexHeuristics(
    graph->mark[root] = TRUE;
 
    SCIP_CALL( SCIPStpunionfindInit(scip, &uf, nnodes) );
+
+   BMSclearMemoryArray(blists_start, nnodes);
+   BMSclearMemoryArray(lvledges_start, nnodes);
 
    /* main loop */
    for( int nruns = 0, localmoves = 1; nruns < maxnrestarts && localmoves > 0; nruns++ )
@@ -3500,18 +3503,6 @@ SCIP_RETCODE localKeyVertexHeuristics(
       {
          if( boundpaths[k] )
             SCIPpairheapFree(scip, &boundpaths[k]);
-
-         for( IDX* lvledges_curr = lvledges_start[k]; lvledges_curr != NULL; lvledges_curr = lvledges_start[k] )
-         {
-            lvledges_start[k] = lvledges_curr->parent;
-            SCIPfreeBlockMemory(scip, &lvledges_curr);
-         }
-
-         for( IDX* blists_curr = blists_start[k]; blists_curr != NULL; blists_curr = blists_start[k] )
-         {
-            blists_start[k] = blists_curr->parent;
-            SCIPfreeBlockMemory(scip, &blists_curr);
-         }
       }
 
       /* has there been a move during this run? */
@@ -3549,6 +3540,12 @@ SCIP_RETCODE localKeyVertexHeuristics(
    /* free data structures */
    SCIPStpunionfindFreeMembers(scip, &uf);
    SCIPfreeMemoryArray(scip, &pheapelements);
+
+   for( int k = nnodes - 1; k >= 0; k-- )
+   {
+      StpVecFree(scip, lvledges_start[k]);
+      StpVecFree(scip, blists_start[k]);
+   }
 
    SCIPfreeBufferArray(scip, &kpedges);
    SCIPfreeBufferArray(scip, &kpnodes);

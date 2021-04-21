@@ -767,8 +767,6 @@ SCIP_RETCODE redLoopInnerMw(
       int ansad2elims = 0;
       int chain2elims = 0;
       int degelims = 0;
-      int todo; // run nnp early to solve ACTMOD FASTER!
-      // also maybe initialize DCSR and use for all! Afterwards need to clean it, bit ahcky, but ok...
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
