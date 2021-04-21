@@ -230,18 +230,12 @@ PHNODE* SCIPpairheapMergeheaps(
    PHNODE                *root2              /**< pointer to root of second heap */
    );
 
-SCIP_EXPORT
-PHNODE* SCIPpairheapAddtoheap(
-   SCIP*                 scip,               /**< SCIP data structure */
-   PHNODE*               root1,              /**< pointer to root of first heap */
-   PHNODE*               root2               /**< pointer to root of second heap */
-   );
-
 /** inserts a new node into the pairing heap */
 SCIP_EXPORT
 SCIP_RETCODE SCIPpairheapInsert(
    SCIP*                 scip,               /**< SCIP data structure */
    PHNODE**              root,
+   PHNODE*               pheapelems,         /**< data array */
    int                   element,
    SCIP_Real             key,
    int*                  size

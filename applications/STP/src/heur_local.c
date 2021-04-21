@@ -106,6 +106,7 @@ typedef struct connectivity_data
    IDX**                 lvledges_start;     /**< horizontal edges starts (on nodes) */
    PHNODE**              pheap_boundpaths;   /**< boundary paths (on nodes) */
    int*                  pheap_sizes;        /**< size (on nodes) */
+   PHNODE*               pheap_elements;     /**< elements, one per edge! */
    int*                  boundaryedges;      /**< current boundary edge */
    UF*                   uf;                 /**< union find */
    int                   nboundaryedges;     /**< number of boundary edges */
@@ -1087,7 +1088,8 @@ SCIP_RETCODE connectivityDataKeyElimUpdate(
          if( node != UNKNOWN && !isLowSupernode[node] && graphmark[node] )
          {
             boundaryedges[nboundaryedges++] = edge;
-            SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[supernode], edge, edgecost, &pheapsize[supernode]) );
+            SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[supernode],
+                  connectData->pheap_elements, edge, edgecost, &pheapsize[supernode]) );
             break;
          }
       }
@@ -1191,8 +1193,10 @@ SCIP_RETCODE connectivityDataInit(
             assert(SCIPisGE(scip, edgecost, 0.0));
 
             /* add the boundary-edge 'e' and its reversed to the corresponding heaps */
-            SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[vnoibase[tail]], e, edgecost, &(pheapsize[vnoibase[tail]])) );
-            SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[vnoibase[head]], flipedge(e), edgecost, &(pheapsize[vnoibase[head]])) );
+            SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[vnoibase[tail]],
+                  connectData->pheap_elements, e, edgecost, &(pheapsize[vnoibase[tail]])) );
+            SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[vnoibase[head]],
+                  connectData->pheap_elements, flipedge(e), edgecost, &(pheapsize[vnoibase[head]])) );
          }
       }
    }
@@ -3140,6 +3144,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    PATH* vnoipath = NULL;
    IDX** lvledges_start = NULL;  /* horizontal edges */
    PHNODE** boundpaths = NULL;
+   PHNODE* pheapelements = NULL;
    SCIP_Real* memvdist = NULL;
    SCIP_Real* edgecostBiased_pc = NULL;
    SCIP_Real* edgecostOrg_pc = NULL;
@@ -3227,6 +3232,7 @@ SCIP_RETCODE localKeyVertexHeuristics(
    SCIP_CALL( SCIPallocBufferArray(scip, &supernodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &kpnodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &kpedges, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pheapelements, nedges) );
 
    for( int k = 0; k < nnodes; k++ )
       graph->mark[k] = (graph->grad[k] > 0);
@@ -3243,7 +3249,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
       KPATHS keypathsData = { .kpnodes = kpnodes, .kpedges = kpedges, .kpcost = 0.0, .nkpnodes = 0, .nkpedges = 0,
          .kptailnode = -1 };
       CONN connectivityData = { .blists_start = blists_start, .pheap_boundpaths = boundpaths, .lvledges_start = lvledges_start,
-         .pheap_sizes = pheapsize, .uf = &uf, .boundaryedges = boundedges, .nboundaryedges = 0 };
+         .pheap_sizes = pheapsize, .uf = &uf, .boundaryedges = boundedges, .nboundaryedges = 0,
+         .pheap_elements = pheapelements };
       SOLTREE soltreeData = { .solNodes = solNodes, .linkcutNodes = linkcutNodes, .solEdges = solEdges, .nodeIsPinned = pinned,
          .nodeIsScanned = scanned, .newedges = newedges };
       SGRAPH supergraphData = { .supernodes = supernodes, .nodeIsLowSupernode = supernodesmark,
@@ -3265,6 +3272,9 @@ SCIP_RETCODE localKeyVertexHeuristics(
          scanned[k] = FALSE;
          supernodesmark[k] = FALSE;
       }
+
+      for( int e = 0; e < nedges; e++ )
+         pheapelements[e].element = -1;
 
       for( int e = 0; e < nedges; e++ )
          newedges[e] = UNKNOWN;
@@ -3425,7 +3435,9 @@ SCIP_RETCODE localKeyVertexHeuristics(
                /* does the boundary-path end in the root component? */
                if( node != UNKNOWN && node != crucnode && graph->mark[base] )
                {
-                  SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[crucnode], e, edgecost, &(pheapsize[crucnode])) );
+                  SCIP_CALL( SCIPpairheapInsert(scip, &boundpaths[crucnode],
+                        pheapelements,
+                        e, edgecost, &(pheapsize[crucnode])) );
                   break;
                }
             }
@@ -3536,6 +3548,8 @@ SCIP_RETCODE localKeyVertexHeuristics(
 
    /* free data structures */
    SCIPStpunionfindFreeMembers(scip, &uf);
+   SCIPfreeMemoryArray(scip, &pheapelements);
+
    SCIPfreeBufferArray(scip, &kpedges);
    SCIPfreeBufferArray(scip, &kpnodes);
    SCIPfreeBufferArray(scip, &supernodes);

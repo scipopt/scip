@@ -110,6 +110,53 @@ void pairheapRec(
 }
 
 
+
+/** add heap to heap */
+static
+PHNODE* pairheapAddtoHeap(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PHNODE*               root1,              /**< pointer to root of first heap */
+   PHNODE*               root2               /**< pointer to root of second heap */
+   )
+{
+   assert(root2 != NULL);
+   assert(root1 != NULL);
+
+   if( root1->key <= root2->key )
+   {
+      /* attach root2 as (the leftmost) child of root1 */
+      root2->prev = root1;
+      root1->sibling = root2->sibling;
+      /* @todo: should never happen */
+      if( root1->sibling != NULL )
+      {
+         root1->sibling->prev = root1;
+      }
+
+      root2->sibling = root1->child;
+      if( root2->sibling != NULL )
+         root2->sibling->prev = root2;
+
+      root1->child = root2;
+
+      return root1;
+   }
+   else
+   {
+      /* attach root1 as (the leftmost) child of root2 */
+      root2->prev = root1->prev;
+      root1->prev = root2;
+      root1->sibling = root2->child;
+      if( root1->sibling != NULL )
+         root1->sibling->prev = root1;
+
+      root2->child = root1;
+
+      return root2;
+   }
+}
+
+
 /** returns maximum of given SCIP_Real values
  *  todo check whether this is really more efficient than a variadic function */
 SCIP_Real miscstp_maxReal(
@@ -588,81 +635,38 @@ PHNODE* SCIPpairheapMergeheaps(
    }
 }
 
-/** add heap to heap */
-PHNODE* SCIPpairheapAddtoheap(
-   SCIP*                 scip,               /**< SCIP data structure */
-   PHNODE*               root1,              /**< pointer to root of first heap */
-   PHNODE*               root2               /**< pointer to root of second heap */
-   )
-{
-   assert(root2 != NULL);
-   assert(root1 != NULL);
-
-   if( root1->key <= root2->key )
-   {
-      /* attach root2 as (the leftmost) child of root1 */
-      root2->prev = root1;
-      root1->sibling = root2->sibling;
-      /* @todo: should never happen */
-      if( root1->sibling != NULL )
-      {
-         root1->sibling->prev = root1;
-      }
-
-      root2->sibling = root1->child;
-      if( root2->sibling != NULL )
-         root2->sibling->prev = root2;
-
-      root1->child = root2;
-
-      return root1;
-   }
-   else
-   {
-      /* attach root1 as (the leftmost) child of root2 */
-      root2->prev = root1->prev;
-      root1->prev = root2;
-      root1->sibling = root2->child;
-      if( root1->sibling != NULL )
-         root1->sibling->prev = root1;
-
-      root2->child = root1;
-
-      return root2;
-   }
-}
-
 
 /** inserts a new node into the pairing heap */
 SCIP_RETCODE SCIPpairheapInsert(
    SCIP*                 scip,               /**< SCIP data structure */
    PHNODE**              root,               /**< pointer to root of the heap */
+   PHNODE*               pheapelems,         /**< data array */
    int                   element,            /**< data of new node */
    SCIP_Real             key,                /**< key of new node */
    int*                  size                /**< pointer to size of the heap */
    )
 {
+   assert(pheapelems[element].element == -1);
+
    if( (*root) == NULL )
    {
       (*size) = 1;
-      SCIP_CALL( SCIPallocBlockMemory(scip, root) );
-      (*root)->key = key;
-      (*root)->element = element;
-      (*root)->child = NULL;
-      (*root)->sibling = NULL;
-      (*root)->prev = NULL;
+      pheapelems[element].key = key;
+      pheapelems[element].element = element;
+      pheapelems[element].child = NULL;
+      pheapelems[element].sibling = NULL;
+      pheapelems[element].prev = NULL;
+      *root = &(pheapelems[element]);
    }
    else
    {
-      PHNODE* node;
       (*size)++;
-      SCIP_CALL( SCIPallocBlockMemory(scip, &node) );
-      node->key = key;
-      node->element = element;
-      node->child = NULL;
-      node->sibling = NULL;
-      node->prev = NULL;
-      (*root) = SCIPpairheapAddtoheap(scip, (*root), node);
+      pheapelems[element].key = key;
+      pheapelems[element].element = element;
+      pheapelems[element].child = NULL;
+      pheapelems[element].sibling = NULL;
+      pheapelems[element].prev = NULL;
+      (*root) = pairheapAddtoHeap(scip, (*root), &pheapelems[element]);
    }
    return SCIP_OKAY;
 }
@@ -697,7 +701,7 @@ SCIP_RETCODE SCIPpairheapDeletemin(
          SCIP_CALL( pairheapCombineSiblings(scip, &newroot, (*size)--) );
       }
 
-      SCIPfreeBlockMemory(scip, root);
+      (*root)->element = -1;
       (*root) = newroot;
    }
    return SCIP_OKAY;
@@ -751,9 +755,8 @@ void SCIPpairheapFree(
       SCIPpairheapFree(scip, &((*root)->child));
    }
 
-   SCIPfreeBlockMemory(scip, root);
+   (*root)->element = -1;
    (*root) = NULL;
-
 }
 
 
