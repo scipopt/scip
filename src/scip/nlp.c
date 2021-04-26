@@ -5755,7 +5755,9 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
    }
    else
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &nlp->initialguess, initguess, nlp->nvars) );
+      assert( nlp->sizevars >= nlp->nvars );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlp->initialguess, nlp->sizevars) );
+      BMScopyMemoryArray(nlp->initialguess, initguess, nlp->nvars);
    }
    nlp->haveinitguess = TRUE;
 
