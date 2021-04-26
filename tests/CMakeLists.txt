@@ -85,6 +85,7 @@ if( CRITERION_FOUND )
         # use the directory name (relative to src/) to build the executable
         #
         set_target_properties(${testName} PROPERTIES
+            RESOURCE_LOCK libscip
             RUNTIME_OUTPUT_DIRECTORY ${dir})
         #
         # add the newly created executable to the dependencies of the unittest target

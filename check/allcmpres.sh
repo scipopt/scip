@@ -14,30 +14,34 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+# Generate a comparison of two testruns, i.e. with different settings.
+#
+# Usage: 'allcmpres.sh check.run1.res check.run2.res'
+
 AWKARGS=""
 FILES=""
 for i in $@
 do
-    if test ! -e $i
+    if test ! -e "${i}"
     then
-	AWKARGS="$AWKARGS $i"
+        AWKARGS="${AWKARGS} ${i}"
     else
-	FILES="$FILES $i"
+        FILES="${FILES} ${i}"
     fi
 done
 
 TESTSETS=""
-for i in `ls -1 $FILES | sed 's!\(.*\)check\.\([^ .]*\)\.\([^ ]*\)\.res!\2!g' | sort -u`
+for i in $(ls -1 "${FILES}" | sed 's!\(.*\)check\.\([^ .]*\)\.\([^ ]*\)\.res!\2!g' | sort -u)
 do
-    TESTSETS="$TESTSETS $i"
+    TESTSETS="${TESTSETS} ${i}"
 done
 
 export LC_NUMERIC=C
 
-for i in $TESTSETS
+for i in ${TESTSETS}
 do
     echo
-    echo ====vvvv==== $i ====vvvv====
-    awk -f cmpres.awk $AWKARGS texcmpfile="cmpres.$i.tex" `ls -1f $FILES | grep "$i\..*\.res"`
-    echo ====^^^^==== $i ====^^^^====
+    echo "====vvvv==== ${i} ====vvvv===="
+    awk -f cmpres.awk "${AWKARGS}" texcmpfile="cmpres.${i}.tex" $(ls -1f "${FILES}" | grep "${i}\..*\.res")
+    echo "====^^^^==== ${i} ====^^^^===="
 done

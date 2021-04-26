@@ -288,7 +288,7 @@ SCIP_RETCODE initConcsolver(
 
       SCIPfreeBufferArray(data->solverscip, &solvals);
 
-      SCIP_CALL( SCIPaddSol(data->solverscip, solversol, &stored) );
+      SCIP_CALL( SCIPaddSolFree(data->solverscip, &solversol, &stored) );
 
       assert(stored);
    }
@@ -577,7 +577,7 @@ SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
    return SCIP_OKAY;
 }
 
-/** writes new solutions and global boundchanges to the iven synchronization data */
+/** writes new solutions and global boundchanges to the given synchronization data */
 static
 SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 {
@@ -621,7 +621,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 
          solobj = SCIPgetSolOrigObj(data->solverscip, sols[i]);
 
-         SCIPdebugMessage("adding sol to spi in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
+         SCIPdebugMessage("adding sol in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
          SCIPsyncdataGetSolutionBuffer(syncstore, syncdata, solobj, concsolverid, &solvals);
 
          /* if syncstore has no place for this solution we can stop since the next solution will have
