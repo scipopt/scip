@@ -35,8 +35,10 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
+#include "scip/scip_tree.h"
 #include <string.h>
 
 #define HEUR_NAME             "indicatordiving"
@@ -44,7 +46,7 @@
 #define HEUR_DISPCHAR         '?' /**< todo: change to SCIP_HEURDISPCHAR_DIVING */
 #define HEUR_PRIORITY         0
 #define HEUR_FREQ             1
-#define HEUR_FREQOFS          1
+#define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
@@ -83,7 +85,52 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+/** checks if variable is indicator variable and returns corresponding indicator constraint */
+static
+SCIP_RETCODE checkAndGetIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             cand,               /**< candidate variable */
+   SCIP_CONS**           cons,               /**< pointer to store indicator constraint */
+   SCIP_Bool*            isindicator         /**< pointer to store whether candidate variable is indicator variable */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** indicatorconss;
+   int c;
+
+   assert(scip != NULL);
+   assert(cand != NULL);
+   assert(cons != NULL);
+   assert(isindicator != NULL);
+
+   if( SCIPvarGetType(cand) != 0 )
+   {
+      *cons = NULL;
+      *isindicator = FALSE;
+      return SCIP_OKAY;
+   }
+
+   conshdlr = SCIPfindConshdlr(scip, "indicator");
+   indicatorconss = SCIPconshdlrGetConss(conshdlr);
+
+   *isindicator = FALSE;
+   for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
+   {
+      SCIP_VAR* indicatorvar;
+      indicatorvar = SCIPgetBinaryVarIndicator(indicatorconss[c]);
+
+      if( cand == indicatorvar )
+      {
+         *cons = indicatorconss[c];
+         *isindicator = TRUE;
+         return SCIP_OKAY;
+      }
+   }
+
+   *cons = NULL;
+   *isindicator = FALSE;
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -182,7 +229,11 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
+   SCIPdebugMessage("call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
+
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
+
+   SCIPdebugMessage("leave heurExecIndicatordiving\n");
 
    return SCIP_OKAY;
 }
@@ -204,42 +255,28 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
     * todo: implement this callback
     */
 
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONS** indicatorconss;
+   SCIP_CONS* indicatorcons;
+   SCIP_CONS* lincons;
+   SCIP_VAR* slackvar;
    SCIP_Bool isindicatorvar;
-   int c;
 
    /* check if cand variable is indicator variable */
-   if( SCIPvarGetType(cand) != 0 )
-   {
-      return SCIP_OKAY;
-   }
-   conshdlr = SCIPfindConshdlr(scip, "indicator");
-   indicatorconss = SCIPconshdlrGetConss(conshdlr);
-
-   isindicatorvar = FALSE;
-   for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
-   {
-      SCIP_VAR* indicatorvar;
-      indicatorvar = SCIPgetBinaryVarIndicator(indicatorconss[c]);
-
-      if( cand == indicatorvar )
-      {
-         isindicatorvar = TRUE;
-         break;
-      }
-   }
+   SCIP_CALL( checkAndGetIndicator(scip, cand, &indicatorcons, &isindicatorvar) );
 
    if( !isindicatorvar )
       return SCIP_OKAY;
 
-   //assert(!SCIPisFeasIntegral(scip, candsol));
-   //assert(!(SCIPvarGetLbLocal(cand) < SCIPvarGetUbLocal(cand) - 0.5));
+   SCIPdebugMessage("cand: %s, candsol: %.2f, candobjcoeff: %f\n", SCIPvarGetName(cand), candsol, SCIPvarGetObj(cand));
 
-   SCIPdebugMessage("cand: %s, candsol: %.2f\n", SCIPvarGetName(cand), candsol);
+   lincons = SCIPgetLinearConsIndicator(indicatorcons);
+   slackvar = SCIPgetSlackVarIndicator(indicatorcons);
+
+   SCIPdebugPrintCons(scip, indicatorcons, NULL);
+   SCIPdebugPrintCons(scip, lincons, NULL);
+   SCIPdebugMessage("slackvar has UB = %f\n", SCIPvarGetUbGlobal(slackvar));
 
    /* round down fractional indicator variable */
-   *roundup = FALSE;
+   *roundup = TRUE; //( SCIPvarGetLPSol(slackvar) == 0 );
    *score = 100;
 
    return SCIP_OKAY;
