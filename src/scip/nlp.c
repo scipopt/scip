@@ -5287,7 +5287,7 @@ SCIP_RETCODE SCIPnlpReset(
    nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
 
-   BMSfreeBlockMemoryArrayNull(blkmem, &nlp->initialguess, nlp->nvars);
+   BMSfreeBlockMemoryArrayNull(blkmem, &nlp->initialguess, nlp->sizevars);
    nlp->haveinitguess = FALSE;
 
    for(i = nlp->nnlrows - 1; i >= 0; --i)
