@@ -26,11 +26,13 @@
 #include <assert.h>
 
 #include "scip/cons_indicator.h"
+#include "scip/cons_linear.h"
 #include "scip/heur_indicatordiving.h"
 #include "scip/heuristics.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_heur.h"
@@ -255,10 +257,18 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
     * todo: implement this callback
     */
 
+   SCIP_VAR** consvars;
    SCIP_CONS* indicatorcons;
    SCIP_CONS* lincons;
    SCIP_VAR* slackvar;
+   SCIP_Real* consvals;
+   SCIP_Real activity;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nconsvars;
    SCIP_Bool isindicatorvar;
+   SCIP_Bool success;
+   int v;
 
    /* check if cand variable is indicator variable */
    SCIP_CALL( checkAndGetIndicator(scip, cand, &indicatorcons, &isindicatorvar) );
@@ -270,14 +280,55 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
    lincons = SCIPgetLinearConsIndicator(indicatorcons);
    slackvar = SCIPgetSlackVarIndicator(indicatorcons);
+   lhs = SCIPconsGetLhs(scip, lincons, &success);
+   rhs = SCIPconsGetRhs(scip, lincons, &success);
+   assert(SCIPisLE(scip, lhs, rhs));
 
    SCIPdebugPrintCons(scip, indicatorcons, NULL);
    SCIPdebugPrintCons(scip, lincons, NULL);
    SCIPdebugMessage("slackvar has UB = %f\n", SCIPvarGetUbGlobal(slackvar));
+   SCIPdebugMessage("cons lhs %f\n", SCIPconsGetLhs(scip, lincons, &success));
 
-   /* round down fractional indicator variable */
-   *roundup = TRUE; //( SCIPvarGetLPSol(slackvar) == 0 );
-   *score = 100;
+   SCIPgetConsNVars(scip, lincons, &nconsvars, &success);
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
+   SCIPgetConsVars(scip, lincons, consvars, nconsvars, &success);
+   SCIPgetConsVals(scip, lincons, consvals, nconsvars, &success);
+
+   activity = 0;
+   for( v = 0; v < nconsvars - 1; v++ )
+   {
+      SCIPdebugMessage("%s lp sol %f %f\n", SCIPvarGetName(consvars[v]), SCIPvarGetLPSol(consvars[v]),
+                     consvals[v]);
+      activity += consvals[v] * SCIPvarGetLPSol(consvars[v]);
+   }
+   assert(consvars[v]==slackvar);
+   SCIPdebugMessage("activity: %f\n", activity);
+
+   if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
+   {
+      /* indicator constraint is feasible */
+      *roundup = TRUE;
+      *score = 0; /* todo: random number */
+   }
+   else if( SCIPisGT(scip, activity, rhs) )
+   {
+      *score = 100 * ABS((activity - rhs)/rhs);
+      *roundup = (*score < 50);
+   }
+   else if( SCIPisLT(scip, activity, lhs) )
+   {
+      *score = 100 * ABS((activity - lhs)/lhs);
+      *roundup = (*score < 50);
+   }
+   else
+   {
+      assert(FALSE);
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &consvals);
+   SCIPfreeBufferArray(scip, &consvars);
 
    return SCIP_OKAY;
 }
