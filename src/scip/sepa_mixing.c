@@ -165,7 +165,7 @@ SCIP_RETCODE addCut(
    /* flush all changes before adding the cut */
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-   if ( SCIPisCutEfficacious(scip, sol, cut) )
+   if( SCIPisCutEfficacious(scip, sol, cut) )
    {
       /* set cut rank */
       SCIProwChgRank(cut, 1);
@@ -244,6 +244,11 @@ SCIP_RETCODE separateCuts(
    *cutoff = FALSE;
    *ncuts = 0;
 
+   /* exit if there are no binary variables - ignore integer variables that have 0/1 bounds */
+   nmaxvars = SCIPgetNBinVars(scip);
+   if( nmaxvars <= 0 )
+      return SCIP_OKAY;
+
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
@@ -258,12 +263,11 @@ SCIP_RETCODE separateCuts(
       /* only generate cuts based on continuous variables */
       firstvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
    }
-   vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   nmaxvars = nvars - SCIPgetNContVars(scip);
-
-   if ( firstvar == nvars )
+   if( firstvar == nvars )
       return SCIP_OKAY;
+
+   vars = SCIPgetVars(scip);
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixcoefs, nmaxvars) );
@@ -312,7 +316,7 @@ SCIP_RETCODE separateCuts(
       nvlb = SCIPvarGetNVlbs(var);
       nvub = SCIPvarGetNVubs(var);
 
-      if ( nvlb == 0 && nvub == 0 )
+      if( nvlb == 0 && nvub == 0 )
          continue;
 
       /* skip lower bound if the LP solution value is equal to the upper bound of the continuous variable */
@@ -395,6 +399,10 @@ SCIP_RETCODE separateCuts(
             }
 
             ++vlbmixsize;
+
+            /* stop if size is exceeded; possibly ignore redundant variable bounds */
+            if( vlbmixsize >= nmaxvars )
+               break;
          }
       }
       assert( vlbmixsize <= nmaxvars );
@@ -550,6 +558,10 @@ SCIP_RETCODE separateCuts(
             }
 
             ++vubmixsize;
+
+            /* stop if size is exceeded; possibly ignore redundant variable bounds */
+            if( vubmixsize >= nmaxvars )
+               break;
          }
       }
       assert( vubmixsize <= nmaxvars );
@@ -800,7 +812,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecSolMixing)
    assert(sepadata != NULL);
 
    /* do not run if we have reached the maximal number of consecutive unsuccessful calls */
-   if ( sepadata->nunsuccessful >= sepadata->maxnunsuccessful )
+   if( sepadata->nunsuccessful >= sepadata->maxnunsuccessful )
       return SCIP_OKAY;
 
    /* only call the mixing cut separator a given number of times at each node */

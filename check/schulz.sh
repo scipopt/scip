@@ -43,92 +43,89 @@ sleepsec=${4:-60}
 # split ress and sigs into arrays
 IFS=":"
 j=1
-for r in $ress
+for r in ${ress}
 do
-  resl[$j]=$r
-  ((j++))
+    resl[${j}]="${r}"
+    ((j++))
 done
 
 j=1
-for s in $sigs
+for s in ${sigs}
 do
-  sigl[$j]=$s
-  ((j++))
+    sigl[${j}]="${s}"
+    ((j++))
 done
 
 # check if number of timelimits equals number of signals
-if test ${#resl[@]} -ne ${#sigl[@]}
+if test "${#resl[@]}" -ne "${#sigl[@]}"
 then
-  echo "List of times and list of signals need to have equal length."
-  exit 1
+    echo "List of times and list of signals need to have equal length."
+    exit 1
 fi
 
-echo "--- " `date` ": Start watching $watch   sleep = $sleepsec seconds"
+echo "--- $(date): Start watching ${watch}   sleep = ${sleepsec} seconds"
 for (( j=1; j <= ${#resl[@]}; j++ ))
 do
-  echo "  Threshold ${resl[$j]}s -> Signal ${sigl[$j]}"
+    echo "  Threshold ${resl[${j}]}s -> Signal ${sigl[${j}]}"
 done
 
 # given a date in format [[[dd-]hh:]mm:]ss,
-# - calculates corresponding number of seconds and stores them in $secs
-# - checks if one of the timelimits is exceeded and stores corresponding signal in $signal
-#   if no timelimit is exceeded, $signal is set to 0
+# - calculates corresponding number of seconds and stores them in ${secs}
+# - checks if one of the timelimits is exceeded and stores corresponding signal in ${signal}
+#   if no timelimit is exceeded, ${signal} is set to 0
 function getsignal() {
-  secs=${1: -2:2}
-  mins=${1: -5:2}
-  hours=${1: -8:2}
-  days=${1: -11:2}
-  
-  #remove 0's from beginning
-  days=${days##0}
-  hours=${hours##0}
-  mins=${mins##0}
-  secs=${secs##0}
-  
-  #echo $days "d" $hours "h" $mins "m" $secs "s"
-  
-  (( secs = secs + 60 * mins + 3600 * hours + 86400 * days ))
-  
-  signal=0
-  for (( j=${#resl[@]}; j ; j-- ))
-  do
-    if test $secs -gt ${resl[$j]}
-    then
-      signal=${sigl[$j]}
-      break
-    fi
-  done
+    secs=${1: -2:2}
+    mins=${1: -5:2}
+    hours=${1: -8:2}
+    days=${1: -11:2}
+
+    # remove 0's from beginning
+    days=${days##0}
+    hours=${hours##0}
+    mins=${mins##0}
+    secs=${secs##0}
+
+    (( secs = secs + 60 * mins + 3600 * hours + 86400 * days ))
+
+    signal=0
+    for (( j=${#resl[@]}; j ; j-- ))
+    do
+        if test "${secs}" -gt ${resl[${j}]}
+        then
+            signal=${sigl[${j}]}
+            break
+        fi
+    done
 }
 
 # run forever
 for ((;;))
 do
 
-sleep $sleepsec || exit
+    sleep "${sleepsec}" || exit
 
-# get list of processes to watch in the format "pid,elapsedtime,command#pid,elapsedtime,command#..."
-ap=`ps -Ao comm,pid,etime | grep -E "$watch" | awk '{ printf("%s,%s,%s#",$2,$3,tolower($1)) }'`
+    # get list of processes to watch in the format "pid,elapsedtime,command#pid,elapsedtime,command#..."
+    ap=$(ps -Ao comm,pid,etime | grep -E "${watch}" | awk '{ printf("%s,%s,%s#",$2,$3,tolower($1)) }')
 
-echo "--- " `date` ":"
+    echo "--- " $(date) ":"
 
-# process list of processes to watch
-IFS="#"
-for i in $ap
-do
-  # get pid, elapsed time of process, and command
-  pid=`echo $i | awk -F"," '{print $1}'`
-  processtime=`echo $i | awk -F"," '{print $2}'`
-  command=`echo $i | awk -F"," '{print $3}'`
-  
-  # check if we need to send a signal
-  getsignal $processtime
-  if test $signal -ne 0
-  then
-    echo "Signal $signal to $command with pid $pid running for $secs seconds"
-    kill -$signal $pid > /dev/null
-  else
-    echo "$pid:$command:$secs"
-  fi
-done
+    # process list of processes to watch
+    IFS="#"
+    for i in ${ap}
+    do
+        # get pid, elapsed time of process, and command
+        pid=$(echo "${i}" | awk -F"," '{print $1}')
+        processtime=$(echo "${i}" | awk -F"," '{print $2}')
+        command=$(echo "${i}" | awk -F"," '{print $3}')
 
+        # check if we need to send a signal
+        getsignal ${processtime}
+        if test "${signal}" -ne 0
+        then
+            echo "Signal ${signal} to ${command} with pid ${pid} running for ${secs} seconds"
+            kill -${signal} ${pid} > /dev/null
+        else
+            echo "${pid}:${command}:${secs}"
+        fi
+    done
 done

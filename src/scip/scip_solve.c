@@ -1850,6 +1850,9 @@ SCIP_RETCODE freeReoptSolve(
       assert(!cutoff);
    }
 
+   /* mark current stats, such that new solve begins with the var/col/row indices from the previous run */
+   SCIPstatMark(scip->stat);
+
    /* switch stage to EXITSOLVE */
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
@@ -2652,6 +2655,8 @@ SCIP_RETCODE SCIPsolve(
             break;
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
+         if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
+            break;
          /*lint -fallthrough*/
 
       case SCIP_STAGE_PRESOLVED:
