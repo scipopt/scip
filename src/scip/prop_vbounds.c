@@ -2069,7 +2069,7 @@ SCIP_RETCODE propagateVbounds(
    }
 
    /* clean up inqueue */
-   for( v = 0; v < nqueuelist; ++v)
+   for( v = 0; v < nqueuelist; ++v )
    {
       assert( 0 <= queuelist[v] && queuelist[v] < nbounds );
       propdata->inqueue[queuelist[v]] = FALSE;
@@ -2079,10 +2079,13 @@ SCIP_RETCODE propagateVbounds(
    SCIPdebugMsg(scip, "tightened %d variable bounds\n", nchgbds);
 
    /* set the result depending on whether bound changes were found or not */
-   if( nchgbds > 0 )
-      (*result) = SCIP_REDUCEDDOM;
-   else
-      (*result) = SCIP_DIDNOTFIND;
+   if( *result != SCIP_CUTOFF )
+   {
+      if( nchgbds > 0 )
+         (*result) = SCIP_REDUCEDDOM;
+      else
+         (*result) = SCIP_DIDNOTFIND;
+   }
 
    return SCIP_OKAY;
 }
