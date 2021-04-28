@@ -1858,6 +1858,17 @@ SCIP_Bool SCIPdebugSolIsEnabled(
    return (!debugsoldata->debugsoldisabled);
 }
 
+/** check if SCIP is compiled with WITH_DEBUG_SOLUTION */
+SCIP_Bool SCIPwithDebugSol(void)
+{
+#ifdef WITH_DEBUG_SOLUTION
+   return TRUE;
+#else
+   return FALSE;
+#endif
+}
+
+
 /** propagator to force finding the debugging solution */
 static
 SCIP_DECL_PROPEXEC(propExecDebug)

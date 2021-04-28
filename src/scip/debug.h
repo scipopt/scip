@@ -247,6 +247,9 @@ SCIP_Bool SCIPdebugSolIsEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** check if SCIP is compiled with WITH_DEBUG_SOLUTION */
+SCIP_Bool SCIPwithDebugSol(void);
+
 #else
 
 #define SCIPdebugSolDataCreate(debugsoldata) SCIP_OKAY
@@ -274,6 +277,8 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #define SCIPdebugSolEnable(scip) /**/
 #define SCIPdebugSolDisable(scip) /**/
 #define SCIPdebugSolIsEnabled(scip) FALSE
+#define SCIPwithDebugSol(void) FALSE
+
 #endif
 
 
