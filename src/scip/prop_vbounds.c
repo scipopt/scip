@@ -1876,12 +1876,13 @@ SCIP_RETCODE propagateVbounds(
 
    /* return if no bound changes are in the priority queue (no changed bounds to handle since last propagation) */
    if( SCIPpqueueNElems(propdata->propqueue) == 0 )
-   {
-      (*result) = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
-   }
 
    nchgbds = 0;
+
+   (*result) = SCIP_DIDNOTFIND;
+
+   /* allocate space for variables added to the queue - needed to clean up data */
    SCIP_CALL( SCIPallocBufferArray(scip, &queuelist, nbounds) );
 
    SCIPdebugMsg(scip, "varbound propagator: %d elements in the propagation queue\n", SCIPpqueueNElems(propdata->propqueue));
