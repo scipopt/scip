@@ -2095,6 +2095,12 @@ SCIP_RETCODE propagateVbounds(
          (*result) = SCIP_DIDNOTFIND;
    }
 
+   SCIPdebugMsg(scip, "tightened %d variable bounds\n", nchgbds);
+
+   /* set the result depending on whether bound changes were found or not */
+   if( *result != SCIP_CUTOFF && nchgbds > 0 )
+      (*result) = SCIP_REDUCEDDOM;
+
    return SCIP_OKAY;
 }
 
