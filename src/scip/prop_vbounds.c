@@ -1974,6 +1974,8 @@ SCIP_RETCODE propagateVbounds(
                   if( *result == SCIP_CUTOFF )
                      break;
                }
+               if( *result == SCIP_CUTOFF )
+                  break;
             }
          }
 
@@ -2029,6 +2031,8 @@ SCIP_RETCODE propagateVbounds(
                         break;
                   }
                }
+               if( *result == SCIP_CUTOFF )
+                  break;
             }
          }
       }
@@ -2066,6 +2070,8 @@ SCIP_RETCODE propagateVbounds(
             if( *result == SCIP_CUTOFF )
                break;
          }
+         if( *result == SCIP_CUTOFF )
+            break;
       }
    }
 
