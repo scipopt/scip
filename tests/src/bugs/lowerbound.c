@@ -104,7 +104,7 @@ Test(lowerbound, constant, .signal = SIGABRT)
    int i;
 
    /* this test can only work with DEBUGSOL, so we make it pass otherwise */
-   if ( SCIPwithDebugSol() )
+   if ( ! SCIPwithDebugSol() )
       abort(); /* return SIGABORT */
 
    /* initialize SCIP */
