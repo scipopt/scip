@@ -10,7 +10,7 @@ Features
   are now deleted when during a restart.
 - New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
   which is able to handle symmetries of arbitrary kinds of variables.
-- Allow to forbid aggregation of variables
+- Variables can now be marked to forbid aggregation
 
 Performance improvements
 ------------------------
@@ -47,7 +47,7 @@ Interface changes
 - new internal function SCIPisPackingPartitioningOrbitope() to check whether an orbitope is of
   packing or partitioning type
 - added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
-- added SCIPdoNotAggrVar() to determine whether a variable should not be aggregated
+- added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
 
 ### Command line interface
 ### Interfaces to external software
