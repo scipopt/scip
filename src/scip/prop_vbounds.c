@@ -2084,16 +2084,15 @@ SCIP_RETCODE propagateVbounds(
    }
    SCIPfreeBufferArray(scip, &queuelist);
 
-   SCIPdebugMsg(scip, "tightened %d variable bounds\n", nchgbds);
-
-   /* set the result depending on whether bound changes were found or not */
-   if( *result != SCIP_CUTOFF )
+#ifdef SCIP_DEBUG
+   for( v = 0; v < nbounds; ++v)
    {
-      if( nchgbds > 0 )
-         (*result) = SCIP_REDUCEDDOM;
+      if( propdata->inqueue[v] )
+         assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (v + 1)) >= 0 );
       else
-         (*result) = SCIP_DIDNOTFIND;
+         assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (v + 1)) == -1 );
    }
+#endif
 
    SCIPdebugMsg(scip, "tightened %d variable bounds\n", nchgbds);
 
