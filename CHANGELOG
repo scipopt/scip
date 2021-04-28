@@ -16,6 +16,7 @@ Features
 - The LPIs for Gurobi and Mosek are thread-safe now.
 - The complete code is now thread-safe by default.
 - New separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint).
+- New parsing routines for cons_orbisack and cons_symresack.
 
 Performance improvements
 ------------------------
