@@ -29,6 +29,7 @@
 #include <signal.h>
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
+#include "scip/debug.h"
 #include "include/scip_test.h"
 
 /* UNIT TEST */
@@ -102,10 +103,9 @@ Test(lowerbound, constant, .signal = SIGABRT)
    SCIP_Real rhs;
    int i;
 
-   /* this test can only work in debug mode, so we make it pass in opt mode */
-#ifdef NDEBUG
-   abort(); /* return SIGABORT */
-#endif
+   /* this test can only work with DEBUGSOL, so we make it pass otherwise */
+   if ( SCIPwithDebugSol() )
+      abort(); /* return SIGABORT */
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
