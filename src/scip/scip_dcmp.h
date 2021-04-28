@@ -151,7 +151,7 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    SCIP_Bool             uselimits           /**< respect user limits on potentially expensive graph statistics? */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

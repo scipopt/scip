@@ -1043,7 +1043,7 @@ test:
 testcount:
 		cd check; \
 		$(SHELL) ./check_count.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) \
-		$(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(OUTPUTDIR);
 
 .PHONY: tags
 tags:

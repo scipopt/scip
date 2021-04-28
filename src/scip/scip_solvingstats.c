@@ -3346,14 +3346,14 @@ void SCIPprintRelaxatorStatistics(
    if( scip->set->nrelaxs == 0 )
       return;
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls    Cutoffs ImprBounds  ImprTime ReducedDom  Separated AddedConss\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls    Cutoffs ImprBounds   ImprTime ReducedDom  Separated AddedConss\n");
 
    /* sort relaxators w.r.t. their name */
    SCIPsetSortRelaxsName(scip->set);
 
    for( i = 0; i < scip->set->nrelaxs; ++i )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
          SCIPrelaxGetName(scip->set->relaxs[i]),
          SCIPrelaxGetTime(scip->set->relaxs[i]),
          SCIPrelaxGetNCalls(scip->set->relaxs[i]),

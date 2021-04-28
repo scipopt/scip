@@ -484,6 +484,7 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->ndescentpoints = 0;
    (*consdata)->descentpoints = NULL;
+   (*consdata)->ismodelcons = ismodelcons;
 
    /* count the number of binary variables which are affected by the permutation */
    SCIP_CALL( SCIPallocBufferArray(scip, &indexcorrection, inputnvars) );
@@ -548,7 +549,6 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->vars = vars;
    (*consdata)->perm = perm;
-   (*consdata)->ismodelcons = ismodelcons;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
    for (i = 0; i < naffectedvariables; ++i)
@@ -958,7 +958,7 @@ SCIP_RETCODE addSymresackInequality(
    consdata = SCIPconsGetData(cons);
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_cover_%s_%d", SCIPconsGetName(cons), consdata->debugcnt);
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
-   consdata->debugcnt += 1;
+   ++consdata->debugcnt;
 #else
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
 #endif
@@ -1574,16 +1574,24 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    }
 #endif
 
-   /* create transformed constraint data (copy data where necessary) */
+   /* create transformed constraint data */
    nvars = sourcedata->nvars;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
 
-#ifdef SCIP_DEBUG
-   consdata->debugcnt = sourcedata->debugcnt;
-#endif
+   consdata->vars = NULL;
    consdata->nvars = nvars;
+   consdata->perm = NULL;
+   consdata->invperm = NULL;
+   consdata->ppupgrade = sourcedata->ppupgrade;
    consdata->ismodelcons = sourcedata->ismodelcons;
+#ifdef SCIP_DEBUG
+   consdata->debugcnt = 0;
+#endif
+   consdata->ncycles = 0;
+   consdata->cycledecomposition = NULL;
+   consdata->ndescentpoints = 0;
+   consdata->descentpoints = NULL;
 
    if ( nvars > 0 )
    {
@@ -1597,8 +1605,6 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->perm, sourcedata->perm, nvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->invperm, sourcedata->invperm, nvars) );
 
-      consdata->ppupgrade = sourcedata->ppupgrade;
-
       if ( sourcedata->ppupgrade )
       {
          consdata->ncycles = sourcedata->ncycles;
@@ -1607,15 +1613,10 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
          {
             SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition[i], sourcedata->cycledecomposition[i], nvars + 1) ); /*lint !e866*/
          }
+
+         consdata->ndescentpoints = sourcedata->ndescentpoints;
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->descentpoints, sourcedata->descentpoints, sourcedata->ndescentpoints) );
       }
-   }
-   else
-   {
-      consdata->perm = NULL;
-      consdata->invperm = NULL;
-      consdata->ppupgrade = FALSE;
-      consdata->ncycles = 0;
-      consdata->cycledecomposition = NULL;
    }
 
    /* create transformed constraint */
