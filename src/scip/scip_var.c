@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -8078,7 +8078,7 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
    return SCIP_OKAY;
 }
 
-/** tightens the variable bounds due a new variable type */
+/** tightens the variable bounds due to a new variable type */
 static
 SCIP_RETCODE tightenBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8107,7 +8107,9 @@ SCIP_RETCODE tightenBounds(
        * tightening, because relaxing bounds may not be allowed
        */
       if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(var)) ||
-         (!SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) && SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)))
+         (!SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) && SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var))) ||
+         (!SCIPsetIsEQ(scip->set, SCIPvarGetLbGlobal(var), SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var))) &&
+          SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)))
         )
       {
          SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)), TRUE, infeasible, &tightened) );

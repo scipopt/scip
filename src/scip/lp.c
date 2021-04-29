@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13789,13 +13789,13 @@ SCIP_RETCODE lpUpdateVarProved(
    return SCIP_OKAY;
 }
 
-/** updates current pseudo and loose objective value for a change in a variable's objective value */
+/** updates current pseudo and loose objective value for a change in a variable's objective coefficient */
 SCIP_RETCODE SCIPlpUpdateVarObj(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
-   SCIP_Real             oldobj,             /**< old objective value of variable */
-   SCIP_Real             newobj              /**< new objective value of variable */
+   SCIP_Real             oldobj,             /**< old objective coefficient of variable */
+   SCIP_Real             newobj              /**< new objective coefficient of variable */
    )
 {
    assert(set != NULL);
@@ -14616,6 +14616,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_ROW** lpirows;
    SCIP_Real* primsol;
    SCIP_Real* activity;
+   SCIP_Bool activityvalid = FALSE;  /* whether some meaningful values are stored in activity */
    SCIP_Real* ray;
    SCIP_Real rayobjval;
    SCIP_Real rayscale;
@@ -14755,7 +14756,12 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    if( r < nlpirows )
    {
       /* get primal feasible point */
+#ifdef SCIP_USE_LPSOLVER_ACTIVITY
       SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, activity, NULL) );
+      activityvalid = TRUE;
+#else
+      SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
+#endif
 
       /* determine feasibility status */
       if( primalfeasible != NULL )
@@ -14777,6 +14783,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    }
    else
    {
+      activityvalid = TRUE; /* previous for() loop computed activity for all rows */
       if( primalfeasible != NULL )
          *primalfeasible = TRUE;
    }
@@ -14863,8 +14870,17 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    for( r = 0; r < nlpirows; ++r )
    {
       lpirows[r]->dualsol = SCIP_INVALID;
-      lpirows[r]->activity = activity[r] + lpirows[r]->constant;
-      lpirows[r]->validactivitylp = lpcount;
+      if( activityvalid )
+      {
+         /* use activity as computed above or given by LP solver to set activity in row */
+         lpirows[r]->activity = activity[r] + lpirows[r]->constant;
+         lpirows[r]->validactivitylp = lpcount;
+      }
+      else if( lpirows[r]->validactivitylp != lpcount )
+      {
+         /* recalculate activity from row if not valid */
+         SCIProwRecalcLPActivity(lpirows[r], stat);
+      }
 
       /* check for feasibility of the rows */
       if( primalfeasible != NULL )
@@ -16598,6 +16614,7 @@ SCIP_RETCODE SCIPlpWriteMip(
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
+         fclose(file);
          return SCIP_ERROR;
       }
    }
@@ -16688,6 +16705,7 @@ SCIP_RETCODE SCIPlpWriteMip(
             break;
          default:
             SCIPerrorMessage("Undefined row type!\n");
+            fclose(file);
             return SCIP_ERROR;
          }
       }

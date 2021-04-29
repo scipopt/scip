@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -309,39 +309,40 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* set up the presolvers that shall participate */
    using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
 
+   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
 
    if( data->enableparallelrows )
-      presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
-
-   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
-
-   if( data->enablemultiaggr )
-      presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
-
-   if( data->enableprobing )
-      presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-
-   if( data->enablesparsify )
-      presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
-
-   if( data->enabledualinfer )
-      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
-
-   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
-
-   if( data->enabledomcol )
-      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+       presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
 
    /* todo: parallel cols cannot be handled by SCIP currently
     * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
+
+   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
+
+   if( data->enabledualinfer )
+       presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
+
+   if( data->enablemultiaggr )
+       presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
+
+   if( data->enableprobing )
+       presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
+
+   if( data->enabledomcol )
+       presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+
+    if( data->enablesparsify )
+      presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
+
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
+
 
    /* set tolerances */
    presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
@@ -492,6 +493,32 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          assert(fixed);
          break;
       }
+#if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
+#else
+      case ReductionType::kFixedInfCol: {
+          if(!constraintsReplaced)
+              continue;
+          SCIP_Bool infeas;
+          SCIP_Bool fixed;
+          SCIP_Real value = SCIPinfinity(scip);
+
+          int column = res.postsolve.indices[first];
+          bool is_negative_infinity = res.postsolve.values[first] < 0;
+          SCIP_VAR* column_variable = SCIPmatrixGetVar(matrix, column);
+
+          if( is_negative_infinity )
+          {
+              value = -SCIPinfinity(scip);
+          }
+
+          SCIP_CALL( SCIPfixVar(scip, column_variable, value, &infeas, &fixed) );
+          *nfixedvars += 1;
+
+          assert(!infeas);
+          assert(fixed);
+          break;
+      }
+#endif
       case ReductionType::kSubstitutedCol:
       {
          int col = res.postsolve.indices[first];
@@ -668,9 +695,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO) [GitHash: {}]", PAPILO_GITHASH);
+   String desc = fmt::format("parallel presolve for integer and linear optimization [GitHash: {}]", PAPILO_GITHASH);
 #else
-   String desc("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO)");
+   String desc("parallel presolve for integer and linear optimization");
 #endif
 
    /* add external code info for the presolve library */

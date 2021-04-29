@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,6 +49,11 @@ using std::vector;
  */
 /* #define NO_CPPAD_USER_ATOMIC */
 
+/* fallback to non-thread-safe version if C++ is too old to have std::atomic */
+#if __cplusplus < 201103L && defined(SCIP_THREADSAFE)
+#undef SCIP_THREADSAFE
+#endif
+
 /** sign of a value (-1 or +1)
  * 
  * 0.0 has sign +1
@@ -70,7 +75,7 @@ using CppAD::SCIPInterval;
  * It is wise to set it to a power of 2, so that if the tape id overflows, it is likely to start at 0 again, which avoids difficult to debug errors.
  */
 #ifndef CPPAD_MAX_NUM_THREADS
-#ifndef NPARASCIP
+#ifdef SCIP_THREADSAFE
 #define CPPAD_MAX_NUM_THREADS 64
 #else
 #define CPPAD_MAX_NUM_THREADS 1
@@ -94,7 +99,7 @@ using CppAD::SCIPInterval;
  * This allocator requires to know the number of threads and a thread number for each thread.
  * To implement this, we follow the team_pthread example of CppAD, which uses pthread's thread-specific data management.
  */
-#ifndef NPARASCIP
+#ifdef SCIP_THREADSAFE
 
 #include <atomic>
 
@@ -156,7 +161,7 @@ char SCIPexprintCppADInitParallel(void)
 static char init_parallel_return = SCIPexprintCppADInitParallel();
 #endif
 
-#endif // NPARASCIP
+#endif // SCIP_THREADSAFE
 
 /** definition of CondExpOp for SCIPInterval (required by CppAD) */ /*lint -e715*/
 inline

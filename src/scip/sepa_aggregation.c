@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -215,7 +215,7 @@ SCIP_RETCODE addCut(
       vars = SCIPgetVars(scip);
 
       /* create cut name */
-      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
+      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%" SCIP_LONGINT_FORMAT "_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
 
 tryagain:
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, cutremovable) );
@@ -419,9 +419,9 @@ SCIP_RETCODE setupAggregationData(
                   continue;
 
                ++aggrdata->nbadvarsinrow[SCIProwGetLPPos(colrows[k])];
-               /* coverity[var_deref_op] */
                assert(aggrdata->aggrrows != NULL);  /* for lint */
                assert(aggrdata->aggrrowscoef != NULL);
+               /* coverity[var_deref_op] */
                aggrdata->aggrrows[aggrdata->naggrrows] = colrows[k];
                aggrdata->aggrrowscoef[aggrdata->naggrrows] = colrowvals[k];
                ++aggrdata->naggrrows;
@@ -1045,13 +1045,14 @@ SCIP_Real getRowFracActivity(
    return fracsum;
 }
 
-/** searches and adds c-MIR cuts that separate the given primal solution */
+/** searches for and adds c-MIR cuts that separate the given primal solution */
 static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< the c-MIR separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
+   int                   depth,              /**< current depth */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -1077,7 +1078,6 @@ SCIP_RETCODE separateCuts(
    int nnonzrows;
    int ntries;
    int nfails;
-   int depth;
    int ncalls;
    int maxtries;
    int maxfails;
@@ -1097,7 +1097,6 @@ SCIP_RETCODE separateCuts(
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call the cmir cut separator a given number of times at each node */
@@ -1256,9 +1255,9 @@ SCIP_RETCODE separateCuts(
       assert(SCIProwGetLPPos(rows[r]) == r);
 
       nnonz = SCIProwGetNLPNonz(rows[r]);
-      if( nnonz == 0 || (!allowlocal && SCIProwIsLocal(rows[r])) )
+      if( nnonz == 0 || SCIProwIsModifiable(rows[r]) || (!allowlocal && SCIProwIsLocal(rows[r])) )
       {
-         /* ignore empty rows and local rows if they are not allowed */
+         /* ignore empty rows, modifiable rows, and local rows if they are not allowed */
          rowlhsscores[r] = 0.0;
          rowrhsscores[r] = 0.0;
       }
@@ -1469,7 +1468,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpAggregation)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( separateCuts(scip, sepa, NULL, allowlocal, result) );
+   SCIP_CALL( separateCuts(scip, sepa, NULL, allowlocal, depth, result) );
 
    return SCIP_OKAY;
 }
@@ -1482,7 +1481,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolAggregation)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( separateCuts(scip, sepa, sol, allowlocal, result) );
+   SCIP_CALL( separateCuts(scip, sepa, sol, allowlocal, depth, result) );
 
    return SCIP_OKAY;
 }

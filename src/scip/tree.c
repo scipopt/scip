@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1063,6 +1063,9 @@ SCIP_RETCODE SCIPnodeFree(
    assert(tree != NULL);
 
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
+
+   /* check lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
 
    if( SCIPnodeGetType(*node) != SCIP_NODETYPE_PROBINGNODE )
    {
@@ -4338,6 +4341,12 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(conflictstore != NULL);
    assert(cutoff != NULL);
 
+   /* check global lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
+
+   /* check local lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckLocalLowerbound(blkmem, set, *node) );
+
    SCIPsetDebugMsg(set, "focusing node #%" SCIP_LONGINT_FORMAT " of type %d in depth %d\n",
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
       *node != NULL ? SCIPnodeGetDepth(*node) : -1);
@@ -4798,6 +4807,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probinglpinorms = NULL;
    (*tree)->pendingbdchgs = NULL;
    (*tree)->probdiverelaxsol = NULL;
+   (*tree)->nprobdiverelaxsol = 0;
    (*tree)->pendingbdchgssize = 0;
    (*tree)->npendingbdchgs = 0;
    (*tree)->focuslpstateforklpcount = -1;
@@ -7025,11 +7035,18 @@ SCIP_RETCODE SCIPtreeStoreRelaxSol(
    nvars = transprob->nvars;
    vars = transprob->vars;
 
-   /* check if memory still needs to be allocated */
+   /* check if memory still needs to be allocated or resized */
    if( tree->probdiverelaxsol == NULL )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&(tree->probdiverelaxsol), nvars) );
+      tree->nprobdiverelaxsol = nvars;
    }
+   else if( nvars > tree->nprobdiverelaxsol )
+   {
+      SCIP_ALLOC( BMSreallocMemoryArray(&tree->probdiverelaxsol, nvars) );
+      tree->nprobdiverelaxsol = nvars;
+   }
+   assert(tree->nprobdiverelaxsol >= nvars);
 
    /* iterate over all variables to save the relaxation solution */
    for( v = 0; v < nvars; ++v )
@@ -7060,6 +7077,7 @@ SCIP_RETCODE SCIPtreeRestoreRelaxSol(
 
    nvars = transprob->nvars;
    vars = transprob->vars;
+   assert( nvars <= tree->nprobdiverelaxsol );
 
    /* iterate over all variables to restore the relaxation solution */
    for( v = 0; v < nvars; ++v )
@@ -7671,10 +7689,10 @@ void SCIPnodeGetDualBoundchgs(
       j = 0;
       for( i = i+1; i < nboundchgs; i++)
       {
-         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
          if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
           || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
          {
+            assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                   && boundchgs[i].data.inferencedata.reason.cons == NULL)
              || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER

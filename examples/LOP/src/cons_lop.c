@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,7 +21,7 @@
  * @author Marc Pfetsch
  *
  * We handle the following system of linear constraints:
- * - \f$ x_{ij} + x_{ji} = 1 \f$ for \f$i < j\$                                (symmetry equations - added initially)
+ * - \f$ x_{ij} + x_{ji} = 1 \f$ for \f$i < j\f$                               (symmetry equations - added initially)
  * - \f$ x_{ij} + x_{jk} + x_{ki} \leq 2 \f$ for \f$i < j, i < k, j \neq k\f$  (triangle inequalities - separated)
  */
 

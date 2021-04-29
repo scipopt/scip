@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -121,10 +121,10 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                701 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
-#define SCIP_APIVERSION              72 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                702 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
+#define SCIP_APIVERSION              76 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -218,13 +218,19 @@ extern "C" {
 #endif
 
 #ifndef MAX
-#define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
-#define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
+#define MAX(x, y) ((x) >= (y) ? (x) : (y)) /**< returns maximum of x and y */
+#endif
+
+#ifndef MIN
+#define MIN(x, y) ((x) <= (y) ? (x) : (y)) /**< returns minimum of x and y */
 #endif
 
 #ifndef MAX3
-#define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))  /**< returns maximum of x, y, and z */
-#define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
+#define MAX3(x, y, z) ((x) >= (y) ? MAX(x, z) : MAX(y, z)) /**< returns maximum of x, y, and z */
+#endif
+
+#ifndef MIN3
+#define MIN3(x, y, z) ((x) <= (y) ? MIN(x, z) : MIN(y, z)) /**< returns minimum of x, y, and z */
 #endif
 
 /* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -14,21 +14,25 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+# compute averages over instances for different permuations
+#
+# Usage: permaverage.sh <awkargs> <check* files>
+
 export LANG=C
 
 AWKARGS=""
 FILES=""
 for i in $@
 do
-    if test ! -e $i
+    if test ! -e "${i}"
     then
-	AWKARGS="$AWKARGS $i"
+        AWKARGS="${AWKARGS} ${i}"
     else
-	FILES="$FILES $i"
+        FILES="${FILES} ${i}"
     fi
 done
 
 export LC_NUMERIC=C
 
-awk -f permaverage.awk $AWKARGS $FILES
+awk -f permaverage.awk "${AWKARGS}" "${FILES}"
 

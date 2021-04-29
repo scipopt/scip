@@ -17,7 +17,7 @@ set(quadinstances
 )
 
 add_test(NAME examples-scflp-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scflp
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target scflp
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -45,6 +45,14 @@ foreach(instance ${instances})
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
                             DEPENDS examples-scflp-build
                         )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties("examples-scflp-${basename}"
+            PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 
     #
     # call the SCFLP binary and validate the solve with the given objective value
@@ -57,6 +65,14 @@ foreach(instance ${instances})
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
                             DEPENDS examples-scflp-build
                         )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties("examples-scflpbenders-${basename}"
+                PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 endforeach()
 
 #
@@ -78,6 +94,14 @@ if( DEFINED IPOPT_FOUND AND DEFINED LPS )
                                   PASS_REGULAR_EXPRESSION "Validation         : Success"
                                   DEPENDS examples-scflp-build
                               )
+          if(WIN32)
+              # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+              # on other systems this directory does not exist.
+              set_tests_properties("examples-scflp-quad-${basename}"
+                  PROPERTIES
+                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+                  )
+          endif()
 
           #
           # call the SCFLP binary and validate the solve with the given objective value
@@ -90,6 +114,14 @@ if( DEFINED IPOPT_FOUND AND DEFINED LPS )
                                   PASS_REGULAR_EXPRESSION "Validation         : Success"
                                   DEPENDS examples-scflp-build
                               )
+          if(WIN32)
+              # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+              # on other systems this directory does not exist.
+              set_tests_properties("examples-scflpbenders-quad-${basename}"
+                  PROPERTIES
+                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+                  )
+          endif()
       endforeach()
    endif()
 endif()

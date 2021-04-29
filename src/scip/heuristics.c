@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1048,7 +1048,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    }
 
    /* adding the violation variable */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "trustregion_violationvar", i);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_trustregionviolvar", SCIPgetProbName(sourcescip));
    SCIP_CALL( SCIPcreateVarBasic(targetscip, &violvar, name, 0.0, SCIPinfinity(targetscip), violpenalty, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(targetscip, violvar) );
    consvars[nconsvars] = violvar;

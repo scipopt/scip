@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -148,11 +148,14 @@ struct SCIP_Reopt
    int                   naddedconss;             /**< number of constraints added */
    SCIP_Bool             objhaschanged;           /**< TRUE iff the objective fucntion has changd */
    SCIP_Bool             consadded;               /**< TRUE iff a constraint was added */
+   int                   nactiveconss;            /**< number of active constraints stored in activeconss */
+   SCIP_CONS**           activeconss;             /**< storage for active constraints */
+   int                   nmaxactiveconss;         /**< maximal number of active constraints stored in activeconss */
 
    /* hashmaps to track global bound reductions and constraints deletion during presolving */
    SCIP_HASHMAP*         glblb;                   /**< global lower bounds after presolving of the first problem */
    SCIP_HASHMAP*         glbub;                   /**< global upper bounds after presolving of the first problem */
-   SCIP_HASHMAP*         activeconss;             /**< set of all active constraints after presolving teh first problem */
+   SCIP_HASHSET*         activeconssset;          /**< set of all active constraints after presolving the first problem */
 
    /* data structure to track decisions based on dual information */
    SCIP_Longint          currentnode;             /**< number of the current node */

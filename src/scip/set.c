@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -291,7 +291,7 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         5 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks)
+#define SCIP_DEFAULT_MISC_USESYMMETRY         7 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks)
                                                  *   2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and
                                                  *   orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital
                                                  *   fixing, see type_symmetry.h */
@@ -422,13 +422,14 @@
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.90 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC       0.1 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC  0.0 /**< factor to scale directed cutoff distance of cut in score calculation */
-#define SCIP_DEFAULT_SEPA_EFFICACYFAC       1.1 /**< factor to scale efficacy of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_EFFICACYFAC       1.0 /**< factor to scale efficacy of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_INTSUPPORTFAC     0.1 /**< factor to scale integral support of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
                                                  *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_CUTSELRESTART     'a' /**< cut selection during restart ('a'ge, activity 'q'uotient) */
 #define SCIP_DEFAULT_SEPA_CUTSELSUBSCIP     'a' /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
+#define SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL TRUE /**< should cutpool separate only cuts with high relative efficacy? */
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS          -1 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -2426,6 +2427,11 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/cutselsubscip",
          "cut selection for sub SCIPs  ('a'ge, activity 'q'uotient)",
          &(*set)->sepa_cutselsubscip, TRUE, SCIP_DEFAULT_SEPA_CUTSELSUBSCIP, "aq",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "separating/filtercutpoolrel",
+         "should cutpool separate only cuts with high relative efficacy?",
+         &(*set)->sepa_filtercutpoolrel, TRUE, SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxruns",

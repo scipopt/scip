@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -207,6 +207,7 @@ static
 SCIP_RETCODE generateDisjCutSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_SEPA*            sepa,               /**< separator */
+   int                   depth,              /**< current depth */
    SCIP_ROW**            rows,               /**< LP rows */
    int                   nrows,              /**< number of LP rows */
    SCIP_COL**            cols,               /**< LP columns */
@@ -382,11 +383,10 @@ SCIP_RETCODE generateDisjCutSOS1(
    }
 
    /* create cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
-   if ( SCIPgetDepth(scip) == 0 )
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
-   else
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT "_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
+
+   /* we create the cut as locally valid, SCIP will make it globally valid if we are at the root node */
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, *row) );
    for (c = 0; c < ncols; ++c)
@@ -408,16 +408,16 @@ SCIP_RETCODE generateDisjCutSOS1(
       SCIP_Longint maxdnom;
       SCIP_Real maxscale;
 
-      assert( SCIPgetDepth(scip) >= 0 );
-      if( SCIPgetDepth(scip) == 0 )
+      assert( depth >= 0 );
+      if( depth == 0 )
       {
-	 maxdnom = 100;
-	 maxscale = 100.0;
+         maxdnom = 100;
+	      maxscale = 100.0;
       }
       else
       {
-	 maxdnom = 10;
-	 maxscale = 10.0;
+         maxdnom = 10;
+         maxscale = 10.0;
       }
 
       SCIP_CALL( SCIPmakeRowIntegral(scip, *row, -SCIPepsilon(scip), SCIPsumepsilon(scip), maxdnom, maxscale, TRUE, madeintegral) );
@@ -510,7 +510,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    int nconss;
    int maxcuts;
    int ncalls;
-   int depth;
    int ncols;
    int nrows;
    int ind;
@@ -565,7 +564,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       return SCIP_OKAY;
 
    /* check for maxdepth < depth, maxinvcutsroot = 0 and maxinvcuts = 0 */
-   depth = SCIPgetDepth(scip);
    if ( ( sepadata->maxdepth >= 0 && sepadata->maxdepth < depth )
       || ( depth == 0 && sepadata->maxinvcutsroot == 0 )
       || ( depth > 0 && sepadata->maxinvcuts == 0 ) )
@@ -677,7 +675,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    SCIPfreeBufferArrayNull(scip, &violationarray);
 
    /* compute maximal number of cuts */
-   if ( SCIPgetDepth(scip) == 0 )
+   if ( depth == 0 )
       maxcuts = MIN(sepadata->maxinvcutsroot, nrelevantedges);
    else
       maxcuts = MIN(sepadata->maxinvcuts, nrelevantedges);
@@ -814,7 +812,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          bound2 = SCIPcolGetLb(col);
 
       /* add coefficients to cut */
-      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, MAKECONTINTEGRAL, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
+      SCIP_CALL( generateDisjCutSOS1(scip, sepa, depth, rows, nrows, cols, ncols, ndisjcuts, MAKECONTINTEGRAL, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
       if ( row == NULL )
          continue;
 

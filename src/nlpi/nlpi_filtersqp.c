@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,7 +30,12 @@
 #include <sys/time.h>
 #endif
 
-#ifndef NPARASCIP
+/* fallback to non-thread version for windows, because pthread does not exist */
+#if defined(_MSC_VER) && defined(SCIP_THREADSAFE)
+#undef SCIP_THREADSAFE
+#endif
+
+#ifdef SCIP_THREADSAFE
 #include <pthread.h>
 #endif
 
@@ -252,8 +257,8 @@ extern struct
 } F77_FUNC(scalec,SCALEC);
 /*lint -esym(754,phe) */
 
-#ifndef NPARASCIP
-static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER;
+#ifdef SCIP_THREADSAFE
+static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER; /*lint !e708*/
 #endif
 
 static
@@ -1914,8 +1919,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* from here on we are not thread-safe: if intended for multithread use, then protect filtersqp call with mutex
     * NOTE: we need to make sure that we do not return from nlpiSolve before unlocking the mutex
     */
-#ifndef NPARASCIP
-   pthread_mutex_lock(&filtersqpmutex);
+#ifdef SCIP_THREADSAFE
+   (void) pthread_mutex_lock(&filtersqpmutex);
 #endif
 
    /* initialize global variables from filtersqp */
@@ -2038,8 +2043,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       assert(success);
    }
 
-#ifndef NPARASCIP
-   pthread_mutex_unlock(&filtersqpmutex);
+#ifdef SCIP_THREADSAFE
+   (void) pthread_mutex_unlock(&filtersqpmutex);
 #endif
 
    SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );

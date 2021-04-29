@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -45,12 +45,12 @@ endif
 # mark that this is a SCIP internal makefile
 SCIPINTERNAL	=	true
 
-# use PARASCIP=true if compiled with TPI not equal to none
+# use THREADSAFE=true if compiled with TPI not equal to none
 ifeq ($(TPI),omp)
-	override PARASCIP        =       true
+	override THREADSAFE      =       true
 endif
 ifeq ($(TPI),tny)
-        override PARASCIP        =       true
+        override THREADSAFE      =       true
 endif
 
 
@@ -85,7 +85,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		NOBUFMEM=$(NOBUFMEM)\\n\
 		OPT=$(OPT)\\n\
 		OSTYPE=$(OSTYPE)\\n\
-		PARASCIP=$(PARASCIP)\\n\
+		THREADSAFE=$(THREADSAFE)\\n\
 		PAPILO=$(PAPILO)\\n\
 		READLINE=$(READLINE)\\n\
 		SANITIZE=$(SANITIZE)\\n\
@@ -437,8 +437,8 @@ READLINESRC	:=	$(shell cat $(READLINEDEP))
 ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
 ZIMPLSRC	:=	$(shell cat $(ZIMPLDEP))
 
-PARASCIPDEP	:=	$(SRCDIR)/depend.parascip
-PARASCIPSRC	:=	$(shell cat $(PARASCIPDEP))
+THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
+THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
 
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
@@ -695,6 +695,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
+			scip/sepa_mixing.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
@@ -1029,13 +1030,13 @@ test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON);
 
 .PHONY: testcount
 testcount:
 		cd check; \
 		$(SHELL) ./check_count.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) \
-		$(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(OUTPUTDIR);
 
 .PHONY: tags
 tags:
@@ -1199,7 +1200,7 @@ depend:
 		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
-		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
+		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC) src/lpi/lpi*.{c,cpp} src/nlpi/nlpi*.{c,cpp}` >$(THREADSAFEDEP)
 
 # do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
 ifneq ($(DFLAGS),)
@@ -1316,6 +1317,13 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.c | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CC) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CFLAGS) $(DFLAGS) $(TPICFLAGS) $(CC_c)$< $(CC_o)$@
 
+# add special target for papilo to avoid sanitizers (leading to false positives in TBB)
+ifeq ($(SANITIZE),true)
+$(LIBOBJDIR)/scip/presol_milp.o: $(SRCDIR)/scip/presol_milp.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
+		@echo "-> compiling $@"
+		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@ -fno-sanitize=all
+endif
+
 $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp | $(LIBOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(LIBOFLAGS) $(CXXFLAGS) $(DFLAGS) $(TPICFLAGS) $(CXX_c)$< $(CXX_o)$@
@@ -1336,7 +1344,7 @@ else
 endif
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP) $(PARASCIPDEP) | $(LIBOBJDIR)
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP) $(THREADSAFEDEP) | $(LIBOBJDIR)
 ifeq ($(TOUCHLINKS),true)
 		@-touch $(ZLIBSRC)
 		@-touch $(GMPSRC)
@@ -1381,8 +1389,8 @@ endif
 ifneq ($(LPSCHECK),$(LAST_LPSCHECK))
 		@-touch $(LPSCHECKSRC)
 endif
-ifneq ($(PARASCIP),$(LAST_PARASCIP))
-		@-touch $(PARASCIPSRC)
+ifneq ($(THREADSAFE),$(LAST_THREADSAFE))
+		@-touch $(THREADSAFESRC)
 endif
 ifneq ($(USRFLAGS),$(LAST_USRFLAGS))
 		@-touch $(ALLSRC)
@@ -1433,7 +1441,7 @@ endif
 		@echo "LAST_IPOPT=$(IPOPT)" >> $(LASTSETTINGS)
 		@echo "LAST_WORHP=$(WORHP)" >> $(LASTSETTINGS)
 		@echo "LAST_SYM=$(SYM)" >> $(LASTSETTINGS)
-		@echo "LAST_PARASCIP=$(PARASCIP)" >> $(LASTSETTINGS)
+		@echo "LAST_THREADSAFE=$(THREADSAFE)" >> $(LASTSETTINGS)
 		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
 		@echo "LAST_USRFLAGS=$(USRFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USROFLAGS=$(USROFLAGS)" >> $(LASTSETTINGS)
@@ -1561,9 +1569,9 @@ ifneq ($(ZLIB),false)
 		$(error invalid ZLIB flag selected: ZLIB=$(ZLIB). Possible options are: true false)
 endif
 endif
-ifneq ($(PARASCIP),true)
-ifneq ($(PARASCIP),false)
-		$(error invalid PARASCIP flag selected: PARASCIP=$(PARASCIP). Possible options are: true false)
+ifneq ($(THREADSAFE),true)
+ifneq ($(THREADSAFE),false)
+		$(error invalid THREADSAFE flag selected: THREADSAFE=$(THREADSAFE). Possible options are: true false)
 endif
 endif
 ifeq ($(SHARED),true)
@@ -1622,6 +1630,7 @@ help:
 		@echo "      xprs: XPress LP-solver"
 		@echo "      none: no LP-solver"
 		@echo "  - COMP={clang|gnu|intel}: Determine compiler."
+		@echo "  - TPI={none|omp|tny}: Determine parallel interface for concurrent solve (default: none)."
 		@echo "  - SHARED={true|false}: Build shared libraries or not (default)."
 		@echo
 		@echo "  More detailed options:"
@@ -1632,13 +1641,15 @@ help:
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
 		@echo "  - SYM=<none|bliss>: To choose type of symmetry handling."
+		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
+		@echo "  - THREADSAFE=<true|false>: Build thread safe."
 		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."
 		@echo "  - NOBUFMEM=<true|false>>: Turn off buffer memory or on (default)."
 		@echo "  - NOBLKBUFMEM=<true|false>: Turn usage of internal memory functions off or on (default)."
 		@echo "  - VERBOSE=<true|false>: Turn on verbose messages of makefile or off (default)."
 		@echo
 		@echo "  Main targets:"
-		@echo "  - all (default): Build SCIP libaries and binary."
+		@echo "  - all (default): Build SCIP libraries and binary."
 		@echo "  - libscipsolver: Build standalone SCIP library."
 		@echo "  - libscip: Build library for the main part of SCIP."
 		@echo "  - libobjscip: Build library for the C++-interface of SCIP."
@@ -1647,9 +1658,10 @@ help:
 		@echo "  - libtpi: Build library for the parallel task interface in SCIP."
 		@echo "  - links: Reconfigures the links in the \"lib\" directory."
 		@echo "  - doc: Creates documentation in the \"doc\" directory."
-		@echo "  - libs: Create all SCIP libaries."
-		@echo "  - lint: Run lint on all SCIP files. (Need flexelint.)"
-		@echo "  - splint: Run splint on all C SCIP files. (Need splint.)"
+		@echo "  - libs: Create all SCIP libraries."
+		@echo "  - lint: Run lint on all SCIP files. (Needs flexelint.)"
+		@echo "  - pclint: Run pclint on all SCIP files. (Needs pclint.)"
+		@echo "  - splint: Run splint on all C SCIP files. (Needs splint.)"
 		@echo "  - clean: Removes all object files."
 		@echo "  - cleanlibs: Remove all SCIP libraries."
 		@echo "  - depend: Updates dependencies files. This is only needed if you modify SCIP source."

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -581,7 +581,7 @@ SCIP_RETCODE SCIPboundchgApply(
    var = boundchg->var;
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(!SCIPvarIsIntegral(var) || SCIPsetIsIntegral(set, boundchg->newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, boundchg->newbound));
 
    /* apply bound change */
    switch( boundchg->boundtype )
@@ -1497,13 +1497,13 @@ SCIP_Real adjustedLb(
    SCIP_Real             lb                  /**< lower bound to adjust */
    )
 {
-   if( lb < 0 && SCIPsetIsInfinity(set, -lb) )
+   if( lb < 0.0 && SCIPsetIsInfinity(set, -lb) )
       return -SCIPsetInfinity(set);
-   else if( lb > 0 && SCIPsetIsInfinity(set, lb) )
+   else if( lb > 0.0 && SCIPsetIsInfinity(set, lb) )
       return SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasCeil(set, lb);
-   else if( SCIPsetIsZero(set, lb) )
+   else if( lb > 0.0 && lb < SCIPsetEpsilon(set) )
       return 0.0;
    else
       return lb;
@@ -1517,13 +1517,13 @@ SCIP_Real adjustedUb(
    SCIP_Real             ub                  /**< upper bound to adjust */
    )
 {
-   if( ub > 0 && SCIPsetIsInfinity(set, ub) )
+   if( ub > 0.0 && SCIPsetIsInfinity(set, ub) )
       return SCIPsetInfinity(set);
-   else if( ub < 0 && SCIPsetIsInfinity(set, -ub) )
+   else if( ub < 0.0 && SCIPsetIsInfinity(set, -ub) )
       return -SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasFloor(set, ub);
-   else if( SCIPsetIsZero(set, ub) )
+   else if( ub < 0.0 && ub > -SCIPsetEpsilon(set) )
       return 0.0;
    else
       return ub;

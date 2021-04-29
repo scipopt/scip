@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,8 +37,6 @@
 #include "scip/benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/pub_misc_linear.h"
-#include "scip/pub_misc_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
@@ -780,7 +778,10 @@ SCIP_RETCODE assignAuxiliaryVariables(
       j = 0;
       targetvar = NULL;
 
-      /* the prefix is required for UG, since we don't know how many copies have been made. */
+      /* the prefix for the variable names is required for UG, since we don't know how many copies have been made. To
+       * find the target variable, we start with an empty prefix. Then t_ is prepended until the target variable is
+       * found
+       */
       prefix[0] = '\0';
       while( targetvar == NULL && j <= subscipdepth )
       {
@@ -793,18 +794,24 @@ SCIP_RETCODE assignAuxiliaryVariables(
          targetvar = SCIPfindVar(scip, varname);
 
          (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
-         strcpy(prefix, tmpprefix);
          len += 2;
+         strncpy(prefix, tmpprefix, len); /*lint !e732*/
 
          j++;
       }
-      assert(targetvar != NULL);
 
-      SCIPvarSetData(targetvar, vardata);
+      if( targetvar != NULL )
+      {
+         SCIPvarSetData(targetvar, vardata);
 
-      benders->auxiliaryvars[i] = SCIPvarGetTransVar(targetvar);
+         benders->auxiliaryvars[i] = SCIPvarGetTransVar(targetvar);
 
-      SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
+         SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
+      }
+      else
+      {
+         SCIPABORT();
+      }
    }
 
    SCIPfreeBlockMemory(scip, &vardata);
@@ -1852,7 +1859,7 @@ SCIP_RETCODE createSubproblems(
        * not required.
        *
        * NOTE: since the subproblems are supplied as NULL pointers, the internal convexity check can not be performed.
-       * The user needs to specify whether the subproblems are convex or not.
+       * The user needs to explicitly specify the subproblem type.
        */
       if( subproblem != NULL )
       {
@@ -1978,6 +1985,17 @@ SCIP_RETCODE createSubproblems(
                SCIP_CALL( SCIPsetEventhdlrFree(subproblem, eventhdlr, eventFreeBendersUpperbound) );
                assert(eventhdlr != NULL);
             }
+         }
+      }
+      else
+      {
+         /* a user must specify the subproblem type if they are not supplying a SCIP instance. */
+         if( SCIPbendersGetSubproblemType(benders, i) == SCIP_BENDERSSUBTYPE_UNKNOWN )
+         {
+            SCIPerrorMessage("If the subproblem is set to NULL, then the subproblem type must be specified.\n");
+            SCIPerrorMessage("In the subproblem creation callback, call SCIPbendersSetSubproblemType with the appropriate problem type.\n");
+
+            return SCIP_ERROR;
          }
       }
    }
@@ -4244,10 +4262,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       /* if the result is DIDNOTRUN, then the subproblem was not solved */
       (*solved) = (result != SCIP_DIDNOTRUN);
    }
-   else
+   else if( subproblem != NULL )
    {
-      assert(subproblem != NULL);
-
       /* setting up the subproblem */
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX )
       {
@@ -4301,6 +4317,10 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
          else
             objective = SCIPsetInfinity(set);
       }
+   }
+   else
+   {
+      SCIPABORT();
    }
 
    if( !enhancement )

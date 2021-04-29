@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -498,7 +498,7 @@ SCIP_RETCODE createNewSol(
    /* try to add new solution to SCIP and free it immediately */
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
-#ifdef SCIP_STATISTICS
+#ifdef SCIP_STATISTIC
    {
       SCIP_HEURDATA* heurdata;
       heurdata = SCIPheurGetData(heur);

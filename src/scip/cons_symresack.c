@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,7 @@
  * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for symresack constraints
  * @author Christopher Hojny
+ * @author Jasper van Doornmalen
  *
  * The type of constraints of this constraint handler is described in cons_symresack.h.
  *
@@ -34,12 +35,13 @@
  * Mathematical Programming 175, No. 1, 197-240, 2019
  *
  * This paper describes an almost linear time separation routine for so-called cover
- * inequalities of symresacks. In our implementation, however, we use a separation routine with
- * quadratic worst case running time.
+ * inequalities of symresacks. A slight modification of this algorithm allows for a linear
+ * running time, which is used in this implementation.
  *
  * Packing, Partitioning, and Covering Symresacks@n
  * Christopher Hojny,@n
- * (2017), preprint available at http://www.optimization-online.org/DB_HTML/2017/05/5990.html
+ * (2020), available at https://doi.org/10.1016/j.dam.2020.03.002
+ * Discrete Applied Mathematics, volume 283, 689-717 (2020)
  *
  * This paper introduces linearly many inequalities with ternary coefficients that suffice to
  * characterize the binary points contained in a packing and partitioning symresack completely.
@@ -69,6 +71,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include <ctype.h>
 #include <string.h>
 
 /* constraint handler properties */
@@ -484,6 +487,7 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->ndescentpoints = 0;
    (*consdata)->descentpoints = NULL;
+   (*consdata)->ismodelcons = ismodelcons;
 
    /* count the number of binary variables which are affected by the permutation */
    SCIP_CALL( SCIPallocBufferArray(scip, &indexcorrection, inputnvars) );
@@ -548,7 +552,6 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->vars = vars;
    (*consdata)->perm = perm;
-   (*consdata)->ismodelcons = ismodelcons;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &invperm, naffectedvariables) );
    for (i = 0; i < naffectedvariables; ++i)
@@ -958,7 +961,7 @@ SCIP_RETCODE addSymresackInequality(
    consdata = SCIPconsGetData(cons);
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_cover_%s_%d", SCIPconsGetName(cons), consdata->debugcnt);
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
-   consdata->debugcnt += 1;
+   ++consdata->debugcnt;
 #else
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
 #endif
@@ -974,6 +977,235 @@ SCIP_RETCODE addSymresackInequality(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
    SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+   return SCIP_OKAY;
+}
+
+
+/** Maximize a linear function on a "strict" symresack,
+ *  that is a symresack where we do not allow the solution x = gamma(x).
+ */
+static
+SCIP_RETCODE maximizeObjectiveSymresackStrict(
+   SCIP*                scip,                /**< SCIP pointer */
+   int                  nvars,               /**< number of variables in symresack */
+   SCIP_Real*           objective,           /**< the objective vector */
+   int*                 perm,                /**< the permutation (without fixed points) as an array */
+   int*                 invperm,             /**< the inverse permutation as an array */
+   int*                 maxcrit,             /**< pointer to the critical entry where optimality is found at */
+   SCIP_Real*           maxsoluval           /**< pointer to store the optimal objective value */
+)
+{
+   /* The maximal objective in every iteration. */
+   SCIP_Real tmpobj;
+   /* The new value of componentobj when combining two components. */
+   SCIP_Real tmpnewcompobj;
+   /* helperobj is the sum of all positive objective-sums for all components. */
+   SCIP_Real helperobj = 0.0;
+
+   int crit;
+   int critinv;
+   int i;
+
+   /* For every vertex of degree < 2 we maintain componentends and componentobj. */
+   int* componentends;
+   SCIP_Real* componentobj;
+
+   assert( scip != NULL );
+   assert( nvars > 0 );
+   assert( objective != NULL );
+   assert( perm != NULL );
+   assert( invperm != NULL );
+   assert( maxcrit != NULL );
+   assert( maxsoluval != NULL );
+
+   /* The current best known critical entry and objective */
+   *maxcrit = -1;
+   *maxsoluval = -SCIP_DEFAULT_INFINITY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &componentends, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &componentobj, nvars) );
+
+   /* Initialization: Every entry is a component in the graph,
+    * having the corresponding objective
+    */
+   for (i = 0; i < nvars; ++i)
+   {
+      componentends[i] = i;
+      componentobj[i] = objective[i];
+      if ( SCIPisGT(scip, objective[i], 0.0) )
+         helperobj += objective[i];
+   }
+
+   /* Iterate over all critical rows, and of the graph maintain the components on the vertices of degree < 2. */
+   for (crit = 0; crit < nvars; ++crit)
+   {
+      critinv = invperm[crit];
+
+      /* Do not allow fixed points. */
+      assert( crit != critinv );
+
+      /* If the other end of the component of crit is critinv, then crit cannot be a critical entry. */
+      if ( componentends[crit] == critinv )
+         continue;
+
+      /* Compute objective for crit as critical entry. Update if it is better than the best found objective */
+      tmpobj = helperobj;
+      if ( SCIPisLT(scip, componentobj[crit], 0.0) )
+         tmpobj += componentobj[crit];
+      if ( SCIPisGT(scip, componentobj[critinv], 0.0) )
+         tmpobj -= componentobj[critinv];
+      if ( SCIPisGT(scip, tmpobj, *maxsoluval) )
+      {
+         *maxsoluval = tmpobj;
+         *maxcrit = crit;
+      }
+
+      /* Update helperobj */
+      tmpnewcompobj = componentobj[crit] + componentobj[critinv];
+      if ( SCIPisGT(scip, componentobj[crit], 0.0) )
+         helperobj -= componentobj[crit];
+      if ( SCIPisGT(scip, componentobj[critinv], 0.0) )
+         helperobj -= componentobj[critinv];
+      if ( SCIPisGT(scip, tmpnewcompobj, 0.0) )
+         helperobj += tmpnewcompobj;
+
+      /* Update the objective of a component */
+      componentobj[componentends[crit]] = tmpnewcompobj;
+      componentobj[componentends[critinv]] = tmpnewcompobj;
+
+      /* Connect the endpoints of the newly created path */
+      if ( componentends[crit] == crit )
+      {
+         componentends[crit] = componentends[critinv];
+         componentends[componentends[critinv]] = crit;
+      }
+      else
+      {
+         componentends[componentends[crit]] = componentends[critinv];
+         componentends[componentends[critinv]] = componentends[crit];
+      }
+
+      /* Early termination criterion. helperobj is upper bound to tmpobj for every next iteration,
+         * so if helperobj <= maxsoluval then we can terminate earlier.
+         */
+      if ( SCIPisGE(scip, *maxsoluval, helperobj) )
+         break;
+   }
+
+   /* It is always possible to make the first entry critical. */
+   assert( *maxcrit >= 0 );
+
+   SCIPfreeBufferArray(scip, &componentobj);
+   SCIPfreeBufferArray(scip, &componentends);
+
+   return SCIP_OKAY;
+}
+
+
+/** For a symresack, determine a maximizer for optimizing linear function
+ *  over a symresack, where the critical entry is fixed.
+ */
+static
+SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
+   SCIP*                scip,                /**< SCIP pointer */
+   int                  nvars,               /**< number of variables in symresack */
+   SCIP_Real*           objective,           /**< the objective vector */
+   int*                 perm,                /**< the permutation (without fixed points) as an array */
+   int*                 invperm,             /**< the inverse permutation as an array */
+   int                  crit,                /**< critical entry where optimality is found at */
+   int*                 maxsolu              /**< pointer to the optimal objective array */
+)
+{
+   /* Compute to which components all entries belong. */
+   int* entrycomponent;
+   SCIP_Real* componentobjective;
+
+   int i;
+   int c;
+
+   assert( scip != NULL );
+   assert( nvars > 0 );
+   assert( objective != NULL );
+   assert( perm != NULL );
+   assert( invperm != NULL );
+   assert( maxsolu != NULL );
+   assert( crit >= 0 );
+   assert( crit <= nvars );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &entrycomponent, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &componentobjective, nvars) );
+
+   /* Initially: Everything forms its own component */
+   for (i = 0; i < nvars; ++i)
+   {
+      entrycomponent[i] = i;
+      componentobjective[i] = objective[i];
+   }
+   for (i = 0; i < crit; ++i)
+   {
+      /* The graph with arcs {i, invperm[i]} if i < c is a collection of paths, cycles and singletons.
+       * Label the vertices to the lowest entry in the component,  and store the value of that in this component.
+       * Every inner while-loop labels one new vertex per iteration, and a vertex is relabeled exactly once.
+       */
+      if ( entrycomponent[i] < i )
+      {
+         /* This entry is already included in a component. */
+         continue;
+      }
+
+      /* Follow the path forward: Take edges {c, invperm[c]} until c >= crit, or a cycle is found. */
+      c = i;
+      while( c < crit )
+      {
+         /* c < crit, so edge {c, invperm[c]} exists. Label invperm[c] as part of component of i */
+         c = invperm[c];
+
+         /* Stop if we find a cycle. */
+         if ( entrycomponent[c] != c )
+            break;
+
+         entrycomponent[c] = i;
+         componentobjective[i] += objective[c];
+      }
+
+      /* Follow the path backward: Take edges {c, perm[c]} until perm[c] >= crit, or a cycle is found. */
+      c = perm[i];
+      while( c < crit )
+      {
+         /* c < crit, so edge {c, invperm[c]} exists. Label c as part of component of i */
+
+         /* Stop if we find a cycle. */
+         if ( entrycomponent[c] != c )
+            break;
+
+         entrycomponent[c] = i;
+         componentobjective[i] += objective[c];
+         /* For next iteration: We do another step back */
+         c = perm[c];
+      }
+   }
+
+   /* Now fill the objective vector.
+    * For the component containing crit, set the value to 1.
+    * For the component contraining invperm[crit], set the value to 0.
+    * For the other components, set the value to 1 if the objective sum is positive.
+    * Otherwise to 0.
+    */
+   for (i = 0; i < nvars; ++i)
+   {
+      if ( entrycomponent[i] == entrycomponent[crit] )
+         maxsolu[i] = 1;
+      else if ( entrycomponent[i] == entrycomponent[invperm[crit]] )
+         maxsolu[i] = 0;
+      else if ( SCIPisGT(scip, componentobjective[entrycomponent[i]], 0.0) )
+         maxsolu[i] = 1;
+      else
+         maxsolu[i] = 0;
+   }
+
+   SCIPfreeBufferArray(scip, &componentobjective);
+   SCIPfreeBufferArray(scip, &entrycomponent);
 
    return SCIP_OKAY;
 }
@@ -995,14 +1227,12 @@ SCIP_RETCODE separateSymresackCovers(
 {
    SCIP_Real constobjective;
    SCIP_Real* sepaobjective;
-   SCIP_Real tmpsoluobj = 0.0;
    SCIP_Real maxsoluobj = 0.0;
-   int* tmpsolu;
    int* maxsolu;
    int* invperm;
    int* perm;
    int nvars;
-   int crit;
+   int maxcrit;
    int i;
 
    *infeasible = FALSE;
@@ -1032,197 +1262,42 @@ SCIP_RETCODE separateSymresackCovers(
    for (i = 0; i < nvars; ++i)
    {
       if ( i < perm[i] )
-      {
-         sepaobjective[i] = vals[i];
-         constobjective -= vals[i];
-      }
+         sepaobjective[i] = - vals[i];
       else
-         sepaobjective[i] = vals[i] - 1.0;
+      {
+         sepaobjective[i] = 1.0 - vals[i];
+         constobjective += vals[i] - 1.0;
+      }
    }
 
    /* allocate memory for temporary and global solution */
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpsolu, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &maxsolu, nvars) );
 
-   /* start separation procedure by iterating over critical rows */
-   for (crit = 0; crit < nvars; ++crit)
-   {
-      /* there are no fixed points */
-      assert( perm[crit] != crit );
+   /* Find critical row of a maximally violated cover */
+   SCIP_CALL( maximizeObjectiveSymresackStrict(scip, nvars, sepaobjective, perm, invperm, &maxcrit, &maxsoluobj) );
+   assert( maxcrit >= 0 );
+   SCIPdebugMsg(scip, "Critical row %d found; Computing maximally violated cover.\n", maxcrit);
+   SCIP_CALL( maximizeObjectiveSymresackCriticalEntry(scip, nvars, sepaobjective, perm, invperm, maxcrit, maxsolu) );
 
-      /* initialize temporary solution */
-      for (i = 0; i < nvars; ++i)
-         tmpsolu[i] = 2;
-      tmpsoluobj = 0.0;
-
-      /* perform fixings implied by the critical row */
-      tmpsolu[crit] = 0;
-      assert( invperm[crit] < nvars );
-
-      tmpsolu[invperm[crit]] = 1;
-      tmpsoluobj += sepaobjective[invperm[crit]];
-
-      /* perform 1-fixings */
-      i = invperm[crit];
-      while ( i < crit )
-      {
-         i = invperm[i];
-         tmpsolu[i] = 1;
-         tmpsoluobj += sepaobjective[i];
-      }
-
-      /* row c cannot be critical */
-      if ( i == crit )
-         continue;
-
-      assert( tmpsolu[crit] == 0 );
-
-      /* perform 0-fixing */
-      i = perm[crit];
-      while ( i < crit )
-      {
-         tmpsolu[i] = 0;
-         i = perm[i];
-      }
-
-      /* iterate over rows above the critical row */
-      for (i = 0; i < crit; ++i)
-      {
-         SCIP_Real objimpact = 0.0;
-         int j;
-
-         /* skip already fixed entries */
-         if ( tmpsolu[i] != 2 )
-            continue;
-
-         /* Check effect of fixing entry i to 1 and apply all implied fixing to other entries.
-          *
-          * Observe: Experiments indicate that entries are more often fixed to 1 than to 0.
-          * For this reason, we apply the 1-fixings directly. If it turns out that the 1-fixings
-          * have a negative impact on the objective, we undo these fixings afterwards and apply
-          * 0-fixings instead. */
-
-         /* check fixings in invperm direction */
-         j = i;
-         do
-         {
-            assert( tmpsolu[j] == 2 );
-            tmpsolu[j] = 1;
-            objimpact += sepaobjective[j];
-            j = invperm[j];
-         }
-         while ( j < crit && j != i );
-
-         /* if we do not detect a cycle */
-         if ( j != i )
-         {
-            /* fix entry j since this is not done in the above do-while loop */
-            assert( tmpsolu[j] == 2 );
-            tmpsolu[j] = 1;
-            objimpact += sepaobjective[j];
-
-            /* check fixings in perm direction */
-            j = perm[i];
-            while ( j < crit )
-            {
-               assert( j != i );
-               assert( tmpsolu[j] == 2 );
-               tmpsolu[j] = 1;
-               objimpact += sepaobjective[j];
-               j = perm[j];
-            }
-
-            assert( j != crit );
-         }
-
-         /* if fixing entry i has a positive impact -> keep above fixings of entries to 1 */
-         /* otherwise -> reset entries to 0 */
-         if ( SCIPisEfficacious(scip, objimpact) )
-            tmpsoluobj += objimpact;
-         else
-         {
-            j = i;
-            do
-            {
-               assert( tmpsolu[j] == 1 );
-               tmpsolu[j] = 0;
-               j = invperm[j];
-            }
-            while ( j < crit && j != i );
-
-            /* if we do not detect a cycle */
-            if ( j != i )
-            {
-               /* fix entry j since this is not done in the above do-while loop */
-               assert( tmpsolu[j] == 1 );
-               tmpsolu[j] = 0;
-
-               /* check fixings in perm direction */
-               j = perm[i];
-               while ( j < crit )
-               {
-                  assert( j != i );
-                  assert( tmpsolu[j] == 1 );
-                  tmpsolu[j] = 0;
-                  j = perm[j];
-               }
-
-               assert( j != crit );
-            }
-         }
-      }
-
-      /* iterate over unfixed entries below the critical row */
-      for (i = crit + 1; i < nvars; ++i)
-      {
-         /* skip already fixed entries */
-         if ( tmpsolu[i] != 2 )
-            continue;
-
-         if ( SCIPisEfficacious(scip, sepaobjective[i]) )
-         {
-            assert( tmpsolu[i] == 2 );
-            tmpsolu[i] = 1;
-            tmpsoluobj += sepaobjective[i];
-         }
-         else
-         {
-            assert( tmpsolu[i] == 2 );
-            tmpsolu[i] = 0;
-         }
-      }
-
-      /* check whether we have found a better solution which has positive separation objective*/
-      if ( SCIPisEfficacious(scip, tmpsoluobj + constobjective - maxsoluobj) )
-      {
-         assert( SCIPisEfficacious(scip, tmpsoluobj + constobjective) );
-         for (i = 0; i < nvars; ++i)
-            maxsolu[i] = tmpsolu[i];
-         maxsoluobj = tmpsoluobj + constobjective;
-      }
-   }
+   /* Add constant to maxsoluobj to get the real objective */
+   maxsoluobj += constobjective;
 
    /* Check whether the separation objective is positive, i.e., a violated cover was found. */
    if ( SCIPisEfficacious(scip, maxsoluobj) )
    {
+      /* Now add the cut. Reuse array maxsolu as coefficient vector for the constraint. */
       SCIP_Real rhs = -1.0;
-      SCIP_Real lhs = 0.0;
-
       for (i = 0; i < nvars; ++i)
       {
          if ( i < perm[i] )
-         {
-            maxsolu[i] = maxsolu[i] - 1;
-            lhs += vals[i] * maxsolu[i];
-         }
+            maxsolu[i] = -maxsolu[i];
          else
          {
-            lhs += vals[i] * maxsolu[i];
-            rhs += maxsolu[i];
+            if ( maxsolu[i] == 0 )
+               rhs += 1.0;
+            maxsolu[i] = 1 - maxsolu[i];
          }
       }
-
-      assert( SCIPisGT(scip, lhs, rhs) );
 
       /* add cover inequality */
       SCIP_CALL( addSymresackInequality(scip, cons, nvars, consdata->vars, maxsolu, rhs, infeasible) );
@@ -1232,7 +1307,6 @@ SCIP_RETCODE separateSymresackCovers(
    }
 
    SCIPfreeBufferArrayNull(scip, &maxsolu);
-   SCIPfreeBufferArrayNull(scip, &tmpsolu);
    SCIPfreeBufferArrayNull(scip, &sepaobjective);
 
    return SCIP_OKAY;
@@ -1574,16 +1648,24 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    }
 #endif
 
-   /* create transformed constraint data (copy data where necessary) */
+   /* create transformed constraint data */
    nvars = sourcedata->nvars;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
 
-#ifdef SCIP_DEBUG
-   consdata->debugcnt = sourcedata->debugcnt;
-#endif
+   consdata->vars = NULL;
    consdata->nvars = nvars;
+   consdata->perm = NULL;
+   consdata->invperm = NULL;
+   consdata->ppupgrade = sourcedata->ppupgrade;
    consdata->ismodelcons = sourcedata->ismodelcons;
+#ifdef SCIP_DEBUG
+   consdata->debugcnt = 0;
+#endif
+   consdata->ncycles = 0;
+   consdata->cycledecomposition = NULL;
+   consdata->ndescentpoints = 0;
+   consdata->descentpoints = NULL;
 
    if ( nvars > 0 )
    {
@@ -1597,8 +1679,6 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->perm, sourcedata->perm, nvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->invperm, sourcedata->invperm, nvars) );
 
-      consdata->ppupgrade = sourcedata->ppupgrade;
-
       if ( sourcedata->ppupgrade )
       {
          consdata->ncycles = sourcedata->ncycles;
@@ -1607,15 +1687,10 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
          {
             SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->cycledecomposition[i], sourcedata->cycledecomposition[i], nvars + 1) ); /*lint !e866*/
          }
+
+         consdata->ndescentpoints = sourcedata->ndescentpoints;
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->descentpoints, sourcedata->descentpoints, sourcedata->ndescentpoints) );
       }
-   }
-   else
-   {
-      consdata->perm = NULL;
-      consdata->invperm = NULL;
-      consdata->ppupgrade = FALSE;
-      consdata->ncycles = 0;
-      consdata->cycledecomposition = NULL;
    }
 
    /* create transformed constraint */
@@ -2428,6 +2503,159 @@ SCIP_DECL_CONSCOPY(consCopySymresack)
 }
 
 
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseSymresack)
+{  /*lint --e{715}*/
+   const char* s;
+   char* endptr;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   int* perm;
+   int val;
+   int nvars = 0;
+   int cnt = 0;
+   int nfoundpermidx = 0;
+   int maxnvars = 128;
+
+   assert( success != NULL );
+
+   *success = TRUE;
+   s = str;
+
+   /* skip white space */
+   while ( *s != '\0' && isspace((unsigned char)*s) )
+      ++s;
+
+   if ( strncmp(s, "symresack(", 10) != 0 )
+   {
+      SCIPerrorMessage("Syntax error - expected \"symresack(\"", s);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   s += 10;
+
+   /* loop through string */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, maxnvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, maxnvars) );
+
+   do
+   {
+      if ( cnt > 1 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected two arrays, but got more\n");
+         *success = FALSE;
+
+         SCIPfreeBufferArray(scip, &perm);
+         SCIPfreeBufferArray(scip, &vars);
+      }
+
+      /* skip whitespace and ',' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
+         ++s;
+
+      /* if we could not find starting indicator of array */
+      if ( *s != '[' )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '[' to start new array\n");
+         *success = FALSE;
+
+         SCIPfreeBufferArray(scip, &perm);
+         SCIPfreeBufferArray(scip, &vars);
+      }
+      ++s;
+
+      /* read array, cnt = 0: variables; cnt = 1: permutation*/
+      if ( cnt == 0 )
+      {
+         do
+         {
+            /* skip whitespace and ',' */
+            while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
+               ++s;
+
+            /* parse variable name */
+            SCIP_CALL( SCIPparseVarName(scip, s, &var, &endptr) );
+            if ( var == NULL )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
+               *success = FALSE;
+               SCIPfreeBufferArray(scip, &vars);
+               return SCIP_OKAY;
+            }
+            s = endptr;
+            assert( s != NULL );
+
+            vars[nvars++] = var;
+
+            if ( nvars >= maxnvars )
+            {
+               int newsize;
+
+               newsize = SCIPcalcMemGrowSize(scip, nvars + 1);
+               SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &perm, newsize) );
+               maxnvars = newsize;
+            }
+         }
+         while ( *s != ']' );
+      }
+      else
+      {
+         do
+         {
+            /* skip whitespace and ',' */
+            while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
+               ++s;
+
+            /* parse integer value */
+            if ( ! SCIPstrToIntValue(s, &val, &endptr) )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not extract int from string '%s'\n", str);
+               *success = FALSE;
+               SCIPfreeBufferArray(scip, &perm);
+               SCIPfreeBufferArray(scip, &vars);
+               return SCIP_OKAY;
+            }
+            s = endptr;
+            assert( s != NULL );
+
+            perm[nfoundpermidx++] = val;
+
+            if ( nfoundpermidx > nvars )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "permutation is longer than vars array\n");
+               *success = FALSE;
+               SCIPfreeBufferArray(scip, &perm);
+               SCIPfreeBufferArray(scip, &vars);
+               return SCIP_OKAY;
+            }
+         }
+         while ( *s != ']' );
+      }
+      ++s;
+      ++cnt;
+   }
+   while ( *s != ')' );
+
+   if ( nfoundpermidx == nvars )
+   {
+      SCIP_CALL( SCIPcreateConsBasicSymresack(scip, cons, name, perm, vars, nvars, TRUE) );
+   }
+   else
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "Length of permutation is not equal to number of given variables.\n");
+      *success = FALSE;
+   }
+
+   SCIPfreeBufferArray(scip, &perm);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint display method of constraint handler
  *
  *  The constraint handler should output a representation of the constraint into the given text file.
@@ -2437,11 +2665,9 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
-   SCIP_Bool* covered;
    int* perm;
    int nvars;
    int i;
-   int j;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2455,10 +2681,7 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 
    /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
-   {
-      SCIPinfoMessage(scip, file, "symresack()");
       return SCIP_OKAY;
-   }
 
    assert( consdata->vars != NULL );
    assert( consdata->perm != NULL );
@@ -2467,35 +2690,18 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
    nvars = consdata->nvars;
    perm = consdata->perm;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &covered, nvars) );
-   for (i = 0; i < nvars; ++i)
-      covered[i] = FALSE;
+   SCIPinfoMessage(scip, file, "symresack([");
+   SCIP_CALL( SCIPwriteVarName(scip, file, vars[0], TRUE) );
 
-   if ( consdata->ppupgrade )
-      SCIPinfoMessage(scip, file, "ppSymresack(");
-   else
-      SCIPinfoMessage(scip, file, "symresack(");
-
-   for (i = 0; i < nvars; ++i)
+   for (i = 1; i < nvars; ++i)
    {
-      if ( covered[i] )
-         continue;
-
-      /* print cycle of perm containing i */
-      SCIPinfoMessage(scip, file, "[%s", SCIPvarGetName(vars[i]));
-      covered[i] = TRUE;
-      j = perm[i];
-      while ( j != i )
-      {
-         SCIPinfoMessage(scip, file, ",%s", SCIPvarGetName(vars[j]));
-         covered[j] = TRUE;
-         j = perm[j];
-      }
-      SCIPinfoMessage(scip, file, "]");
+      SCIPinfoMessage(scip, file, ",");
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars[i], TRUE) );
    }
-   SCIPinfoMessage(scip, file, ")");
-
-   SCIPfreeBufferArray(scip, &covered);
+   SCIPinfoMessage(scip, file, "],[%d", perm[0]);
+   for (i = 1; i < nvars; ++i)
+      SCIPinfoMessage(scip, file, ",%d", perm[i]);
+   SCIPinfoMessage(scip, file, "])");
 
    return SCIP_OKAY;
 }
@@ -2574,6 +2780,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSymresack) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSymresack) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSymresack) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSymresack) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSymresack, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSymresack) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSymresack, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
