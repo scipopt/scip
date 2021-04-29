@@ -111,7 +111,7 @@ SCIP_RETCODE checkAndGetIndicator(
    assert(cons != NULL);
    assert(isindicator != NULL);
 
-   if( SCIPvarGetType(cand) != 0 )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
    {
       *cons = NULL;
       *isindicator = FALSE;
@@ -298,7 +298,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIPdebugMessage("cons lhs %f\n", lhs);
    SCIPdebugMessage("cons rhs %f\n", rhs);
 
-   SCIPgetConsNVars(scip, lincons, &nconsvars, &success);
+   SCIP_RETCODE return_code = SCIPgetConsNVars(scip, lincons, &nconsvars, &success);
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
    SCIP_CALL( SCIPgetConsVars(scip, lincons, consvars, nconsvars, &success) );
@@ -329,7 +329,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
       {
          /* indicator constraint is feasible */
-         *score = SCIPrandomGetReal(randnumgen, -1, 0);
+         *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       }
       else if( SCIPisGT(scip, activity, rhs))
       {
@@ -352,7 +352,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
       {
          /* indicator constraint is feasible */
-         *score = SCIPrandomGetReal(randnumgen, -1, 0);
+         *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       }
       else if( SCIPisGT(scip, activity, rhs))
       {
@@ -375,7 +375,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       {
          /* indicator constraint is feasible */
          *roundup = TRUE;
-         *score = SCIPrandomGetReal(randnumgen, -1, 0);
+         *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       }
       else if( SCIPisGT(scip, activity, rhs))
       {
