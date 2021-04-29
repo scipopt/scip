@@ -313,13 +313,14 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    assert(randnumgen != NULL);
 
    activity = 0;
-   for( v = 0; v < nconsvars - 1; v++ )
+   for( v = 0; v < nconsvars ; v++ )
    {
+      if(consvars[v]==slackvar)
+         continue;
       SCIPdebugMessage("%s lp sol %f %f\n", SCIPvarGetName(consvars[v]), SCIPvarGetLPSol(consvars[v]),
                        consvals[v]);
       activity += consvals[v] * SCIPvarGetLPSol(consvars[v]);
    }
-   assert(consvars[v]==slackvar);
    SCIPdebugMessage("activity: %f\n", activity);
 
    if( heurdata->mode == 0 )
