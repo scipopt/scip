@@ -22,7 +22,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 #include <assert.h>
 
@@ -295,13 +295,14 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIPdebugPrintCons(scip, indicatorcons, NULL);
    SCIPdebugPrintCons(scip, lincons, NULL);
    SCIPdebugMessage("slackvar has UB = %f\n", SCIPvarGetUbGlobal(slackvar));
-   SCIPdebugMessage("cons lhs %f\n", SCIPconsGetLhs(scip, lincons, &success));
+   SCIPdebugMessage("cons lhs %f\n", lhs);
+   SCIPdebugMessage("cons rhs %f\n", rhs);
 
    SCIPgetConsNVars(scip, lincons, &nconsvars, &success);
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
-   SCIPgetConsVars(scip, lincons, consvars, nconsvars, &success);
-   SCIPgetConsVals(scip, lincons, consvals, nconsvars, &success);
+   SCIP_CALL( SCIPgetConsVars(scip, lincons, consvars, nconsvars, &success) );
+   SCIP_CALL( SCIPgetConsVals(scip, lincons, consvals, nconsvars, &success) );
 
    /* get heuristic data */
    heur = SCIPdivesetGetHeur(diveset);
@@ -332,12 +333,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       else if( SCIPisGT(scip, activity, rhs))
       {
          *score = 100 * (activity - rhs) / MAX(ABS(rhs),1);
-         assert(score>=0);
+         assert(*score>=0);
       }
       else if( SCIPisLT(scip, activity, lhs))
       {
          *score = 100 * (lhs - activity) / MAX(ABS(lhs),1);
-         assert(score>=0);
+         assert(*score>=0);
       }
       else
       {
@@ -355,12 +356,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       else if( SCIPisGT(scip, activity, rhs))
       {
          *score = 100 * (activity - rhs) / MAX(ABS(rhs),1);
-         assert(score>=0);
+         assert(*score>=0);
       }
       else if( SCIPisLT(scip, activity, lhs))
       {
          *score = 100 * (lhs - activity) / MAX(ABS(lhs),1);
-         assert(score>=0);
+         assert(*score>=0);
       }
       else
       {
@@ -378,13 +379,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       else if( SCIPisGT(scip, activity, rhs))
       {
          *score = 100 * (activity - rhs) / MAX(ABS(rhs),1);
-         assert(score>=0);
+         assert(*score>=0);
          *roundup = (*score < heurdata->roundingfrac);
       }
       else if( SCIPisLT(scip, activity, lhs))
       {
          *score = 100 * (lhs - activity) / MAX(ABS(lhs),1);
-         assert(score>=0);
+         assert(*score>=0);
          *roundup = (*score < heurdata->roundingfrac);
       }
       else
