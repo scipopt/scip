@@ -205,6 +205,16 @@
 #define TABLE_POSITION_NEIGHBORHOOD              12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NEIGHBORHOOD        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
+
+/** reward types of ALNS */
+typedef enum RewardType {
+   REWARDTYPE_TOTAL,                         /**< combination of the other rewards */
+   REWARDTYPE_BESTSOL,                       /**< 1, if a new solution was found, 0 otherwise */
+   REWARDTYPE_CLOSEDGAP,                           /**< 0 if no solution was found, closed gap otherwise */
+   REWARDTYPE_NOSOLPENALTY,                  /**< 1 if a solution was found, otherwise between 0 and 1 depending on the effort spent  */
+   NREWARDTYPES
+} REWARDTYPE;
+
 /*
  * Data structures
  */
@@ -2024,12 +2034,14 @@ SCIP_RETCODE getReward(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data of the ALNS neighborhood */
    NH_STATS*             runstats,           /**< run statistics */
-   SCIP_Real*            rewardptr           /**< pointer to store the computed reward */
+   SCIP_Real*            rewardptr           /**< array to store the computed rewards, total and individual */
    )
 {
    SCIP_Real reward = 0.0;
    SCIP_Real effort;
    int ndiscretevars;
+
+   memset(rewardptr, 0, sizeof(*rewardptr)*NREWARDTYPES);
 
    assert(rewardptr != NULL);
    assert(runstats->usednodes >= 0);
@@ -2048,29 +2060,28 @@ SCIP_RETCODE getReward(
    /* a positive reward is only assigned if a new incumbent solution was found */
    if( runstats->nbestsolsfound > 0 )
    {
-      SCIP_Real bestsolreward;
-      SCIP_Real closedgapreward;
       SCIP_Real rewardcontrol = heurdata->rewardcontrol;
 
       SCIP_Real lb;
       SCIP_Real ub;
 
       /* the indicator function is simply 1.0 */
-      bestsolreward = 1.0;
+      rewardptr[REWARDTYPE_BESTSOL] = 1.0;
+      rewardptr[REWARDTYPE_NOSOLPENALTY] = 1.0;
 
       ub = runstats->newupperbound;
       lb = SCIPgetLowerbound(scip);
 
       /* compute the closed gap reward */
       if( SCIPisEQ(scip, ub, lb) || SCIPisInfinity(scip, runstats->oldupperbound) )
-         closedgapreward = 1.0;
+         rewardptr[REWARDTYPE_CLOSEDGAP] = 1.0;
       else
       {
-         closedgapreward = (runstats->oldupperbound - ub) / (runstats->oldupperbound - lb);
+         rewardptr[REWARDTYPE_CLOSEDGAP] = (runstats->oldupperbound - ub) / (runstats->oldupperbound - lb);
       }
 
       /* the reward is a convex combination of the best solution reward and the reward for the closed gap */
-      reward = rewardcontrol * bestsolreward + (1.0 - rewardcontrol) * closedgapreward;
+      reward = rewardcontrol * rewardptr[REWARDTYPE_BESTSOL] + (1.0 - rewardcontrol) * rewardptr[REWARDTYPE_CLOSEDGAP];
 
       /* optionally, scale the reward by the involved effort */
       if( heurdata->scalebyeffort )
@@ -2088,11 +2099,13 @@ SCIP_RETCODE getReward(
       if( ndiscretevars > 0 )
          usednodes *= (1.0 - (runstats->nfixings / (SCIP_Real)ndiscretevars));
 
-      reward = heurdata->rewardbaseline - (usednodes) * heurdata->rewardbaseline / maxeffort;
-      reward = MAX(0.0, reward);
+      rewardptr[REWARDTYPE_NOSOLPENALTY] = 1 - (usednodes / maxeffort);
+      rewardptr[REWARDTYPE_NOSOLPENALTY] = MAX(0.0, rewardptr[REWARDTYPE_NOSOLPENALTY]);
+      reward = heurdata->rewardbaseline * rewardptr[REWARDTYPE_NOSOLPENALTY];
    }
 
-   *rewardptr = reward;
+   rewardptr[REWARDTYPE_TOTAL] = reward;
+
    return SCIP_OKAY;
 }
 
@@ -2304,7 +2317,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    SCIP_Bool success;
    SCIP_Bool run;
    SCIP_Bool allrewardsmode;
-   SCIP_Real rewards[NNEIGHBORHOODS];
+   SCIP_Real rewards[NNEIGHBORHOODS][NREWARDTYPES] = {0};
    int banditidx;
 
    int i;
@@ -2436,7 +2449,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       SCIPdebugMsg(scip, "Running '%s' neighborhood %d\n", neighborhood->name, neighborhoodidx);
 
       initRunStats(scip, &runstats[neighborhoodidx]);
-      rewards[neighborhoodidx] = 0.0;
+      rewards[neighborhoodidx][REWARDTYPE_TOTAL] = 0.0;
 
       subscipstatus[neighborhoodidx] = SCIP_STATUS_UNKNOWN;
       SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.setupclock) );
@@ -2613,7 +2626,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       subscipstatus[neighborhoodidx] = SCIPgetStatus(subscip);
       SCIPdebugMsg(scip, "Status of sub-SCIP run: %d\n", subscipstatus[neighborhoodidx]);
 
-      SCIP_CALL( getReward(scip, heurdata, &runstats[neighborhoodidx], &rewards[neighborhoodidx]) );
+      SCIP_CALL( getReward(scip, heurdata, &runstats[neighborhoodidx], rewards[neighborhoodidx]) );
 
       /* in all rewards mode, continue with the next neighborhood */
       if( allrewardsmode && ntries < heurdata->nactiveneighborhoods )
@@ -2675,7 +2688,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       }
 
       /* update the bandit algorithm by the measured reward */
-      SCIP_CALL( updateBanditAlgorithm(scip, heurdata, rewards[banditidx], banditidx) );
+      SCIP_CALL( updateBanditAlgorithm(scip, heurdata, rewards[banditidx][REWARDTYPE_TOTAL], banditidx) );
 
       resetCurrentNeighborhood(heurdata);
    }
@@ -2683,10 +2696,11 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    /* write single, measured rewards and the bandit index to the reward file */
    if( allrewardsmode )
    {
-      for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
-      {
-         fprintf(heurdata->rewardfile, "%.4f,", rewards[i]);
-      }
+      int j;
+      for( j = 0; j < NREWARDTYPES; j++ )
+         for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
+            fprintf(heurdata->rewardfile, "%.4f,", rewards[i][j]);
+
       fprintf(heurdata->rewardfile, "%d\n", banditidx);
    }
 
