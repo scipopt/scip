@@ -20,7 +20,7 @@ Interface changes
 ### Deleted and changed API methods
 
 ### New API functions
-- added function SCIPwithDebugSol() to determine wether SCIP was compiled with WITH_DEBUG_SOLUTION
+- added function SCIPwithDebugSol() to determine whether SCIP was compiled with WITH_DEBUG_SOLUTION
 
 ### Command line interface
 
