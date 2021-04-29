@@ -39,8 +39,10 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
+#include "struct_heur.h"
 #include <string.h>
 
 #define HEUR_NAME             "indicatordiving"
@@ -75,12 +77,16 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_RANDSEED            11  /**< initial seed for random number generation */
+#define DEFAULT_RANDSEED             11  /**< initial seed for random number generation */
+#define DEFAULT_ROUNDINGFRAC         50 /**< default parameter setting for parameter roundingfrac */
+#define DEFAULT_MODE                  2 /**< default parameter setting for parameter mode */
 
 /** locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded down*/
+   int                   mode;               /**< decides which mode is selected (0: rounding down; 1: rounding up; 2: fractional rounding (default))*/
 };
 
 /*
@@ -254,9 +260,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
     * - score : pointer for diving score value - the best candidate maximizes this score
     * - roundup : pointer to store whether the preferred rounding direction is upwards
     *
-    * todo: implement this callback
     */
 
+   SCIP_HEUR* heur;
+   SCIP_HEURDATA* heurdata;
    SCIP_VAR** consvars;
    SCIP_CONS* indicatorcons;
    SCIP_CONS* lincons;
@@ -295,36 +302,54 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIPgetConsVars(scip, lincons, consvars, nconsvars, &success);
    SCIPgetConsVals(scip, lincons, consvals, nconsvars, &success);
 
-   activity = 0;
-   for( v = 0; v < nconsvars - 1; v++ )
-   {
-      SCIPdebugMessage("%s lp sol %f %f\n", SCIPvarGetName(consvars[v]), SCIPvarGetLPSol(consvars[v]),
-                     consvals[v]);
-      activity += consvals[v] * SCIPvarGetLPSol(consvars[v]);
-   }
-   assert(consvars[v]==slackvar);
-   SCIPdebugMessage("activity: %f\n", activity);
+   /* get heuristic data */
+   heur = SCIPdivesetGetHeur(diveset);
+   assert(heur != NULL);
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
 
-   if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
+   if( heurdata->mode == 0 )
    {
-      /* indicator constraint is feasible */
-      *roundup = TRUE;
-      *score = 0; /* todo: random number */
+      //TODO: implement rounding down
    }
-   else if( SCIPisGT(scip, activity, rhs) )
+   else if( heurdata->mode == 1)
    {
-      *score = 100 * ABS((activity - rhs)/rhs);
-      *roundup = (*score < 50);
-   }
-   else if( SCIPisLT(scip, activity, lhs) )
-   {
-      *score = 100 * ABS((activity - lhs)/lhs);
-      *roundup = (*score < 50);
+      //TODO: implement rounding up
    }
    else
    {
-      assert(FALSE);
+      activity = 0;
+      for( v = 0; v < nconsvars - 1; v++ )
+      {
+         SCIPdebugMessage("%s lp sol %f %f\n", SCIPvarGetName(consvars[v]), SCIPvarGetLPSol(consvars[v]),
+                          consvals[v]);
+         activity += consvals[v] * SCIPvarGetLPSol(consvars[v]);
+      }
+      assert(consvars[v]==slackvar);
+      SCIPdebugMessage("activity: %f\n", activity);
+
+      if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
+      {
+         /* indicator constraint is feasible */
+         *roundup = TRUE;
+         *score = 0; /* todo: random number */
+      }
+      else if( SCIPisGT(scip, activity, rhs) )
+      {
+         *score = 100 * ABS((activity - rhs)/rhs);
+         *roundup = (*score < heurdata->roundingfrac);
+      }
+      else if( SCIPisLT(scip, activity, lhs) )
+      {
+         *score = 100 * ABS((activity - lhs)/lhs);
+         *roundup = (*score < heurdata->roundingfrac);
+      }
+      else
+      {
+          assert(FALSE);
+      }
    }
+
 
    /* free memory */
    SCIPfreeBufferArray(scip, &consvals);
@@ -371,6 +396,14 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
          DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetAvailableIndicatordiving) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/roundingfrac",
+         "in fractional case all fractional below this value are rounded down",
+         &heurdata->roundingfrac, FALSE, DEFAULT_ROUNDINGFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/mode",
+         "decides which mode is selected (0: rounding down; 1: rounding up; 2: fractional rounding (default))",
+         &heurdata->mode, FALSE, DEFAULT_MODE, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;
 }
