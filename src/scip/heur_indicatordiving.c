@@ -18,6 +18,7 @@
  * @brief  indicator diving heuristic
  * @author Katrin Halbig
  * @author Alexander Hoen
+ * #TODO: deactivate heuristic if model contains no indicator variable
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,7 +27,6 @@
 #include <assert.h>
 
 #include "scip/cons_indicator.h"
-#include "scip/cons_linear.h"
 #include "scip/heur_indicatordiving.h"
 #include "scip/heuristics.h"
 #include "scip/pub_cons.h"
@@ -85,7 +85,7 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded down*/
+   SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded up*/
    int                   mode;               /**< decides which mode is selected (0: rounding down; 1: rounding up; 2: fractional rounding (default))*/
 };
 
@@ -264,6 +264,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
    SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;
+   SCIP_RANDNUMGEN* randnumgen;
    SCIP_VAR** consvars;
    SCIP_CONS* indicatorcons;
    SCIP_CONS* lincons;
@@ -307,41 +308,83 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    assert(heur != NULL);
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   randnumgen = SCIPdivesetGetRandnumgen(diveset);
+   assert(randnumgen != NULL);
+
+   activity = 0;
+   for( v = 0; v < nconsvars - 1; v++ )
+   {
+      SCIPdebugMessage("%s lp sol %f %f\n", SCIPvarGetName(consvars[v]), SCIPvarGetLPSol(consvars[v]),
+                       consvals[v]);
+      activity += consvals[v] * SCIPvarGetLPSol(consvars[v]);
+   }
+   assert(consvars[v]==slackvar);
+   SCIPdebugMessage("activity: %f\n", activity);
 
    if( heurdata->mode == 0 )
    {
-      //TODO: implement rounding down
+      *roundup = FALSE;
+      if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
+      {
+         /* indicator constraint is feasible */
+         *score = SCIPrandomGetReal(randnumgen, -1, 0);
+      }
+      else if( SCIPisGT(scip, activity, rhs))
+      {
+         *score = 100 * (activity - rhs) / MAX(ABS(rhs),1);
+         assert(score>=0);
+      }
+      else if( SCIPisLT(scip, activity, lhs))
+      {
+         *score = 100 * (lhs - activity) / MAX(ABS(lhs),1);
+         assert(score>=0);
+      }
+      else
+      {
+         assert(FALSE);
+      }
    }
    else if( heurdata->mode == 1)
    {
-      //TODO: implement rounding up
+      *roundup = TRUE;
+      if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
+      {
+         /* indicator constraint is feasible */
+         *score = SCIPrandomGetReal(randnumgen, -1, 0);
+      }
+      else if( SCIPisGT(scip, activity, rhs))
+      {
+         *score = 100 * (activity - rhs) / MAX(ABS(rhs),1);
+         assert(score>=0);
+      }
+      else if( SCIPisLT(scip, activity, lhs))
+      {
+         *score = 100 * (lhs - activity) / MAX(ABS(lhs),1);
+         assert(score>=0);
+      }
+      else
+      {
+         assert(FALSE);
+      }
    }
    else
    {
-      activity = 0;
-      for( v = 0; v < nconsvars - 1; v++ )
-      {
-         SCIPdebugMessage("%s lp sol %f %f\n", SCIPvarGetName(consvars[v]), SCIPvarGetLPSol(consvars[v]),
-                          consvals[v]);
-         activity += consvals[v] * SCIPvarGetLPSol(consvars[v]);
-      }
-      assert(consvars[v]==slackvar);
-      SCIPdebugMessage("activity: %f\n", activity);
-
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
       {
          /* indicator constraint is feasible */
          *roundup = TRUE;
-         *score = 0; /* todo: random number */
+         *score = SCIPrandomGetReal(randnumgen, -1, 0);
       }
-      else if( SCIPisGT(scip, activity, rhs) )
+      else if( SCIPisGT(scip, activity, rhs))
       {
-         *score = 100 * ABS((activity - rhs)/rhs);
+         *score = 100 * (activity - rhs) / MAX(ABS(rhs),1);
+         assert(score>=0);
          *roundup = (*score < heurdata->roundingfrac);
       }
-      else if( SCIPisLT(scip, activity, lhs) )
+      else if( SCIPisLT(scip, activity, lhs))
       {
-         *score = 100 * ABS((activity - lhs)/lhs);
+         *score = 100 * (lhs - activity) / MAX(ABS(lhs),1);
+         assert(score>=0);
          *roundup = (*score < heurdata->roundingfrac);
       }
       else
@@ -398,7 +441,7 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetAvailableIndicatordiving) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/roundingfrac",
-         "in fractional case all fractional below this value are rounded down",
+         "in fractional case all fractional below this value are rounded up",
          &heurdata->roundingfrac, FALSE, DEFAULT_ROUNDINGFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/mode",
