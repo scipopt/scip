@@ -298,9 +298,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIPdebugMessage("cons lhs %f\n", lhs);
    SCIPdebugMessage("cons rhs %f\n", rhs);
 
-   SCIP_RETCODE return_code = SCIPgetConsNVars(scip, lincons, &nconsvars, &success);
-   if(return_code!= SCIP_OKAY)
-      return SCIP_OKAY;
+   SCIP_CALL( SCIPgetConsNVars(scip, lincons, &nconsvars, &success) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
    SCIP_CALL( SCIPgetConsVars(scip, lincons, consvars, nconsvars, &success) );
