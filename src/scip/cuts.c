@@ -4053,14 +4053,14 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to the aggrrow; must be positive */
    SCIP_AGGRROW*         aggrrow,            /**< aggrrow to compute MIR cut for */
-   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
-   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
-   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
-   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut if its efficacy improves cutefficacy */
+   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut if its efficacy improves cutefficacy */
+   int*                  cutinds,            /**< array to store the indices of non-zero coefficients in the cut if its efficacy improves cutefficacy */
+   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut if its efficacy improves cutefficacy */
    SCIP_Real*            cutefficacy,        /**< pointer to store efficacy of cut, or NULL */
-   int*                  cutrank,            /**< pointer to return rank of generated cut */
-   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
-   SCIP_Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   int*                  cutrank,            /**< pointer to return rank of generated cut or NULL if it improves cutefficacy */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally if it improves cutefficacy */
+   SCIP_Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut and it improves cutefficacy */
    )
 {
    int i;
