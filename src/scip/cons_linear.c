@@ -17392,7 +17392,9 @@ SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
    expr = SCIPgetExprConsNonlinear(cons);
    assert(expr != NULL);
 
-   /* not a linear constraint if the root expression is not a sum */
+   /* not a linear constraint if the expression is not a sum
+    * (unless the expression is a variable or a constant or a constant*variable, but these are simplified away in cons_nonlinear)
+    */
    if( !SCIPisExprSum(scip, expr) )
       return SCIP_OKAY;
 
