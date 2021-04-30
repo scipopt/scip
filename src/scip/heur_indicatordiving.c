@@ -78,7 +78,7 @@
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_RANDSEED             11  /**< initial seed for random number generation */
-#define DEFAULT_ROUNDINGFRAC         50 /**< default parameter setting for parameter roundingfrac */
+#define DEFAULT_ROUNDINGFRAC       50.0 /**< default parameter setting for parameter roundingfrac */
 #define DEFAULT_MODE                  2 /**< default parameter setting for parameter mode */
 
 /** locally defined heuristic data */
