@@ -588,9 +588,10 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
          break;
       }
-      default:
       case ReductionType::kParallelCol:
          return SCIP_INVALIDRESULT;
+      default:
+         continue;
       }
    }
 
