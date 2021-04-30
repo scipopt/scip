@@ -16,6 +16,7 @@ Features
 - The LPIs for Gurobi and Mosek are thread-safe now.
 - The complete code is now thread-safe by default.
 - New separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint).
+- New parsing routines for cons_orbisack and cons_symresack.
 
 Performance improvements
 ------------------------
@@ -176,6 +177,7 @@ Interface changes
 ### Deleted and changed API methods
 
 ### New API functions
+- added function SCIPwithDebugSol() to determine whether SCIP was compiled with WITH_DEBUG_SOLUTION
 
 - New function SCIPcreateConsBounddisjunctionRedundant() and SCIPcreateConsBasicBounddisjunctionRedundant() that allow
   the input to contain redundant literals.
@@ -231,6 +233,7 @@ Fixed bugs
 - Fixed sign bug during creation of conflict constraints with almost zero left-hand side.
 - Disabled call of conflict handler for conflict sets that contain relaxation-only variables.
 - Fixed bug in cons_symresack by initializing all constraint data in constrans
+- Avoid allowing the upgrade of linear constraints corresponding to indicators in propagation of nodes.
 - Fixed bug in computing lex. min/max faces in dynamic orbitope propagation.
 
 

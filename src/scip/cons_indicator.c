@@ -3763,16 +3763,20 @@ SCIP_RETCODE propIndicator(
       if ( *nGen > 0 )
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
-      /* mark linear constraint to be update-able */
-      if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
+      /* remove constraint if we are not in probing */
+      if ( ! SCIPinProbing(scip) )
       {
-         SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-         assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-      }
+         /* mark linear constraint to be update-able */
+         if ( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(consdata->lincons) )
+         {
+            SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+            assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
+         }
 
-      /* delete constraint locally */
-      assert( ! SCIPconsIsModifiable(cons) );
-      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         /* delete constraint locally */
+         assert( ! SCIPconsIsModifiable(cons) );
+         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+      }
    }
    else
    {
@@ -3923,14 +3927,18 @@ SCIP_RETCODE propIndicator(
          /* delete constraint */
          assert( ! SCIPconsIsModifiable(cons) );
 
-         /* mark linear constraint to be update-able */
-         if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
+         /* remove constraint if we are not in probing */
+         if ( ! SCIPinProbing(scip) )
          {
-            SCIPconsAddUpgradeLocks(consdata->lincons, -1);
-            assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
-         }
+            /* mark linear constraint to be update-able */
+            if ( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && SCIPconsIsActive(consdata->lincons) )
+            {
+               SCIPconsAddUpgradeLocks(consdata->lincons, -1);
+               assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
+            }
 
-         SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+            SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+         }
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          ++(*nGen);
       }

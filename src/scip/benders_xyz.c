@@ -209,6 +209,12 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarXyz)
  *  addition, the settings required for the solving the problem must be set here. However, some settings will be
  *  overridden by the standard solving method included in the Benders' decomposition framework. If a special solving
  *  method is desired, the user can implement the bendersSolvesubXyz callback.
+ *
+ *  If the user defines a subproblem solving method in the bendersSolvesubXyz that doesn't involve a SCIP instance,
+ *  then the user must explicitly specify the subproblem type. This is necessary because the dual solutions from convex
+ *  problems can be used to generate cuts. The classical Benders' optimality and feasibility cuts require that the
+ *  subproblems are convex. The subproblem type is specified by calling SCIPbendersSetSubproblemType. The available
+ *  subproblem types are defined in SCIP_BENDERSSUBTYPE.
  */
 static
 SCIP_DECL_BENDERSCREATESUB(bendersCreatesubXyz)

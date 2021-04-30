@@ -3618,7 +3618,7 @@ SCIP_RETCODE SCIPnlpReset(
    nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
 
-   BMSfreeBlockMemoryArrayNull(blkmem, &nlp->initialguess, nlp->nvars);
+   BMSfreeBlockMemoryArrayNull(blkmem, &nlp->initialguess, nlp->sizevars);
    nlp->haveinitguess = FALSE;
 
    for(i = nlp->nnlrows - 1; i >= 0; --i)
@@ -4097,7 +4097,9 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
    }
    else
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &nlp->initialguess, initguess, nlp->nvars) );
+      assert( nlp->sizevars >= nlp->nvars );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlp->initialguess, nlp->sizevars) );
+      BMScopyMemoryArray(nlp->initialguess, initguess, nlp->nvars);
    }
    nlp->haveinitguess = TRUE;
 

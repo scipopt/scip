@@ -71,6 +71,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include <ctype.h>
 #include <string.h>
 
 /* constraint handler properties */
@@ -2502,6 +2503,159 @@ SCIP_DECL_CONSCOPY(consCopySymresack)
 }
 
 
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseSymresack)
+{  /*lint --e{715}*/
+   const char* s;
+   char* endptr;
+   SCIP_VAR** vars;
+   SCIP_VAR* var;
+   int* perm;
+   int val;
+   int nvars = 0;
+   int cnt = 0;
+   int nfoundpermidx = 0;
+   int maxnvars = 128;
+
+   assert( success != NULL );
+
+   *success = TRUE;
+   s = str;
+
+   /* skip white space */
+   while ( *s != '\0' && isspace((unsigned char)*s) )
+      ++s;
+
+   if ( strncmp(s, "symresack(", 10) != 0 )
+   {
+      SCIPerrorMessage("Syntax error - expected \"symresack(\"", s);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   s += 10;
+
+   /* loop through string */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, maxnvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, maxnvars) );
+
+   do
+   {
+      if ( cnt > 1 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected two arrays, but got more\n");
+         *success = FALSE;
+
+         SCIPfreeBufferArray(scip, &perm);
+         SCIPfreeBufferArray(scip, &vars);
+      }
+
+      /* skip whitespace and ',' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
+         ++s;
+
+      /* if we could not find starting indicator of array */
+      if ( *s != '[' )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '[' to start new array\n");
+         *success = FALSE;
+
+         SCIPfreeBufferArray(scip, &perm);
+         SCIPfreeBufferArray(scip, &vars);
+      }
+      ++s;
+
+      /* read array, cnt = 0: variables; cnt = 1: permutation*/
+      if ( cnt == 0 )
+      {
+         do
+         {
+            /* skip whitespace and ',' */
+            while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
+               ++s;
+
+            /* parse variable name */
+            SCIP_CALL( SCIPparseVarName(scip, s, &var, &endptr) );
+            if ( var == NULL )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
+               *success = FALSE;
+               SCIPfreeBufferArray(scip, &vars);
+               return SCIP_OKAY;
+            }
+            s = endptr;
+            assert( s != NULL );
+
+            vars[nvars++] = var;
+
+            if ( nvars >= maxnvars )
+            {
+               int newsize;
+
+               newsize = SCIPcalcMemGrowSize(scip, nvars + 1);
+               SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &perm, newsize) );
+               maxnvars = newsize;
+            }
+         }
+         while ( *s != ']' );
+      }
+      else
+      {
+         do
+         {
+            /* skip whitespace and ',' */
+            while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
+               ++s;
+
+            /* parse integer value */
+            if ( ! SCIPstrToIntValue(s, &val, &endptr) )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not extract int from string '%s'\n", str);
+               *success = FALSE;
+               SCIPfreeBufferArray(scip, &perm);
+               SCIPfreeBufferArray(scip, &vars);
+               return SCIP_OKAY;
+            }
+            s = endptr;
+            assert( s != NULL );
+
+            perm[nfoundpermidx++] = val;
+
+            if ( nfoundpermidx > nvars )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "permutation is longer than vars array\n");
+               *success = FALSE;
+               SCIPfreeBufferArray(scip, &perm);
+               SCIPfreeBufferArray(scip, &vars);
+               return SCIP_OKAY;
+            }
+         }
+         while ( *s != ']' );
+      }
+      ++s;
+      ++cnt;
+   }
+   while ( *s != ')' );
+
+   if ( nfoundpermidx == nvars )
+   {
+      SCIP_CALL( SCIPcreateConsBasicSymresack(scip, cons, name, perm, vars, nvars, TRUE) );
+   }
+   else
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "Length of permutation is not equal to number of given variables.\n");
+      *success = FALSE;
+   }
+
+   SCIPfreeBufferArray(scip, &perm);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint display method of constraint handler
  *
  *  The constraint handler should output a representation of the constraint into the given text file.
@@ -2511,11 +2665,9 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
-   SCIP_Bool* covered;
    int* perm;
    int nvars;
    int i;
-   int j;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2529,10 +2681,7 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
 
    /* we do not have to take care of trivial constraints */
    if ( consdata->nvars < 2 )
-   {
-      SCIPinfoMessage(scip, file, "symresack()");
       return SCIP_OKAY;
-   }
 
    assert( consdata->vars != NULL );
    assert( consdata->perm != NULL );
@@ -2541,35 +2690,18 @@ SCIP_DECL_CONSPRINT(consPrintSymresack)
    nvars = consdata->nvars;
    perm = consdata->perm;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &covered, nvars) );
-   for (i = 0; i < nvars; ++i)
-      covered[i] = FALSE;
+   SCIPinfoMessage(scip, file, "symresack([");
+   SCIP_CALL( SCIPwriteVarName(scip, file, vars[0], TRUE) );
 
-   if ( consdata->ppupgrade )
-      SCIPinfoMessage(scip, file, "ppSymresack(");
-   else
-      SCIPinfoMessage(scip, file, "symresack(");
-
-   for (i = 0; i < nvars; ++i)
+   for (i = 1; i < nvars; ++i)
    {
-      if ( covered[i] )
-         continue;
-
-      /* print cycle of perm containing i */
-      SCIPinfoMessage(scip, file, "[%s", SCIPvarGetName(vars[i]));
-      covered[i] = TRUE;
-      j = perm[i];
-      while ( j != i )
-      {
-         SCIPinfoMessage(scip, file, ",%s", SCIPvarGetName(vars[j]));
-         covered[j] = TRUE;
-         j = perm[j];
-      }
-      SCIPinfoMessage(scip, file, "]");
+      SCIPinfoMessage(scip, file, ",");
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars[i], TRUE) );
    }
-   SCIPinfoMessage(scip, file, ")");
-
-   SCIPfreeBufferArray(scip, &covered);
+   SCIPinfoMessage(scip, file, "],[%d", perm[0]);
+   for (i = 1; i < nvars; ++i)
+      SCIPinfoMessage(scip, file, ",%d", perm[i]);
+   SCIPinfoMessage(scip, file, "])");
 
    return SCIP_OKAY;
 }
@@ -2648,6 +2780,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSymresack) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSymresack) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSymresack) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSymresack) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSymresack, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSymresack) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSymresack, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
