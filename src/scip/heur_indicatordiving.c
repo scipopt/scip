@@ -282,7 +282,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIP_CALL( checkAndGetIndicator(scip, cand, &indicatorcons, &isindicatorvar) );
 
    if( !isindicatorvar )
+   {
+      /* todo: set useful score for non-indicator variables */
+      *score = -1;
+      *roundup = (candsfrac > 0.5);
       return SCIP_OKAY;
+   }
 
    SCIPdebugMessage("cand: %s, candsol: %.2f, candobjcoeff: %f\n", SCIPvarGetName(cand), candsol, SCIPvarGetObj(cand));
 
