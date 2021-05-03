@@ -266,6 +266,7 @@ struct SCIP_Var
    unsigned int          removable:1;        /**< TRUE iff var's column is removable from the LP (due to aging or cleanup) */
    unsigned int          deletable:1;        /**< TRUE iff the variable is removable from the problem */
    unsigned int          deleted:1;          /**< TRUE iff variable was marked for deletion from the problem */
+   unsigned int          donotaggr:1;        /**< TRUE iff variable is not allowed to be aggregated */
    unsigned int          donotmultaggr:1;    /**< TRUE iff variable is not allowed to be multi-aggregated */
    unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int          varstatus:3;        /**< status of variable: original, loose, column, fixed, aggregated, multiaggregated, negated */

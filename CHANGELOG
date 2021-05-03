@@ -17,6 +17,7 @@ Features
 - The complete code is now thread-safe by default.
 - New separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint).
 - New parsing routines for cons_orbisack and cons_symresack.
+- Variables can now be marked to forbid aggregation
 
 Performance improvements
 ------------------------
@@ -72,6 +73,8 @@ Interface changes
 - new internal function SCIPcomputeOrbitVar() to compute the symmetry orbit of a variable
 - added SCIPcalcFibHash(SCIP_Real) to hash a floating-point value to an unsigned integer
 - added SCIPcomputeArraysIntersectionPtr() to compute intersection of two sorted arrays of pointers
+- added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
+- added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
 
 ### Command line interface
 ### Interfaces to external software
