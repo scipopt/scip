@@ -272,7 +272,7 @@ do
 
                 if test "${WRITESETTINGS}" = "true"
                 then
-                    qsub -l walltime="${HARDTIMELIMIT }" -l nodes=1:ppn=$PPN -N write-settings \
+                    qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn=$PPN -N write-settings \
                         -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null write-settings.sh
                     rm write-settings.sh
                 fi
