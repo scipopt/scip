@@ -2065,6 +2065,7 @@ SCIP_RETCODE printRow(
    return SCIP_OKAY;
 }
 
+/* TODO reenable this when we can recognize (simplified) polynomial constraints, #3237 */
 #ifdef SCIP_DISABLED_CODE
 /* print row in PIP format to file stream */
 static

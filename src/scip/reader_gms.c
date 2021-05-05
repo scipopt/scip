@@ -25,7 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
+#ifdef CLASSIC_NONLINEAR_CONSHDLR  /* TODO code disabled with this define needs to be update to work with new cons_nonlinear, see #3014 */
 #include "scip/pub_expr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_bivariate.h"
