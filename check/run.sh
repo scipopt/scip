@@ -91,7 +91,7 @@ then
             MOUNTED=1
         else
             ((FAILED++))
-            echo "/optimi is not mounted yet, waiting 1 second"
+            echo "/optimi is not mounted yet, waiting 1 second" >> "${ERRFILE}"
             sleep 1
         fi
     done
