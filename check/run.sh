@@ -14,8 +14,6 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-set -x
-
 # The script executing EXECNAME on one instance and producing the logfiles.
 # Can be executed either locally or on a cluster node.
 # Is to be invoked inside a 'check(_cluster)*.sh' script.
