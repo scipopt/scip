@@ -2034,6 +2034,7 @@ SCIP_RETCODE varCreate(
    (*var)->initial = initial;
    (*var)->removable = removable;
    (*var)->deleted = FALSE;
+   (*var)->donotaggr = FALSE;
    (*var)->donotmultaggr = FALSE;
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
@@ -2202,7 +2203,8 @@ SCIP_RETCODE SCIPvarCopy(
          NULL, NULL, NULL, NULL, NULL) );
    assert(*var != NULL);
 
-   /* directly copy donotmultaggr flag */
+   /* directly copy donot(mult)aggr flag */
+   (*var)->donotaggr = sourcevar->donotaggr;
    (*var)->donotmultaggr = sourcevar->donotmultaggr;
 
    /* insert variable into mapping between source SCIP and the target SCIP */
@@ -3221,6 +3223,8 @@ SCIP_RETCODE SCIPvarAddLocks(
 
          return SCIP_OKAY;
       case SCIP_VARSTATUS_AGGREGATED:
+         assert(!lockvar->donotaggr);
+
          if( lockvar->data.aggregate.scalar < 0.0 )
          {
             int tmp = addnlocksup;
@@ -3306,6 +3310,7 @@ int SCIPvarGetNLocksDownType(
       return var->nlocksdown[locktype];
 
    case SCIP_VARSTATUS_AGGREGATED:
+      assert(!var->donotaggr);
       if( var->data.aggregate.scalar > 0.0 )
          return SCIPvarGetNLocksDownType(var->data.aggregate.var, locktype);
       else
@@ -3363,6 +3368,7 @@ int SCIPvarGetNLocksUpType(
       return var->nlocksup[locktype];
 
    case SCIP_VARSTATUS_AGGREGATED:
+      assert(!var->donotaggr);
       if( var->data.aggregate.scalar > 0.0 )
          return SCIPvarGetNLocksUpType(var->data.aggregate.var, locktype);
       else
@@ -3503,7 +3509,8 @@ SCIP_RETCODE SCIPvarTransform(
          assert((*transvar)->nlocksup[i] >= 0);
       }
 
-      /* copy doNotMultiaggr status */
+      /* copy donot(mult)aggr status */
+      (*transvar)->donotaggr = origvar->donotaggr;
       (*transvar)->donotmultaggr = origvar->donotmultaggr;
 
       /* copy lazy bounds */
@@ -4785,6 +4792,13 @@ SCIP_RETCODE SCIPvarAggregate(
    if( SCIPvarGetHolelistGlobal(var) != NULL )
       return SCIP_OKAY;
 
+   /* if the variable is not allowed to be aggregated */
+   if( SCIPvarDoNotAggr(var) )
+   {
+      SCIPsetDebugMsg(set, "variable is not allowed to be aggregated.\n");
+      return SCIP_OKAY;
+   }
+
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
    assert(aggvar->glbdom.ub == aggvar->locdom.ub); /*lint !e777*/
    assert(SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_LOOSE);
@@ -4845,7 +4859,8 @@ SCIP_RETCODE SCIPvarAggregate(
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
 
-      /* copy doNotMultiaggr status */
+      /* copy donot(mult)aggr status */
+      aggvar->donotaggr |= var->donotaggr;
       aggvar->donotmultaggr |= var->donotmultaggr;
 
       /* mark both variables to be non-deletable */
@@ -4860,7 +4875,8 @@ SCIP_RETCODE SCIPvarAggregate(
       var->data.aggregate.scalar = scalar;
       var->data.aggregate.constant = constant;
 
-      /* copy doNotMultiaggr status */
+      /* copy donot(mult)aggr status */
+      aggvar->donotaggr |= var->donotaggr;
       aggvar->donotmultaggr |= var->donotmultaggr;
 
       /* mark both variables to be non-deletable */
@@ -5084,6 +5100,13 @@ SCIP_RETCODE tryAggregateIntVars(
 
    *infeasible = FALSE;
    *aggregated = FALSE;
+
+   /* if the variable is not allowed to be aggregated */
+   if( SCIPvarDoNotAggr(varx) )
+   {
+      SCIPsetDebugMsg(set, "variable is not allowed to be aggregated.\n");
+      return SCIP_OKAY;
+   }
 
    /* get rational representation of coefficients */
    success = SCIPrealToRational(scalarx, -SCIPsetEpsilon(set), SCIPsetEpsilon(set), MAXDNOM, &scalarxn, &scalarxd);
@@ -5550,8 +5573,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          }
          else if( ntmpvars == 2 ) /* 0 = a_1*y_1 + a_2*y_2 + c => y_1 = -a_2/a_1 * y_2 - c/a_1 */
          {
-	    /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
-
+            /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
             SCIPsetDebugMsg(set, "Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %g and %g and constant %g.\n",
                   SCIPvarGetName(tmpvars[0]), SCIPvarGetName(tmpvars[1]), tmpscalars[0], tmpscalars[1], -tmpconstant);
 
@@ -5815,6 +5837,39 @@ SCIP_VAR* varGetActiveVar(
    }
 }
 
+/** returns whether variable is not allowed to be aggregated */
+SCIP_Bool SCIPvarDoNotAggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_VAR* retvar;
+
+   assert(var != NULL);
+
+   retvar = varGetActiveVar(var);
+   assert(retvar != NULL);
+
+   switch( SCIPvarGetStatus(retvar) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      return retvar->donotaggr;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      return FALSE;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_NEGATED:
+   default:
+      /* aggregated and negated variables should be resolved by varGetActiveVar() */
+      SCIPerrorMessage("wrong variable status\n");
+      SCIPABORT();
+      return FALSE; /*lint !e527 */
+   }
+}
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
@@ -5841,6 +5896,7 @@ SCIP_Bool SCIPvarDoNotMultaggr(
    case SCIP_VARSTATUS_AGGREGATED:
    case SCIP_VARSTATUS_NEGATED:
    default:
+      /* aggregated and negated variables should be resolved by varGetActiveVar() */
       SCIPerrorMessage("wrong variable status\n");
       SCIPABORT();
       return FALSE; /*lint !e527 */
@@ -5916,7 +5972,8 @@ SCIP_RETCODE SCIPvarNegate(
       (*negvar)->branchpriority = var->branchpriority;
       (*negvar)->branchdirection = SCIPbranchdirOpposite((SCIP_BRANCHDIR)var->branchdirection); /*lint !e641*/
 
-      /* copy doNotMultiaggr status */
+      /* copy donot(mult)aggr status */
+      (*negvar)->donotaggr = var->donotaggr;
       (*negvar)->donotmultaggr = var->donotmultaggr;
 
       /* copy lazy bounds (they have to be flipped) */
@@ -6038,6 +6095,42 @@ void SCIPvarMarkDeleted(
    var->deleted = TRUE;
 }
 
+/** marks the variable to not to be aggregated */
+SCIP_RETCODE SCIPvarMarkDoNotAggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_VAR* retvar;
+
+   assert(var != NULL);
+
+   retvar = varGetActiveVar(var);
+   assert(retvar != NULL);
+
+   switch( SCIPvarGetStatus(retvar) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      retvar->donotaggr = TRUE;
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot mark a multi-aggregated variable to not be aggregated.\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_NEGATED:
+   default:
+      /* aggregated and negated variables should be resolved by varGetActiveVar() */
+      SCIPerrorMessage("wrong variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** marks the variable to not to be multi-aggregated */
 SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
@@ -6066,6 +6159,7 @@ SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
    case SCIP_VARSTATUS_AGGREGATED:
    case SCIP_VARSTATUS_NEGATED:
    default:
+      /* aggregated and negated variables should be resolved by varGetActiveVar() */
       SCIPerrorMessage("wrong variable status\n");
       return SCIP_INVALIDDATA;
    }
@@ -6310,6 +6404,7 @@ SCIP_RETCODE SCIPvarAddObj(
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
+         assert(!var->donotaggr);
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPprobAddObjoffset(transprob, var->data.aggregate.constant * addobj);
          SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
@@ -11497,6 +11592,7 @@ SCIP_RETCODE SCIPvarChgBranchFactor(
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
+      assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
       SCIP_CALL( SCIPvarChgBranchFactor(var->data.aggregate.var, set, branchfactor) );
       break;
@@ -11616,12 +11712,13 @@ SCIP_RETCODE SCIPvarChgBranchPriority(
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
+      assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
       SCIP_CALL( SCIPvarChgBranchPriority(var->data.aggregate.var, branchpriority) );
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      assert(!var->donotmultaggr);      
+      assert(!var->donotmultaggr);
       for( v = 0; v < var->data.multaggr.nvars; ++v )
       {
          SCIP_CALL( SCIPvarChgBranchPriority(var->data.multaggr.vars[v], branchpriority) );
@@ -11746,6 +11843,7 @@ SCIP_RETCODE SCIPvarChgBranchDirection(
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
+      assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -12991,6 +13089,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
    {
       SCIP_Real lpsolval;
 
+      assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
       lpsolval = SCIPvarGetLPSol(var->data.aggregate.var);
 
@@ -13110,6 +13209,7 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
    case SCIP_VARSTATUS_AGGREGATED:
    {
       SCIP_Real pseudosolval;
+      assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
        * corresponding infinity value instead of performing an arithmetical transformation (compare method
@@ -13267,6 +13367,7 @@ SCIP_Real SCIPvarGetRootSol(
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
+      assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
        * corresponding infinity value instead of performing an arithmetical transformation (compare method
@@ -13631,6 +13732,7 @@ SCIP_Real SCIPvarGetBestRootSol(
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
+      assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
       /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
        * corresponding infinity value instead of performing an arithmetical transformation (compare method
@@ -13980,6 +14082,7 @@ SCIP_Real SCIPvarGetAvgSol(
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
+      assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
       return var->data.aggregate.scalar * SCIPvarGetAvgSol(var->data.aggregate.var)
          + var->data.aggregate.constant;
@@ -14222,6 +14325,7 @@ SCIP_RETCODE SCIPvarAddToRow(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_AGGREGATED:
+      assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
       SCIP_CALL( SCIPvarAddToRow(var->data.aggregate.var, blkmem, set, stat, eventqueue, prob, lp,
             row, var->data.aggregate.scalar * val) );
@@ -17537,6 +17641,7 @@ SCIP_VAR* SCIPvarGetAggrVar(
 {
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
+   assert(!var->donotaggr);
 
    return var->data.aggregate.var;
 }
@@ -17548,6 +17653,7 @@ SCIP_Real SCIPvarGetAggrScalar(
 {
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
+   assert(!var->donotaggr);
 
    return var->data.aggregate.scalar;
 }
@@ -17559,6 +17665,7 @@ SCIP_Real SCIPvarGetAggrConstant(
 {
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
+   assert(!var->donotaggr);
 
    return var->data.aggregate.constant;
 }

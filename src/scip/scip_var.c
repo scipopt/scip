@@ -8562,6 +8562,19 @@ SCIP_Bool SCIPdoNotMultaggr(
    return scip->set->presol_donotmultaggr;
 }
 
+/** returns whether variable is not allowed to be aggregated */
+SCIP_Bool SCIPdoNotAggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable x to aggregate */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(var->scip == scip);
+
+   return scip->set->presol_donotaggr || SCIPvarDoNotAggr(var);
+}
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8628,6 +8641,39 @@ SCIP_Bool SCIPallowWeakDualReds(
    assert(scip != NULL);
 
    return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
+}
+
+/** marks the variable that it must not be aggregated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *
+ *  @note There exists no "unmark" method since it has to be ensured that if a plugin requires that a variable is not
+ *        aggregated that this is will be the case.
+ */
+SCIP_RETCODE SCIPmarkDoNotAggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to delete */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(var->scip == scip);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPmarkDoNotAggrVar", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+
+   SCIP_CALL( SCIPvarMarkDoNotAggr(var) );
+
+   return SCIP_OKAY;
 }
 
 /** marks the variable that it must not be multi-aggregated
