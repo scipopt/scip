@@ -805,7 +805,7 @@ SCIP_RETCODE readPolynomial(
    char*                 name,               /**< pointer to store the name of the line; must be at least of size
                                               *   PIP_MAX_LINELEN */
    SCIP_EXPR**           expr,               /**< pointer to store the constraint function as expression */
-   int*                  degree,             /**< pointer to store degree of polynomial */
+   SCIP_Bool*            islinear,           /**< pointer to store polynomial is linear */
    SCIP_Bool*            newsection          /**< pointer to store whether a new section was encountered */
    )
 {
@@ -833,12 +833,12 @@ SCIP_RETCODE readPolynomial(
    assert(pipinput != NULL);
    assert(name != NULL);
    assert(expr != NULL);
-   assert(degree != NULL);
+   assert(islinear != NULL);
    assert(newsection != NULL);
 
    *name = '\0';
    *expr = NULL;
-   *degree = 0;
+   *islinear = TRUE;
    *newsection = FALSE;
 
    /* read the first token, which may be the name of the line */
@@ -927,8 +927,8 @@ SCIP_RETCODE readPolynomial(
             constant += coefsign * coef;
          }
 
-         if( monomialdegree > *degree )
-            *degree = monomialdegree;
+         if( monomialdegree > 1 )
+            *islinear = FALSE;
 
          /* reset variables */
          nfactors = 0;
@@ -1012,7 +1012,7 @@ SCIP_RETCODE readPolynomial(
          if( SCIPisIntegral(scip, exponent) && exponent > 0.0 ) /*lint !e530*/
             monomialdegree += (int)exponent - 1; /*lint !e530*//* -1, because we added +1 when we put the variable into varidxs */
          else
-            monomialdegree = 65535;
+            *islinear = FALSE;
 
          SCIPdebugMsg(scip, "(line %d) read exponent value %g for variable %s\n", pipinput->linenumber, exponent,
             SCIPvarGetName(vars[nfactors-1]));
@@ -1070,7 +1070,7 @@ SCIP_RETCODE readPolynomial(
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "read polynomial of degree %d: ", *degree);
+   SCIPdebugMsg(scip, "read polynomial: ");
    SCIP_CALL( SCIPprintExpr(scip, *expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 #endif
@@ -1093,7 +1093,7 @@ SCIP_RETCODE readObjective(
 {
    char name[PIP_MAX_LINELEN];
    SCIP_EXPR* expr;
-   int degree;
+   SCIP_Bool linear;
    SCIP_Bool newsection;
    SCIP_Bool initial;
    SCIP_Bool separate;
@@ -1123,7 +1123,7 @@ SCIP_RETCODE readObjective(
    removable = FALSE;
 
    /* read the objective coefficients */
-   SCIP_CALL( readPolynomial(scip, pipinput, name, &expr, &degree, &newsection) );
+   SCIP_CALL( readPolynomial(scip, pipinput, name, &expr, &linear, &newsection) );
    if( !hasError(pipinput) && expr != NULL )
    {
       SCIP_Real constant = SCIPgetConstantExprSum(expr);
@@ -1142,8 +1142,7 @@ SCIP_RETCODE readObjective(
          SCIPsetConstantExprSum(expr, 0.0);
       }
 
-      assert(degree >= 0);
-      if( degree == 1 )
+      if( linear )
       {
          int i;
 
@@ -1226,7 +1225,7 @@ SCIP_RETCODE readConstraints(
    char name[PIP_MAX_LINELEN];
    SCIP_EXPR* expr;
    SCIP_CONS* cons = NULL;
-   int degree;
+   SCIP_Bool linear;
 
    PIPSENSE sense;
    SCIP_Real sidevalue;
@@ -1247,7 +1246,7 @@ SCIP_RETCODE readConstraints(
    assert(pipinput != NULL);
 
    /* read polynomial */
-   SCIP_CALL( readPolynomial(scip, pipinput, name, &expr, &degree, &newsection) );
+   SCIP_CALL( readPolynomial(scip, pipinput, name, &expr, &linear, &newsection) );
    if ( hasError(pipinput) )
       return SCIP_READERROR;
    if ( newsection )
@@ -1319,7 +1318,7 @@ SCIP_RETCODE readConstraints(
    }
 
    /* linear constraint function */
-   if( degree == 1 )
+   if( linear )
    {
       SCIP_VAR** vars;
       SCIP_Real* coefs;
