@@ -61,6 +61,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/symmetry.h"
+#include <ctype.h>
 #include <string.h>
 
 /* constraint handler properties */
@@ -1720,6 +1721,114 @@ SCIP_DECL_CONSCOPY(consCopyOrbisack)
 }
 
 
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseOrbisack)
+{  /*lint --e{715}*/
+   const char* s;
+   char* endptr;
+   SCIP_VAR** vars1;
+   SCIP_VAR** vars2;
+   SCIP_VAR* var;
+   int nrows = 0;
+   int maxnrows = 128;
+   SCIP_Bool firstcolumn = TRUE;
+   SCIP_Bool ispporbisack = FALSE;
+   SCIP_Bool isparttype = FALSE;
+
+   assert( success != NULL );
+
+   *success = TRUE;
+   s = str;
+
+   /* skip white space */
+   while ( *s != '\0' && isspace((unsigned char)*s) )
+      ++s;
+
+   if ( strncmp(s, "partOrbisack(", 13) == 0 )
+   {
+      ispporbisack = TRUE;
+      isparttype = TRUE;
+   }
+   else if ( strncmp(s, "packOrbisack(", 13) == 0 )
+      ispporbisack = TRUE;
+   else
+   {
+      if ( strncmp(s, "fullOrbisack(", 13) != 0 )
+      {
+         SCIPerrorMessage("Syntax error - expected \"fullOrbisack(\", \"partOrbisack\" or \"packOrbisacj\": %s\n", s);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+   }
+   s += 13;
+
+   /* loop through string */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars1, maxnrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars2, maxnrows) );
+
+   do
+   {
+      /* skip whitespace */
+      while ( *s != '\0' && isspace((unsigned char)*s) )
+         ++s;
+
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, s, &var, &endptr) );
+      if ( var == NULL )
+      {
+         SCIPerrorMessage("unknown variable name at '%s'\n", str);
+         *success = FALSE;
+
+         SCIPfreeBufferArray(scip, &vars2);
+         SCIPfreeBufferArray(scip, &vars1);
+
+         return SCIP_OKAY;
+      }
+
+      if ( firstcolumn )
+         vars1[nrows] = var;
+      else
+         vars2[nrows] = var;
+      s = endptr;
+      assert( s != NULL );
+
+      firstcolumn = !firstcolumn;
+
+      /* skip white space and ',' */
+      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
+         ++s;
+
+      /* begin new row if required */
+      if ( *s == '.' )
+      {
+         ++nrows;
+         ++s;
+
+         if ( nrows >= maxnrows )
+         {
+            int newsize;
+
+            newsize = SCIPcalcMemGrowSize(scip, nrows + 1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars1, newsize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars2, newsize) );
+            maxnrows = newsize;
+         }
+         assert( nrows < maxnrows );
+      }
+   }
+   while ( *s != ')' );
+   ++nrows;
+
+   SCIP_CALL( SCIPcreateConsBasicOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack, isparttype, TRUE) );
+
+   SCIPfreeBufferArray(scip, &vars2);
+   SCIPfreeBufferArray(scip, &vars1);
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint display method of constraint handler
  *
  *  The constraint handler should output a representation of the constraint into the given text file.
@@ -1750,14 +1859,18 @@ SCIP_DECL_CONSPRINT(consPrintOrbisack)
 
    SCIPdebugMsg(scip, "Printing method for orbisack constraint handler\n");
 
-   SCIPinfoMessage(scip, file, "orbisack(");
+   SCIPinfoMessage(scip, file, "fullOrbisack(");
 
    for (i = 0; i < nrows; ++i)
    {
-      SCIPinfoMessage(scip, file, "%s,%s", SCIPvarGetName(vars1[i]), SCIPvarGetName(vars2[i]));
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars1[i], TRUE) );
+      SCIPinfoMessage(scip, file, ",");
+      SCIP_CALL( SCIPwriteVarName(scip, file, vars2[i], TRUE) );
       if ( i < nrows-1 )
          SCIPinfoMessage(scip, file, ".");
    }
+
+   SCIPinfoMessage(scip, file, ")");
 
    return SCIP_OKAY;
 }
@@ -1893,6 +2006,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbisack) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbisack) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOrbisack) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOrbisack) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbisack, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbisack) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbisack, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );

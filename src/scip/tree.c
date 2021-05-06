@@ -1064,6 +1064,9 @@ SCIP_RETCODE SCIPnodeFree(
 
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
+   /* check lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
+
    if( SCIPnodeGetType(*node) != SCIP_NODETYPE_PROBINGNODE )
    {
       SCIP_EVENT event;
@@ -4337,6 +4340,12 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(lp != NULL);
    assert(conflictstore != NULL);
    assert(cutoff != NULL);
+
+   /* check global lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
+
+   /* check local lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckLocalLowerbound(blkmem, set, *node) );
 
    SCIPsetDebugMsg(set, "focusing node #%" SCIP_LONGINT_FORMAT " of type %d in depth %d\n",
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,

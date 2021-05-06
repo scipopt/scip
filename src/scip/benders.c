@@ -1909,6 +1909,9 @@ SCIP_RETCODE createSubproblems(
             }
          }
 
+         /* changing all of the master problem variable to continuous. */
+         SCIP_CALL( SCIPbendersChgMastervarsToCont(benders, set, i) );
+
          /* checking the convexity of the subproblem. The convexity of the subproblem indicates whether the convex
           * relaxation is a valid relaxation for the problem
           */
