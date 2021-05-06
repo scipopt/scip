@@ -761,6 +761,10 @@ void extTreeFindExtensions(
       if( !extLeafIsExtendable(graph, isterm, leaf) )
          continue;
 
+      // todo extra method...skipping all edges except for the reverted one
+      if( extIsAtInitialStar(extdata) && extdata->extcomp->nextleaves == 1 && extdata->extcomp->extleaves[0] != leaf )
+         continue;
+
       /* assemble feasible single edge extensions from leaf */
       for( int e = graph->outbeg[leaf]; e != EAT_LAST; e = graph->oeat[e] )
       {
@@ -1907,7 +1911,7 @@ SCIP_RETCODE extreduce_checkComponent(
          .tree_maxnleaves = extpermanent->tree_maxnleaves,
          .tree_maxnedges = extpermanent->tree_maxnedges, .node_isterm = isterm, .reddata = &reddata,
          .distdata = extpermanent->distdata_default, .distdata_biased = extpermanent->distdata_biased,
-         .mode = extpermanent->mode};
+         .mode = extpermanent->mode, .extcomp = extcomp };
 
 #ifdef STP_DEBUG_EXT
       extreduce_extdataCleanArraysDbg(graph, &extdata);

@@ -165,6 +165,21 @@ typedef struct pcmw_specific_data
 } PCDATA;
 
 
+/** initial extension component
+ *  NOTE: it is vital the the first edge of the star component comes from the root!
+ *  (will thus be constantly asserted) */
+typedef struct initial_extension_component
+{
+   int*                  compedges;          /**< edges of the component */
+   int*                  extleaves;          /**< leaves to extend from */
+   int                   nextleaves;         /**< number of extension nodes */
+   int                   ncompedges;         /**< number of edges of the component */
+   int                   comproot;           /**< component root */
+   int                   genstar_centeredge; /**< center-edge or -1 */
+   SCIP_Bool             allowReversion;     /**< allow change of comproot? (with extleaves = \{comproot\}) */
+} EXTCOMP;
+
+
 /** extension data; just used internally */
 typedef struct extension_data
 {
@@ -205,22 +220,9 @@ typedef struct extension_data
    const int tree_maxdepth;
    const int tree_maxnedges;
    enum EXTRED_MODE      mode;               /**< mode */
+   const EXTCOMP* const extcomp;
 } EXTDATA;
 
-
-/** initial extension component
- *  NOTE: it is vital the the first edge of the star component comes from the root!
- *  (will thus be constantly asserted) */
-typedef struct initial_extension_component
-{
-   int*                  compedges;          /**< edges of the component */
-   int*                  extleaves;          /**< leaves to extend from */
-   int                   nextleaves;         /**< number of extension nodes */
-   int                   ncompedges;         /**< number of edges of the component */
-   int                   comproot;           /**< component root */
-   int                   genstar_centeredge; /**< center-edge or -1 */
-   SCIP_Bool             allowReversion;     /**< allow change of comproot? (with extleaves = \{comproot\}) */
-} EXTCOMP;
 
 
 /* inline methods
