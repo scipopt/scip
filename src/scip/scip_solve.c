@@ -1465,8 +1465,8 @@ SCIP_RETCODE presolve(
 
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
-      /* resort variables if we are not already done */
-      if( !(*infeasible) && !(*unbounded) && !(*vanished) )
+      /* resort variables if we are not already done (unless variable permutation was explicitly activated) */
+      if( !scip->set->random_permutevars && !(*infeasible) && !(*unbounded) && !(*vanished) )
       {
          /* (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after
           * presolve with respect to their original index (within their categories). Adjust the problem index afterwards
