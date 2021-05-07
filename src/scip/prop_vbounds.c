@@ -2080,7 +2080,7 @@ SCIP_RETCODE propagateVbounds(
    {
       assert( 0 <= queuelist[v] && queuelist[v] < nbounds );
       propdata->inqueue[queuelist[v]] = FALSE;
-      assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (queuelist[v] + 1)) == -1 );
+      assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (queuelist[v] + 1)) == -1 ); /*lint !e571*//*lint !e776*/
    }
    SCIPfreeBufferArray(scip, &queuelist);
 
