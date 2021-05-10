@@ -73,6 +73,9 @@ Interface changes
 - new internal function SCIPcomputeOrbitVar() to compute the symmetry orbit of a variable
 - added SCIPcalcFibHash(SCIP_Real) to hash a floating-point value to an unsigned integer
 - added SCIPcomputeArraysIntersectionPtr() to compute intersection of two sorted arrays of pointers
+- added SCIPcreateConsIndicatorGeneric() and SCIPcreateConsIndicatorGenericLinCons()
+  which copy the interface of SCIPcreateConsIndicator() and SCIPcreateConsIndicatorLinCons() and
+  add an activeone argument to specify whether the indicator constraint should be activated on 0 or 1.
 - added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
 - added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
 
