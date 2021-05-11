@@ -60,7 +60,6 @@ Test(indicatorzero, feasiblezero, .init = setup, .fini = teardown,
    SCIP_CONS* lc2;
    SCIP_CONS* ic1;
    SCIP_CONS* ic2;
-   SCIP_SOL* sol;
    /*
       Unit test based on MathOptInterface.jl
       minimize
@@ -128,8 +127,7 @@ Test(indicatorzero, feasiblezero, .init = setup, .fini = teardown,
        1.0 / 5.0) );
 
    SCIP_CALL( SCIPsolve(scip) );
-   sol = SCIPgetBestSol(scip);
-   assert( sol != NULL );
+   cr_assert_not_null(SCIPgetBestSol(scip));
 
    SCIP_CALL( SCIPreleaseVar(scip, &x1) );
    SCIP_CALL( SCIPreleaseVar(scip, &x2) );
