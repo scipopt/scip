@@ -97,10 +97,10 @@
 #define DEFAULT_FORCECONSCOPY     FALSE /**< whether symresack constraints should be forced to be copied to sub SCIPs */
 
 /* Constants to store fixings */
-#define FIXED0    0
-#define FIXED1    1
-#define UNFIXED   2
-#define NOINIT    -1
+#define FIXED0    1                     /* When a variable is fixed to 0. */
+#define FIXED1    2                     /* When a variable is fixed to 1. */
+#define UNFIXED   3                     /* When a variable is neither fixed to 0 or to 1. */
+#define NOINIT    0                     /* A dummy entry for non-initialized variables. Must have value 0 because of SCIPallocCleanBufferArray. */
 
 
 /*
@@ -135,8 +135,6 @@ struct SCIP_ConsData
    int**                 cycledecomposition; /**< cycle decomposition */
    int                   ndescentpoints;     /**< number of descent points in perm (only used if perm is not monotone) */
    int*                  descentpoints;      /**< descent points in perm (only used if perm is not monotone) */
-   int*                  tempfixings;        /**< temporary fixings */
-   int*                  tempfixentries;     /**< entries affected by temporary fixings */
 };
 
 
@@ -187,9 +185,6 @@ SCIP_RETCODE consdataFree(
       }
       SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cycledecomposition), (*consdata)->ncycles);
    }
-
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->tempfixentries), nvars);
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->tempfixings), nvars);
 
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->invperm), nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->perm), nvars);
@@ -529,9 +524,6 @@ SCIP_RETCODE consdataCreate(
       (*consdata)->ppupgrade = FALSE;
       (*consdata)->ncycles = 0;
       (*consdata)->cycledecomposition = NULL;
-      (*consdata)->tempfixentries = NULL;
-      (*consdata)->tempfixings = NULL;
-
       return SCIP_OKAY;
    }
 
@@ -569,10 +561,6 @@ SCIP_RETCODE consdataCreate(
       invperm[perm[i]] = i;
    }
    (*consdata)->invperm = invperm;
-
-   /* Create helper arrays for storing virtual fixings */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->tempfixings, naffectedvariables) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->tempfixentries, naffectedvariables) );
 
    /* check for upgrade to packing/partitioning symresacks*/
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -807,39 +795,50 @@ SCIP_RETCODE initLP(
 }
 
 
-/** Vector can be lexicographically maximal over its images whilst hypothetical (virtual) fixings are applied */
+/** Determines if a vector with additional fixings could exist that is lexicographically larger than its image.
+ *
+ * Given a vector of variables, a permutation, and a set of additional (virtual) fixings.
+ * If a vector adhering to the local variable bounds (local fixings) and to the virtual fixings exists,
+ * then infeasible is FALSE, otherwise TRUE.
+ */
 static
 SCIP_RETCODE checkFeasible(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected in these fixings */
-   SCIP_VAR**            vars,               /**< variable array of support of permutation */
+   SCIP_VAR**            vars,               /**< array of variables affected by permutation */
    int*                  invperm,            /**< inverse of permutation */
    int                   nvars,              /**< number of variables */
-   int                   start,              /**< at which row we should start (assuming above rows are constants) */
-   int*                  tempfixings,        /**< array with at entry [i] the virtual fixing of variable vars[i] */
+   int                   start,              /**< at which position to start (assuming previous positions are equal) */
+   int*                  tempfixings,        /**< array with at entry i the virtual fixing of variable vars[i] */
    int*                  tempfixentries,     /**< the entries i that are virtually fixed until numfixentriesinit */
-   int                   numfixentriesinit   /**< the number of virtually fixed entries */
+   int                   numfixentriesinit,  /**< the number of virtually fixed entries */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility is detected in these fixings */
 )
 {
-   int i;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    int var1fix;
    int var2fix;
 
-   /* A counter for how many virtual fixings we have. */
-   int numfixentries = numfixentriesinit;
-
-   assert( scip != NULL );
-   assert( infeasible != NULL );
-
-   *infeasible = FALSE;
+   int i;
+   int numfixentries;
 
    /* avoid trivial problems */
    if ( nvars < 2 )
       return SCIP_OKAY;
 
-   for (i=start; i < nvars; ++i)
+   assert( scip != NULL );
+   assert( vars != NULL );
+   assert( invperm != NULL );
+   assert( tempfixings != NULL );
+   assert( tempfixentries != NULL );
+   assert( infeasible != NULL );
+
+   /* A counter for how many virtual fixings we have. */
+   numfixentries = numfixentriesinit;
+
+   *infeasible = FALSE;
+
+   for (i = start; i < nvars; ++i)
    {
       /* there are no fixed points */
       assert( invperm[i] != i );
@@ -868,7 +867,7 @@ SCIP_RETCODE checkFeasible(
       assert( var1fix != NOINIT );
 
       /* Get virtual fixing of variable in right column */
-      var2fix = tempfixings[i];
+      var2fix = tempfixings[invperm[i]];
       if ( var2fix == NOINIT )
       {
          if ( SCIPvarGetUbLocal(var2) < 0.5 )
@@ -885,9 +884,7 @@ SCIP_RETCODE checkFeasible(
 
       /* Encounter one of (_, _), (_, 0), (1, _), (1, 0). In all cases (1, 0) can be constructed. Thus feasible. */
       if ( var1fix != FIXED0 && var2fix != FIXED1 )
-      {
          break;
-      }
       /* Encounter (0, 1). Infeasible. */
       else if ( var1fix == FIXED0 && var2fix == FIXED1 )
       {
@@ -899,25 +896,23 @@ SCIP_RETCODE checkFeasible(
       {
          tempfixings[invperm[i]] = FIXED0;
          /* Mark that we have fixed invperm[i]. */
-         tempfixentries[numfixentries] = invperm[i];
-         ++numfixentries;
+         tempfixentries[numfixentries++] = invperm[i];
       }
       /* Encounter (_, 1). Virtually fix var1 to 1. */
       else if(var1fix == UNFIXED && var2fix == FIXED1 )
       {
          tempfixings[i] = FIXED0;
          /* Mark that we have fixed invperm[i]. */
-         tempfixentries[numfixentries] = i;
-         ++numfixentries;
+         tempfixentries[numfixentries++] = i;
       }
       /* Remaining cases are (0, 0) and (1, 1). In both cases: continue. */
    }
 
    /* Undo virtual fixings made in this function */
-   for(i = numfixentriesinit; i < numfixentries; ++i)
+   for (i = numfixentriesinit; i < numfixentries; ++i)
    {
       tempfixings[tempfixentries[i]] = NOINIT;
-      tempfixentries[i] = -1;
+      tempfixentries[i] = 0;
    }
 
    return SCIP_OKAY;
@@ -945,6 +940,8 @@ SCIP_RETCODE propVariables(
    int var2fix;
    SCIP_Bool tightened;
    SCIP_Bool peekinfeasible;
+   int* tempfixings;
+   int* tempfixentries;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -1013,50 +1010,66 @@ SCIP_RETCODE propVariables(
          SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
          SCIPdebugMsg(scip, " -> node is feasible (could set pair to (1,0) and every earlier pair is constant).\n");
 
-         if ( var1fix == UNFIXED )
+         if ( var1fix == UNFIXED || var2fix == UNFIXED )
          {
-            assert( SCIPvarGetLbLocal(var1) < 0.5 );
+            /* Create arrays tempfixings and tempfixentries to store virtual fixings. */
+            SCIP_CALL( SCIPallocCleanBufferArray(scip, &tempfixings, nvars) );
+            SCIP_CALL( SCIPallocCleanBufferArray(scip, &tempfixentries, nvars) );
 
-            /* Peek whether a lexicographical larger-or-equal vector can be created with var1 fixed to 0 */
-            SCIPdebugMsg(scip, " -> First entry is not fixed. Check if 0 is feasible.\n");
-            consdata->tempfixings[i] = 0;
-            consdata->tempfixentries[0] = i;
-            SCIP_CALL( checkFeasible(scip, &peekinfeasible, vars, invperm, nvars, i, consdata->tempfixings,
-                  consdata->tempfixentries, 1) );
-
-            if ( peekinfeasible )
+            if ( var1fix == UNFIXED )
             {
-               /* No feasible vector exists with var1 set to 0, so it must be a 1-fixing. */
-               SCIPdebugMsg(scip, " -> First entry is not fixed. 0 is not feasible. Fixing to 1.\n");
-               SCIP_CALL( SCIPinferVarUbCons(scip, var1, 1.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
-               assert( ! *infeasible );
+               assert( SCIPvarGetLbLocal(var1) < 0.5 );
 
-               if ( tightened )
-                  ++(*ngen);
+               /* Peek whether a lexicographical larger-or-equal vector can be created with var1 fixed to 0 */
+               SCIPdebugMsg(scip, " -> First entry is not fixed. Check if 0 is feasible.\n");
+               tempfixings[i] = FIXED0;
+               tempfixentries[0] = i;
+               SCIP_CALL( checkFeasible(scip, vars, invperm, nvars, i, tempfixings, tempfixentries, 1,
+                     &peekinfeasible) );
+
+               if ( peekinfeasible )
+               {
+                  /* No feasible vector exists with var1 set to 0, so it must be a 1-fixing. */
+                  SCIPdebugMsg(scip, " -> First entry is not fixed. 0 is not feasible. Fixing to 1.\n");
+                  SCIP_CALL( SCIPinferVarLbCons(scip, var1, 1.0, cons, i + nvars, FALSE, infeasible, &tightened) ); /*lint !e713*/
+                  assert( ! *infeasible );
+
+                  if ( tightened )
+                     ++(*ngen);
+               }
+
+               tempfixings[i] = NOINIT;
+               tempfixentries[0] = 0;
             }
-         }
 
-         if ( var2fix == UNFIXED )
-         {
-            assert( SCIPvarGetUbLocal(var2) > 0.5 );
-
-            /* Peek whether a lexicographical larger-or-equal vector can be created with var2 fixed to 1 */
-            SCIPdebugMsg(scip, " -> Second entry is not fixed. Check if 1 is feasible.\n");
-            consdata->tempfixings[invperm[i]] = 1;
-            consdata->tempfixentries[0] = invperm[i];
-            SCIP_CALL( checkFeasible(scip, &peekinfeasible, vars, invperm, nvars, i, consdata->tempfixings,
-                  consdata->tempfixentries, 1) );
-
-            if ( peekinfeasible )
+            if ( var2fix == UNFIXED )
             {
-               /* No feasible vector exists with var2 set to 1, so it must be a 1-fixing. */
-               SCIPdebugMsg(scip, " -> Second entry is not fixed. 1 is not feasible. Fixing to 0.\n");
-               SCIP_CALL( SCIPinferVarLbCons(scip, var2, 0.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
-               assert( ! *infeasible );
+               assert( SCIPvarGetUbLocal(var2) > 0.5 );
 
-               if ( tightened )
-                  ++(*ngen);
+               /* Peek whether a lexicographical larger-or-equal vector can be created with var2 fixed to 1 */
+               SCIPdebugMsg(scip, " -> Second entry is not fixed. Check if 1 is feasible.\n");
+               tempfixings[invperm[i]] = FIXED1;
+               tempfixentries[0] = invperm[i];
+               SCIP_CALL( checkFeasible(scip, vars, invperm, nvars, i, tempfixings, tempfixentries, 1,
+                     &peekinfeasible) );
+
+               if ( peekinfeasible )
+               {
+                  /* No feasible vector exists with var2 set to 1, so it must be a 1-fixing. */
+                  SCIPdebugMsg(scip, " -> Second entry is not fixed. 1 is not feasible. Fixing to 0.\n");
+                  SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
+                  assert( ! *infeasible );
+
+                  if ( tightened )
+                     ++(*ngen);
+               }
+
+               tempfixings[invperm[i]] = NOINIT;
+               tempfixentries[0] = 0;
             }
+
+            SCIPfreeCleanBufferArray(scip, &tempfixentries);
+            SCIPfreeCleanBufferArray(scip, &tempfixings);
          }
 
          /* Can stop here, because this row can become (1, 0). Therefore all next rows can take arbitrary values. */
@@ -1865,8 +1878,6 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    consdata->cycledecomposition = NULL;
    consdata->ndescentpoints = 0;
    consdata->descentpoints = NULL;
-   consdata->tempfixentries = NULL;
-   consdata->tempfixings = NULL;
 
    if ( nvars > 0 )
    {
@@ -1891,13 +1902,6 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
 
          consdata->ndescentpoints = sourcedata->ndescentpoints;
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->descentpoints, sourcedata->descentpoints, sourcedata->ndescentpoints) );
-      }
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->tempfixentries, nvars) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->tempfixings, nvars) );
-      for (i = 0; i < nvars; ++i)
-      {
-         consdata->tempfixings[i] = NOINIT;
       }
    }
 
