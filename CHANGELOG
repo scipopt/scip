@@ -87,6 +87,7 @@ Miscellaneous
 - To avoid performance variablity during reoptimization, the active constraints are now stored in the same order as in the
   original problem.
 - Added workaround for bug in MSVS 2019 when compiling CppAD source.
+- The original order of variables is now only restored after presolve if `randomization/permutevars` is set to FALSE.
 
 Known bugs
 ----------
