@@ -91,6 +91,12 @@
 #define DEFAULT_PPORBISACK         TRUE /**< whether we allow upgrading to packing/partitioning orbisacks */
 #define DEFAULT_FORCECONSCOPY     FALSE /**< whether orbisack constraints should be forced to be copied to sub SCIPs */
 
+/* Constants to store fixings */
+#define FIXED0    1                     /* When a variable is fixed to 0. */
+#define FIXED1    2                     /* When a variable is fixed to 1. */
+#define UNFIXED   3                     /* When a variable is neither fixed to 0 or to 1. */
+#define NOINIT    0                     /* A dummy entry for non-initialized variables. Must have value 0 because of SCIPallocCleanBufferArray. */
+
 
 /*
  * Data structures
@@ -654,6 +660,83 @@ SCIP_RETCODE separateOrbisack(
 }
 
 
+/** Determines if a vector with additional fixings could exist that is lexicographically larger than its image.
+ *
+ * Given a vector of variables, a permutation, and a set of additional (virtual) fixings.
+ * If a vector adhering to the local variable bounds (local fixings) and to the virtual fixings exists,
+ * then infeasible is FALSE, otherwise TRUE.
+ */
+static
+SCIP_RETCODE checkFeasible(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR**            vars1,              /**< array of variables in left column */
+   SCIP_VAR**            vars2,              /**< array of variables in right column */
+   int                   nrows,              /**< number of rows */
+   int                   start,              /**< at which row to start (assuming previous rows are equal) */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility is detected in these fixings */
+)
+{
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   int var1fix;
+   int var2fix;
+
+   int i;
+
+   assert( scip != NULL );
+   assert( vars1 != NULL );
+   assert( vars2 != NULL );
+   assert( infeasible != NULL );
+
+   *infeasible = FALSE;
+
+   for (i = start; i < nrows; ++i)
+   {
+      /* get variables of first and second column */
+      var1 = vars1[i];
+      var2 = vars2[i];
+
+      assert( var1 != NULL );
+      assert( var2 != NULL );
+
+      /* Get virtual fixing of variable in left column, for var1 */
+      if ( SCIPvarGetUbLocal(var1) < 0.5 )
+      {
+         var1fix = FIXED0;
+         assert( SCIPvarGetLbLocal(var1) <= 0.5 );
+      }
+      else if ( SCIPvarGetLbLocal(var1) > 0.5 )
+         var1fix = FIXED1;
+      else
+         var1fix = UNFIXED;
+
+      /* Get virtual fixing of variable in right column, for var2 */
+      if ( SCIPvarGetUbLocal(var2) < 0.5 )
+      {
+         var2fix = FIXED0;
+         assert( SCIPvarGetLbLocal(var2) <= 0.5 );
+      }
+      else if ( SCIPvarGetLbLocal(var2) > 0.5 )
+         var2fix = FIXED1;
+      else
+         var2fix = UNFIXED;
+
+      /* Encounter one of (_, _), (_, 0), (1, _), (1, 0). In all cases (1, 0) can be constructed. Thus feasible. */
+      if ( var1fix != FIXED0 && var2fix != FIXED1 )
+         break;
+      /* Encounter (0, 1). Infeasible. */
+      else if ( var1fix == FIXED0 && var2fix == FIXED1 )
+      {
+         *infeasible = TRUE;
+         break;
+      }
+      /* Remaining cases are (0, _), (_, 1), (0, 0) and (1, 1). In all cases: continue. */
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** propagation */
 static
 SCIP_RETCODE propVariables(
@@ -667,17 +750,14 @@ SCIP_RETCODE propVariables(
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars1;
    SCIP_VAR** vars2;
-   SCIP_Bool tightened = FALSE;
-   SCIP_VAR* var;
-   SCIP_Real ub;
-   SCIP_Real lb;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
-   int* solu1;
-   int* solu2;
+   int var1fix;
+   int var2fix;
+   SCIP_Bool tightened;
+   SCIP_Bool peekinfeasible;
    int nrows;
    int i;
-   int r;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -702,49 +782,6 @@ SCIP_RETCODE propVariables(
    vars1 = consdata->vars1;
    vars2 = consdata->vars2;
 
-   /* determine current solution */
-   SCIP_CALL( SCIPallocBufferArray(scip, &solu1, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &solu2, nrows) );
-
-   for (i = 0; i < nrows; ++i)
-   {
-      /* determine value in first column */
-      var = vars1[i];
-      assert( SCIPvarIsBinary(var) );
-
-      /* get local upper and lower bound on variable */
-      ub = SCIPvarGetUbLocal(var);
-      lb = SCIPvarGetLbLocal(var);
-
-      /* if variable is fixed to 1 -> solu[i][j] = 1,
-       * if it is fixed to 0 -> solu[i][j] = 0,
-       * else, -> solu[i][j] = 2 */
-      if ( lb > 0.5 )
-         solu1[i] = 1;
-      else if (ub < 0.5)
-         solu1[i] = 0;
-      else
-         solu1[i] = 2;
-
-      /* determine value in second column */
-      var = vars2[i];
-      assert( SCIPvarIsBinary(var) );
-
-      /* get local upper and lower bound on variable */
-      ub = SCIPvarGetUbLocal(var);
-      lb = SCIPvarGetLbLocal(var);
-
-      /* if variable is fixed to 1 -> solu[i][j] = 1,
-       * if it is fixed to 0 -> solu[i][j] = 0,
-       * else, -> solu[i][j] = 2 */
-      if ( lb > 0.5 )
-         solu2[i] = 1;
-      else if (ub < 0.5)
-         solu2[i] = 0;
-      else
-         solu2[i] = 2;
-   }
-
    /* loop through all variables */
    for (i = 0; i < nrows; ++i)
    {
@@ -754,88 +791,148 @@ SCIP_RETCODE propVariables(
       assert( var1 != NULL );
       assert( var2 != NULL );
 
-      /* if variable in first column is fixed to 0 and variable in second column is fixed to 1 */
-      if ( SCIPvarGetUbLocal(var1) < 0.5 && SCIPvarGetLbLocal(var2) > 0.5 )
+      /* Get the fixing status of the left column variable var1 */
+      if ( SCIPvarGetUbLocal(var1) < 0.5 )
       {
-         SCIP_Bool nocritical = TRUE;
-
-         SCIPdebugMsg(scip, "Check variable pair (%d,0) and (%d,1).\n", i, i);
-
-         /* check whether there is a critical row above row i, otherwise the solution is infeasible
-          * if there is a row without fixing (2) above the current row, we cannot obtain a result */
-         for (r = 0; r < i; ++r)
-         {
-            if ( (solu1[r] == 1 && solu2[r] == 0) || solu1[r] == 2 || solu2[r] == 2 )
-            {
-               nocritical = FALSE;
-               break;
-            }
-         }
-
-         if ( nocritical )
-         {
-            SCIPdebugMsg(scip, " -> node infeasible (row was fixed to 0,1 but there was no critical row above).\n");
-
-            /* perform conflict analysis */
-            if ( SCIPisConflictAnalysisApplicable(scip) )
-            {
-               SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
-
-               for (r = 0; r <= i; ++r)
-               {
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars1[r]) );
-                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars2[r]) );
-               }
-
-               SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
-
-               *infeasible = TRUE;
-
-               /* free current solution */
-               SCIPfreeBufferArray(scip, &solu2);
-               SCIPfreeBufferArray(scip, &solu1);
-
-               return SCIP_OKAY;
-            }
-         }
+         var1fix = FIXED0;
+         assert( SCIPvarGetLbLocal(var1) <= 0.5 );
       }
-      /* if variable in the first column is fixed to 0 and the variable in the second column is free */
-      else if ( SCIPvarGetUbLocal(var1) < 0.5 && SCIPvarGetUbLocal(var2) > 0.5 )
+      else if ( SCIPvarGetLbLocal(var1) > 0.5 )
+         var1fix = FIXED1;
+      else
+         var1fix = UNFIXED;
+
+      /* Get the fixing status of the right column variable var2 */
+      if ( SCIPvarGetUbLocal(var2) < 0.5 )
       {
-         SCIP_Bool allconstant = TRUE;
+         var2fix = FIXED0;
+         assert( SCIPvarGetLbLocal(var2) <= 0.5 );
+      }
+      else if ( SCIPvarGetLbLocal(var2) > 0.5 )
+         var2fix = FIXED1;
+      else
+         var2fix = UNFIXED;
 
-         SCIPdebugMsg(scip, "Check variable pair (%d,0) and (%d,1).\n", i, i);
+      /* Encounter one of (1, 0). All above rows are constant. This is a feasible situation. Stop. */
+      if ( var1fix == FIXED1 && var2fix == FIXED0 )
+      {
+         assert( SCIPvarGetLbLocal(var1) > 0.5 );
+         assert( SCIPvarGetUbLocal(var2) < 0.5 );
 
-         /* Check whether all rows above row i are constant. In this case, the variable in the second */
-         /* column can be fixed to 0. If an entry above row i is unfixed or a row is not constant, we cannot */
-         /* fix the second entry in row i. */
-         for (r = 0; r < i; ++r)
+         SCIPdebugMsg(scip, "Row %d is (1, 0)\n", i);
+         break;
+      }
+      /* Encounter one of (_, _), (_, 0), (1, _). Check if a constant row is possible, otherwise fix to (1, 0). */
+      if ( var1fix != FIXED0 && var2fix != FIXED1 )
+      {
+         assert( SCIPvarGetUbLocal(var1) > 0.5 );
+         assert( SCIPvarGetLbLocal(var2) < 0.5 );
+
+         SCIPdebugMsg(scip, "Row %d is (_, _), (_, 0) or (1, _).\n", i);
+
+         SCIP_CALL( checkFeasible(scip, vars1, vars2, nrows, i + 1, &peekinfeasible) );
+
+         if ( peekinfeasible )
          {
-            if ( solu1[r] == 2 || solu2[r] == 2 || solu1[r] != solu2[r] )
+            /* If row i is constant, then we end up in an infeasible solution. Hence, row i must be (1, 0). */
+            SCIPdebugMsg(scip, "Making row constant is infeasible. Fix to (1, 0).\n", i);
+
+            if ( var1fix != FIXED1 )
             {
-               allconstant = FALSE;
-               break;
+               /* Fix variable in first column to 1 */
+               /* For inferinfo:
+                * The fixing value is the least significant bit.
+                * Then whether it's the left (0) or right (1) column is the second least significant bit.
+                * Then the int i follows, starting at the third least significant bit.
+                */
+               SCIP_CALL( SCIPinferVarLbCons(scip, var1, 1.0, cons, (i << 2) | 0b01, FALSE, infeasible, &tightened) ); /*lint !e713*/
+               assert( ! *infeasible );
+
+               *found = *found || tightened;
+               if ( tightened )
+                  ++(*ngen);
+            }
+
+            if ( var2fix != FIXED0 )
+            {
+               /* Fix variable in second column to 0 */
+               SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, (i << 2) | 0b10, FALSE, infeasible, &tightened) ); /*lint !e713*/
+               assert( ! *infeasible );
+
+               *found = *found || tightened;
+               if ( tightened )
+                  ++(*ngen);
             }
          }
 
-         /* fix variable in the second column to 0 */
-         if ( allconstant )
-         {
-            assert( SCIPvarGetLbLocal(var2) < 0.5 );
-            SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
-            assert( ! *infeasible );
-
-            *found = *found || tightened;
-            if ( tightened )
-               ++(*ngen);
-         }
+         /* In all cases, we could make this row (1, 0), so it is feasible. Stop. */
+         break;
       }
+      /* Encounter (0, 1): if variable in first column is fixed to 0 and variable in second column is fixed to 1 */
+      else if ( var1fix == FIXED0 && var2fix == FIXED1 )
+      {
+         assert( SCIPvarGetUbLocal(var1) < 0.5 );
+         assert( SCIPvarGetLbLocal(var2) > 0.5 );
+
+         SCIPdebugMsg(scip, "Row %d is (0, 1). Infeasible!\n", i);
+
+         /* Mark solution as infeasible. */
+         *infeasible = TRUE;
+
+         /* Perform conflict analysis */
+         if ( SCIPisConflictAnalysisApplicable(scip) )
+         {
+            SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
+            /* Mark all variables from row i and above as part of the conflict */
+            while (i >= 0)
+            {
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars1[i]) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars2[i]) );
+               --i;
+            }
+
+            SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
+         }
+
+         break;
+      }
+      /* Encounter (0, _): Fix second part to 0 */
+      else if ( var1fix == FIXED0 && var2fix != FIXED0 )
+      {
+         assert( SCIPvarGetUbLocal(var1) < 0.5 );
+         assert( SCIPvarGetLbLocal(var2) < 0.5 );
+         assert( SCIPvarGetUbLocal(var2) > 0.5 );
+
+         SCIPdebugMsg(scip, "Row %d is (0, _). Fixing to (0, 0).\n", i);
+
+         SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, (i << 2) | 0b10, FALSE, infeasible, &tightened) ); /*lint !e713*/
+         assert( ! *infeasible );
+
+         *found = *found || tightened;
+         if ( tightened )
+            ++(*ngen);
+      }
+      /* Encounter (_, 1): fix first part to 1 */
+      else if ( var1fix != FIXED1 && var2fix == FIXED1 )
+      {
+         assert( SCIPvarGetLbLocal(var1) < 0.5 );
+         assert( SCIPvarGetUbLocal(var1) > 0.5 );
+         assert( SCIPvarGetLbLocal(var2) > 0.5 );
+
+         SCIPdebugMsg(scip, "Row %d is (_, 1). Fixing to (1, 1).\n", i);
+
+         SCIP_CALL( SCIPinferVarLbCons(scip, var1, 1.0, cons, (i << 2) | 0b01, FALSE, infeasible, &tightened) ); /*lint !e713*/
+         assert( ! *infeasible );
+
+         *found = *found || tightened;
+         if ( tightened )
+            ++(*ngen);
+      }
+      /* Remaining cases are (0, 0) and (1, 1). In these cases we can continue! */
    }
 
-   /* free current solution */
-   SCIPfreeBufferArray(scip, &solu2);
-   SCIPfreeBufferArray(scip, &solu1);
-
+   SCIPdebugMsg(scip, "No further fixings possible.\n", i);
    return SCIP_OKAY;
 }
 
