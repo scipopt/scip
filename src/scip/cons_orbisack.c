@@ -673,7 +673,8 @@ SCIP_RETCODE checkFeasible(
    SCIP_VAR**            vars2,              /**< array of variables in right column */
    int                   nrows,              /**< number of rows */
    int                   start,              /**< at which row to start (assuming previous rows are equal) */
-   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility is detected in these fixings */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected in these fixings */
+   int*                  infeasiblerow       /**< pointer to store at which row a (0, 1) pattern is found */
 )
 {
    SCIP_VAR* var1;
@@ -728,6 +729,7 @@ SCIP_RETCODE checkFeasible(
       else if ( var1fix == FIXED0 && var2fix == FIXED1 )
       {
          *infeasible = TRUE;
+         *infeasiblerow = i;
          break;
       }
       /* Remaining cases are (0, _), (_, 1), (0, 0) and (1, 1). In all cases: continue. */
@@ -756,6 +758,7 @@ SCIP_RETCODE propVariables(
    int var2fix;
    SCIP_Bool tightened;
    SCIP_Bool peekinfeasible;
+   int peekinfeasiblerow;
    int nrows;
    int i;
 
@@ -830,22 +833,21 @@ SCIP_RETCODE propVariables(
 
          SCIPdebugMsg(scip, "Row %d is (_, _), (_, 0) or (1, _).\n", i);
 
-         SCIP_CALL( checkFeasible(scip, vars1, vars2, nrows, i + 1, &peekinfeasible) );
+         SCIP_CALL( checkFeasible(scip, vars1, vars2, nrows, i + 1, &peekinfeasible, &peekinfeasiblerow) );
 
          if ( peekinfeasible )
          {
             /* If row i is constant, then we end up in an infeasible solution. Hence, row i must be (1, 0). */
             SCIPdebugMsg(scip, "Making row constant is infeasible. Fix to (1, 0).\n", i);
 
+            assert( peekinfeasiblerow > i );
+            assert( peekinfeasiblerow < nrows );
+
             if ( var1fix != FIXED1 )
             {
                /* Fix variable in first column to 1 */
-               /* For inferinfo:
-                * The fixing value is the least significant bit.
-                * Then whether it's the left (0) or right (1) column is the second least significant bit.
-                * Then the int i follows, starting at the third least significant bit.
-                */
-               SCIP_CALL( SCIPinferVarLbCons(scip, var1, 1.0, cons, (i << 2) | 0b01, FALSE, infeasible, &tightened) ); /*lint !e713*/
+               SCIP_CALL( SCIPinferVarLbCons(scip, var1, 1.0, cons, i + nrows * peekinfeasiblerow, FALSE, infeasible,
+                     &tightened) ); /*lint !e713*/
                assert( ! *infeasible );
 
                *found = *found || tightened;
@@ -856,7 +858,8 @@ SCIP_RETCODE propVariables(
             if ( var2fix != FIXED0 )
             {
                /* Fix variable in second column to 0 */
-               SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, (i << 2) | 0b10, FALSE, infeasible, &tightened) ); /*lint !e713*/
+               SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, i + nrows * peekinfeasiblerow, FALSE, infeasible,
+                     &tightened) ); /*lint !e713*/
                assert( ! *infeasible );
 
                *found = *found || tightened;
@@ -906,7 +909,7 @@ SCIP_RETCODE propVariables(
 
          SCIPdebugMsg(scip, "Row %d is (0, _). Fixing to (0, 0).\n", i);
 
-         SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, (i << 2) | 0b10, FALSE, infeasible, &tightened) ); /*lint !e713*/
+         SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
          assert( ! *infeasible );
 
          *found = *found || tightened;
@@ -922,7 +925,7 @@ SCIP_RETCODE propVariables(
 
          SCIPdebugMsg(scip, "Row %d is (_, 1). Fixing to (1, 1).\n", i);
 
-         SCIP_CALL( SCIPinferVarLbCons(scip, var1, 1.0, cons, (i << 2) | 0b01, FALSE, infeasible, &tightened) ); /*lint !e713*/
+         SCIP_CALL( SCIPinferVarLbCons(scip, var1, 1.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
          assert( ! *infeasible );
 
          *found = *found || tightened;
@@ -1635,6 +1638,8 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
    SCIP_VAR** vars1;
    SCIP_VAR** vars2;
    int i;
+   int varrow;
+   int infrow;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1657,28 +1662,113 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
    vars1 = consdata->vars1;
    vars2 = consdata->vars2;
 
-   assert( 0 <= inferinfo && inferinfo < consdata->nrows );
+   /* inferinfo == varrow + infrow * nrows. infrow is 0 if the fixing is not caused by a lookahead. */
+   varrow = inferinfo % consdata->nrows;
+   infrow = inferinfo / consdata->nrows;
 
-   assert( vars2[inferinfo] == infervar );
-   assert( SCIPvarGetUbAtIndex(vars2[inferinfo], bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(vars2[inferinfo], bdchgidx, TRUE) < 0.5 );
+   assert( varrow >= 0 );
+   assert( varrow < consdata->nrows );
+   assert( infrow >= 0 );
+   assert( infrow < consdata->nrows );
 
-   if ( SCIPvarGetUbAtIndex(vars2[inferinfo], bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(vars2[inferinfo], bdchgidx, TRUE) < 0.5 )
+   if ( infrow > 0 )
    {
-      SCIPdebugMsg(scip, " -> reason for setting x[%d][1] = 0 was fixing x[%d][0] to 0 and each row above is fixed to the same value.\n",
-         inferinfo, inferinfo);
-
-      for (i = 0; i < inferinfo; ++i)
+      /* The fixing of infervar is caused by a lookahead (checkFeasible).
+       * The rows until "varrow" are constants, and row "varrow" is (_, _), (1, _), (_, 0).
+       * If we assume "varrow" is constant, then the next rows until infrow are constants, and infrow is (0, 1).
+       */
+      for (i = 0; i < varrow; ++i)
       {
+         /* Conflict caused by bounds of previous variables */
          SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx) );
          SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx) );
       }
-      SCIP_CALL( SCIPaddConflictUb(scip, vars1[inferinfo], bdchgidx) );
 
-      *result = SCIP_SUCCESS;
+      if ( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+         /* We changed the lower bound of infervar (to 1). This means that infervar is the left column. */
+         assert( infervar == vars1[varrow] );
+         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, FALSE) < 0.5 );
+         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, TRUE) > 0.5 );
+
+         /* The fixing of the other column is also important. Namely, we are not in (0, _) or (_, 1)! */
+         SCIP_CALL( SCIPaddConflictUb(scip, vars2[varrow], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars2[varrow], bdchgidx) );
+      }
+      else
+      {
+         /* We changed the upper bound of infervar (to 0). This means that infervar is the right column. */
+         assert( infervar == vars2[varrow] );
+         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE) > 0.5 );
+         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, TRUE) < 0.5 );
+
+         /* The fixing of the other column is also important. Namely, we are not in (0, _) or (_, 1)! */
+         SCIP_CALL( SCIPaddConflictUb(scip, vars1[varrow], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars1[varrow], bdchgidx) );
+      }
+
+      for (i = varrow + 1; i < infrow; ++i)
+      {
+         /* These rows are one of (0, 0), (1, 1), (0, _), (_, 1), making them constants. */
+         SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx) );
+      }
+
+      /* And infrow itself is (0, 1). */
+      assert( SCIPvarGetUbAtIndex(vars1[infrow], bdchgidx, TRUE) < 0.5 );
+      assert( SCIPvarGetUbAtIndex(vars1[infrow], bdchgidx, FALSE) < 0.5 );
+      assert( SCIPvarGetLbAtIndex(vars2[infrow], bdchgidx, TRUE) > 0.5 );
+      assert( SCIPvarGetLbAtIndex(vars2[infrow], bdchgidx, FALSE) > 0.5 );
+
+      SCIP_CALL( SCIPaddConflictUb(scip, vars1[infrow], bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars2[infrow], bdchgidx) );
+   }
+   else
+   {
+      /* This is not a fixing caused by lookahead (checkFeasible),
+       * so row "varrow" was (0, _) or (_, 1) and its previous rows are constants.
+       */
+      for (i = 0; i < varrow; ++i)
+      {
+         /* Conflict caused by bounds of previous variables */
+         SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx) );
+      }
+
+      if ( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+         /* We changed the lower bound of infervar to 1. This means that this fixing is due to (_, 1) */
+         assert( infervar == vars1[varrow] );
+         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, FALSE) < 0.5 );
+         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, TRUE) > 0.5 );
+         assert( SCIPvarGetLbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5)
+         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5)
+
+         SCIP_CALL( SCIPaddConflictUb(scip, vars2[varrow], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars2[varrow], bdchgidx) );
+      }
+      else
+      {
+         /* We changed the upper bound to 0. This means that this fixing is due to (0, _) */
+         assert( infervar == vars2[varrow] );
+         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, FALSE ) < 0.5)
+         assert( SCIPvarGetUbAtIndex(vars1[varrow], bdchgidx, FALSE ) < 0.5)
+         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE) > 0.5 );
+         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, TRUE) < 0.5 );
+
+         SCIP_CALL( SCIPaddConflictUb(scip, vars1[varrow], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars1[varrow], bdchgidx) );
+      }
+
    }
 
+   *result = SCIP_SUCCESS;
    return SCIP_OKAY;
 }
 
