@@ -27,13 +27,13 @@
 #ifndef APPLICATIONS_STP_GRAPH_H_
 #define APPLICATIONS_STP_GRAPH_H_
 
-
 #include "scip/scip.h"
 #include "misc_stp.h"
 #include "graphdefs.h"
 #include "redcosts.h"
 #include "reducedefs.h"
 #include "portab.h"
+#include "stpvector.h"
 
 
 #ifdef __cplusplus
@@ -402,6 +402,7 @@ extern SCIP_RETCODE     graph_tpathsRepair(SCIP*, int, SCIP_Bool, const GRAPH*, 
 extern SCIP_RETCODE     graph_tpathsRepairSetUp(const GRAPH*, TPATHS*);
 extern void             graph_tpathsFree(SCIP*, TPATHS**);
 extern void             graph_tpathsPrintForNode(const GRAPH*, const SDPROFIT*, const TPATHS*, int);
+extern void graph_tpathsGetProfitNodes(SCIP*, const GRAPH*, const TPATHS*, const SDPROFIT*, int, int, STP_Vectype(int));
 extern void             graph_tpathsAdd1st(const GRAPH*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsAdd2nd(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsAdd3rd(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);

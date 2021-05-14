@@ -586,6 +586,8 @@ void tpathsScan1st(
       const int k = pathheapGetNearest(heap, state, &nHeapElems, path);
       const SCIP_Real k_dist = path[k].dist;
 
+
+
       /* mark vertex k as scanned */
       state[k] = CONNECT;
 
@@ -1834,6 +1836,95 @@ void graph_tpathsPrintForNode(
    }
 
 }
+
+
+/** gets nodes with positive profit on path */
+void graph_tpathsGetProfitNodes(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   const TPATHS*         tpaths,             /**< storage for terminal paths */
+   const SDPROFIT*       sdprofit,           /**< SD bias for nodes */
+   int                   start,              /**< start vertex */
+   int                   base,               /**< base vertex (terminal) */
+   STP_Vectype(int)      profitnodes         /**< NOTE: needs to be of capacity at least g->knots! */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   int level;
+
+   assert(tpaths && profitnodes && sdprofit);
+   assert(graph_knot_isInRange(g, start));
+   assert(graph_knot_isInRange(g, base));
+   assert(Is_term(g->term[base]));
+   assert(StpVecGetcapacity(profitnodes) >= g->knots);
+
+   StpVecClear(profitnodes);
+
+   if( base != start )
+   {
+      const int* const termbases = tpaths->termbases;
+      const PATH* const termpaths = tpaths->termpaths;
+      int node_pred;
+      int node_curr;
+      int node_next;
+      int edge_curr;
+
+      for( level = 0; termbases[start + nnodes * level] != base; level++ )
+      {
+         assert(level <= STP_TPATHS_NTERMBASES);
+      }
+      assert(termbases[start + nnodes * level] == base);
+      assert(0 <= level && level <= STP_TPATHS_NTERMBASES);
+
+      node_pred = -1;
+      node_curr = start;
+      edge_curr = termpaths[node_curr + level * nnodes].edge;
+      assert(edge_curr >= 0);
+      node_next = g->tail[edge_curr];
+
+   //   printf("%d->%d \n", start, base);
+
+      while( node_curr != base )
+      {
+         assert(graph_knot_isInRange(g, node_curr));
+         assert(graph_edge_isInRange(g, edge_curr));
+         assert(termbases[node_curr + level * nnodes] == base);
+
+       //  printf("%d \n", node_curr);
+
+         if( node_curr != start )
+         {
+            const SCIP_Real profit = reduce_sdprofitGetProfit(sdprofit, node_curr, node_pred, node_next);
+            if( GT(profit, 0.0) )
+            {
+               StpVecPushBack(scip, profitnodes, node_curr);
+            }
+         }
+
+         node_pred = node_curr;
+         node_curr = node_next;
+
+         while( termbases[node_curr + level * nnodes] != base )
+         {
+            level--;
+            assert(level >= 0);
+         }
+
+         edge_curr = termpaths[node_curr + level * nnodes].edge;
+         node_next = (edge_curr >= 0) ? g->tail[edge_curr] : -1;
+      }
+   }
+
+#ifndef NDEBUG
+   for( int k = 0; k < StpVecGetSize(profitnodes); k++ )
+   {
+      const int node = profitnodes[k];
+      assert(graph_knot_isInRange(g, node));
+      assert(!Is_term(g->term[node]));
+   }
+#endif
+}
+
 
 
 /** Computes next terminal to all non-terminal nodes.

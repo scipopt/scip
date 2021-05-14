@@ -1503,7 +1503,7 @@ SCIP_RETCODE sdgraphBuildDistgraphFromTpaths(
 
 /** updates distance graph */
 static
-void sdgraphUpdateDistgraphFromTpaths(
+SCIP_RETCODE sdgraphUpdateDistgraphFromTpaths(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph to initialize from */
    const SDPROFIT*       sdprofit,           /**< profit or NULL */
@@ -1511,12 +1511,20 @@ void sdgraphUpdateDistgraphFromTpaths(
    SDGRAPH*              g_sd                /**< the SD graph */
 )
 {
+   int* hasharr;
+   STP_Vectype(int) profitnodes_tail = NULL;
+   STP_Vectype(int) profitnodes_head = NULL;
+
    GRAPH* RESTRICT distgraph = g_sd->distgraph;
    const int* distnodes_id = g_sd->nodemapOrgToDist;
    const int nnodes = graph_get_nNodes(g);
    const int edgelimit = MIN(2 * distgraph->edges, distgraph->esize);
 
    assert(LE(distgraph->edges, distgraph->esize));
+
+   StpVecReserve(scip, profitnodes_tail, nnodes);
+   StpVecReserve(scip, profitnodes_head, nnodes);
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
 
    for( int tail = 0; tail < nnodes && distgraph->edges < edgelimit; tail++ )
    {
@@ -1536,9 +1544,38 @@ void sdgraphUpdateDistgraphFromTpaths(
           * the change of the distance graph */
          if( LT(distance, FARAWAY) && LT(distance, sdgraphGetSd(vbase_tail, vbase_head, g_sd)) )
          {
-            SCIP_Bool success;
+            SCIP_Bool success = TRUE;
             assert(vbase_tail >= 0 && vbase_head >= 0);
 
+            graph_tpathsGetProfitNodes(scip, g, tpaths, sdprofit, tail, vbase_tail, profitnodes_tail);
+            for( int k = 0; k < StpVecGetSize(profitnodes_tail); k++ )
+            {
+               assert(!hasharr[profitnodes_tail[k]]);
+               hasharr[profitnodes_tail[k]] = 1;
+            }
+            graph_tpathsGetProfitNodes(scip, g, tpaths, sdprofit, head, vbase_head, profitnodes_head);
+
+            for( int k = 0; k < StpVecGetSize(profitnodes_head); k++ )
+            {
+               if( hasharr[profitnodes_head[k]] )
+               {
+                  success = FALSE;
+                //  printf("shared node: %d \n", profitnodes_head[k]);
+                  break;
+               }
+            }
+
+            for( int k = 0; k < StpVecGetSize(profitnodes_tail); k++ )
+            {
+               assert(1 == hasharr[profitnodes_tail[k]]);
+               hasharr[profitnodes_tail[k]] = 0;
+            }
+
+            if( !success )
+            {
+              // printf("fail for %d %d \n", vbase_tail, vbase_head);
+               continue;
+            }
             //SCIPdebugMessage("add biased MST edge %d->%d (%f<%f) \n", vbase_tail, vbase_head, distance, sdgraphGetSd(vbase_tail, vbase_head, g_sd));
 
             distgraphInsertEdge(scip, distnodes_id[vbase_tail], distnodes_id[vbase_head], distance, -1, NULL, distgraph, &success);
@@ -1549,9 +1586,16 @@ void sdgraphUpdateDistgraphFromTpaths(
          }
       }
    }
+#ifndef NDEBUG
+   for( int i = 0; i < nnodes; i++ )
+      assert(hasharr[i] == 0);
+#endif
 
+   SCIPfreeCleanBufferArray(scip, &hasharr);
+   StpVecFree(scip, profitnodes_head);
+   StpVecFree(scip, profitnodes_tail);
 
-   assert(sdprofit);
+   return SCIP_OKAY;
 }
 
 
@@ -1805,7 +1849,7 @@ SCIP_RETCODE reduce_sdgraphInitBiasedFromTpaths(
 
    if( sdprofit )
    {
-      sdgraphUpdateDistgraphFromTpaths(scip, g, sdprofit, tpaths, *sdgraph);
+      SCIP_CALL( sdgraphUpdateDistgraphFromTpaths(scip, g, sdprofit, tpaths, *sdgraph) );
       SCIP_CALL( sdgraphMstBuild(scip, g, *sdgraph) );
    }
 
