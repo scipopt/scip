@@ -19,6 +19,7 @@
  * @author Stefan Heinz
  * @author Jens Schulz
  * @author Gerald Gamrath
+ * @author Marc Pfetsch
  *
  * This propagator uses global bound information provided by SCIP to deduce global and local bound changes.
  * It can take into account
@@ -1805,6 +1806,8 @@ SCIP_RETCODE propagateVbounds(
    SCIP_BOUNDTYPE starttype;
    SCIP_Real startbound;
    SCIP_Real globalbound;
+   int* queuelist = NULL;
+   int nqueuelist = 0;
    int startpos;
    int topopos;
    int v;
@@ -1873,12 +1876,14 @@ SCIP_RETCODE propagateVbounds(
 
    /* return if no bound changes are in the priority queue (no changed bounds to handle since last propagation) */
    if( SCIPpqueueNElems(propdata->propqueue) == 0 )
-   {
-      (*result) = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
-   }
 
    nchgbds = 0;
+
+   (*result) = SCIP_DIDNOTFIND;
+
+   /* allocate space for variables added to the queue - needed to clean up data */
+   SCIP_CALL( SCIPallocBufferArray(scip, &queuelist, nbounds) );
 
    SCIPdebugMsg(scip, "varbound propagator: %d elements in the propagation queue\n", SCIPpqueueNElems(propdata->propqueue));
 
@@ -1892,7 +1897,11 @@ SCIP_RETCODE propagateVbounds(
       assert(propdata->inqueue[topopos]);
       startpos = propdata->topoorder[topopos];
       assert(startpos >= 0);
-      propdata->inqueue[topopos] = FALSE;
+      queuelist[nqueuelist++] = topopos;
+      assert( nqueuelist <= nbounds );
+
+      /* do not directly set propdata->inqueue[topopos] = FALSE: we allow only one propagation sweep through the
+       * topologically ordered bounds; otherwise an infinite loop could occur */
 
       startvar = vars[getVarIndex(startpos)];
       starttype = getBoundtype(startpos);
@@ -1963,8 +1972,10 @@ SCIP_RETCODE propagateVbounds(
                   }
 
                   if( *result == SCIP_CUTOFF )
-                     return SCIP_OKAY;
+                     break;
                }
+               if( *result == SCIP_CUTOFF )
+                  break;
             }
          }
 
@@ -2015,10 +2026,13 @@ SCIP_RETCODE propagateVbounds(
                         SCIP_CALL( tightenVarLb(scip, prop, propdata, cliquevars[n], 1.0, global, startvar, starttype,
                               force, 0.0, 0.0, FALSE, &nchgbds, result) );
                      }
+
                      if( *result == SCIP_CUTOFF )
-                        return SCIP_OKAY;
+                        break;
                   }
                }
+               if( *result == SCIP_CUTOFF )
+                  break;
             }
          }
       }
@@ -2054,18 +2068,37 @@ SCIP_RETCODE propagateVbounds(
             }
 
             if( *result == SCIP_CUTOFF )
-               return SCIP_OKAY;
+               break;
          }
+         if( *result == SCIP_CUTOFF )
+            break;
       }
    }
+
+   /* clean up inqueue */
+   for( v = 0; v < nqueuelist; ++v )
+   {
+      assert( 0 <= queuelist[v] && queuelist[v] < nbounds );
+      propdata->inqueue[queuelist[v]] = FALSE;
+      assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (queuelist[v] + 1)) == -1 ); /*lint !e571*//*lint !e776*/
+   }
+   SCIPfreeBufferArray(scip, &queuelist);
+
+#ifdef SCIP_DEBUG
+   for( v = 0; v < nbounds; ++v)
+   {
+      if( propdata->inqueue[v] )
+         assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (v + 1)) >= 0 );
+      else
+         assert( SCIPpqueueFind(propdata->propqueue, (void*)(size_t) (v + 1)) == -1 );
+   }
+#endif
 
    SCIPdebugMsg(scip, "tightened %d variable bounds\n", nchgbds);
 
    /* set the result depending on whether bound changes were found or not */
-   if( nchgbds > 0 )
+   if( *result != SCIP_CUTOFF && nchgbds > 0 )
       (*result) = SCIP_REDUCEDDOM;
-   else
-      (*result) = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
@@ -3068,8 +3101,8 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    {
       SCIP_CALL( SCIPpqueueInsert(propdata->propqueue, (void*)(size_t)(idx + 1)) ); /*lint !e571 !e776*/
       propdata->inqueue[idx] = TRUE;
+      assert(SCIPpqueueNElems(propdata->propqueue) > 0);
    }
-   assert(SCIPpqueueNElems(propdata->propqueue) > 0);
 
    return SCIP_OKAY;
 }

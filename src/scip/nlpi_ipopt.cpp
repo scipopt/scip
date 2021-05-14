@@ -60,6 +60,7 @@ static std::mutex solve_mutex;
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
 #endif
+#define IPOPT_DEPRECATED  // to avoid warnings about using functions that became deprecated in Ipopt 3.14
 #include "IpoptConfig.h"
 #include "IpIpoptApplication.hpp"
 #include "IpIpoptCalculatedQuantities.hpp"
