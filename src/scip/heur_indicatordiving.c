@@ -246,6 +246,8 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    return SCIP_OKAY;
 }
 
+static const int MODE_ROUNDING_DOWN = 0;
+
 /** calculate score and preferred rounding direction for the candidate variable */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
@@ -328,7 +330,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    }
    SCIPdebugMessage("activity: %f\n", activity);
 
-   if( heurdata->mode == 0 )
+   if(heurdata->mode == MODE_ROUNDING_DOWN )
    {
       *roundup = FALSE;
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
@@ -351,7 +353,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          assert(FALSE);
       }
    }
-   else if( heurdata->mode == 1)
+   else if(heurdata->mode == MODE_ROUNDING_UP)
    {
       *roundup = TRUE;
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
@@ -386,13 +388,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       {
          *score = 100 * (activity - rhs) / MAX(ABS(rhs),1);
          assert(*score>=0);
-         *roundup = (*score < heurdata->roundingfrac);
+         *roundup = (*score > heurdata->roundingfrac);
       }
       else if( SCIPisLT(scip, activity, lhs))
       {
          *score = 100 * (lhs - activity) / MAX(ABS(lhs),1);
          assert(*score>=0);
-         *roundup = (*score < heurdata->roundingfrac);
+         *roundup = (*score > heurdata->roundingfrac);
       }
       else
       {
