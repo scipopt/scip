@@ -1747,8 +1747,8 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
          assert( infervar == vars1[varrow] );
          assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, FALSE) < 0.5 );
          assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, TRUE) > 0.5 );
-         assert( SCIPvarGetLbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5)
-         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5)
+         assert( SCIPvarGetLbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5);
+         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5);
 
          SCIP_CALL( SCIPaddConflictUb(scip, vars2[varrow], bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, vars2[varrow], bdchgidx) );
@@ -1757,8 +1757,8 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
       {
          /* We changed the upper bound to 0. This means that this fixing is due to (0, _) */
          assert( infervar == vars2[varrow] );
-         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, FALSE ) < 0.5)
-         assert( SCIPvarGetUbAtIndex(vars1[varrow], bdchgidx, FALSE ) < 0.5)
+         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, FALSE ) < 0.5);
+         assert( SCIPvarGetUbAtIndex(vars1[varrow], bdchgidx, FALSE ) < 0.5);
          assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE) > 0.5 );
          assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, TRUE) < 0.5 );
 
