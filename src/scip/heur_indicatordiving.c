@@ -335,7 +335,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    }
    SCIPdebugMessage("activity: %f\n", activity);
 
-   if( heurdata->mode == (int)ROUNDING_DOWN )
+   if( (INDICATORDIVINGMODE)heurdata->mode == ROUNDING_DOWN )
    {
       *roundup = FALSE;
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
@@ -358,7 +358,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          assert(FALSE);
       }
    }
-   else if( heurdata->mode == (int)ROUNDING_UP )
+   else if( (INDICATORDIVINGMODE)heurdata->mode == ROUNDING_UP )
    {
       *roundup = TRUE;
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
@@ -381,7 +381,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          assert(FALSE);
       }
    }
-   else if( heurdata->mode == (int)ROUNDING_FRAC )
+   else if( (INDICATORDIVINGMODE)heurdata->mode == ROUNDING_FRAC )
    {
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
       {
