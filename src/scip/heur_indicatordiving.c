@@ -37,7 +37,6 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_mem.h"
-//#include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_sol.h"
@@ -80,6 +79,14 @@
 #define DEFAULT_RANDSEED             11  /**< initial seed for random number generation */
 #define DEFAULT_ROUNDINGFRAC       50.0 /**< default parameter setting for parameter roundingfrac */
 #define DEFAULT_MODE                  2 /**< default parameter setting for parameter mode */
+
+enum IndicatorDivingMode
+{
+   ROUNDING_DOWN = 0,
+   ROUNDING_UP = 1,
+   ROUNDING_FRAC = 2
+};
+typedef enum IndicatorDivingMode INDICATORDIVINGMODE;
 
 /** locally defined heuristic data */
 struct SCIP_HeurData
@@ -246,8 +253,6 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    return SCIP_OKAY;
 }
 
-static const int MODE_ROUNDING_DOWN = 0;
-
 /** calculate score and preferred rounding direction for the candidate variable */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
@@ -330,7 +335,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    }
    SCIPdebugMessage("activity: %f\n", activity);
 
-   if(heurdata->mode == MODE_ROUNDING_DOWN )
+   if(heurdata->mode == ROUNDING_DOWN )
    {
       *roundup = FALSE;
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
@@ -353,7 +358,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          assert(FALSE);
       }
    }
-   else if(heurdata->mode == MODE_ROUNDING_UP)
+   else if(heurdata->mode == ROUNDING_UP)
    {
       *roundup = TRUE;
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
@@ -376,7 +381,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          assert(FALSE);
       }
    }
-   else
+   else if(heurdata->mode == ROUNDING_FRAC)
    {
       if( SCIPisGE(scip, activity, lhs) && SCIPisLE(scip, activity, rhs) )
       {
@@ -401,9 +406,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
           assert(FALSE);
       }
    }
+   else
+   {
+      assert(FALSE);
+   }
 
 
-   /* free memory */
+      /* free memory */
    SCIPfreeBufferArray(scip, &consvals);
    SCIPfreeBufferArray(scip, &consvars);
 

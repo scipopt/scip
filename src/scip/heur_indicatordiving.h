@@ -27,8 +27,6 @@
 #ifndef __SCIP_HEUR_INDICATORDIVING_H__
 #define __SCIP_HEUR_INDICATORDIVING_H__
 
-static const int MODE_ROUNDING_UP = 1;
-
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
