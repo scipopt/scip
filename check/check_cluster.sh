@@ -164,6 +164,7 @@ do
             then
                 echo "waitcluster does not work on slurm cluster"
             fi
+
             # loop over settings
             for SETNAME in "${SETTINGSLIST[@]}"
             do
@@ -178,7 +179,6 @@ do
                 then
                     continue
                 fi
-
                 # check if binary exists. The second condition checks whether there is a binary of that name directly available
                 # independent of whether it is a symlink, file in the working directory, or application in the path
                 if test -e "${SCIPPATH}/../${BINNAME}"
@@ -215,6 +215,21 @@ do
                 export TIMELIMIT
                 export EXECNAME
 
+                if test "${SLURMACCOUNT}" == "default"
+                then
+                    SLURMACCOUNT="${ACCOUNT}"
+                fi
+
+                WRITESETTINGS="false"
+                if test "${INIT}" = "true"
+                then
+                    if test "${SOLVER}" = "scip"
+                    then
+                        WRITESETTINGS="true"
+                        echo -e "#!/usr/bin/env bash \n ${EXECNAME} -s ${SETTINGS} -c 'set save ${CHECKSETFILE} quit'" > write-settings.sh
+                    fi
+                fi
+
                 # check queue type
                 if test  "${QUEUETYPE}" = "srun"
                 then
@@ -224,9 +239,9 @@ do
                         export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
                     fi
 
-                    if test "${SLURMACCOUNT}" == "default"
+                    if test "${WRITESETTINGS}" = "true"
                     then
-                        SLURMACCOUNT="${ACCOUNT}"
+                        sbatch --job-name=write-settings --mem=${HARDMEMLIMIT} -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null write-settings.sh
                     fi
 
                     if test "${CLUSTERNODES}" = "all"
@@ -238,10 +253,24 @@ do
                         sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
                     fi
                 else
+                    if test "${WRITESETTINGS}" = "true"
+                    then
+                        qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn=$PPN -N write-settings \
+                            -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null write-settings.sh
+                        rm write-settings.sh
+                    fi
+
                     # -V to copy all environment variables
                     qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn="${PPN}" -N "${JOBNAME}" \
                         -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null run.sh
+
                 fi
+
+                if test "$WRITESETTINGS" = "true"
+                then
+                    rm write-settings.sh
+                fi
+
             done # end for SETNAME
         done # end for PERMUTE
     done #end for SEEDS

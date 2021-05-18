@@ -55,6 +55,11 @@
  * \f[
  *      \langle -2(z - x_0), x_0 - z \rangle \le 0
  * \f]
+ *
+ * This callback is currently disabled by default. It requires additional
+ * tuning to be enabled by default. However, it may be useful to enable
+ * it on instances with convex nonlinear constraints if SCIP spends
+ * many iterations in the separation loop without doing sufficient progress.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

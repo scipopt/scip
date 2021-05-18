@@ -20,6 +20,7 @@ Interface changes
 ### Deleted and changed API methods
 
 ### New API functions
+- added function SCIPwithDebugSol() to determine whether SCIP was compiled with WITH_DEBUG_SOLUTION
 
 - New function SCIPcreateConsBounddisjunctionRedundant() and SCIPcreateConsBasicBounddisjunctionRedundant() that allow
   the input to contain redundant literals.
@@ -77,6 +78,7 @@ Fixed bugs
 - Fixed bug in cons_symresack by initializing all constraint data in constrans
 - Avoid allowing the upgrade of linear constraints corresponding to indicators in propagation of nodes.
 - Fixed bug in computing lex. min/max faces in dynamic orbitope propagation.
+- Limit vbounds propagator to one sweep through all bounds per call in order to avoid an infinite loop.
 
 
 Miscellaneous
@@ -85,6 +87,7 @@ Miscellaneous
 - To avoid performance variablity during reoptimization, the active constraints are now stored in the same order as in the
   original problem.
 - Added workaround for bug in MSVS 2019 when compiling CppAD source.
+- The original order of variables is now only restored after presolve if `randomization/permutevars` is set to FALSE.
 
 Known bugs
 ----------
