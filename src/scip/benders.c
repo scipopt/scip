@@ -797,7 +797,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
 
          (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
          len += 2;
-         strncpy(prefix, tmpprefix, len); /*lint !e732*/
+         (void) strncpy(prefix, tmpprefix, len); /*lint !e732*/
 
          j++;
       }

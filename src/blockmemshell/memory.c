@@ -701,7 +701,7 @@ struct Freelist
 /** chunk of memory elements */
 struct Chunk
 {
-   SCIP_RBTREE_HOOKS;                        /**< organize chunks in a red black tree */
+   SCIP_RBTREE_HOOKS;                        /**< organize chunks in a red black tree */ /*lint !e768 */
    void*                 store;              /**< data storage */
    void*                 storeend;           /**< points to the first byte in memory not belonging to the chunk */
    FREELIST*             eagerfree;          /**< eager free list */

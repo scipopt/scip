@@ -31,7 +31,7 @@
 
 #include <assert.h>
 
-#define MSKCONST const
+#define MSKCONST const    /* this define is needed for older MOSEK versions */
 #include "mosek.h"
 
 #include "lpi/lpi.h"
@@ -244,7 +244,7 @@ void MSKAPI printstr(
 {  /*lint --e{715}*/
 #if SUPRESS_NAME_ERROR
    char errstr[32];
-   snprintf(errstr, 32, "MOSEK Error %d", MSK_RES_ERR_DUP_NAME);
+   (void) snprintf(errstr, 32, "MOSEK Error %d", MSK_RES_ERR_DUP_NAME);
    if (0 == strncmp(errstr, str, strlen(errstr)))
       return;
 #endif
@@ -634,7 +634,7 @@ void scale_bound(
    case MSK_BK_FR:
       break;
    default:
-      assert(FALSE);
+      SCIPABORT();
       break;
    }  /*lint !e788*/
 
@@ -730,9 +730,9 @@ const char* SCIPlpiGetSolverName(
    )
 {
 #if MSK_VERSION_MAJOR < 9
-   sprintf(mskname, "MOSEK %d.%d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_BUILD, MSK_VERSION_REVISION);
+   (void) snprintf(mskname, 100, "MOSEK %d.%d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_BUILD, MSK_VERSION_REVISION);
 #else
-   sprintf(mskname, "MOSEK %d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_REVISION);
+   (void) snprintf(mskname, 100, "MOSEK %d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_REVISION);
 #endif
    return mskname;
 }
@@ -764,6 +764,10 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( ncols >= 0 );
+   assert( intInfo != NULL );
+
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1913,6 +1917,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol);
    assert(colnames != NULL || namestoragesize == 0);
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
@@ -1937,6 +1942,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow);
    assert(rownames != NULL || namestoragesize == 0);
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
@@ -2119,6 +2125,8 @@ MSKrescodee filterTRMrescode(
       *termcode = res;
       return MSK_RES_OK;
    }
+#else
+   SCIP_UNUSED(messagehdlr);
 #endif
 
    if (  res == MSK_RES_TRM_MAX_ITERATIONS || res == MSK_RES_TRM_MAX_TIME
@@ -3766,6 +3774,7 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(quality != NULL);
+   SCIP_UNUSED(qualityindicator);
 
    *quality = SCIP_INVALID;
 
@@ -4292,10 +4301,11 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED(inds);
 
    SCIPdebugMessage("Calling SCIPlpiGetBInvARow (%d)\n", lpi->lpid);
 
-   /* can currently only return dense result */
+   /* currently only return dense result */
    if ( ninds != NULL )
       *ninds = -1;
 
@@ -4490,10 +4500,12 @@ SCIP_RETCODE checkState1(
    assert(lpi != NULL);
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
 
+#ifdef SCIP_DEBUG
    if( !isrow )
       xc = 'x';
    else
       xc = 'c';
+#endif
 
    /* printout for all except LOW, UPR, FIX and BAS with sl[xc]==su[xc] */
    for( i = 0; i < n; i++ )
@@ -4579,7 +4591,7 @@ SCIP_RETCODE lpistatePack(
    int *skxi = (int *) lpi->skx; /* Used as temp. buffer */
    int *skci = (int *) lpi->skc; /* Used as temp. buffer */
 
-   assert(sizeof(int) == sizeof(MSKstakeye));
+   assert(sizeof(int) == sizeof(MSKstakeye)); /*lint !e506*/
    assert(lpi != NULL);
    assert(lpistate != NULL);
    assert(lpi->lastsolvetype == MSK_SOL_BAS);
@@ -4601,7 +4613,7 @@ void lpistateUnpack(
    MSKstakeye*           skc                 /**< basis status for rows */
    )
 {
-   assert(sizeof(int) == sizeof(MSKstakeye));
+   assert(sizeof(int) == sizeof(MSKstakeye)); /*lint !e506*/
 
    SCIPdecodeDualBit(lpistate->skx, (int*) skx, lpistate->ncols);
    SCIPdecodeDualBit(lpistate->skc, (int*) skc, lpistate->nrows);
@@ -4929,6 +4941,8 @@ SCIP_RETCODE SCIPlpiSetNorms(
    const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information, or NULL */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   SCIP_UNUSED(blkmem);
    assert(lpinorms == NULL);
 
    /* no work necessary */
@@ -4942,6 +4956,8 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information, or NULL */
    )
 {  /*lint --e{715}*/
+   assert(lpi != NULL);
+   SCIP_UNUSED(blkmem);
    assert(lpinorms == NULL);
 
    /* no work necessary */
@@ -4985,7 +5001,8 @@ const char* paramty2str(
    SCIP_LPPARAM          type
    )
 {  /*lint --e{641}*/
-   /* check if the parameters in this order */
+   /* check whether the parameters are in the right order */
+   /*lint --e{506}*/
    assert(SCIP_LPPAR_FROMSCRATCH == 0);      /* solver should start from scratch at next call? */
    assert(SCIP_LPPAR_FASTMIP == 1);          /* fast mip setting of LP solver */
    assert(SCIP_LPPAR_SCALING == 2);          /* which scaling should LP solver use? */
@@ -5086,6 +5103,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       (int)MSK_SIM_SELECTION_DEVEX,          /**< mosek pricing for SCIP_PRICING_DEVEX */
    };
 
+   /*lint --e{506}*/
    assert((int)SCIP_PRICING_LPIDEFAULT == 0);
    assert((int)SCIP_PRICING_AUTO == 1);
    assert((int)SCIP_PRICING_FULL == 2);
