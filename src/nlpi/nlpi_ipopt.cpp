@@ -2867,6 +2867,65 @@ void ScipNLP::finalize_solution(
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       }
    }
+
+   if( nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+   {
+      assert(lambda != NULL);
+      SCIP_Real tol;
+      nlpiproblem->ipopt->Options()->GetNumericValue("tol", tol, "");
+
+      // Jakobs paper ZR_20-20 says we should have f(x) + lambda*g(x) + mu*h(x) > 0
+      //   if the NLP is min f(x) s.t. g(x) <= 0, h(x) = 0
+      // we check this here and change solution status to unknown if the test fails
+      bool infreasonable = true;
+      SCIP_Real infproof = obj_value;
+      for( int i = 0; i < m && infreasonable; ++i )
+      {
+         if( fabs(lambda[i]) < tol )
+            continue;
+         SCIP_Real side;
+         if( lambda[i] < 0.0 )
+         {
+            // lhs <= g(x) should be active
+            // in the NLP above, this should be lhs - g(x) <= 0 with negated dual
+            // so this contributes -lambda*(lhs-g(x)) = lambda*(g(x)-side)
+            side = SCIPnlpiOracleGetConstraintLhs(nlpiproblem->oracle, i);
+            if( side <= -SCIPnlpiOracleGetInfinity(nlpiproblem->oracle) )
+            {
+               SCIPdebugMessage("inconsistent dual, lambda = %g, but lhs = %g\n", lambda[i], side);
+               infreasonable = false;
+            }
+         }
+         else
+         {
+            // g(x) <= rhs should be active
+            // in the NLP above, this should be g(x) - rhs <= 0
+            // so this contributes lambda*(g(x)-rhs)
+            side = SCIPnlpiOracleGetConstraintRhs(nlpiproblem->oracle, i);
+            if( side >= SCIPnlpiOracleGetInfinity(nlpiproblem->oracle) )
+            {
+               SCIPdebugMessage("inconsistent dual, lambda = %g, but rhs = %g\n", lambda[i], side);
+               infreasonable = false;
+            }
+         }
+
+         // g(x) <= 0
+         infproof += lambda[i] * (g[i] - side);
+         // SCIPdebugMessage("cons %d lambda %g, slack %g\n", i, lambda[i], g[i] - side);
+      }
+      if( infreasonable )
+      {
+         SCIPdebugMessage("infproof = %g should be positive to be valid\n", infproof);
+         if( infproof <= 0.0 )
+            infreasonable = false;
+      }
+
+      if( !infreasonable )
+      {
+         // change status to say we don't know
+         nlpiproblem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
+      }
+   }
 }
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
