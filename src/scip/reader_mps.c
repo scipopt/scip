@@ -4116,6 +4116,9 @@ SCIP_RETCODE SCIPwriteMps(
       /* construct constraint name */
       consname = consnames[c];
 
+      /* init rhs value to infinity (would the be ignored) */
+      rhss[c] = SCIPinfinity(scip);
+
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          lhs = SCIPgetLhsLinear(scip, cons);
