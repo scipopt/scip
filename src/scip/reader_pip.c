@@ -73,7 +73,7 @@
 #define PIP_INIT_MONOMIALSSIZE 128
 #define PIP_INIT_FACTORSSIZE   16
 #define PIP_MAX_PRINTLEN       561       /**< the maximum length of any line is 560 + '\\0' = 561*/
-#define PIP_MAX_NAMELEN        256u      /**< the maximum length for any name is 255 + '\\0' = 256 */
+#define PIP_MAX_NAMELEN        256       /**< the maximum length for any name is 255 + '\\0' = 256 */
 #define PIP_PRINTLEN           100
 
 /** Section in PIP File */
@@ -1508,7 +1508,12 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the constraint sense */
-   if ( !getNextToken(scip, pipinput) || !isSense(pipinput, &sense) )
+   if ( !getNextToken(scip, pipinput) )
+   {
+      syntaxError(scip, pipinput, "expected constraint sense.");
+      goto TERMINATE;
+   }
+   if ( !isSense(pipinput, &sense) )
    {
       syntaxError(scip, pipinput, "expected constraint sense '<=', '=', or '>='");
       goto TERMINATE;
@@ -2906,7 +2911,7 @@ SCIP_Bool isNameValid(
    assert(name != NULL);
 
    len = strlen(name);  /*lint !e613*/
-   if( len > PIP_MAX_NAMELEN || len == 0 )
+   if( len > (size_t) PIP_MAX_NAMELEN || len == 0 )
       return FALSE;
 
    /* names cannot start with a number */
@@ -2998,7 +3003,7 @@ void checkConsnames(
          SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
 
          /* for ranged constraints, we need to be able to append _lhs and _rhs to the constraint name, so need additional 4 characters */
-         if( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(cons)) > PIP_MAX_NAMELEN -  4 )
+         if( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > (size_t) PIP_MAX_NAMELEN -  4 )
          {
             SCIPwarningMessage(scip, "name of ranged constraint <%s> has to be cut down to %d characters;\n", SCIPconsGetName(conss[c]),
                PIP_MAX_NAMELEN  - 1);

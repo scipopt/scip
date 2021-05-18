@@ -72,7 +72,7 @@ using namespace Ipopt;
 #define NLPI_PRIORITY      1000              /**< priority */
 
 #ifdef SCIP_DEBUG
-#define DEFAULT_PRINTLEVEL J_WARNING         /**< default print level of Ipopt */
+#define DEFAULT_PRINTLEVEL J_ITERSUMMARY     /**< default print level of Ipopt */
 #else
 #define DEFAULT_PRINTLEVEL J_ERROR           /**< default print level of Ipopt */
 #endif
@@ -623,6 +623,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->RegOptions()->AddStringOption2("store_intermediate", "whether to store the most feasible intermediate solutions", "no", "yes", "", "no", "", "useful when Ipopt looses a once found feasible solution and then terminates with an infeasible point");
    (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
+#ifdef SCIP_DEBUG
+   (*problem)->ipopt->Options()->SetStringValue("print_user_options", "yes");
+#endif
    (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
    (*problem)->ipopt->Options()->SetIntegerValue("max_iter", DEFAULT_MAXITER);
    (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -data->infinity, false);
@@ -1149,7 +1152,9 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          }
 
 #ifdef SCIP_DEBUG
-         problem->ipopt->Options()->SetStringValue("derivative_test", problem->nlp->approxhessian ? "first-order" : "second-order");
+         // enabling the derivative tester leads to calling TNLP::get_starting_point() twice, which has undesired consequences if the starting point is generated randomly
+         // so we don't enable derivative tester if SCIP_DEBUG is defined for now
+         // problem->ipopt->Options()->SetStringValue("derivative_test", problem->nlp->approxhessian ? "first-order" : "second-order");
 #endif
 
          status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));

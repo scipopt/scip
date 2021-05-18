@@ -6948,6 +6948,8 @@ SCIP_Real evaluateLiftingFunction(
    SCIP_Real xpluslambda;
    int i;
 
+   assert( liftingdata != NULL );
+
    xpluslambda = x + liftingdata->lambda;
 
    i = 0;
@@ -7072,6 +7074,15 @@ SCIP_RETCODE computeLiftingData(
    SCIP_Real QUAD(sumN2mC2GT);
    SCIP_Real QUAD(sumC1LE);
    SCIP_Real QUAD(sumC2);
+
+#ifndef NDEBUG
+   /* for debugging */
+   liftingdata->m = NULL;
+   liftingdata->M = NULL;
+   liftingdata->lambda = SCIP_INVALID;
+   liftingdata->t = 0;
+   liftingdata->mp = SCIP_INVALID;
+#endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &liftingdata->m, snf->ntransvars) );
 
@@ -7211,6 +7222,12 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
    SCIP_CALL( computeLiftingData(scip, snf, flowcoverstatus, lambda, &liftingdata, success) );
    if( ! *success )
       return SCIP_OKAY;
+   assert( liftingdata.m != NULL );
+   assert( liftingdata.M != NULL );
+   assert( liftingdata.lambda != SCIP_INVALID ); /*lint !e777*/
+   assert( liftingdata.r >= 0 );
+   assert( liftingdata.t >= 0 );
+   assert( liftingdata.mp != SCIP_INVALID ); /*lint !e777*/
 
    QUAD_ASSIGN(rhs, liftingdata.d1);
 
