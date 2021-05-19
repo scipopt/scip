@@ -27,7 +27,7 @@ Interface changes
 
 ### Changed API functions
 - added __attribute__((format(printf,,,))) to variadic SCIP message printing functions;
-  this enable warnings about mismatches between format string and variadic function arguments if using GCC
+  this enables warnings about mismatches between format string and variadic function arguments if using GCC.
 
 ### Command line interface
 
