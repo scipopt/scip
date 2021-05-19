@@ -1650,7 +1650,7 @@ SCIP_RETCODE readQCMatrix(
    lincons = SCIPfindCons(scip, mpsinputField1(mpsi));
    if( lincons == NULL )
    {
-      SCIPerrorMessage("no row under name <%s> processed so far.\n");
+      SCIPerrorMessage("no row under name <%s> processed so far.\n", mpsinputField1(mpsi));
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }

@@ -730,7 +730,7 @@ SCIP_RETCODE solveMinIISC(
       }
       else
       {
-         SCIPwarningMessage(masterscip, NULL, "\nparameter file <%s> not found - using default parameters.\n", settingsname);
+         SCIPwarningMessage(masterscip, "\nparameter file <%s> not found - using default parameters.\n", settingsname);
       }
    }
 
