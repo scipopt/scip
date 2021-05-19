@@ -401,11 +401,11 @@ protected:
    {
       if( level == J_ERROR )
       {
-         SCIPmessagePrintError(str);
+         SCIPmessagePrintError("%s", str);
       }
       else
       {
-         SCIPmessagePrintInfo(messagehdlr, str);
+         SCIPmessagePrintInfo(messagehdlr, "%s", str);
       }
    }
 
