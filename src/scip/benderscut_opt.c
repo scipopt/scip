@@ -562,7 +562,7 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
       || SCIPisInfinity(masterprob, dirderiv) || SCIPisInfinity(masterprob, -dirderiv))
    {
       (*success) = FALSE;
-      SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut. lhs = %g dirderiv = %g.\n", lhs, dirderiv);
+      SCIPdebugMsg(masterprob, "Infinite bound when generating optimality cut. lhs = %g dirderiv = %g.\n", *lhs, dirderiv);
       return SCIP_OKAY;
    }
 

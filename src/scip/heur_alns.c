@@ -1087,8 +1087,8 @@ void printNeighborhoodStatistics(
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, neighborhood->stats.setupclock) );
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, neighborhood->stats.submipclock) );
       SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, neighborhood->stats.usednodes );
-      SCIPinfoMessage(scip, file, " %10d", neighborhood->stats.nsolsfound);
-      SCIPinfoMessage(scip, file, " %10d", neighborhood->stats.nbestsolsfound);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, neighborhood->stats.nsolsfound);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, neighborhood->stats.nbestsolsfound);
 
       proba = 0.0;
       ucb = 1.0;

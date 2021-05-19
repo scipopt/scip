@@ -4961,7 +4961,7 @@ SCIP_RETCODE exprparseReadVariable(
    namelength = varnameendptr - *str; /*lint !e712*/
    if( namelength >= SCIP_MAXSTRLEN )
    {
-      SCIPerrorMessage("Variable name %.*s is too long for buffer in exprparseReadVariable.\n", namelength, str);
+      SCIPerrorMessage("Variable name %.*s is too long for buffer in exprparseReadVariable.\n", namelength, *str);
       return SCIP_READERROR;
    }
 
@@ -4984,7 +4984,7 @@ SCIP_RETCODE exprparseReadVariable(
       (*varnameslength) -= (int)(1 + (strlen(varname) + 1) / sizeof(int) + 1);
       if( *varnameslength < 0 )
       {
-         SCIPerrorMessage("Buffer in exprparseReadVariable is too short for varaible name %.*s.\n", namelength, str);
+         SCIPerrorMessage("Buffer in exprparseReadVariable is too short for varaible name %.*s.\n", namelength, *str);
          return SCIP_READERROR;
       }
 
@@ -13400,7 +13400,7 @@ SCIP_RETCODE SCIPexprgraphCreateNode(
    case SCIP_EXPR_POLYNOMIAL:
    case SCIP_EXPR_USER      :
    {
-      SCIPerrorMessage("cannot create node with operand %d via SCIPexprgraphCreateNode\n");
+      SCIPerrorMessage("cannot create node with operand %d via SCIPexprgraphCreateNode\n", op);
       SCIPABORT();
       return SCIP_ERROR;  /*lint !e527*/
    }

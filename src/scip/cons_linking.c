@@ -1115,7 +1115,7 @@ SCIP_RETCODE tightenedLinkvar(
       /* analyze the cutoff if if SOLVING stage and conflict analysis is turned on */
       if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
-         SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b= %d; coef = %d \n",
+         SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b= %d; coef = %g \n",
             SCIPvarGetName(linkvar), SCIPvarGetLbLocal(linkvar), SCIPvarGetUbLocal(linkvar), b, vals[b]);
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
@@ -1164,7 +1164,7 @@ SCIP_RETCODE tightenedLinkvar(
       /* conflict analysis can only be applied in solving stage and if conflict analysis is turned on */
       if( (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && !SCIPinProbing(scip)) && SCIPisConflictAnalysisApplicable(scip) )
       {
-         SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b = %d; coef = %d,\n",
+         SCIPdebugMsg(scip, "conflict at <%s> due to bounds and fixed binvars: [lb,ub] = [%g,%g]; b = %d; coef = %g,\n",
             SCIPvarGetName(linkvar), SCIPvarGetLbLocal(linkvar), SCIPvarGetUbLocal(linkvar), b, vals[b]);
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
@@ -2524,7 +2524,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 
                if( infeasible )
                {
-                  SCIPdebugMsg(scip, "" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %d\n",
+                  SCIPdebugMsg(scip, "" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %g\n",
                      SCIPconsGetName(cons), SCIPvarGetName(consdata->linkvar), consdata->vals[v]);
 
                   *result = SCIP_CUTOFF;
@@ -2602,7 +2602,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 
          if( infeasible )
          {
-            SCIPdebugMsg(scip, "" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %d\n",
+            SCIPdebugMsg(scip, CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %g\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->linkvar), consdata->vals[v]);
 
             *result = SCIP_CUTOFF;

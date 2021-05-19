@@ -408,7 +408,7 @@ SCIP_DECL_EVENTEXEC(eventExecIntobj)
       break;
 
    default:
-      SCIPerrorMessage("invalid event type %x\n", SCIPeventGetType(event));
+      SCIPerrorMessage("invalid event type %lx\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;
    }
 

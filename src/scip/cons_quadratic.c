@@ -7520,7 +7520,7 @@ void updateBilinearRelaxation(
    for( i = 0; i < nineqs; ++i )
    {
       constshift[i] = MAX(0.0, ineqs[3*i] * refx - ineqs[3*i+1] * refy - ineqs[3*i+2]);
-      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", constshift[i]);
+      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", i, constshift[i]);
    }
 
    /* try to use both inequalities */

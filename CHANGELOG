@@ -83,7 +83,7 @@ Fixed bugs
 - Avoid allowing the upgrade of linear constraints corresponding to indicators in propagation of nodes.
 - Fixed bug in computing lex. min/max faces in dynamic orbitope propagation.
 - Limit vbounds propagator to one sweep through all bounds per call in order to avoid an infinite loop.
-
+- Fixed mismatches between formatter strings and arguments in calls to SCIP message printing functions.
 
 Miscellaneous
 -------------
