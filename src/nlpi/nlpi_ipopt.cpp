@@ -2874,11 +2874,11 @@ void ScipNLP::finalize_solution(
       SCIP_Real tol;
       nlpiproblem->ipopt->Options()->GetNumericValue("tol", tol, "");
 
-      // Jakobs paper ZR_20-20 says we should have f(x) + lambda*g(x) + mu*h(x) > 0
+      // Jakobs paper ZR_20-20 says we should have lambda*g(x) + mu*h(x) > 0
       //   if the NLP is min f(x) s.t. g(x) <= 0, h(x) = 0
       // we check this here and change solution status to unknown if the test fails
       bool infreasonable = true;
-      SCIP_Real infproof = obj_value;
+      SCIP_Real infproof = 0.0;
       for( int i = 0; i < m && infreasonable; ++i )
       {
          if( fabs(lambda[i]) < tol )
