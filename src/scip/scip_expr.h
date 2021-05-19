@@ -591,7 +591,7 @@ SCIP_RETCODE SCIPhashExpr(
  *    ? at most one child is an abs
  *    SP11: no two children are expr*log(expr)
  *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
- *    happen at the simplifcation level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
+ *    happen at the simplification level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
  *    SP12: if it has two children, then neither of them is a sum (expand sums)
  *    SP13: no child is a sum with a single term
  *    SP14: at most one child is an exp
@@ -634,7 +634,7 @@ SCIP_RETCODE SCIPhashExpr(
  *    SS7: if it consists of a single child, then either constant is != 0.0 or coef != 1
  *    SS8: no child has coefficient 0
  *    SS9: if a child c is a product that has an exponential expression as one of its factors, then the coefficient of c is +/-1.0
- *    SS10: if a child c is an exponential, then the coefficient of c is +/-1.0 (TODO)
+ *    SS10: if a child c is an exponential, then the coefficient of c is +/-1.0
  *    x if it consists of a single child, then its constant != 0.0 (otherwise, should be written as a product)
  * - it is a function with simplified arguments, but not all of them can be values
  * ? a logarithm doesn't have a product as a child

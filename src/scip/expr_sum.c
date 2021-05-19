@@ -265,6 +265,54 @@ SCIP_RETCODE simplifyTerm(
       }
    }
 
+   /* enforce SS10 */
+   if( REALABS(coef) != 1.0 && SCIPisExprExp(scip, expr) )
+   {
+      /* coef != +- 1, term is exponential -> enforce SS10 by moving |coef| into argument of exponential */
+
+      SCIP_EXPR* sum;
+      SCIP_EXPR* simplifiedsum;
+      SCIP_EXPR* exponential;
+      SCIP_EXPR* simplifiedexp;
+      SCIP_Real expconstant;
+
+      /* inform that expression will change */
+      *changed = TRUE;
+
+      /* compute expchild's coefficient as +- 1.0 * exp(log(abs(coef))) */
+      if( coef > 0.0 )
+      {
+         expconstant = log(coef);
+         coefs[idx] = 1.0;
+      }
+      else
+      {
+         expconstant = log(-coef);
+         coefs[idx] = -1.0;
+      }
+
+      /* add constant to exponential's child */
+      SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(expr), NULL, expconstant, ownercreate, ownercreatedata) );  /* expconstant+expchild */
+
+      /* simplify sum */
+      SCIP_CALL( SCIPcallExprSimplify(scip, sum, &simplifiedsum, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
+
+      /* create exponential with new child */
+      SCIP_CALL( SCIPcreateExprExp(scip, &exponential, simplifiedsum, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedsum) );
+
+      /* simplify exponential */
+      SCIP_CALL( SCIPcallExprSimplify(scip, exponential, &simplifiedexp, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exponential) );
+
+      /* replace current child with simplified exponential */
+      SCIP_CALL( SCIPreplaceExprChild(scip, duplicate, idx, simplifiedexp) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedexp) );
+
+      return SCIP_OKAY;
+   }
+
    /* other types of (simplified) expressions can be a child of a simplified sum */
    assert(!SCIPisExprSum(scip, expr));
    assert(!SCIPisExprValue(scip, expr));
@@ -335,7 +383,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
          continue;
       }
 
-      /* enforces SS2, SS3 and SS9 */
+      /* enforces SS2, SS3, SS9, and SS10 */
       SCIP_CALL( simplifyTerm(scip, duplicate, i, &changed, ownercreate, ownercreatedata) );
    }
 

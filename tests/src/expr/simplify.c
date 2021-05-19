@@ -106,7 +106,9 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"exp(<x>)^2", "exp"},
       {"2+2*<x>*exp(<x>*<y>)-2", "prod"},
       {"2+2*<x>*cos(<x>*<y>)-2", "sum"},
-      {"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"}
+      {"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"},
+      {"10.0*exp(<x>)", "exp"},
+      {"-10.0*exp(<x>)", "sum"}
       /*TODO,
       {"<x>*abs(<x>)", "pow"}
       {"<x>*abs(<x>)^0.875", "pow"}*/
