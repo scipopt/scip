@@ -595,9 +595,7 @@ SCIP_RETCODE SCIPhashExpr(
  *    SP12: if it has two children, then neither of them is a sum (expand sums)
  *    SP13: no child is a sum with a single term
  *    SP14: at most one child is an exp
- * - is a (signed)power expression such that
- *   TODO: Some of these criteria are too restrictive for signed powers; for example, the exponent does not need to be
- *   an integer for signedpower to distribute over a product (POW5, POW6, POW8). Others can also be improved
+ * - is a power expression such that
  *    POW1: exponent is not 0
  *    POW2: exponent is not 1
  *    POW3: its child is not a value
