@@ -6692,7 +6692,7 @@ void SCIPprofilePrint(
 {
    int t;
 
-   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", profile, profile->capacity);
+   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", (void*)profile, profile->capacity);
 
    for( t = 0; t < profile->ntimepoints; ++t )
    {

@@ -5502,7 +5502,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
    {
-      SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
+      SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
@@ -5988,7 +5988,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
    {
-      SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
+      SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
       return SCIP_INVALIDDATA; /*lint !e527*/
    }

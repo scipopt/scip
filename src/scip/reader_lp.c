@@ -1018,7 +1018,7 @@ SCIP_RETCODE readCoefficients(
                syntaxError(scip, lpinput, "two objective offsets.");
                return SCIP_OKAY;
             }
-            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", coefsign * coef);
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * coef);
             haveobjoffset = TRUE;
             *objoffset = coefsign * coef;
          }
@@ -1077,7 +1077,7 @@ SCIP_RETCODE readCoefficients(
                syntaxError(scip, lpinput, "two objective offsets.");
                return SCIP_OKAY;
             }
-            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", coefsign * coef);
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * coef);
             *objoffset = coefsign * coef;
          }
 

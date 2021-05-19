@@ -358,7 +358,7 @@ void* BMSallocClearMemory_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -393,7 +393,7 @@ void* BMSallocMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -430,7 +430,7 @@ void* BMSallocMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -467,7 +467,7 @@ void* BMSreallocMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %llu.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -505,7 +505,7 @@ void* BMSreallocMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %llu.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -1890,7 +1890,7 @@ void* BMSallocBlockMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate block of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -1911,7 +1911,7 @@ void* BMSallocBlockMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate block of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -1959,7 +1959,7 @@ void* BMSreallocBlockMemory_call(
    if ( newsize > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate block of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2000,7 +2000,7 @@ void* BMSreallocBlockMemoryArray_call(
    if ( newnum > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate array of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate array of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2767,7 +2767,7 @@ void* BMSallocBufferMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate buffer of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2788,7 +2788,7 @@ void* BMSallocBufferMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate buffer of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2900,7 +2900,7 @@ void* BMSreallocBufferMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate buffer of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2922,7 +2922,7 @@ void* BMSreallocBufferMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate array of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate array of size exceeding %lu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif

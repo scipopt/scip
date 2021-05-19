@@ -1624,7 +1624,7 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
             constants[i] = 0.0;
          else if( constants[i] == GMS_SV_UNDEF || constants[i] == GMS_SV_NA || constants[i] == GMS_SV_NAINT || constants[i] == GMS_SV_ACR )
          {
-            SCIPwarningMessage(scip, "Constant %e in nonlinear expressions constants pool cannot be handled by SCIP.\n");
+            SCIPwarningMessage(scip, "Constant %e in nonlinear expressions constants pool cannot be handled by SCIP.\n", constants[i]);
             constants[i] = SCIP_INVALID;
          }
          else if( constants[i] <= -SCIPinfinity(scip) )
@@ -2551,7 +2551,7 @@ SCIP_RETCODE writeGmoSolution(
 
             for( s = 0; s < nsols; ++s )
             {
-               SCIPinfoMessage(scip, NULL, "Checking feasibility of solution #%0.2d with reported objective value %.15e.\n", s, objvals[s]);
+               SCIPinfoMessage(scip, NULL, "Checking feasibility of solution #%.2d with reported objective value %.15e.\n", s, objvals[s]);
 
                SCIP_CALL( checkAndRepairSol(scip, solvals[s], &objvals[s], resolvenlp, &success) );
 
@@ -2591,7 +2591,7 @@ SCIP_RETCODE writeGmoSolution(
                objvals[s] = gmoGetHeadnTail(gmo, (int) gmoHobjval);
                primalbound = objvals[s];
 
-               SCIPinfoMessage(scip, NULL, "Solution #%0.2d feasible. Reevaluated objective value = %.15e.\n", s, objvals[s]);
+               SCIPinfoMessage(scip, NULL, "Solution #%.2d feasible. Reevaluated objective value = %.15e.\n", s, objvals[s]);
 
                SCIPinfoMessage(scip, NULL, "\nStatus update:\n");
                SCIPinfoMessage(scip, NULL, "Solving Time (sec) : %.2f\n", gmoGetHeadnTail(gmo, (int) gmoHresused));

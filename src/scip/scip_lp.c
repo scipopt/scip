@@ -1008,14 +1008,14 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
    if( quality != SCIP_INVALID ) /*lint !e777*/
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%.6e\n", quality);
    else
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "not available\n", quality);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "not available\n");
 
    SCIP_CALL( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_EXACTCONDITION, &quality) );
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Basis matrix condition (exact):     ");
    if( quality != SCIP_INVALID ) /*lint !e777*/
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%.6e\n", quality);
    else
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "not available\n", quality);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "not available\n");
 
    return SCIP_OKAY;
 }

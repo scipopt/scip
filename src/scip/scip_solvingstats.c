@@ -2469,7 +2469,7 @@ void SCIPprintTransProblemStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
    SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Nonzeros         : %d constraint, %d clique table\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Nonzeros         : %" SCIP_LONGINT_FORMAT " constraint, %" SCIP_LONGINT_FORMAT " clique table\n",
          scip->stat->nnz, SCIPcliquetableGetNEntries(scip->cliquetable));
 }
 
@@ -3280,7 +3280,7 @@ void SCIPprintLPStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", (SCIP_Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          - %10d\n", scip->stat->nsbtimesiterlimhit);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          - %10" SCIP_LONGINT_FORMAT "\n", scip->stat->nsbtimesiterlimhit);
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "    (at root node) :          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f          -\n",
       scip->stat->nrootstrongbranchs,
@@ -3389,9 +3389,9 @@ void SCIPprintTreeStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file,
       "  nodes            : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " internal, %" SCIP_LONGINT_FORMAT " leaves)\n",
       scip->stat->nnodes, scip->stat->ninternalnodes, scip->stat->nnodes - scip->stat->ninternalnodes );
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  feasible leaves  : %10d\n", scip->stat->nfeasleaves);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeas. leaves   : %10d\n", scip->stat->ninfeasleaves);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  objective leaves : %10d\n", scip->stat->nobjleaves);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  feasible leaves  : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->nfeasleaves);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeas. leaves   : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->ninfeasleaves);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  objective leaves : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->nobjleaves);
    SCIPmessageFPrintInfo(scip->messagehdlr, file,
       "  nodes (total)    : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " internal, %" SCIP_LONGINT_FORMAT " leaves)\n",
       scip->stat->ntotalnodes, scip->stat->ntotalinternalnodes, scip->stat->ntotalnodes - scip->stat->ntotalinternalnodes);
@@ -3652,7 +3652,7 @@ void SCIPprintConcsolverStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Concurrent Solvers : SolvingTime    SyncTime       Nodes    LP Iters SolsShared   SolsRecvd TighterBnds TighterIntBnds\n");
       for( i = 0; i < nconcsolvers; ++i )
       {
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %c%-16s: %11.2f %11.2f %11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT "%11i %11i %11" SCIP_LONGINT_FORMAT " %14" SCIP_LONGINT_FORMAT "\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %c%-16s: %11.2f %11.2f %11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT "%11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT " %14" SCIP_LONGINT_FORMAT "\n",
             winner == i ? '*' : ' ',
             SCIPconcsolverGetName(concsolvers[i]),
             SCIPconcsolverGetSolvingTime(concsolvers[i]),
@@ -3698,7 +3698,7 @@ void SCIPprintBendersStatistics(
          int nbenderscuts;
          int j;
 
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10d %10d %10d %10d %10d %10d\n",
             SCIPbendersGetName(scip->set->benders[i]),
             SCIPbendersGetTime(scip->set->benders[i]),
             SCIPbendersGetSetupTime(scip->set->benders[i]),
