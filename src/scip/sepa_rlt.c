@@ -2364,7 +2364,7 @@ void printProjRows(
 
    for( i = 0; i < nrows; ++i )
    {
-      SCIPinfoMessage(scip, file, "\n%s: ", "proj_row[%d]", i);
+      SCIPinfoMessage(scip, file, "\nproj_row[%d]: ", i);
       if( !SCIPisInfinity(scip, -projrows[i].lhs) )
          SCIPinfoMessage(scip, file, "%.15g <= ", projrows[i].lhs);
       for( j = 0; j < projrows[i].nnonz; ++j )

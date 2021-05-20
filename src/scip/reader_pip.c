@@ -2945,7 +2945,7 @@ SCIP_RETCODE SCIPwritePip(
           */
          if( !isquadratic )
          {
-            SCIPwarningMessage(scip, "constraint handler <%s> cannot print constraint\n", SCIPconsGetHdlr(cons));
+            SCIPwarningMessage(scip, "constraint handler <%s> cannot print constraint\n", SCIPconshdlrGetName(SCIPconsGetHdlr(cons)));
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
             SCIPinfoMessage(scip, file, ";\n");

@@ -2584,7 +2584,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
 #ifdef SCIP_DEBUG
       else
       {
-         SCIPdebugMsg(scip, "failed to generate %d-SOC\n");
+         SCIPdebugMsg(scip, "failed to generate SOC\n");
       }
 #endif
 

@@ -236,7 +236,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 
       if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childrenbounds[i]) )
       {
-         SCIPdebugMsg(scip, "activity for expression %d (unexpectedly) empty in initsepa\n");
+         SCIPdebugMsg(scip, "activity for expression %d (unexpectedly) empty in initsepa\n", i);
          *infeasible = TRUE;
          SCIPfreeBufferArray(scip, &childrenbounds);
          return SCIP_OKAY;

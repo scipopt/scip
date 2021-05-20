@@ -893,7 +893,7 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
 
       default :
       {
-         SCIPerrorMessage("Unsupported value '%c' for varboundrelax option.\n");
+         SCIPerrorMessage("Unsupported value '%c' for varboundrelax option.\n", conshdlrdata->varboundrelax);
          SCIPABORT();
          break;
       }
@@ -940,7 +940,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    expr = (SCIP_EXPR*) eventdata;
    assert(SCIPisExprVar(scip, expr));
 
-   SCIPdebugMsg(scip, "  exec event %#x for variable <%s> (local [%g,%g], global [%g,%g])\n", eventtype,
+   SCIPdebugMsg(scip, "  exec event %#lx for variable <%s> (local [%g,%g], global [%g,%g])\n", eventtype,
          SCIPvarGetName(SCIPeventGetVar(event)),
          SCIPvarGetLbLocal(SCIPeventGetVar(event)), SCIPvarGetUbLocal(SCIPeventGetVar(event)),
          SCIPvarGetLbGlobal(SCIPeventGetVar(event)), SCIPvarGetUbGlobal(SCIPeventGetVar(event)));
@@ -1993,7 +1993,7 @@ SCIP_RETCODE forwardPropExpr(
    /* if value is valid and empty, then we cannot improve, so do nothing */
    if( SCIPexprGetActivityTag(rootexpr) >= conshdlrdata->lastboundrelax && SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPexprGetActivity(rootexpr)) )
    {
-      SCIPdebugMsg(scip, "stored activity of root expr is empty and valid (activitytag >= lastboundrelax (%u)), skip forwardPropExpr -> cutoff\n", conshdlrdata->lastboundrelax);
+      SCIPdebugMsg(scip, "stored activity of root expr is empty and valid (activitytag >= lastboundrelax (%" SCIP_LONGINT_FORMAT ")), skip forwardPropExpr -> cutoff\n", conshdlrdata->lastboundrelax);
 
       if( infeasible != NULL )
          *infeasible = TRUE;
@@ -2007,7 +2007,7 @@ SCIP_RETCODE forwardPropExpr(
    /* if value is up-to-date, then nothing to do */
    if( SCIPexprGetActivityTag(rootexpr) == conshdlrdata->curboundstag )
    {
-      SCIPdebugMsg(scip, "activitytag of root expr equals curboundstag (%u), skip forwardPropExpr\n", conshdlrdata->curboundstag);
+      SCIPdebugMsg(scip, "activitytag of root expr equals curboundstag (%" SCIP_LONGINT_FORMAT "), skip forwardPropExpr\n", conshdlrdata->curboundstag);
 
       assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPexprGetActivity(rootexpr))); /* handled in previous if() */
 
@@ -6113,7 +6113,7 @@ SCIP_RETCODE addExprViolScoresAuxVars(
       {
          assert(auxvars[pos] == auxvar);
 
-         SCIPdebugMsg(scip, "adding branchingscore for expr %p with auxvar <%s>\n", expr, SCIPvarGetName(auxvar));
+         SCIPdebugMsg(scip, "adding branchingscore for expr %p with auxvar <%s>\n", (void*)expr, SCIPvarGetName(auxvar));
          exprs[nexprs++] = expr;
 
          if( nexprs == nauxvars )
@@ -10963,9 +10963,8 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
                 (!overestimate && ( cutviol / auxvarcoef <= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) ||
                 ( overestimate && (-cutviol / auxvarcoef >= conshdlrdata->weakcutthreshold * (auxvalue - auxvarvalue))) )
             {
-               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g "\
-                              "estimateval %g auxvalue %g (over %d)\n", auxvalue, auxvarvalue,
-                                        auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
+               ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut is too weak after cleanup: auxvarvalue %g estimateval %g auxvalue %g (over %d)\n",
+                  auxvarvalue, auxvarvalue + (overestimate ? -cutviol : cutviol) / auxvarcoef, auxvalue, overestimate); )
                sepasuccess = FALSE;
             }
          }

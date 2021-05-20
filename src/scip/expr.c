@@ -3181,7 +3181,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    /* handle single square term */
    if( SCIPexprIsPower(set, expr) && SCIPgetExponentExprPow(expr) == 2.0 )
    {
-      SCIPsetDebugMsg(set, "expr looks like square: fill data structures\n", (void*)expr);
+      SCIPsetDebugMsg(set, "expr %p looks like square: fill data structures\n", (void*)expr);
       SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, &expr->quaddata) );
 
       expr->quaddata->nquadexprs = 1;
@@ -3198,7 +3198,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    /* handle single bilinear term */
    if( SCIPexprIsProduct(set, expr) && SCIPexprGetNChildren(expr) == 2 )
    {
-      SCIPsetDebugMsg(set, "expr looks like bilinear product: fill data structures\n", (void*)expr);
+      SCIPsetDebugMsg(set, "expr %p looks like bilinear product: fill data structures\n", (void*)expr);
       SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, &expr->quaddata) );
       expr->quaddata->nquadexprs = 2;
 
@@ -3273,7 +3273,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       return SCIP_OKAY;
    }
 
-   SCIPsetDebugMsg(set, "expr looks quadratic: fill data structures\n", (void*)expr);
+   SCIPsetDebugMsg(set, "expr %p looks quadratic: fill data structures\n", (void*)expr);
 
    /* expr2idx maps expressions to indices; if index > 0, it is its index in the linexprs array, otherwise -index-1 is
     * its index in the quadexprterms array

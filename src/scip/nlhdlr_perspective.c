@@ -1337,7 +1337,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectPerspective)
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", expr);
+   SCIPdebugMsg(scip, "Called perspective detect, expr = %p: ", (void*)expr);
    SCIPprintExpr(scip, expr, NULL);
    SCIPdebugMsgPrint(scip, "\n");
 #endif
@@ -1507,7 +1507,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
 
 #ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "enforcement method of perspective nonlinear handler called for expr %p: ", expr);
+   SCIPinfoMessage(scip, NULL, "enforcement method of perspective nonlinear handler called for expr %p: ", (void*)expr);
    SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
    SCIPinfoMessage(scip, NULL, " at\n");
    for( i = 0; i < nlhdlrexprdata->nvars; ++i )

@@ -913,7 +913,7 @@ public:
                }
                else
                {
-                  SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown constraint suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+                  SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown constraint suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
                }
                break;
 
@@ -940,16 +940,16 @@ public:
                }
                else
                {
-                  SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown variable suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+                  SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown variable suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
                }
                break;
 
             case mp::suf::Kind::OBJ:
-               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown objective suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown objective suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
                break;
 
             case mp::suf::Kind::PROBLEM:
-               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown problem suffix <%.*s>. Ignoring.\n", name.size(), name.data());
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown problem suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
                break;
             }
          }
