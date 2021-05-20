@@ -224,7 +224,7 @@ depend:		$(SCIPDIR)
 -include	$(UNITTESTSDEP)
 
 
-$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(TPILIBFILE)
+$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE)
 		@echo "-> linking $@"
 		$(LINKCXX) $< $(LINKCXXSCIPALL) \
 		$(LINKCXX_l)$(TPILIB) \
@@ -239,8 +239,6 @@ $(LPILIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) LPS=$(LPS))
 $(SCIPLIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED))
-$(NLPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) IPOPT=$(IPOPT))
 $(TPILIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) TPI=$(TPI))
 
