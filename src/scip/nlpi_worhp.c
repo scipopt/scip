@@ -631,7 +631,7 @@ SCIP_RETCODE userHM(
    return retcode;
 }
 
-/** Worhp print callback function that does nothing */
+/** Worhp print callback function that does nothing */ /*lint -e{715}*/
 static void noprint(
    int                    mode,              /**< the mode */
    const char             s[]                /**< a string */
@@ -950,6 +950,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    assert(problem != NULL);
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, problem) );
+   assert( *problem != NULL );
 
    /* initialize problem */
    (*problem)->firstrun = TRUE;

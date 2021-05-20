@@ -760,8 +760,8 @@ SCIP_DECL_CONSCHECK(consCheckLOP)
                {
                   SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
                   SCIPinfoMessage(scip, NULL, "violation: symmetry equation violated <%s> = %.15g and <%s> = %.15g\n",
-                     SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]), 0.5,
-                     SCIPvarGetName(vars[j][i]), SCIPgetSolVal(scip, sol, vars[j][i]), 0.5);
+                     SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]),
+                     SCIPvarGetName(vars[j][i]), SCIPgetSolVal(scip, sol, vars[j][i]));
                }
 	       return SCIP_OKAY;
 	    }
@@ -790,9 +790,9 @@ SCIP_DECL_CONSCHECK(consCheckLOP)
                      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
                      SCIPinfoMessage(scip, NULL,
                         "violation: triangle inequality violated <%s> = %.15g, <%s> = %.15g, <%s> = %.15g\n",
-                        SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]), 0.5,
-                        SCIPvarGetName(vars[j][k]), SCIPgetSolVal(scip, sol, vars[j][k]), 0.5,
-                        SCIPvarGetName(vars[k][i]), SCIPgetSolVal(scip, sol, vars[k][i]), 0.5);
+                        SCIPvarGetName(vars[i][j]), SCIPgetSolVal(scip, sol, vars[i][j]),
+                        SCIPvarGetName(vars[j][k]), SCIPgetSolVal(scip, sol, vars[j][k]),
+                        SCIPvarGetName(vars[k][i]), SCIPgetSolVal(scip, sol, vars[k][i]));
                   }
 		  return SCIP_OKAY;
 	       }

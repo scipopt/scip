@@ -676,7 +676,7 @@ SCIP_RETCODE aggregation(
     */
    if( !isimpliedfree && (!SCIPisInfinity(scip, rhs) || !SCIPisInfinity(scip, -lhs)) )
    {
-      SCIPdebugMsg(scip, "create a linear constraint to ensure %g <= %g %s + %g <= %g\n", lhs, coefs[0], SCIPvarGetName(tmpvars[0]),
+      SCIPdebugMsg(scip, "create a linear constraint to ensure %g <= %g %s + %g %s <= %g\n", lhs, coefs[0], SCIPvarGetName(tmpvars[0]),
          coefs[1], SCIPvarGetName(tmpvars[1]), rhs);
       (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "dualsparsifycons_%d", presoldata->naggregated);
 

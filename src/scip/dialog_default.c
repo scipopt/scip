@@ -3723,13 +3723,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
             else
             {
                SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "finite solution could not be created\n");
-               SCIPdialogMessage(scip, NULL, "finite solution could not be created\n", filename);
+               SCIPdialogMessage(scip, NULL, "finite solution could not be created\n");
             }
          }
          else
          {
             SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no solution available\n");
-            SCIPdialogMessage(scip, NULL, "no solution available\n", filename);
+            SCIPdialogMessage(scip, NULL, "no solution available\n");
          }
 
          fclose(file);

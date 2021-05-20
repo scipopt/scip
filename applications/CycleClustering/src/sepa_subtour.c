@@ -52,7 +52,7 @@ void printCycle(
 {
    int i;
 
-   SCIPinfoMessage(scip, NULL, "cycle_l%d_c: %d", cyclelength, cycle[0]);x
+   SCIPinfoMessage(scip, NULL, "cycle_l%d_c: %d", cyclelength, cycle[0]);
    for( i = 0; i < cyclelength; ++i )
    {
       SCIPinfoMessage(scip, NULL, " -> %d", cycle[i+1]);

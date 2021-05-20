@@ -220,19 +220,21 @@ void F77_FUNC(hessian,HESSIAN)(real *x, fint *n, fint *m, fint *phase, real *lam
     fint *l_hess, fint *li_hess, fint *errflag);
 
 /** common block for problemname */
+/*lint -esym(754,char_l,pname,*::char_l,*::pname) */
 extern struct
 {
    fint char_l;
    char pname[10];
 } F77_FUNC(cpname,CPNAME);
-/*lint -esym(752,cpname_) -esym(754,char_l) -esym(754,pname) */
+/*lint -esym(752,cpname_) */
 
 /** common block for Hessian storage set to 0, i.e. NO Hessian */
+/*lint -esym(754,*::phr,*::phc) */
 extern struct
 {
    fint phl, phr, phc;
 } F77_FUNC(hessc,HESSC);
-/*lint -esym(754,phr) -esym(754,phc) */
+/*lint -esym(754,phr,phc) */
 
 /** common block for upper bound on filter */
 extern struct
@@ -247,13 +249,16 @@ extern struct
 } F77_FUNC(nlp_eps_inf,NLP_EPS_INF);
 
 /** common block for printing from QP solver */
+/*lint -esym(754,*::n_bqpd_calls,*::n_bqpd_prfint) */
 extern struct
 {
    fint n_bqpd_calls, n_bqpd_prfint;
 } F77_FUNC(bqpd_count,BQPD_COUNT);
-/*lint -esym(752,bqpd_count_) -esym(754,n_bqpd_calls) -esym(754,n_bqpd_prfint) */
+/*lint -esym(752,bqpd_count_) */
+/*lint -esym(754,n_bqpd_calls,n_bqpd_prfint) */
 
 /** common for scaling: scale_mode = 0 (none), 1 (variables), 2 (vars+cons) */
+/*lint -esym(754,*::phe) */
 extern struct
 {
    fint scale_mode, phe;
@@ -316,7 +321,7 @@ SCIP_Bool timelimitreached(
    return timeelapsed(nlpidata) >= nlpiproblem->maxtime;
 }
 
-/** Objective function evaluation */
+/** Objective function evaluation */ /*lint -e{715} */
 void F77_FUNC(objfun,OBJFUN)(
    real*                 x,                  /**< value of current variables (array of length n) */
    fint*                 n,                  /**< number of variables */
@@ -325,7 +330,7 @@ void F77_FUNC(objfun,OBJFUN)(
    fint*                 iuser,              /**< user integer workspace */
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
-{ /*lint --e{715} */
+{  /*lint --e{715} */
    SCIP_NLPIPROBLEM* problem;
    real val;
 
@@ -351,7 +356,7 @@ void F77_FUNC(objfun,OBJFUN)(
    }
 }
 
-/** Constraint functions evaluation */
+/** Constraint functions evaluation */ /*lint -e{715} */
 void F77_FUNC(confun,CONFUN)(
    real*                 x,                  /**< value of current variables (array of length n) */
    fint*                 n,                  /**< number of variables */
@@ -363,7 +368,7 @@ void F77_FUNC(confun,CONFUN)(
    fint*                 iuser,              /**< user integer workspace */
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
-{ /*lint --e{715} */
+{  /*lint --e{715} */
    SCIP_NLPIPROBLEM* problem;
    real val;
    int j;
@@ -387,7 +392,7 @@ void F77_FUNC(confun,CONFUN)(
 /** Objective gradient and Jacobian evaluation
  *
  * \note If an arithmetic exception occurred, then the gradients must not be modified.
- */
+ */ /*lint -e{715} */
 void
 F77_FUNC(gradient,GRADIENT)(
    fint*                 n,                  /**< number of variables */
@@ -401,7 +406,7 @@ F77_FUNC(gradient,GRADIENT)(
    fint*                 iuser,              /**< user integer workspace */
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
-{ /*lint --e{715} */
+{  /*lint --e{715} */
    SCIP_NLPIPROBLEM* problem;
    SCIP_Real dummy;
 
@@ -456,7 +461,7 @@ void F77_FUNC(objgrad,OBJGRAD)(void)
  * phase = 2 : Hessian of the Lagrangian (including objective Hessian)
  *
  * \note If an arithmetic exception occurred, then the Hessian must not be modified.
- */
+ */ /*lint -e{715} */
 void
 F77_FUNC(hessian,HESSIAN)(
    real*                 x,                  /**< value of current variables (array of length n) */
@@ -472,7 +477,7 @@ F77_FUNC(hessian,HESSIAN)(
    fint*                 li_hess,            /**< space of Hessian integer storage lws. On entry: maximal space allowed, on exit: actual amount used */
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
-{ /*lint --e{715} */
+{  /*lint --e{715} */
    SCIP_NLPIPROBLEM* problem;
    SCIP_Real* lambda;
    int nnz;

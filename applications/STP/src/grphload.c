@@ -914,9 +914,7 @@ SCIP_RETCODE graph_load(
    curf.section     = &section_table[0];
    save             = curf_null;
 
-   (void)sprintf(curf.filename, "%s%s",
-      pathname,
-      basename);
+   (void) SCIPsnprintf(curf.filename, MAX_PATH_LEN, "%s%s", pathname, basename);
 
    /* Open the file...
     */

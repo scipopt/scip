@@ -355,7 +355,7 @@ extern "C" {
                        {                                                                                      \
                           if( NULL == (x) )                                                                   \
                           {                                                                                   \
-                             SCIPerrorMessage("No memory in function call\n", __FILE__, __LINE__);            \
+                             SCIPerrorMessage("No memory in function call\n");                                \
                              SCIPABORT();                                                                     \
                           }                                                                                   \
                        }                                                                                      \

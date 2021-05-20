@@ -2172,7 +2172,7 @@ SCIP_RETCODE readQCMatrix(
    lincons = SCIPfindCons(scip, mpsinputField1(mpsi));
    if( lincons == NULL )
    {
-      SCIPerrorMessage("no row under name <%s> processed so far.\n");
+      SCIPerrorMessage("no row under name <%s> processed so far.\n", mpsinputField1(mpsi));
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
@@ -3297,7 +3297,7 @@ void printColumnSection(
          printStart(scip, file, "", "INTEND", (int) maxnamelen);
          printRecord(scip, file, "'MARKER'", "", maxnamelen);
          printRecord(scip, file, "'INTEND'", "", maxnamelen);
-         SCIPinfoMessage(scip, file, "\n", maxnamelen);
+         SCIPinfoMessage(scip, file, "\n");
          intSection = FALSE;
       }
       else if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !intSection )
@@ -3340,7 +3340,7 @@ void printColumnSection(
       printStart(scip, file, "", "INTEND", (int) maxnamelen);
       printRecord(scip, file, "'MARKER'", "", maxnamelen);
       printRecord(scip, file, "'INTEND'", "", maxnamelen);
-      SCIPinfoMessage(scip, file, "\n", maxnamelen);
+      SCIPinfoMessage(scip, file, "\n");
    }
 }
 
@@ -4111,6 +4111,9 @@ SCIP_RETCODE SCIPwriteMps(
       /* construct constraint name */
       consname = consnames[c];
 
+      /* init rhs value to infinity (would then ignored) */
+      rhss[c] = SCIPinfinity(scip);
+
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          lhs = SCIPgetLhsLinear(scip, cons);
@@ -4795,7 +4798,7 @@ SCIP_RETCODE SCIPwriteMps(
             /* print "x x coeff" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
-            SCIPinfoMessage(scip, file, "\n", valuestr);
+            SCIPinfoMessage(scip, file, "\n");
          }
 
          /* print bilinear terms; CPLEX format expects a symmetric matrix with all coefficients specified,
@@ -4832,12 +4835,12 @@ SCIP_RETCODE SCIPwriteMps(
             /* print "x y coeff/2" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
             printRecord(scip, file, varname2, valuestr, maxnamelen);
-            SCIPinfoMessage(scip, file, "\n", valuestr);
+            SCIPinfoMessage(scip, file, "\n");
 
             /* print "y x coeff/2" line */
             printStart(scip, file, "", varname2, (int) maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
-            SCIPinfoMessage(scip, file, "\n", valuestr);
+            SCIPinfoMessage(scip, file, "\n");
          }
       }
 

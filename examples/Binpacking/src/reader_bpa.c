@@ -214,7 +214,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
 
    if( nweights < nitems )
    {
-      SCIPwarningMessage(scip, "set nitems from <%d> to <%d> since the file <%s> only contains <%d> weights\n", nitems, weights, filename, weights);
+      SCIPwarningMessage(scip, "set nitems from <%d> to <%d> since the file <%s> only contains <%d> weights\n", nitems, nweights, filename, nweights);
       nitems = nweights;
    }
 

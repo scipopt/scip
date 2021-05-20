@@ -746,8 +746,7 @@ SCIP_RETCODE setupProblem(
    probdata->enumtime += SCIPgetTotalTime(scip);
    probdata->ncppatternsunknownbeg = getNCPatterns(scip, probdata, SCIP_PACKABLE_UNKNOWN);
 
-   SCIPinfoMessage(scip, NULL, "+++++++++++++ starting with |CP|=%d\n", probdata->ncpatterns,
-      probdata->nrpatterns);
+   SCIPinfoMessage(scip, NULL, "+++++++++++++ starting with |CP|=%d\n", probdata->ncpatterns);
 
    /* create initial rectangular patterns */
    for( t = 0; t < ntypes; ++t )

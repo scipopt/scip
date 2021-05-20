@@ -2529,7 +2529,7 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
 
    if ( strncmp(s, "symresack(", 10) != 0 )
    {
-      SCIPerrorMessage("Syntax error - expected \"symresack(\"", s);
+      SCIPerrorMessage("Syntax error - expected \"symresack(\", but got '%s'", s);
       *success = FALSE;
       return SCIP_OKAY;
    }

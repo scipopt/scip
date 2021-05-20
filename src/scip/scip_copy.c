@@ -102,7 +102,7 @@ SCIP_Bool takeCut(
       takecut = (SCIPcutGetLPActivityQuot(cut) >= scip->set->sepa_minactivityquot);
       break;
    default:
-      SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n");
+      SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n", cutsel);
       SCIPABORT();
       takecut = FALSE;  /*lint !e527*/
       break;

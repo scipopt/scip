@@ -921,15 +921,11 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
              */
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
             coef = 1.0;
-            break;
          }
-         if( *str == '-' || *str == '+' || isdigit(*str) )
-         {
+         else if( *str == '-' || *str == '+' || isdigit(*str) )
             state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
-            break;
-         }
-
-         state = SCIPPARSEPOLYNOMIAL_STATE_END;
+         else
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
 
          break;
       }
@@ -940,18 +936,15 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          {
             /* there seem to come another variable */
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
-            break;
          }
-
-         if( *str == '-' || *str == '+' || isdigit(*str) )
+         else if( *str == '-' || *str == '+' || isdigit(*str) )
          {
             /* there seem to come a coefficient, which means the next monomial */
             state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
-            break;
          }
+         else /* since we cannot detect the symbols we stop parsing the polynomial */
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
 
-         /* since we cannot detect the symbols we stop parsing the polynomial */
-         state = SCIPPARSEPOLYNOMIAL_STATE_END;
          break;
       }
 
@@ -981,7 +974,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          }
 
          /* after the coefficient we go into the intermediate state, i.e., expecting next variables */
-         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;  /*lint !e838*/
 
          break;
       }
@@ -1049,7 +1042,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          str = *endptr;
 
          /* after the exponent we go into the intermediate state, i.e., expecting next variables */
-         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;  /*lint !e838*/
          break;
       }
 

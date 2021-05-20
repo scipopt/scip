@@ -179,10 +179,10 @@ void SCIPprintMemoryDiagnostic(
 
    BMSdisplayMemory();
 
-   SCIPmessagePrintInfo(scip->messagehdlr, "\nParameter Block Memory (%p):\n", scip->mem->setmem);
+   SCIPmessagePrintInfo(scip->messagehdlr, "\nParameter Block Memory (%p):\n", (void*)scip->mem->setmem);
    BMSdisplayBlockMemory(scip->mem->setmem);
 
-   SCIPmessagePrintInfo(scip->messagehdlr, "\nSolution Block Memory (%p):\n", scip->mem->probmem);
+   SCIPmessagePrintInfo(scip->messagehdlr, "\nSolution Block Memory (%p):\n", (void*)scip->mem->probmem);
    BMSdisplayBlockMemory(scip->mem->probmem);
 
    SCIPmessagePrintInfo(scip->messagehdlr, "\nMemory Buffers:\n");

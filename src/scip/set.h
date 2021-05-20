@@ -1736,6 +1736,9 @@ SCIP_Bool SCIPsetGetSubscipsOff(
 
 
 /** prints a debug message */
+#ifdef __GNUC__
+__attribute__((format(printf, 4, 5)))
+#endif
 SCIP_EXPORT
 void SCIPsetPrintDebugMessage(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1746,6 +1749,9 @@ void SCIPsetPrintDebugMessage(
    );
 
 /** prints a debug message without precode */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPsetDebugMessagePrint(
    SCIP_SET*             set,                /**< global SCIP settings */
