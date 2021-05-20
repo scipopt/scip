@@ -5036,7 +5036,7 @@ SCIP_DECL_CONSCHECK(consCheckXor)
 
             if( consdata->intvar != NULL )
             {
-               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE but integer variable has value of %g\n", SCIPgetSolVal(scip, sol, consdata->intvar));
+               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE but integer variable has value of %g\n", sum, SCIPgetSolVal(scip, sol, consdata->intvar));
             }
             else
             {

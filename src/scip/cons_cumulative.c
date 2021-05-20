@@ -2893,7 +2893,7 @@ SCIP_RETCODE analyzeEnergyRequirement(
    /* energy which needs be explained */
    requiredenergy = ((SCIP_Longint) end - begin) * capacity;
 
-   SCIPdebugMsg(scip, "analysis energy load in [%d,%d) (capacity %d, energy %d)\n", begin, end, capacity, requiredenergy);
+   SCIPdebugMsg(scip, "analysis energy load in [%d,%d) (capacity %d, energy %" SCIP_LONGINT_FORMAT ")\n", begin, end, capacity, requiredenergy);
 
    /* collect global contribution and adjusted the required energy by the amount of energy the inference variable
     * takes
@@ -4781,7 +4781,7 @@ SCIP_RETCODE propagateUbTTEF(
 
          if( freeenergy <= minavailable )
          {
-            SCIPdebugMsg(scip, "skip latest completion time  <%d> (minimum available energy <%d>, free energy <%d>)\n", lct, minavailable, freeenergy);
+            SCIPdebugMsg(scip, "skip latest completion time  <%d> (minimum available energy <%" SCIP_LONGINT_FORMAT ">, free energy <%" SCIP_LONGINT_FORMAT ">)\n", lct, minavailable, freeenergy);
             continue;
          }
       }
@@ -5790,7 +5790,7 @@ void updateEnvelope(
       if( leftdata->enveloptheta >= 0 && rightdata->energylambda >= 0 )
          nodedata->enveloplambda = MAX(nodedata->enveloplambda, leftdata->enveloptheta + rightdata->energylambda);
 
-      SCIPdebugMsg(scip, "node <%p> lambda envelop %d\n", (void*)node, nodedata->enveloplambda);
+      SCIPdebugMsg(scip, "node <%p> lambda envelop %" SCIP_LONGINT_FORMAT "\n", (void*)node, nodedata->enveloplambda);
 
       if( leftdata->energylambda >= 0 && rightdata->energylambda >= 0 )
       {
@@ -6500,7 +6500,7 @@ SCIP_RETCODE analyzeConflictOverload(
    }
    assert(reportedenergy > energy);
 
-   SCIPdebugMsg(scip, "time window [%d,%d) available energy %d, required energy %d\n", est, lct, energy, reportedenergy);
+   SCIPdebugMsg(scip, "time window [%d,%d) available energy %" SCIP_LONGINT_FORMAT ", required energy %d\n", est, lct, energy, reportedenergy);
 
    /* initialize conflict analysis */
    SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );

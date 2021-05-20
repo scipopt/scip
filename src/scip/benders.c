@@ -6585,7 +6585,7 @@ void SCIPbendersSetSubproblemIsIndependent(
     */
    if( benders->benderssolvesubconvex != NULL || benders->benderssolvesub != NULL || benders->bendersfreesub != NULL )
    {
-      SCIPerrorMessage("The user has defined either bendersSolvesubconvex%d, bendersSolvesub%d or bendersFreesub%s. "
+      SCIPerrorMessage("The user has defined either bendersSolvesubconvex%s, bendersSolvesub%s or bendersFreesub%s. "
          "Thus, it is not possible to declare the independence of a subproblem.\n", benders->name, benders->name,
          benders->name);
       SCIPABORT();

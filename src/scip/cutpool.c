@@ -799,7 +799,7 @@ SCIP_RETCODE SCIPcutpoolDelRow(
    cut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
    if( cut == NULL )
    {
-      SCIPerrorMessage("row <%s> is not existing in cutpool %p\n", SCIProwGetName(row), cutpool);
+      SCIPerrorMessage("row <%s> is not existing in cutpool %p\n", SCIProwGetName(row), (void*)cutpool);
       return SCIP_INVALIDDATA;
    }
 

@@ -5299,7 +5299,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          sepafreq = SCIPconshdlrGetSepaFreq(conshdlr);
          if ( (sepafreq != -1 || conshdlrdata->enforcecuts) && logicorsepafreq != 1 )
          {
-            SCIPwarningMessage(scip, "For better performance set parameter 'constraints/logicor/sepafreq' to 1 if 'constraints/included/genlogicor' is true.\n", sepafreq);
+            SCIPwarningMessage(scip, "For better performance set parameter 'constraints/logicor/sepafreq' to 1 if 'constraints/included/genlogicor' is true.\n");
          }
       }
    }

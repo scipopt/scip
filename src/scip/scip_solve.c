@@ -1173,7 +1173,7 @@ SCIP_RETCODE presolveRound(
 
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
                "feasible solution found by %s heuristic after %.1f seconds, objective value %.6e\n",
-               SCIPgetSolvingTime(scip), SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip, sol));
+               SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolvingTime(scip), SCIPgetSolOrigObj(scip, sol));
          }
       }
    }
@@ -2621,7 +2621,7 @@ SCIP_RETCODE SCIPsolve(
          if( scip->stat->userrestart )
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
                "(run %d, node %" SCIP_LONGINT_FORMAT ") performing user restart\n",
-               scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
+               scip->stat->nruns, scip->stat->nnodes);
          else
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
                "(run %d, node %" SCIP_LONGINT_FORMAT ") restarting after %d global fixings of integer variables\n",

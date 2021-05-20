@@ -1213,7 +1213,7 @@ SCIP_RETCODE updateTransformation(
 
    case TRANSFORMSTATUS_NONE:
    default:
-      SCIPerrorMessage("Error: Invalid variable status <%d> in shift and propagagate heuristic, aborting!\n");
+      SCIPerrorMessage("Error: Invalid variable status <%d> in shift and propagagate heuristic, aborting!\n", status);
       SCIPABORT();
       return SCIP_INVALIDDATA;   /*lint !e527*/
    }

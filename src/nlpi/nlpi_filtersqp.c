@@ -1919,7 +1919,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       problem->mxiwk = newsize;
    }
    /* in case of some evalerrors, not clearing ws could lead to valgrind warnings about use of uninitialized memory */
-   memset(problem->ws, 0, (size_t) problem->mxwk * sizeof(real));
+   memset(problem->ws, 0, (size_t) problem->mxwk * sizeof(real)); /*lint !e571*/
 
    /* from here on we are not thread-safe: if intended for multithread use, then protect filtersqp call with mutex
     * NOTE: we need to make sure that we do not return from nlpiSolve before unlocking the mutex

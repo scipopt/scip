@@ -7093,8 +7093,7 @@ SCIP_RETCODE getFarkasProof(
       else
       {
          (*valid) = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
-            *farkasact, SCIPaggrRowGetRhs(farkasrow));
+         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
 
@@ -7318,8 +7317,7 @@ SCIP_RETCODE getDualProof(
       else
       {
          (*valid) = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
-            *farkasact, SCIPaggrRowGetRhs(farkasrow));
+         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
 

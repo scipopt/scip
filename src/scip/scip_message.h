@@ -115,6 +115,9 @@ void SCIPsetMessagehdlrQuiet(
    );
 
 /** prints a warning message via the message handler */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPwarningMessage(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -123,6 +126,9 @@ void SCIPwarningMessage(
    );
 
 /** prints a debug message */
+#ifdef __GNUC__
+__attribute__((format(printf, 4, 5)))
+#endif
 SCIP_EXPORT
 void SCIPprintDebugMessage(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -133,6 +139,9 @@ void SCIPprintDebugMessage(
    );
 
 /** prints a debug message without precode */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPdebugMessagePrint(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -141,6 +150,9 @@ void SCIPdebugMessagePrint(
    );
 
 /** prints a dialog message that requests user interaction or is a direct response to a user interactive command */
+#ifdef __GNUC__
+__attribute__((format(printf, 3, 4)))
+#endif
 SCIP_EXPORT
 void SCIPdialogMessage(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -150,6 +162,9 @@ void SCIPdialogMessage(
    );
 
 /** prints a message */
+#ifdef __GNUC__
+__attribute__((format(printf, 3, 4)))
+#endif
 SCIP_EXPORT
 void SCIPinfoMessage(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -159,6 +174,9 @@ void SCIPinfoMessage(
    );
 
 /** prints a message depending on the verbosity level */
+#ifdef __GNUC__
+__attribute__((format(printf, 4, 5)))
+#endif
 SCIP_EXPORT
 void SCIPverbMessage(
    SCIP*                 scip,               /**< SCIP data structure */

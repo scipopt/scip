@@ -376,7 +376,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          {
             SCIP_CALL( SCIPprintDisplayLine(masterprob, NULL, SCIP_VERBLEVEL_NORMAL, TRUE) );
             SCIPverbMessage(masterprob, SCIP_VERBLEVEL_NORMAL, NULL,
-               "Benders' Decomposition: Master problem LP is infeasible. Added %d feasibility cuts.\n",
+               "Benders' Decomposition: Master problem LP is infeasible. Added %" SCIP_LONGINT_FORMAT " feasibility cuts.\n",
                SCIPbenderscutGetNFound(benderscut));
          }
       }
