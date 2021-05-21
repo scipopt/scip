@@ -128,6 +128,8 @@ Interface changes
 Deleted files
 -------------
 
+- interfaces/gams/*
+
 Unit tests
 ----------
 
