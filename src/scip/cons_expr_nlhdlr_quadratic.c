@@ -2357,7 +2357,14 @@ void insertBoundRayEntries(
       var = SCIPgetConsExprExprAuxVar(expr);
       solval = SCIPgetSolVal(scip, vertex, var);
 
-      entry = (idx == i) ? factor + solval : solval;
+      entry = solval;
+
+      /* add lppos of var corresponding to current ray */
+      if( idx == i )
+      {
+         entry += factor;
+         rays->lpposray[i] = SCIPcolGetLPPos(SCIPvarGetCol(var));
+      }
 
       /* insert new non-zero entry in ray */
       if( ! SCIPisZero(scip, entry) )
@@ -2377,7 +2384,14 @@ void insertBoundRayEntries(
       var = SCIPgetConsExprExprAuxVar(linexprs[i]);
       solval = SCIPgetSolVal(scip, vertex, var);
 
-      entry = (idx == i + nquadexprs) ? factor + solval : solval;
+      entry = solval;
+
+      /* add lppos of var corresponding to current ray */
+      if( idx == i + nquadexprs )
+      {
+         entry += factor;
+         rays->lpposray[i + nquadexprs] = SCIPcolGetLPPos(SCIPvarGetCol(var));
+      }
 
       /* insert new non-zero entry in ray */
       if( SCIPisZero(scip, entry) )
@@ -2394,7 +2408,14 @@ void insertBoundRayEntries(
       SCIP_Real solval;
 
       solval = SCIPgetSolVal(scip, vertex, auxvar);
-      entry = (idx == nquadexprs + nlinexprs) ? factor + solval : solval;
+      entry = solval;
+
+      /* add lppos of var corresponding to current ray */
+      if( idx == nquadexprs + nlinexprs )
+      {
+         entry += factor;
+         rays->lpposray[nquadexprs + nlinexprs] = SCIPcolGetLPPos(SCIPvarGetCol(auxvar));
+      }
 
       /* insert new non-zero entry in ray */
       if( SCIPisZero(scip, entry) )
