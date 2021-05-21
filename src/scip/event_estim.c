@@ -2209,13 +2209,13 @@ SCIP_RETCODE getEstimCompletion(
 {
    SCIP_Real completed;
 
+   *estim = -1.0;
+
    SCIP_CALL( getSearchCompletion(eventhdlrdata, &completed) );
 
    completed = MIN(completed, 1.0);
 
-   if( completed <= 0.0 )
-      *estim = -1.0;
-   else
+   if( completed > 0.0 )
       *estim = SCIPgetNNodes(scip) / completed;
 
    return SCIP_OKAY;
