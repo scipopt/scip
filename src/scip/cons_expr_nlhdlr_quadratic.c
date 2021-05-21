@@ -50,6 +50,8 @@
 #include "scip/cons_expr_rowprep.h"
 #include "scip/sol.h"
 #include "scip/cons.h"
+#include "scip/struct_mem.h"
+#include "scip/struct_scip.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "quadratic"
@@ -2348,8 +2350,11 @@ void insertBoundRayEntries(
       SCIP_Real entry;
       SCIP_VAR* var;
       SCIP_Real solval;
+      SCIP_CONSEXPR_EXPR* expr;
 
-      var = SCIPgetConsExprExprAuxVar(quaddata->quadexprterms[i].expr);
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &expr, NULL, NULL, NULL, NULL, NULL);
+
+      var = SCIPgetConsExprExprAuxVar(expr);
       solval = SCIPgetSolVal(scip, vertex, var);
 
       entry = (idx == i) ? factor + solval : solval;
@@ -2470,8 +2475,12 @@ SCIP_RETCODE findNearestVertex(
 
    /* go through quadratic variables */
    for( i = 0; i < nquadexprs; ++i )
-      SCIP_CALL( setVarToNearestBound(scip, sol, vertex, SCIPgetConsExprExprAuxVar(quaddata->quadexprterms[i].expr),
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &expr, NULL, NULL, NULL, NULL, NULL);
+      SCIP_CALL( setVarToNearestBound(scip, sol, vertex, SCIPgetConsExprExprAuxVar(expr),
          &factors[i]) );
+   }
 
    /* go through linear variables */
    for( i = 0; i < nlinexprs; ++i )
