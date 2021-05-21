@@ -67,7 +67,7 @@
 
 /* some default values */
 #define INTERCUTS_MINVIOL      1e-4
-#define DEFAULT_USEINTERCUTS  FALSE
+#define DEFAULT_USEINTERCUTS   TRUE
 #define DEFAULT_USESTRENGTH   FALSE
 #define DEFAULT_USEBOUNDS      TRUE
 #define BINSEARCH_MAXITERS      120
@@ -2605,6 +2605,7 @@ SCIP_RETCODE generateIntercut(
       /* store bounds as rays */
       SCIP_CALL( createAndStoreSparseBoundsRays(scip, nlhdlrexprdata, vertex, auxvar, &rays, factors) );
 
+      SCIPfreeBufferArray(scip, &factors);
    }
 
    /* TODO move computation of vb, wcoefs, and kappa to INITLP */
@@ -2652,6 +2653,11 @@ SCIP_RETCODE generateIntercut(
    SCIPfreeBufferArray(scip, &vzlp);
    SCIPfreeBufferArray(scip, &vb);
    freeRays(scip, &rays);
+
+   if( nlhdlrdata->useboundsasrays )
+   {
+      SCIP_CALL( SCIPsolFree(&vertex, scip->mem->probmem, scip->primal) );
+   }
 
    return SCIP_OKAY;
 }
