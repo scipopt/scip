@@ -17,6 +17,7 @@
  * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for orbisack constraints
  * @author Christopher Hojny
+ * @author Jasper van Doornmalen
  *
  *
  * The type of constraints of this constraint handler is described in cons_orbisack.h.
