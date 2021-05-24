@@ -100,7 +100,8 @@
 #define FIXED0    1                     /* When a variable is fixed to 0. */
 #define FIXED1    2                     /* When a variable is fixed to 1. */
 #define UNFIXED   3                     /* When a variable is neither fixed to 0 or to 1. */
-#define NOINIT    0                     /* A dummy entry for non-initialized variables. Must have value 0 because of SCIPallocCleanBufferArray. */
+#define NOINIT    0                     /* A dummy entry for non-initialized variables.
+                                         * Must have value 0 because of SCIPallocCleanBufferArray. */
 
 
 /*
