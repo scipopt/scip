@@ -1914,14 +1914,14 @@ SCIP_RETCODE reduce_sdBiased(
 
          if( deleteEdge )
          {
+            int todo; // continue seems to hurt with SP hard...need to tune
 #ifdef SCIP_DEBUG
             SCIPdebugMessage("SD biased deletes (sd=%f):  ", sd);
             graph_edge_printInfo(g, e);
 #endif
             graph_edge_del(scip, g, e, TRUE);
             (*nelims)++;
-
-            break;
+            // break;
          }
       }
    }

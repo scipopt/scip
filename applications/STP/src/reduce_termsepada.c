@@ -43,6 +43,7 @@
 #include "stpvector.h"
 #include "scip/scip.h"
 
+// todo tune values, more or less random
 
 #define COMPONENT_NODESRATIO_MIN 0.01
 #define COMPONENT_NODESRATIO_SMALL 0.1
@@ -52,8 +53,8 @@
 #define SEPARATOR_MAXNCHECKS 75
 #define SEPARATOR_MAXSIZE_FAST 4
 #define SEPARATOR_MAXNCHECKS_FAST 40
-#define SEPARATOR_MINTERMRATIO 0.1
-#define SEPARATOR_MINTERMRATIO_FAST 0.01
+#define SEPARATOR_MINTERMRATIO 0.14
+#define SEPARATOR_MINTERMRATIO_FAST 0.005
 
 
 /*

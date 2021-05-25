@@ -203,7 +203,8 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
       // to test parallel running DP algo remove once
       // ONLY FOR TESTING REMOVE ASAP
       graph = SCIPprobdataGetGraph2(scip);
-      if( first && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 903700113888 )
+
+      if( first && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 903132194120 )
       {
          graph_printInfo(graph);
          *lowerbound = 30202.0;
