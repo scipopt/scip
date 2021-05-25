@@ -553,11 +553,11 @@ SCIP_RETCODE SCIPchgExprNonlinear(
  * @attention This method can only be called in the problem stage.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddLinearTermNonlinear(
+SCIP_RETCODE SCIPaddLinearVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Real             coef,               /**< coefficient */
-   SCIP_VAR*             var                 /**< variable */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< coefficient */
    );
 
 /** gets absolute violation of nonlinear constraint

@@ -1381,7 +1381,7 @@ SCIP_RETCODE addSlackVars(
       }
       else
       {
-         SCIP_CALL( SCIPaddLinearTermNonlinear(scip, cons, -1.0, var) );
+         SCIP_CALL( SCIPaddLinearVarNonlinear(scip, cons, var, -1.0) );
       }
 
       /* releasing the variable */
@@ -1405,7 +1405,7 @@ SCIP_RETCODE addSlackVars(
       }
       else
       {
-         SCIP_CALL( SCIPaddLinearTermNonlinear(scip, cons, 1.0, var) );
+         SCIP_CALL( SCIPaddLinearVarNonlinear(scip, cons, var, 1.0) );
       }
 
       /* releasing the variable */

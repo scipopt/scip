@@ -11867,7 +11867,7 @@ SCIP_RETCODE SCIPchgExprNonlinear(
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
-      SCIPerrorMessage("SCIPaddLinearTermNonlinear can only be called in problem stage.\n");
+      SCIPerrorMessage("SCIPchgExprNonlinear can only be called in problem stage.\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -11906,11 +11906,11 @@ SCIP_RETCODE SCIPchgExprNonlinear(
  *
  * @attention This method can only be called in the problem stage.
  */
-SCIP_RETCODE SCIPaddLinearTermNonlinear(
+SCIP_RETCODE SCIPaddLinearVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Real             coef,               /**< coefficient */
-   SCIP_VAR*             var                 /**< variable */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< coefficient */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -11922,7 +11922,7 @@ SCIP_RETCODE SCIPaddLinearTermNonlinear(
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
-      SCIPerrorMessage("SCIPaddLinearTermNonlinear can only be called in problem stage.\n");
+      SCIPerrorMessage("SCIPaddLinearVarNonlinear can only be called in problem stage.\n");
       return SCIP_INVALIDCALL;
    }
 
