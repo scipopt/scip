@@ -1870,10 +1870,17 @@ SCIP_RETCODE computeIntercut(
       }
       else
       {
-         assert(SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER || SCIPcolGetBasisStatus(cols[lppos]) ==
-               SCIP_BASESTAT_LOWER);
-         SCIP_CALL( addColToCut(scip, rowprep, SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef :
+         if( ! nlhdlrdata->useboundsasrays )
+         {
+            assert(SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER || SCIPcolGetBasisStatus(cols[lppos]) ==
+                  SCIP_BASESTAT_LOWER);
+            SCIP_CALL( addColToCut(scip, rowprep, SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef :
                   cutcoef, cols[lppos]) );
+         }
+         else
+         {
+            SCIP_CALL( addColToCut(scip, rowprep, rays->rays[i] == -1 ? -cutcoef : cutcoef, cols[lppos]) );
+         }
       }
    }
 
@@ -2314,7 +2321,6 @@ SCIP_RETCODE setVarToNearestBound(
 
    /* set val to bound in solution */
    SCIP_CALL( SCIPsetSolVal(scip, vertex, var, bound) );
-   printf("bound = %f \n", bound);
    return SCIP_OKAY;
 }
 
@@ -2353,13 +2359,15 @@ void insertBoundRayEntries(
       var = SCIPgetConsExprExprAuxVar(expr);
       solval = SCIPgetSolVal(scip, vertex, var);
 
-      entry = solval;
+      //entry = solval;
+      entry = 0.0;
 
       /* add lppos of var corresponding to current ray */
       if( idx == i )
       {
          entry += factor;
-         rays->lpposray[i] = SCIPcolGetLPPos(SCIPvarGetCol(var));
+         rays->lpposray[idx] = SCIPcolGetLPPos(SCIPvarGetCol(var));
+         //printf("lppos of var %s is %d \n", SCIPvarGetName(var), SCIPcolGetLPPos(SCIPvarGetCol(var)));
       }
 
       /* insert new non-zero entry in ray */
@@ -2380,13 +2388,15 @@ void insertBoundRayEntries(
       var = SCIPgetConsExprExprAuxVar(linexprs[i]);
       solval = SCIPgetSolVal(scip, vertex, var);
 
-      entry = solval;
+      //entry = solval;
+      entry = 0.0;
 
       /* add lppos of var corresponding to current ray */
       if( idx == i + nquadexprs )
       {
          entry += factor;
-         rays->lpposray[i + nquadexprs] = SCIPcolGetLPPos(SCIPvarGetCol(var));
+         rays->lpposray[idx] = SCIPcolGetLPPos(SCIPvarGetCol(var));
+         //printf("lppos of var %s is %d \n", SCIPvarGetName(var), SCIPcolGetLPPos(SCIPvarGetCol(var)));
       }
 
       /* insert new non-zero entry in ray */
@@ -2404,13 +2414,15 @@ void insertBoundRayEntries(
       SCIP_Real solval;
 
       solval = SCIPgetSolVal(scip, vertex, auxvar);
-      entry = solval;
+      //entry = solval;
+      entry = 0.0;
 
       /* add lppos of var corresponding to current ray */
       if( idx == nquadexprs + nlinexprs )
       {
          entry += factor;
-         rays->lpposray[nquadexprs + nlinexprs] = SCIPcolGetLPPos(SCIPvarGetCol(auxvar));
+         rays->lpposray[idx] = SCIPcolGetLPPos(SCIPvarGetCol(auxvar));
+         //printf("lppos of var %s is %d \n", SCIPvarGetName(auxvar), SCIPcolGetLPPos(SCIPvarGetCol(auxvar)));
       }
 
       /* insert new non-zero entry in ray */
@@ -2540,6 +2552,7 @@ SCIP_RETCODE generateIntercut(
    int nlinexprs;
    int i;
 
+
    quaddata = nlhdlrexprdata->quaddata;
    SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
 
@@ -2594,6 +2607,10 @@ SCIP_RETCODE generateIntercut(
       if( result == SCIP_FEASIBLE )
       {
          INTERLOG(printf("Failed to use bounds as rays: nearest vertex is not violated!\n"); )
+
+         SCIP_CALL( SCIPfreeSol(scip, &vertex) );
+         SCIPfreeBufferArray(scip, &factors);
+
          return SCIP_OKAY;
       }
 
