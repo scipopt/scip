@@ -48,10 +48,6 @@
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_rowprep.h"
-#include "scip/sol.h"
-#include "scip/cons.h"
-#include "scip/struct_mem.h"
-#include "scip/struct_scip.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "quadratic"
@@ -2317,8 +2313,8 @@ SCIP_RETCODE setVarToNearestBound(
    }
 
    /* set val to bound in solution */
-   SCIP_CALL( SCIPsolSetVal(vertex, scip->set, scip->stat, scip->tree, var, bound) );
-
+   SCIP_CALL( SCIPsetSolVal(scip, vertex, var, bound) );
+   printf("bound = %f \n", bound);
    return SCIP_OKAY;
 }
 
@@ -2586,13 +2582,13 @@ SCIP_RETCODE generateIntercut(
          SCIP_CALL( SCIPallocBufferArray(scip, &factors, nquadexprs + nlinexprs + 1) );
 
       /* create new solution */
-      SCIP_CALL( SCIPsolCreate( &vertex, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, NULL) );
+      SCIP_CALL( SCIPcreateSol(scip, &vertex, NULL) );
 
       /* find nearest vertex of the box to separate */
       SCIP_CALL( findNearestVertex(scip, nlhdlrexprdata, sol, vertex, auxvar, factors) );
 
       /* check if vertex is violated */
-      SCIP_CALL( SCIPconsCheck(cons, scip->set, vertex, FALSE, FALSE, FALSE, &result) );
+      SCIP_CALL( SCIPcheckCons(scip, cons, vertex, FALSE, FALSE, FALSE, &result) );
 
       if( result == SCIP_FEASIBLE )
       {
@@ -2606,6 +2602,8 @@ SCIP_RETCODE generateIntercut(
       SCIP_CALL( createAndStoreSparseBoundsRays(scip, nlhdlrexprdata, vertex, auxvar, &rays, factors) );
 
       SCIPfreeBufferArray(scip, &factors);
+
+      //sol = vertex;
    }
 
    /* TODO move computation of vb, wcoefs, and kappa to INITLP */
@@ -2613,7 +2611,7 @@ SCIP_RETCODE generateIntercut(
    SCIP_CALL( SCIPallocBufferArray(scip, &vzlp, nquadexprs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &wcoefs, nquadexprs) );
 
-   SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, auxvar, sidefactor, sol, vb, vzlp, wcoefs, &wzlp, &kappa) );
+   SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, auxvar, sidefactor, vertex, vb, vzlp, wcoefs, &wzlp, &kappa) );
 
    /* check if we are in case 4 */
    if( nlinexprs == 0 && auxvar == NULL )
@@ -2656,7 +2654,7 @@ SCIP_RETCODE generateIntercut(
 
    if( nlhdlrdata->useboundsasrays )
    {
-      SCIP_CALL( SCIPsolFree(&vertex, scip->mem->probmem, scip->primal) );
+      SCIP_CALL( SCIPfreeSol(scip, &vertex) );
    }
 
    return SCIP_OKAY;
