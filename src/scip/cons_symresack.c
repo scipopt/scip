@@ -102,6 +102,9 @@
 #define UNFIXED   3                     /* When a variable is neither fixed to 0 or to 1. */
 #define NOINIT    0                     /* A dummy entry for non-initialized variables.
                                          * Must have value 0 because of SCIPallocCleanBufferArray. */
+/* A macro for checking if a variable was fixed during a bound change */
+#define ISFIXED(x, bdchgidx)   (SCIPvarGetUbAtIndex(x, bdchgidx, FALSE) - SCIPvarGetLbAtIndex(x, bdchgidx, FALSE) < 0.5)
+
 
 
 /*
@@ -2492,6 +2495,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
+   int* perm;
    int* invperm;
    int nvars;
    int i;
@@ -2522,6 +2526,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
    vars = consdata->vars;
    nvars = consdata->nvars;
+   perm = consdata->perm;
    invperm = consdata->invperm;
 
    /* inferinfo == varrow + infrow * nvars.
@@ -2535,79 +2540,95 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
    assert( infrow >= 0 );
    assert( infrow < nvars );
 
+   /* Up to entry varrow the vectors x and perm[x] are equal. */
+   for (i = 0; i < varrow; ++i)
+   {
+      /* Conflict caused by bounds of x[i] and perm(x)[i] = x[invperm[i]]. */
+
+      /* No fixed points in the permutation. */
+      assert( i != invperm[i] );
+
+      /* Up to entry varrow the vectors x and perm[x] are equal. */
+      assert( ISFIXED(vars[i], bdchgidx) );
+      assert( ISFIXED(vars[invperm[i]], bdchgidx) );
+
+      /* At iteration i the vars x[i] and x[invperm[i]] are fixed.
+       * So only new information is received if i < perm[i] (i.e. there is no j < i with j = invperm[i])
+       * Or if invperm[i] > i.
+       */
+      if ( i < perm[i] )
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
+      }
+      if ( invperm[i] > i )
+      {
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
+      }
+   }
+
+   /* Case distinction: Fixing due to propagation or due to lookahead */
    if ( infrow > 0 )
    {
       /* The fixing of infervar is caused by a lookahead (checkFeasible)
        * Up to row "varrow" the entries x[i] and perm(x)[i] are forced to be equal
-       * If we assume that x[varrow] = perm(x)[varrow], then until infrow we find x[i] = perm(x)[i]
+       * If x[varrow] = perm(x)[varrow] is assumed, then until infrow we find x[i] = perm(x)[i] ( = x[invperm[i]] )
        * and (x[infrow], perm(x)[infrow]) = (0, 1).
        */
-      for (i = 0; i < varrow; ++i)
+
+      /* Everything after varrow to infrow is forced to a constant, and row infrow is (0, 1) */
+      for (i = varrow + 1; i <= infrow; ++i)
       {
          /* Conflict caused by bounds of x[i] and perm(x)[i] = x[invperm[i]]. */
 
          /* No fixed points in the permutation. */
          assert( i != invperm[i] );
 
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
+         /* The fixing are applied 'virtually', i.e. If varrow is considered constant, then fixings will follow.
+          * Thus, between entries varrow and infrow of vectorx x and gamma(x) the entries do not have to be fixed.
+          * For conflict analysis, only the fixed entries matter.
+          */
+         if ( i != invperm[varrow] && i < perm[i] && ISFIXED(vars[i], bdchgidx) )
+         {
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
+         }
+         if ( invperm[i] != varrow && invperm[i] > i && ISFIXED(vars[invperm[i]], bdchgidx) )
+         {
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
+         }
       }
-
-      /* Everything from varrow to infrow is foced to a constant. */
-      for (i = varrow + 1; i < infrow; ++i)
-      {
-         /* Conflict caused by bounds of x[i] and perm(x)[i] = x[invperm[i]]. */
-
-         /* No fixed points in the permutation. */
-         assert( i != invperm[i] );
-
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
-      }
-
-      /* Lastly, row infrow is (0, 1) */
-      SCIP_CALL( SCIPaddConflictUb(scip, vars[infrow], bdchgidx) );
-      SCIP_CALL( SCIPaddConflictLb(scip, vars[infrow], bdchgidx) );
-      SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[infrow]], bdchgidx) );
-      SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[infrow]], bdchgidx) );
    }
    else
    {
       /* This is not a fixing caused by lookahead (checkFeasible),
        * so row "varrow" was (0, _) or (_, 1) and for i < varrow x[i] = perm(x)[i].
        */
-      for (i = 0; i < varrow; ++i)
-      {
-         /* Conflict caused by bounds of x[i] and perm(x)[i] = x[invperm[i]]. */
-
-         /* No fixed points in the permutation. */
-         assert( i != invperm[i] );
-
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
-      }
-
       if ( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
          /* Changed the lower bound of infervar to 1. That means that this fixing is due to (_, 1) */
          assert( infervar == vars[varrow] );
+         assert( ISFIXED(vars[invperm[i]], bdchgidx) );
 
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
+         if ( invperm[i] > i )
+         {
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
+         }
       }
       else
       {
          /* Changed the lower bound of infervar to 0. That means that this fixing is due to (0, _) */
          assert( infervar == vars[invperm[varrow]] );
+         assert( ISFIXED(vars[i], bdchgidx) );
 
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
+         if ( i < perm[i] )
+         {
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
+         }
       }
    }
 
