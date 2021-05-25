@@ -2456,13 +2456,14 @@ SCIP_RETCODE createAndStoreSparseBoundsRays(
    rays = *raysptr;
 
    rays->rayssize = 0;
+   rays->nrays = raylength;
 
    /* go through quadratic variables */
    for( i = 0; i < nquadexprs; ++i )
       insertBoundRayEntries(scip, nlhdlrexprdata, rays, vertex, auxvar, factors[i], i);
 
    /* go through linear variables */
-   for( i = 0; i < nquadexprs; ++i )
+   for( i = 0; i < nlinexprs; ++i )
       insertBoundRayEntries(scip, nlhdlrexprdata, rays, vertex, auxvar, factors[i + nquadexprs], i + nquadexprs);
 
    if( auxvar != NULL )
