@@ -786,7 +786,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
       SCIP_CONS* cons = SCIPconshdlrGetConss(conshdlr)[c];
       SCIP_EXPR* expr;
 
-      SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprConsNonlinear(scip, cons), SCIP_EXPRITER_DFS, FALSE) );
+      SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprNonlinear(scip, cons), SCIP_EXPRITER_DFS, FALSE) );
 
       for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {

@@ -121,7 +121,7 @@ SCIP_RETCODE detect(
       expr = oexpr;
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, " and %s\n", SCIPexprcurvGetName(exprrootcurv));
@@ -209,7 +209,7 @@ Test(nlhdlrconvex, detectquad, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseExpr(scip, &oexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
@@ -293,7 +293,7 @@ SCIP_RETCODE estimate(
       expr = oexpr;
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, " at x1=%g x2=%g x3=%g\n",

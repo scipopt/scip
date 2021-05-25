@@ -77,15 +77,15 @@ Test(readers, pip)
     */
 
    cr_expect_eq(SCIPconsGetHdlr(conss[0]), SCIPfindConshdlr(scip, "nonlinear"));
-   expr = SCIPgetExprConsNonlinear(conss[0]);
+   expr = SCIPgetExprNonlinear(conss[0]);
    cr_expect_not_null(expr);
    children = SCIPexprGetChildren(expr);
    cr_expect_not_null(children);
    cr_expect_eq(SCIPexprGetNChildren(expr), 3);
 
    /* check sides */
-   cr_expect(SCIPisInfinity(scip, -SCIPgetLhsConsNonlinear(conss[0])));
-   cr_expect_eq(SCIPgetRhsConsNonlinear(conss[0]), 0.0);
+   cr_expect(SCIPisInfinity(scip, -SCIPgetLhsNonlinear(conss[0])));
+   cr_expect_eq(SCIPgetRhsNonlinear(conss[0]), 0.0);
 
    /* check constant and coefficients of the sum expression */
    cr_expect(SCIPisExprSum(scip, expr));
@@ -124,15 +124,15 @@ Test(readers, pip)
     */
 
    cr_expect_eq(SCIPconsGetHdlr(conss[2]), SCIPfindConshdlr(scip, "nonlinear"));
-   expr = SCIPgetExprConsNonlinear(conss[2]);
+   expr = SCIPgetExprNonlinear(conss[2]);
    cr_expect_not_null(expr);
    children = SCIPexprGetChildren(expr);
    cr_expect_not_null(children);
    cr_expect_eq(SCIPexprGetNChildren(expr), 3);
 
    /* check sides */
-   cr_expect_eq(SCIPgetLhsConsNonlinear(conss[2]), 10.0);
-   cr_expect_eq(SCIPgetRhsConsNonlinear(conss[2]), 10.0);
+   cr_expect_eq(SCIPgetLhsNonlinear(conss[2]), 10.0);
+   cr_expect_eq(SCIPgetRhsNonlinear(conss[2]), 10.0);
 
    /* check constant and coefficients of the sum expression */
    cr_expect(SCIPisExprSum(scip, expr));
@@ -207,10 +207,10 @@ Test(readers, mps1)
    for( int i = 0; i < 4; ++i )
    {
       cr_expect_eq(SCIPfindConshdlr(scip, "nonlinear"), SCIPconsGetHdlr(conss[i]));
-      cr_expect_eq(SCIPgetLhsConsNonlinear(conss[i]), lhs[i], "lhs cons %d: expected %g, got %g\n", i, lhs[i], SCIPgetLhsConsNonlinear(conss[i]));
-      cr_expect_eq(SCIPgetRhsConsNonlinear(conss[i]), rhs[i], "rhs cons %d: expected %g, got %g\n", i, rhs[i], SCIPgetRhsConsNonlinear(conss[i]));
+      cr_expect_eq(SCIPgetLhsNonlinear(conss[i]), lhs[i], "lhs cons %d: expected %g, got %g\n", i, lhs[i], SCIPgetLhsNonlinear(conss[i]));
+      cr_expect_eq(SCIPgetRhsNonlinear(conss[i]), rhs[i], "rhs cons %d: expected %g, got %g\n", i, rhs[i], SCIPgetRhsNonlinear(conss[i]));
 
-      expr = SCIPgetExprConsNonlinear(conss[i]);
+      expr = SCIPgetExprNonlinear(conss[i]);
       cr_assert_not_null(expr);
       cr_expect(SCIPisExprSum(scip, expr));
       cr_expect_eq(SCIPexprGetNChildren(expr), expectednnonz[i]);
@@ -221,7 +221,7 @@ Test(readers, mps1)
    }
 
    /* check constraint c1 */
-   expr = SCIPgetExprConsNonlinear(conss[1]);
+   expr = SCIPgetExprNonlinear(conss[1]);
    cr_expect(SCIPisExprPower(scip, SCIPexprGetChildren(expr)[0]));;
    cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(SCIPexprGetChildren(expr)[0])[0]));
    cr_expect_eq(SCIPgetVarExprVar(SCIPexprGetChildren(SCIPexprGetChildren(expr)[0])[0]), vars[2]);
@@ -296,10 +296,10 @@ Test(readers, zimpl)
    for( int i = 0; i < 5; ++i )
    {
       cr_assert_eq(SCIPfindConshdlr(scip, "nonlinear"), SCIPconsGetHdlr(conss[i]));
-      cr_assert(SCIPisEQ(scip, SCIPgetLhsConsNonlinear(conss[i]), lhs[i]));
-      cr_assert(SCIPisEQ(scip, SCIPgetRhsConsNonlinear(conss[i]), rhs[i]));
+      cr_assert(SCIPisEQ(scip, SCIPgetLhsNonlinear(conss[i]), lhs[i]));
+      cr_assert(SCIPisEQ(scip, SCIPgetRhsNonlinear(conss[i]), rhs[i]));
 
-      expr = SCIPgetExprConsNonlinear(conss[i]);
+      expr = SCIPgetExprNonlinear(conss[i]);
       cr_assert_not_null(expr);
 
       cr_expect(SCIPisExprSum(scip, expr));

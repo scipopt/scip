@@ -141,7 +141,7 @@ Test(nlhdlrquotient, detectandfree1, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
@@ -180,7 +180,7 @@ Test(nlhdlrquotient, detectandfree2, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
@@ -219,7 +219,7 @@ Test(nlhdlrquotient, detectandfree3, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPexprGetChildren(SCIPgetExprConsNonlinear(cons))[0];
+   expr = SCIPexprGetChildren(SCIPgetExprNonlinear(cons))[0];
    ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
@@ -258,7 +258,7 @@ Test(nlhdlrquotient, detectandfree4, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
@@ -296,7 +296,7 @@ Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
@@ -342,7 +342,7 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */

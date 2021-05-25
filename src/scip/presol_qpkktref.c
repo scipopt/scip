@@ -1581,8 +1581,8 @@ SCIP_RETCODE checkConsQuadraticProblem(
    *isqp = FALSE;
    *objvar = NULL;
 
-   lhs = SCIPgetLhsConsNonlinear(cons);
-   rhs = SCIPgetRhsConsNonlinear(cons);
+   lhs = SCIPgetLhsNonlinear(cons);
+   rhs = SCIPgetRhsNonlinear(cons);
 
    /* desired structure: there exists only one variable with nonzero objective value; this is the objective variable 'z' */
    if( SCIPgetNObjVars(scip) != 1 )
@@ -1859,7 +1859,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    SCIPdebugMsg(scip, "tries to add the KKT conditions for constraint <%s>\n", SCIPconsGetName(cons));
 
    /* get quadratic representation of the expression constraint, if possible */
-   SCIP_CALL( SCIPcheckQuadraticConsNonlinear(scip, cons, &isquadratic) );
+   SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
 
    if( !isquadratic )
    {
@@ -1870,7 +1870,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    /* desired structure: matrix associated to quadratic constraint is indefinite; otherwise, the problem usually can be
     * solved faster by standard methods
     */
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPcomputeExprQuadraticCurvature(scip, expr, &curv, NULL, FALSE) );
 
    if( !presoldata->updatequadindef && (curv == SCIP_EXPRCURV_CONVEX || curv == SCIP_EXPRCURV_CONCAVE) )

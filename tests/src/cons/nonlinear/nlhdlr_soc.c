@@ -314,7 +314,7 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 
    SCIP_CALL( createAddConsAndConstructLP(&cons, (char*)"[nonlinear] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 <= 1") );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr didn't detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -334,7 +334,7 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
 
    SCIP_CALL( createAddConsAndConstructLP(&cons, (char*)"[nonlinear] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 - <w> <= 0") );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    normexpr = SCIPexprGetChildren(expr)[1];
 
    /* check that soc nlhdlr detected */
@@ -379,7 +379,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    normexpr = SCIPexprGetChildren(expr)[1];
 
    /* check that soc nlhdlr detected */
@@ -430,7 +430,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -482,7 +482,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -533,7 +533,7 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression tha
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr didn't detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -572,7 +572,7 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -622,7 +622,7 @@ Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr didn't detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -661,7 +661,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -711,7 +711,7 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -765,7 +765,7 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -821,7 +821,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -874,7 +874,7 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr didn't detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -914,7 +914,7 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -958,7 +958,7 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    /* call the separation initialization -> this creates auxvars and creates disaggregation variables and row */
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    normexpr = SCIPexprGetChildren(expr)[1];
 
    /* check that soc nlhdlr detected */
@@ -1019,7 +1019,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
 
    SCIP_CALL( createAddConsAndConstructLP(&cons, (char*)"[nonlinear] <test>: exp((<x>^2 + <y>^2 + <z>^2)^0.5) <= 2") );
 
-   rootexpr = SCIPgetExprConsNonlinear(cons);
+   rootexpr = SCIPgetExprNonlinear(cons);
    expr = SCIPexprGetChildren(rootexpr)[0];
 
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -1122,7 +1122,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
    /* get norm expression */
-   expr = SCIPexprGetChildren(SCIPgetExprConsNonlinear(cons))[0];
+   expr = SCIPexprGetChildren(SCIPgetExprNonlinear(cons))[0];
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
@@ -1182,7 +1182,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    /* create constraint */
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "soc", expr, -SCIPinfinity(scip), 0.0) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );

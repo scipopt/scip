@@ -104,8 +104,8 @@ Test(presolve, mergeconss)
    /* merge constraints */
    SCIP_CALL( presolveMergeConss(scip, conss, 3, &success) );
    cr_expect(success);
-   cr_expect(SCIPgetLhsConsNonlinear(conss[0]) == 1.0);
-   cr_expect(SCIPgetRhsConsNonlinear(conss[0]) == 4.0);
+   cr_expect(SCIPgetLhsNonlinear(conss[0]) == 1.0);
+   cr_expect(SCIPgetRhsNonlinear(conss[0]) == 4.0);
    cr_expect(!SCIPconsIsDeleted(conss[0]));
    cr_expect(SCIPconsIsDeleted(conss[1]));
    cr_expect(SCIPconsIsDeleted(conss[2]));

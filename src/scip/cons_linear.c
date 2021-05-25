@@ -17389,7 +17389,7 @@ SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
    assert(upgdconss != NULL);
    assert(upgdconsssize > 0);
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    assert(expr != NULL);
 
    /* not a linear constraint if the expression is not a sum
@@ -17404,8 +17404,8 @@ SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
          return SCIP_OKAY;
 
    /* consider constant part of the sum expression */
-   lhs = SCIPisInfinity(scip, -SCIPgetLhsConsNonlinear(cons)) ? -SCIPinfinity(scip) : (SCIPgetLhsConsNonlinear(cons) - SCIPgetConstantExprSum(expr));
-   rhs = SCIPisInfinity(scip,  SCIPgetRhsConsNonlinear(cons)) ?  SCIPinfinity(scip) : (SCIPgetRhsConsNonlinear(cons) - SCIPgetConstantExprSum(expr));
+   lhs = SCIPisInfinity(scip, -SCIPgetLhsNonlinear(cons)) ? -SCIPinfinity(scip) : (SCIPgetLhsNonlinear(cons) - SCIPgetConstantExprSum(expr));
+   rhs = SCIPisInfinity(scip,  SCIPgetRhsNonlinear(cons)) ?  SCIPinfinity(scip) : (SCIPgetRhsNonlinear(cons) - SCIPgetConstantExprSum(expr));
 
    SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
          0, NULL, NULL, lhs, rhs,

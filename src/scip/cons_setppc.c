@@ -7150,16 +7150,16 @@ SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
    /* left and right hand side need to be equal
     * @todo we could also handle inequalities
     */
-   rhs = SCIPgetRhsConsNonlinear(cons);
-   if( SCIPisInfinity(scip, rhs) || !SCIPisEQ(scip, SCIPgetLhsConsNonlinear(cons), rhs) )
+   rhs = SCIPgetRhsNonlinear(cons);
+   if( SCIPisInfinity(scip, rhs) || !SCIPisEQ(scip, SCIPgetLhsNonlinear(cons), rhs) )
       return SCIP_OKAY;
 
    /* check whether constraint is quadratic */
-   SCIP_CALL( SCIPcheckQuadraticConsNonlinear(scip, cons, &isquadratic) );
+   SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
    if( !isquadratic )
       return SCIP_OKAY;
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIPexprGetQuadraticData(expr, &constant, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprterms, NULL, NULL);
 
    /* adjust rhs */

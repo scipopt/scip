@@ -11645,7 +11645,7 @@ CLEANUP:
  */
 
 /** returns the expression of the given nonlinear constraint */
-SCIP_EXPR* SCIPgetExprConsNonlinear(
+SCIP_EXPR* SCIPgetExprNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
@@ -11661,7 +11661,7 @@ SCIP_EXPR* SCIPgetExprConsNonlinear(
 }
 
 /** gets the left hand side of a nonlinear constraint */
-SCIP_Real SCIPgetLhsConsNonlinear(
+SCIP_Real SCIPgetLhsNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
@@ -11677,7 +11677,7 @@ SCIP_Real SCIPgetLhsConsNonlinear(
 }
 
 /** gets the right hand side of a nonlinear constraint */
-SCIP_Real SCIPgetRhsConsNonlinear(
+SCIP_Real SCIPgetRhsNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
@@ -11693,7 +11693,7 @@ SCIP_Real SCIPgetRhsConsNonlinear(
 }
 
 /** gets the nonlinear constraint as a nonlinear row representation. */
-SCIP_RETCODE SCIPgetNlRowConsNonlinear(
+SCIP_RETCODE SCIPgetNlRowNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
@@ -11722,7 +11722,7 @@ SCIP_RETCODE SCIPgetNlRowConsNonlinear(
  *
  * @note The curvature information are computed during CONSINITSOL.
  */
-SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
+SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
@@ -11743,7 +11743,7 @@ SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
  * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
  * \ref SCIPgetVarExprVar() can be used to retrieve the variable.
  */
-SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
+SCIP_RETCODE SCIPcheckQuadraticNonlinear(
    SCIP*                    scip,               /**< SCIP data structure */
    SCIP_CONS*               cons,               /**< constraint data */
    SCIP_Bool*               isquadratic         /**< buffer to store whether constraint is quadratic */
@@ -11867,7 +11867,7 @@ SCIP_RETCODE SCIPchgExprNonlinear(
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
-      SCIPerrorMessage("SCIPaddLinearTermConsNonlinear can only be called in problem stage.\n");
+      SCIPerrorMessage("SCIPaddLinearTermNonlinear can only be called in problem stage.\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -11906,7 +11906,7 @@ SCIP_RETCODE SCIPchgExprNonlinear(
  *
  * @attention This method can only be called in the problem stage.
  */
-SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
+SCIP_RETCODE SCIPaddLinearTermNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_Real             coef,               /**< coefficient */
@@ -11922,7 +11922,7 @@ SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
-      SCIPerrorMessage("SCIPaddLinearTermConsNonlinear can only be called in problem stage.\n");
+      SCIPerrorMessage("SCIPaddLinearTermNonlinear can only be called in problem stage.\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -11981,7 +11981,7 @@ SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
  *
  * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
  */
-SCIP_RETCODE SCIPgetAbsViolationConsNonlinear(
+SCIP_RETCODE SCIPgetAbsViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to check */
@@ -12004,7 +12004,7 @@ SCIP_RETCODE SCIPgetAbsViolationConsNonlinear(
  * The scaling that is applied to the absolute violation of the constraint
  * depends on the setting of parameter constraints/nonlinear/violscale.
  */
-SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
+SCIP_RETCODE SCIPgetRelViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to check */

@@ -85,7 +85,7 @@ Test(addcons, nonchecked, .init = setup, .fini = teardown)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    SCIP_CALL( SCIPgetTransformedCons(scip, cons, &t_cons) );
-   expr = SCIPgetExprConsNonlinear(t_cons);
+   expr = SCIPgetExprNonlinear(t_cons);
    cr_assert(expr != NULL);
 
    /* check locks */

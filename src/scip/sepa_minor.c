@@ -172,7 +172,7 @@ SCIP_Bool isPackingCons(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   root = SCIPgetExprConsNonlinear(cons);
+   root = SCIPgetExprNonlinear(cons);
    assert(root != NULL);
    nchildren = SCIPexprGetNChildren(root);
 
@@ -343,7 +343,7 @@ SCIP_RETCODE detectMinors(
 
       cons = SCIPconshdlrGetConss(conshdlr)[c];
       assert(cons != NULL);
-      root = SCIPgetExprConsNonlinear(cons);
+      root = SCIPgetExprNonlinear(cons);
       assert(root != NULL);
 
       /* ignore circle packing constraints; the motivation for this is that in circle packing instance not only the SDP

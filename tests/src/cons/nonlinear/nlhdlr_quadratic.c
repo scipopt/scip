@@ -216,7 +216,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    cr_assert(!infeasible);
 
    /* get expr and work with it */
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* detect */
    enforcing = SCIP_NLHDLR_METHOD_NONE;
@@ -274,7 +274,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert(!infeasible);
 
    /* get expr and work with it */
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* get cosine expression */
    cr_assert_eq(SCIPexprGetNChildren(expr), 3);
@@ -349,7 +349,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    /* get expr and work with it */
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* expr is exponential expr */
    cr_assert_eq(SCIPexprGetNChildren(expr), 1);
@@ -513,7 +513,7 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -100.0, 100.0) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
@@ -710,7 +710,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* to register events */
 
    /* detect */
@@ -972,7 +972,7 @@ void simplifyAndDetect(
    infeasible = TRUE;
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert(!infeasible);
-   expr = SCIPgetExprConsNonlinear(scip, *cons);
+   expr = SCIPgetExprNonlinear(scip, *cons);
 
    /* SCIP_CALL( SCIPprintExpr(scip, conshdlr, expr, NULL) ); */
    /* SCIPinfoMessage(scip, NULL, "\n"); */
@@ -995,7 +995,7 @@ void registerAndFree(
 {
    SCIP_EXPR* expr;
 
-   expr = SCIPgetExprConsNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(scip, cons);
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(expr->enfos), 1) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &(expr->enfos[0])) );
@@ -1195,7 +1195,7 @@ void testCut(
    enorm = SQRT( enorm );
    cr_assert(enorm > 0);
 
-   expr = SCIPgetExprConsNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(scip, cons);
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
 
@@ -1851,7 +1851,7 @@ Test(interCuts, testRaysAuxvar1)
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x> - 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
 
    /* create aux variable */
-   expr = SCIPgetExprConsNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(scip, cons);
    cr_assert_not_null(expr);
    SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
@@ -1923,7 +1923,7 @@ Test(interCuts, testRaysAuxvar2)
     */
 
    /* create aux variable */
-   expr = SCIPgetExprConsNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(scip, cons);
    cr_assert_not_null(expr);
    SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
