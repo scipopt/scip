@@ -845,7 +845,7 @@ SCIP_RETCODE SCIPexprhdlrPrintExpr(
       {
          case SCIP_EXPRITER_ENTEREXPR :
          {
-            SCIPmessageFPrintInfo(messagehdlr, file, SCIPexprhdlrGetName(expr->exprhdlr));
+            SCIPmessageFPrintInfo(messagehdlr, file, "%s", SCIPexprhdlrGetName(expr->exprhdlr));
             if( expr->nchildren > 0 )
             {
                SCIPmessageFPrintInfo(messagehdlr, file, "(");
