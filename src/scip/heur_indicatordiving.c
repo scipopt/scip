@@ -637,6 +637,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       //TODO: only continue if semicontinuous variable.
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = (candsfrac > 0.5);
+      SCIPfreeBufferArray(scip, &consvals);
+      SCIPfreeBufferArray(scip, &consvars);
       return SCIP_OKAY;
    }
 
