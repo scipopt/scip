@@ -631,14 +631,14 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    assert(SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[0]));
 
    //TODO: only allow sc variables and do the check if ub is equal to lowerbound of the sc
-   if( scdata == NULL || !SCIPisEQ(scip, rhs, scdata->vals0[0]) )
+   if( scdata == NULL || !SCIPisEQ(scip, rhs, scdata->vals0[0]) ||
+      !(scdata->bvars[0] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand))) )
    {
       //TODO: only continue if semicontinuous variable.
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = (candsfrac > 0.5);
       return SCIP_OKAY;
    }
-   assert(scdata->bvars[0] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand)));
 
    //Case: Variable is at least lb1
    if( SCIPisGE(scip, lpsolsemicontinuous, scdata->lbs1[0]) )
