@@ -79,7 +79,7 @@
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_RANDSEED             11  /**< initial seed for random number generation */
 #define DEFAULT_ROUNDINGFRAC       50.0 /**< default parameter setting for parameter roundingfrac */
-#define DEFAULT_MODE                  2 /**< default parameter setting for parameter mode */
+#define DEFAULT_MODE                  3 /**< default parameter setting for parameter mode */
 
 enum IndicatorDivingMode
 {
@@ -114,8 +114,8 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded up*/
-   int                   mode;               /**< decides which mode is selected (0: rounding down; 1: rounding up; 2: fractional rounding (default))*/
-   SCIP_HASHMAP*         scvars;
+   int                   mode;               /**< decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default)) */
+   SCIP_HASHMAP*         scvars;             /**< stores hashmap with semicontinuous variables */
 };
 
 /*
@@ -624,49 +624,55 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
                         consvals[v] );
       SCIP_CALL( varIsSemicontinuous(scip, semicontinuousvar, heurdata->scvars, &success) );
    }
-   assert( semicontinuousvar != NULL );
+   assert(semicontinuousvar != NULL);
 
    scdata = (SCVARDATA*) SCIPhashmapGetImage(heurdata->scvars, (void*) semicontinuousvar);
+   assert(SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[0]));
+   assert(SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[0]));
+
    //TODO: only allow sc variables and do the check if ub is equal to lowerbound of the sc
-   if ( scdata == NULL || rhs != *scdata->vals0 )
+   if( scdata == NULL || !SCIPisEQ(scip, rhs, scdata->vals0[0]) )
    {
       //TODO: only continue if semicontinuous variable.
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = (candsfrac > 0.5);
       return SCIP_OKAY;
    }
+   assert(scdata->bvars[0] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand)));
 
-   //Case: Variable is in bounds of lb1 and ub1
-   if( SCIPisGE( scip, lpsolsemicontinuous, *scdata->lbs1) && SCIPisLE( scip, lpsolsemicontinuous, *scdata->ubs1) )
-   {
-      *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
-      *roundup = TRUE;
-   }
-   //Case: Variable is equal to "semi"
-   else if( SCIPisEQ( scip, lpsolsemicontinuous, *scdata->vals0))
+   //Case: Variable is at least lb1
+   if( SCIPisGE(scip, lpsolsemicontinuous, scdata->lbs1[0]) )
    {
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = FALSE;
    }
+   //Case: Variable is equal to constant
+   else if( SCIPisEQ(scip, lpsolsemicontinuous, scdata->vals0[0]) )
+   {
+      *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
+      *roundup = TRUE;
+   }
+   //Case: Variable is between constant and lb1
    else
    {
-      if( SCIPisGT( scip, lpsolsemicontinuous, *scdata->ubs1 ))
+      *score = 100 * (scdata->lbs1[0] - lpsolsemicontinuous) / scdata->lbs1[0];
+      assert(*score>0);
+
+      switch( (INDICATORDIVINGMODE)heurdata->mode )
       {
-         *score = 100 * (lpsolsemicontinuous - *scdata->ubs1) / *scdata->ubs1;
-         assert(*score>0);
+      case ROUNDING_DOWN:
+         *roundup = FALSE;
+         break;
+      case ROUNDING_UP:
+         *roundup = TRUE;
+         break;
+      case ROUNDING_FRAC_AGGRESSIVE:
+         *roundup = (*score <= heurdata->roundingfrac);
+         break;
+      case ROUNDING_FRAC_CONSERVATIVE:
+         *roundup = (*score > heurdata->roundingfrac);
+         break;
       }
-      else if( SCIPisLT( scip, lpsolsemicontinuous, *scdata->lbs1 ))
-      {
-         *score = 100 * (*scdata->lbs1 - lpsolsemicontinuous) / *scdata->lbs1;
-         assert(*score>0);
-      }
-      else
-      {
-         assert( FALSE );
-      }
-      *roundup = ( (INDICATORDIVINGMODE)heurdata->mode == ROUNDING_UP ||
-                 ((INDICATORDIVINGMODE)heurdata->mode == ROUNDING_FRAC_AGGRESSIVE && (*score > heurdata->roundingfrac)) ||
-                 ((INDICATORDIVINGMODE)heurdata->mode == ROUNDING_FRAC_CONSERVATIVE && (*score <= heurdata->roundingfrac)) );
    }
 
    /* free memory */
@@ -720,8 +726,8 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          &heurdata->roundingfrac, FALSE, DEFAULT_ROUNDINGFRAC, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/mode",
-         "decides which mode is selected (0: rounding down; 1: rounding up; 2: fractional rounding (default))",
-         &heurdata->mode, FALSE, DEFAULT_MODE, 0, 2, NULL, NULL) );
+         "decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default))",
+         &heurdata->mode, FALSE, DEFAULT_MODE, 0, 3, NULL, NULL) );
 
    return SCIP_OKAY;
 }
