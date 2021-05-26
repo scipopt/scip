@@ -50,8 +50,6 @@
 #define DEFAULT_DARUNS     8                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_DARUNS_FAST     4             /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  8                  /**< max number of roots to use for new graph in dual ascent heuristic */
-#define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
-#define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
 #define SOLPOOL_SIZE 20                       /**< size of presolving solution pool */
 #define STP_RED_MINBNDTERMS   750
 #define STP_DABD_MAXDEGREE 5
@@ -1534,147 +1532,6 @@ SCIP_Bool daRedCostIsValid(
 }
 
 
-/** pertubate edge costs for PCMW dual-ascent */
-static
-void daPcPertubateEdgeCosts(
-   SCIP* scip,
-   const GRAPH* graph,
-   GRAPH* transgraph,
-   const int* result,
-   STP_Bool* nodearrchar,
-   int randomize
-)
-{
-   int e;
-   const int root = graph->source;
-   const int newroot = transgraph->source;
-   const int nnodes = graph->knots;
-   const int nedges = graph->edges;
-
-   BMSclearMemoryArray(nodearrchar, nnodes);
-
-   /* mark all vertices visited in regular graph */
-   for( e = 0; e < nedges; e++ )
-      if( result[e] == CONNECT && graph->tail[e] != root )
-         nodearrchar[graph->head[e]] = TRUE;
-   srand((unsigned)graph->terms);
-
-   if( graph->stp_type != STP_MWCSP )
-   {
-      SCIP_Real pratio = PERTUBATION_RATIO_PC;
-
-      for( int k = 0; k < nnodes; k++ )
-      {
-         assert(Is_anyTerm(graph->term[k]) == Is_anyTerm(transgraph->term[k]) || transgraph->grad[k] == 0);
-
-         if( randomize > 8 )
-            pratio = ((SCIP_Real)(rand() % 10)) / (100.0) - 1.0 / 100.0;
-         else if( randomize > 6 )
-            pratio = ((SCIP_Real)(rand() % 10)) / (200.0);
-         else if( randomize > 4 )
-            pratio = ((SCIP_Real)(rand() % 10)) / (300.0);
-         else if( randomize > 0 )
-            pratio = ((SCIP_Real)(rand() % 10)) / 1000.0;
-         else
-            pratio = PERTUBATION_RATIO_PC + ((SCIP_Real)(rand() % 10)) / 1000.0;
-
-         assert(SCIPisPositive(scip, 1.0 - pratio));
-         assert(SCIPisPositive(scip, 1.0 + pratio));
-
-         if( !Is_anyTerm(graph->term[k]) )
-         {
-            for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
-            {
-               assert(transgraph->tail[e] != root);
-
-               if( result[e] == CONNECT || result[flipedge(e)] == CONNECT )
-                  transgraph->cost[e] *= 1.0 - pratio;
-               else
-                  transgraph->cost[e] *= 1.0 + pratio;
-            }
-         }
-         else if( Is_term(transgraph->term[k]) && k != root && k != newroot )
-         {
-            assert(transgraph->grad[k] == 2);
-
-            for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
-               if( SCIPisPositive(scip, transgraph->cost[e]) )
-               {
-                  assert(!Is_pseudoTerm(transgraph->term[transgraph->tail[e]]));
-                  assert(transgraph->tail[e] != root);
-                  assert(result[flipedge(e)] != CONNECT);
-
-                  if( result[e] == CONNECT )
-                     transgraph->cost[e] *= 1.0 - pratio;
-                  else
-                     transgraph->cost[e] *= 1.0 + pratio;
-
-                  assert(SCIPisPositive(scip, transgraph->cost[e]));
-               }
-         }
-      }
-
-      return;
-   }
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      SCIP_Real pratio = PERTUBATION_RATIO;
-
-      assert(Is_anyTerm(graph->term[k]) == Is_anyTerm(transgraph->term[k]));
-
-      if( randomize > 8 )
-         pratio = ((SCIP_Real)(rand() % 10)) / (50.0) - 1.0 / 10.0;
-      else if( randomize > 6 )
-         pratio = ((SCIP_Real)(rand() % 10)) / (20.0);
-      else if( randomize > 4 )
-         pratio = ((SCIP_Real)(rand() % 10)) / (30.0);
-      else if( randomize > 0 )
-         pratio = ((SCIP_Real)(rand() % 10)) / 100.0;
-      else
-         pratio = PERTUBATION_RATIO + ((SCIP_Real)(rand() % 10)) / 200.0;
-
-      if( !Is_anyTerm(graph->term[k]) )
-      {
-         if( nodearrchar[k] )
-         {
-            for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
-               transgraph->cost[e] *= 1.0 - pratio;
-         }
-         else
-         {
-            for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
-               transgraph->cost[e] *= 1.0 + pratio;
-         }
-      }
-      else if( Is_term(transgraph->term[k]) && k != root && k != newroot )
-      {
-         assert(transgraph->grad[k] == 2);
-
-         if( nodearrchar[k] )
-         {
-            for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
-               if( SCIPisPositive(scip, transgraph->cost[e]) )
-               {
-                  assert(!Is_pseudoTerm(transgraph->term[transgraph->tail[e]]));
-
-                  transgraph->cost[e] *= 1.0 + pratio;
-               }
-         }
-         else
-         {
-            for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
-               if( SCIPisPositive(scip, transgraph->cost[e]) )
-               {
-                  assert(!Is_pseudoTerm(transgraph->term[transgraph->tail[e]]));
-                  transgraph->cost[e] *= 1.0 - pratio;
-               }
-         }
-      }
-   }
-}
-
-
 /** returns maximum allowed deviation for dual-ascent */
 static
 SCIP_Real daGetMaxDeviation(
@@ -1941,9 +1798,8 @@ SCIP_RETCODE computePertubedSol(
    SCIP_Real* minpathcost,
    SCIP_Bool* apsol,
    SCIP_Real offset,
-   int extnedges,
-   int pertubation
-)
+   int extnedges
+   )
 {
    SCIP_Real lb;
    int e;
@@ -1954,54 +1810,6 @@ SCIP_RETCODE computePertubedSol(
    assert(graph_pc_isPcMw(graph));
 
    graph_pc_2transcheck(scip, graph);
-
-   /* pertubate the reduced cost? */
-   if( graph->stp_type == STP_MWCSP )
-   {
-      SCIP_Real* transcost;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &transcost, transnedges) );
-      BMScopyMemoryArray(transcost, transgraph->cost, transnedges);
-
-      /* result contains no valid solution?*/
-      if( !(*apsol) )
-      {
-         /* compute new solution */
-         SCIP_Real bound;
-         SCIP_Bool success;
-         SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, bestcost, result2, -1, &success, FALSE) );
-         assert(success);
-
-         SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result2) );
-
-         assert(solstp_isValid(scip, graph, result2));
-
-         bound = getSolObj(scip, graph, result2);
-
-         if( SCIPisLE(scip, bound, *upperbound) )
-         {
-            *upperbound = bound;
-            *apsol = TRUE;
-            BMScopyMemoryArray(result, result2, nedges);
-         }
-         daPcPertubateEdgeCosts(scip, graph, transgraph, result2, nodearrchar, pertubation);
-      }
-      else
-      {
-         daPcPertubateEdgeCosts(scip, graph, transgraph, result, nodearrchar, pertubation);
-      }
-
-      /* todo use result as guiding solution? */
-      {
-         DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = root,
-               .is_pseudoroot = TRUE, .damaxdeviation = -1.0 };
-         SCIP_CALL( dualascent_exec(scip, transgraph, NULL, &daparams, cost, &lb) );
-      }
-
-      BMScopyMemoryArray(transgraph->cost, transcost, transnedges);
-
-      SCIPfreeBufferArray(scip, &transcost);
-   }
 
    SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, pool, cost, upperbound, result, result2, pathedge, nodearrchar, apsol) );
 
@@ -3528,7 +3336,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       /* try to improve both dual and primal bound */
       SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, cost, bestcost, pathdist, pathedge, result, result2,
-            transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges, 0) );
+            transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges) );
 
       assert(solstp_isValid(scip, graph, result));
       assert(!havenewsol || SCIPisEQ(scip, getSolObj(scip, graph, result), upperbound));
@@ -3561,43 +3369,6 @@ SCIP_RETCODE reduce_daPcMw(
          graph_pc_2trans(scip, graph);
          SCIP_CALL( reduce_sollocalUpdateNodesol(scip, result, graph, redprimal) );
          graph_pc_2org(scip, graph);
-      }
-   }
-
-   /* pertubation runs for MWCSP */
-   if( varyroot && graph->stp_type == STP_MWCSP )
-   {
-      int todo; // disable?
-      for( int run = 0; run < DEFAULT_NMAXROOTS && graph->terms > STP_RED_MINBNDTERMS; run++ )
-      {
-         SCIP_Real oldupperbound = upperbound;
-         graph_pc_2trans(scip, graph);
-
-         havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
-         assert(!havenewsol || solstp_isValid(scip, graph, result));
-
-         assert(SCIPisEQ(scip, upperbound, getSolObj(scip, graph, result)));
-
-         /* try to improve both dual and primal bound */
-         SCIP_CALL( computePertubedSol(scip, graph, transgraph, pool, vnoi, cost, bestcost, pathdist, pathedge, result, result2,
-               transresult, nodearrchar, &upperbound, &lpobjval, &bestlpobjval, &minpathcost, &havenewsol, offset, extnedges, run) );
-
-         SCIPdebugMessage("DA: pertubated run %d ub: %f \n", run, upperbound);
-         SCIPdebugMessage("DA: pertubated run %d minpathcost: %f \n", run, upperbound - lpobjval);
-
-         computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
-         updateEdgeFixingBounds(edgefixingbounds, graph, cost, pathdist, vnoi, lpobjval, extnedges, FALSE, FALSE);
-         updateNodeFixingBounds(nodefixingbounds, graph, pathdist, vnoi, lpobjval, FALSE);
-
-         nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, havenewsol, TRUE);
-
-         nfixed += reducePcMwTryBest(scip, graph, transgraph, vnoi, cost, costrev, bestcost, pathdist, &upperbound,
-               &lpobjval, &bestlpobjval, &minpathcost, oldupperbound, result, vbase, state, pathedge, marked, nodearrchar, &havenewsol, extnedges);
-
-         nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
-         nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
-
-         SCIPdebugMessage("DA: pertubated run %d NFIXED %d \n", run, nfixed);
       }
    }
 
