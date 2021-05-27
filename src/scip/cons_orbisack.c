@@ -96,7 +96,8 @@
 #define FIXED0    1                     /* When a variable is fixed to 0. */
 #define FIXED1    2                     /* When a variable is fixed to 1. */
 #define UNFIXED   3                     /* When a variable is neither fixed to 0 or to 1. */
-#define NOINIT    0                     /* A dummy entry for non-initialized variables. Must have value 0 because of SCIPallocCleanBufferArray. */
+#define NOINIT    0                     /* A dummy entry for non-initialized variables.
+                                         * Must have value 0 because of SCIPallocCleanBufferArray. */
 
 
 /*
@@ -661,17 +662,18 @@ SCIP_RETCODE separateOrbisack(
 }
 
 
-/** Determines if a vector with additional fixings could exist that is lexicographically larger than its image.
+/** Determines if a vector with additional fixings could exist that is lexicographically larger than another vector.
  *
- * Given a vector of variables, a permutation, and a set of additional (virtual) fixings.
- * If a vector adhering to the local variable bounds (local fixings) and to the virtual fixings exists,
- * then infeasible is FALSE, otherwise TRUE.
+ * Given two vectors of variables with local lower and upper bounds, and a set of additional (virtual) fixings.
+ * Assuming that the entries of both vectors are equal until entry "start", this function determines if there exists
+ * a vector where the left vector is lexicographically larger or equal to the right vector.
+ * If a vector exsits, infeasible is set to FALSE, otherwise TRUE.
  */
 static
 SCIP_RETCODE checkFeasible(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_VAR**            vars1,              /**< array of variables in left column */
-   SCIP_VAR**            vars2,              /**< array of variables in right column */
+   SCIP_VAR**            vars1,              /**< array of variables in first vector */
+   SCIP_VAR**            vars2,              /**< array of variables in second vector */
    int                   nrows,              /**< number of rows */
    int                   start,              /**< at which row to start (assuming previous rows are equal) */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected in these fixings */
@@ -682,26 +684,26 @@ SCIP_RETCODE checkFeasible(
    SCIP_VAR* var2;
    int var1fix;
    int var2fix;
-
    int i;
 
    assert( scip != NULL );
    assert( vars1 != NULL );
    assert( vars2 != NULL );
    assert( infeasible != NULL );
+   assert( start >= 0 );
 
    *infeasible = FALSE;
 
    for (i = start; i < nrows; ++i)
    {
-      /* get variables of first and second column */
+      /* get variables of first and second vector */
       var1 = vars1[i];
       var2 = vars2[i];
 
       assert( var1 != NULL );
       assert( var2 != NULL );
 
-      /* Get virtual fixing of variable in left column, for var1 */
+      /* Get virtual fixing of variable in first vector, for var1 */
       if ( SCIPvarGetUbLocal(var1) < 0.5 )
       {
          var1fix = FIXED0;
@@ -712,7 +714,7 @@ SCIP_RETCODE checkFeasible(
       else
          var1fix = UNFIXED;
 
-      /* Get virtual fixing of variable in right column, for var2 */
+      /* Get virtual fixing of variable in second vector, for var2 */
       if ( SCIPvarGetUbLocal(var2) < 0.5 )
       {
          var2fix = FIXED0;
@@ -892,8 +894,7 @@ SCIP_RETCODE propVariables(
             while (i >= 0)
             {
                SCIP_CALL( SCIPaddConflictBinvar(scip, vars1[i]) );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars2[i]) );
-               --i;
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars2[i--]) );
             }
 
             SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -1672,44 +1673,22 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
    assert( infrow >= 0 );
    assert( infrow < consdata->nrows );
 
+   /* In both cases, the rows until "varrow" are constants. */
+   for (i = 0; i < varrow; ++i)
+   {
+      /* Conflict caused by bounds of previous variables */
+      SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx) );
+      SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx) );
+      SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx) );
+   }
+
    if ( infrow > 0 )
    {
       /* The fixing of infervar is caused by a lookahead (checkFeasible).
        * The rows until "varrow" are constants, and row "varrow" is (_, _), (1, _), (_, 0).
        * If we assume "varrow" is constant, then the next rows until infrow are constants, and infrow is (0, 1).
        */
-      for (i = 0; i < varrow; ++i)
-      {
-         /* Conflict caused by bounds of previous variables */
-         SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx) );
-      }
-
-      if ( boundtype == SCIP_BOUNDTYPE_LOWER )
-      {
-         /* We changed the lower bound of infervar (to 1). This means that infervar is the left column. */
-         assert( infervar == vars1[varrow] );
-         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, FALSE) < 0.5 );
-         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, TRUE) > 0.5 );
-
-         /* The fixing of the other column is also important. Namely, we are not in (0, _) or (_, 1)! */
-         SCIP_CALL( SCIPaddConflictUb(scip, vars2[varrow], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars2[varrow], bdchgidx) );
-      }
-      else
-      {
-         /* We changed the upper bound of infervar (to 0). This means that infervar is the right column. */
-         assert( infervar == vars2[varrow] );
-         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE) > 0.5 );
-         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, TRUE) < 0.5 );
-
-         /* The fixing of the other column is also important. Namely, we are not in (0, _) or (_, 1)! */
-         SCIP_CALL( SCIPaddConflictUb(scip, vars1[varrow], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars1[varrow], bdchgidx) );
-      }
-
       for (i = varrow + 1; i < infrow; ++i)
       {
          /* These rows are one of (0, 0), (1, 1), (0, _), (_, 1), making them constants. */
@@ -1733,15 +1712,6 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
       /* This is not a fixing caused by lookahead (checkFeasible),
        * so row "varrow" was (0, _) or (_, 1) and its previous rows are constants.
        */
-      for (i = 0; i < varrow; ++i)
-      {
-         /* Conflict caused by bounds of previous variables */
-         SCIP_CALL( SCIPaddConflictUb(scip, vars1[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars1[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictUb(scip, vars2[i], bdchgidx) );
-         SCIP_CALL( SCIPaddConflictLb(scip, vars2[i], bdchgidx) );
-      }
-
       if ( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
          /* We changed the lower bound of infervar to 1. This means that this fixing is due to (_, 1) */
@@ -1766,7 +1736,6 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
          SCIP_CALL( SCIPaddConflictUb(scip, vars1[varrow], bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, vars1[varrow], bdchgidx) );
       }
-
    }
 
    *result = SCIP_SUCCESS;
