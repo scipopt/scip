@@ -639,8 +639,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    assert(semicontinuousvar != NULL);
 
    scdata = (SCVARDATA*) SCIPhashmapGetImage(heurdata->scvars, (void*) semicontinuousvar);
-   assert(SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[0]));
-   assert(SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[0]));
+   assert(scdata == NULL  || SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[0]));
+   assert(scdata == NULL  || SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[0]));
 
    //TODO: only allow sc variables and do the check if ub is equal to lowerbound of the sc
    if( scdata == NULL || !SCIPisEQ(scip, rhs, scdata->vals0[0]) ||
