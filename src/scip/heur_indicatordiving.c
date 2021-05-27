@@ -18,11 +18,20 @@
  * @brief  indicator diving heuristic
  * @author Katrin Halbig
  * @author Alexander Hoen
- * #TODO: deactivate heuristic if model contains no indicator variable
- */
+ * Diving heuristic: Iteratively fixes some fractional variable and resolves the LP-relaxation, thereby simulating a
+ * depth-first-search in the tree.
+ *
+ * Indicatordiving:
+ * Iterates over every indicator constraints and checks if this indicatorvariable models a semicontinuous variable by
+ * setting an upperbound for the constant.
+ * (Unfortunately this is data needs to be checked and is not contained in the Vbound structure.)
+ * Now the heuristic checks if the indicator constraint is already fulfilled (lp solution is greater than lowerbound).
+ * If not, it calculates a score within the percentage difference and the rounding direction according to mode.
+ * Otherwise, the indicator constraint is fulfilled and therefore the rounding direction is chosen correspondingly with
+ * random (low) score.
+ * */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
 
 #include <assert.h>
 
@@ -78,6 +87,10 @@
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_RANDSEED             11  /**< initial seed for random number generation */
+
+/*
+ * Heuristic specific parameters
+ */
 #define DEFAULT_ROUNDINGFRAC       50.0 /**< default parameter setting for parameter roundingfrac */
 #define DEFAULT_MODE                  3 /**< default parameter setting for parameter mode */
 
@@ -122,7 +135,7 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** releases all data from given hashmap and the hashmap itself */
+/** releases all data from given hashmap filled with SCVarData and the hashmap itself */
 static
 SCIP_RETCODE releaseSCHashmap(
   SCIP*                  scip,               /**< SCIP data structure */
@@ -155,7 +168,7 @@ SCIP_RETCODE releaseSCHashmap(
 }
 
 
-/** checks if variable is indicator variable and returns corresponding indicator constraint */
+/** checks if variable is indicator variable and stores corresponding indicator constraint */
 static
 SCIP_RETCODE checkAndGetIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -267,7 +280,7 @@ SCIP_RETCODE addSCVarIndicator(
    return SCIP_OKAY;
 }
 
-/** checks if a variable is semicontinuous and, if needed, updates the scvars hashmap
+/** checks if a variable is semicontinuous and stores it data in the hashmap scvars
  *
  * A variable x is semicontinuous if its bounds depend on at least one binary variable called the indicator,
  * and indicator == 0 => x == x^0 for some real constant x^0.
@@ -547,7 +560,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
     * - candsfrac : fractional part of solution value of variable
     * - score : pointer for diving score value - the best candidate maximizes this score
     * - roundup : pointer to store whether the preferred rounding direction is upwards
-    *
     */
 
    SCIP_HEUR* heur;
