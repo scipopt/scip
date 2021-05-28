@@ -197,6 +197,7 @@ static
 SCIP_RETCODE addColToCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to store intersection cut */
+   SCIP_SOL*             sol,                /**< solution to separate */
    SCIP_Real             cutcoef,            /**< cut coefficient */
    SCIP_COL*             col                 /**< column to add to rowprep */
    )
@@ -211,7 +212,7 @@ SCIP_RETCODE addColToCut(
 #endif
 
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPcolGetVar(col), cutcoef) );
-   SCIPaddRowprepConstant(rowprep, -cutcoef * SCIPcolGetPrimsol(col) );
+   SCIPaddRowprepConstant(rowprep, -cutcoef * SCIPgetSolVal(scip, sol, SCIPcolGetVar(col)) );
 
    return SCIP_OKAY;
 }
@@ -1741,6 +1742,7 @@ SCIP_RETCODE computeIntercut(
    SCIP_ROWPREP*         rowprep,            /**< rowprep for the generated cut */
    SCIP_Real*            interpoints,        /**< array to store intersection points for all rays or NULL if nothing
                                                   needs to be stored */
+   SCIP_SOL*             sol,                /**< solution we want to separate */
    SCIP_Bool*            success             /**< if a cut candidate could be computed */
    )
 {
@@ -1874,12 +1876,12 @@ SCIP_RETCODE computeIntercut(
          {
             assert(SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER || SCIPcolGetBasisStatus(cols[lppos]) ==
                   SCIP_BASESTAT_LOWER);
-            SCIP_CALL( addColToCut(scip, rowprep, SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef :
+            SCIP_CALL( addColToCut(scip, rowprep, sol, SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef :
                   cutcoef, cols[lppos]) );
          }
          else
          {
-            SCIP_CALL( addColToCut(scip, rowprep, rays->rays[i] == -1 ? -cutcoef : cutcoef, cols[lppos]) );
+            SCIP_CALL( addColToCut(scip, rowprep, sol, rays->rays[i] == -1 ? -cutcoef : cutcoef, cols[lppos]) );
          }
       }
    }
@@ -2193,6 +2195,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
    SCIP_Real             wzlp,               /**< value of w at zlp */
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_ROWPREP*         rowprep,            /**< rowprep for the generated cut */
+   SCIP_SOL*             sol,                /**< solution to separate */
    SCIP_Bool*            success,            /**< if a cut candidate could be computed */
    SCIP_Bool*            strengthsuccess     /**< if strengthening was successfully applied */
    )
@@ -2215,7 +2218,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
 
    /* compute all intersection points and store them in interpoints; build not-stregthened intersection cut */
    SCIP_CALL( computeIntercut(scip, nlhdlrdata, nlhdlrexprdata, rays, sidefactor, iscase4, vb, vzlp, wcoefs, wzlp, kappa,
-            rowprep, interpoints, success) );
+            rowprep, interpoints, sol, success) );
 
    if( ! *success )
       goto CLEANUP;
@@ -2279,7 +2282,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
       {
          assert(SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER || SCIPcolGetBasisStatus(cols[lppos]) ==
                SCIP_BASESTAT_LOWER);
-         SCIP_CALL( addColToCut(scip, rowprep, SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef :
+         SCIP_CALL( addColToCut(scip, rowprep, sol, SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef :
                   cutcoef, cols[lppos]) );
       }
    }
@@ -2299,16 +2302,23 @@ SCIP_RETCODE setVarToNearestBound(
    SCIP_SOL*             sol,                /**< solution to separate */
    SCIP_SOL*             vertex,             /**< new solution to separate */
    SCIP_VAR*             var,                /**< var we want to find nearest bound to */
-   int*                  factor              /**< is vertex for current var at lower or upper? */
+   SCIP_Real*            factor,             /**< is vertex for current var at lower or upper? */
+   SCIP_Bool*            success             /**< TRUE if no variable is bounded */
    )
 {
    SCIP_Real solval;
    SCIP_Real bound;
 
    solval = SCIPgetSolVal(scip, sol, var);
+   *success = TRUE;
 
    /* find nearest bound */
-   if( solval - SCIPvarGetLbLocal(var) < SCIPvarGetUbLocal(var) - solval )
+   if( SCIPisInfinity(scip, SCIPvarGetLbLocal(var)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   else if( solval - SCIPvarGetLbLocal(var) < SCIPvarGetUbLocal(var) - solval )
    {
       bound = SCIPvarGetLbLocal(var);
       *factor = 1.0;
@@ -2319,147 +2329,35 @@ SCIP_RETCODE setVarToNearestBound(
       *factor = -1.0;
    }
 
+   //printf("var %s has bound %f --> entry = %f \n", SCIPvarGetName(var), bound, *factor);
    /* set val to bound in solution */
    SCIP_CALL( SCIPsetSolVal(scip, vertex, var, bound) );
    return SCIP_OKAY;
 }
 
 static
-void insertBoundRayEntries(
+SCIP_RETCODE findVertexAndGetRays(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
-   RAYS*                 rays,               /**< data structure of rays */
-   SCIP_SOL*             vertex,             /**< 'vertex' solution we separate */
+   SCIP_SOL*             sol,                /**< solution to separate */
+   SCIP_SOL*             vertex,             /**< new 'vertex' (w.r.t. bounds) solution to separate */
    SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
-   int                   factor,             /**< do we have to go along e_idx or -e_idx */
-   int                   idx                 /**< idx of current ray */
+   RAYS**                raysptr,            /**< pointer to new bound rays */
+   SCIP_Bool*            success             /**< TRUE if no variable is unbounded */
    )
 {
    SCIP_CONSEXPR_QUADEXPR* quaddata;
    SCIP_CONSEXPR_EXPR** linexprs;
-   int nlinexprs;
+   RAYS* rays;
    int nquadexprs;
+   int nlinexprs;
    int raylength;
    int i;
+
+   *success = TRUE;
 
    quaddata = nlhdlrexprdata->quaddata;
    SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, &linexprs, NULL, &nquadexprs, NULL, NULL, NULL);
-
-   raylength = 0;
-
-   for( i = 0; i < nquadexprs; ++i )
-   {
-      SCIP_Real entry;
-      SCIP_VAR* var;
-      SCIP_Real solval;
-      SCIP_CONSEXPR_EXPR* expr;
-
-      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &expr, NULL, NULL, NULL, NULL, NULL);
-
-      var = SCIPgetConsExprExprAuxVar(expr);
-      solval = SCIPgetSolVal(scip, vertex, var);
-
-      //entry = solval;
-      entry = 0.0;
-
-      /* add lppos of var corresponding to current ray */
-      if( idx == i )
-      {
-         entry += factor;
-         rays->lpposray[idx] = SCIPcolGetLPPos(SCIPvarGetCol(var));
-         //printf("lppos of var %s is %d \n", SCIPvarGetName(var), SCIPcolGetLPPos(SCIPvarGetCol(var)));
-      }
-
-      /* insert new non-zero entry in ray */
-      if( ! SCIPisZero(scip, entry) )
-      {
-         rays->rays[rays->raysbegin[idx] + raylength] = entry;
-         rays->raysidx[rays->raysbegin[idx] + raylength] = i;
-         raylength += 1;
-      }
-   }
-
-   for( i = 0; i < nlinexprs; ++i )
-   {
-      SCIP_Real entry;
-      SCIP_VAR* var;
-      SCIP_Real solval;
-
-      var = SCIPgetConsExprExprAuxVar(linexprs[i]);
-      solval = SCIPgetSolVal(scip, vertex, var);
-
-      //entry = solval;
-      entry = 0.0;
-
-      /* add lppos of var corresponding to current ray */
-      if( idx == i + nquadexprs )
-      {
-         entry += factor;
-         rays->lpposray[idx] = SCIPcolGetLPPos(SCIPvarGetCol(var));
-         //printf("lppos of var %s is %d \n", SCIPvarGetName(var), SCIPcolGetLPPos(SCIPvarGetCol(var)));
-      }
-
-      /* insert new non-zero entry in ray */
-      if( SCIPisZero(scip, entry) )
-      {
-         rays->rays[rays->raysbegin[idx] + raylength] = entry;
-         rays->raysidx[rays->raysbegin[idx] + raylength] = i + nquadexprs;
-         raylength += 1;
-      }
-   }
-
-   if( auxvar != NULL )
-   {
-      SCIP_Real entry;
-      SCIP_Real solval;
-
-      solval = SCIPgetSolVal(scip, vertex, auxvar);
-      //entry = solval;
-      entry = 0.0;
-
-      /* add lppos of var corresponding to current ray */
-      if( idx == nquadexprs + nlinexprs )
-      {
-         entry += factor;
-         rays->lpposray[idx] = SCIPcolGetLPPos(SCIPvarGetCol(auxvar));
-         //printf("lppos of var %s is %d \n", SCIPvarGetName(auxvar), SCIPcolGetLPPos(SCIPvarGetCol(auxvar)));
-      }
-
-      /* insert new non-zero entry in ray */
-      if( SCIPisZero(scip, entry) )
-      {
-         rays->rays[rays->raysbegin[idx] + raylength] = entry;
-         rays->raysidx[rays->raysbegin[idx] + raylength] = nquadexprs + nlinexprs;
-         raylength += 1;
-      }
-   }
-
-   rays->rayssize += raylength;
-   rays->raysbegin[idx + 1] = rays->raysbegin[idx] + raylength;
-
-   return;
-}
-
-static
-SCIP_RETCODE createAndStoreSparseBoundsRays(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
-   SCIP_SOL*             vertex,             /**< vertex (w.r.t. bounds) we want to separate */
-   SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
-   RAYS**                raysptr,
-   int*                  factors             /**< array to store at which bound vertex is */
-   )
-{
-   SCIP_Real* densetableaucols;
-   RAYS* rays;
-   SCIP_CONSEXPR_QUADEXPR* quaddata;
-   int nlinexprs;
-   int nquadexprs;
-   int raylength;
-   int i;
-
-   quaddata = nlhdlrexprdata->quaddata;
-   SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
 
    raylength = (auxvar == NULL) ? nquadexprs + nlinexprs : nquadexprs + nlinexprs + 1;
 
@@ -2467,61 +2365,136 @@ SCIP_RETCODE createAndStoreSparseBoundsRays(
    SCIP_CALL( createBoundRays(scip, raysptr, raylength) );
    rays = *raysptr;
 
-   rays->rayssize = 0;
+   rays->rayssize = raylength;
    rays->nrays = raylength;
-
-   /* go through quadratic variables */
-   for( i = 0; i < nquadexprs; ++i )
-      insertBoundRayEntries(scip, nlhdlrexprdata, rays, vertex, auxvar, factors[i], i);
-
-   /* go through linear variables */
-   for( i = 0; i < nlinexprs; ++i )
-      insertBoundRayEntries(scip, nlhdlrexprdata, rays, vertex, auxvar, factors[i + nquadexprs], i + nquadexprs);
-
-   if( auxvar != NULL )
-      insertBoundRayEntries(scip, nlhdlrexprdata, rays, vertex, auxvar, factors[nquadexprs + nlinexprs], nquadexprs + nlinexprs);
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE findNearestVertex(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
-   SCIP_SOL*             sol,                /**< solution to separate */
-   SCIP_SOL*             vertex,             /**< new 'vertex' (w.r.t. bounds) solution to separate */
-   SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
-   int*                  factors             /**< array to store at which bound vertex is */
-   )
-{
-   SCIP_CONSEXPR_QUADEXPR* quaddata;
-   SCIP_CONSEXPR_EXPR** linexprs;
-   int nquadexprs;
-   int nlinexprs;
-   int i;
-
-   quaddata = nlhdlrexprdata->quaddata;
-   SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, &linexprs, NULL, &nquadexprs, NULL, NULL, NULL);
 
    /* go through quadratic variables */
    for( i = 0; i < nquadexprs; ++i )
    {
       SCIP_CONSEXPR_EXPR* expr;
       SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &expr, NULL, NULL, NULL, NULL, NULL);
+
+      rays->raysbegin[i] = i;
+      rays->raysidx[i] = i;
+      rays->lpposray[i] = SCIPcolGetLPPos(SCIPvarGetCol(SCIPgetConsExprExprAuxVar(expr)));
+
       SCIP_CALL( setVarToNearestBound(scip, sol, vertex, SCIPgetConsExprExprAuxVar(expr),
-         &factors[i]) );
+         &rays->rays[i], success) );
+
+      if( ! *success )
+         return SCIP_OKAY;
    }
 
    /* go through linear variables */
    for( i = 0; i < nlinexprs; ++i )
+   {
+      rays->raysbegin[i + nquadexprs] = i + nquadexprs;
+      rays->raysidx[i + nquadexprs] = i + nquadexprs;
+      rays->lpposray[i + nquadexprs] = SCIPcolGetLPPos(SCIPvarGetCol(SCIPgetConsExprExprAuxVar(linexprs[i])));
+
       SCIP_CALL( setVarToNearestBound(scip, sol, vertex, SCIPgetConsExprExprAuxVar(linexprs[i]),
-         &factors[i + nquadexprs]) );
+         &rays->rays[i + nquadexprs], success) );
+
+      if( ! *success )
+         return SCIP_OKAY;
+   }
 
    /* consider auxvar if it exists */
    if( auxvar != NULL )
-      SCIP_CALL( setVarToNearestBound(scip, sol, vertex, auxvar, &factors[nquadexprs + nlinexprs]) );
+   {
+      rays->raysbegin[nquadexprs + nlinexprs] = nquadexprs + nlinexprs;
+      rays->raysidx[nquadexprs + nlinexprs] = nquadexprs + nlinexprs;
+      rays->lpposray[nquadexprs + nlinexprs] = SCIPcolGetLPPos(SCIPvarGetCol(auxvar));
+
+      SCIP_CALL( setVarToNearestBound(scip, sol, vertex, auxvar, &rays->rays[nquadexprs + nlinexprs], success) );
+
+      if( ! *success )
+         return SCIP_OKAY;
+   }
+
+   rays->raysbegin[raylength] = raylength;
 
    return SCIP_OKAY;
+}
+
+static
+SCIP_Bool isQuadConsViolated(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
+   SCIP_SOL*             sol,                /**< solution to check feasibility for */
+   SCIP_Real             sidefactor          /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   )
+{
+   SCIP_CONSEXPR_QUADEXPR* quaddata;
+   SCIP_CONSEXPR_EXPR** linexprs;
+   SCIP_Real* lincoefs;
+   SCIP_Real constant;
+   SCIP_Real val;
+   int nquadexprs;
+   int nlinexprs;
+   int nbilinexprs;
+   int i;
+
+   quaddata = nlhdlrexprdata->quaddata;
+   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs,
+      &nbilinexprs, NULL, NULL);
+
+   val = 0.0;
+
+   /* go through quadratic terms */
+   for( i = 0; i < nquadexprs; i++ )
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_Real quadlincoef;
+      SCIP_Real sqrcoef;
+
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &expr, &quadlincoef, &sqrcoef, NULL, NULL, NULL);
+
+      /* add square term */
+      val += sqrcoef * SQR(SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)));
+
+      /* add linear term */
+      val += quadlincoef * SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr));
+   }
+
+   /* go through bilinear terms */
+   for( i = 0; i < nbilinexprs; i++ )
+   {
+      SCIP_CONSEXPR_EXPR* expr1;
+      SCIP_CONSEXPR_EXPR* expr2;
+      SCIP_Real bilincoef;
+
+      SCIPgetConsExprQuadraticBilinTermData(quaddata, i, &expr1, &expr2, &bilincoef, NULL, NULL);
+
+      val += bilincoef * SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr1))
+         * SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr2));
+   }
+
+   /* go through linear terms */
+   for( i = 0; i < nlinexprs; i++ )
+   {
+      val += lincoefs[i] * SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(linexprs[i]));
+   }
+
+   /* add auxvar if exists and get constant */
+   if( auxvar != NULL )
+   {
+      val -= SCIPgetSolVal(scip, sol, auxvar);
+
+      constant = (sidefactor == 1.0) ? constant - SCIPgetRhsConsExpr(scip, nlhdlrexprdata->cons) :
+         SCIPgetLhsConsExpr(scip, nlhdlrexprdata->cons) - constant;
+   }
+   else
+      constant = (sidefactor * constant);
+
+   val = (sidefactor * val);
+
+   /* now constraint is q(z) <= const */
+   if( val <= constant )
+      return FALSE;
+   else
+      return TRUE;
 }
 
 static
@@ -2587,41 +2560,39 @@ SCIP_RETCODE generateIntercut(
    }
    else
    {
-      SCIP_RESULT result;
-      int* factors;
+      SCIP_Bool violated;
 
-      if( auxvar == NULL )
-         SCIP_CALL( SCIPallocBufferArray(scip, &factors, nquadexprs + nlinexprs) );
-      else
-         SCIP_CALL( SCIPallocBufferArray(scip, &factors, nquadexprs + nlinexprs + 1) );
+      if( auxvar != NULL )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
 
       /* create new solution */
       SCIP_CALL( SCIPcreateSol(scip, &vertex, NULL) );
 
-      /* find nearest vertex of the box to separate */
-      SCIP_CALL( findNearestVertex(scip, nlhdlrexprdata, sol, vertex, auxvar, factors) );
+      /* find nearest vertex of the box to separate and compute rays */
+      SCIP_CALL( findVertexAndGetRays(scip, nlhdlrexprdata, sol, vertex, auxvar, &rays, success) );
 
-      /* check if vertex is violated */
-      SCIP_CALL( SCIPcheckCons(scip, cons, vertex, FALSE, FALSE, FALSE, &result) );
-
-      if( result == SCIP_FEASIBLE )
+      if( ! *success )
       {
-         INTERLOG(printf("Failed to use bounds as rays: nearest vertex is not violated!\n"); )
-
+         INTERLOG(printf("Failed to use bounds as rays: variable is unbounded!\n"); )
+         freeRays(scip, &rays);
          SCIP_CALL( SCIPfreeSol(scip, &vertex) );
-         SCIPfreeBufferArray(scip, &factors);
-
          return SCIP_OKAY;
       }
 
-      assert( result == SCIP_INFEASIBLE );
+      /* check if vertex is violated */
+      violated = isQuadConsViolated(scip, nlhdlrexprdata, auxvar, vertex, sidefactor);
 
-      /* store bounds as rays */
-      SCIP_CALL( createAndStoreSparseBoundsRays(scip, nlhdlrexprdata, vertex, auxvar, &rays, factors) );
-
-      SCIPfreeBufferArray(scip, &factors);
-
-      //sol = vertex;
+      if( ! violated )
+      {
+         INTERLOG(printf("Failed to use bounds as rays: nearest vertex is not violated!\n"); )
+         freeRays(scip, &rays);
+         SCIP_CALL( SCIPfreeSol(scip, &vertex) );
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
    }
 
    /* TODO move computation of vb, wcoefs, and kappa to INITLP */
@@ -2654,7 +2625,7 @@ SCIP_RETCODE generateIntercut(
       SCIP_Bool strengthsuccess;
 
       SCIP_CALL( computeStrengthenedIntercut(scip, nlhdlrdata, nlhdlrexprdata, rays, sidefactor, iscase4, vb, vzlp, wcoefs,
-            wzlp, kappa, rowprep, success, &strengthsuccess) );
+            wzlp, kappa, rowprep, sol, success, &strengthsuccess) );
 
       if( *success && strengthsuccess )
          nlhdlrdata->nstrengthenings++;
@@ -2662,7 +2633,7 @@ SCIP_RETCODE generateIntercut(
    else
    {
       SCIP_CALL( computeIntercut(scip, nlhdlrdata, nlhdlrexprdata, rays, sidefactor, iscase4, vb, vzlp, wcoefs, wzlp, kappa,
-            rowprep, NULL, success) );
+            rowprep, NULL, vertex, success) );
    }
 
    SCIPfreeBufferArrayNull(scip, &wcoefs);
