@@ -65,14 +65,6 @@ int SCIPnlpiGetPriority(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
-/** sets NLP solver priority */
-SCIP_EXPORT
-void SCIPnlpiSetPriority(
-   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
-   int                   priority            /**< new priority of NLPI */
-   );
-
-
 /**@} */ /* PublicNLPIMethods */
 
 #ifdef __cplusplus
