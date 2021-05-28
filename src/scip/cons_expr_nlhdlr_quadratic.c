@@ -131,6 +131,8 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   nhighre;            /**< number of times a cut was not added because range / efficacy was too large */
    int                   nphinonneg;         /**< number of times a cut was aborted because phi is nonnegative at 0 */
    int                   nstrengthenings;    /**< number of successful strengthenings */
+   int                   nboundcuts;         /**< number of successful bound cuts */
+   int                   ncalls;             /**< number of calls to separation */
    SCIP_Real             densitysum;         /**< sum of density of cuts */
 };
 
@@ -169,8 +171,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
 
 
    /* print statistics */
-   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
-         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "AveCutcoef", "AveDensity");
+   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s \n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
+         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "AveCutcoef", "AveDensity", "AveBCutsFrac");
    SCIPinfoMessage(scip, file, "  %-17s:", "Quadratic Nlhdlr");
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsgenerated);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsadded);
@@ -182,6 +184,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nstrengthenings);
    SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->cutcoefsum / nlhdlrdata->nstrengthenings);
    SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->densitysum / nlhdlrdata->ncutsadded);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->nboundcuts / nlhdlrdata->ncalls);
    SCIPinfoMessage(scip, file, "\n");
 
    return SCIP_OKAY;
@@ -2525,6 +2528,8 @@ SCIP_RETCODE generateIntercut(
    int nlinexprs;
    int i;
 
+   /* count number of calls */
+   (nlhdlrdata->ncalls++);
 
    quaddata = nlhdlrexprdata->quaddata;
    SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
@@ -3373,6 +3378,11 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
    /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
    if( success )
    {
+      /* count number of bound cuts */
+      if( nlhdlrdata->useboundsasrays )
+         nlhdlrdata->nboundcuts += 1;
+
+      //printf("ADDED CUT SUCCESSFULLY! \n");
       SCIP_ROW* row;
       SCIP_Bool infeasible;
 
