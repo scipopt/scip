@@ -4302,7 +4302,7 @@ SCIP_RETCODE replaceBinaryProducts(
  *    minact <= sum_j Q_ij x_j - w_i + minact x_i
  *    maxact >= sum_j Q_ij x_j - w_i + maxact x_i
  *
- * We mark w_i to be implicit integer if all Q_ij are integer. After each replacment of a lower sum, it
+ * We mark w_i to be implicit integer if all Q_ij are integer. After each replacement of a lower sum, it
  * is checked whether there are enough terms left to factorize other binary variables. Lower sums with a larger number
  * of terms are prioritized.
  */
@@ -5299,7 +5299,7 @@ SCIP_RETCODE removeSingleLockedVars(
 }
 
 /** presolving method to fix a variable x_i to one of its bounds if the variable is only contained in a single
- *  expression contraint g(x) <= rhs (>= lhs) if g is concave (convex) in x_i;  if a continuous variable has bounds
+ *  expression constraint g(x) <= rhs (>= lhs) if g is concave (convex) in x_i;  if a continuous variable has bounds
  *  [0,1], then the variable type is changed to be binary; otherwise a bound disjunction constraint is added
  *
  *  @todo the same reduction can be applied if g(x) is not concave, but monotone in x_i for g(x) <= rhs
