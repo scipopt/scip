@@ -2306,8 +2306,8 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
-   conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsNonlinear(cons));
-   consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsNonlinear(cons));
+   conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsNonlinear(cons));
+   consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsNonlinear(cons));
 
    SCIP_CALL( detectSOC(scip, nlhdlrdata, expr, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, &success) );
 
@@ -2737,14 +2737,14 @@ SCIP_RETCODE SCIPisSOCNonlinear(
 
    assert(cons != NULL);
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    assert(expr != NULL);
 
    nlhdlrdata.mincutefficacy = 0.0;
    nlhdlrdata.compeigenvalues = compeigenvalues;
 
-   conslhs = SCIPgetLhsConsNonlinear(cons);
-   consrhs = SCIPgetRhsConsNonlinear(cons);
+   conslhs = SCIPgetLhsNonlinear(cons);
+   consrhs = SCIPgetRhsNonlinear(cons);
 
    SCIP_CALL( detectSOC(scip, &nlhdlrdata, expr, conslhs, consrhs, &nlhdlrexprdata, &enforcebelow, success) );
 

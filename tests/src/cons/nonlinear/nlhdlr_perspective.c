@@ -222,7 +222,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x1>^2 + <x1>*<y1> + <x2>^2", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPcomputeExprCurvature(scip, expr) );
    SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
 
@@ -303,7 +303,7 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x1>^2", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPcomputeExprCurvature(scip, expr) );
    SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
 
@@ -362,7 +362,7 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"log(<x1>+<x2>+1.0)", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPcomputeExprCurvature(scip, expr) );
    SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
 
@@ -442,7 +442,7 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x1>^2 + <x1>*<x2> + <x2>^2", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
    SCIP_CALL( SCIPcomputeExprCurvature(scip, expr) );
    SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );

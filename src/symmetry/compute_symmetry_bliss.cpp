@@ -553,7 +553,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
       vector<SCIP_Bool> ischildofsum(0);
       int currentlevel = 0;
 
-      rootexpr = SCIPgetExprConsNonlinear(conss[i]);
+      rootexpr = SCIPgetExprNonlinear(conss[i]);
 
       SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
       SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
@@ -763,8 +763,8 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   assert( nuniquerhs < rhsarraysize );
 
                   rt = &uniquerhsarray[nuniquerhs];
-                  rt->lhs = SCIPgetLhsConsNonlinear(conss[i]);
-                  rt->rhs = SCIPgetRhsConsNonlinear(conss[i]);
+                  rt->lhs = SCIPgetLhsNonlinear(conss[i]);
+                  rt->rhs = SCIPgetRhsNonlinear(conss[i]);
 
                   if ( !SCIPhashtableExists(rhstypemap, (void *) rt) )
                   {

@@ -79,6 +79,12 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    );
 
+/** sets NLP solver priority */
+void SCIPnlpiSetPriority(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   int                   priority            /**< new priority of NLPI */
+   );
+
 /** copies an NLPI and includes it into another SCIP instance */
 SCIP_RETCODE SCIPnlpiCopyInclude(
    SCIP_NLPI*            sourcenlpi,         /**< the NLP interface to copy */

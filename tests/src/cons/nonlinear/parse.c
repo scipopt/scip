@@ -69,8 +69,8 @@ Test(parse, constraint_with_spaces)
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
-   cr_expect_eq(SCIPgetLhsConsNonlinear(cons), 1.0);
-   cr_expect_eq(SCIPgetRhsConsNonlinear(cons), SCIPinfinity(scip));
+   cr_expect_eq(SCIPgetLhsNonlinear(cons), 1.0);
+   cr_expect_eq(SCIPgetRhsNonlinear(cons), SCIPinfinity(scip));
    /* TODO there should be some test that the expression was parsed ok, too */
 
    /* print constraint */
@@ -94,8 +94,8 @@ Test(parse, constraint_with_sides)
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
-   cr_expect_eq(SCIPgetLhsConsNonlinear(cons), 1.0);
-   cr_expect_eq(SCIPgetRhsConsNonlinear(cons), 2.0);
+   cr_expect_eq(SCIPgetLhsNonlinear(cons), 1.0);
+   cr_expect_eq(SCIPgetRhsNonlinear(cons), 2.0);
    /* TODO there should be some test that the expression was parsed ok, too */
 
    /* print constraint */

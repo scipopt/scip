@@ -1008,8 +1008,8 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
 
    /* first get constant of quadratic when written as quad <= 0 */
    if( nlhdlrexprdata->cons != NULL )
-      constant = (sidefactor == 1.0) ? constant - SCIPgetRhsConsNonlinear(nlhdlrexprdata->cons) :
-         SCIPgetLhsConsNonlinear(nlhdlrexprdata->cons) - constant;
+      constant = (sidefactor == 1.0) ? constant - SCIPgetRhsNonlinear(nlhdlrexprdata->cons) :
+         SCIPgetLhsNonlinear(nlhdlrexprdata->cons) - constant;
    else
       constant = (sidefactor * constant);
 
@@ -3209,8 +3209,8 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
    }
    else
       /* quadratic is a constraint */
-      violation = MAX( SCIPgetLhsConsNonlinear(nlhdlrexprdata->cons) - auxvalue, auxvalue -
-            SCIPgetRhsConsNonlinear(nlhdlrexprdata->cons)); /*lint !e666*/
+      violation = MAX( SCIPgetLhsNonlinear(nlhdlrexprdata->cons) - auxvalue, auxvalue -
+            SCIPgetRhsNonlinear(nlhdlrexprdata->cons)); /*lint !e666*/
 
    if( violation < nlhdlrdata->minviolation )
    {
@@ -3230,8 +3230,8 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
    /* if we are the root of a constraint and we are feasible w.r.t our auxiliary variables, that is, auxvalue is
     * actually feasible for the sides of the constraint, then do not separate
     */
-   if( cons == nlhdlrexprdata->cons && ((overestimate && (SCIPgetLhsConsNonlinear(cons)) - auxvalue < SCIPfeastol(scip)) ||
-            (! overestimate && (auxvalue - SCIPgetRhsConsNonlinear(cons) < SCIPfeastol(scip)))) )
+   if( cons == nlhdlrexprdata->cons && ((overestimate && (SCIPgetLhsNonlinear(cons)) - auxvalue < SCIPfeastol(scip)) ||
+            (! overestimate && (auxvalue - SCIPgetRhsNonlinear(cons) < SCIPfeastol(scip)))) )
    {
       INTERLOG(printf("We are actually feasible for the sides of the constraint\n"); )
       return SCIP_OKAY;

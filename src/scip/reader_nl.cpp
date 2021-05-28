@@ -1144,7 +1144,7 @@ public:
          SCIP_CALL_THROW( SCIPcreateConsBasicNonlinear(scip, &objcons, "objcons", objexpr,
             SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
             SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0) );
-         SCIP_CALL_THROW( SCIPaddLinearTermConsNonlinear(scip, objcons, -1.0, objvar) );
+         SCIP_CALL_THROW( SCIPaddLinearVarNonlinear(scip, objcons, objvar, -1.0) );
          SCIP_CALL_THROW( SCIPaddCons(scip, objcons) );
 
          SCIP_CALL_THROW( SCIPreleaseCons(scip, &objcons) );
@@ -1156,7 +1156,7 @@ public:
       {
          for( size_t j = 0; j < nlconslin[i].size(); ++j )
          {
-            SCIP_CALL_THROW( SCIPaddLinearTermConsNonlinear(scip, probdata->conss[i], nlconslin[i][j].first, nlconslin[i][j].second) );
+            SCIP_CALL_THROW( SCIPaddLinearVarNonlinear(scip, probdata->conss[i], nlconslin[i][j].second, nlconslin[i][j].first) );
          }
       }
 

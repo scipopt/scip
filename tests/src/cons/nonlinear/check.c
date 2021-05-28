@@ -178,10 +178,10 @@ Test(conshdlr, relviol_n,
    cr_expect_not(success, "an infeasible solution has been accepted");
 
    activity = getActivity();
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_float_eq(absviol, activity-2.0, SCIPepsilon(scip), "activity: %g, rhs: 2.0, but absviol: %g", activity, absviol);
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
 
@@ -193,10 +193,10 @@ Test(conshdlr, relviol_n,
    cr_expect(success, "a feasible solution has been declined");
 
    activity = getActivity();
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, 0.0);
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
 
@@ -209,10 +209,10 @@ Test(conshdlr, relviol_n,
 
    activity = getActivity();
    cr_expect_eq(activity, SCIP_INVALID);
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, SCIPinfinity(scip));
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
    /* release constraints */
@@ -248,10 +248,10 @@ Test(conshdlr, relviol_a,
    cr_expect_not(success, "an infeasible solution has been accepted");
 
    activity = getActivity();
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_float_eq(absviol, activity-2.0, SCIPepsilon(scip), "activity: %g, rhs: 2.0, but absviol: %g", activity, absviol);
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(activity, 2.0), SCIPepsilon(scip));
 
 
@@ -263,10 +263,10 @@ Test(conshdlr, relviol_a,
    cr_expect(success, "a feasible solution has been declined");
 
    activity = getActivity();
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, 0.0);
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(activity, 2.0), SCIPepsilon(scip));
 
 
@@ -279,10 +279,10 @@ Test(conshdlr, relviol_a,
 
    activity = getActivity();
    cr_expect_eq(activity, SCIP_INVALID);
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, SCIPinfinity(scip));
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
    /* release constraints */
@@ -320,10 +320,10 @@ Test(conshdlr, relviol_g,
 
    activity = getActivity();
    gradnorm = getGradNorm();
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_float_eq(absviol, activity-2.0, SCIPepsilon(scip), "activity: %g, rhs: 2.0, but absviol: %g", activity, absviol);
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(gradnorm, 1.0), SCIPepsilon(scip));
 
 
@@ -336,10 +336,10 @@ Test(conshdlr, relviol_g,
 
    activity = getActivity();
    gradnorm = getGradNorm();
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, 0.0);
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(gradnorm, 1.0), SCIPepsilon(scip));
 
 
@@ -352,10 +352,10 @@ Test(conshdlr, relviol_g,
 
    activity = getActivity();
    cr_expect_eq(activity, SCIP_INVALID);
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, SCIPinfinity(scip));
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
    /* release constraints */
@@ -393,10 +393,10 @@ Test(conshdlr, relviol_g2,
 
    activity = sqrt(0.25);
    gradnorm = sqrt(SQR(0.5)+SQR(0.5));
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_float_eq(absviol, 1.0-activity, SCIPepsilon(scip), "activity: %g, lhs: 1.0, but absviol: %g", activity, absviol);
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(gradnorm, 1.0), SCIPepsilon(scip));
 
 
@@ -406,10 +406,10 @@ Test(conshdlr, relviol_g2,
    SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, FALSE, FALSE, FALSE, &success) );
    cr_expect_not(success, "an infeasible solution has been accepted");
 
-   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, 1.0);
 
-   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationNonlinear(scip, cons, sol, &relviol) );
    /* if gradient cannot be evaluated, then no scaling should happen */
    cr_expect_eq(relviol, absviol);
 
@@ -455,7 +455,7 @@ Test(conshdlr, exprviol,
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 4.0) );
 
    cr_assert_eq(SCIPgetNConss(scip), 1);
-   mainexpr = SCIPgetExprConsNonlinear(SCIPgetConss(scip)[0]);
+   mainexpr = SCIPgetExprNonlinear(SCIPgetConss(scip)[0]);
    SCIP_CALL( SCIPdismantleExpr(scip, NULL, mainexpr) );
 
    /* construct LP to get auxvar */

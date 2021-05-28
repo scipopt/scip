@@ -2938,7 +2938,7 @@ SCIP_RETCODE SCIPwritePip(
          SCIP_Bool isquadratic;
 
          /* get the quadratic representation of the expression constraint */
-         SCIP_CALL( SCIPcheckQuadraticConsNonlinear(scip, cons, &isquadratic) );
+         SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
 
          /* we cannot handle expression constraint that are not quadratically representable
           * TODO we should, see disabled printRowNl code
@@ -2953,8 +2953,8 @@ SCIP_RETCODE SCIPwritePip(
             return SCIP_OKAY;
          }
 
-         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprConsNonlinear(cons),
-            SCIPgetLhsConsNonlinear(cons), SCIPgetRhsConsNonlinear(cons), transformed) );
+         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprNonlinear(cons),
+            SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
 
          consNonlinear[nConsNonlinear++] = cons;
       }

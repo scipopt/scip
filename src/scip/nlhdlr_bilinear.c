@@ -786,7 +786,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
       SCIP_CONS* cons = SCIPconshdlrGetConss(conshdlr)[c];
       SCIP_EXPR* expr;
 
-      SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprConsNonlinear(scip, cons), SCIP_EXPRITER_DFS, FALSE) );
+      SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprNonlinear(scip, cons), SCIP_EXPRITER_DFS, FALSE) );
 
       for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
@@ -1532,23 +1532,23 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
    SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalBilinear, nlhdlrReversepropBilinear);
 
    /* parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/useinteval",
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/useinteval",
          "whether to use the interval evaluation callback of the nlhdlr",
          &nlhdlrdata->useinteval, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/usereverseprop",
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/usereverseprop",
          "whether to use the reverse propagation callback of the nlhdlr",
          &nlhdlrdata->usereverseprop, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/maxseparoundsroot",
+   SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxseparoundsroot",
          "maximum number of separation rounds in the root node",
          &nlhdlrdata->maxseparoundsroot, FALSE, 10, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/maxseparounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxseparounds",
          "maximum number of separation rounds in a local node",
          &nlhdlrdata->maxseparounds, FALSE, 1, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/maxsepadepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxsepadepth",
          "maximum depth to apply separation",
          &nlhdlrdata->maxsepadepth, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 

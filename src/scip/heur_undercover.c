@@ -963,7 +963,7 @@ SCIP_RETCODE createCoveringProblem(
          assert(exprcons != NULL);
 
          /* get nlrow representation and store it in hash map */
-         SCIP_CALL( SCIPgetNlRowConsNonlinear(scip, exprcons, &nlrow) );
+         SCIP_CALL( SCIPgetNlRowNonlinear(scip, exprcons, &nlrow) );
          assert(nlrow != NULL);
 
          /* process nlrow */

@@ -3889,7 +3889,7 @@ SCIP_RETCODE SCIPwriteLp(
          SCIP_Bool isquadratic;
 
          /* check whether there is a quadratic representation of the nonlinear constraint */
-         SCIP_CALL( SCIPcheckQuadraticConsNonlinear(scip, cons, &isquadratic) );
+         SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
 
          /* we cannot handle nonlinear constraint that are not quadratically representable */
          if( !isquadratic )
@@ -3902,8 +3902,8 @@ SCIP_RETCODE SCIPwriteLp(
             return SCIP_OKAY;
          }
 
-         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprConsNonlinear(cons),
-            SCIPgetLhsConsNonlinear(cons), SCIPgetRhsConsNonlinear(cons), transformed) );
+         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprNonlinear(cons),
+            SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
 
          consExpr[nConsExpr++] = cons;
       }

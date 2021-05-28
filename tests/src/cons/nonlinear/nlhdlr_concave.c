@@ -118,7 +118,7 @@ SCIP_RETCODE detect(
       expr = oexpr;
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, " and %s\n", SCIPexprcurvGetName(exprrootcurv));

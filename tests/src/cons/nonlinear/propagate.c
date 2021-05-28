@@ -103,7 +103,7 @@ SCIP_RETCODE propCons(
    assert(cons != NULL);
    assert(infeasible != NULL);
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, TRUE, infeasible, &ntightenings) );
 
    /* compare activity with constraint sides, which might add root expr to reversepropqueue */
@@ -111,8 +111,8 @@ SCIP_RETCODE propCons(
    {
       SCIP_INTERVAL conssides;
 
-      SCIP_Real lhs = SCIPisInfinity(scip, -SCIPgetLhsConsNonlinear(cons)) ? -SCIP_INTERVAL_INFINITY : SCIPgetLhsConsNonlinear(cons);
-      SCIP_Real rhs = SCIPisInfinity(scip,  SCIPgetRhsConsNonlinear(cons)) ?  SCIP_INTERVAL_INFINITY : SCIPgetRhsConsNonlinear(cons);
+      SCIP_Real lhs = SCIPisInfinity(scip, -SCIPgetLhsNonlinear(cons)) ? -SCIP_INTERVAL_INFINITY : SCIPgetLhsNonlinear(cons);
+      SCIP_Real rhs = SCIPisInfinity(scip,  SCIPgetRhsNonlinear(cons)) ?  SCIP_INTERVAL_INFINITY : SCIPgetRhsNonlinear(cons);
 
       SCIPintervalSetBounds(&conssides, lhs, rhs);
 
@@ -144,7 +144,7 @@ Test(propagate, sum)
    SCIP_CALL( SCIPreleaseExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, 0.5, 1.5) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* forward prop only propagates active constraints */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -183,7 +183,7 @@ Test(propagate, product)
    SCIP_CALL( SCIPreleaseExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, 0.0, 1.0) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -243,7 +243,7 @@ Test(propagate, productwithzero)
    SCIP_CALL( SCIPreleaseExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, 1.0, 8.0) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -287,7 +287,7 @@ Test(propagate, abs)
    SCIP_CALL( SCIPreleaseExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, 1.0, 2.5) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -322,7 +322,7 @@ Test(propagate, exp)
    SCIP_CALL( SCIPreleaseExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -1.0, 2.0) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -359,7 +359,7 @@ Test(propagate, log)
    SCIP_CALL( SCIPreleaseExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -1.0, 1.0) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -395,7 +395,7 @@ Test(propagate, sin)
    SCIP_CALL( SCIPreleaseExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -1.0, 0.5) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -437,7 +437,7 @@ Test(propagate, entropy)
    SCIP_CALL( SCIPreleaseExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -1.0, -0.9 * log(0.9)) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -470,7 +470,7 @@ Test(propagate, entropy)
    SCIP_CALL( SCIPreleaseExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -0.1 * log(0.1), exp(-1)) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -552,7 +552,7 @@ Test(propagate, complicated_expression)
 
    /* get expr for root as used in cons */
    SCIP_CALL( SCIPreleaseExpr(scip, &rootexpr) );
-   rootexpr = SCIPgetExprConsNonlinear(cons);
+   rootexpr = SCIPgetExprNonlinear(cons);
 
    SCIP_CALL( forwardPropExpr(scip, conshdlr, rootexpr, TRUE, &infeasible, &ntightenings) );
 
@@ -565,10 +565,10 @@ Test(propagate, complicated_expression)
    cr_expect(CHECK_EXPRINTERVAL(scip, powexpr, 0.0, 1.0), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(powexpr,0.0,1.0));
    cr_expect(CHECK_EXPRINTERVAL(scip, sumexpr, log(2) - 1, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(sumexpr,log(2)-1.0,log(3)));
    */
-   cr_expect(CHECK_EXPRINTERVAL(scip, SCIPgetExprConsNonlinear(cons), (log(2) - 1) / 1.0, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(rootexpr,log(2)-1.0,log(3)));
+   cr_expect(CHECK_EXPRINTERVAL(scip, SCIPgetExprNonlinear(cons), (log(2) - 1) / 1.0, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(rootexpr,log(2)-1.0,log(3)));
 
    /* initialize reverse-propagation by tightening via constraint sides */
-   SCIPintervalSetBounds(&conssides, SCIPgetLhsConsNonlinear(cons), SCIPgetRhsConsNonlinear(cons));
+   SCIPintervalSetBounds(&conssides, SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons));
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, rootexpr, conssides, &infeasible, &ntightenings) );
 
    cr_assert_not(infeasible);
@@ -608,7 +608,7 @@ Test(propagate, unbounded_sub_expression)
    SCIP_CALL( SCIPparseExpr(scip, &expr, "2 * <t_x> * <t_y>", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -5.0, SCIPinfinity(scip)) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -628,7 +628,7 @@ Test(propagate, unbounded_sub_expression)
    SCIP_CALL( SCIPparseExpr(scip, &expr, "2 + <t_x> - <t_y>", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -650,7 +650,7 @@ Test(propagate, unbounded_sub_expression)
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<t_x> * <t_y> * <t_z>", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -682,7 +682,7 @@ Test(propagate, forwardprop_uses_expressions_bounds)
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<t_x> + <t_y>", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -1.0, 0.5) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -725,14 +725,14 @@ Test(propagate, infeas_after_forwardprop)
    SCIP_CALL( SCIPparseExpr(scip, &expr, "2 * <t_x> * <t_y>", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -7.0, -6.1) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
    SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, TRUE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
-   SCIPintervalSetBounds(&conssides, SCIPgetLhsConsNonlinear(cons), SCIPgetRhsConsNonlinear(cons));
+   SCIPintervalSetBounds(&conssides, SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons));
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, expr, conssides, &infeasible, &ntightenings) );
    cr_assert(infeasible);
 
@@ -744,14 +744,14 @@ Test(propagate, infeas_after_forwardprop)
    SCIP_CALL( SCIPparseExpr(scip, &expr, "1 + <t_x> / (1 + <t_y>)", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -1.0, -0.1) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
    SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, TRUE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
-   SCIPintervalSetBounds(&conssides, SCIPgetLhsConsNonlinear(cons), SCIPgetRhsConsNonlinear(cons));
+   SCIPintervalSetBounds(&conssides, SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons));
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, expr, conssides, &infeasible, &ntightenings) );
    cr_assert(infeasible);
 
@@ -763,14 +763,14 @@ Test(propagate, infeas_after_forwardprop)
    SCIP_CALL( SCIPparseExpr(scip, &expr, "1 + exp(-5 * <t_x> + <t_y>^2)", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "cons", expr, -10.0, -0.1) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
    SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, TRUE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
-   SCIPintervalSetBounds(&conssides, SCIPgetLhsConsNonlinear(cons), SCIPgetRhsConsNonlinear(cons));
+   SCIPintervalSetBounds(&conssides, SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons));
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, expr, conssides, &infeasible, &ntightenings) );
    cr_assert(infeasible);
 
@@ -803,13 +803,13 @@ Test(propagate, infeas_after_backwardprop)
 
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons1, "cons1", expr1, -1.0, 1.0) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
-   expr1 = SCIPgetExprConsNonlinear(cons1);
+   expr1 = SCIPgetExprNonlinear(cons1);
    SCIP_CALL( SCIPaddCons(scip, cons1) );
    cr_assert(SCIPconsIsActive(cons1));
 
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons2, "cons2", expr2, 3.5, 5.0) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
-   expr2 = SCIPgetExprConsNonlinear(cons2);
+   expr2 = SCIPgetExprNonlinear(cons2);
    SCIP_CALL( SCIPaddCons(scip, cons2) );
    cr_assert(SCIPconsIsActive(cons2));
 
@@ -823,7 +823,7 @@ Test(propagate, infeas_after_backwardprop)
    cr_assert(CHECK_EXPRINTERVAL(scip, expr2, 0.0, 4.0));
 
    /* apply constraint sides to expr2 */
-   SCIPintervalSetBounds(&conssides, SCIPgetLhsConsNonlinear(cons2), SCIPgetRhsConsNonlinear(cons2));
+   SCIPintervalSetBounds(&conssides, SCIPgetLhsNonlinear(cons2), SCIPgetRhsNonlinear(cons2));
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, expr2, conssides, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
    cr_assert(SCIPisFeasEQ(scip, SCIPexprGetOwnerData(expr2)->propbounds.inf, 3.5));
@@ -843,7 +843,7 @@ Test(propagate, infeas_after_backwardprop)
    cr_assert(CHECK_EXPRINTERVAL(scip, expr1, 1.5*1.5, 4.0));
 
    /* apply constraint sides to expr1 should detect infeasibility */
-   SCIPintervalSetBounds(&conssides, SCIPgetLhsConsNonlinear(cons1), SCIPgetRhsConsNonlinear(cons1));
+   SCIPintervalSetBounds(&conssides, SCIPgetLhsNonlinear(cons1), SCIPgetRhsNonlinear(cons1));
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, expr1, conssides, &infeasible, &ntightenings) );
    cr_assert(infeasible);
 
@@ -898,8 +898,8 @@ Test(propagate, forwardprop_common_subexpressions)
    conss[0] = cons1;
    conss[1] = cons2;
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 2, SCIP_PRESOLTIMING_ALWAYS, &infeasible, &dummy, &dummy, &dummy) );
-   sqrexpr = SCIPgetExprConsNonlinear(cons1);
-   prodexpr = SCIPgetExprConsNonlinear(cons2);
+   sqrexpr = SCIPgetExprNonlinear(cons1);
+   prodexpr = SCIPgetExprNonlinear(cons2);
 
    /* apply propagation for first constraint (x^2 >= 0.5) */
    SCIP_CALL( propCons(cons1, &infeasible) );

@@ -103,7 +103,7 @@ Test(hess, hessian1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPsetSolVal(scip, dir, tx, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, dir, ty, 1.0) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    SCIP_CALL( SCIPevalExprHessianDir(scip, expr, sol, 0, dir) );
 
@@ -150,7 +150,7 @@ Test(hess, hessian2, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPsetSolVal(scip, dir, x, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, dir, y, 0.0) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPevalExprHessianDir(scip, expr, sol, 0, dir) );
 
    fxx = SCIPgetExprPartialDiffGradientDirNonlinear(scip, expr, tx);
@@ -203,7 +203,7 @@ Test(hess, hessian3, .init = setup, .fini = teardown)
    /* get first column of hessian */
    SCIP_CALL( SCIPsetSolVal(scip, dir, tx, 1.0) );
 
-   expr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPgetExprNonlinear(cons);
    SCIP_CALL( SCIPevalExprHessianDir(scip, expr, sol, 0, dir) );
 
    fxx = SCIPgetExprPartialDiffGradientDirNonlinear(scip, expr, tx);

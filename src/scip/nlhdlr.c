@@ -308,7 +308,7 @@ SCIP_RETCODE SCIPnlhdlrCreate(
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
    SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/nonlinear/nlhdlr/%s/enabled", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nlhdlr/%s/enabled", name);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname, "should this nonlinear handler be used",
       &(*nlhdlr)->enabled, FALSE, TRUE, NULL, NULL) );
 

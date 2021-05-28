@@ -108,8 +108,8 @@ Test(curvature, cons_and_nlrows)
       assert(cons != NULL);
 
       /* check curvature that is stored in the constraint data */
-      cr_expect(SCIPgetCurvatureConsNonlinear(cons) == targetcurvs[i], "for cons %d (%s): expected %d got %d", i,
-         SCIPconsGetName(cons), targetcurvs[i], SCIPgetCurvatureConsNonlinear(cons));
+      cr_expect(SCIPgetCurvatureNonlinear(cons) == targetcurvs[i], "for cons %d (%s): expected %d got %d", i,
+         SCIPconsGetName(cons), targetcurvs[i], SCIPgetCurvatureNonlinear(cons));
 
       /* check curvature that is stored in the nonlinear row */
       nlrow = SCIPgetNLPNlRows(scip)[i];

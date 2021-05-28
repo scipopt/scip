@@ -4306,7 +4306,7 @@ SCIP_RETCODE SCIPwriteMps(
          int j;
 
          /* check if it is a quadratic constraint */
-         SCIP_CALL( SCIPcheckQuadraticConsNonlinear(scip, cons, &isquadratic) );
+         SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
          if( !isquadratic )
          {
             /* unknown constraint type; mark this with SCIPinfinity(scip) */
@@ -4319,7 +4319,7 @@ SCIP_RETCODE SCIPwriteMps(
          /* store constraint */
          consQuadratic[nConsQuadratic++] = cons;
 
-         expr = SCIPgetExprConsNonlinear(cons);
+         expr = SCIPgetExprNonlinear(cons);
 
          /* collect linear coefficients of quadratic part */
          SCIPexprGetQuadraticData(expr, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, NULL, NULL,
@@ -4337,8 +4337,8 @@ SCIP_RETCODE SCIPwriteMps(
             quadvars[j] = SCIPgetVarExprVar(qexpr);
          }
 
-         lhs = SCIPgetLhsConsNonlinear(cons);
-         rhs = SCIPgetRhsConsNonlinear(cons);
+         lhs = SCIPgetLhsNonlinear(cons);
+         rhs = SCIPgetRhsNonlinear(cons);
 
          /* correct side by constant */
          lhs -= SCIPisInfinity(scip, -lhs) ? 0.0 : constant;
@@ -4766,7 +4766,7 @@ SCIP_RETCODE SCIPwriteMps(
          SCIP_EXPR* expr;
 
          cons = consQuadratic[c];
-         expr = SCIPgetExprConsNonlinear(cons);
+         expr = SCIPgetExprNonlinear(cons);
 
          SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nconsvars, &nbilin, NULL, NULL);
 
