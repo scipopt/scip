@@ -268,15 +268,15 @@ void updateBilinearRelaxation(
 /** helper function to determine whether a given point satisfy given inequalities */
 static
 SCIP_Bool isPointFeasible(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_Real             x,                 /**< x-coordinate */
-   SCIP_Real             y,                 /**< y-coordinate */
-   SCIP_Real             lbx,               /**< lower bound of x */
-   SCIP_Real             ubx,               /**< upper bound of x */
-   SCIP_Real             lby,               /**< lower bound of y */
-   SCIP_Real             uby,               /**< upper bound of y */
-   SCIP_Real*            ineqs,             /**< inequalities of the form coefx x <= coefy y + constant */
-   int                   nineqs             /**< total number of inequalities */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             x,                  /**< x-coordinate */
+   SCIP_Real             y,                  /**< y-coordinate */
+   SCIP_Real             lbx,                /**< lower bound of x */
+   SCIP_Real             ubx,                /**< upper bound of x */
+   SCIP_Real             lby,                /**< lower bound of y */
+   SCIP_Real             uby,                /**< upper bound of y */
+   SCIP_Real*            ineqs,              /**< inequalities of the form coefx x <= coefy y + constant */
+   int                   nineqs              /**< total number of inequalities */
    )
 {
    int i;
@@ -315,18 +315,18 @@ SCIP_Bool isPointFeasible(
  */
 static
 void getFeasiblePointsBilinear(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,          /**< constraint handler, if levelset == TRUE, otherwise can be NULL */
-   SCIP_EXPR*            expr,              /**< product expression */
-   SCIP_INTERVAL         exprbounds,        /**< bounds on product expression, only used if levelset == TRUE */
-   SCIP_Real*            underineqs,        /**< inequalities for underestimation */
-   int                   nunderineqs,       /**< total number of inequalities for underestimation */
-   SCIP_Real*            overineqs,         /**< inequalities for overestimation */
-   int                   noverineqs,        /**< total number of inequalities for overestimation */
-   SCIP_Bool             levelset,          /**< should the level set be considered? */
-   SCIP_Real*            xs,                /**< array to store x-coordinates of computed points */
-   SCIP_Real*            ys,                /**< array to store y-coordinates of computed points */
-   int*                  npoints            /**< buffer to store the total number of computed points */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler, if levelset == TRUE, otherwise can be NULL */
+   SCIP_EXPR*            expr,               /**< product expression */
+   SCIP_INTERVAL         exprbounds,         /**< bounds on product expression, only used if levelset == TRUE */
+   SCIP_Real*            underineqs,         /**< inequalities for underestimation */
+   int                   nunderineqs,        /**< total number of inequalities for underestimation */
+   SCIP_Real*            overineqs,          /**< inequalities for overestimation */
+   int                   noverineqs,         /**< total number of inequalities for overestimation */
+   SCIP_Bool             levelset,           /**< should the level set be considered? */
+   SCIP_Real*            xs,                 /**< array to store x-coordinates of computed points */
+   SCIP_Real*            ys,                 /**< array to store y-coordinates of computed points */
+   int*                  npoints             /**< buffer to store the total number of computed points */
    )
 {
    SCIP_EXPR* child1;
@@ -591,12 +591,12 @@ void getFeasiblePointsBilinear(
 /** computes interval for a bilinear term when using at least one inequality */
 static
 SCIP_INTERVAL intevalBilinear(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_EXPR*   expr,              /**< product expression */
-   SCIP_Real*            underineqs,        /**< inequalities for underestimation */
-   int                   nunderineqs,       /**< total number of inequalities for underestimation */
-   SCIP_Real*            overineqs,         /**< inequalities for overestimation */
-   int                   noverineqs         /**< total number of inequalities for overestimation */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< product expression */
+   SCIP_Real*            underineqs,         /**< inequalities for underestimation */
+   int                   nunderineqs,        /**< total number of inequalities for underestimation */
+   SCIP_Real*            overineqs,          /**< inequalities for overestimation */
+   int                   noverineqs          /**< total number of inequalities for overestimation */
    )
 {
    SCIP_INTERVAL interval = {0., 0.};
@@ -662,16 +662,16 @@ SCIP_INTERVAL intevalBilinear(
 /** uses inequalities for bilinear terms to get stronger bounds during reverse propagation */
 static
 void reversePropBilinear(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,          /**< constraint handler */
-   SCIP_EXPR*            expr,              /**< product expression */
-   SCIP_INTERVAL         exprbounds,        /**< bounds on product expression */
-   SCIP_Real*            underineqs,        /**< inequalities for underestimation */
-   int                   nunderineqs,       /**< total number of inequalities for underestimation */
-   SCIP_Real*            overineqs,         /**< inequalities for overestimation */
-   int                   noverineqs,        /**< total number of inequalities for overestimation */
-   SCIP_INTERVAL*        intervalx,         /**< buffer to store the new interval for x */
-   SCIP_INTERVAL*        intervaly          /**< buffer to store the new interval for y */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_EXPR*            expr,               /**< product expression */
+   SCIP_INTERVAL         exprbounds,         /**< bounds on product expression */
+   SCIP_Real*            underineqs,         /**< inequalities for underestimation */
+   int                   nunderineqs,        /**< total number of inequalities for underestimation */
+   SCIP_Real*            overineqs,          /**< inequalities for overestimation */
+   int                   noverineqs,         /**< total number of inequalities for overestimation */
+   SCIP_INTERVAL*        intervalx,          /**< buffer to store the new interval for x */
+   SCIP_INTERVAL*        intervaly           /**< buffer to store the new interval for y */
    )
 {
    SCIP_Real xs[62];
@@ -917,7 +917,6 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataBilinear)
 static
 SCIP_DECL_NLHDLRINIT(nlhdlrInitBilinear)
 {  /*lint --e{715}*/
-
    /* TODO */
 
    return SCIP_OKAY;
@@ -1322,7 +1321,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
 
 /** returns an array of expressions that have been detected by the bilinear nonlinear handler */
 SCIP_EXPR** SCIPgetNlhdlrBilinearExprs(
-   SCIP_NLHDLR* nlhdlr              /**< nonlinear handler */
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
    SCIP_NLHDLRDATA* nlhdlrdata;
@@ -1338,7 +1337,7 @@ SCIP_EXPR** SCIPgetNlhdlrBilinearExprs(
 
 /** returns the total number of expressions that have been detected by the bilinear nonlinear handler */
 int SCIPgetNlhdlrBilinearNExprs(
-   SCIP_NLHDLR* nlhdlr              /**< nonlinear handler */
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    )
 {
    SCIP_NLHDLRDATA* nlhdlrdata;
@@ -1355,8 +1354,8 @@ int SCIPgetNlhdlrBilinearNExprs(
 /** adds a globally valid inequality of the form xcoef x <= ycoef y + constant to a product expression of the form x*y */
 SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLR* nlhdlr,             /**< nonlinear handler */
-   SCIP_EXPR*   expr,               /**< product expression */
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
+   SCIP_EXPR*            expr,               /**< product expression */
    SCIP_Real             xcoef,              /**< x coefficient */
    SCIP_Real             ycoef,              /**< y coefficient */
    SCIP_Real             constant,           /**< constant part */

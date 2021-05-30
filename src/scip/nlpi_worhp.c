@@ -633,8 +633,8 @@ SCIP_RETCODE userHM(
 
 /** Worhp print callback function that does nothing */ /*lint -e{715}*/
 static void noprint(
-   int                    mode,              /**< the mode */
-   const char             s[]                /**< a string */
+   int                   mode,               /**< the mode */
+   const char            s[]                 /**< a string */
    )
 { /*lint --e{715}*/
 }

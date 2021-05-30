@@ -987,13 +987,13 @@ SCIP_RETCODE addSymresackInequality(
  */
 static
 SCIP_RETCODE maximizeObjectiveSymresackStrict(
-   SCIP*                scip,                /**< SCIP pointer */
-   int                  nvars,               /**< number of variables in symresack */
-   SCIP_Real*           objective,           /**< the objective vector */
-   int*                 perm,                /**< the permutation (without fixed points) as an array */
-   int*                 invperm,             /**< the inverse permutation as an array */
-   int*                 maxcrit,             /**< pointer to the critical entry where optimality is found at */
-   SCIP_Real*           maxsoluval           /**< pointer to store the optimal objective value */
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   nvars,              /**< number of variables in symresack */
+   SCIP_Real*            objective,          /**< the objective vector */
+   int*                  perm,               /**< the permutation (without fixed points) as an array */
+   int*                  invperm,            /**< the inverse permutation as an array */
+   int*                  maxcrit,            /**< pointer to the critical entry where optimality is found at */
+   SCIP_Real*            maxsoluval          /**< pointer to store the optimal objective value */
    )
 {
    /* The maximal objective in every iteration. */
@@ -1108,13 +1108,13 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
  */
 static
 SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
-   SCIP*                scip,                /**< SCIP pointer */
-   int                  nvars,               /**< number of variables in symresack */
-   SCIP_Real*           objective,           /**< the objective vector */
-   int*                 perm,                /**< the permutation (without fixed points) as an array */
-   int*                 invperm,             /**< the inverse permutation as an array */
-   int                  crit,                /**< critical entry where optimality is found at */
-   int*                 maxsolu              /**< pointer to the optimal objective array */
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   nvars,              /**< number of variables in symresack */
+   SCIP_Real*            objective,          /**< the objective vector */
+   int*                  perm,               /**< the permutation (without fixed points) as an array */
+   int*                  invperm,            /**< the inverse permutation as an array */
+   int                   crit,               /**< critical entry where optimality is found at */
+   int*                  maxsolu             /**< pointer to the optimal objective array */
    )
 {
    /* Compute to which components all entries belong. */

@@ -205,7 +205,6 @@ SCIP_DECL_EXPRESTIMATE(estimateCos)
    assert(*branchcand == TRUE);
    assert(success != NULL);
 
-
    *success = SCIPcomputeEstimatorsTrig(scip, expr, coefs, constant, refpoint[0], localbounds[0].inf,
          localbounds[0].sup, ! overestimate);
    *islocal = TRUE;  /* TODO there are cases where cuts would be globally valid */

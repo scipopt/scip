@@ -4344,7 +4344,6 @@ SCIP_RETCODE SCIPwriteMps(
          lhs -= SCIPisInfinity(scip, -lhs) ? 0.0 : constant;
          rhs -= SCIPisInfinity(scip,  rhs) ? 0.0 : constant;
 
-
          /* there is nothing to do if the left hand side is minus infinity and the right side is infinity */
          if( !SCIPisInfinity(scip, -lhs) || !SCIPisInfinity(scip, rhs) )
          {

@@ -106,7 +106,7 @@ SCIP_RETCODE simplifyTerm(
    int                   idx,                /**< idx of children to be simplified */
    SCIP_Bool*            changed,            /**< pointer to store if some term actually got simplified */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
-   void* ownercreatedata  /**< data to pass to ownercreate */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPR** children;
@@ -824,7 +824,6 @@ SCIP_DECL_EXPRINTEVAL(intevalSum)
       }
 
       SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", exprdata->coefficients[c], childinterval.inf, childinterval.sup);
-
    }
    SCIPdebugMsgPrint(scip, " = [%.20g,%.20g]\n", interval->inf, interval->sup);
 
@@ -1130,7 +1129,7 @@ void SCIPmultiplyByConstantExprSum(
 
 /** gets the coefficients of a summation expression */
 SCIP_Real* SCIPgetCoefsExprSum(
-   SCIP_EXPR*   expr                /**< sum expression */
+   SCIP_EXPR*            expr                /**< sum expression */
    )
 {
    SCIP_EXPRDATA* exprdata;
@@ -1145,7 +1144,7 @@ SCIP_Real* SCIPgetCoefsExprSum(
 
 /** gets the constant of a summation expression */
 SCIP_Real SCIPgetConstantExprSum(
-   SCIP_EXPR*   expr                /**< sum expression */
+   SCIP_EXPR*            expr                /**< sum expression */
    )
 {
    SCIP_EXPRDATA* exprdata;

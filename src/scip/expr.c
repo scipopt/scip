@@ -461,9 +461,9 @@ void SCIPexprhdlrSetReverseProp(
 
 /** set the and estimation callbacks of an expression handler */
 void SCIPexprhdlrSetEstimate(
-   SCIP_EXPRHDLR*        exprhdlr,                /**< expression handler */
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRINITESTIMATES((*initestimates)), /**< initial estimators callback (can be NULL) */
-   SCIP_DECL_EXPRESTIMATE((*estimate))            /**< estimator callback (can be NULL) */
+   SCIP_DECL_EXPRESTIMATE((*estimate))       /**< estimator callback (can be NULL) */
    )
 {
    assert(exprhdlr != NULL);
@@ -1603,13 +1603,13 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 
 /** creates and captures an expression with given expression data and children */
 SCIP_RETCODE SCIPexprCreate(
-   SCIP_SET*             set,              /**< global SCIP settings */
-   BMS_BLKMEM*           blkmem,           /**< block memory */
-   SCIP_EXPR**           expr,             /**< pointer where to store expression */
-   SCIP_EXPRHDLR*        exprhdlr,         /**< expression handler */
-   SCIP_EXPRDATA*        exprdata,         /**< expression data (expression assumes ownership) */
-   int                   nchildren,        /**< number of children */
-   SCIP_EXPR**           children,         /**< children (can be NULL if nchildren is 0) */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_EXPRDATA*        exprdata,           /**< expression data (expression assumes ownership) */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children (can be NULL if nchildren is 0) */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
@@ -3753,7 +3753,7 @@ SCIP_Longint SCIPexprGetEvalTag(
 
 /** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
 SCIP_Real SCIPexprGetDerivative(
-   SCIP_EXPR*     expr              /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    )
 {
    assert(expr != NULL);
@@ -3763,7 +3763,7 @@ SCIP_Real SCIPexprGetDerivative(
 
 /** gives the value of directional derivative from the last evaluation of a directional derivative of expression (or SCIP_INVALID if there was an error) */
 SCIP_Real SCIPexprGetDot(
-   SCIP_EXPR*     expr              /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    )
 {
    assert(expr != NULL);
@@ -3773,7 +3773,7 @@ SCIP_Real SCIPexprGetDot(
 
 /** gives the value of directional derivative from the last evaluation of a directional derivative of derivative of root (or SCIP_INVALID if there was an error) */
 SCIP_Real SCIPexprGetBardot(
-   SCIP_EXPR*     expr              /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    )
 {
    assert(expr != NULL);

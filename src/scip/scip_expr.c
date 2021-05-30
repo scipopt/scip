@@ -793,13 +793,13 @@ SCIP_RETCODE hashExpr(
 /** creates the handler for an expression handler and includes it into SCIP */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlr(
-   SCIP*                 scip,         /**< SCIP data structure */
-   SCIP_EXPRHDLR**       exprhdlr,     /**< buffer where to store created expression handler */
-   const char*           name,         /**< name of expression handler (must not be NULL) */
-   const char*           desc,         /**< description of expression handler (can be NULL) */
-   unsigned int          precedence,   /**< precedence of expression operation (used for printing) */
-   SCIP_DECL_EXPREVAL((*eval)),        /**< point evaluation callback (must not be NULL) */
-   SCIP_EXPRHDLRDATA*    data          /**< data of expression handler (can be NULL) */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
+   const char*           name,               /**< name of expression handler (must not be NULL) */
+   const char*           desc,               /**< description of expression handler (can be NULL) */
+   unsigned int          precedence,         /**< precedence of expression operation (used for printing) */
+   SCIP_DECL_EXPREVAL((*eval)),              /**< point evaluation callback (must not be NULL) */
+   SCIP_EXPRHDLRDATA*    data                /**< data of expression handler (can be NULL) */
    )
 {
    assert(scip != NULL);
@@ -816,7 +816,7 @@ SCIP_RETCODE SCIPincludeExprHdlr(
 
 /** gives expression handlers */
 SCIP_EXPRHDLR** SCIPgetExprHdlrs(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -827,7 +827,7 @@ SCIP_EXPRHDLR** SCIPgetExprHdlrs(
 
 /** gives number of expression handlers */
 int SCIPgetNExprHdlrs(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -838,8 +838,8 @@ int SCIPgetNExprHdlrs(
 
 /** returns an expression handler of a given name (or NULL if not found) */
 SCIP_EXPRHDLR* SCIPfindExprHdlr(
-   SCIP*                      scip,          /**< SCIP data structure */
-   const char*                name           /**< name of expression handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of expression handler */
    )
 {
    assert(scip != NULL);
@@ -850,7 +850,7 @@ SCIP_EXPRHDLR* SCIPfindExprHdlr(
 
 /** returns expression handler for variable expressions (or NULL if not included) */
 SCIP_EXPRHDLR* SCIPgetExprHdlrVar(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -861,7 +861,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrVar(
 
 /** returns expression handler for constant value expressions (or NULL if not included) */
 SCIP_EXPRHDLR* SCIPgetExprHdlrValue(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -872,7 +872,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrValue(
 
 /** returns expression handler for sum expressions (or NULL if not included) */
 SCIP_EXPRHDLR* SCIPgetExprHdlrSum(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -883,7 +883,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrSum(
 
 /** returns expression handler for product expressions (or NULL if not included) */
 SCIP_EXPRHDLR* SCIPgetExprHdlrProduct(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -894,7 +894,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrProduct(
 
 /** returns expression handler for power expressions (or NULL if not included) */
 SCIP_EXPRHDLR* SCIPgetExprHdlrPower(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -1176,10 +1176,10 @@ SCIP_RETCODE SCIPappendExprChild(
  * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
  */
 SCIP_RETCODE SCIPreplaceExprChild(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPR*              expr,             /**< expression which is going to replace a child */
-   int                     childidx,         /**< index of child being replaced */
-   SCIP_EXPR*              newchild          /**< the new child */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression which is going to replace a child */
+   int                   childidx,           /**< index of child being replaced */
+   SCIP_EXPR*            newchild            /**< the new child */
    )
 {
    assert(scip != NULL);
@@ -1428,10 +1428,10 @@ SCIP_RETCODE SCIPprintExpr(
 
 /** initializes printing of expressions in dot format to a give FILE* pointer */
 SCIP_RETCODE SCIPprintExprDotInit(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPRPRINTDATA**    printdata,        /**< buffer to store dot printing data */
-   FILE*                   file,             /**< file to print to, or NULL for stdout */
-   SCIP_EXPRPRINT_WHAT     whattoprint       /**< info on what to print for each expression */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA**  printdata,          /**< buffer to store dot printing data */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   SCIP_EXPRPRINT_WHAT   whattoprint         /**< info on what to print for each expression */
    )
 {
    assert(scip != NULL);
@@ -1444,10 +1444,10 @@ SCIP_RETCODE SCIPprintExprDotInit(
 
 /** initializes printing of expressions in dot format to a file with given filename */
 SCIP_RETCODE SCIPprintExprDotInit2(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPRPRINTDATA**    printdata,        /**< buffer to store dot printing data */
-   const char*             filename,         /**< name of file to print to */
-   SCIP_EXPRPRINT_WHAT     whattoprint       /**< info on what to print for each expression */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA**  printdata,          /**< buffer to store dot printing data */
+   const char*           filename,           /**< name of file to print to */
+   SCIP_EXPRPRINT_WHAT   whattoprint         /**< info on what to print for each expression */
    )
 {
    assert(scip != NULL);
@@ -1460,9 +1460,9 @@ SCIP_RETCODE SCIPprintExprDotInit2(
 
 /** main part of printing an expression in dot format */
 SCIP_RETCODE SCIPprintExprDot(
-   SCIP*                  scip,              /**< SCIP data structure */
-   SCIP_EXPRPRINTDATA*    printdata,         /**< data as initialized by \ref SCIPprintExprDotInit() */
-   SCIP_EXPR*             expr               /**< expression to be printed */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA*   printdata,          /**< data as initialized by \ref SCIPprintExprDotInit() */
+   SCIP_EXPR*            expr                /**< expression to be printed */
    )
 {
    assert(scip != NULL);
@@ -1474,8 +1474,8 @@ SCIP_RETCODE SCIPprintExprDot(
 
 /** finishes printing of expressions in dot format */
 SCIP_RETCODE SCIPprintExprDotFinal(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPRPRINTDATA**    printdata         /**< buffer where dot printing data has been stored */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA**  printdata           /**< buffer where dot printing data has been stored */
    )
 {
    assert(scip != NULL);
@@ -1615,11 +1615,11 @@ SCIP_RETCODE SCIPevalExprGradient(
  * be set to SCIP_INVALID.
  */
 SCIP_RETCODE SCIPevalExprHessianDir(
-   SCIP*                 scip,             /**< SCIP data structure */
-   SCIP_EXPR*            expr,             /**< expression to be differentiated */
-   SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */
-   SCIP_Longint          soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
-   SCIP_SOL*             direction         /**< direction */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be differentiated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
+   SCIP_Longint          soltag,             /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_SOL*             direction           /**< direction */
    )
 {
    assert(scip != NULL);

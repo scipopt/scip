@@ -1451,7 +1451,6 @@ SCIP_RETCODE detectHiddenProducts(
       SCIPfreeBuffer(scip, &foundhashdata);
    }
 
-
    /* also loop through implied bounds to look for products */
    for( i = 0; i < SCIPgetNBinVars(scip); ++i )
    {
@@ -1896,7 +1895,7 @@ SCIP_RETCODE addRltTerm(
    boundfactor = (uselb ? -lbvar : ubvar);
 
    coefterm = coef * signfactor; /* coefficient of the bilinear term */
-   coefcolvar = coef * boundfactor; /** coefficient of the linear term */
+   coefcolvar = coef * boundfactor; /* coefficient of the linear term */
    coefauxvar = 0.0; /* coefficient of the auxiliary variable corresponding to the bilinear term */
    auxvar = NULL;
 

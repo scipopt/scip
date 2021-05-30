@@ -700,9 +700,9 @@ SCIP_DECL_EXPR_MAPEXPR(mapexprtransvar)
 /** stores all variable expressions into a given constraint */
 static
 SCIP_RETCODE storeVarExprs(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
-   SCIP_CONSDATA*          consdata          /**< constraint data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -750,8 +750,8 @@ SCIP_RETCODE storeVarExprs(
 /** frees all variable expression stored in storeVarExprs() */
 static
 SCIP_RETCODE freeVarExprs(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSDATA*          consdata          /**< constraint data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
    )
 {
    int i;
@@ -1889,12 +1889,12 @@ SCIP_RETCODE proposeFeasibleSolution(
  */
 static
 SCIP_RETCODE tightenAuxVarBounds(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
-   SCIP_EXPR*              expr,             /**< expression whose auxvar is to be tightened */
-   SCIP_INTERVAL           bounds,           /**< bounds to be used for tightening (must not be empty) */
-   SCIP_Bool*              cutoff,           /**< buffer to store whether a cutoff was detected */
-   int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_EXPR*            expr,               /**< expression whose auxvar is to be tightened */
+   SCIP_INTERVAL         bounds,             /**< bounds to be used for tightening (must not be empty) */
+   SCIP_Bool*            cutoff,             /**< buffer to store whether a cutoff was detected */
+   int*                  ntightenings        /**< buffer to add the total number of tightenings, or NULL */
    )
 {
    SCIP_VAR* var;
@@ -2860,7 +2860,6 @@ SCIP_RETCODE propagateLocks(
 
          case SCIP_EXPRITER_LEAVEEXPR :
          {
-
             /* remove monotonicity information if expression has been unlocked */
             if( ownerdata->nlockspos == 0 && ownerdata->nlocksneg == 0 && ownerdata->monotonicity != NULL )
             {
@@ -4740,7 +4739,6 @@ SCIP_RETCODE canonicalizeConstraints(
 
       SCIPfreeBufferArray(scip, &rootexprs);
 
-
       /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
        * been changed after simplification; now we completely recollect all variable expression and variable events
        */
@@ -5933,10 +5931,10 @@ SCIP_Bool branchAuxNonlinear(
 /** gets weight of variable when splitting violation score onto several variables in an expression */
 static
 SCIP_Real getViolSplitWeight(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
-   SCIP_VAR*               var,              /**< variable */
-   SCIP_SOL*               sol               /**< current solution */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expr constraint handler */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_SOL*             sol                 /**< current solution */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -5986,12 +5984,12 @@ SCIP_Real getViolSplitWeight(
  */
 static
 void addExprsViolScore(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPR**             exprs,            /**< expressions where to add branching score */
-   int                     nexprs,           /**< number of expressions */
-   SCIP_Real               violscore,        /**< violation-branching score to add to expression */
-   SCIP_SOL*               sol,              /**< current solution */
-   SCIP_Bool*              success           /**< buffer to store whether at least one violscore was added */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           exprs,              /**< expressions where to add branching score */
+   int                   nexprs,             /**< number of expressions */
+   SCIP_Real             violscore,          /**< violation-branching score to add to expression */
+   SCIP_SOL*             sol,                /**< current solution */
+   SCIP_Bool*            success             /**< buffer to store whether at least one violscore was added */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -6073,13 +6071,13 @@ void addExprsViolScore(
  */
 static
 SCIP_RETCODE addExprViolScoresAuxVars(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPR*              expr,             /**< expression where to start searching */
-   SCIP_Real               violscore,        /**< violation score to add to expression */
-   SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
-   int                     nauxvars,         /**< number of auxiliary variables */
-   SCIP_SOL*               sol,              /**< current solution (NULL for the LP solution) */
-   SCIP_Bool*              success           /**< buffer to store whether at least one violscore was added */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression where to start searching */
+   SCIP_Real             violscore,          /**< violation score to add to expression */
+   SCIP_VAR**            auxvars,            /**< auxiliary variables for which to find expression */
+   int                   nauxvars,           /**< number of auxiliary variables */
+   SCIP_SOL*             sol,                /**< current solution (NULL for the LP solution) */
+   SCIP_Bool*            success             /**< buffer to store whether at least one violscore was added */
    )
 {
    SCIP_EXPRITER* it;
@@ -7786,7 +7784,6 @@ SCIP_RETCODE consEnfo(
    SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxabsconsviol, &maxrelconsviol,
             &minauxviol, &maxauxviol, &maxvarboundviol) );
 
-
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e (rel=%e), "\
             "auxviolations in %g..%g, variable bounds violated by at most %g, LP feastol=%e\n",
             SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxabsconsviol, maxrelconsviol, minauxviol, maxauxviol,
@@ -8734,7 +8731,6 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
       facetcoefs[nonfixedpos[i]] = aux[i];
    /* last dual multiplier is the constant */
    *facetconstant = aux[nrows - 1];
-
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "facet for the transformed problem: ");
@@ -10788,7 +10784,6 @@ SCIP_Longint SCIPgetLastBoundRelaxTagNonlinear(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    return conshdlrdata->lastboundrelax;
-
 }
 
 /** increments the curboundstag and resets lastboundrelax in constraint handler data
@@ -10798,8 +10793,8 @@ SCIP_Longint SCIPgetLastBoundRelaxTagNonlinear(
  *   This method is used by some unittests.
  */
 void SCIPincrementCurBoundsTagNonlinear(
-   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
-   SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_Bool             boundrelax          /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -11744,9 +11739,9 @@ SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
  * \ref SCIPgetVarExprVar() can be used to retrieve the variable.
  */
 SCIP_RETCODE SCIPcheckQuadraticNonlinear(
-   SCIP*                    scip,               /**< SCIP data structure */
-   SCIP_CONS*               cons,               /**< constraint data */
-   SCIP_Bool*               isquadratic         /**< buffer to store whether constraint is quadratic */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Bool*            isquadratic         /**< buffer to store whether constraint is quadratic */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -13006,7 +13001,7 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    int                   enfopriority,       /**< enforcement priority of nonlinear handler */
    SCIP_DECL_NLHDLRDETECT((*detect)),        /**< structure detection callback of nonlinear handler */
    SCIP_DECL_NLHDLREVALAUX((*evalaux)),      /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_NLHDLRDATA*      nlhdlrdata                /**< data of nonlinear handler (can be NULL) */
+   SCIP_NLHDLRDATA*      nlhdlrdata          /**< data of nonlinear handler (can be NULL) */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -13086,8 +13081,10 @@ SCIP_NLHDLREXPRDATA* SCIPgetNlhdlrExprDataNonlinear(
    assert(ownerdata != NULL);
 
    for( e = 0; e < ownerdata->nenfos; ++e )
+   {
       if( ownerdata->enfos[e]->nlhdlr == nlhdlr )
          return ownerdata->enfos[e]->nlhdlrexprdata;
+   }
 
    return NULL;
 }

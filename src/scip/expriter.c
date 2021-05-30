@@ -853,7 +853,7 @@ SCIP_EXPRITER_USERDATA SCIPexpriterGetExprUserData(
  * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 void SCIPexpriterSetCurrentUserData(
-   SCIP_EXPRITER*         iterator,          /**< expression iterator */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
    SCIP_EXPRITER_USERDATA userdata           /**< data to be stored */
    )
 {
@@ -869,8 +869,8 @@ void SCIPexpriterSetCurrentUserData(
  * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
 void SCIPexpriterSetExprUserData(
-   SCIP_EXPRITER*         iterator,          /**< expression iterator */
-   SCIP_EXPR*             expr,              /**< expression where to set iterator data */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
+   SCIP_EXPR*            expr,               /**< expression where to set iterator data */
    SCIP_EXPRITER_USERDATA userdata           /**< data to be stored in current child */
    )
 {
@@ -885,7 +885,7 @@ void SCIPexpriterSetExprUserData(
  * @note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
  */
 void SCIPexpriterSetChildUserData(
-   SCIP_EXPRITER*         iterator,          /**< expression iterator */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
    SCIP_EXPRITER_USERDATA userdata           /**< data to be stored in current child */
    )
 {

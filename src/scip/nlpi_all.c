@@ -343,7 +343,6 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetAll )
           */
          SCIP_CALL( SCIPdelNlpiConsSet(scip, nlpidata->nlpis[i], problem->nlpiproblems[i], dstats, dstatssize) );
       }
-
    }
 
    SCIPfreeBlockMemoryArray(scip, &tmpdstats, dstatssize);

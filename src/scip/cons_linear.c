@@ -5589,7 +5589,6 @@ SCIP_RETCODE tightenVarBoundsEasy(
          }
          assert(consdata->validmaxact);
 
-
          /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
          {

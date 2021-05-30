@@ -11139,11 +11139,11 @@ SCIP_Bool SCIPvarHasBinaryImplic(
  *  the values are set to SCIP_INVALID if there is no implied bound
  */
 void SCIPvarGetImplicVarBounds(
-   SCIP_VAR*      var,                      /**< problem variable x */
-   SCIP_Bool      varfixing,                /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
-   SCIP_VAR*      implvar,                  /**< variable y to search for */
-   SCIP_Real*     lb,                       /**< buffer to store the value of the implied lower bound */
-   SCIP_Real*     ub                        /**< buffer to store the value of the implied upper bound */
+   SCIP_VAR*             var,                /**< problem variable x */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_Real*            lb,                 /**< buffer to store the value of the implied lower bound */
+   SCIP_Real*            ub                  /**< buffer to store the value of the implied upper bound */
    )
 {
    int lowerpos;

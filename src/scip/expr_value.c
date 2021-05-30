@@ -199,7 +199,6 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityValue)
 static
 SCIP_DECL_EXPRINTEGRALITY(integralityValue)
 {  /*lint --e{715}*/
-
    assert(scip != NULL);
    assert(expr != NULL);
    assert(isintegral != NULL);
@@ -259,7 +258,7 @@ SCIP_RETCODE SCIPcreateExprValue(
 
 /** gets the value of a constant value expression */
 SCIP_Real SCIPgetValueExprValue(
-   SCIP_EXPR*   expr                /**< expression */
+   SCIP_EXPR*            expr                /**< sum expression */
    )
 {
    SCIP_EXPRDATA* exprdata;

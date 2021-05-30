@@ -134,7 +134,6 @@ SCIP_DECL_NLHDLREXIT(nlhdlrExitXyz)
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectXyz)
 { /*lint --e{715}*/
-
    return SCIP_OKAY;
 }
 

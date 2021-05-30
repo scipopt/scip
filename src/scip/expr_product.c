@@ -101,9 +101,9 @@ SCIP_DECL_VERTEXPOLYFUN(prodfunction)
 
 static
 SCIP_RETCODE createData(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_EXPRDATA**          exprdata,        /**< pointer where to store expression data */
-   SCIP_Real                coefficient      /**< coefficient of product */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRDATA**       exprdata,           /**< pointer where to store expression data */
+   SCIP_Real             coefficient         /**< coefficient of product */
    )
 {
    assert(exprdata != NULL);
@@ -390,7 +390,7 @@ SCIP_RETCODE mergeProductExprlist(
    EXPRNODE*             tomerge,            /**< list to merge */
    EXPRNODE**            finalchildren,      /**< pointer to store the result of merge between tomerge and *finalchildren */
    EXPRNODE**            unsimplifiedchildren,/**< the list of children that should go to the product expression;
-                                                   they are unsimplified when seen as children of a simplified product */
+                                               *   they are unsimplified when seen as children of a simplified product */
    SCIP_Bool*            changed,            /**< pointer to store if some term actually got simplified */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
@@ -888,12 +888,12 @@ SCIP_RETCODE enforceSP11(
  */
 static
 SCIP_RETCODE enforceSP12(
-   SCIP*                 scip,            /**< SCIP data structure */
-   SCIP_Real             simplifiedcoef,  /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
-   EXPRNODE*             finalchildren,   /**< factors of simplified product */
-   SCIP_EXPR**           simplifiedexpr,  /**< buffer to store the simplified expression */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             simplifiedcoef,     /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
+   EXPRNODE*             finalchildren,      /**< factors of simplified product */
+   SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
-   void*                 ownercreatedata  /**< data to pass to ownercreate */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    /* we need only two children */
@@ -1647,7 +1647,6 @@ SCIP_DECL_EXPRINTEVAL(intevalProduct)
       SCIPintervalMul(SCIP_INTERVAL_INFINITY, interval, *interval, childinterval);
 
       SCIPdebugMsgPrint(scip, " *[%.20g,%.20g]", childinterval.inf, childinterval.sup);
-
    }
    SCIPdebugMsgPrint(scip, " = [%.20g,%.20g]\n", interval->inf, interval->sup);
 

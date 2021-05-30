@@ -58,7 +58,7 @@ void SCIPnlhdlrSetFreeHdlrData(
 
 /** set the nonlinear handler callback to free expression specific data of nonlinear handler */
 void SCIPnlhdlrSetFreeExprData(
-   SCIP_NLHDLR*          nlhdlr,            /**< nonlinear handler */
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
    )
 {
@@ -182,7 +182,7 @@ SCIP_Bool SCIPnlhdlrHasIntEval(
 /** returns whether nonlinear handler implements the reverse propagation callback */
 SCIP_Bool SCIPnlhdlrHasReverseProp(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->reverseprop != NULL;
 }

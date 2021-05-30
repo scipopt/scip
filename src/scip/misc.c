@@ -9758,13 +9758,13 @@ SCIP_Real SCIPselectSimpleValue(
  *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
  */
 SCIP_Real SCIPcalcRootNewton(
-   SCIP_DECL_NEWTONEVAL((*function)),       /**< pointer to function for which roots are computed */
-   SCIP_DECL_NEWTONEVAL((*derivative)),     /**< pointer to derivative of above function */
-   SCIP_Real*            params,            /**< parameters needed for function (can be NULL) */
-   int                   nparams,           /**< number of parameters (can be 0) */
-   SCIP_Real             x,                 /**< starting point */
-   SCIP_Real             eps,               /**< tolerance */
-   int                   k                  /**< iteration limit */
+   SCIP_DECL_NEWTONEVAL((*function)),        /**< pointer to function for which roots are computed */
+   SCIP_DECL_NEWTONEVAL((*derivative)),      /**< pointer to derivative of above function */
+   SCIP_Real*            params,             /**< parameters needed for function (can be NULL) */
+   int                   nparams,            /**< number of parameters (can be 0) */
+   SCIP_Real             x,                  /**< starting point */
+   SCIP_Real             eps,                /**< tolerance */
+   int                   k                   /**< iteration limit */
    )
 {
    SCIP_Real result = x;
@@ -10505,15 +10505,15 @@ void SCIPcomputeArraysIntersectionInt(
 
 /** computes set intersection (duplicates removed) of two void-pointer arrays that are ordered ascendingly */
 void SCIPcomputeArraysIntersectionPtr(
-   void**                array1,                   /**< pointer to first data array */
-   int                   narray1,                  /**< number of entries of first array */
-   void**                array2,                   /**< pointer to second data array */
-   int                   narray2,                  /**< number of entries of second array */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),              /**< data element comparator */
-   void**                intersectarray,           /**< intersection of array1 and array2
-                                                    *   (note: it is possible to use array1 for this input argument) */
-   int*                  nintersectarray           /**<  pointer to store number of entries of intersection array
-                                                    *   (note: it is possible to use narray1 for this input argument) */
+   void**                array1,             /**< pointer to first data array */
+   int                   narray1,            /**< number of entries of first array */
+   void**                array2,             /**< pointer to second data array */
+   int                   narray2,            /**< number of entries of second array */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void**                intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**<  pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
    )
 {
    int cnt = 0;
@@ -11263,9 +11263,9 @@ int SCIPdisjointsetGetSize(
 
 /** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
 SCIP_Bool SCIPstrAtStart(
-        const char*           s,                  /**< string to search in */
-        const char*           t,                  /**< string to search for */
-        size_t                tlen                /**< length of t */
+   const char*           s,                  /**< string to search in */
+   const char*           t,                  /**< string to search for */
+   size_t                tlen                /**< length of t */
    )
 {
    int idxctr = 0;

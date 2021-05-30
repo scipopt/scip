@@ -251,7 +251,6 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
    assert(*branchcand == TRUE);
    assert(success != NULL);
 
-
    SCIPdebugMsg(scip, "%sestimate |child| over locdom=[%g,%g] glbdom=[%g,%g]\n", overestimate ? "over" : "under",
       localbounds[0].inf, localbounds[0].sup, globalbounds[0].inf, globalbounds[0].sup);
 

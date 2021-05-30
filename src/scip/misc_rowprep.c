@@ -1554,8 +1554,8 @@ SCIP_Real SCIPscaleupRowprep(
 
       if( success != NULL )
          *success = TRUE;
-
-   } else if( success != NULL )
+   }
+   else if( success != NULL )
       *success = FALSE;
 
    return factor;

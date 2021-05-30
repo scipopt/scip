@@ -1707,7 +1707,6 @@ SCIP_RETCODE SCIPaddNlpiProbNlRows(
       {
          SCIP_CALL( SCIPreleaseExpr(scip, &exprs[i]) );
       }
-
    }
    SCIPfreeBufferArray(scip, &exprs);
    SCIPfreeBufferArray(scip, &nlininds);

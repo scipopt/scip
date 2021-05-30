@@ -164,7 +164,6 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata);
 
-
    /* print statistics */
    SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
          "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "AveCutcoef");
@@ -623,9 +622,9 @@ SCIP_RETCODE insertRayEntry(
  */
 static
 void constructLPPos2ConsPosMap(
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,      /**< nlhdlr expression data */
-   SCIP_VAR*                     auxvar,     /**< aux var of the expr */
-   int*                          map         /**< buffer to store the mapping */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_VAR*             auxvar,             /**< aux var of the expr */
+   int*                  map                 /**< buffer to store the mapping */
    )
 {
    SCIP_EXPR* qexpr;
@@ -1397,7 +1396,6 @@ SCIP_RETCODE computeRestrictionToRay(
    }
 #endif
 
-
    /* some sanity check applicable to all cases */
    assert(*a >= 0); /* the function inside the root is convex */
    assert(*c >= 0); /* radicand at zero */
@@ -1479,7 +1477,7 @@ SCIP_Real isCase4a(
    SCIP_Real             tsol,               /**< t in the above formula */
    SCIP_Real*            coefs4a,            /**< coefficients A, B, C, D, and E of case 4a */
    SCIP_Real*            coefscondition      /**< extra coefficients needed for the evaluation of the condition:
-                                               num(xhat_{r+1}(zlp)) / E; w(ray); num(yhat_{s+1}(zlp)) */
+                                              *   num(xhat_{r+1}(zlp)) / E; w(ray); num(yhat_{s+1}(zlp)) */
    )
 {
    return (coefscondition[0] * SQRT( coefs4a[0] * SQR( tsol ) + coefs4a[1] * tsol + coefs4a[2] ) + coefscondition[1] *
@@ -1524,8 +1522,8 @@ void doBinarySearch(
    }
 
    *sol = lb;
-
 }
+
 /**  finds smallest positive root phi by finding the smallest positive root of
  * (A - D^2) t^2 + (B - 2 D*E) t + (C - E^2) = 0
  * However, we are conservative and want a solution such that phi is negative, but close to 0;
@@ -1712,7 +1710,7 @@ SCIP_RETCODE computeIntercut(
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_ROWPREP*         rowprep,            /**< rowprep for the generated cut */
    SCIP_Real*            interpoints,        /**< array to store intersection points for all rays or NULL if nothing
-                                                  needs to be stored */
+                                              *   needs to be stored */
    SCIP_Bool*            success             /**< if a cut candidate could be computed */
    )
 {
@@ -1924,7 +1922,7 @@ SCIP_Bool raysAreDependent(
    int*                  rayidx2,            /**< index of consvar of the ray 2 coef is associated to */
    int                   raynnonz2,          /**< length of raycoefs2 and rayidx2 */
    SCIP_Real*            coef                /**< pointer to store coef (s.t. r1 = coef * r2) in case rays are
-                                                  dependent */
+                                              *   dependent */
    )
 {
    int i;
@@ -2044,7 +2042,7 @@ SCIP_RETCODE findRho(
    SCIP_Real             wzlp,               /**< value of w at zlp */
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real*            interpoints,        /**< array to store intersection points for all rays or NULL if nothing
-                                                  needs to be stored */
+                                              *   needs to be stored */
    SCIP_Real*            rho,                /**< pointer to store the optimal rho */
    SCIP_Bool*            success             /**< could we successfully find the right rho? */
    )
@@ -2420,8 +2418,8 @@ SCIP_Bool isPropagable(
  */
 static
 SCIP_Bool isPropagableTerm(
-   SCIP_EXPR*              qexpr,            /**< quadratic representation data */
-   int                     idx               /**< index of quadratic term to consider */
+   SCIP_EXPR*            qexpr,              /**< quadratic representation data */
+   int                   idx                 /**< index of quadratic term to consider */
    )
 {
    SCIP_Real lincoef;
@@ -3273,7 +3271,6 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
       /* merge coefficients that belong to same variable */
       SCIPmergeRowprepTerms(scip, rowprep);
 
-
       SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, nlhdlrdata->mincutviolation,
                &violation, &success) );
       INTERLOG(if( !success) printf("Clean up failed\n"); )
@@ -3323,7 +3320,6 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
             *result = SCIP_SEPARATED;
             nlhdlrdata->ncutsadded += 1;
          }
-
       }
       else
       {
@@ -3820,7 +3816,6 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
 
       if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, rhs_i) )
          continue;
-
 
       /* try to propagate */
       if( !isPropagableTerm(expr, i) )

@@ -212,9 +212,9 @@ SCIP_RETCODE computeHyperbolaRoot(
 
 static
 SCIP_RETCODE createData(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_EXPRDATA**          exprdata,        /**< pointer where to store expression data */
-   SCIP_Real                exponent         /**< exponent of the power expression */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRDATA**       exprdata,           /**< pointer where to store expression data */
+   SCIP_Real             exponent            /**< exponent of the power expression */
    )
 {
    assert(exprdata != NULL);
@@ -3088,7 +3088,7 @@ SCIP_Bool SCIPisExprSignpower(
 
 /** gets the exponent of a power or signed power expression */
 SCIP_Real SCIPgetExponentExprPow(
-   SCIP_EXPR*   expr                /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    )
 {
    SCIP_EXPRDATA* exprdata;

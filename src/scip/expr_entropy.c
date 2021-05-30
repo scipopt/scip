@@ -170,7 +170,6 @@ SCIP_RETCODE reverseProp(
    /* using a strict greater-than here because we expect a tightening because we saw an at-least-epsilon-potential above */
    assert(boundinf == SCIP_INVALID || boundinf > childinf); /*lint !e777*/
 
-
    /*
     * check whether upper bound of child can be improved
     */
@@ -622,7 +621,6 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityEntropy)
 static
 SCIP_DECL_EXPRINTEGRALITY(integralityEntropy)
 {  /*lint --e{715}*/
-
    assert(scip != NULL);
    assert(expr != NULL);
    assert(isintegral != NULL);

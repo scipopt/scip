@@ -109,7 +109,7 @@ typedef struct
    SCIP_Bool             isrootexpr,         /**< whether nlexpr is the root from where detection has been started */ \
    EXPRSTACK*            stack,              /**< stack where to add generated leafs */ \
    SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping from our expression copy to original expression */ \
-   SCIP_NLHDLRDATA*      nlhdlrdata,     /**< data of nlhdlr */ \
+   SCIP_NLHDLRDATA*      nlhdlrdata,         /**< data of nlhdlr */ \
    SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */ \
    SCIP_Bool*            success             /**< whether we found something */ \
    )
@@ -698,7 +698,6 @@ DECL_CURVCHECK(curvCheckProductComposite)
          else
             hcurv = SCIP_EXPRCURV_CONCAVE;
       }
-
    }
    else
    {
@@ -1186,7 +1185,6 @@ SCIP_RETCODE collectLeafs(
    assert(nlhdlrexprdata->nleafs > 0);
 
    SCIPfreeExpriter(&it);
-
 
    /* assemble auxvars array */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlhdlrexprdata->leafexprs), nlhdlrexprdata->nleafs) );

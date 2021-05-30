@@ -2838,7 +2838,6 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
       {
          SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &exprs[c]) );
       }
-
    }
 
 #if ADDNAMESTONLPI

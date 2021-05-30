@@ -229,7 +229,6 @@ SCIP_RETCODE generateCut(
       SCIP_CALL( SCIPaddVarToRow(scip, *row, var, grad) );
    }
 
-
    SCIP_CALL( SCIPflushRowExtensions(scip, *row) );
 
    SCIPdebugPrintf("gradient: ");

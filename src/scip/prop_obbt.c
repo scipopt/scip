@@ -828,7 +828,7 @@ void getCorners(
 /** returns the first variable of a bilinear bound */
 static
 SCIP_VAR* bilinboundGetX(
-   BILINBOUND*           bilinbound         /**< bilinear bound */
+   BILINBOUND*           bilinbound          /**< bilinear bound */
    )
 {
    assert(bilinbound->expr != NULL);
@@ -840,7 +840,7 @@ SCIP_VAR* bilinboundGetX(
 /** returns the second variable of a bilinear bound */
 static
 SCIP_VAR* bilinboundGetY(
-   BILINBOUND*           bilinbound         /**< bilinear bound */
+   BILINBOUND*           bilinbound          /**< bilinear bound */
    )
 {
    assert(bilinbound->expr != NULL);
@@ -852,7 +852,7 @@ SCIP_VAR* bilinboundGetY(
 /** returns the negative locks of the expression in a bilinear bound */
 static
 int bilinboundGetLocksNeg(
-   BILINBOUND*           bilinbound         /**< bilinear bound */
+   BILINBOUND*           bilinbound          /**< bilinear bound */
    )
 {
    assert(bilinbound->expr != NULL);
@@ -863,7 +863,7 @@ int bilinboundGetLocksNeg(
 /** returns the positive locks of the expression in a bilinear bound */
 static
 int bilinboundGetLocksPos(
-   BILINBOUND*           bilinbound         /**< bilinear bound */
+   BILINBOUND*           bilinbound          /**< bilinear bound */
    )
 {
    assert(bilinbound->expr != NULL);
@@ -874,9 +874,9 @@ int bilinboundGetLocksPos(
 /** computes the score of a bilinear term bound */
 static
 SCIP_Real bilinboundGetScore(
-   SCIP*                 scip,              /**< SCIP data structure */
-   SCIP_RANDNUMGEN*      randnumgen,        /**< random number generator */
-   BILINBOUND*           bilinbound         /**< bilinear bound */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   BILINBOUND*           bilinbound          /**< bilinear bound */
    )
 {
    SCIP_VAR* x = bilinboundGetX(bilinbound);
@@ -2242,7 +2242,7 @@ SCIP_RETCODE solveBilinearLP(
    SCIP_Real*            constant,           /**< pointer to store the constant */
    SCIP_Longint          iterlim,            /**< iteration limit (-1: for no limit) */
    int*                  nnonzduals          /**< buffer to store the number of non-zero dual multipliers except for
-                                                  the auxiliary row (NULL if not needed) */
+                                              *   the auxiliary row (NULL if not needed) */
    )
 {
    SCIP_ROW* row;

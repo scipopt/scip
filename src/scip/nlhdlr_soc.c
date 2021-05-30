@@ -779,7 +779,6 @@ SCIP_RETCODE checkAndCollectQuadratic(
 
             ++(*nexprs);
          }
-
       }
       else if( SCIPisExprVar(scip, child) && SCIPvarIsBinary(SCIPgetVarExprVar(child)) )
       {
@@ -1442,7 +1441,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
-                                               valid when success is TRUE */
+                                              *   valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
@@ -1911,7 +1910,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
-                                               valid when success is TRUE */
+                                              *   valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
@@ -2176,7 +2175,7 @@ SCIP_RETCODE detectSOC(
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
-                                               valid when success is TRUE */
+                                              *   valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
@@ -2238,7 +2237,6 @@ SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataSoc)
    SCIPfreeBlockMemory(scip, nlhdlrdata);
 
    return SCIP_OKAY;
-
 }
 
 /** callback to free expression specific data */
@@ -2717,7 +2715,7 @@ SCIP_RETCODE SCIPisSOCNonlinear(
    SCIP_Bool             compeigenvalues,    /**< whether eigenvalues should be computed to detect complex cases */
    SCIP_Bool*            success,            /**< pointer to store whether SOC structure has been detected */
    SCIP_SIDETYPE*        sidetype,           /**< pointer to store which side of cons is SOC representable; only
-                                               valid when success is TRUE */
+                                              *   valid when success is TRUE */
    SCIP_VAR***           vars,               /**< variables (x) that appear on both sides; no duplicates are allowed */
    SCIP_Real**           offsets,            /**< offsets of both sides (beta_i) */
    SCIP_Real**           transcoefs,         /**< non-zeros of linear transformation vectors (v_i) */
