@@ -94,7 +94,8 @@ void print_backtrace(void)
 {
    void* array[10];
    char** strings;
-   int size, i;
+   int size;
+   int i;
 
    size = backtrace(array, 10);
    strings = backtrace_symbols(array, size);
@@ -11149,6 +11150,9 @@ void SCIPvarGetImplicVarBounds(
    int upperpos;
    SCIP_Real* bounds;
 
+   assert(lb != NULL);
+   asserT(ub != NULL);
+
    *lb = SCIP_INVALID;
    *ub = SCIP_INVALID;
 
@@ -11157,16 +11161,13 @@ void SCIPvarGetImplicVarBounds(
 
    SCIPimplicsGetVarImplicPoss(var->implics, varfixing, implvar, &lowerpos, &upperpos);
    bounds = SCIPvarGetImplBounds(var, varfixing);
+   assert(bounds != NULL);
 
    if( lowerpos >= 0 )
-   {
       *lb = bounds[lowerpos];
-   }
 
    if( upperpos >= 0 )
-   {
       *ub = bounds[upperpos];
-   }
 }
 
 

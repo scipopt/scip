@@ -1993,12 +1993,12 @@ SCIP_Real SCIPgetRandomReal(
 /** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
  *  that are larger, equal, and smaller than the weighted median
  *
- *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
+ *  In a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
  *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
  *
  *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
  *
- *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
+ *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0, ..., leftmedianidx - 1
  *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., nkeys
  *  contains only elements that are smaller than the median.
  *
