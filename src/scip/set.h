@@ -853,7 +853,7 @@ SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
    );
 
 /** sorts expression hanlders by name */
-void SCIPsetSortExprhdlrsc(
+void SCIPsetSortExprhdlrs(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

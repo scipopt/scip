@@ -11151,7 +11151,7 @@ void SCIPvarGetImplicVarBounds(
    SCIP_Real* bounds;
 
    assert(lb != NULL);
-   asserT(ub != NULL);
+   assert(ub != NULL);
 
    *lb = SCIP_INVALID;
    *ub = SCIP_INVALID;
