@@ -817,7 +817,7 @@ SCIP_RETCODE SCIPincludeExprHdlr(
 /** gives expression handlers */
 SCIP_EXPRHDLR** SCIPgetExprHdlrs(
    SCIP*                      scip           /**< SCIP data structure */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -828,7 +828,7 @@ SCIP_EXPRHDLR** SCIPgetExprHdlrs(
 /** gives number of expression handlers */
 int SCIPgetNExprHdlrs(
    SCIP*                      scip           /**< SCIP data structure */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -1313,7 +1313,7 @@ SCIP_RETCODE SCIPparseExpr(
    const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
-)
+   )
 {
    const char* finalpos_;
    SCIP_RETCODE retcode;
@@ -1734,7 +1734,7 @@ SCIP_RETCODE SCIPreplaceCommonSubexpressions(
    SCIP_EXPR**           exprs,              /**< expressions (possibly replaced by equivalent on output) */
    int                   nexprs,             /**< total number of expressions */
    SCIP_Bool*            replacedroot        /**< buffer to store whether any root expression (expression in exprs) was replaced */
-)
+   )
 {
    COMMONSUBEXPR_HASH_DATA hashdata;
    SCIP_EXPRITER* hashiterator;

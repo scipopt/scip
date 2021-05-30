@@ -41,14 +41,14 @@ SCIP_RETCODE SCIPcreateRowprep(
    SCIP_ROWPREP**        rowprep,            /**< buffer to store pointer to rowprep */
    SCIP_SIDETYPE         sidetype,           /**< whether cut will be or lower-equal or larger-equal type */
    SCIP_Bool             local               /**< whether cut will be valid only locally */
-);
+   );
 
 /** frees a SCIP_ROWPREP datastructure */
 SCIP_EXPORT
 void SCIPfreeRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP**        rowprep             /**< pointer that stores pointer to rowprep */
-);
+   );
 
 /** creates a copy of a SCIP_ROWPREP datastructure */
 SCIP_EXPORT
@@ -56,7 +56,7 @@ SCIP_RETCODE SCIPcopyRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP**        target,             /**< buffer to store pointer of rowprep copy */
    SCIP_ROWPREP*         source              /**< rowprep to copy */
-);
+   );
 
 /** gives number of terms in rowprep */
 SCIP_EXPORT
@@ -116,14 +116,14 @@ SCIP_VAR** SCIProwprepGetModifiedVars(
 SCIP_EXPORT
 void SCIProwprepReset(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
-);
+   );
 
 /** adds constant value to side of rowprep */
 SCIP_EXPORT
 void SCIProwprepAddSide(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_Real             side                /**< constant value to be added to side */
-);
+   );
 
 /** adds constant term to rowprep
  *
@@ -133,27 +133,27 @@ SCIP_EXPORT
 void SCIProwprepAddConstant(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_Real             constant            /**< constant value to be added */
-);
+   );
 
 /** sets side type of rowprep */
 SCIP_EXPORT
 void SCIProwprepSetSidetype(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_SIDETYPE         sidetype            /**< new side type */
-);
+   );
 
 /** sets whether rowprep is local */
 SCIP_EXPORT
 void SCIProwprepSetLocal(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_Bool             islocal             /**< whether rowprep is local */
-);
+   );
 
 /** enables recording for where modifications were done in cleanup */
 SCIP_EXPORT
 void SCIProwprepRecordModifications(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
-);
+   );
 
 #ifdef NDEBUG
 #define SCIProwprepAddSide(rowprep, sideadd)  ((rowprep)->side += (sideadd))
@@ -166,7 +166,7 @@ void SCIPprintRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
    FILE*                 file                /**< file to print to, or NULL for stdout */
-);
+   );
 
 /** prints a rowprep and values in solution */
 SCIP_EXPORT
@@ -175,7 +175,7 @@ void SCIPprintRowprepSol(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
    SCIP_SOL*             sol,                /**< solution for activity */
    FILE*                 file                /**< file to print to, or NULL for stdout */
-);
+   );
 
 /** ensures that rowprep has space for at least given number of additional terms
  *
@@ -186,7 +186,7 @@ SCIP_RETCODE SCIPensureRowprepSize(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    int                   size                /**< number of additional terms for which to alloc space in rowprep */
-);
+   );
 
 /** adds a term coef*var to a rowprep */
 SCIP_EXPORT
@@ -195,7 +195,7 @@ SCIP_RETCODE SCIPaddRowprepTerm(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_VAR*             var,                /**< variable to add */
    SCIP_Real             coef                /**< coefficient to add */
-);
+   );
 
 /** adds several terms coef*var to a rowprep */
 SCIP_EXPORT
@@ -205,7 +205,7 @@ SCIP_RETCODE SCIPaddRowprepTerms(
    int                   nvars,              /**< number of terms to add */
    SCIP_VAR**            vars,               /**< variables to add */
    SCIP_Real*            coefs               /**< coefficients to add */
-);
+   );
 
 /** computes violation of cut in a given solution
  *
@@ -220,7 +220,7 @@ SCIP_Real SCIPgetRowprepViolation(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
    SCIP_Bool*            reliable            /**< buffer to store whether computed violation is reliable (numerically), or NULL if not of interest */
-);
+   );
 
 /** computes violation of cut in a given solution and reports whether that value seem numerically reliable
  *
@@ -231,7 +231,7 @@ SCIP_Bool SCIPisRowprepViolationReliable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
-);
+   );
 
 /** Merge terms that use same variable and eliminate zero coefficients.
  *
@@ -245,7 +245,7 @@ SCIP_EXPORT
 void SCIPmergeRowprepTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep             /**< rowprep to be cleaned up */
-);
+   );
 
 /** Cleans up and attempts to improve rowprep
  *
@@ -276,7 +276,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
    SCIP_Real*            viol,               /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
    SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
-);
+   );
 
 /** Cleans up and attempts to improve rowprep
  *
@@ -322,7 +322,7 @@ SCIP_Real SCIPscaleupRowprep(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
    SCIP_Real             minscaleup,         /**< minimal factor by which to scale up row, or <= 1.0 if to be ignored */
    SCIP_Bool*            success             /**< buffer to store whether rowprep could be turned into SCIP_ROW without loss, or NULL if not of interest */
-);
+   );
 
 /** scales a rowprep
  *
@@ -332,7 +332,7 @@ SCIP_EXPORT
 int SCIPscaleRowprep(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be scaled */
    SCIP_Real             factor              /**< suggested scale factor */
-);
+   );
 
 /** generates a SCIP_ROW from a rowprep */
 SCIP_EXPORT
@@ -341,7 +341,7 @@ SCIP_RETCODE SCIPgetRowprepRowConshdlr(
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-);
+   );
 
 /** generates a SCIP_ROW from a rowprep */
 SCIP_EXPORT
@@ -350,7 +350,7 @@ SCIP_RETCODE SCIPgetRowprepRowCons(
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
    SCIP_CONS*            cons                /**< constraint */
-);
+   );
 
 /** generates a SCIP_ROW from a rowprep */
 SCIP_EXPORT
@@ -359,6 +359,6 @@ SCIP_RETCODE SCIPgetRowprepRowSepa(
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
    SCIP_SEPA*            sepa                /**< separator */
-);
+   );
 
 #endif /* __SCIP_PUB_MISC_ROWPREP_H__ */

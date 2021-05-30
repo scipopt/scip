@@ -170,7 +170,7 @@ SCIP_RETCODE SCIPexprhdlrEvalExpr(
    SCIP_Real*            val,                /**< buffer to store value of expression */
    SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
    SCIP_SOL*             sol                 /**< solution that is evaluated (can be NULL) */
-);
+   );
 
 /** calls the backward derivative evaluation callback of an expression handler
  *
@@ -225,7 +225,7 @@ SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
    SCIP_SOL*             sol,                /**< solution that is evaluated (can be NULL) */
    SCIP_Real*            childrendirs,       /**< directional derivatives for children, or NULL if dot-values stored in children should be used */
    SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions, can be NULL if childrendirs is given) */
-);
+   );
 
 /** calls the evaluation callback for Hessian directions (backward over forward) of an expression handler
  *

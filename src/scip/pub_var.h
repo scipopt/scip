@@ -324,7 +324,7 @@ void SCIPvarGetImplicVarBounds(
    SCIP_VAR*             implvar,            /**< variable y to search for */
    SCIP_Real*            lb,                 /**< buffer to store the value of the implied lower bound */
    SCIP_Real*            ub                  /**< buffer to store the value of the implied upper bound */
-);
+   );
 
 /** returns whether there is a clique that contains both given variable/value pairs;
  *  the variables must be active binary variables;

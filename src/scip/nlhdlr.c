@@ -38,7 +38,7 @@
 void SCIPnlhdlrSetCopyHdlr(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRCOPYHDLR((*copy))         /**< copy callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -49,7 +49,7 @@ void SCIPnlhdlrSetCopyHdlr(
 void SCIPnlhdlrSetFreeHdlrData(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -60,7 +60,7 @@ void SCIPnlhdlrSetFreeHdlrData(
 void SCIPnlhdlrSetFreeExprData(
    SCIP_NLHDLR*          nlhdlr,            /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -72,7 +72,7 @@ void SCIPnlhdlrSetInitExit(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRINIT((*init)),            /**< initialization callback (can be NULL) */
    SCIP_DECL_NLHDLREXIT((*exit_))            /**< deinitialization callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -85,7 +85,7 @@ void SCIPnlhdlrSetProp(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRINTEVAL((*inteval)),      /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -100,7 +100,7 @@ void SCIPnlhdlrSetSepa(
    SCIP_DECL_NLHDLRENFO((*enfo)),            /**< enforcement callback (can be NULL if estimate is not NULL) */
    SCIP_DECL_NLHDLRESTIMATE((*estimate)),    /**< estimation callback (can be NULL if sepa is not NULL) */
    SCIP_DECL_NLHDLREXITSEPA((*exitsepa))     /**< separation deinitialization callback (can be NULL) */
-)
+   )
 {
    assert(nlhdlr != NULL);
    assert(enfo != NULL || estimate != NULL);
@@ -114,7 +114,7 @@ void SCIPnlhdlrSetSepa(
 /** gives name of nonlinear handler */
 const char* SCIPnlhdlrGetName(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -124,7 +124,7 @@ const char* SCIPnlhdlrGetName(
 /** gives description of nonlinear handler, can be NULL */
 const char* SCIPnlhdlrGetDesc(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -134,7 +134,7 @@ const char* SCIPnlhdlrGetDesc(
 /** gives detection priority of nonlinear handler */
 int SCIPnlhdlrGetDetectPriority(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -144,7 +144,7 @@ int SCIPnlhdlrGetDetectPriority(
 /** gives enforcement priority of nonlinear handler */
 int SCIPnlhdlrGetEnfoPriority(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -154,7 +154,7 @@ int SCIPnlhdlrGetEnfoPriority(
 /** returns whether nonlinear handler is enabled */
 SCIP_Bool SCIPnlhdlrIsEnabled(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -164,7 +164,7 @@ SCIP_Bool SCIPnlhdlrIsEnabled(
 /** gives handler data of nonlinear handler */
 SCIP_NLHDLRDATA* SCIPnlhdlrGetData(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -174,7 +174,7 @@ SCIP_NLHDLRDATA* SCIPnlhdlrGetData(
 /** returns whether nonlinear handler implements the interval evaluation callback */
 SCIP_Bool SCIPnlhdlrHasIntEval(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->inteval != NULL;
 }
@@ -190,7 +190,7 @@ SCIP_Bool SCIPnlhdlrHasReverseProp(
 /** returns whether nonlinear handler implements the separation initialization callback */
 SCIP_Bool SCIPnlhdlrHasInitSepa(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->initsepa != NULL;
 }
@@ -198,7 +198,7 @@ SCIP_Bool SCIPnlhdlrHasInitSepa(
 /** returns whether nonlinear handler implements the separation deinitialization callback */
 SCIP_Bool SCIPnlhdlrHasExitSepa(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->exitsepa != NULL;
 }
@@ -206,7 +206,7 @@ SCIP_Bool SCIPnlhdlrHasExitSepa(
 /** returns whether nonlinear handler implements the enforcement callback */
 SCIP_Bool SCIPnlhdlrHasEnfo(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->enfo != NULL;
 }
@@ -214,7 +214,7 @@ SCIP_Bool SCIPnlhdlrHasEnfo(
 /** returns whether nonlinear handler implements the estimator callback */
 SCIP_Bool SCIPnlhdlrHasEstimate(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    return nlhdlr->estimate != NULL;
 }

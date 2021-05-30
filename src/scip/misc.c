@@ -9765,7 +9765,7 @@ SCIP_Real SCIPcalcRootNewton(
    SCIP_Real             x,                 /**< starting point */
    SCIP_Real             eps,               /**< tolerance */
    int                   k                  /**< iteration limit */
-)
+   )
 {
    SCIP_Real result = x;
    int iteration = 0;
@@ -10514,7 +10514,7 @@ void SCIPcomputeArraysIntersectionPtr(
                                                     *   (note: it is possible to use array1 for this input argument) */
    int*                  nintersectarray           /**<  pointer to store number of entries of intersection array
                                                     *   (note: it is possible to use narray1 for this input argument) */
-)
+   )
 {
    int cnt = 0;
    int k = 0;
@@ -11266,7 +11266,7 @@ SCIP_Bool SCIPstrAtStart(
         const char*           s,                  /**< string to search in */
         const char*           t,                  /**< string to search for */
         size_t                tlen                /**< length of t */
-)
+   )
 {
    int idxctr = 0;
 

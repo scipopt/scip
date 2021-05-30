@@ -175,7 +175,7 @@ void SCIPimplicsGetVarImplicPoss(
    SCIP_VAR*             implvar,            /**< variable y to search for */
    int*                  haslowerimplic,     /**< pointer to store the position of an implication y >= l */
    int*                  hasupperimplic      /**< pointer to store the position of an implication y <= u */
-);
+   );
 
 /** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
 SCIP_Bool SCIPimplicsContainsImpl(

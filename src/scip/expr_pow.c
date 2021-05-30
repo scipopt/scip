@@ -245,7 +245,7 @@ void computeTangent(
    SCIP_Real*            constant,           /**< buffer to store constant term of secant */
    SCIP_Real*            slope,              /**< buffer to store slope of secant */
    SCIP_Bool*            success             /**< buffer to store whether secant could be computed */
-)
+   )
 {
    SCIP_Real xrefpow;
 
@@ -294,7 +294,7 @@ void computeSecant(
    SCIP_Real*            constant,           /**< buffer to store constant term of secant */
    SCIP_Real*            slope,              /**< buffer to store slope of secant */
    SCIP_Bool*            success             /**< buffer to store whether secant could be computed */
-)
+   )
 {
    assert(scip != NULL);
    assert(constant != NULL);
@@ -432,7 +432,7 @@ void estimateParabola(
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
-)
+   )
 {
    assert(scip != NULL);
    assert(constant != NULL);
@@ -501,7 +501,7 @@ void estimateSignedpower(
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            branchcand,         /**< buffer to indicate whether estimator would improve by branching on it */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
-)
+   )
 {
    assert(scip != NULL);
    assert(constant != NULL);
@@ -641,7 +641,7 @@ void estimateHyperbolaPositive(
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            branchcand,         /**< buffer to indicate whether estimator would improve by branching on it */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
-)
+   )
 {
    assert(scip != NULL);
    assert(constant != NULL);
@@ -848,7 +848,7 @@ void estimateHyperbolaMixed(
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            branchcand,         /**< buffer to indicate whether estimator would improve by branching on it */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
-)
+   )
 {
    assert(scip != NULL);
    assert(constant != NULL);
@@ -943,7 +943,7 @@ void estimateRoot(
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is, depends on given bounds */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
-)
+   )
 {
    assert(scip != NULL);
    assert(constant != NULL);
@@ -1007,7 +1007,7 @@ SCIP_RETCODE buildPowEstimator(
    SCIP_Bool*            success,            /**< pointer to store whether the estimator was built successfully */
    SCIP_Bool*            islocal,            /**< pointer to store whether the estimator is valid w.r.t. local bounds only */
    SCIP_Bool*            branchcand          /**< pointer to indicate whether to consider child for branching (initialized to TRUE) */
-)
+   )
 {
    SCIP_Bool isinteger;
    SCIP_Bool iseven;
@@ -1124,7 +1124,7 @@ void addTangentRefpoints(
    SCIP_Real             lb,                 /**< lower bound on the child variable */
    SCIP_Real             ub,                 /**< upper bound on the child variable */
    SCIP_Real*            refpoints           /**< array to store the reference points */
-)
+   )
 {
    SCIP_Real maxabsbnd;
 
@@ -1165,7 +1165,7 @@ SCIP_RETCODE addSignpowerRefpoints(
    SCIP_Real             exponent,           /**< exponent */
    SCIP_Bool             underestimate,      /**< are the refpoints for an underestimator */
    SCIP_Real*            refpoints           /**< array to store the reference points */
-)
+   )
 {
    assert(refpoints != NULL);
 
@@ -1221,7 +1221,7 @@ SCIP_RETCODE chooseRefpointsPow(
    SCIP_Real*            refpointsover,      /**< array to store reference points for overestimators */
    SCIP_Bool             underestimate,      /**< whether refpoints for underestimation are needed */
    SCIP_Bool             overestimate        /**< whether refpoints for overestimation are needed */
-)
+   )
 {
    SCIP_Bool convex;
    SCIP_Bool concave;

@@ -524,13 +524,13 @@ SCIP_RETCODE ensureVarsSize(
  */
 static
 SCIP_RETCODE addProductVars(
-  SCIP*                  scip,               /**< SCIP data structure */
-  SCIP_SEPADATA*         sepadata,           /**< separator data */
-  SCIP_VAR*              x,                  /**< x variable */
-  SCIP_VAR*              y,                  /**< y variable */
-  SCIP_HASHMAP*          varmap,             /**< hashmap linking var index to position */
-  int                    nlocks              /**< number of locks */
-  )
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_VAR*             x,                  /**< x variable */
+   SCIP_VAR*             y,                  /**< y variable */
+   SCIP_HASHMAP*         varmap,             /**< hashmap linking var index to position */
+   int                   nlocks              /**< number of locks */
+   )
 {
    int xpos;
    int ypos;
@@ -2234,7 +2234,7 @@ SCIP_RETCODE createProjRow(
    SCIP_ROW*             row,                /**< row to be projected */
    SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
    SCIP_Bool             local               /**< whether local bounds should be checked */
-  )
+   )
 {
    int i;
    SCIP_VAR* var;

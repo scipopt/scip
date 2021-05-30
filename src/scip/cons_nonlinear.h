@@ -459,7 +459,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
    SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
    SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an array of length at least nallvars */
    SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
-);
+   );
 
 /**@} */
 
@@ -925,7 +925,7 @@ SCIP_EXPORT
 SCIP_NLHDLREXPRDATA* SCIPgetNlhdlrExprDataNonlinear(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_EXPR*            expr                /**< expression */
-);
+   );
 
 /** @} */
 

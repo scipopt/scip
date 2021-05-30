@@ -910,7 +910,7 @@ void SCIPimplicsGetVarImplicPoss(
    SCIP_VAR*             implvar,            /**< variable y to search for */
    int*                  lowerimplicpos,     /**< pointer to store the position of an implication y >= l */
    int*                  upperimplicpos      /**< pointer to store the position of an implication y <= u */
-)
+   )
 {
    int posadd;
 

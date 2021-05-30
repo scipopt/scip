@@ -49,7 +49,7 @@ SCIP_RETCODE evalExprInAux(
    SCIP_EXPR*            expr,               /**< expression to be evaluated */
    SCIP_Real*            val,                /**< buffer to store value of expression */
    SCIP_SOL*             sol                 /**< solution to be evaluated */
-)
+   )
 {
    SCIP_Real* childvals;
    SCIP_VAR* childvar;

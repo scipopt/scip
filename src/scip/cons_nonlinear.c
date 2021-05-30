@@ -5918,7 +5918,7 @@ static
 SCIP_Bool branchAuxNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -8565,7 +8565,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
    SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an zero'ed array of length at least nallvars */
    SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
-)
+   )
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LPI* lp;
@@ -8817,7 +8817,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetUnivariate(
    SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
    SCIP_Real*            facetcoef,          /**< buffer to store coefficient of facet defining inequality */
    SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
-)
+   )
 {
    assert(scip != NULL);
    assert(SCIPisLE(scip, left, right));
@@ -8971,7 +8971,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
    SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
    SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an array of length at least 2 */
    SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
-)
+   )
 {
    SCIP_Real alpha, beta, gamma_, delta;
    SCIP_Real xstarval, candxstarval = 0.0;
@@ -11467,7 +11467,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
    SCIP_Bool*            success,            /**< buffer to store whether a facet could be computed successfully */
    SCIP_Real*            facetcoefs,         /**< buffer to store coefficients of facet defining inequality; must be an array of length at least nallvars */
    SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
-)
+   )
 {
    SCIP_Real* corner;
    SCIP_Real* funvals;
@@ -13074,7 +13074,7 @@ SCIP_NLHDLR* SCIPfindNlhdlrNonlinear(
 SCIP_NLHDLREXPRDATA* SCIPgetNlhdlrExprDataNonlinear(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_EXPR*            expr                /**< expression */
-)
+   )
 {
    SCIP_EXPR_OWNERDATA* ownerdata;
    int e;

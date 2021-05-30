@@ -994,7 +994,7 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
    int*                 invperm,             /**< the inverse permutation as an array */
    int*                 maxcrit,             /**< pointer to the critical entry where optimality is found at */
    SCIP_Real*           maxsoluval           /**< pointer to store the optimal objective value */
-)
+   )
 {
    /* The maximal objective in every iteration. */
    SCIP_Real tmpobj;
@@ -1115,7 +1115,7 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
    int*                 invperm,             /**< the inverse permutation as an array */
    int                  crit,                /**< critical entry where optimality is found at */
    int*                 maxsolu              /**< pointer to the optimal objective array */
-)
+   )
 {
    /* Compute to which components all entries belong. */
    int* entrycomponent;

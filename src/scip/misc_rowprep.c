@@ -672,7 +672,7 @@ SCIP_VAR** SCIProwprepGetModifiedVars(
 /** resets rowprep to have 0 terms and side 0 */
 void SCIProwprepReset(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
-)
+   )
 {
    assert(rowprep != NULL);
 
@@ -716,7 +716,7 @@ void SCIProwprepAddConstant(
 void SCIProwprepSetSidetype(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_SIDETYPE         sidetype            /**< new side type */
-)
+   )
 {
    assert(rowprep != NULL);
 
@@ -727,7 +727,7 @@ void SCIProwprepSetSidetype(
 void SCIProwprepSetLocal(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_Bool             islocal             /**< whether rowprep is local */
-)
+   )
 {
    assert(rowprep != NULL);
 
@@ -737,7 +737,7 @@ void SCIProwprepSetLocal(
 /** enables recording for where modifications were done in cleanup */
 void SCIProwprepRecordModifications(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
-)
+   )
 {
    assert(rowprep != NULL);
 
@@ -1012,7 +1012,7 @@ SCIP_Bool SCIPisRowprepViolationReliable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
-)
+   )
 {
    SCIP_Bool reliable;
 
@@ -1448,7 +1448,7 @@ SCIP_Real SCIPscaleupRowprep(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
    SCIP_Real             minscaleup,         /**< minimal factor by which to scale up row, or <= 1.0 if to be ignored */
    SCIP_Bool*            success             /**< buffer to store whether rowprep could be turned into SCIP_ROW without loss, or NULL if not of interest */
-)
+   )
 {
    SCIP_Real minfrac = 0.5;
    SCIP_Real minfrac0 = 0.5;

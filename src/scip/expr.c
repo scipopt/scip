@@ -313,7 +313,7 @@ void SCIPexprhdlrSetCopyFreeHdlr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRCOPYHDLR((*copyhdlr)),      /**< handler copy callback (can be NULL) */
    SCIP_DECL_EXPRFREEHDLR((*freehdlr))       /**< handler free callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -326,7 +326,7 @@ void SCIPexprhdlrSetCopyFreeData(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRCOPYDATA((*copydata)),      /**< expression data copy callback (can be NULL for expressions without data) */
    SCIP_DECL_EXPRFREEDATA((*freedata))       /**< expression data free callback (can be NULL if data does not need to be freed) */
-)
+   )
 {  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
@@ -338,7 +338,7 @@ void SCIPexprhdlrSetCopyFreeData(
 void SCIPexprhdlrSetPrint(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRPRINT((*print))             /**< print callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -349,7 +349,7 @@ void SCIPexprhdlrSetPrint(
 void SCIPexprhdlrSetParse(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRPARSE((*parse))             /**< parse callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -360,7 +360,7 @@ void SCIPexprhdlrSetParse(
 void SCIPexprhdlrSetCurvature(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRCURVATURE((*curvature))     /**< curvature detection callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -371,7 +371,7 @@ void SCIPexprhdlrSetCurvature(
 void SCIPexprhdlrSetMonotonicity(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRMONOTONICITY((*monotonicity)) /**< monotonicity detection callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -382,7 +382,7 @@ void SCIPexprhdlrSetMonotonicity(
 void SCIPexprhdlrSetIntegrality(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -393,7 +393,7 @@ void SCIPexprhdlrSetIntegrality(
 void SCIPexprhdlrSetHash(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRHASH((*hash))               /**< hash callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -404,7 +404,7 @@ void SCIPexprhdlrSetHash(
 void SCIPexprhdlrSetCompare(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRCOMPARE((*compare))         /**< compare callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -417,7 +417,7 @@ void SCIPexprhdlrSetDiff(
    SCIP_DECL_EXPRBWDIFF((*bwdiff)),          /**< backward derivative evaluation callback (can be NULL) */
    SCIP_DECL_EXPRFWDIFF((*fwdiff)),          /**< forward derivative evaluation callback (can be NULL) */
    SCIP_DECL_EXPRBWFWDIFF((*bwfwdiff))       /**< backward-forward derivative evaluation callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -430,7 +430,7 @@ void SCIPexprhdlrSetDiff(
 void SCIPexprhdlrSetIntEval(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRINTEVAL((*inteval))         /**< interval evaluation callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -441,7 +441,7 @@ void SCIPexprhdlrSetIntEval(
 void SCIPexprhdlrSetSimplify(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRSIMPLIFY((*simplify))       /**< simplify callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -452,7 +452,7 @@ void SCIPexprhdlrSetSimplify(
 void SCIPexprhdlrSetReverseProp(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -464,7 +464,7 @@ void SCIPexprhdlrSetEstimate(
    SCIP_EXPRHDLR*        exprhdlr,                /**< expression handler */
    SCIP_DECL_EXPRINITESTIMATES((*initestimates)), /**< initial estimators callback (can be NULL) */
    SCIP_DECL_EXPRESTIMATE((*estimate))            /**< estimator callback (can be NULL) */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -475,7 +475,7 @@ void SCIPexprhdlrSetEstimate(
 /** gives the name of an expression handler */
 const char* SCIPexprhdlrGetName(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -485,7 +485,7 @@ const char* SCIPexprhdlrGetName(
 /** gives the description of an expression handler (can be NULL) */
 const char* SCIPexprhdlrGetDescription(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -495,7 +495,7 @@ const char* SCIPexprhdlrGetDescription(
 /** gives the precedence of an expression handler */
 unsigned int SCIPexprhdlrGetPrecedence(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -505,7 +505,7 @@ unsigned int SCIPexprhdlrGetPrecedence(
 /** gives the data of an expression handler */
 SCIP_EXPRHDLRDATA* SCIPexprhdlrGetData(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -515,7 +515,7 @@ SCIP_EXPRHDLRDATA* SCIPexprhdlrGetData(
 /** returns whether expression handler implements the print callback */
 SCIP_Bool SCIPexprhdlrHasPrint(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -525,7 +525,7 @@ SCIP_Bool SCIPexprhdlrHasPrint(
 /** returns whether expression handler implements the backward differentiation callback */
 SCIP_Bool SCIPexprhdlrHasBwdiff(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -535,7 +535,7 @@ SCIP_Bool SCIPexprhdlrHasBwdiff(
 /** returns whether expression handler implements the forward differentiation callback */
 SCIP_Bool SCIPexprhdlrHasFwdiff(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
-)
+   )
 {
    assert(exprhdlr != NULL);
 
@@ -1105,7 +1105,7 @@ SCIP_RETCODE SCIPexprhdlrEvalExpr(
    SCIP_Real*            val,                /**< buffer to store value of expression */
    SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
    SCIP_SOL*             sol                 /**< solution that is evaluated (can be NULL) */
-)
+   )
 {
    SCIP_Real* origvals = NULL;
 
@@ -1284,7 +1284,7 @@ SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
    SCIP_SOL*             sol,                /**< solution that is evaluated (can be NULL) */
    SCIP_Real*            childrendirs,       /**< directional derivatives for children, or NULL if dot-values stored in children should be used */
    SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions, can be NULL if childrendirs is given) */
-)
+   )
 {
    SCIP_Real origval;
    SCIP_Real* origvals = NULL;

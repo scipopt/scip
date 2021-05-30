@@ -130,7 +130,7 @@ SCIP_RETCODE nlhdlrExprCreate(
    SCIP_EXPR**           nlhdlrexpr,         /**< buffer to store created expr */
    SCIP_EXPR*            origexpr,           /**< original expression to be copied */
    SCIP_EXPRCURV         curv                /**< curvature to achieve */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlexpr2origexpr != NULL);
