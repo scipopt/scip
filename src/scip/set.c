@@ -1035,7 +1035,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-   /* copy all expression handler */
+   /* copy all expression handlers */
    if( copyexprhdlrs && sourceset->exprhdlrs != NULL )
    {
       for( p = sourceset->nexprhdlrs - 1; p >= 0; --p )
@@ -2833,7 +2833,7 @@ SCIP_RETCODE SCIPsetFree(
    /* free dialogs */
    BMSfreeMemoryArrayNull(&(*set)->dialogs);
 
-   /* free expression handler */
+   /* free expression handlers */
    for( i = 0; i < (*set)->nexprhdlrs; ++i )
    {
       SCIP_CALL( SCIPexprhdlrFree(&(*set)->exprhdlrs[i], *set, blkmem) );
@@ -5207,7 +5207,7 @@ SCIP_RETCODE SCIPsetInitPlugins(
       SCIP_CALL( SCIPtableInit(set->tables[i], set) );
    }
 
-   /* expression handler */
+   /* expression handlers */
    for( i = 0; i < set->nexprhdlrs; ++i )
       SCIPexprhdlrInit(set->exprhdlrs[i], set);
 

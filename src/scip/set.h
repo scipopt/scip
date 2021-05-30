@@ -840,7 +840,7 @@ SCIP_Bool SCIPsetExistsDialog(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
-/** inserts expressions handler in expression handler list */
+/** inserts expression handler in expression handler list */
 SCIP_RETCODE SCIPsetIncludeExprhdlr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
@@ -852,8 +852,8 @@ SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
    const char*           name                /**< name of expression handler */
    );
 
-/** sorts expression hanlder by name */
-void SCIPsetSortExprhdlrs(
+/** sorts expression hanlders by name */
+void SCIPsetSortExprhdlrsc(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

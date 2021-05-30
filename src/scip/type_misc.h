@@ -157,7 +157,7 @@ typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
 
 /** a linear inequality row in preparation
  *
- * Uses to assemble data that could eventually make a SCIP_ROW.
+ * Used to assemble data that could eventually make a SCIP_ROW.
  * @note Only one-sided rows are allowed here.
  */
 typedef struct SCIP_RowPrep SCIP_ROWPREP;
