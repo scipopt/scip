@@ -2823,6 +2823,7 @@ void SCIPintervalCos(
       {
          SCIP_Real cinf;
          SCIP_Real csup;
+
          cinf = cos(operand.inf);
          csup = cos(operand.sup);
          resultant->sup = SCIPnextafter(MAX(cinf, csup), SCIP_REAL_MAX);
@@ -2919,6 +2920,7 @@ void SCIPintervalEntropy(
       infcand1 = SCIPnextafter(loginf, SCIP_REAL_MAX);
       supcand1 = SCIPnextafter(loginf, SCIP_REAL_MIN);
    }
+
    if( operand.sup < infinity )
    {
       logsup = log(operand.sup);
@@ -2940,6 +2942,7 @@ void SCIPintervalEntropy(
       infcand1 = 0.0;
       supcand1 = 0.0;
    }
+
    if( operand.sup < infinity )
    {
       infcand2 = SCIPnegateReal(operand.sup * infcand2);
@@ -4738,6 +4741,7 @@ int SCIPintervalPropagateWeightedSum(
          c = noperands;
          goto TERMINATE;
       }
+
       if( resultants[c].inf != operands[c].inf || resultants[c].sup != operands[c].sup )  /*lint !e777*/
          ++nreductions;
    }
