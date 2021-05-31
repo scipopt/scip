@@ -7692,7 +7692,7 @@ SCIP_RETCODE generateCutNonConvex(
          lby = SCIPvarGetLbLocal(y);
          uby = SCIPvarGetUbLocal(y);
          SCIPdebugMsg(scip, "bilinear term %g %s %s with (%g,%g) in [%g,%g]x[%g,%g] overestimate=%u\n", bilinterm->coef,
-            SCIPvarGetName(x), SCIPvarGetName(y), refx, refy, lbx, ubx, lby, uby, violside == SCIP_SIDETYPE_LEFT);
+            SCIPvarGetName(x), SCIPvarGetName(y), refx, refy, lbx, ubx, lby, uby, (SCIP_Bool) (violside == SCIP_SIDETYPE_LEFT));
 
          /* use the McCormick relaxation for under- or overestimating the bilinear term */
          coef = 0.0;

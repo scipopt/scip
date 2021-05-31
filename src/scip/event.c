@@ -1766,7 +1766,7 @@ SCIP_RETCODE SCIPeventProcess(
       break;
 
    default:
-      SCIPerrorMessage("unknown event type <%ld>\n", event->eventtype);
+      SCIPerrorMessage("unknown event type <%" SCIP_EVENTTYPE_FORMAT ">\n", event->eventtype);
       return SCIP_INVALIDDATA;
    }
 
@@ -2458,7 +2458,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
          break;
 
       default:
-         SCIPerrorMessage("unknown event type <%ld>\n", (*event)->eventtype);
+         SCIPerrorMessage("unknown event type <%" SCIP_EVENTTYPE_FORMAT ">\n", (*event)->eventtype);
          return SCIP_INVALIDDATA;
       }
    }
