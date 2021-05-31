@@ -85,13 +85,6 @@ typedef unsigned char STP_Bool;
 #define GE(a, b)   (((a) - (b))     > -EPS_ZERO)
 #define GE_HARD(a, b)   (((a) - (b))     > -EPS_ZERO_HARD)
 
-#ifdef __GNUC__
-#define does_not_return   __attribute__((noreturn))
-#else
-#define does_not_return   /**/
-#define inline            /**/
-#endif
-
 #if defined(MSDOS) || defined(WIN32)
 #define  DIRSEP "\\"
 #else
