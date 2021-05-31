@@ -11161,7 +11161,9 @@ void SCIPvarGetImplicVarBounds(
 
    SCIPimplicsGetVarImplicPoss(var->implics, varfixing, implvar, &lowerpos, &upperpos);
    bounds = SCIPvarGetImplBounds(var, varfixing);
-   assert(bounds != NULL);
+
+   if( bounds == NULL )
+      return;
 
    if( lowerpos >= 0 )
       *lb = bounds[lowerpos];
