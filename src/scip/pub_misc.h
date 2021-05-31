@@ -1990,20 +1990,8 @@ SCIP_Real SCIPgetRandomReal(
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
-/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
- *  that are larger, equal, and smaller than the weighted median
- *
- *  In a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
- *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
- *
- *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
- *
- *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0, ..., leftmedianidx - 1
- *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., nkeys
- *  contains only elements that are smaller than the median.
- *
- *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
- *  largest element by using a capacity k.
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
  *
  *  @deprecated Please use SCIPrandomGetSubset()
  */
