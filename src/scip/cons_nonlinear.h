@@ -565,7 +565,7 @@ SCIP_RETCODE SCIPchgExprNonlinear(
    SCIP_EXPR*            expr                /**< new expression */
    );
 
-/** adds coef * var to expression constraint
+/** adds coef * var to nonlinear constraint
  *
  * @attention This method can only be called in the problem stage.
  */
@@ -574,6 +574,18 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< coefficient */
+   );
+
+/** adds coef * expr to nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddExprNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             coef                /**< coefficient */
    );
 

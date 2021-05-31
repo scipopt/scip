@@ -11919,7 +11919,7 @@ SCIP_RETCODE SCIPchgExprNonlinear(
    return SCIP_OKAY;
 }
 
-/** adds coef * var to expression constraint
+/** adds coef * var to nonlinear constraint
  *
  * @attention This method can only be called in the problem stage.
  */
@@ -11984,6 +11984,80 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
    }
 
    SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
+
+   /* not sure we care about any of these flags for original constraints */
+   consdata->issimplified = FALSE;
+   consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** adds coef * expr to nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_RETCODE SCIPaddExprNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             coef                /**< coefficient */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* exprowned;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("SCIPaddLinearVarNonlinear can only be called in problem stage.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* we should have an original constraint */
+   assert(SCIPconsIsOriginal(cons));
+
+   if( coef == 0.0 )
+      return SCIP_OKAY;
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   /* we should not have collected additional data for it
+    * if some of these asserts fail, we may have to remove it and add some code to keep information uptodate
+    */
+   assert(consdata->nvarexprs == 0);
+   assert(consdata->varexprs == NULL);
+   assert(!consdata->catchedevents);
+
+   /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
+   SCIP_CALL( SCIPduplicateExpr(scip, expr, &exprowned, mapexprvar, conshdlr, exprownerCreate, (void*)conshdlr) );
+
+   /* append to sum, if consdata->expr is sum and not used anywhere else */
+   if( SCIPexprGetNUses(consdata->expr) == 1 && SCIPisExprSum(scip, consdata->expr) )
+   {
+      SCIP_CALL( SCIPappendExprSumExpr(scip, consdata->expr, exprowned, coef) );
+   }
+   else
+   {
+      /* create new expression = 1 * consdata->expr + coef * var */
+      SCIP_EXPR* children[2] = { consdata->expr, exprowned };
+      SCIP_Real coefs[2] = { 1.0, coef };
+
+      SCIP_CALL( SCIPcreateExprSum(scip, &consdata->expr, 2, children, coefs, 0.0, exprownerCreate, (void*)conshdlr) );
+
+      /* release old root expr */
+      SCIP_CALL( SCIPreleaseExpr(scip, &children[0]) );
+   }
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &exprowned) );
 
    /* not sure we care about any of these flags for original constraints */
    consdata->issimplified = FALSE;
