@@ -854,15 +854,12 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CONSHDLR*  conshdlrindicator;
    SCIP_CONSHDLR*  conshdlrindi;
    SCIP_CONSHDLR*  conshdlrlin;
-   SCIP_CONSHDLR*  conshdlrabspow;
-   SCIP_CONSHDLR*  conshdlrquad;
    SCIP_CONSHDLR*  conshdlrnonlin;
    SCIP_CONSHDLR*  conshdlrvarbound;
    SCIP_CONSHDLR*  conshdlrknapsack;
    SCIP_CONSHDLR*  conshdlrlogicor;
    SCIP_CONSHDLR*  conshdlrsetppc;
    SCIP_CONSHDLR*  currentconshdlr;
-   SCIP_CONSHDLR*  conshdlrsignpower;
    SCIP_CONS**  conss;
    SCIP_CONS*   subcons;
    SCIP_CONS*   transcons;
@@ -903,14 +900,11 @@ SCIP_RETCODE createSubSCIP(
    /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present*/
    conshdlrindi = SCIPfindConshdlr(scip, "indicator");
    conshdlrlin = SCIPfindConshdlr(scip, "linear");
-   conshdlrabspow = SCIPfindConshdlr(scip, "abspower");
-   conshdlrquad = SCIPfindConshdlr(scip, "quadratic");
    conshdlrnonlin = SCIPfindConshdlr(scip, "nonlinear");
    conshdlrvarbound = SCIPfindConshdlr(scip, "varbound");
    conshdlrknapsack = SCIPfindConshdlr(scip, "knapsack");
    conshdlrlogicor = SCIPfindConshdlr(scip, "logicor");
    conshdlrsetppc = SCIPfindConshdlr(scip, "setppc");
-   conshdlrsignpower = SCIPfindConshdlr(scip, "signpower");
 
    nconss = SCIPgetNOrigConss(scip);
    conss = SCIPgetOrigConss(scip);
@@ -922,15 +916,12 @@ SCIP_RETCODE createSubSCIP(
       currentconshdlr = SCIPconsGetHdlr(cons);
 
       if( currentconshdlr == conshdlrindi ||
-         currentconshdlr == conshdlrabspow ||
-         currentconshdlr == conshdlrquad ||
          currentconshdlr == conshdlrnonlin ||
          currentconshdlr == conshdlrvarbound ||
          currentconshdlr == conshdlrknapsack ||
          currentconshdlr == conshdlrlogicor ||
          currentconshdlr == conshdlrsetppc ||
-         currentconshdlr == conshdlrlin ||
-         currentconshdlr == conshdlrsignpower)
+         currentconshdlr == conshdlrlin)
       {
          continue;
       }
