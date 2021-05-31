@@ -852,7 +852,7 @@ SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
    const char*           name                /**< name of expression handler */
    );
 
-/** sorts expression hanlders by name */
+/** sorts expression handlers by name */
 void SCIPsetSortExprhdlrs(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
