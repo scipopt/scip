@@ -64,6 +64,7 @@ set(scipsources
     scip/cons_pseudoboolean.c
     scip/cons_quadratic.c
     scip/cons_setppc.c
+    scip/cons_soc.c
     scip/cons_sos1.c
     scip/cons_sos2.c
     scip/cons_superindicator.c
@@ -504,6 +505,7 @@ set(scipheaders
     scip/cons_pseudoboolean.h
     scip/cons_quadratic.h
     scip/cons_setppc.h
+    scip/cons_soc.h
     scip/cons_sos1.h
     scip/cons_sos2.h
     scip/cons_superindicator.h
