@@ -497,6 +497,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_orbisack.o \
 			scip/cons_orbitope.o \
 			scip/cons_pseudoboolean.o \
+			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \

@@ -61,6 +61,7 @@ set(scipsources
     scip/cons_orbisack.c
     scip/cons_orbitope.c
     scip/cons_pseudoboolean.c
+    scip/cons_quadratic.c
     scip/cons_setppc.c
     scip/cons_sos1.c
     scip/cons_sos2.c
@@ -499,6 +500,7 @@ set(scipheaders
     scip/cons_orbitope.h
     scip/cons_or.h
     scip/cons_pseudoboolean.h
+    scip/cons_quadratic.h
     scip/cons_setppc.h
     scip/cons_sos1.h
     scip/cons_sos2.h
