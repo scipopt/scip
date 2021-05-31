@@ -120,7 +120,6 @@ Interface changes
 
 ### Deleted and changed API methods
 
-- removed SCIPcreateConsBasicQuadratic(), use SCIPcreateConsQuadraticNonlinear() instead
 - removed exprint argument from SCIPaddNlRowGradientBenderscutOpt()
 - added copyexprhdlrs argument to SCIPcopyPlugins() (18th position)
 - removed refpoint argument from SCIPaddSquareSecant()
@@ -245,30 +244,44 @@ expression graph:
 - removed SCIPexprgraphGetTree(), SCIPexprgraphGetSeparableTrees(), SCIPexprgraphGetSubtreeVarsUsage(), SCIPexprgraphGetSumTreesNSummands(), SCIPexprgraphGetSumTrees()
 
 conshdlr:
-- removed SCIPincludeConshdlrAbspower(), SCIPcreateConsAbspower(), SCIPcreateConsBasicAbspower()
-- removed SCIPgetNlRowAbspower(), SCIPgetNonlinearVarAbspower(), SCIPgetLinearVarAbspower(), SCIPgetExponentAbspower(), SCIPgetOffsetAbspower(), SCIPgetCoefLinearAbspower(), SCIPgetLhsAbspower(), SCIPgetRhsAbspower()
+- removed SCIPincludeConshdlrAbspower()
+- deprecated SCIPcreateConsAbspower() and SCIPcreateConsBasicAbspower(), use SCIPcreateConsBasicSignpowerNonlinear() instead
+- deprecated SCIPgetNlRowAbspower(), use SCIPgetNlRowNonlinear() instead
+- removed SCIPgetNonlinearVarAbspower(), SCIPgetLinearVarAbspower(), SCIPgetExponentAbspower(), SCIPgetOffsetAbspower(), SCIPgetCoefLinearAbspower(), SCIPgetLhsAbspower(), SCIPgetRhsAbspower()
 - removed SCIPgetViolationAbspower(), use SCIPgetAbsViolationNonlinear() instead
 - removed SCIPisConvexAbspower(), use SCIPhasExprCurvature() instead
 - removed SCIPincludeConshdlrBivariate(), SCIPcreateConsBivariate(), SCIPcreateConsBasicBivariate()
 - removed SCIPgetLinearVarBivariate(), SCIPgetLinearCoefBivariate(), SCIPgetExprtreeBivariate(), SCIPgetLhsBivariate(), SCIPgetRhsBivariate()
 - removed SCIPincludeConshdlrQuadratic(), use SCIPincludeNlhdlrQuadratic() instead
 - removed SCIPincludeQuadconsUpgrade()
-- removed SCIPcreateConsBasicQuadratic(), use SCIPcreateConsQuadraticNonlinear() instead
 - removed SCIPcreateConsQuadratic2(), SCIPcreateConsBasicQuadratic2()
-- removed SCIPaddConstantQuadratic(), SCIPaddLinearVarQuadratic(), SCIPaddQuadVarQuadratic(), SCIPaddQuadVarLinearCoefQuadratic(), SCIPaddSquareCoefQuadratic(), SCIPaddBilinTermQuadratic()
-- removed SCIPgetNlRowQuadratic(), SCIPgetNLinearVarsQuadratic(), SCIPgetLinearVarsQuadratic(), SCIPgetCoefsLinearVarsQuadratic(), SCIPgetNQuadVarTermsQuadratic(), SCIPgetQuadVarTermsQuadratic(), SCIPsortQuadVarTermsQuadratic(), SCIPfindQuadVarTermQuadratic(), SCIPgetNBilinTermsQuadratic(), SCIPgetBilinTermsQuadratic(), SCIPgetLhsQuadratic(), SCIPgetRhsQuadratic()
+- deprecated SCIPcreateConsBasicQuadratic(), use SCIPcreateConsBasicQuadraticNonlinear() instead
+- deprecated SCIPcreateConsBasicQuadratic(), use SCIPcreateConsQuadraticNonlinear() instead
+- deprecated SCIPaddConstantQuadratic(), use SCIPgetLhsNonlinear() and SCIPgetRhsNonlinear() instead
+- deprecated SCIPaddLinearVarQuadratic(), use SCIPaddLinearVarNonlinear() instead
+- deprecated SCIPaddQuadVarQuadratic(), use SCIPaddLinearVarNonlinear() and SCIPaddExprNonlinear() instead
+- deprecated SCIPaddQuadVarLinearCoefQuadratic(), use SCIPaddLinearVarNonlinear() instead
+- deprecated SCIPaddSquareCoefQuadratic(), use SCIPaddExprNonlinear() instead
+- deprecated SCIPaddBilinTermQuadratic(), use SCIPaddExprNonlinear() instead
+- deprecated SCIPchgLhsQuadratic(), use SCIPgetLhsNonlinear() instead
+- deprecated SCIPchgRhsQuadratic(), use SCIPgetRhsNonlinear() instead
+- deprecated SCIPgetNlRowQuadratic(), use SCIPgetNlRowNonlinear() instead
+- removed SCIPgetNLinearVarsQuadratic(), SCIPgetLinearVarsQuadratic(), SCIPgetCoefsLinearVarsQuadratic(), SCIPgetNQuadVarTermsQuadratic(), SCIPgetQuadVarTermsQuadratic(), SCIPsortQuadVarTermsQuadratic(), SCIPfindQuadVarTermQuadratic(), SCIPgetNBilinTermsQuadratic(), SCIPgetBilinTermsQuadratic(), SCIPgetLhsQuadratic(), SCIPgetRhsQuadratic()
 - removed SCIPgetLinvarMayDecreaseQuadratic(), SCIPgetLinvarMayIncreaseQuadratic()
 - removed SCIPcheckCurvatureQuadratic() and SCIPisConvexConsQuadratic(), use SCIPcomputeExprQuadraticCurvature() instead
 - removed SCIPisConvexQuadratic(), SCIPisConcaveQuadratic()
 - removed SCIPgetViolationQuadratic() and SCIPgetFeasibilityQuadratic(), use SCIPgetAbsViolationNonlinear() instead
 - removed SCIPisLinearLocalQuadratic(), SCIPaddToNlpiProblemQuadratic()
-- removed SCIPchgLhsQuadratic(), SCIPchgRhsQuadratic(), SCIPchgLinearCoefQuadratic(), SCIPchgSquareCoefQuadratic(), SCIPchgBilinCoefQuadratic()
+- removed SCIPchgLinearCoefQuadratic(), SCIPchgSquareCoefQuadratic(), SCIPchgBilinCoefQuadratic()
 - renamed SCIPgetNAllBilinearTermsQuadratic() to SCIPgetNBilinTermsNonlinear() and changed argument from SCIP* to SCIP_CONSHDLR*
 - renamed SCIPgetAllBilinearTermsQuadratic() to SCIPgetBilinTermsNonlinear() and replaced arguments by SCIP_CONSHDLR* and changed return type to SCIP_CONSNONLINEAR_BILINTERM*
 - removed SCIPaddBilinearIneqQuadratic(), use SCIPinsertBilinearTermImplicitNonlinear() instead
 - renamed SCIPcreateConsQuadratic() to SCIPcreateConsQuadraticNonlinear() and removed argument stickingatnode
-- removed SCIPincludeConshdlrSOC(), SCIPcreateConsSOC(), SCIPcreateConsBasicSOC()
-- removed SCIPgetNlRowSOC(), SCIPgetNLhsVarsSOC(), SCIPgetLhsVarsSOC(), SCIPgetLhsCoefsSOC(), SCIPgetLhsOffsetsSOC(), SCIPgetLhsConstantSOC(), SCIPgetRhsVarSOC(), SCIPgetRhsCoefSOC(), SCIPgetRhsOffsetSOC(), use SCIPisSOCNonlinear() instead
+- removed SCIPincludeConshdlrSOC()
+- deprecated SCIPcreateConsSOC(), use SCIPcreateConsNonlinear() instead
+- deprecated SCIPcreateConsBasicSOC(), use SCIPcreateConsBasicSOC() instead
+- deprecated SCIPgetNlRowSOC(), use SCIPgetNlRowNonlinear() instead
+- removed SCIPgetNLhsVarsSOC(), SCIPgetLhsVarsSOC(), SCIPgetLhsCoefsSOC(), SCIPgetLhsOffsetsSOC(), SCIPgetLhsConstantSOC(), SCIPgetRhsVarSOC(), SCIPgetRhsCoefSOC(), SCIPgetRhsOffsetSOC(), use SCIPisSOCNonlinear() instead
 - removed SCIPaddToNlpiProblemSOC()
 - renamed SCIPincludeNonlinconsUpgrade() to SCIPincludeConsUpgradeNonlinear() and removed nodereform argument
 - removed arguments nlinvars, linvars, lincoefs, nexprtrees, exprtrees, nonlincoefs, stickingatnode from SCIPcreateConsNonlinear() and added SCIP_EXPR* argument
@@ -336,7 +349,8 @@ nlpi:
 
 ### New API functions
 
-- added SCIPcreateConsQuadraticNonlinear() to create a nonlinear constraint that is quadratic
+- added SCIPcreateConsQuadraticNonlinear() and SCIPcreateConsBasicQuadraticNonlinear() to create a nonlinear constraint that is quadratic
+- added SCIPcreateConsBasicSignpowerNonlinear() to create a nonlinear constraint that looks like the former abspower or signpower constraints
 - added SCIPintervalAreDisjointEps(), SCIPintervalIntersectEps()
 - added SCIPintervalEntropy()
 - added SCIPintervalPropagateWeightedSum()
@@ -409,7 +423,7 @@ conshdlr:
 - added SCIPcollectBilinTermsNonlinear(), SCIPgetBilinTermIdxNonlinear(), SCIPgetBilinTermNonlinear(), SCIPevalBilinAuxExprNonlinear(), SCIPinsertBilinearTermExistingNonlinear(), SCIPinsertBilinearTermImplicitNonlinear()
 - added SCIPcomputeFacetVertexPolyhedralNonlinear()
 - added SCIPgetExprNonlinear()
-- added SCIPcheckQuadraticNonlinear(), SCIPchgLhsNonlinear(), SCIPchgRhsNonlinear(), SCIPchgExprNonlinear()
+- added SCIPcheckQuadraticNonlinear(), SCIPchgLhsNonlinear(), SCIPchgRhsNonlinear(), SCIPchgExprNonlinear(), SCIPaddExprNonlinear()
 - added SCIPgetRelViolationNonlinear()
 - added SCIPgetExprNLocksPosNonlinear(), SCIPgetExprNLocksNegNonlinear(), SCIPgetExprAuxVarNonlinear(), SCIPgetExprNEnfosNonlinear(), SCIPgetExprEnfoDataNonlinear(), SCIPsetExprEnfoAuxValueNonlinear()
 - added SCIPgetExprNPropUsesActivityNonlinear(), SCIPgetExprNSepaUsesActivityNonlinear(), SCIPgetExprNAuxvarUsesNonlinear(), SCIPregisterExprUsageNonlinear()
@@ -533,10 +547,7 @@ Deleted files
 
 - interfaces/ampl/*
 - src/nlpi/*
-- src/scip/cons_abspower.{c,h}
 - src/scip/cons_bivariate.{c,h}
-- src/scip/cons_quadratic.{c,h}
-- src/scip/cons_soc.{c,h}
 - src/scip/pub_misc_nonlinear.h
 - src/scip/misc_nonlinear.c
 
