@@ -232,6 +232,23 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    );
 
+/** creates and captures a quadratic nonlinear constraint with all its constraint flags set to their default values */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part */
+   int                   nquadterms,         /**< number of quadratic terms */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
+   SCIP_Real             rhs                 /**< right hand side of quadratic equation */
+   );
+
 /** gets tag indicating current local variable bounds */
 SCIP_EXPORT
 SCIP_Longint SCIPgetCurBoundsTagNonlinear(

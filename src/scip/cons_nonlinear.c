@@ -10760,6 +10760,28 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    return SCIP_OKAY;
 }
 
+/** creates and captures a quadratic nonlinear constraint with all its constraint flags set to their default values */
+SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part */
+   int                   nquadterms,         /**< number of quadratic terms */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
+   SCIP_Real             rhs                 /**< right hand side of quadratic equation */
+   )
+{
+   SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** gets tag indicating current local variable bounds */
 SCIP_Longint SCIPgetCurBoundsTagNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
