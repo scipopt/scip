@@ -2741,8 +2741,8 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-   /* set up data for Schreier Sims constraints */
-   if ( propdata->sstenabled && ! propdata->ofenabled )
+   /* set up data for Schreier Sims constraints or subgroup detection */
+   if ( (propdata->sstenabled || propdata->detectsubgroups) && ! propdata->ofenabled )
    {
       int v;
 
