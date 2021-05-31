@@ -50,6 +50,7 @@
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_value.h"
+#include "scip/expr_pow.h"
 #include "scip/nlhdlr_convex.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
@@ -10778,6 +10779,60 @@ SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
 {
    SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a signpower nonlinear constraint with all its constraint flags set to their default values
+ *
+ * \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
+ */
+SCIP_RETCODE SCIPcreateConsBasicSignpowerNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             x,                  /**< nonlinear variable x in constraint */
+   SCIP_VAR*             z,                  /**< linear variable z in constraint */
+   SCIP_Real             exponent,           /**< exponent n of |x+offset|^n term in constraint */
+   SCIP_Real             xoffset,            /**< offset in |x+offset|^n term in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of z in constraint */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   SCIP_EXPR* xexpr;
+   SCIP_EXPR* terms[2];
+   SCIP_Real coefs[2];
+   SCIP_EXPR* sumexpr;
+
+   assert(x != NULL);
+   assert(z != NULL);
+
+   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
+   if( xoffset != 0.0 )
+   {
+      SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 1, &xexpr, NULL, xoffset, NULL, NULL) ); /* x + xoffset */
+      SCIP_CALL( SCIPcreateExprSignpower(scip, &terms[0], sumexpr, exponent, NULL, NULL) ); /* signpow(x + xoffset, exponent) */
+
+      SCIP_CALL( SCIPreleaseExpr(scip,  &sumexpr) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateExprSignpower(scip, &terms[0], xexpr, exponent, NULL, NULL) );  /* signpow(x, exponent) */
+   }
+   coefs[0] = 1.0;
+
+   SCIP_CALL( SCIPcreateExprVar(scip, &terms[1], z, NULL, NULL) );
+   coefs[1] = zcoef;
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 2, terms, coefs, 0.0, NULL, NULL) );  /* signpowexpr + zcoef * z */
+
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, cons, name, sumexpr, lhs, rhs) );
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &terms[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &terms[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
 
    return SCIP_OKAY;
 }

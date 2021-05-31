@@ -249,6 +249,24 @@ SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
    SCIP_Real             rhs                 /**< right hand side of quadratic equation */
    );
 
+/** creates and captures a signpower nonlinear constraint with all its constraint flags set to their default values
+ *
+ * \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsBasicSignpowerNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             x,                  /**< nonlinear variable x in constraint */
+   SCIP_VAR*             z,                  /**< linear variable z in constraint */
+   SCIP_Real             exponent,           /**< exponent n of |x+offset|^n term in constraint */
+   SCIP_Real             xoffset,            /**< offset in |x+offset|^n term in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of z in constraint */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   );
+
 /** gets tag indicating current local variable bounds */
 SCIP_EXPORT
 SCIP_Longint SCIPgetCurBoundsTagNonlinear(

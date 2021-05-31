@@ -40,6 +40,7 @@ set(scipsources
     scip/compr_largestrepr.c
     scip/compr_weakcompr.c
     scip/concsolver_scip.c
+    scip/cons_abspower.c
     scip/cons_and.c
     scip/cons_benders.c
     scip/cons_benderslp.c
@@ -478,6 +479,7 @@ set(scipheaders
     scip/concurrent.h
     scip/conflict.h
     scip/conflictstore.h
+    scip/cons_abspower.h
     scip/cons_and.h
     scip/cons_benders.h
     scip/cons_benderslp.h
