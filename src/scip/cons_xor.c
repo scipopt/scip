@@ -502,7 +502,7 @@ SCIP_RETCODE consdataPrint(
    SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
 
    /* close variable list and write right hand side */
-   SCIPinfoMessage(scip, file, ") = %d", consdata->rhs);
+   SCIPinfoMessage(scip, file, ") = %u", consdata->rhs);
 
    /* write integer variable if it exists */
    if( consdata->intvar != NULL )

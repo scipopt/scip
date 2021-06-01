@@ -168,52 +168,24 @@ Known bugs
 @section RN703 SCIP 7.0.3
 *************************
 
-Features
---------
-
-Performance improvements
-------------------------
-
-Examples and applications
--------------------------
-
 Interface changes
 -----------------
 
-### New and changed callbacks
-
-### Deleted and changed API methods
-
 ### New API functions
+
 - added function SCIPwithDebugSol() to determine whether SCIP was compiled with WITH_DEBUG_SOLUTION
 
 - New function SCIPcreateConsBounddisjunctionRedundant() and SCIPcreateConsBasicBounddisjunctionRedundant() that allow
   the input to contain redundant literals.
 
 ### Changed API functions
+
 - added __attribute__((format(printf,,,))) to variadic SCIP message printing functions;
   this enables warnings about mismatches between format string and variadic function arguments if using GCC.
-
-### Command line interface
 
 ### Interfaces to external software
 
 - removed MATLAB interface from interfaces/matlab
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
 
 Build system
 ------------
@@ -223,8 +195,6 @@ Build system
 ### Cmake
 
 - Make find_package more verbose and require packages to be found. Now enabled packages that are not found result in an error.
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -257,9 +227,6 @@ Miscellaneous
   original problem.
 - Added workaround for bug in MSVS 2019 when compiling CppAD source.
 - The original order of variables is now only restored after presolve if `randomization/permutevars` is set to FALSE.
-
-Known bugs
-----------
 
 @section RN702 SCIP 7.0.2
 *************************
