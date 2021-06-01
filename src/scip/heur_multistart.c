@@ -927,7 +927,7 @@ SCIP_RETCODE applyHeur(
       /* call sub-NLP heuristic */
       SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start, -1LL, timelimit,
             heurdata->nlpminimpr, &success) );
-      SCIPdebugMsg(scip, "solveNLP result = %d\n", success);
+      SCIPdebugMsg(scip, "solveNLP result = %u\n", success);
 
       if( success )
          *result = SCIP_FOUNDSOL;

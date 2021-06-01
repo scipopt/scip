@@ -1966,7 +1966,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMsg(scip, "Execlp method of relpscost branching in node %llu\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   SCIPdebugMsg(scip, "Execlp method of relpscost branching in node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {

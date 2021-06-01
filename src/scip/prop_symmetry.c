@@ -915,7 +915,7 @@ SCIP_RETCODE collectCoefficients(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matrhsidx), matrixdata->nmaxmatcoef, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matvaridx), matrixdata->nmaxmatcoef, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matcoef), matrixdata->nmaxmatcoef, newsize) );
-      SCIPdebugMsg(scip, "Resized matrix coefficients from %u to %d.\n", matrixdata->nmaxmatcoef, newsize);
+      SCIPdebugMsg(scip, "Resized matrix coefficients from %d to %d.\n", matrixdata->nmaxmatcoef, newsize);
       matrixdata->nmaxmatcoef = newsize;
    }
 
@@ -1078,7 +1078,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    int j;
    int p;
 
-   SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %u).\n", nperms);
+   SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %d).\n", nperms);
 
    /* set up dense row for permuted row */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &permrow, matrixdata->npermvars) );
@@ -2325,7 +2325,7 @@ SCIP_RETCODE determineSymmetry(
    if ( maxgenerators == 0 )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "-");
    else
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%u", maxgenerators);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%d", maxgenerators);
 
    /* display statistics: log10 group size, number of affected vars*/
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.1f", propdata->log10groupsize);
