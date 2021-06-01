@@ -52,6 +52,7 @@
 
 #define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
 
+/*lint -e440*/
 /*lint -e441*/
 /*lint -e666*/
 /*lint -e777*/
@@ -274,13 +275,13 @@ SCIP_RETCODE exprstackPush(
 
    assert(exprs != NULL);
 
-   if( exprstack->stackpos+1 + nexprs > exprstack->stacksize )
+   if( exprstack->stackpos+1 + nexprs > exprstack->stacksize )  /*lint !e644*/
    {
-      exprstack->stacksize = SCIPcalcMemGrowSize(scip, exprstack->stackpos+1 + nexprs);
+      exprstack->stacksize = SCIPcalcMemGrowSize(scip, exprstack->stackpos+1 + nexprs);    /*lint !e644*/
       SCIP_CALL( SCIPreallocBufferArray(scip, &exprstack->stack, exprstack->stacksize) );
    }
 
-   memcpy(exprstack->stack + (exprstack->stackpos+1), exprs, nexprs * sizeof(SCIP_EXPR*));
+   memcpy(exprstack->stack + (exprstack->stackpos+1), exprs, nexprs * sizeof(SCIP_EXPR*));  /*lint !e679*/ /*lint !e737*/
    exprstack->stackpos += nexprs;
 
    return SCIP_OKAY;

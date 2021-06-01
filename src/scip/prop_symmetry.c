@@ -2270,7 +2270,7 @@ SCIP_RETCODE computeSymmetryGroup(
          SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
          SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
 
-         for (expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/
+         for (expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/ /*lint !e440*/
          {
             assert( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR );
 

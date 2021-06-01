@@ -688,7 +688,7 @@ SCIP_RETCODE extractProducts(
    assert(b1 != 0.0 || b2 != 0.0); /* at least one w coefficient must be nonzero */
 
    SCIPdebugMsg(scip, "Extracting product from two implied relations:\n");
-   SCIPdebugMsg(scip, "Relation 1: <%s> == %d => %g<%s> + %g<%s> %s %g\n", SCIPvarGetName(x), f, b1,
+   SCIPdebugMsg(scip, "Relation 1: <%s> == %u => %g<%s> + %g<%s> %s %g\n", SCIPvarGetName(x), f, b1,
       SCIPvarGetName(w), c1, SCIPvarGetName(y), sidetype1 == SCIP_SIDETYPE_LEFT ? ">=" : "<=",
       f ? d1 - a1 : d1);
    SCIPdebugMsg(scip, "Relation 2: <%s> == %d => %g<%s> + %g<%s> %s %g\n", SCIPvarGetName(x), !f, b2,
@@ -824,7 +824,7 @@ void implBndToBigM(
    *side = binval ? globbnd : implbnd;
 
    SCIPdebugMsg(scip, "Got an implied relation with binpos = %d, implpos = %d, implbnd = %g, "
-                   "bnd type = %s, binval = %d, glbbnd = %g\n", binvarpos, implvarpos, implbnd,
+                   "bnd type = %s, binval = %u, glbbnd = %g\n", binvarpos, implvarpos, implbnd,
                    bndtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", binval, globbnd);
    SCIPdebugMsg(scip, "Constructed big-M: %g*bvar + implvar %s %g\n", coefs[binvarpos],
                    bndtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", *side);
@@ -1481,7 +1481,7 @@ SCIP_RETCODE detectHiddenProducts(
             if( SCIPisZero(scip, coefs1[0]) )
                continue;
 
-            SCIPdebugMsg(scip, "Implication %s == %d  =>  %s %s %g\n", SCIPvarGetName(vars_xwy[0]), xfixing,
+            SCIPdebugMsg(scip, "Implication %s == %u  =>  %s %s %g\n", SCIPvarGetName(vars_xwy[0]), xfixing,
                   SCIPvarGetName(vars_xwy[1]), sidetype1 == SCIP_SIDETYPE_LEFT ? ">=" : "<=",
                   SCIPvarGetImplBounds(vars_xwy[0], xfixing)[r1]);
             SCIPdebugMsg(scip, "Written as big-M: %g%s + %s %s %g\n", coefs1[0], SCIPvarGetName(vars_xwy[0]),
@@ -2101,7 +2101,7 @@ SCIP_RETCODE computeRltCut(
    SCIP_Bool             computeEqCut,       /**< whether conditions are fulfilled to compute equality cuts */
    SCIP_Bool             useprojrow          /**< whether to use projected row instead of normal row */
    )
-{
+{ /*lint --e{413}*/
    SCIP_Real signfactor;
    SCIP_Real boundfactor;
    SCIP_Real lbvar;
@@ -2117,17 +2117,18 @@ SCIP_RETCODE computeRltCut(
    const char* rowname;
    char cutname[SCIP_MAXSTRLEN];
 
-   lhs = useprojrow ? projrow->lhs : SCIProwGetLhs(row);
-   rhs = useprojrow ? projrow->rhs : SCIProwGetRhs(row);
-   rowname = useprojrow ? projrow->name : SCIProwGetName(row);
-   rowcst = useprojrow ? projrow ->cst : SCIProwGetConstant(row);
-
    assert(sepadata != NULL);
    assert(cut != NULL);
    assert(useprojrow || row != NULL);
    assert(!useprojrow || projrow != NULL);
    assert(var != NULL);
    assert(success != NULL);
+
+   lhs = useprojrow ? projrow->lhs : SCIProwGetLhs(row);
+   rhs = useprojrow ? projrow->rhs : SCIProwGetRhs(row);
+   rowname = useprojrow ? projrow->name : SCIProwGetName(row);
+   rowcst = useprojrow ? projrow ->cst : SCIProwGetConstant(row);
+
    assert(!computeEqCut || SCIPisEQ(scip, lhs, rhs));
 
    *cut = NULL;
@@ -2905,7 +2906,7 @@ SCIP_RETCODE separateRltCuts(
             success = TRUE;
             cut = NULL;
 
-            SCIPdebugMsg(scip, "row <%s>, uselb = %d, uselhs = %d\n", SCIProwGetName(row), uselb[k], uselhs[k]);
+            SCIPdebugMsg(scip, "row <%s>, uselb = %u, uselhs = %u\n", SCIProwGetName(row), uselb[k], uselhs[k]);
 
             if( sepadata->useprojection )
             {

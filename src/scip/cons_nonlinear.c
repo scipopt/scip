@@ -36,6 +36,7 @@
 /* define to get more debug output from domain propagation */
 /* #define DEBUG_PROP */
 
+/*lint -e440*/
 /*lint -e441*/
 /*lint -e528*/
 /*lint -e666*/
@@ -1931,7 +1932,7 @@ SCIP_RETCODE tightenAuxVarBounds(
    {
       if( ntightenings != NULL )
          ++*ntightenings;
-      SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %.15g (forced:%d)\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), force);
+      SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %.15g (forced:%u)\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), force);
    }
    if( *cutoff )
    {
@@ -1945,7 +1946,7 @@ SCIP_RETCODE tightenAuxVarBounds(
    {
       if( ntightenings != NULL )
          ++*ntightenings;
-      SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %.15g (forced:%d)\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var), force);
+      SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %.15g (forced:%u)\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var), force);
    }
    if( *cutoff )
    {
@@ -7566,7 +7567,6 @@ SCIP_RETCODE enforceConstraints(
 static
 SCIP_RETCODE analyzeViolation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
@@ -7781,7 +7781,7 @@ SCIP_RETCODE consEnfo(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( analyzeViolation(scip, conshdlr, conss, nconss, sol, soltag, &maxabsconsviol, &maxrelconsviol,
+   SCIP_CALL( analyzeViolation(scip, conss, nconss, sol, soltag, &maxabsconsviol, &maxrelconsviol,
             &minauxviol, &maxauxviol, &maxvarboundviol) );
 
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e (rel=%e), "\
@@ -8398,7 +8398,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
       /* an upper bound of 1.0 is implied by the last row, but I presume that LP solvers prefer unbounded variables */
       ub[i] = SCIPlpiInfinity(*lp);
 
-      SCIPdebugMsg(scip, "col %i starts at position %d\n", i, k);
+      SCIPdebugMsg(scip, "col %u starts at position %u\n", i, k);
       beg[i] = (int)k;
       row = 0;
 
@@ -8411,7 +8411,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
             val[k] = 1.0;
             ind[k] = row;
 
-            SCIPdebugMsg(scip, " val[%d][%d] = 1 (position  %d)\n", row, i, k);
+            SCIPdebugMsg(scip, " val[%d][%u] = 1 (position  %u)\n", row, i, k);
 
             ++k;
          }
@@ -8426,7 +8426,7 @@ SCIP_RETCODE buildVertexPolyhedralSeparationLP(
       val[k] = 1.0;
       ind[k] = (int)nrows - 1;
       ++k;
-      SCIPdebugMsg(scip, " val[%d][%d] = 1 (position  %d)\n", nrows - 1, i, k);
+      SCIPdebugMsg(scip, " val[%u][%u] = 1 (position  %u)\n", nrows - 1, i, k);
    }
    assert(k == nnonz);
 
@@ -8546,7 +8546,7 @@ SCIP_Real computeVertexPolyhedralMaxFacetError(
    return maxerror;
 }
 
-/** computes a facet of the convex or concave envelope of a vertex polyhedral function using by solving an LP */
+/** computes a facet of the convex or concave envelope of a vertex polyhedral function using by solving an LP */  /*lint -e{715}*/
 static
 SCIP_RETCODE computeVertexPolyhedralFacetLP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8581,6 +8581,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
    assert(box != NULL);
    assert(nonfixedpos != NULL);
    assert(funvals != NULL);
+   assert(nvars >= 0);
    assert(nvars <= SCIP_MAXVERTEXPOLYDIM);
    assert(success != NULL);
    assert(facetcoefs != NULL);
@@ -8784,7 +8785,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
     */
    if( overestimate == (facetvalue > targetvalue) )
    {
-      SCIPdebugMsg(scip, "missed the target, facetvalue %g targetvalue %g, overestimate=%d\n", facetvalue, targetvalue, overestimate);
+      SCIPdebugMsg(scip, "missed the target, facetvalue %g targetvalue %g, overestimate=%u\n", facetvalue, targetvalue, overestimate);
       goto CLEANUP;
    }
 
@@ -11025,7 +11026,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          else if( !SCIPisEQ(scip, auxvalue, estimateval) )
          {
             char gap[40];
-            sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
+            (void) sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
             strcat(SCIProwprepGetName(rowprep), gap);
          }
       }
@@ -11516,7 +11517,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
    }
    for( i = 0; i < ncorners; ++i )
    {
-      SCIPdebugMsg(scip, "corner %d: ", i);
+      SCIPdebugMsg(scip, "corner %u: ", i);
       for( j = 0; j < nvars; ++j )
       {
          int varpos = nonfixedpos[j];
@@ -11552,7 +11553,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
       /* check whether target has been missed */
       if( *success && overestimate == (*facetconstant + facetcoefs[nonfixedpos[0]] * xstar[nonfixedpos[0]] > targetvalue) )
       {
-         SCIPdebugMsg(scip, "computed secant, but missed target %g (facetvalue=%g, overestimate=%d)\n", targetvalue, *facetconstant + facetcoefs[nonfixedpos[0]] * xstar[nonfixedpos[0]], overestimate);
+         SCIPdebugMsg(scip, "computed secant, but missed target %g (facetvalue=%g, overestimate=%u)\n", targetvalue, *facetconstant + facetcoefs[nonfixedpos[0]] * xstar[nonfixedpos[0]], overestimate);
          *success = FALSE;
       }
    }
@@ -13034,7 +13035,7 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    /* sort nonlinear handlers by detection priority, in decreasing order
     * will happen in INIT, so only do when called late
     */
-   if( SCIPgetStage(scip) >= SCIP_STAGE_INIT && conshdlrdata->nnlhdlrs > 1 )
+   if( SCIPgetStage(scip) > SCIP_STAGE_INIT && conshdlrdata->nnlhdlrs > 1 )
       SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, SCIPnlhdlrComp, conshdlrdata->nnlhdlrs);
 
    return SCIP_OKAY;

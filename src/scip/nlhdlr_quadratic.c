@@ -308,7 +308,6 @@ SCIP_RETCODE constructBasicVars2TableauRowMap(
 /** counts the number of basic variables in the quadratic expr */
 static
 int countBasicVars(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
    SCIP_Bool*            nozerostat          /**< whether there is no variable with basis status zero */
@@ -479,7 +478,8 @@ SCIP_RETCODE storeDenseTableauRowsByColumns(
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvarow, ncols) );
 
-   memset(basicvarpos2tableaurow, -1, ncols * sizeof(int));
+   for( i = 0; i < ncols; ++i )
+      basicvarpos2tableaurow[i] = -1;
    SCIP_CALL( constructBasicVars2TableauRowMap(scip, basicvarpos2tableaurow) );
 
    qexpr = nlhdlrexprdata->qexpr;
@@ -807,7 +807,7 @@ SCIP_RETCODE createAndStoreSparseRays(
 
    *success = TRUE;
 
-   raylength = countBasicVars(scip, nlhdlrexprdata, auxvar, success);
+   raylength = countBasicVars(nlhdlrexprdata, auxvar, success);
    if( ! *success )
    {
       SCIPdebugMsg(scip, "failed to store sparse rays: there is a var with base status zero\n");
@@ -823,7 +823,8 @@ SCIP_RETCODE createAndStoreSparseRays(
 
    /* build rays sparsely now */
    SCIP_CALL( SCIPallocBufferArray(scip, &lppos2conspos, ncols) );
-   memset(lppos2conspos, -1, ncols * sizeof(int));
+   for( i = 0; i < ncols; ++i )
+      lppos2conspos[i] = -1;
 
    constructLPPos2ConsPosMap(nlhdlrexprdata, auxvar, lppos2conspos);
 
@@ -1014,7 +1015,7 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
 
    *kappa = 0.0;
    *wzlp = 0.0;
-   memset(wcoefs, 0, nquadexprs * sizeof(SCIP_Real));
+   BMSclearMemoryArray(wcoefs, nquadexprs);
 
    for( i = 0; i < nquadexprs; ++i )
    {

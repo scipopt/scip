@@ -399,12 +399,12 @@ SCIP_RETCODE SCIPcreateExprExp(
    return SCIP_OKAY;
 }
 
-/** indicates whether expression is of exp-type */
+/** indicates whether expression is of exp-type */  /*lint -e{715}*/
 SCIP_Bool SCIPisExprExp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr                /**< expression */
    )
-{
+{  /*lint --e{715}*/
    assert(expr != NULL);
 
    return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;

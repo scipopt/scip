@@ -1105,7 +1105,7 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
       /* update corresponding gradient entry */
       SCIP_CALL( SCIPcreateExpriter(subproblem, &it) );
       SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
-      for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
+      for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/ /*lint !e440*/
       {
          if( !SCIPisExprVar(subproblem, expr) )
             continue;

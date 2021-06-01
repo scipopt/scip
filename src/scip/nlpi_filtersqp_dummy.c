@@ -28,9 +28,11 @@
 SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
    SCIP*                 scip                /**< SCIP data structure */
    )
-{
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+
    return SCIP_OKAY;
-}  /*lint !e715*/
+}
 
 /** gets string that identifies filterSQP */
 const char* SCIPgetSolverNameFilterSQP(void)

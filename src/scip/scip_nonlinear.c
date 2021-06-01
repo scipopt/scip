@@ -1410,7 +1410,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
          int varidx;
 
          SCIP_CALL( SCIPexpriterInit(it, exprs[nconss], SCIP_EXPRITER_DFS, FALSE) );
-         for( expr = exprs[nconss]; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
+         for( expr = exprs[nconss]; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/ /*lint !e440*/
          {
             if( !SCIPisExprVaridx(scip, expr) )
                continue;

@@ -62,6 +62,7 @@
 #define EVENTHDLR_DESC   "handles all events necessary for maintaining NLP data"  /**< description of NLP event handler */
 #define ADDNAMESTONLPI   0                   /**< whether to give variable and row names to NLPI */
 
+/*lint -e440*/
 /*lint -e441*/
 /*lint -e777*/
 
@@ -1861,7 +1862,7 @@ SCIP_Real SCIPnlrowGetDualsol(
 /** announces, that a row of the NLP was modified
  * adjusts status of current solution
  * calling method has to ensure that change is passed to the NLPI!
- */
+ */ /*lint -e{715}*/
 static
 SCIP_RETCODE nlpRowChanged(
    SCIP_NLP*             nlp,                /**< current NLP data */

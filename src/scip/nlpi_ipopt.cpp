@@ -54,8 +54,11 @@
 
 #ifdef SCIP_THREADSAFE
 #include <mutex>
-static std::mutex solve_mutex;
+static std::mutex solve_mutex;  /*lint !e1756*/
 #endif
+
+/* turn off some lint warnings for file */
+/*lint --e{1540,750,3701}*/
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
@@ -95,6 +98,7 @@ using namespace Ipopt;
 #define FEASTOLFACTOR      0.05              /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
 
 #define DEFAULT_RANDSEED   71                /**< initial random seed */
+
 
 /* Convergence check (see ScipNLP::intermediate_callback)
  *
@@ -202,7 +206,7 @@ public:
 
    /** destructor */
    ~ScipNLP()
-   {
+   { /*lint --e{1540}*/
       assert(randnumgen != NULL);
       SCIPfreeRandom(scip, &randnumgen);
    }
@@ -396,12 +400,13 @@ public:
    ~ScipJournal() { }
 
 protected:
+   /*lint -e{715}*/
    void PrintImpl(
       Ipopt::EJournalCategory category,      /**< category of message */
       Ipopt::EJournalLevel    level,         /**< verbosity level of message */
       const char*             str            /**< message to print */
       )
-   {
+   {  /*lint --e{715} */
       if( level == J_ERROR )
       {
          SCIPmessagePrintError("%s", str);
@@ -412,13 +417,14 @@ protected:
       }
    }
 
+   /*lint -e{715}*/
    void PrintfImpl(
       Ipopt::EJournalCategory category,      /**< category of message */
       Ipopt::EJournalLevel    level,         /**< verbosity level of message */
       const char*             pformat,       /**< message printing format */
       va_list                 ap             /**< arguments of message */
       )
-   {
+   {  /*lint --e{715} */
       if( level == J_ERROR )
       {
          SCIPmessageVPrintError(pformat, ap);
@@ -465,18 +471,18 @@ void setFeastol(
 {
    assert(nlpiproblem != NULL);
 
-   nlpiproblem->ipopt->Options()->SetNumericValue("tol", FEASTOLFACTOR * feastol);
-   nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * feastol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", FEASTOLFACTOR * feastol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * feastol);
 
-   nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_tol", feastol);
-   nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", feastol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_tol", feastol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", feastol);
 
    /* It seem to be better to let Ipopt relax bounds a bit to ensure that a relative interior exists.
     * However, if we relax the bounds too much, then the solutions tend to be slightly infeasible.
     * If the user wants to set a tight feasibility tolerance, then (s)he has probably difficulties to compute accurate enough solutions.
     * Thus, we turn off the bound_relax_factor completely if it would be below its default value of 1e-8.
     */
-   nlpiproblem->ipopt->Options()->SetNumericValue("bound_relax_factor", feastol < 1e-8/FEASTOLFACTOR ? 0.0 : FEASTOLFACTOR * feastol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("bound_relax_factor", feastol < 1e-8/FEASTOLFACTOR ? 0.0 : FEASTOLFACTOR * feastol);
 }
 
 /** sets optimality tolerance parameters in Ipopt
@@ -496,8 +502,8 @@ void setOpttol(
 {
    assert(nlpiproblem != NULL);
 
-   nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", opttol);
-   nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", opttol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", opttol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", opttol);
 }
 
 /** copy method of NLP interface (called when SCIP copies plugins)
@@ -581,9 +587,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
-   *problem = new SCIP_NLPIPROBLEM;
-   if( *problem == NULL )
-      return SCIP_NOMEMORY;
+   SCIP_ALLOC( *problem = new SCIP_NLPIPROBLEM ); /*lint !e774*/
 
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
@@ -618,17 +622,17 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 
    /* modify Ipopt's default settings to what we believe is appropriate */
    (*problem)->ipopt->RegOptions()->AddStringOption2("store_intermediate", "whether to store the most feasible intermediate solutions", "no", "yes", "", "no", "", "useful when Ipopt looses a once found feasible solution and then terminates with an infeasible point");
-   (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
+   (void) (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
 #ifdef SCIP_DEBUG
-   (*problem)->ipopt->Options()->SetStringValue("print_user_options", "yes");
+   (void) (*problem)->ipopt->Options()->SetStringValue("print_user_options", "yes");
 #endif
-   (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
-   (*problem)->ipopt->Options()->SetIntegerValue("max_iter", DEFAULT_MAXITER);
-   (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
-   (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
-   (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
-   /* (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
+   (void) (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
+   (void) (*problem)->ipopt->Options()->SetIntegerValue("max_iter", DEFAULT_MAXITER);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
+   /* (void) (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
    /* if the expression interpreter does not give hessians, tell Ipopt to approximate hessian */
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
    setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
@@ -842,7 +846,7 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
     * This way, the variable fixing is satisfied exactly in a solution, see also #1254.
     */
    for( i = 0; i < nvars && !problem->firstrun; ++i )
-      if( (SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]] == SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]]) != (lbs[i] == ubs[i]) )
+      if( (SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]] == SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]]) != (lbs[i] == ubs[i]) )  /*lint !e777*/
          problem->firstrun = TRUE;
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, problem->oracle, nvars, indices, lbs, ubs) );
@@ -1064,9 +1068,9 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       /* lock solve_mutex if Ipopt is going to use Mumps as linear solver
        * unlocking will happen in the destructor of guard, which is called when this block is left
        */
-      std::unique_lock<std::mutex> guard(solve_mutex, std::defer_lock);
+      std::unique_lock<std::mutex> guard(solve_mutex, std::defer_lock);  /*lint !e{728}*/
       std::string linsolver;
-      problem->ipopt->Options()->GetStringValue("linear_solver", linsolver, "");
+      (void) problem->ipopt->Options()->GetStringValue("linear_solver", linsolver, "");
       if( linsolver == "mumps" )
          guard.lock();
 #endif
@@ -1095,7 +1099,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             /* enable Hessian approximation if we are nonquadratic and the expression interpreter or user expression do not support Hessians */
             if( !(cap & SCIP_EXPRINTCAPABILITY_HESSIAN) )
             {
-               problem->ipopt->Options()->SetStringValue("hessian_approximation", "limited-memory");
+               (void) problem->ipopt->Options()->SetStringValue("hessian_approximation", "limited-memory");
                problem->nlp->approxhessian = true;
             }
             else
@@ -1349,7 +1353,7 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
    case SCIP_NLPPAR_VERBLEVEL:
    {
       int printlevel;
-      problem->ipopt->Options()->GetIntegerValue("print_level", printlevel, "");
+      (void) problem->ipopt->Options()->GetIntegerValue("print_level", printlevel, "");
       if( printlevel <= J_ERROR )
          *ival = 0;
       else if( printlevel >= J_DETAILED )
@@ -1379,7 +1383,7 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
 
    case SCIP_NLPPAR_ITLIM:
    {
-      problem->ipopt->Options()->GetIntegerValue("max_iter", *ival, "");
+      (void) problem->ipopt->Options()->GetIntegerValue("max_iter", *ival, "");
       break;
    }
 
@@ -1447,18 +1451,18 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
       switch( ival )
       {
       case 0:
-         problem->ipopt->Options()->SetIntegerValue("print_level", J_ERROR);
+         (void) problem->ipopt->Options()->SetIntegerValue("print_level", J_ERROR);
          break;
       case 1:
-         problem->ipopt->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
+         (void) problem->ipopt->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
          break;
       case 2:
-         problem->ipopt->Options()->SetIntegerValue("print_level", J_DETAILED);
+         (void) problem->ipopt->Options()->SetIntegerValue("print_level", J_DETAILED);
          break;
       default:
          if( ival > 2 )
          {
-            problem->ipopt->Options()->SetIntegerValue("print_level", MIN(J_ITERSUMMARY + (ival-1), J_ALL));
+            (void) problem->ipopt->Options()->SetIntegerValue("print_level", MIN(J_ITERSUMMARY + (ival-1), J_ALL));
             break;
          }
          else
@@ -1492,7 +1496,7 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
    {
       if( ival >= 0 )
       {
-         problem->ipopt->Options()->SetIntegerValue("max_iter", ival);
+         (void) problem->ipopt->Options()->SetIntegerValue("max_iter", ival);
       }
       else
       {
@@ -1574,13 +1578,13 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 
    case SCIP_NLPPAR_FEASTOL:
    {
-      problem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", *dval, "");
+      (void) problem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", *dval, "");
       break;
    }
 
    case SCIP_NLPPAR_RELOBJTOL:
    {
-      problem->ipopt->Options()->GetNumericValue("dual_inf_tol", *dval, "");
+      (void) problem->ipopt->Options()->GetNumericValue("dual_inf_tol", *dval, "");
       break;
    }
 
@@ -1598,7 +1602,7 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 
    case SCIP_NLPPAR_TILIM:
    {
-      problem->ipopt->Options()->GetNumericValue("max_cpu_time", *dval, "");
+      (void) problem->ipopt->Options()->GetNumericValue("max_cpu_time", *dval, "");
       break;
    }
 
@@ -1698,7 +1702,7 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
       if( dval >= 0.0 )
       {
          /* Ipopt doesn't like a setting of exactly 0 for the max_cpu_time, so increase as little as possible in that case */
-         problem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(dval, DBL_MIN));
+         (void) problem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(dval, DBL_MIN));
       }
       else
       {
@@ -1813,7 +1817,7 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParIpopt )
    }
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e527*/
 }
 
 /** sets string parameter of NLP
@@ -1886,7 +1890,7 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
          SCIPerrorMessage("Error initializing Ipopt using optionfile \"%s\"\n", problem->optfile.c_str());
          return SCIP_ERROR;
       }
-      problem->ipopt->Options()->GetBoolValue("store_intermediate", problem->storeintermediate, "");
+      (void) problem->ipopt->Options()->GetBoolValue("store_intermediate", problem->storeintermediate, "");
       problem->firstrun = TRUE;
 
       return SCIP_OKAY;
@@ -1905,7 +1909,7 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
    }
    }
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e527*/
 }
 
 /** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */
@@ -1917,7 +1921,7 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
 
    assert(scip != NULL);
 
-   SCIP_ALLOC( nlpidata = new SCIP_NLPIDATA() );
+   SCIP_ALLOC( nlpidata = new SCIP_NLPIDATA() ); /*lint !e774*/
 
    SCIP_CALL( SCIPincludeNlpi(scip,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
@@ -1936,7 +1940,7 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
 
    return SCIP_OKAY;
-}
+}  /*lint !e429 */
 
 /** gets string that identifies Ipopt (version number) */
 const char* SCIPgetSolverNameIpopt(void)
@@ -2094,7 +2098,7 @@ bool ScipNLP::get_bounds_info(
    return true;
 }
 
-/** Method to return the starting point for the algorithm */
+/** Method to return the starting point for the algorithm */  /*lint -e{715}*/
 bool ScipNLP::get_starting_point(
    Index              n,                  /**< number of variables */ 
    bool               init_x,             /**< whether initial values for primal values are requested */ 
@@ -2106,7 +2110,7 @@ bool ScipNLP::get_starting_point(
    bool               init_lambda,        /**< whether initial values for dual values of constraints are required */
    Number*            lambda              /**< buffer to store dual values of constraints */
    )
-{
+{  /*lint --e{715} */
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
 
@@ -2241,7 +2245,7 @@ bool ScipNLP::get_list_of_nonlinear_variables(
    return true;
 }
 
-/** Method to return metadata about variables and constraints */
+/** Method to return metadata about variables and constraints */  /*lint -e{715}*/
 bool ScipNLP::get_var_con_metadata(
    Index              n,                  /**< number of variables */
    StringMetaDataMapType& var_string_md,  /**< variable meta data of string type */
@@ -2252,7 +2256,7 @@ bool ScipNLP::get_var_con_metadata(
    IntegerMetaDataMapType& con_integer_md,/**< constraint meta data of integer type */
    NumericMetaDataMapType& con_numeric_md /**< constraint meta data of numeric type */
    )
-{
+{ /*lint --e{715}*/
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
@@ -2262,24 +2266,24 @@ bool ScipNLP::get_var_con_metadata(
    if( varnames != NULL )
    {
       std::vector<std::string>& varnamesvec(var_string_md["idx_names"]);
-      varnamesvec.reserve(n);
+      varnamesvec.reserve((size_t)n);
       for( int i = 0; i < n; ++i )
       {
          if( varnames[i] != NULL )
          {
-            varnamesvec.push_back(varnames[i]);
+            varnamesvec.push_back(varnames[i]);  /*lint !e3701*/
          }
          else
          {
             char buffer[20];
-            sprintf(buffer, "nlpivar%8d", i);
+            (void) sprintf(buffer, "nlpivar%8d", i);
             varnamesvec.push_back(buffer);
          }
       }
    }
 
    std::vector<std::string>& consnamesvec(con_string_md["idx_names"]);
-   consnamesvec.reserve(m);
+   consnamesvec.reserve((size_t)m);
    for( int i = 0; i < m; ++i )
    {
       if( SCIPnlpiOracleGetConstraintName(nlpiproblem->oracle, i) != NULL )
@@ -2289,22 +2293,22 @@ bool ScipNLP::get_var_con_metadata(
       else
       {
          char buffer[20];
-         sprintf(buffer, "nlpicons%8d", i);
-         consnamesvec.push_back(buffer);
+         (void) sprintf(buffer, "nlpicons%8d", i);
+         consnamesvec.push_back(buffer);  /*lint !e3701*/
       }
    }
 
    return true;
 }
 
-/** Method to return the objective value */
+/** Method to return the objective value */  /*lint -e{715}*/
 bool ScipNLP::eval_f(
    Index              n,                  /**< number of variables */ 
    const Number*      x,                  /**< point to evaluate */ 
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
    Number&            obj_value           /**< place to store objective function value */
    )
-{
+{ /*lint --e{715}*/
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
 
@@ -2313,14 +2317,14 @@ bool ScipNLP::eval_f(
    return SCIPnlpiOracleEvalObjectiveValue(scip, nlpiproblem->oracle, x, &obj_value) == SCIP_OKAY;
 }
 
-/** Method to return the gradient of the objective */
+/** Method to return the gradient of the objective */  /*lint -e{715}*/
 bool ScipNLP::eval_grad_f(
    Index              n,                  /**< number of variables */ 
    const Number*      x,                  /**< point to evaluate */ 
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
    Number*            grad_f              /**< buffer to store objective gradient */
    )
-{
+{ /*lint --e{715}*/
    SCIP_Real dummy;
 
    assert(nlpiproblem != NULL);
@@ -2331,7 +2335,7 @@ bool ScipNLP::eval_grad_f(
    return SCIPnlpiOracleEvalObjectiveGradient(scip, nlpiproblem->oracle, x, TRUE, &dummy, grad_f) == SCIP_OKAY;
 }
 
-/** Method to return the constraint residuals */
+/** Method to return the constraint residuals */  /*lint -e{715}*/
 bool ScipNLP::eval_g(
    Index              n,                  /**< number of variables */ 
    const Number*      x,                  /**< point to evaluate */ 
@@ -2339,7 +2343,7 @@ bool ScipNLP::eval_g(
    Index              m,                  /**< number of constraints */
    Number*            g                   /**< buffer to store constraint function values */
    )
-{
+{ /*lint --e{715}*/
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
 
@@ -2351,7 +2355,7 @@ bool ScipNLP::eval_g(
 /** Method to return:
  *   1) The structure of the jacobian (if "values" is NULL)
  *   2) The values of the jacobian (if "values" is not NULL)
- */
+ */  /*lint -e{715}*/
 bool ScipNLP::eval_jac_g(
    Index              n,                  /**< number of variables */ 
    const Number*      x,                  /**< point to evaluate */ 
@@ -2362,7 +2366,7 @@ bool ScipNLP::eval_jac_g(
    Index*             jCol,               /**< buffer to store column indices of nonzero jacobian entries, or NULL if values are requested */                  
    Number*            values              /**< buffer to store values of nonzero jacobian entries, or NULL if structure is requested */
    )
-{
+{ /*lint --e{715}*/
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
 
@@ -2403,7 +2407,7 @@ bool ScipNLP::eval_jac_g(
 /** Method to return:
  *   1) The structure of the hessian of the lagrangian (if "values" is NULL)
  *   2) The values of the hessian of the lagrangian (if "values" is not NULL)
- */
+ */   /*lint -e{715}*/
 bool ScipNLP::eval_h(
    Index              n,                  /**< number of variables */ 
    const Number*      x,                  /**< point to evaluate */ 
@@ -2417,7 +2421,7 @@ bool ScipNLP::eval_h(
    Index*             jCol,               /**< buffer to store column indices of nonzero hessian entries, or NULL if values are requested */                  
    Number*            values              /**< buffer to store values of nonzero hessian entries, or NULL if structure is requested */
    )
-{
+{  /*lint --e{715}*/
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
 
@@ -2458,7 +2462,7 @@ bool ScipNLP::eval_h(
 /** Method called by the solver at each iteration.
  * 
  * Checks whether Ctrl-C was hit.
- */
+ */   /*lint -e{715}*/
 bool ScipNLP::intermediate_callback(
    AlgorithmMode      mode,               /**< current mode of algorithm */
    Index              iter,               /**< current iteration number */
@@ -2474,7 +2478,7 @@ bool ScipNLP::intermediate_callback(
    const IpoptData*   ip_data,            /**< pointer to Ipopt Data */
    IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
    )
-{
+{  /*lint --e{715}*/
    if( nlpiproblem->storeintermediate && mode == RegularMode && inf_pr < nlpiproblem->lastsolinfeas )
    {
       Ipopt::TNLPAdapter* tnlp_adapter;
@@ -2504,7 +2508,7 @@ bool ScipNLP::intermediate_callback(
                BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL )
             {
                SCIPerrorMessage("out-of-memory in ScipNLP::intermediate_callback()\n");
-               return TRUE;
+               return true;
             }
          }
 
@@ -2600,7 +2604,7 @@ bool ScipNLP::intermediate_callback(
    return (SCIPinterrupted() == FALSE);
 }
 
-/** This method is called when the algorithm is complete so the TNLP can store/write the solution. */
+/** This method is called when the algorithm is complete so the TNLP can store/write the solution. */  /*lint -e{715}*/
 void ScipNLP::finalize_solution(
    SolverReturn       status,             /**< solve and solution status */ 
    Index              n,                  /**< number of variables */ 
@@ -2614,7 +2618,7 @@ void ScipNLP::finalize_solution(
    const IpoptData*   data,               /**< pointer to Ipopt Data */ 
    IpoptCalculatedQuantities* cq          /**< pointer to calculated quantities */
    )
-{
+{ /*lint --e{715}*/
    assert(nlpiproblem         != NULL);
    assert(nlpiproblem->oracle != NULL);
 
@@ -2701,7 +2705,7 @@ void ScipNLP::finalize_solution(
    }
 
    /* if Ipopt reports its solution as locally infeasible or we don't know feasibility, then report the intermediate point with lowest constraint violation, if available */
-   if( (x == NULL || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nlpiproblem->lastsolinfeas != SCIP_INVALID )
+   if( (x == NULL || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nlpiproblem->lastsolinfeas != SCIP_INVALID )  /*lint !e777*/
    {
       /* if infeasibility of lastsol is not invalid, then lastsol values should exist */
       assert(nlpiproblem->lastsolprimals != NULL);
@@ -2711,7 +2715,7 @@ void ScipNLP::finalize_solution(
 
       /* check if lastsol is feasible */
       Number constrvioltol;
-      nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
+      (void) nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
       if( nlpiproblem->lastsolinfeas <= constrvioltol )
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       else
@@ -2758,7 +2762,7 @@ void ScipNLP::finalize_solution(
 
          constrviol = cq->curr_constraint_violation();
 
-         nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
+         (void) nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
          if( constrviol <= constrvioltol )
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
          else if( nlpiproblem->lastsolstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
@@ -2770,7 +2774,7 @@ void ScipNLP::finalize_solution(
    {
       assert(lambda != NULL);
       SCIP_Real tol;
-      nlpiproblem->ipopt->Options()->GetNumericValue("tol", tol, "");
+      (void) nlpiproblem->ipopt->Options()->GetNumericValue("tol", tol, "");
 
       // Jakobs paper ZR_20-20 says we should have lambda*g(x) + mu*h(x) > 0
       //   if the NLP is min f(x) s.t. g(x) <= 0, h(x) = 0
@@ -2839,7 +2843,7 @@ SCIP_RETCODE LapackDsyev(
 {
    int info;
 
-   IpLapackDsyev(computeeigenvectors, N, a, N, w, info);
+   IpLapackDsyev((bool)computeeigenvectors, N, a, N, w, info);
 
    if( info != 0 )
    {

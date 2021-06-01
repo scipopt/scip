@@ -805,6 +805,7 @@ SCIP_RETCODE aggregation(
 
    assert(scip != NULL);
    assert(aggrdata != NULL);
+   assert(aggrdata->aggrrow != NULL);
    assert(sepa != NULL);
    assert(rowlhsscores != NULL);
    assert(rowrhsscores != NULL);

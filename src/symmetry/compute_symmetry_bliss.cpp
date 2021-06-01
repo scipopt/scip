@@ -81,7 +81,7 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQOptype)
 
    /* for pow expressions, also check exponent (TODO should that happen for signpow as well?) */
    if ( SCIPisExprPower((SCIP*)userptr, k1->expr )
-      && SCIPgetExponentExprPow(k1->expr) != SCIPgetExponentExprPow(k2->expr) )
+      && SCIPgetExponentExprPow(k1->expr) != SCIPgetExponentExprPow(k2->expr) )  /*lint !e777*/
       return FALSE;
 
    /* if still undecided, take level */
@@ -131,7 +131,7 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQConsttype)
    k1 = (SYM_CONSTTYPE*) key1;
    k2 = (SYM_CONSTTYPE*) key2;
 
-   return k1->value == k2->value;
+   return (SCIP_Bool)(k1->value == k2->value);  /*lint !e777*/
 }
 
 /** returns the hash value of the key */
@@ -167,10 +167,10 @@ SCIP_DECL_HASHKEYEQ(SYMhashKeyEQRhstype)
    k1 = (SYM_RHSTYPE*) key1;
    k2 = (SYM_RHSTYPE*) key2;
 
-   if ( k1->lhs != k2->lhs )
+   if ( k1->lhs != k2->lhs )  /*lint !e777*/
       return FALSE;
 
-   return k1->rhs == k2->rhs;
+   return (SCIP_Bool)(k1->rhs == k2->rhs);  /*lint !e777*/
 }
 
 /** returns the hash value of the key */
@@ -261,9 +261,8 @@ SCIP_RETCODE createVariableNodes(
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix (also contains the relevant variables) */
    int&                  nnodes,             /**< buffer to store number of nodes in graph */
-   int&                  nedges,             /**< buffer to store number of edges in graph */
-   int&                  nusedcolors,        /**< buffer to store number of used colors */
-   SCIP_Bool&            success             /**< whether the construction was successful */
+   const int&            nedges,             /**< buffer to store number of edges in graph */
+   int&                  nusedcolors         /**< buffer to store number of used colors */
    )
 {
    assert( scip != NULL );
@@ -272,8 +271,6 @@ SCIP_RETCODE createVariableNodes(
    assert( nedges == 0 );
    assert( nusedcolors == 0 );
    SCIPdebugMsg(scip, "Creating graph with colored nodes for variables.\n");
-
-   success = TRUE;
 
    /* add nodes for variables */
    for (int v = 0; v < matrixdata->npermvars; ++v)
@@ -558,7 +555,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
       SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
       SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
 
-      for (SCIP_EXPR* expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/
+      for (SCIP_EXPR* expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/ /*lint !e440*/
       {
          switch( SCIPexpriterGetStageDFS(it) )
          {
@@ -1010,13 +1007,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    bliss::Graph G(0);
 
    /* create nodes corresponding to variables */
-   SCIP_CALL( createVariableNodes(scip, &G, matrixdata, nnodes, nedges, nusedcolors, success) );
-
-   if ( !success )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, 0, "Graph construction failed during creation of var nodes.\n");
-      return SCIP_OKAY;
-   }
+   SCIP_CALL( createVariableNodes(scip, &G, matrixdata, nnodes, nedges, nusedcolors) );
 
    assert( nnodes == matrixdata->npermvars );
    assert( nusedcolors == matrixdata->nuniquevars );

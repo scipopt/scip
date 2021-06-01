@@ -56,6 +56,9 @@
 #pragma GCC optimize ("O0")
 #endif
 
+/*lint -e644*/
+/*lint -e777*/
+
 #ifdef SCIP_ROUNDING_FE
 #define ROUNDING
 /*
@@ -547,8 +550,8 @@ void SCIPintervalIntersect(
 {
    assert(resultant != NULL);
 
-   resultant->inf = MAX(operand1.inf, operand2.inf); /*lint !e644*/
-   resultant->sup = MIN(operand1.sup, operand2.sup); /*lint !e644*/
+   resultant->inf = MAX(operand1.inf, operand2.inf);
+   resultant->sup = MIN(operand1.sup, operand2.sup);
 }
 
 /** intersection of two intervals with epsilon tolerance
@@ -705,7 +708,7 @@ void SCIPintervalAddScalar(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_Real             operand2            /**< second operand of operation */
    )
-{  /*lint --e{644}*/
+{
    SCIP_ROUNDMODE roundmode;
 
    assert(resultant != NULL);
@@ -785,7 +788,7 @@ void SCIPintervalSub(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    )
-{  /*lint --e{644}*/
+{
    SCIP_ROUNDMODE roundmode;
 
    assert(resultant != NULL);
@@ -814,7 +817,7 @@ void SCIPintervalSub(
    /* [a,b] - [+inf,+inf] = [-inf,-inf] */
    else if( operand1.sup <= -infinity || operand2.inf >= infinity )
    {
-      assert(resultant->inf == -infinity);  /* should be set above, since operand1.inf <= operand1.sup <= -infinity */  /*lint !e777*/
+      assert(resultant->inf == -infinity);  /* should be set above, since operand1.inf <= operand1.sup <= -infinity */
       resultant->sup = -infinity;
    }
    else
@@ -1109,13 +1112,13 @@ void SCIPintervalMulScalar(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand1));
 
-   if( operand2 == 1.0 )  /*lint !e777*/
+   if( operand2 == 1.0 )
    {
       *resultant = operand1;
       return;
    }
 
-   if( operand2 == -1.0 )  /*lint !e777*/
+   if( operand2 == -1.0 )
    {
       resultant->inf = -operand1.sup;
       resultant->sup = -operand1.inf;
@@ -1504,7 +1507,7 @@ void SCIPintervalSquareRoot(
       return;
    }
 
-   if( operand.inf == operand.sup )  /*lint !e777 */
+   if( operand.inf == operand.sup )
    {
       if( operand.inf >= infinity )
       {
@@ -1556,7 +1559,7 @@ void SCIPintervalPower(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    )
-{  /*lint --e{777}*/
+{
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand1));
    assert(!SCIPintervalIsEmpty(infinity, operand2));
@@ -1891,7 +1894,7 @@ void SCIPintervalPowerScalar(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_Real             operand2            /**< second operand of operation */
    )
-{  /*lint --e{777}*/
+{
    SCIP_Bool op2isint;
 
    assert(resultant != NULL);
@@ -2227,7 +2230,7 @@ void SCIPintervalSignPowerScalar(
    assert(!SCIPintervalIsEmpty(infinity, operand1));
    assert(operand2     >= 0.0);
 
-   if( operand2 == infinity )  /*lint !e777 */
+   if( operand2 == infinity )
    {
       /* 0^infinity =  0
        * +^infinity =  infinity
@@ -2482,7 +2485,7 @@ void SCIPintervalExp(
       return;
    }
 
-   if( operand.inf == operand.sup )  /*lint !e777 */
+   if( operand.inf == operand.sup )
    {
       if( operand.inf == 0.0 )
       {
@@ -2561,7 +2564,7 @@ void SCIPintervalLog(
       return;
    }
 
-   if( operand.inf == operand.sup )  /*lint !e777 */
+   if( operand.inf == operand.sup )
    {
       if( operand.sup == 1.0 )
       {
@@ -2673,8 +2676,8 @@ void SCIPintervalAbs(
  * MSVC refuses to evaluate this at compile time
  */
 #ifndef _MSC_VER
-static const double pi_d_l = (3373259426.0 + 273688.0 / (1<<21)) / (1<<30);
-static const double pi_d_u = (3373259426.0 + 273689.0 / (1<<21)) / (1<<30);
+static const double pi_d_l = (3373259426.0 + 273688.0 / (1<<21)) / (1<<30);   /*lint !e790*/
+static const double pi_d_u = (3373259426.0 + 273689.0 / (1<<21)) / (1<<30);   /*lint !e790*/
 #else
 #define pi_d_l ((3373259426.0 + 273688.0 / (1<<21)) / (1<<30))
 #define pi_d_u ((3373259426.0 + 273689.0 / (1<<21)) / (1<<30))
@@ -2748,7 +2751,7 @@ void SCIPintervalCos(
 
    SCIPdebugMessage("cos([%.16g,%.16g])\n", operand.inf, operand.sup);
 
-   if( operand.inf == operand.sup ) /*lint !e777 */
+   if( operand.inf == operand.sup )
    {
       SCIP_Real tmp;
 
@@ -3129,11 +3132,11 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    }
 
    /* find x>=0 s.t. a.sup x^2 + b.sup x >= c.inf */
-   if( lincoeff.sup <  infinity && rhs.inf >  -infinity && sqrcoeff.sup <  infinity ) /*lint !e644*/
+   if( lincoeff.sup <  infinity && rhs.inf >  -infinity && sqrcoeff.sup <  infinity )
    {
       SCIP_INTERVAL res2;
       /* coverity[uninit_use_in_call] */
-      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff.sup, lincoeff.sup, rhs.inf, xbnds); /*lint !e644*/
+      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff.sup, lincoeff.sup, rhs.inf, xbnds);
       SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", sqrcoeff.sup, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
       SCIPdebugMessage("intersection of [%.20f, %.20f] and [%.20f, %.20f]", resultant->inf, resultant->sup, res2.inf, res2.sup);
       /* intersect both results */
@@ -4406,7 +4409,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          if( lincoef.inf == 0.0 && lincoef.sup == 0.0 )
          {
             /* equation became 0.0 \in myrhs */
-            if( myrhs.inf <= 0.0 && myrhs.sup >= 0.0 ) /*lint !e644*/
+            if( myrhs.inf <= 0.0 && myrhs.sup >= 0.0 )
                *resultant = xbnds;
             else
                SCIPintervalSetEmpty(resultant);
@@ -4653,7 +4656,7 @@ int SCIPintervalPropagateWeightedSum(
       if( SCIPintervalIsEmpty(infinity, childbounds) )
       {
          *infeasible = TRUE;
-         c = noperands;  /* signal for terminate code to not copy operands to resultants because we return *infeasible == TRUE */
+         c = noperands;  /* signal for terminate code to not copy operands to resultants because we return *infeasible == TRUE */  /*lint !e850*/
          goto TERMINATE;
       }
 
@@ -4738,11 +4741,11 @@ int SCIPintervalPropagateWeightedSum(
       if( SCIPintervalIsEmpty(infinity, resultants[c]) )
       {
          *infeasible = TRUE;
-         c = noperands;
+         c = noperands;   /*lint !e850*/
          goto TERMINATE;
       }
 
-      if( resultants[c].inf != operands[c].inf || resultants[c].sup != operands[c].sup )  /*lint !e777*/
+      if( resultants[c].inf != operands[c].inf || resultants[c].sup != operands[c].sup )
          ++nreductions;
    }
 

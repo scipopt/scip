@@ -562,7 +562,7 @@ const char* SCIPexprcurvGetName(
    SCIP_EXPRCURV         curv                /**< curvature */
    )
 {
-   assert(curv <= SCIP_EXPRCURV_LINEAR);  /*lint !e685*/
+   assert(0 <= curv && curv <= SCIP_EXPRCURV_LINEAR);  /*lint !e685 !e2650 !e587 !e831 !e641 !e568*/
 
    return curvnames[curv];
 }

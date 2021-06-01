@@ -967,41 +967,41 @@ public:
                return;
 
             case CONSINITIAL:
-               SCIPsetConsInitial(amplph.scip, amplph.probdata->conss[index], value == 1);
+               SCIP_CALL_THROW( SCIPsetConsInitial(amplph.scip, amplph.probdata->conss[index], value == 1) );
                break;
 
             case CONSSEPARATE:
-               SCIPsetConsSeparated(amplph.scip, amplph.probdata->conss[index], value == 1);
+               SCIP_CALL_THROW( SCIPsetConsSeparated(amplph.scip, amplph.probdata->conss[index], value == 1) );
                break;
 
             case CONSENFORCE:
-               SCIPsetConsEnforced(amplph.scip, amplph.probdata->conss[index], value == 1);
+               SCIP_CALL_THROW( SCIPsetConsEnforced(amplph.scip, amplph.probdata->conss[index], value == 1) );
                break;
 
             case CONSCHECK:
-               SCIPsetConsChecked(amplph.scip, amplph.probdata->conss[index], value == 1);
+               SCIP_CALL_THROW( SCIPsetConsChecked(amplph.scip, amplph.probdata->conss[index], value == 1) );
                break;
 
             case CONSPROPAGATE:
-               SCIPsetConsPropagated(amplph.scip, amplph.probdata->conss[index], value == 1);
+               SCIP_CALL_THROW( SCIPsetConsPropagated(amplph.scip, amplph.probdata->conss[index], value == 1) );
                break;
 
             case CONSDYNAMIC:
-               SCIPsetConsDynamic(amplph.scip, amplph.probdata->conss[index], value == 1);
+               SCIP_CALL_THROW( SCIPsetConsDynamic(amplph.scip, amplph.probdata->conss[index], value == 1) );
                break;
 
             case CONSREMOVABLE:
-               SCIPsetConsRemovable(amplph.scip, amplph.probdata->conss[index], value == 1);
+               SCIP_CALL_THROW( SCIPsetConsRemovable(amplph.scip, amplph.probdata->conss[index], value == 1) );
                break;
 
             case VARINITIAL:
                assert(index < amplph.probdata->nvars);
-               SCIPvarSetInitial(amplph.probdata->vars[index], value == 1);
+               SCIP_CALL_THROW( SCIPvarSetInitial(amplph.probdata->vars[index], value == 1) );
                break;
 
             case VARREMOVABLE:
                assert(index < amplph.probdata->nvars);
-               SCIPvarSetRemovable(amplph.probdata->vars[index], value == 1);
+               SCIP_CALL_THROW( SCIPvarSetRemovable(amplph.probdata->vars[index], value == 1) );
                break;
 
             case VARSOSNO:
