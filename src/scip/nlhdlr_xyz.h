@@ -14,8 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_xyz.h
+ * @ingroup NLHDLRS
  * @brief  xyz nonlinear handler
- * @author Benjamin Mueller
+ * @author Jane Doe
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -30,7 +31,24 @@
 extern "C" {
 #endif
 
-/** includes xyz nonlinear handler to nonlinear constraint handler */
+
+/**@addtogroup NLHDLRS
+ *
+ * @{
+ *
+ * @name Xyz nonlinear handler.
+ *
+ * @{
+ */
+
+/** @}
+  * @}
+  */
+
+/** includes xyz nonlinear handler to nonlinear constraint handler
+ *
+ * @ingroup NlhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_quadratic.h
+ * @ingroup NLHDLRS
  * @brief  nonlinear handler to handle quadratic expressions
  * @author Felipe Serrano
  *
@@ -31,7 +32,25 @@
 extern "C" {
 #endif
 
-/** includes quadratic nonlinear handler in nonlinear constraint handler */
+/**@addtogroup NLHDLRS
+ *
+ * @{
+ *
+ * @name Quadratic nonlinear handler.
+ *
+ * This nonlinear handler detects quadratic subexpressions and provides specialized propagation and estimation functionality.
+ *
+ * @{
+ */
+
+/** @}
+  * @}
+  */
+
+/** includes quadratic nonlinear handler in nonlinear constraint handler
+ *
+ * @ingroup NlhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
    SCIP*                 scip                /**< SCIP data structure */

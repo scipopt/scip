@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_bilinear.h
+ * @ingroup NLHDLRS
  * @brief  bilinear nonlinear handler
  * @author Benjamin Mueller
  */
@@ -29,6 +30,17 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup NLHDLRS
+ *
+ * @{
+ *
+ * @name Bilinear nonlinear handler.
+ *
+ * This nonlinear handler detects and collects bilinear terms and provides specialized propagation and estimation functionality.
+ *
+ * @{
+ */
 
 /** returns an array of expressions that have been detected by the bilinear nonlinear handler */
 SCIP_EXPORT
@@ -60,7 +72,14 @@ SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
    SCIP_Bool*            success             /**< buffer to store whether inequality has been accepted */
    );
 
-/** includes bilinear nonlinear handler in nonlinear constraint handler */
+/** @}
+  * @}
+  */
+
+/** includes bilinear nonlinear handler in nonlinear constraint handler
+ *
+ * @ingroup NlhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrBilinear(
    SCIP*                 scip                /**< SCIP data structure */

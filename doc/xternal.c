@@ -7985,6 +7985,21 @@
  *
  */
 
+/**@defgroup NLHDLRS  Nonlinear Handlers
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default nonlinear handlers of \SCIP
+ */
+
+/**@defgroup NlhdlrIncludes Inclusion methods
+ * @ingroup NLHDLRS
+ * @brief methods to include specific nonlinear handlers into \SCIP
+ *
+ * This module contains methods to include specific nonlinear handlers into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default nonlinear handlers) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup NLPIS NLP Solver Interfaces
  * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the default NLP solver interfaces of \SCIP

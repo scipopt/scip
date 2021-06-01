@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_soc.h
+ * @ingroup NLHDLRS
  * @brief  soc nonlinear handler
  *
  * @author Benjamin Mueller
@@ -31,11 +32,25 @@
 extern "C" {
 #endif
 
-/** includes SOC nonlinear handler in nonlinear constraint handler */
+/** includes SOC nonlinear handler in nonlinear constraint handler
+ *
+ * @ingroup NlhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrSoc(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup NLHDLRS
+ *
+ * @{
+ *
+ * @name SOC nonlinear handler.
+ *
+ * This nonlinear handler detects second-order cone constraints in the extended formulation and provides specialized separation functionality.
+ *
+ * @{
+ */
 
 /** checks whether constraint is SOC representable in original variables and if yes, returns the SOC
  * representation
@@ -90,6 +105,10 @@ void SCIPfreeSOCArraysNonlinear(
    int                   nvars,              /**< total number of variables appearing */
    int                   nterms              /**< number of summands in the SQRT +1 for RHS (n+1) */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

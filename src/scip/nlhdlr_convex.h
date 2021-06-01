@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_convex.h
+ * @ingroup NLHDLRS
  * @brief  nonlinear handlers for convex and concave expressions, respectively
  * @author Benjamin Mueller
  * @author Stefan Vigerske
@@ -30,17 +31,34 @@
 extern "C" {
 #endif
 
-/** includes convex nonlinear handler in nonlinear constraint handler */
+/** includes convex nonlinear handler in nonlinear constraint handler
+ *
+ * @ingroup NlhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrConvex(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** includes concave nonlinear handler in nonlinear constraint handler */
+/** includes concave nonlinear handler in nonlinear constraint handler
+ *
+ * @ingroup NlhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrConcave(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup NLHDLRS
+ *
+ * @{
+ *
+ * @name Convex and concave nonlinear handlers.
+ *
+ * These nonlinear handler detect convex and concave subexpressions and provide specialized estimation functionality.
+ *
+ * @{
+ */
 
 /** checks whether a given expression is convex or concave w.r.t. the original variables
  *
@@ -54,6 +72,10 @@ SCIP_RETCODE SCIPhasExprCurvature(
    SCIP_Bool*            success,            /**< buffer to store whether expression has curvature curv (w.r.t. original variables) */
    SCIP_HASHMAP*         assumevarfixed      /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

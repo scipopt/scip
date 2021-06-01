@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_perspective.h
+ * @ingroup NLHDLRS
  * @brief  perspective nonlinear handler
  * @author Ksenia Bestuzheva
  */
@@ -30,7 +31,25 @@
 extern "C" {
 #endif
 
-/** includes perspective nonlinear handler to nonlinear constraint handler */
+/**@addtogroup NLHDLRS
+ *
+ * @{
+ *
+ * @name Perspective nonlinear handler.
+ *
+ * This nonlinear handler detects expressions in semi-continuous variables and strengthens estimators computed by other nlhdlr by means of perspective cuts.
+ *
+ * @{
+ */
+
+/** @}
+  * @}
+  */
+
+/** includes perspective nonlinear handler to nonlinear constraint handler
+ *
+ * @ingroup NlhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrPerspective(
    SCIP*                 scip                /**< SCIP data structure */

@@ -14,11 +14,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_nlhdlr.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions related to nonlinear handlers of nonlinear constraints
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
  * @author Felipe Serrano
  * @author Stefan Vigerske
+ *
+ *  This file defines the interface for nonlinear handlers.
+ *
+ *  - \ref NLHDLRS "List of available nonlinear handlers"
  */
 
 #ifndef SCIP_TYPE_NLHDLR_H_

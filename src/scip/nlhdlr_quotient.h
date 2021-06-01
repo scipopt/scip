@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_quotient.h
+ * @ingroup NLHDLRS
  * @brief  quotient nonlinear handler
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
@@ -31,7 +32,25 @@
 extern "C" {
 #endif
 
-/** includes quotient nonlinear handler to nonlinear constraint handler */
+/**@addtogroup NLHDLRS
+ *
+ * @{
+ *
+ * @name Quotient nonlinear handler.
+ *
+ * This nonlinear handler detects quotients and provides specialized propagation and estimation functionality.
+ *
+ * @{
+ */
+
+/** @}
+  * @}
+  */
+
+/** includes quotient nonlinear handler to nonlinear constraint handler
+ *
+ * @ingroup NlhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrQuotient(
    SCIP*                 scip                /**< SCIP data structure */

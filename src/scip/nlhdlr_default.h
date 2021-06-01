@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_default.h
+ * @ingroup NLHDLRS
  * @brief  default nonlinear handler that calls expression handler methods
  * @author Stefan Vigerske
  */
@@ -29,7 +30,25 @@
 extern "C" {
 #endif
 
-/** includes default nonlinear handler in nonlinear constraint handler */
+/**@addtogroup NLHDLRS
+ *
+ * @{
+ *
+ * @name Default nonlinear handler.
+ *
+ * This nonlinear handler is used when no other nonlinear handler enforces an expression and accesses expression handler methods.
+ *
+ * @{
+ */
+
+/** @}
+  * @}
+  */
+
+/** includes default nonlinear handler in nonlinear constraint handler
+ *
+ * @ingroup NlhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrDefault(
    SCIP*                 scip                /**< SCIP data structure */
