@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_pow.h
- * @brief  power expression handler
+ * @ingroup EXPRHDLRS
+ * @brief  power and signed power expression handlers
  * @author Benjamin Mueller
  */
 
@@ -29,6 +30,28 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Power and signed power expression.
+ *
+ * These expression handler provide the power function, that is,
+ * \f[
+ *   x \mapsto \begin{case}
+ *     x^e & \textrm{if} x \geq 0 or e integral, \\
+ *     \textrm{undefined}, & otherwise.
+ *     \end{cases}
+ * \f]
+ * and the signed power function, that is,
+ * \f[
+ *   x \mapsto \textrm{sign}(e) |x|^e
+ * \f]
+ * for some exponent e.
+ *
+ * @{
+ */
 
 /** creates a power expression */
 SCIP_EXPORT
@@ -52,23 +75,33 @@ SCIP_RETCODE SCIPcreateExprSignpower(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** creates the handler for power expression and includes it into SCIP */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrPow(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** creates the handler for signed power expression and includes it into SCIP */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrSignpower(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** indicates whether expression is of signpower-type */
 SCIP_EXPORT
 SCIP_Bool SCIPisExprSignpower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** @}
+  * @}
+  */
+
+/** creates the handler for power expression and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeExprHdlrPow(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** creates the handler for signed power expression and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeExprHdlrSignpower(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

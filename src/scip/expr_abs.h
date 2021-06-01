@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_abs.h
+ * @ingroup EXPRHDLRS
  * @brief  absolute expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -32,6 +33,20 @@
 extern "C" {
 #endif
 
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Absolute value expression.
+ *
+ * This expression handler provides the absolute-value function, that is,
+ * \f[
+ *   x \mapsto |x|
+ * \f]
+ *
+ * @{
+ */
+
 /** creates a absolute expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateExprAbs(
@@ -42,7 +57,14 @@ SCIP_RETCODE SCIPcreateExprAbs(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** creates the handler for absolute expression and includes it into the expression constraint handler */
+/** @}
+  * @}
+  */
+
+/** creates the handler for absolute expression and includes it into the expression constraint handler
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrAbs(
    SCIP*                 scip                /**< SCIP data structure */

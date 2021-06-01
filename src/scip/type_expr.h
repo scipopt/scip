@@ -14,11 +14,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_expr.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions related to algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
  * @author Felipe Serrano
  * @author Stefan Vigerske
+ *
+ *  This file defines the interface for expression handlers.
+ *
+ *  - \ref EXPRHDLRS "List of available expression handlers"
  */
 
 #ifndef SCIP_TYPE_EXPR_H_

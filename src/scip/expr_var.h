@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_var.h
+ * @ingroup EXPRHDLRS
  * @brief  variable expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -32,11 +33,24 @@
 extern "C" {
 #endif
 
-/** creates the handler for variable expression and includes it into SCIP */
+/** creates the handler for variable expression and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrVar(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name SCIP variable expression.
+ *
+ * This expression handler handles a SCIP variables. It cannot have children.
+ * @{
+ */
 
 /** creates a variable expression */
 SCIP_EXPORT
@@ -47,6 +61,10 @@ SCIP_RETCODE SCIPcreateExprVar(
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

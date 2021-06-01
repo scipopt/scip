@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_value.h
+ * @ingroup EXPRHDLRS
  * @brief  constant value expression handler
  * @author Stefan Vigerske
  */
@@ -30,11 +31,24 @@
 extern "C" {
 #endif
 
-/** creates the handler for constant value expression and includes it into SCIP */
+/** creates the handler for constant value expression and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrValue(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Constant value expression.
+ *
+ * This expression handler handles a constant value. It cannot have children.
+ * @{
+ */
 
 /** creates constant value expression */
 SCIP_EXPORT
@@ -45,6 +59,10 @@ SCIP_RETCODE SCIPcreateExprValue(
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_xyz.h
+ * @ingroup EXPRHDLRS
  * @brief  handler for xyz expressions
  * @author Jane Doe
  */
@@ -31,11 +32,28 @@
 extern "C" {
 #endif
 
-/** creates the handler for xyz expressions and includes it into SCIP */
+/** creates the handler for xyz expressions and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Xyz expression.
+ *
+ * This expression handler provides the xyz function, that is,
+ * \f[
+ *   x \mapsto xyz(x)
+ * \f]
+ *
+ * @{
+ */
 
 /** creates a xyz expression */
 SCIP_EXPORT
@@ -47,6 +65,10 @@ SCIP_RETCODE SCIPcreateExprXyz(
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

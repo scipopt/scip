@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_product.h
+ * @ingroup EXPRHDLRS
  * @brief  product expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -32,11 +33,28 @@
 extern "C" {
 #endif
 
-/** creates the handler for product expressions and includes it into SCIP */
+/** creates the handler for product expressions and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrProduct(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Product expression.
+ *
+ * This expression handler provides the product function, that is,
+ * \f[
+ *   x \mapsto c\,\Prod_{i=1}^n x_i
+ * \f]
+ * for some constant coefficient c.
+ * @{
+ */
 
 /** creates a product expression */
 SCIP_EXPORT
@@ -49,6 +67,10 @@ SCIP_RETCODE SCIPcreateExprProduct(
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

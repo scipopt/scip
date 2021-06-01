@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_log.h
+ * @ingroup EXPRHDLRS
  * @brief  logarithm expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -31,6 +32,20 @@
 extern "C" {
 #endif
 
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Logarithm expression.
+ *
+ * This expression handler provides the natural logarithm function, that is,
+ * \f[
+ *   x \mapsto \ln(x)
+ * \f]
+ *
+ * @{
+ */
+
 /** creates a logarithmic expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateExprLog(
@@ -41,17 +56,24 @@ SCIP_RETCODE SCIPcreateExprLog(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** creates the handler for logarithmic expression and includes it into SCIP */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrLog(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** indicates whether expression is of log-type */
 SCIP_EXPORT
 SCIP_Bool SCIPisExprLog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** @}
+  * @}
+  */
+
+/** creates the handler for logarithmic expression and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeExprHdlrLog(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

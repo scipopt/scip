@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_cos.h
+ * @ingroup EXPRHDLRS
  * @brief  handler for cosine expressions
  * @author Fabian Wegscheider
  */
@@ -31,11 +32,28 @@
 extern "C" {
 #endif
 
-/** creates the handler for cos expressions and includes it into the expression constraint handler */
+/** creates the handler for cos expressions and includes it into the expression constraint handler
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrCos(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Cosine expression.
+ *
+ * This expression handler provides the cosine function, that is,
+ * \f[
+ *   x \mapsto cos(x)
+ * \f]
+ *
+ * @{
+ */
 
 /** creates a cos expression */
 SCIP_EXPORT
@@ -46,6 +64,10 @@ SCIP_RETCODE SCIPcreateExprCos(
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

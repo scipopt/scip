@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_sum.h
+ * @ingroup EXPRHDLRS
  * @brief  sum expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -32,11 +33,29 @@
 extern "C" {
 #endif
 
-/** creates the handler for sum expressions and includes it into SCIP */
+/** creates the handler for sum expressions and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrSum(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Sum expression.
+ *
+ * This expression handler provides the sum function, that is,
+ * \f[
+ *   x \mapsto c + \sum_{i=1}^n a_i x_i
+ * \f]
+ * for some constant c and constant coefficients \f$a_i\f$.
+ *
+ * @{
+ */
 
 /** creates a sum expression */
 SCIP_EXPORT
@@ -72,6 +91,10 @@ void SCIPmultiplyByConstantExprSum(
    SCIP_EXPR*            expr,               /**< sum expression */
    SCIP_Real             constant            /**< constant that multiplies sum expression */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

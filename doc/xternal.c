@@ -7856,6 +7856,21 @@
  *
  */
 
+/**@defgroup EXPRHDLRS  Expression Handlers
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default expressions handlers of \SCIP
+ */
+
+/**@defgroup ExprhdlrIncludes Inclusion methods
+ * @ingroup EXPRHDLRS
+ * @brief methods to include specific expression handlers into \SCIP
+ *
+ * This module contains methods to include specific expression handlers into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default expression handlers) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup FILEREADERS File Readers
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all file readers which are currently available.

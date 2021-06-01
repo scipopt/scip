@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_exp.h
+ * @ingroup EXPRHDLRS
  * @brief  exponential expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -31,6 +32,20 @@
 extern "C" {
 #endif
 
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Exponential value expression.
+ *
+ * This expression handler provides the exponential function, that is,
+ * \f[
+ *   x \mapsto \exp(x)
+ * \f]
+ *
+ * @{
+ */
+
 /** creates an exponential expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateExprExp(
@@ -41,17 +56,24 @@ SCIP_RETCODE SCIPcreateExprExp(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** creates the handler for exponential expressions and includes it into SCIP */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrExp(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** indicates whether expression is of exp-type */
 SCIP_EXPORT
 SCIP_Bool SCIPisExprExp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** @}
+  * @}
+  */
+
+/** creates the handler for exponential expressions and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeExprHdlrExp(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

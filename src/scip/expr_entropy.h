@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_entropy.h
+ * @ingroup EXPRHDLRS
  * @brief  handler for -x*log(x) expressions
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
@@ -32,11 +33,32 @@
 extern "C" {
 #endif
 
-/** creates the handler for x*log(x) expressions and includes it into SCIP */
+/** creates the handler for x*log(x) expressions and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrEntropy(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Entropy value expression.
+ *
+ * This expression handler provides the entropy function, that is,
+ * \f[
+ *   x \mapsto \begin{cases}
+ *     -x\log(x), & \mathrm{if} x > 0,\\
+ *     0, & \mathrm{if} x = 0, \\
+ *     \mathrm{undefined}, & \mathrm{else}
+ *     \end{cases}
+ * \f]
+ *
+ * @{
+ */
 
 /** creates an x*log(x) expression */
 SCIP_EXPORT
@@ -47,6 +69,10 @@ SCIP_RETCODE SCIPcreateExprEntropy(
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

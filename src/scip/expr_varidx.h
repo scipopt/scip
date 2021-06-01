@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_varidx.h
+ * @ingroup EXPRHDLRS
  * @brief  handler for variable index expressions
  * @author Benjamin Mueller
  */
@@ -31,11 +32,26 @@
 extern "C" {
 #endif
 
-/** creates the handler for variable index expressions and includes it into SCIP */
+/** creates the handler for variable index expressions and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrVaridx(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Index variable expression.
+ *
+ * This expression handler handles a variable that is given by a variable index. It cannot have children.
+ *
+ * This expression handler is used for expression that are passed to a NLP solver via the NLPI.
+ * @{
+ */
 
 /** creates a variable index expression */
 SCIP_EXPORT
@@ -66,6 +82,10 @@ void SCIPsetIndexExprVaridx(
    SCIP_EXPR*            expr,               /**< varindex expression */
    int                   newindex            /**< new index */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

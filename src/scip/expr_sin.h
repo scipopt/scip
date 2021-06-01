@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_sin.h
+ * @ingroup EXPRHDLRS
  * @brief  handler for sin expressions
  * @author Fabian Wegscheider
  */
@@ -33,11 +34,28 @@
 extern "C" {
 #endif
 
-/** creates the handler for sin expressions and includes it into the expression constraint handler */
+/** creates the handler for sin expressions and includes it into the expression constraint handler
+ *
+ * @ingroup ExprhdlrIncludes
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlrSin(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Sine expression.
+ *
+ * This expression handler provides the sine function, that is,
+ * \f[
+ *   x \mapsto \sin(x)
+ * \f]
+ *
+ * @{
+ */
 
 /** creates a sin expression */
 SCIP_EXPORT
@@ -109,6 +127,10 @@ SCIP_EXPRCURV SCIPcomputeCurvatureSin(
    SCIP_Real             lb,                 /**< lower bound of child */
    SCIP_Real             ub                  /**< lower bound of child */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }
