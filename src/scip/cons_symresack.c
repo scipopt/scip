@@ -2539,6 +2539,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
    assert( varrow < nvars );
    assert( infrow >= 0 );
    assert( infrow < nvars );
+   assert( vars[varrow] == infervar || vars[invperm[varrow]] == infervar );
 
    /* Up to entry varrow the vectors x and perm[x] are equal. */
    for (i = 0; i < varrow; ++i)
@@ -2562,11 +2563,13 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
        */
       if ( i < perm[i] )
       {
+         assert( vars[i] != infervar );
          SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
       }
       if ( invperm[i] > i )
       {
+         assert( vars[invperm[i]] != infervar );
          SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
       }
@@ -2593,13 +2596,15 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
           * Thus, between entries varrow and infrow of vectorx x and gamma(x) the entries do not have to be fixed.
           * For conflict analysis, only the fixed entries matter.
           */
-         if ( i != invperm[varrow] && i < perm[i] && ISFIXED(vars[i], bdchgidx) )
+         if ( ( i < perm[i] || i == invperm[varrow] ) && ISFIXED(vars[i], bdchgidx) )
          {
+            assert( vars[i] != infervar );
             SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
             SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
          }
-         if ( invperm[i] != varrow && invperm[i] > i && ISFIXED(vars[invperm[i]], bdchgidx) )
+         if ( ( invperm[i] > i || invperm[i] == varrow ) && ISFIXED(vars[invperm[i]], bdchgidx) )
          {
+            assert( vars[invperm[i]] != infervar );
             SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
             SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
          }
