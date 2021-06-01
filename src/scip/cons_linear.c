@@ -17180,7 +17180,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
                   consdata->boundstightened = 0;
                break;
             default:
-               SCIPerrorMessage("invalid event type %ld\n", eventtype);
+               SCIPerrorMessage("invalid event type %" SCIP_EVENTTYPE_FORMAT "\n", eventtype);
                return SCIP_INVALIDDATA;
             }
          }

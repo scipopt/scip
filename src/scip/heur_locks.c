@@ -252,7 +252,7 @@ SCIP_RETCODE SCIPapplyLockFixings(
 
    updatelocks = heurdata->updatelocks && (SCIPgetNCheckConss(scip) == SCIPgetNLPRows(scip));
 
-   SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%d\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
+   SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%u\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
    assert(vars != NULL);

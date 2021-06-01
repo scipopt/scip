@@ -2678,7 +2678,7 @@ SCIP_RETCODE applyFixingsAndAggregations(
 
          SCIP_CALL( SCIPfixVar(scip, var, lower ? 0.0 : 1.0, infeasible, &fixed) );
 
-         SCIPdebugMsg(scip, "fix <%s>[%d] to %g: inf=%d, fixed=%d\n",
+         SCIPdebugMsg(scip, "fix <%s>[%d] to %g: inf=%u, fixed=%u\n",
             SCIPvarGetName(var), infeasnodes[i], lower ? 0.0 : 1.0, *infeasible, fixed);
 
          /* fixing was infeasible */
@@ -2730,7 +2730,7 @@ SCIP_RETCODE applyFixingsAndAggregations(
                   lower == isIndexLowerbound(sccvars[v]) ? 0.0 : 1.0,
                   infeasible, &redundant, &aggregated) );
 
-            SCIPdebugMsg(scip, "aggregate <%s> + %g <%s> = %g: inf=%d, red=%d, aggr=%d\n",
+            SCIPdebugMsg(scip, "aggregate <%s> + %g <%s> = %g: inf=%u, red=%u, aggr=%u\n",
                SCIPvarGetName(startvar), lower == isIndexLowerbound(sccvars[v]) ? -1.0 : 1.0,
                SCIPvarGetName(vars[getVarIndex(sccvars[v])]), lower == isIndexLowerbound(sccvars[v]) ? 0.0 : 1.0,
                *infeasible, redundant, aggregated);

@@ -2745,7 +2745,7 @@ SCIP_RETCODE addNode(
       /* update the lowerbound if the new lower bound is finite */
       if( !SCIPsetIsInfinity(set, REALABS(lowerbound)) )
          reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
-      SCIPsetDebugMsg(set, " -> reopttype: %u, lowerbound: %g\n", reopttype, reopt->reopttree->reoptnodes[id]->lowerbound);
+      SCIPsetDebugMsg(set, " -> reopttype: %d, lowerbound: %g\n", reopttype, reopt->reopttree->reoptnodes[id]->lowerbound);
 
 #ifdef SCIP_MORE_DEBUG
       {
@@ -2899,7 +2899,7 @@ SCIP_RETCODE addNode(
             reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
          SCIPsetDebugMsg(set, "update node %d at ID %d:\n", 1, 0);
-         SCIPsetDebugMsg(set, " -> nvars: 0, ncons: 0, parentID: -, reopttype: %u, lowerbound: %g\n", reopttype,
+         SCIPsetDebugMsg(set, " -> nvars: 0, ncons: 0, parentID: -, reopttype: %d, lowerbound: %g\n", reopttype,
                reopt->reopttree->reoptnodes[id]->lowerbound);
 
          goto PSEUDO;
@@ -2932,7 +2932,7 @@ SCIP_RETCODE addNode(
             reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
          SCIPsetDebugMsg(set, "update node %d at ID %d:\n", 1, 0);
-         SCIPsetDebugMsg(set, " -> nvars: 0, ncons: 0, parentID: -, reopttype: %u, lowerbound: %g\n", reopttype,
+         SCIPsetDebugMsg(set, " -> nvars: 0, ncons: 0, parentID: -, reopttype: %d, lowerbound: %g\n", reopttype,
                reopt->reopttree->reoptnodes[id]->lowerbound);
 
          break;
@@ -2965,7 +2965,7 @@ SCIP_RETCODE addNode(
             reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
          SCIPsetDebugMsg(set, "update node %d at ID %d:\n", 1, 0);
-         SCIPsetDebugMsg(set, " -> nvars: 0, ncons: 0, parentID: -, reopttype: %u, lowerbound:%g \n", reopttype,
+         SCIPsetDebugMsg(set, " -> nvars: 0, ncons: 0, parentID: -, reopttype: %d, lowerbound:%g \n", reopttype,
                reopt->reopttree->reoptnodes[id]->lowerbound);
 
          break;
@@ -2995,7 +2995,7 @@ SCIP_RETCODE addNode(
       SCIP_Bool transintoorig;
 
       SCIPsetDebugMsg(set, "try to add node #%lld to the reopttree\n", SCIPnodeGetNumber(node));
-      SCIPsetDebugMsg(set, " -> reopttype = %u\n", reopttype);
+      SCIPsetDebugMsg(set, " -> reopttype = %d\n", reopttype);
 
       /* check if we really want to save this node:
        *   1. save the node if reopttype is at least SCIP_REOPTTYPE_INFSUBTREE
@@ -7886,7 +7886,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
          SCIP_CALL( SCIProwRelease(&cut, blkmem, set, lp) );
 
          if( infeasible )
-            SCIPsetDebugMsg(set, "cut %d stored at node %llu (id: %u) is infeasible.\n", c, SCIPnodeGetNumber(node), id);
+            SCIPsetDebugMsg(set, "cut %d stored at node %" SCIP_LONGINT_FORMAT " (id: %u) is infeasible.\n", c, SCIPnodeGetNumber(node), id);
          else
             ++ncuts;
 

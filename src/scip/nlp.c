@@ -3374,7 +3374,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else
    {
-      SCIPerrorMessage("unexpected event %ld on variable <%s>\n", etype, SCIPvarGetName(var) );
+      SCIPerrorMessage("unexpected event %" SCIP_EVENTTYPE_FORMAT " on variable <%s>\n", etype, SCIPvarGetName(var) );
       return SCIP_ERROR;
    }
 

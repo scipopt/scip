@@ -1859,7 +1859,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub))
          || (boundtype == SCIP_BOUNDTYPE_UPPER && newbound < oldub && newbound * oldub <= 0.0));
 
-   SCIPsetDebugMsg(set, "adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
+   SCIPsetDebugMsg(set, "adding boundchange at node %" SCIP_LONGINT_FORMAT " at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
       node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, infercons != NULL ? "cons" : "prop",
       infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo);
