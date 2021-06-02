@@ -1766,7 +1766,7 @@ SCIP_RETCODE SCIPeventProcess(
       break;
 
    default:
-      SCIPerrorMessage("unknown event type <%d>\n", event->eventtype);
+      SCIPerrorMessage("unknown event type <%" SCIP_EVENTTYPE_FORMAT ">\n", event->eventtype);
       return SCIP_INVALIDDATA;
    }
 
@@ -1989,8 +1989,8 @@ SCIP_RETCODE SCIPeventfilterDel(
       filterpos = eventfilterSearch(eventfilter, eventtype, eventhdlr, eventdata);
    if( filterpos == -1 )
    {
-      SCIPerrorMessage("no event for event handler %p with data %p and event mask 0x%x found in event filter %p\n",
-         eventhdlr, eventdata, eventtype, eventfilter);
+      SCIPerrorMessage("no event for event handler %p with data %p and event mask 0x%lx found in event filter %p\n",
+         (void*)eventhdlr, (void*)eventdata, eventtype, (void*)eventfilter);
       return SCIP_INVALIDDATA;
    }
    assert(0 <= filterpos && filterpos < eventfilter->len);
@@ -2458,7 +2458,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
          break;
 
       default:
-         SCIPerrorMessage("unknown event type <%d>\n", (*event)->eventtype);
+         SCIPerrorMessage("unknown event type <%" SCIP_EVENTTYPE_FORMAT ">\n", (*event)->eventtype);
          return SCIP_INVALIDDATA;
       }
    }

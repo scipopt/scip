@@ -265,7 +265,7 @@ SCIP_RETCODE visualizeSolutionAscii(
    picture[width/2-8+i] = '*';
 
    /* show plot */
-   SCIPinfoMessage(scip, NULL, picture);
+   SCIPinfoMessage(scip, NULL, "%s", picture);
 
    SCIPfreeBufferArray(scip, &picture);
 

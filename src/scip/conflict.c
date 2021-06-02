@@ -6922,12 +6922,12 @@ SCIP_RETCODE addLocalRows(
       if( !infdelta && SCIPsetIsInfinity(set, REALABS(*proofact)) )
       {
          *valid = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %d]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
+         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %u]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
       }
       else if( infdelta || SCIPsetIsLE(set, *proofact, SCIPaggrRowGetRhs(proofrow)) )
       {
          *valid = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %d]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
+         SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g [infdelta: %u]\n", *proofact, SCIPaggrRowGetRhs(proofrow), infdelta);
       }
    }
 
@@ -7073,7 +7073,7 @@ SCIP_RETCODE getFarkasProof(
    /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
    *farkasact = aggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs, &infdelta);
 
-   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
       (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
 
    /* The constructed proof is not valid, this can happen due to numerical reasons,
@@ -7093,8 +7093,7 @@ SCIP_RETCODE getFarkasProof(
       else
       {
          (*valid) = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
-            *farkasact, SCIPaggrRowGetRhs(farkasrow));
+         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
 
@@ -7298,7 +7297,7 @@ SCIP_RETCODE getDualProof(
    /* check validity of the proof */
    *farkasact = aggrRowGetMinActivity(set, transprob, farkasrow, curvarlbs, curvarubs, &infdelta);
 
-   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %d], \n",
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
       (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
 
    /* The constructed proof is not valid, this can happen due to numerical reasons,
@@ -7318,8 +7317,7 @@ SCIP_RETCODE getDualProof(
       else
       {
          (*valid) = FALSE;
-         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n",
-            *farkasact, SCIPaggrRowGetRhs(farkasrow));
+         SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
 

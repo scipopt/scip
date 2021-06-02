@@ -77,11 +77,6 @@ override VERSION	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* VERSION=\([^@]*\
 override ZIMPL		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZIMPL=\([^@]*\).*/\1/')
 override ZIMPLOPT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZIMPLOPT=\([^@]*\).*/\1/')
 override ZLIB		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZLIB=\([^@]*\).*/\1/')
-ifneq ($(OPT), dbg)
-$(error Please compile SCIP with OPT=dbg)
-endif
-else
-override OPT	=	dbg
 endif
 
 #-----------------------------------------------------------------------------
@@ -229,13 +224,13 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX_o)$@
 
 $(LPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) LPS=$(LPS))
 $(SCIPLIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED))
 $(NLPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) IPOPT=$(IPOPT))
 $(TPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS) TPI=$(TPI))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) TPI=$(TPI))
 
 -include	$(UNITTESTSDEP)
 

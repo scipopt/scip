@@ -1012,12 +1012,13 @@ SCIP_RETCODE readCoefficients(
          /* check whether we found an objective offset */
          if( isobjective && havevalue && var == NULL )
          {
+            assert( objoffset != NULL );
             if( haveobjoffset )
             {
                syntaxError(scip, lpinput, "two objective offsets.");
                return SCIP_OKAY;
             }
-            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", coefsign * coef);
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * coef);
             haveobjoffset = TRUE;
             *objoffset = coefsign * coef;
          }
@@ -1069,13 +1070,14 @@ SCIP_RETCODE readCoefficients(
          }
          else if( isobjective && havevalue && !SCIPisZero(scip, coef) )
          {
+            assert( objoffset != NULL );
             /* check whether we found an objective offset */
             if( haveobjoffset )
             {
                syntaxError(scip, lpinput, "two objective offsets.");
                return SCIP_OKAY;
             }
-            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", coefsign * coef);
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * coef);
             *objoffset = coefsign * coef;
          }
 
@@ -1476,7 +1478,12 @@ SCIP_RETCODE createIndicatorConstraint(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(scip, lpinput) || !isSense(lpinput, &linsense) )
+   if( !getNextToken(scip, lpinput) )
+   {
+      syntaxError(scip, lpinput, "missing constraint sense.");
+      goto TERMINATE;
+   }
+   if( !isSense(lpinput, &linsense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
@@ -1650,7 +1657,12 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(scip, lpinput) || !isSense(lpinput, &sense) )
+   if( !getNextToken(scip, lpinput) )
+   {
+      syntaxError(scip, lpinput, "missing constraint sense.");
+      goto TERMINATE;
+   }
+   if( !isSense(lpinput, &sense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;

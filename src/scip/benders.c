@@ -795,7 +795,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
 
          (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
          len += 2;
-         strncpy(prefix, tmpprefix, len); /*lint !e732*/
+         (void) strncpy(prefix, tmpprefix, len); /*lint !e732*/
 
          j++;
       }
@@ -3393,7 +3393,7 @@ SCIP_RETCODE solveBendersSubproblems(
    }
 
    /* setting the input parameters to the local variables */
-   SCIPsetDebugMsg(set, "Local variable values: nverified %d infeasible %d optimal %d stopped %d\n", locnverified,
+   SCIPsetDebugMsg(set, "Local variable values: nverified %d infeasible %u optimal %u stopped %u\n", locnverified,
       locinfeasible, locoptimal, locstopped);
    *nverified = locnverified;
    *infeasible = locinfeasible;
@@ -3652,7 +3652,7 @@ SCIP_RETCODE SCIPbendersExec(
    success = TRUE;
    stopped = FALSE;
 
-   SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %d\n", type, checkint);
+   SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %u\n", type, checkint);
 
 #ifdef SCIP_MOREDEBUG
    SCIP_CALL( SCIPprintSol(set->scip, sol, NULL, FALSE) );
@@ -3880,7 +3880,7 @@ SCIP_RETCODE SCIPbendersExec(
 
    allverified = (nverified == nsubproblems);
 
-   SCIPsetDebugMsg(set, "End Benders' decomposition subproblem solve. result %d infeasible %d auxviol %d nverified %d\n",
+   SCIPsetDebugMsg(set, "End Benders' decomposition subproblem solve. result %d infeasible %u auxviol %u nverified %d\n",
       *result, *infeasible, *auxviol, nverified);
 
 #ifdef SCIP_DEBUG
@@ -4058,7 +4058,7 @@ TERMINATE:
    /* increment the number of calls to the Benders' decomposition subproblem solve */
    benders->ncalls++;
 
-   SCIPsetDebugMsg(set, "End Benders' decomposition execution method. result %d infeasible %d auxviol %d\n", *result,
+   SCIPsetDebugMsg(set, "End Benders' decomposition execution method. result %d infeasible %u auxviol %u\n", *result,
       *infeasible, *auxviol);
 
    /* end timing */
@@ -4108,7 +4108,7 @@ TERMINATE:
       SCIP_Bool activeslack;
 
       SCIP_CALL( SCIPbendersSolSlackVarsActive(benders, &activeslack) );
-      SCIPsetDebugMsg(set, "Type: %d Active slack: %d Feasibility Phase: %d\n", type, activeslack,
+      SCIPsetDebugMsg(set, "Type: %d Active slack: %u Feasibility Phase: %u\n", type, activeslack,
          benders->feasibilityphase);
       if( activeslack )
       {
@@ -6585,7 +6585,7 @@ void SCIPbendersSetSubproblemIsIndependent(
     */
    if( benders->benderssolvesubconvex != NULL || benders->benderssolvesub != NULL || benders->bendersfreesub != NULL )
    {
-      SCIPerrorMessage("The user has defined either bendersSolvesubconvex%d, bendersSolvesub%d or bendersFreesub%s. "
+      SCIPerrorMessage("The user has defined either bendersSolvesubconvex%s, bendersSolvesub%s or bendersFreesub%s. "
          "Thus, it is not possible to declare the independence of a subproblem.\n", benders->name, benders->name,
          benders->name);
       SCIPABORT();

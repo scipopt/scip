@@ -9411,7 +9411,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
       if( conshdlrdata->nlconsupgrades[i]->nlconsupgd == nonlinconsupgd && conshdlrdata->nlconsupgrades[i]->nodereform == nodereform)
       {
 #ifdef SCIP_DEBUG
-         SCIPwarningMessage(scip, "Try to add already known upgrade method pair (%p,%p) for constraint handler <%s>.\n", nonlinconsupgd, nodereform, conshdlrname); /*lint !e611*/
+         SCIPwarningMessage(scip, "Try to add already known upgrade method pair for constraint handler <%s>.\n", conshdlrname); /*lint !e611*/
 #endif
          return SCIP_OKAY;
       }

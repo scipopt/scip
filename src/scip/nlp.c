@@ -2648,7 +2648,7 @@ SCIP_RETCODE SCIPnlrowDelQuadElement(
    pos = nlrowSearchQuadElem(nlrow, idx1, idx2);
    if( pos == -1 )
    {
-      SCIPerrorMessage("coefficient for index pair (idx1, idx2) doesn't exist in nonlinear row <%s>\n", idx1, idx2, nlrow->name);
+      SCIPerrorMessage("coefficient for index pair (%d, %d) doesn't exist in nonlinear row <%s>\n", idx1, idx2, nlrow->name);
       return SCIP_INVALIDDATA;
    }
    assert(0 <= pos && pos < nlrow->nquadelems);
@@ -5046,7 +5046,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else
    {
-      SCIPerrorMessage("unexpected event %d on variable <%s>\n", etype, SCIPvarGetName(var) );
+      SCIPerrorMessage("unexpected event %" SCIP_EVENTTYPE_FORMAT " on variable <%s>\n", etype, SCIPvarGetName(var) );
       return SCIP_ERROR;
    }
 

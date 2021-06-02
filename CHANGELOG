@@ -73,6 +73,9 @@ Interface changes
 - new internal function SCIPcomputeOrbitVar() to compute the symmetry orbit of a variable
 - added SCIPcalcFibHash(SCIP_Real) to hash a floating-point value to an unsigned integer
 - added SCIPcomputeArraysIntersectionPtr() to compute intersection of two sorted arrays of pointers
+- added SCIPcreateConsIndicatorGeneric() and SCIPcreateConsIndicatorGenericLinCons()
+  which copy the interface of SCIPcreateConsIndicator() and SCIPcreateConsIndicatorLinCons() and
+  add an activeone argument to specify whether the indicator constraint should be activated on 0 or 1.
 - added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
 - added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
 
@@ -125,6 +128,8 @@ Interface changes
 Deleted files
 -------------
 
+- interfaces/gams/*
+
 Unit tests
 ----------
 
@@ -163,48 +168,24 @@ Known bugs
 @section RN703 SCIP 7.0.3
 *************************
 
-Features
---------
-
-Performance improvements
-------------------------
-
-Examples and applications
--------------------------
-
 Interface changes
 -----------------
 
-### New and changed callbacks
-
-### Deleted and changed API methods
-
 ### New API functions
+
 - added function SCIPwithDebugSol() to determine whether SCIP was compiled with WITH_DEBUG_SOLUTION
 
 - New function SCIPcreateConsBounddisjunctionRedundant() and SCIPcreateConsBasicBounddisjunctionRedundant() that allow
   the input to contain redundant literals.
 
-### Command line interface
+### Changed API functions
+
+- added __attribute__((format(printf,,,))) to variadic SCIP message printing functions;
+  this enables warnings about mismatches between format string and variadic function arguments if using GCC.
 
 ### Interfaces to external software
 
 - removed MATLAB interface from interfaces/matlab
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
 
 Build system
 ------------
@@ -214,8 +195,6 @@ Build system
 ### Cmake
 
 - Make find_package more verbose and require packages to be found. Now enabled packages that are not found result in an error.
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -238,7 +217,8 @@ Fixed bugs
 - Fixed bug in cons_symresack by initializing all constraint data in constrans
 - Avoid allowing the upgrade of linear constraints corresponding to indicators in propagation of nodes.
 - Fixed bug in computing lex. min/max faces in dynamic orbitope propagation.
-
+- Limit vbounds propagator to one sweep through all bounds per call in order to avoid an infinite loop.
+- Fixed mismatches between formatter strings and arguments in calls to SCIP message printing functions.
 
 Miscellaneous
 -------------
@@ -246,9 +226,7 @@ Miscellaneous
 - To avoid performance variablity during reoptimization, the active constraints are now stored in the same order as in the
   original problem.
 - Added workaround for bug in MSVS 2019 when compiling CppAD source.
-
-Known bugs
-----------
+- The original order of variables is now only restored after presolve if `randomization/permutevars` is set to FALSE.
 
 @section RN702 SCIP 7.0.2
 *************************
