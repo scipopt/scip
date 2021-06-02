@@ -48,6 +48,7 @@
 
 /* #define PARSE_DEBUG */
 
+/*lint -e440*/
 /*lint -e441*/
 
 /*
@@ -123,6 +124,7 @@ SCIP_DECL_EXPR_MAPEXPR(copyVarExpr)
 
 /*lint -emacro(681,debugParse) */
 /*lint -emacro(506,debugParse) */
+/*lint -emacro(774,debugParse) */
 #ifdef PARSE_DEBUG
 #define debugParse                      printf
 #else

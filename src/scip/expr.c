@@ -36,6 +36,7 @@
 #include "scip/struct_stat.h"
 #include "scip/nlpi_ipopt.h" /* for LAPACK */
 
+/*lint -e440*/
 /*lint -e441*/
 /*lint -e777*/
 
@@ -2246,7 +2247,7 @@ SCIP_RETCODE SCIPexprPrintDotInit2(
    (*printdata)->closefile = TRUE;
 
    return SCIP_OKAY;
-}
+} /*lint !e429*/
 
 /** main part of printing an expression in dot format */
 SCIP_RETCODE SCIPexprPrintDot(

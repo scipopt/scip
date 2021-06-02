@@ -39,6 +39,7 @@
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(47161.0)
 
 /** macro to activate/deactivate debugging information of simplify method */
+/*lint -emacro(774,debugSimplify) */
 #ifdef SIMPLIFY_DEBUG
 #define debugSimplify                   printf
 #else

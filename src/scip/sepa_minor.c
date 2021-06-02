@@ -180,7 +180,7 @@ SCIP_Bool isPackingCons(
    if( nchildren != 6 || !SCIPisExprSum(scip, root) )
       return FALSE;
 
-   for( i = 0; i < nchildren && (nbilinvars <= 4 && nquadvars <= 4); ++i )
+   for( i = 0; i < nchildren; ++i )
    {
       SCIP_EXPR* expr;
       SCIP_EXPR** children;
@@ -197,7 +197,7 @@ SCIP_Bool isPackingCons(
          SCIP_VAR* x;
 
          /* too many quadratic variables -> stop */
-         if( nquadvars == 4 )
+         if( nquadvars > 3 )
             return FALSE;
 
          x = SCIPgetVarExprVar(children[0]);
@@ -213,7 +213,7 @@ SCIP_Bool isPackingCons(
          SCIP_VAR* y;
 
          /* too many bilinear variables -> stop */
-         if( nbilinvars == 4 )
+         if( nbilinvars > 2 )
             return FALSE;
 
          x = SCIPgetVarExprVar(children[0]);
@@ -356,7 +356,7 @@ SCIP_RETCODE detectMinors(
          continue;
       }
 
-      for( expr = SCIPexpriterRestartDFS(it, root); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, root); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/ /*lint !e440*/
       {
          SCIP_EXPR** children;
          SCIP_VAR* auxvar;
@@ -692,7 +692,7 @@ SCIP_RETCODE separatePoint(
       {
          SCIPdebugMsg(scip, "eigenvalue = %g  eigenvector = (%g,%g,%g)\n", eigenvals[k], eigenvecs[3*k], eigenvecs[3*k + 1], eigenvecs[3*k + 2]);
          SCIP_CALL( addCut(scip, sepa, sol, x, y, xx, yy, xy, &eigenvecs[3*k], eigenvals[k], sepadata->mincutviol, result) );
-         SCIPdebugMsg(scip, "result: %u\n", *result);
+         SCIPdebugMsg(scip, "result: %d\n", *result);
       }
    }
 

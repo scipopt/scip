@@ -118,6 +118,7 @@ void printBacktraces(
 #else
 #define storeBacktrace(subscipdepth, iterpos)
 
+/*lint -e{715}*/
 static
 void printBacktraces(
    int                   subscipdepth        /**< current subscip depth */
@@ -1008,7 +1009,7 @@ SCIP_EXPR* SCIPexpriterSkipDFS(
 
       case SCIP_EXPRITER_LEAVEEXPR :
       default :
-         SCIPerrorMessage("SCIPexpriterSkipDFS called in invalid stage %d", iterator->dfsstage);
+         SCIPerrorMessage("SCIPexpriterSkipDFS called in invalid stage %u", iterator->dfsstage);
          SCIPABORT();
          return iterator->curr;
    }

@@ -213,7 +213,7 @@ SCIP_RETCODE generateCut(
    SCIP_CALL( SCIPevalExprGradient(scip, expr, projection, 0L) );
 
    SCIP_CALL( SCIPexpriterInit(exprit, expr, SCIP_EXPRITER_DFS, FALSE) );
-   for( ; !SCIPexpriterIsEnd(exprit); expr = SCIPexpriterGetNext(exprit) )  /*lint !e441*/
+   for( ; !SCIPexpriterIsEnd(exprit); expr = SCIPexpriterGetNext(exprit) )  /*lint !e441*/ /*lint !e440*/
    {
       SCIP_Real grad;
       SCIP_VAR* var;

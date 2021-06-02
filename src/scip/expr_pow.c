@@ -2195,7 +2195,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
 
       if( success )
       {
-         SCIPdebugMsg(scip, "initestimate x^%g for base in [%g,%g] at ref=%g, over:%d -> %g*x+%g\n", exponent, childlb, childub, refpoint, overest[i], coefs[*nreturned][0], constant[*nreturned]);
+         SCIPdebugMsg(scip, "initestimate x^%g for base in [%g,%g] at ref=%g, over:%u -> %g*x+%g\n", exponent, childlb, childub, refpoint, overest[i], coefs[*nreturned][0], constant[*nreturned]);
          ++*nreturned;
       }
    }
@@ -3073,12 +3073,12 @@ SCIP_RETCODE SCIPcreateExprSignpower(
    return SCIP_OKAY;
 }
 
-/** indicates whether expression is of signpower-type */
+/** indicates whether expression is of signpower-type */  /*lint -e{715}*/
 SCIP_Bool SCIPisExprSignpower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr                /**< expression */
    )
-{
+{ /*lint --e{715}*/
    assert(expr != NULL);
 
    return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME) == 0;
@@ -3086,7 +3086,7 @@ SCIP_Bool SCIPisExprSignpower(
 
 /* from pub_expr.h */
 
-/** gets the exponent of a power or signed power expression */
+/** gets the exponent of a power or signed power expression */  /*lint -e{715}*/
 SCIP_Real SCIPgetExponentExprPow(
    SCIP_EXPR*            expr                /**< expression */
    )

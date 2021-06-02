@@ -424,7 +424,7 @@ SCIP_RETCODE processNlRow(
 
          SCIP_CALL( SCIPcreateExpriter(scip, &it) );
          SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
-         for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
+         for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/ /*lint !e440*/
          {
             if( !SCIPisExprVar(scip, expr) )
                continue;

@@ -47,6 +47,7 @@
 /** macro to activate/deactivate debugging information of simplify method */
 /*lint -emacro(681,debugSimplify) */
 /*lint -emacro(506,debugSimplify) */
+/*lint -emacro(774,debugSimplify) */
 #ifdef SIMPLIFY_DEBUG
 #define debugSimplify                   printf
 #else

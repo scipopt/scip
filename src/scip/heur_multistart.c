@@ -281,7 +281,7 @@ SCIP_RETCODE computeGradient(
 
       /* TODO: change this when nlrows store the vars */
       SCIP_CALL( SCIPexpriterInit(exprit, expr, SCIP_EXPRITER_DFS, FALSE) );
-      for( ; !SCIPexpriterIsEnd(exprit); expr = SCIPexpriterGetNext(exprit) )  /*lint !e441*/
+      for( ; !SCIPexpriterIsEnd(exprit); expr = SCIPexpriterGetNext(exprit) )  /*lint !e441*/ /*lint !e440*/
       {
          if( !SCIPisExprVar(scip, expr) )
             continue;

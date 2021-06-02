@@ -262,12 +262,12 @@ SCIP_RETCODE SCIPcreateExprVaridx(
    return SCIP_OKAY;
 }
 
-/** indicates whether expression is varidx expression */
+/** indicates whether expression is varidx expression */  /*lint -e{715}*/
 SCIP_Bool SCIPisExprVaridx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr                /**< expression */
    )
-{
+{ /*lint --e{715}*/
    assert(expr != NULL);
 
    /* quick inconclusive check first */

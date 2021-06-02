@@ -80,6 +80,7 @@ struct SCIP_NlpiOracle
 
 /**@} */
 
+/*lint -e440*/
 /*lint -e441*/
 /*lint -e866*/
 
@@ -1696,14 +1697,13 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
    return SCIP_OKAY;
 }
 
-/** changes the constant value in the objective function
- */
+/** changes the constant value in the objective function */ /*lint -e{715}*/
 SCIP_RETCODE SCIPnlpiOracleChgObjConstant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real             objconstant         /**< new value for objective constant */
    )
-{
+{ /*lint --e{715}*/
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p chg obj constant\n", (void*)oracle);

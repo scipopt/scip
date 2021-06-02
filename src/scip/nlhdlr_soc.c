@@ -2078,7 +2078,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
       assert(lhsissoc);
 
       /* lhs is potentially SOC, change signs */
-      lhsconstant = lhs - constant;
+      lhsconstant = lhs - constant;  /*lint !e644*/
 
       for( i = 0; i < nvars; ++i )
       {
@@ -2089,7 +2089,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    }
    else
    {
-      lhsconstant = constant - rhs;
+      lhsconstant = constant - rhs;  /*lint !e644*/
       *enforcebelow = TRUE; /* enforce expr <= rhs */
    }
 
@@ -2556,7 +2556,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
 
          cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
 
-         SCIPdebugMsg(scip, "generated row for %d-SOC, efficacy=%g, minefficacy=%g, allowweakcuts=%d\n",
+         SCIPdebugMsg(scip, "generated row for %d-SOC, efficacy=%g, minefficacy=%g, allowweakcuts=%u\n",
             nlhdlrexprdata->nterms, cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
 
          /* check whether cut is applicable */
@@ -2595,7 +2595,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
    if( !SCIProwIsInLP(nlhdlrexprdata->disrow) && -SCIPgetRowSolFeasibility(scip, nlhdlrexprdata->disrow, sol) > SCIPgetLPFeastol(scip) )
    {
       SCIP_CALL( SCIPaddRow(scip, nlhdlrexprdata->disrow, TRUE, &infeasible) );
-      SCIPdebugMsg(scip, "added disaggregation row to LP, cutoff=%d\n", infeasible);
+      SCIPdebugMsg(scip, "added disaggregation row to LP, cutoff=%u\n", infeasible);
 
       if( infeasible )
       {
@@ -2619,7 +2619,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
 
          cutefficacy = SCIPgetCutEfficacy(scip, sol, row);
 
-         SCIPdebugMsg(scip, "generated row for disaggregation %d, efficacy=%g, minefficacy=%g, allowweakcuts=%d\n",
+         SCIPdebugMsg(scip, "generated row for disaggregation %d, efficacy=%g, minefficacy=%g, allowweakcuts=%u\n",
             k, cutefficacy, nlhdlrdata->mincutefficacy, allowweakcuts);
 
          /* check whether cut is applicable */

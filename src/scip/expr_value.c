@@ -103,7 +103,7 @@ SCIP_DECL_EXPREVAL(evalValue)
    assert(expr != NULL);
 
    exprdata = SCIPexprGetData(expr);
-   memcpy(val, &exprdata, sizeof(SCIP_Real));
+   memcpy(val, &exprdata, sizeof(SCIP_Real)); /*lint !e857*/
 
    return SCIP_OKAY;
 }
@@ -145,7 +145,7 @@ SCIP_DECL_EXPRINTEVAL(intevalValue)
    assert(expr != NULL);
 
    exprdata = SCIPexprGetData(expr);
-   memcpy(&val, &exprdata, sizeof(SCIP_Real));
+   memcpy(&val, &exprdata, sizeof(SCIP_Real)); /*lint !e857*/
 
    SCIPintervalSet(interval, val);
 
@@ -246,8 +246,8 @@ SCIP_RETCODE SCIPcreateExprValue(
    assert(expr != NULL);
    assert(SCIPisFinite(value));
 
-   assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*));
-   memcpy(&exprdata, &value, sizeof(SCIP_Real));
+   assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*)); /*lint !e506*/
+   memcpy(&exprdata, &value, sizeof(SCIP_Real)); /*lint !e857*/
 
    SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrValue(scip), exprdata, 0, NULL, ownercreate, ownercreatedata) );
 
@@ -264,10 +264,10 @@ SCIP_Real SCIPgetValueExprValue(
    SCIP_EXPRDATA* exprdata;
    SCIP_Real v;
 
-   assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*));
+   assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*)); /*lint !e506*/
 
    exprdata = SCIPexprGetData(expr);
-   memcpy(&v, &exprdata, sizeof(SCIP_Real));
+   memcpy(&v, &exprdata, sizeof(SCIP_Real));  /*lint !e857*/
 
    return v;
 }

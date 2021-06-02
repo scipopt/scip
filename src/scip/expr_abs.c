@@ -322,7 +322,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
       }
    }
 
-   SCIPdebugMsg(scip, "-> %g * <child> %+g, local=%d branchcand=%d\n", *coefs, *constant, *islocal, *branchcand);
+   SCIPdebugMsg(scip, "-> %g * <child> %+g, local=%u branchcand=%u\n", *coefs, *constant, *islocal, *branchcand);
 
    *success = TRUE;
 

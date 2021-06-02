@@ -512,19 +512,16 @@ SCIP_RETCODE nlrowaggrCreate(
       for( j = 0; j < nadjbilin; ++j )
       {
          SCIP_EXPR* qterm1;
-         SCIP_Real coef;
          int pos2;
          int idx2;
 
-         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, NULL, &coef, &pos2, NULL);
+         SCIPexprGetQuadraticBilinTerm(expr, adjbilin[j], &qterm1, NULL, NULL, &pos2, NULL);
 
          /* only handle qterm1 == qterm here; the other case will be handled when its turn for qterm2 to be qterm */
          if( qterm1 != qterm )
             continue;
 
          idx2 = quadvar2aggr[pos2];
-         if( rhsaggr )
-            coef = -coef;
 
          /* variables have to belong to the same e.c. aggregation; bilinear term has to be concave */
          if( idx1 >= 0 && idx2 >= 0 && idx1 == idx2 )
@@ -1302,7 +1299,6 @@ SCIP_RETCODE searchEcAggrWithMIP(
  */
 static
 SCIP_RETCODE createTcliqueGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< nonlinear row  */
    TCLIQUE_GRAPH**       graph,              /**< TCLIQUE graph structure */
    SCIP_Real*            nodeweights         /**< weights for each quadratic variable (nodes in the graph) */
@@ -1364,7 +1360,7 @@ SCIP_RETCODE createTcliqueGraph(
             continue;
 
 #ifdef SCIP_DEBUG_DETAILED
-         SCIPdebugMsg(scip, "   add edge (%d, %d) = (%s,%s) to tclique graph\n",
+         SCIPdebugMessage("   add edge (%d, %d) = (%s,%s) to tclique graph\n",
             SCIPvarGetIndex(SCIPgetVarExprVar(qterm1)), SCIPvarGetIndex(SCIPgetVarExprVar(qterm2)),
             SCIPvarGetName(SCIPgetVarExprVar(qterm1)), SCIPvarGetName(SCIPgetVarExprVar(qterm2)));
 #endif
@@ -1662,7 +1658,7 @@ SCIP_RETCODE doSeachEcAggr(
          /* create graph if necessary */
          if( graph == NULL )
          {
-            SCIP_CALL_TERMINATE( retcode, createTcliqueGraph(scip, nlrow, &graph, nodeweights), TERMINATE );
+            SCIP_CALL_TERMINATE( retcode, createTcliqueGraph(nlrow, &graph, nodeweights), TERMINATE );
          }
 
          /* 2.a - search and store a single edge-concave aggregation by computing a clique with a good cycle */

@@ -21,14 +21,16 @@
 
 #include "scip/nlpi_worhp.h"
 
-/** create solver interface for Worhp solver and includes it into SCIP, if Worhp is available */
+/** create solver interface for Worhp solver and includes it into SCIP, if Worhp is available */  /*lint -e{715}*/
 SCIP_RETCODE SCIPincludeNlpSolverWorhp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    )
-{
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** gets string that identifies Worhp (version number) */
 const char* SCIPgetSolverNameWorhp(void)
