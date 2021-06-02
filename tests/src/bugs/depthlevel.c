@@ -119,6 +119,6 @@ Test(depthlevel, hit_depth_limit, .description = "show problem when hitting dept
    /* check for memory leaks */
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 
-   if(retcode==SCIP_OKAY)
+   if( retcode == SCIP_OKAY )
       abort();
 }
