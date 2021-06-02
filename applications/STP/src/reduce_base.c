@@ -304,38 +304,6 @@ SCIP_RETCODE execPc_SD(
    return SCIP_OKAY;
 }
 
-#if 0
-static
-SCIP_RETCODE execPc_SDSP(
-   SCIP*                 scip,
-   GRAPH*                g,
-   PATH*                 pathtail,
-   PATH*                 pathhead,
-   int*                  heap,
-   int*                  statetail,
-   int*                  statehead,
-   int*                  memlbltail,
-   int*                  memlblhead,
-   int*                  nelims,
-   int                   limit,
-   int*                  edgestate,
-   int                   redbound,          /**< reduction bound */
-   SCIP_Bool             verbose,           /**< be verbose? */
-   SCIP_Bool*            rerun              /**< use again? */
-)
-{
-   SCIP_CALL( reduce_sdsp(scip, g, pathtail, pathhead, heap, statetail, statehead, memlbltail, memlblhead, nelims,
-         limit, edgestate) );
-
-   if( verbose )
-      printf("pc_SDSP eliminations: %d \n", *nelims);
-
-   if( *nelims <= redbound )
-      *rerun = FALSE;
-
-   return SCIP_OKAY;
-}
-#endif
 
 static
 SCIP_RETCODE execPc_BDk(

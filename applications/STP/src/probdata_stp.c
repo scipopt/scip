@@ -1184,14 +1184,14 @@ SCIP_RETCODE createVariables(
    int k2;
    int tail;
    char varname[SCIP_MAXSTRLEN];
-   SCIP_Bool objint = SCIPisIntegral(scip, offset);;
+   SCIP_Bool objint = SCIPisIntegral(scip, offset);
 
    assert(scip != NULL);
    assert(probdata != NULL);
 
    t = 0;
    graph = probdata->graph;
-   SCIPdebugMessage("createVariables \n");
+   SCIPdebugMessage("create Variables \n");
 
    /* nontrivial problem? */
    if( !probdata->graphHasVanished )
