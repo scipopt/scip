@@ -3000,7 +3000,7 @@ void checkConsnames(
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
-         SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
+         SCIP_Real rhs = SCIPgetRhsLinear(scip, cons);
 
          /* for ranged constraints, we need to be able to append _lhs and _rhs to the constraint name, so need additional 4 characters */
          if( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > (size_t) PIP_MAX_NAMELEN -  4 )

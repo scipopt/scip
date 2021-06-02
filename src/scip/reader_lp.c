@@ -3367,7 +3367,7 @@ void checkConsnames(
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
-         SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
+         SCIP_Real rhs = SCIPgetRhsLinear(scip, cons);
 
          if( (SCIPisEQ(scip, lhs, rhs) && len > LP_MAX_NAMELEN) || ( !SCIPisEQ(scip, lhs, rhs) && len > LP_MAX_NAMELEN - 4) )
          {
