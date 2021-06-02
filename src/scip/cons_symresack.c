@@ -2552,9 +2552,9 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       /* Up to entry varrow the vectors x and perm[x] are fixed to the same value. */
       assert( ISFIXED(vars[i], bdchgidx) );
       assert( ISFIXED(vars[invperm[i]], bdchgidx) );
-      assert( fabs(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) -
+      assert( REALABS(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) -
          SCIPvarGetUbAtIndex(vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
-      assert( fabs(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) -
+      assert( REALABS(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) -
          SCIPvarGetLbAtIndex(vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
 
       /* At iteration i the vars x[i] and x[invperm[i]] are fixed.
