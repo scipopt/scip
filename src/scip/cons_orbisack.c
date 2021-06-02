@@ -841,7 +841,7 @@ SCIP_RETCODE propVariables(
          if ( peekinfeasible )
          {
             /* If row i is constant, then we end up in an infeasible solution. Hence, row i must be (1, 0). */
-            SCIPdebugMsg(scip, "Making row constant is infeasible. Fix to (1, 0).\n", i);
+            SCIPdebugMsg(scip, "Making row %d constant is infeasible. Fix to (1, 0).\n", i);
 
             assert( peekinfeasiblerow > i );
             assert( peekinfeasiblerow < nrows );
@@ -937,7 +937,7 @@ SCIP_RETCODE propVariables(
       /* Remaining cases are (0, 0) and (1, 1). In these cases we can continue! */
    }
 
-   SCIPdebugMsg(scip, "No further fixings possible.\n", i);
+   SCIPdebugMsg(scip, "No further fixings possible. Stopping at row %d\n", i);
    return SCIP_OKAY;
 }
 
