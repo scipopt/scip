@@ -29,7 +29,6 @@
 #include "scip/cons_expr.c"
 #include "scip/cons_expr_nlhdlr_quadratic.c"
 
-
 /*
  * TEST
  */
@@ -2492,6 +2491,96 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
 
    SCIP_CALL( SCIPendProbing(scip) );
 
+
+   /* register enforcer info in expr and free */
+   registerAndFree(cons, nlhdlrexprdata);
+}
+
+/* test that stored rays are
+ * x    1     0     0     0
+ * y  = 0 x + 1 y + 0 w + 0 z
+ * z    0     0     0     1
+ */
+Test(interCuts, testBoundRays1)
+{
+   SCIP_Bool cutoff;
+   SCIP_Bool lperror;
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONS* cons;
+   SCIP_SOL* sol;
+   SCIP_SOL* vertex;
+
+   /* simplify and detect quadratic structure in: 6xy + 2x^2 -2z^2 + 2 <= 0 */
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
+
+   /*
+    * build LP
+    */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
+   cr_assert_not(cutoff);
+
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* add bounds to vars */
+   SCIPchgVarLbProbing(scip, x, -1.0); SCIPchgVarUbProbing(scip, x, 10.0);
+   SCIPchgVarLbProbing(scip, y, -2.0); SCIPchgVarUbProbing(scip, y, 9.0);
+   SCIPchgVarLbProbing(scip, z, 1.0);
+
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
+   cr_expect_not(cutoff);
+   cr_expect_not(lperror);
+
+   /* choose solution to separate */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 4.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, 6.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
+
+   /* the vertex we separate is {-1.0, 9.0, -, 1.0, -, -}
+    * and bound rays are
+    * x    1      0     0
+    * y  = 0 x + -1 y + 0 z
+    * z    0      0     1
+    */
+   {
+      SCIP_Real expectedvertexcoefs[6] = {-1.0, 9.0, 0.0, 1.0, 0.0, 0.0};
+      SCIP_Real expectedrayscoefs[8] = {1.0, -1.0, 1.0};
+      int expectedraysidx[3] = {0, 1, 2};
+      int expectedlppos[3] = {0, 1, 3};
+      int expectedbegin[4] = {0, 1, 2, 3};
+      int expectednrays = 3;
+      int expectednnonz = 3;
+      int expectedncols = 3;
+      SCIP_VAR* vars[6] = {x, y, w, z, s, t};
+      SCIP_VAR* consvars[3] = {x, y, z};
+
+      /*
+      * find and test nearest vertex and rays
+      */
+      SCIP_CALL( SCIPcreateSol(scip, &vertex, NULL) );
+      SCIP_CALL( findVertexAndGetRays(scip, nlhdlrexprdata, sol, vertex, NULL, &myrays) );
+
+      for( int i = 0; i < 6; ++i )
+      {
+         cr_expect_float_eq(SCIPgetSolVal(scip, vertex, vars[i]), expectedvertexcoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
+            expectedvertexcoefs[i], SCIPgetSolVal(scip, vertex, vars[i]));
+      }
+
+      cr_expect_eq(myrays->nrays, expectednrays, "e %d g %d\n", expectednrays, myrays->nrays);
+      cr_expect_eq(myrays->raysbegin[myrays->nrays], expectednnonz, "e %d g %d\n", expectednnonz, myrays->raysbegin[myrays->nrays]);
+
+      for( int i = 0; i < expectednnonz; ++i )
+      {
+         cr_expect_float_eq(myrays->rays[i], expectedrayscoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
+            expectedrayscoefs[i], myrays->rays[i]);
+      }
+      //cr_expect_arr_eq(myrays->raysidx, expectedraysidx, expectednnonz * sizeof(int));
+      //cr_expect_arr_eq(myrays->lpposray, expectedlppos, expectednrays * sizeof(int));
+      //cr_expect_arr_eq(myrays->raysbegin, expectedbegin, (expectednrays + 1) * sizeof(int));
+   }
+
+   /* end probing mode */
+   SCIP_CALL( SCIPendProbing(scip) );
 
    /* register enforcer info in expr and free */
    registerAndFree(cons, nlhdlrexprdata);
