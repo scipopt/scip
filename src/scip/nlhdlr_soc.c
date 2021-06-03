@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,6 +27,7 @@
  * Note that v_i, for i <= n, could be 0, thus allowing a positive constant term inside the root.
  *
  * @note: this nlhdlr does not handle constraints of the form \f$\sqrt{ \sum_i (a_i x_i + b_i)^2\| \leq a_n x_n+ b_n\f$
+ * @todo: the formula directly above is not complete
  * as the default nlhdlr will do an extended formulation.
  *
  * @todo: test if it makes sense to only disaggregate when nterms > some parameter
@@ -46,10 +47,10 @@
 
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME           "soc"
-#define NLHDLR_DESC           "nonlinear handler for second-order cone structures"
-#define NLHDLR_DETECTPRIORITY       100
-#define NLHDLR_ENFOPRIORITY         100
+#define NLHDLR_NAME               "soc"
+#define NLHDLR_DESC               "nonlinear handler for second-order cone structures"
+#define NLHDLR_DETECTPRIORITY       100 /**< priority of the nonlinear handler for detection */
+#define NLHDLR_ENFOPRIORITY         100 /**< priority of the nonlinear handler for enforcement */
 #define DEFAULT_MINCUTEFFICACY     1e-5 /** default value for parameter mincutefficacy */
 #define DEFAULT_COMPEIGENVALUES    TRUE /** default value for parameter compeigenvalues */
 
@@ -59,7 +60,7 @@
 
 /** nonlinear handler expression data. The data is structured in the following way:
  *
- *  A 'term' is one of the arguments of the quadratic terms, i.e. v_i^T x + beta_i.
+ *  A 'term' is one of the arguments of the quadratic terms, i.e. \f$v_i^T x + beta_i\f$.
  *  The last term is always the one on the right-hand side. This means that nterms is
  *  equal to n+1 in the above description.
  *
@@ -721,7 +722,7 @@ SCIP_RETCODE generateCutSolDisagg(
    return SCIP_OKAY;
 }
 
-/** checks if an expression is quadratic and to collectall occurring expressions
+/** checks if an expression is quadratic and to collect all occurring expressions
  *
  * @pre @param expr2idx and @param occurringexprs need to be initialized with capacity 2 * nchildren
  *
@@ -1440,8 +1441,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< pointer to store nonlinear handler expression data */
-   SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
-                                              *   valid when success is TRUE */
+   SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {

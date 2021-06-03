@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,6 +24,9 @@
  *   expr^2 or expr * other_expr. It stores its sqrcoef (that can be 0), its linear coef and all the bilinear expression
  *   terms in which expr appears.
  */
+
+/** @todo there are some TODOs in the code that look like questions from a prior code review.
+ * These should be addressed or removed or they will just be confusing in the future */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -52,24 +55,23 @@
 #include "scip/expr_product.h"
 
 /* fundamental nonlinear handler properties */
-#define NLHDLR_NAME               "quadratic"
-#define NLHDLR_DESC               "handler for quadratic expressions"
-#define NLHDLR_DETECTPRIORITY       1
-#define NLHDLR_ENFOPRIORITY       100
+#define NLHDLR_NAME                    "quadratic"
+#define NLHDLR_DESC                    "handler for quadratic expressions"
+#define NLHDLR_DETECTPRIORITY          1
+#define NLHDLR_ENFOPRIORITY            100
 
 /* properties of the quadratic nlhdlr statistics table */
-#define TABLE_NAME_QUADRATIC                 "quadratic_nlhdlr_table"
-#define TABLE_DESC_QUADRATIC                 "quadratic nlhdlr statistics table"
-#define TABLE_POSITION_QUADRATIC             14700                  /**< the position of the statistics table */
-#define TABLE_EARLIEST_STAGE_QUADRATIC       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+#define TABLE_NAME_QUADRATIC           "quadratic_nlhdlr_table"
+#define TABLE_DESC_QUADRATIC           "quadratic nlhdlr statistics table"
+#define TABLE_POSITION_QUADRATIC       14700                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_QUADRATIC SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 /* some default values */
-/* #define INTERCUTS_MINVIOL      1e-4 */
-#define DEFAULT_USEINTERCUTS   FALSE
-#define DEFAULT_USESTRENGTH    TRUE
-#define BINSEARCH_MAXITERS     120
-#define DEFAULT_NCUTSROOT       20
-#define DEFAULT_NCUTS            2
+#define DEFAULT_USEINTERCUTS           FALSE
+#define DEFAULT_USESTRENGTH            TRUE
+#define BINSEARCH_MAXITERS             120
+#define DEFAULT_NCUTSROOT              20
+#define DEFAULT_NCUTS                  2
 
 /*
  * Data structures
@@ -86,9 +88,9 @@ struct SCIP_NlhdlrExprData
 
    /* activities of quadratic parts as defined in nlhdlrIntevalQuadratic */
    SCIP_Real             minquadfiniteact;   /**< minimum activity of quadratic part where only terms with finite min
-                                               activity contribute */
+                                                  activity contribute */
    SCIP_Real             maxquadfiniteact;   /**< maximum activity of quadratic part where only terms with finite max
-                                               activity contribute */
+                                                  activity contribute */
    int                   nneginfinityquadact;/**< number of quadratic terms contributing -infinity to activity */
    int                   nposinfinityquadact;/**< number of quadratic terms contributing +infinity to activity */
    SCIP_INTERVAL*        quadactivities;     /**< activity of each quadratic term as defined in nlhdlrIntevalQuadratic */
@@ -118,7 +120,8 @@ struct SCIP_NlhdlrData
    int                   maxrank;            /**< maximal rank a slackvar can have */
    SCIP_Real             mincutviolation;    /**< minimal cut violation the generated cuts must fulfill to be added to the LP */
    SCIP_Real             minviolation;       /**< minimal violation the constraint must fulfill such that a cut can be generated */
-   int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n) */
+   int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node,
+                                                  if it's n >= 0, it's used at every multiple of n) */
    int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
    SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
 
@@ -144,6 +147,7 @@ struct Rays
    int                   nrays;              /**< size of raysbegin is nrays + 1; size of lpposray */
 };
 typedef struct Rays RAYS;
+
 
 /*
  * Callback methods of the table
@@ -930,7 +934,7 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** this function determines how the maximal S-free is going to look like.
+/** this function determines how the maximal S-free set is going to look like.
  * There are 4 possibilities: after writting the quadratic constraint
  * q(z) <= 0
  * as
@@ -977,7 +981,7 @@ CLEANUP:
 static
 SCIP_RETCODE intercutsComputeCommonQuantities(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
    SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
    SCIP_SOL*             sol,                /**< solution to separate */
@@ -1117,7 +1121,7 @@ SCIP_Real computeEigenvecDotRay(
  */
 static
 SCIP_Real computeWRayLinear(
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
    SCIP_Real*            raycoefs,           /**< coefficients of ray */
    int*                  rayidx,             /**< ray coef[i] affects var at pos rayidx[i] in consvar */
@@ -1183,7 +1187,7 @@ SCIP_Real computeWRayLinear(
 static
 SCIP_RETCODE computeRestrictionToRay(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
    SCIP_Bool             iscase4,            /**< whether we are in case 4 */
    SCIP_Real*            raycoefs,           /**< coefficients of ray */
@@ -1525,11 +1529,12 @@ void doBinarySearch(
    *sol = lb;
 }
 
-/**  finds smallest positive root phi by finding the smallest positive root of
+/** finds smallest positive root phi by finding the smallest positive root of
  * (A - D^2) t^2 + (B - 2 D*E) t + (C - E^2) = 0
  * However, we are conservative and want a solution such that phi is negative, but close to 0;
  * thus we correct the result with a binary search
  */
+/** @todo: there is quite a bit of commented out code in this method (mainly asserts) can these be deleted? */
 static
 SCIP_Real computeRoot(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1871,6 +1876,7 @@ void combineRays(
    idx2 = 0;
    *newraynnonz = 0;
 
+   /** @todo delte or transform into debugmessages */
    /*for( int i = 0; i < raynnonz1; ++i )
       printf("ray1 (%f, %d) \n", raycoefs1[i], rayidx1[i]);
    for( int i = 0; i < raynnonz2; ++i )
@@ -2376,6 +2382,7 @@ SCIP_RETCODE generateIntercut(
    return SCIP_OKAY;
 }
 
+/** @todo is "propagatable" meant here? or is it a new word that means something else? */
 /** returns whether a quadratic form is "propagable"
  *
  * It is propagable, if a variable (aka child expr) appears at least twice, which is the case if at least two of the following hold:
@@ -2524,10 +2531,10 @@ SCIP_RETCODE propagateBoundsLinExpr(
 /** returns max of a/x - c*x for x in {x1, x2} with x1, x2 > 0 */
 static
 SCIP_Real computeMaxBoundaryForBilinearProp(
-   SCIP_Real a,
-   SCIP_Real c,
-   SCIP_Real x1,
-   SCIP_Real x2
+   SCIP_Real             a,                  /**< coefficient a */
+   SCIP_Real             c,                  /**< coefficient c */
+   SCIP_Real             x1,                 /**< coefficient x1 > 0 */
+   SCIP_Real             x2                  /**< coefficient x2 > 0 */
    )
 {
    SCIP_Real cneg;
@@ -2552,9 +2559,9 @@ SCIP_Real computeMaxBoundaryForBilinearProp(
 /** returns max of a/x - c*x for x in dom; it assumes that dom is contained in (0, +inf) */
 static
 SCIP_Real computeMaxForBilinearProp(
-   SCIP_Real a,
-   SCIP_Real c,
-   SCIP_INTERVAL dom
+   SCIP_Real             a,                  /**< coefficient a */
+   SCIP_Real             c,                  /**< coefficient c */
+   SCIP_INTERVAL         dom                 /**< domain of x */
    )
 {
    SCIP_ROUNDMODE roundmode;
@@ -2621,8 +2628,8 @@ static
 void computeRangeForBilinearProp(
    SCIP_INTERVAL         exprdom,            /**< expression for which to solve */
    SCIP_Real             coef,               /**< expression for which to solve */
-   SCIP_INTERVAL         rhs,
-   SCIP_INTERVAL*        range
+   SCIP_INTERVAL         rhs,                /**< rhs used for computation */
+   SCIP_INTERVAL*        range               /**< storage for the resulting range */
    )
 {
    SCIP_Real max;
@@ -3290,6 +3297,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
+      /** @todo remove printf or turn into debugmessage */
       /*printf("## New cut\n");
       printf(" -> found maxquad-free cut <%s>: act=%f, lhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n\n",
             SCIProwGetName(row), SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row), SCIProwGetNorm(row),
@@ -3795,6 +3803,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
       else
          rest_i.inf = -SCIP_INTERVAL_INFINITY;
 
+/** @todo turn into SCIP_DISABLED_CODE or remove */
 #if 0 /* I (SV) added the following in cons_quadratic to fix/workaround some bug. Maybe we'll need this here, too? */
       /* FIXME in theory, rest_i should not be empty here
        * what we tried to do here is to remove the contribution of the i'th bilinear term (=bilinterm) to [minquadactivity,maxquadactivity] from rhs
