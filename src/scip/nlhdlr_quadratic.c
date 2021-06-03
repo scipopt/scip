@@ -3803,8 +3803,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
       else
          rest_i.inf = -SCIP_INTERVAL_INFINITY;
 
-/** @todo turn into SCIP_DISABLED_CODE or remove */
-#if 0 /* I (SV) added the following in cons_quadratic to fix/workaround some bug. Maybe we'll need this here, too? */
+#ifdef SCIP_DISABLED_CODE  /* I (SV) added the following in cons_quadratic to fix/workaround some bug. Maybe we'll need this here, too? */
       /* FIXME in theory, rest_i should not be empty here
        * what we tried to do here is to remove the contribution of the i'th bilinear term (=bilinterm) to [minquadactivity,maxquadactivity] from rhs
        * however, quadactivity is computed differently (as x*(a1*y1+...+an*yn)) than q_i (a*ak*yk) and since interval arithmetics do overestimation,
