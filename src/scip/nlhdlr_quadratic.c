@@ -25,9 +25,6 @@
  *   terms in which expr appears.
  */
 
-/** @todo there are some TODOs in the code that look like questions from a prior code review.
- * These should be addressed or removed or they will just be confusing in the future */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /* #define DEBUG_INTERSECTIONCUT */
