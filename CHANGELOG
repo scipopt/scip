@@ -857,7 +857,6 @@ Fixed bugs
 - improve numerics in conflict analysis by using double-double arithmetic
 - fixed bound acceptance condition to avoid inconsistencies
 - fixed numerics in pseudoobj propagator by using double-double arithmetic
-- ensure dualbound of infeasible problems is positive infinity
 
 Miscellaneous
 -------------

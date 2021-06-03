@@ -1376,9 +1376,6 @@ SCIP_Real SCIPgetLowerbound(
        */
       return -SCIPinfinity(scip);
    }
-   /* SCIPtreeGetLowerbound() should return +inf in the case of infeasibility; we add this case explicitly for clarity */
-   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE && scip->set->stage == SCIP_STAGE_SOLVED  )
-      return SCIPinfinity(scip);
    else
    {
       SCIP_Real treelowerbound;
