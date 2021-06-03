@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -149,7 +149,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxXyz)
 }
 
 
-/** separation deinitialization method of a nonlinear handler (called during CONSINITLP) */
+/** separation initialization method of a nonlinear handler (called during CONSINITLP) */
 #if 0
 static
 SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaXyz)

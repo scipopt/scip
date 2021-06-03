@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,8 +29,8 @@
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "perspective"
 #define NLHDLR_DESC               "perspective handler for expressions"
-#define NLHDLR_DETECTPRIORITY     -20 /**< detect last so that to make use of what other handlers detected */
-#define NLHDLR_ENFOPRIORITY       125 /**< enforce first because perspective cuts are always stronger */
+#define NLHDLR_DETECTPRIORITY     -20   /**< detect last so that to make use of what other handlers detected */
+#define NLHDLR_ENFOPRIORITY       125   /**< enforce first because perspective cuts are always stronger */
 
 #define DEFAULT_MAXPROPROUNDS     1     /**< maximal number of propagation rounds in probing */
 #define DEFAULT_MINDOMREDUCTION   0.1   /**< minimal relative reduction in a variable's domain for applying probing */
