@@ -26,8 +26,7 @@
  *
  * Note that v_i, for i <= n, could be 0, thus allowing a positive constant term inside the root.
  *
- * @note: this nlhdlr does not handle constraints of the form \f$\sqrt{ \sum_i (a_i x_i + b_i)^2\| \leq a_n x_n+ b_n\f$
- * @todo: the formula directly above is not complete
+ * @note: this nlhdlr does not handle constraints of the form \f$\sqrt{ \sum_i (a_i x_i + b_i)^2} \leq a_n x_n+ b_n\f$
  * as the default nlhdlr will do an extended formulation.
  *
  * @todo: test if it makes sense to only disaggregate when nterms > some parameter
