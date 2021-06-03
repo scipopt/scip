@@ -110,6 +110,9 @@ Test(depthlevel, hit_depth_limit, .description = "show problem when hitting dept
    retcode = SCIPsolve(scip);
    cr_expect(retcode == SCIP_OKAY || retcode == SCIP_MAXDEPTHLEVEL);
 
+   /* print statistics */
+   /* SCIP_CALL( SCIPprintStatistics(scip, NULL) ); */
+
    /* free transformed problem */
    SCIP_CALL( SCIPfreeTransform(scip) );
 
@@ -118,7 +121,4 @@ Test(depthlevel, hit_depth_limit, .description = "show problem when hitting dept
 
    /* check for memory leaks */
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
-
-   if( retcode == SCIP_OKAY )
-      abort();
 }
