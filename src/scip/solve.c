@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1182,7 +1182,7 @@ SCIP_RETCODE initLP(
    )
 {
    SCIP_VAR* var;
-   int nvarsold;
+   int oldnvars = 0;
    int v;
 
    assert(set != NULL);
@@ -1199,6 +1199,9 @@ SCIP_RETCODE initLP(
       assert(SCIPlpGetNRows(lp) == 0);
       assert(lp->nremovablecols == 0);
       assert(lp->nremovablerows == 0);
+
+      /* store number of variables for later */
+      oldnvars = transprob->nvars;
 
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
@@ -1229,28 +1232,24 @@ SCIP_RETCODE initLP(
    if( *cutoff )
       return SCIP_OKAY;
 
-   /* remember number of variables in the transformed problem before calling SCIPinitConssLP */
-   nvarsold = transprob->nvars;
-
    /* put all initial constraints into the LP */
    /* @todo check whether we jumped through the tree */
    SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
          eventfilter, cliquetable, root, TRUE, cutoff) );
 
-   /* add variables that have been added during CONSINITLP to LP */
-   if( root && nvarsold < transprob->nvars )
+   /* putting all initial constraints into the LP might have added new variables */
+   if( root && !(*cutoff) && transprob->nvars > oldnvars )
    {
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
 
-      /* add all initial variables to LP */
-      SCIPsetDebugMsg(set, "init LP: initial columns\n");
+      /* check all initial variables */
       for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
       {
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
 
-         if( SCIPvarIsInitial(var) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN || SCIPcolGetLPPos(SCIPvarGetCol(var)) == -1) )
+         if( SCIPvarIsInitial(var) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN || !SCIPcolIsInLP(SCIPvarGetCol(var))) )
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
          }
@@ -5258,7 +5257,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
    assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
-   SCIPsetDebugMsg(set, "Problem solving finished with status %u (restart=%u, userrestart=%u)\n", stat->status, *restart, stat->userrestart);
+   SCIPsetDebugMsg(set, "Problem solving finished with status %d (restart=%u, userrestart=%u)\n", stat->status, *restart, stat->userrestart);
 
    /* cuts off nodes with lower bound is not better than given cutoff bound, manually; this necessary to ensure that
     * SCIP terminates with a proper solve stage

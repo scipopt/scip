@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,7 @@ extern "C" {
 
 typedef struct SCIP_NlRow SCIP_NLROW;        /**< nonlinear row of an NLP */
 typedef struct SCIP_Nlp   SCIP_NLP;          /**< current NLP data */
+typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics */
 
 #ifdef __cplusplus
 }

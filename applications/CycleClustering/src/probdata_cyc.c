@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,7 +26,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "probdata_cyc.h"
 
-#include "scip/cons_expr.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/var.h"
@@ -755,7 +755,7 @@ SCIP_RETCODE createProbQP(
 
       /* create, add, and release constraint */
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "irrev_%d", c);
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &temp, consname, 1, &edgevars[c], &one, nquadterms, quadvars1,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &temp, consname, 1, &edgevars[c], &one, nquadterms, quadvars1,
          quadvars2, quadcoefs, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, temp) );
       SCIP_CALL( SCIPreleaseCons(scip, &temp) );
@@ -782,7 +782,7 @@ SCIP_RETCODE createProbQP(
 
       /* create, add, and release constraint */
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "coh_%d", c);
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &temp, consname, 1, &edgevars[c+ncluster], &one, nquadterms, quadvars1,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &temp, consname, 1, &edgevars[c+ncluster], &one, nquadterms, quadvars1,
          quadvars2, quadcoefs, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, temp) );
       SCIP_CALL( SCIPreleaseCons(scip, &temp) );

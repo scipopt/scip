@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,10 +21,10 @@
  *
  *  In SCIP, the NLP is defined as follows:
  *
- *   min         const + obj * x + <x, Qx> + f(x)
- *        lhs <= const + A   * x                  <= rhs
- *        lhs <= const + A   * x + <x, Qx> + f(x) <= rhs
- *        lb  <=               x                  <= ub
+ *   min         const + obj * x + f(x)
+ *        lhs <= const + A   * x        <= rhs
+ *        lhs <= const + A   * x + f(x) <= rhs
+ *        lb  <=               x        <= ub
  *
  *  where the linear rows and variable bounds are managed by the LP
  *  and the nonlinear rows are managed by the NLP.
@@ -32,14 +32,13 @@
  *  The row activities are defined as
  *     activity = A * x + const
  *  for a linear row and as
- *     activity = f(x) + <x, Qx> + A * x + const
+ *     activity = f(x) + A * x + const
  *  for a nonlinear row.
- *  The activities must therefore be in the range of [lhs,rhs].
  *
  *  The main datastructures for storing an NLP are the nonlinear rows.
  *  A nonlinear row can live on its own (if it was created by a separator),
- *  or as relaxation of a constraint. Thus, it has a nuses-counter, and is
- *  deleted, if not needed any more.
+ *  or as relaxation of a constraint. Thus, it has a nuses-counter and is
+ *  deleted if not used any more.
  *  In difference to columns of an LP, nonlinear rows are defined
  *  with respect SCIP variables.
  */
@@ -54,8 +53,8 @@
 #include "scip/type_var.h"
 #include "scip/type_misc.h"
 #include "scip/type_event.h"
-#include "nlpi/type_nlpi.h"
-#include "nlpi/type_expr.h"
+#include "scip/type_nlpi.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,18 +77,8 @@ struct SCIP_NlRow
    double*               lincoefs;           /**< coefficients of linear variables */
    SCIP_Bool             linvarssorted;      /**< are the linear coefficients sorted (by variable indices?) */
 
-   /* quadratic part */
-   int                   nquadvars;          /**< number of variables in quadratic terms */
-   int                   quadvarssize;       /**< size of array storing quadratic variables of row */
-   SCIP_VAR**            quadvars;           /**< variables in quadratic term */
-   SCIP_HASHMAP*         quadvarshash;       /**< hash map from variable to indices in quadvars */
-   int                   nquadelems;         /**< number of entries in quadratic matrix */
-   int                   quadelemssize;      /**< size of quadratic elements array */
-   SCIP_QUADELEM*        quadelems;          /**< entries in quadratic matrix */
-   SCIP_Bool             quadelemssorted;    /**< are the quadratic elements sorted? */
-
-   /* nonquadratic part */
-   SCIP_EXPRTREE*        exprtree;           /**< expression tree representing nonquadratic part */
+   /* nonlinear part */
+   SCIP_EXPR*            expr;               /**< expression representing nonlinear part */
 
    /* miscellaneous */
    char*                 name;               /**< name */
@@ -172,6 +161,13 @@ struct SCIP_Nlp
 
    /* miscellaneous */
    char*                 name;               /**< problem name */
+};
+
+/** Statistics from an NLP solve */
+struct SCIP_NlpStatistics
+{
+   int       niterations;   /**< number of iterations the NLP solver spend in the last solve command */
+   SCIP_Real totaltime;     /**< total time in CPU sections the NLP solver spend in the last solve command */
 };
 
 #ifdef __cplusplus

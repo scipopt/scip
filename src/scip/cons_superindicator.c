@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2039,9 +2039,7 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
 
    /* only allow types of slack constraints that can be handled */
    if( conshdlrdata->checkslacktype &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "abspower") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "and") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "bivariate") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "bounddisjunction") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "conjunction") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "disjunction") != 0 &&
@@ -2051,8 +2049,6 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "logicor") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "nonlinear") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "or") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "quadratic") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "soc") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS1") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS2") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "cumulative") != 0 &&

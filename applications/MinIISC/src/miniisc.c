@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,7 +28,7 @@
 /* default parameters */
 #define DEFAULT_SOLVEMASTERAPPROX      FALSE      /**< Solve master problem approximately? */
 #define DEFAULT_MASTERGAPLIMIT         0.1        /**< gap bound for approximately solving the master problem */
-#define DEFAULT_REOPTIMIZATION         FALSE      /**< Use reoptimization to solve master problem? */
+#define DEFAULT_REOPTIMIZATION         TRUE       /**< Use reoptimization to solve master problem? */
 #define DEFAULT_MASTERSTALLNODES       5000L      /**< stall nodes for the master problem */
 
 /** data needed for cut generation */
@@ -730,7 +730,7 @@ SCIP_RETCODE solveMinIISC(
       }
       else
       {
-         SCIPwarningMessage(masterscip, NULL, "\nparameter file <%s> not found - using default parameters.\n", settingsname);
+         SCIPwarningMessage(masterscip, "\nparameter file <%s> not found - using default parameters.\n", settingsname);
       }
    }
 

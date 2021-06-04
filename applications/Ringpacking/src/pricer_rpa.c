@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -648,7 +648,7 @@ SCIP_RETCODE solvePricingMINLP(
 
          /* create quadratic constraint */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nonoverlap_%d_%d", i, j);
-         SCIP_CALL( SCIPcreateConsExprQuadratic(subscip, &cons, name, 2, linvars, lincoefs, 6, quadvars1, quadvars2,
+         SCIP_CALL( SCIPcreateConsQuadraticNonlinear(subscip, &cons, name, 2, linvars, lincoefs, 6, quadvars1, quadvars2,
                quadcoefs, -c, SCIPinfinity(subscip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          /* add and release constraint */

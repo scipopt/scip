@@ -21,7 +21,7 @@ set(instances
 # add a build test first
 #
 add_test(NAME examples-relaxator-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target relaxator
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target relaxator
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -48,4 +48,12 @@ foreach(instance ${instances})
                             PROPERTIES
                                 DEPENDS examples-relaxator-build
                             )
+        if(WIN32)
+            # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+            # on other systems this directory does not exist.
+            set_tests_properties(examples-relaxator-${basename}
+                PROPERTIES
+                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+                )
+        endif()
 endforeach(instance)

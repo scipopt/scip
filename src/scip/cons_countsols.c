@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1840,7 +1840,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
       int symcomptiming = 2;
 
       /* get timing of symmetry computation */
-      if ( (usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
+      if ( ((unsigned) usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
       {
          SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
       }
@@ -1960,7 +1960,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       int symcomptiming = 2;
 
       /* get timing of symmetry computation */
-      if ( (usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
+      if ( ((unsigned) usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
       {
          SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
       }
@@ -2072,7 +2072,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          SCIPfreeBufferArray(scip, &buffer);
       }
 
-      SCIPdialogMessage(scip, NULL, " (%d non-trivial feasible subtrees)\n", SCIPgetNCountedFeasSubtrees(scip));
+      SCIPdialogMessage(scip, NULL, " (%" SCIP_LONGINT_FORMAT " non-trivial feasible subtrees)\n", SCIPgetNCountedFeasSubtrees(scip));
 
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 

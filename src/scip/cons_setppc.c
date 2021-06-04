@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,8 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_var.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_conflict.h"
@@ -73,7 +72,7 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define LINCONSUPGD_PRIORITY    +700000 /**< priority of the constraint handler for upgrading of linear constraints */
-#define EXPRCONSUPGD_PRIORITY   +700000 /**< priority of the constraint handler for upgrading of expr constraints */
+#define NONLINCONSUPGD_PRIORITY +700000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 
 #define EVENTHDLR_NAME         "setppc"
 #define EVENTHDLR_DESC         "bound change event handler for set partitioning / packing / covering constraints"
@@ -7111,13 +7110,14 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
    return SCIP_OKAY;
 }
 
-/** tries to upgrade an expression constraint to a setpacking constraint */
+/** tries to upgrade a nonlinear constraint to a setpacking constraint */
 static
-SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
+SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
 {
-   SCIP_CONSEXPR_QUADEXPR* quaddata;
-   SCIP_CONSEXPR_EXPR* expr1;
-   SCIP_CONSEXPR_EXPR* expr2;
+   SCIP_Bool isquadratic;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* expr1;
+   SCIP_EXPR* expr2;
    SCIP_VAR* bilinvars[2];
    SCIP_VAR* vars[2];
    SCIP_Real bilincoef;
@@ -7136,11 +7136,11 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
    assert(nupgdconss != NULL);
    assert(upgdconss != NULL);
    assert(! SCIPconsIsModifiable(cons));
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "expr") == 0);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "nonlinear") == 0);
 
    *nupgdconss = 0;
 
-   SCIPdebugMsg(scip, "try to upgrade expression constraint <%s> to setpacking constraint ...\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "try to upgrade nonlinear constraint <%s> to setpacking constraint ...\n", SCIPconsGetName(cons));
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* need exactly two variables */
@@ -7150,17 +7150,17 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
    /* left and right hand side need to be equal
     * @todo we could also handle inequalities
     */
-   rhs = SCIPgetRhsConsExpr(scip, cons);
-   if( SCIPisInfinity(scip, rhs) || !SCIPisEQ(scip, SCIPgetLhsConsExpr(scip, cons), rhs) )
+   rhs = SCIPgetRhsNonlinear(cons);
+   if( SCIPisInfinity(scip, rhs) || !SCIPisEQ(scip, SCIPgetLhsNonlinear(cons), rhs) )
       return SCIP_OKAY;
 
-   /* get quadratic representation, if possible */
-   SCIP_CALL( SCIPgetQuadExprConsExpr(scip, cons, &quaddata) );
-
-   if( quaddata == NULL || !SCIPareConsExprQuadraticExprsVariables(quaddata) )
+   /* check whether constraint is quadratic */
+   SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
+   if( !isquadratic )
       return SCIP_OKAY;
 
-   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprterms, NULL, NULL);
+   expr = SCIPgetExprNonlinear(cons);
+   SCIPexprGetQuadraticData(expr, &constant, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprterms, NULL, NULL);
 
    /* adjust rhs */
    rhs -= constant;
@@ -7178,9 +7178,9 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
       return SCIP_OKAY;
 
    /* get bilinear term */
-   SCIPgetConsExprQuadraticBilinTermData(quaddata, 0, &expr1, &expr2, &bilincoef, NULL, NULL);
-   bilinvars[0] = SCIPgetConsExprExprVarVar(expr1);
-   bilinvars[1] = SCIPgetConsExprExprVarVar(expr2);
+   SCIPexprGetQuadraticBilinTerm(expr, 0, &expr1, &expr2, &bilincoef, NULL, NULL);
+   bilinvars[0] = SCIPgetVarExprVar(expr1);
+   bilinvars[1] = SCIPgetVarExprVar(expr2);
 
    if( SCIPisZero(scip, bilincoef) )
       return SCIP_OKAY;
@@ -7190,10 +7190,10 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
       return SCIP_OKAY;
 
    /* get data of quadratic terms */
-   SCIPgetConsExprQuadraticQuadTermData(quaddata, 0, &expr1, &lincoef, &sqrcoef, NULL, NULL, NULL);
+   SCIPexprGetQuadraticQuadTerm(expr, 0, &expr1, &lincoef, &sqrcoef, NULL, NULL, NULL);
    coefx = lincoef + sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
 
-   SCIPgetConsExprQuadraticQuadTermData(quaddata, 1, &expr2, &lincoef, &sqrcoef, NULL, NULL, NULL);
+   SCIPexprGetQuadraticQuadTerm(expr, 1, &expr2, &lincoef, &sqrcoef, NULL, NULL, NULL);
    coefy = lincoef + sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
 
    /* divide constraint by coefficient of x*y */
@@ -7215,23 +7215,23 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
 
    if( SCIPisZero(scip, coefy) )
    {
-      vars[0] = SCIPgetConsExprExprVarVar(expr1);
+      vars[0] = SCIPgetVarExprVar(expr1);
    }
    else
    {
       assert(SCIPisEQ(scip, coefy, -1.0));
       /* x - 1 = -(1-x) = -(~x) */
-      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPgetConsExprExprVarVar(expr1), &vars[0]) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPgetVarExprVar(expr1), &vars[0]) );
    }
    if( SCIPisZero(scip, coefx) )
    {
-      vars[1] = SCIPgetConsExprExprVarVar(expr2);
+      vars[1] = SCIPgetVarExprVar(expr2);
    }
    else
    {
       assert(SCIPisEQ(scip, coefx, -1.0));
       /* y - 1 = -(1 - y) = -(~y) */
-      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPgetConsExprExprVarVar(expr2), &vars[1]) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPgetVarExprVar(expr2), &vars[1]) );
    }
 
    /* constraint is now of the form  vars[0] * vars[1] == 0 */
@@ -9031,10 +9031,10 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
       /* include the linear constraint to setppc constraint upgrade in the linear constraint handler */
       SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetppc, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
    }
-   if( SCIPfindConshdlr(scip, "expr") != NULL )
+   if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
    {
       /* notify function that upgrades quadratic constraint to setpacking */
-      SCIP_CALL( SCIPincludeExprconsUpgrade(scip, exprUpgdSetppc, EXPRCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+      SCIP_CALL( SCIPincludeConsUpgradeNonlinear(scip, nonlinUpgdSetppc, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
    }
 
    /* set partitioning constraint handler parameters */

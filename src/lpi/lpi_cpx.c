@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -360,10 +360,10 @@ SCIP_RETCODE setBase(
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
-   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
-   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
-   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
-   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER); /*lint !e506*/
 
    return SCIP_OKAY;
 }
@@ -1035,13 +1035,17 @@ void* SCIPlpiGetSolverPointer(
    return (void*) lpi->cpxlp;
 }
 
-/** pass integrality information to LP solver */ /*lint -e{715}*/
+/** pass integrality information to LP solver */
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
    int                   ncols,              /**< length of integrality array */
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0.  */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( ncols >= 0 );
+   assert( ncols == 0 || intInfo != NULL );
+
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1092,8 +1096,7 @@ SCIP_RETCODE SCIPlpiCreate(
 {
    int restat;
 
-   assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* CPLEX only works with ints as bools */
+   assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */ /*lint !e506*/
    assert(lpi != NULL);
    assert(name != NULL);
 
@@ -3550,10 +3553,10 @@ SCIP_RETCODE SCIPlpiGetBase(
    }
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
-   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
-   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
-   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
-   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER); /*lint !e506*/
 
    return SCIP_OKAY;
 }
@@ -3585,10 +3588,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    invalidateSolution(lpi);
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
-   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
-   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
-   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
-   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER); /*lint !e506*/
 
    /* Copy rstat to internal structure and correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that
     * the slack is 0, i.e., the upper bound is tight. */

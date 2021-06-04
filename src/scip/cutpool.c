@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -799,7 +799,7 @@ SCIP_RETCODE SCIPcutpoolDelRow(
    cut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
    if( cut == NULL )
    {
-      SCIPerrorMessage("row <%s> is not existing in cutpool %p\n", SCIProwGetName(row), cutpool);
+      SCIPerrorMessage("row <%s> is not existing in cutpool %p\n", SCIProwGetName(row), (void*)cutpool);
       return SCIP_INVALIDDATA;
    }
 
@@ -869,7 +869,10 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    *result = SCIP_DIDNOTFIND;
    cutpool->ncalls++;
    found = FALSE;
-   minefficacy = stat->bestefficacy * stat->minefficacyfac;
+   if( set->sepa_filtercutpoolrel )
+      minefficacy = stat->bestefficacy * stat->minefficacyfac;
+   else
+      minefficacy = root ? set->sepa_minefficacyroot : set->sepa_minefficacy;
 
    if( sol == NULL )
    {
@@ -994,15 +997,16 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       cutpool->firstunprocessedsol = cutpool->ncuts;
    }
 
-   if( nefficaciouscuts > 0 )
+   /* update the number of found cuts */
+   cutpool->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
+
+   /* check whether efficacy threshold should be tightened or relaxed */
+   if( set->sepa_filtercutpoolrel && nefficaciouscuts > 0 )
    {
       int maxncuts = SCIPsetGetSepaMaxcuts(set, root);
       int ncuts = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
 
       maxncuts = MIN(maxncuts, nefficaciouscuts);
-
-      /* update the number of found cuts */
-      cutpool->ncutsfound += ncuts;
 
       if( ncuts > (0.5 * maxncuts) )
       {
@@ -1012,19 +1016,19 @@ SCIP_RETCODE SCIPcutpoolSeparate(
       {
          stat->ncutpoolfails = MAX(stat->ncutpoolfails + 1, 1);
       }
-   }
 
-   if( stat->ncutpoolfails == (root ? 2 : 10) )
-   {
-      cutpool->firstunprocessed = 0;
-      cutpool->firstunprocessedsol = 0;
-      stat->minefficacyfac *= 0.5;
-      stat->ncutpoolfails = 0;
-   }
-   else if( stat->ncutpoolfails == -2 )
-   {
-      stat->minefficacyfac *= 1.2;
-      stat->ncutpoolfails = 0;
+      if( stat->ncutpoolfails == (root ? 2 : 10) )
+      {
+         cutpool->firstunprocessed = 0;
+         cutpool->firstunprocessedsol = 0;
+         stat->minefficacyfac *= 0.5;
+         stat->ncutpoolfails = 0;
+      }
+      else if( stat->ncutpoolfails == -2 )
+      {
+         stat->minefficacyfac *= 1.2;
+         stat->ncutpoolfails = 0;
+      }
    }
 
    /* stop timing */

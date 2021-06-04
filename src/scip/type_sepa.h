@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -107,6 +107,12 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - sepa            : the separator itself
  *  - result          : pointer to store the result of the separation call
  *  - allowlocal      : should the separator allow local cuts?
+ *  - depth           : preteneded depth of current node
+ *
+ *  @note The depth argument shouldn't be use to determine whether the cut is globally valid or not.  The value of depth
+ *  could be 0 even though we are not in the root node! The purpose of depth is to control the behavior of the
+ *  separator. Usually separators will have different limits on the number of cuts to be applied in the root node, etc.
+ *  These limits should be checked against depth and not against the actual depth of the current node.
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
@@ -118,7 +124,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
-#define SCIP_DECL_SEPAEXECLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa, SCIP_RESULT* result, SCIP_Bool allowlocal)
+#define SCIP_DECL_SEPAEXECLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa, SCIP_RESULT* result, SCIP_Bool allowlocal, int depth)
 
 /** arbitrary primal solution separation method of separator
  *
@@ -131,6 +137,12 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - sol             : primal solution that should be separated
  *  - result          : pointer to store the result of the separation call
  *  - allowlocal      : should the separator allow local cuts?
+ *  - depth           : preteneded depth of current node
+ *
+ *  @note The depth argument shouldn't be use to determine whether the cut is globally valid or not.  The value of depth
+ *  could be 0 even though we are not in the root node! The purpose of depth is to control the behavior of the
+ *  separator. Usually separators will have different limits on the number of cuts to be applied in the root node, etc.
+ *  These limits should be checked against depth and not against the actual depth of the current node.
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
@@ -142,7 +154,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
-#define SCIP_DECL_SEPAEXECSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa, SCIP_SOL* sol, SCIP_RESULT* result, SCIP_Bool allowlocal)
+#define SCIP_DECL_SEPAEXECSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SEPA* sepa, SCIP_SOL* sol, SCIP_RESULT* result, SCIP_Bool allowlocal, int depth)
 
 #ifdef __cplusplus
 }

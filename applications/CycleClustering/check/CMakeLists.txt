@@ -18,7 +18,7 @@ set(settings
 # add a test that builds the executable
 #
 add_test(NAME applications-cycleclustering-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target cycleclustering
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target cycleclustering
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -46,5 +46,13 @@ foreach(instance ${instances})
                                 PASS_REGULAR_EXPRESSION "optimal solution found"
                                 DEPENDS applications-cycleclustering-build
                             )
+        if(WIN32)
+            # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+            # on other systems this directory does not exist.
+            set_tests_properties("applications-cycleclustering-${basename}-${setting}"
+                PROPERTIES
+                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+                )
+        endif()
     endforeach()
 endforeach()

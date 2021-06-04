@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -121,10 +121,10 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                701 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
-#define SCIP_APIVERSION              72 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                702 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
+#define SCIP_APIVERSION             100 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -227,29 +227,19 @@ extern "C" {
 #endif
 
 #ifndef MAX
-#define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
-#define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
+#define MAX(x, y) ((x) >= (y) ? (x) : (y)) /**< returns maximum of x and y */
+#endif
+
+#ifndef MIN
+#define MIN(x, y) ((x) <= (y) ? (x) : (y)) /**< returns minimum of x and y */
 #endif
 
 #ifndef MAX3
-#define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))  /**< returns maximum of x, y, and z */
-#define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
+#define MAX3(x, y, z) ((x) >= (y) ? MAX(x, z) : MAX(y, z)) /**< returns maximum of x, y, and z */
 #endif
 
-#ifndef SIN
-#define SIN(x)       (sin((x)))
-#endif
-
-#ifndef COS
-#define COS(x)       (cos((x)))
-#endif
-
-#ifndef ASIN
-#define ASIN(x)      (asin((x)))
-#endif
-
-#ifndef ACOS
-#define ACOS(x)      (acos((x)))
+#ifndef MIN3
+#define MIN3(x, y, z) ((x) <= (y) ? MIN(x, z) : MIN(y, z)) /**< returns minimum of x, y, and z */
 #endif
 
 #ifndef COPYSIGN
@@ -365,7 +355,7 @@ extern "C" {
                        {                                                                                      \
                           if( NULL == (x) )                                                                   \
                           {                                                                                   \
-                             SCIPerrorMessage("No memory in function call\n", __FILE__, __LINE__);            \
+                             SCIPerrorMessage("No memory in function call\n");                                \
                              SCIPABORT();                                                                     \
                           }                                                                                   \
                        }                                                                                      \

@@ -7,7 +7,9 @@
 # The correct year is detected through the 'date' function
 #
 # Note that not all files (usually scripts) contain a copyright. A copyright is only
-# needed for those files which are part of a SCIP distribution (see makedist.sh)
+# needed for those files which are part of a SCIP distribution (see scripts/makedist.sh)
+#
+# USAGE: ./scripts/updatedates.sh
 
 set -euo pipefail
 

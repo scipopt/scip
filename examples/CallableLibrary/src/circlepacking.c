@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -265,7 +265,7 @@ SCIP_RETCODE visualizeSolutionAscii(
    picture[width/2-8+i] = '*';
 
    /* show plot */
-   SCIPinfoMessage(scip, NULL, picture);
+   SCIPinfoMessage(scip, NULL, "%s", picture);
 
    SCIPfreeBufferArray(scip, &picture);
 
@@ -486,7 +486,7 @@ static SCIP_RETCODE setupProblem(
     * If the size the rectangle is fixed, then w, h, and a have been fixed above.
     * We could actually omit this constraint, but here SCIP presolve will take care of removing it.
     */
-   SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, "area", 1, &a, &minusone, 1, &w, &h, &one, -SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, "area", 1, &a, &minusone, 1, &w, &h, &one, -SCIPinfinity(scip),
       0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -526,7 +526,7 @@ static SCIP_RETCODE setupProblem(
             nlinvars = 2;
          }
 
-         SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, 6, quadvars1,
+         SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, name, nlinvars, linvars, lincoefs, 6, quadvars1,
             quadvars2, quadcoefs, (minarea ? 1.0 : -1.0) * SQR(r[i] + r[j]), SCIPinfinity(scip),
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 

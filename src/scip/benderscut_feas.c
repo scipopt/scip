@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,8 +21,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "nlpi/exprinterpret.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "scip/benderscut_feas.h"
 #include "scip/benderscut_opt.h"
 #include "scip/cons_linear.h"
@@ -41,6 +40,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_solvingstats.h"
@@ -226,7 +226,6 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
-   SCIP_EXPRINT* exprinterpreter;
    SCIP_VAR** subvars;
    int nrows;
    int nsubvars;
@@ -249,8 +248,6 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    *lhs = 0.0;
    dirderiv = 0.0;
 
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(subproblem), &exprinterpreter) );
-
    /* looping over all NLP rows and setting the corresponding coefficients of the cut */
    nrows = SCIPgetNNLPNlRows(subproblem);
    for( i = 0; i < nrows; i++ )
@@ -266,7 +263,7 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
       if( SCIPisZero(subproblem, dualsol) )
          continue;
 
-      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow, exprinterpreter, -dualsol,
+      SCIP_CALL( SCIPaddNlRowGradientBenderscutOpt(masterprob, subproblem, benders, nlrow, -dualsol,
             NULL, NULL, &dirderiv, vars, vals, nvars, varssize) );
 
       SCIP_CALL( SCIPgetNlRowActivity(subproblem, nlrow, &activity) );
@@ -282,8 +279,6 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
          *lhs += dualsol * (activity - SCIPnlrowGetLhs(nlrow));
       }
    }
-
-   SCIP_CALL( SCIPexprintFree(&exprinterpreter) );
 
    /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
    for( i = 0; i < nsubvars; i++ )
@@ -318,7 +313,7 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
       || SCIPisInfinity(masterprob, dirderiv) || SCIPisInfinity(masterprob, -dirderiv))
    {
       (*success) = FALSE;
-      SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut. lhs = %g dirderiv = %g.\n", lhs, dirderiv);
+      SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut. lhs = %g dirderiv = %g.\n", *lhs, dirderiv);
       return SCIP_OKAY;
    }
 
@@ -364,7 +359,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    varssize = nmastervars;
 
    /* setting the name of the generated cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "feasibilitycut_%d_%d", probnumber,
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "feasibilitycut_%d_%" SCIP_LONGINT_FORMAT, probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
    if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) )

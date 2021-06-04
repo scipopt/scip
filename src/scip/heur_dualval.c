@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,8 +27,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/type_expr.h"
-#include "nlpi/type_nlpi.h"
+#include "scip/type_expr.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -55,6 +54,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -396,8 +396,7 @@ SCIP_RETCODE addLinearConstraints(
       }
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]),
-            0, NULL, 0, NULL, NULL,
+            SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]), NULL,
             SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i]),
             SCIP_EXPRCURV_LINEAR) );
 
@@ -455,8 +454,7 @@ SCIP_RETCODE addVarboundConstraints(
       coefs[1] = SCIPgetVbdcoefVarbound(scip, conss[i]);
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            2, vars, coefs,
-            0, NULL, 0, NULL, NULL,
+            2, vars, coefs, NULL,
             SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i]),
             SCIP_EXPRCURV_LINEAR) );
 
@@ -522,8 +520,7 @@ SCIP_RETCODE addLogicOrConstraints(
 
       /* logic or constraints: 1 == sum_j x_j */
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
-            0, NULL, 0, NULL, NULL,
+            nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs, NULL,
             1.0, SCIPinfinity(scip),
             SCIP_EXPRCURV_LINEAR) );
 
@@ -615,8 +612,7 @@ SCIP_RETCODE addSetppcConstraints(
       }
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs,
-            0, NULL, 0, NULL, NULL,
+            nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs, NULL,
             lhs, rhs,
             SCIP_EXPRCURV_LINEAR) );
 
@@ -687,8 +683,7 @@ SCIP_RETCODE addKnapsackConstraints(
          coefs[j] = (SCIP_Real)weights[j];  /*lint !e613*/
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
-            0, NULL, 0, NULL, NULL,
+            nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs, NULL,
             -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i]),
             SCIP_EXPRCURV_LINEAR) );
 
@@ -859,15 +854,12 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CONSHDLR*  conshdlrindicator;
    SCIP_CONSHDLR*  conshdlrindi;
    SCIP_CONSHDLR*  conshdlrlin;
-   SCIP_CONSHDLR*  conshdlrabspow;
-   SCIP_CONSHDLR*  conshdlrquad;
    SCIP_CONSHDLR*  conshdlrnonlin;
    SCIP_CONSHDLR*  conshdlrvarbound;
    SCIP_CONSHDLR*  conshdlrknapsack;
    SCIP_CONSHDLR*  conshdlrlogicor;
    SCIP_CONSHDLR*  conshdlrsetppc;
    SCIP_CONSHDLR*  currentconshdlr;
-   SCIP_CONSHDLR*  conshdlrsignpower;
    SCIP_CONS**  conss;
    SCIP_CONS*   subcons;
    SCIP_CONS*   transcons;
@@ -908,14 +900,11 @@ SCIP_RETCODE createSubSCIP(
    /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present*/
    conshdlrindi = SCIPfindConshdlr(scip, "indicator");
    conshdlrlin = SCIPfindConshdlr(scip, "linear");
-   conshdlrabspow = SCIPfindConshdlr(scip, "abspower");
-   conshdlrquad = SCIPfindConshdlr(scip, "quadratic");
    conshdlrnonlin = SCIPfindConshdlr(scip, "nonlinear");
    conshdlrvarbound = SCIPfindConshdlr(scip, "varbound");
    conshdlrknapsack = SCIPfindConshdlr(scip, "knapsack");
    conshdlrlogicor = SCIPfindConshdlr(scip, "logicor");
    conshdlrsetppc = SCIPfindConshdlr(scip, "setppc");
-   conshdlrsignpower = SCIPfindConshdlr(scip, "signpower");
 
    nconss = SCIPgetNOrigConss(scip);
    conss = SCIPgetOrigConss(scip);
@@ -927,15 +916,12 @@ SCIP_RETCODE createSubSCIP(
       currentconshdlr = SCIPconsGetHdlr(cons);
 
       if( currentconshdlr == conshdlrindi ||
-         currentconshdlr == conshdlrabspow ||
-         currentconshdlr == conshdlrquad ||
          currentconshdlr == conshdlrnonlin ||
          currentconshdlr == conshdlrvarbound ||
          currentconshdlr == conshdlrknapsack ||
          currentconshdlr == conshdlrlogicor ||
          currentconshdlr == conshdlrsetppc ||
-         currentconshdlr == conshdlrlin ||
-         currentconshdlr == conshdlrsignpower)
+         currentconshdlr == conshdlrlin)
       {
          continue;
       }
@@ -966,7 +952,7 @@ SCIP_RETCODE createSubSCIP(
    /* create sub-SCIP copy of CIP, copy interesting plugins */
    success = TRUE;
    SCIP_CALL( SCIPcopyPlugins(scip, heurdata->subscip, TRUE, FALSE, TRUE, FALSE, TRUE,
-         FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, &success) );
+         FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, &success) );
 
    if( success == FALSE )
    {

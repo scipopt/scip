@@ -27,13 +27,14 @@
 #include <string.h>
 
 #include "scip/sepa_interminor.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_var.h"
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_product.h"
-#include "scip/cons_expr_iterator.h"
-#include "scip/cons_expr_rowprep.h"
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/expr.h"
+#include "scip/expr_var.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/nlpi_ipopt.h"
+#include "scip/cons_nonlinear.h"
+
+
 
 #define SEPA_NAME              "interminor"
 #define SEPA_DESC              "separator to ensure that 2x2 minors of X (= xx') have determinant 0"
@@ -292,7 +293,7 @@ SCIP_RETCODE detectMinors(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_EXPRITER* it;
    SCIP_HASHMAP* rowmap;
    int* rowvars = NULL;
    int* perm = NULL;
@@ -325,63 +326,60 @@ SCIP_RETCODE detectMinors(
    SCIPdebugMsg(scip, "call detectMinors()\n");
 
    /* allocate memory */
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
    SCIP_CALL( SCIPhashmapCreate(&rowmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowvars, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &intersection, SCIPgetNVars(scip)) );
 
    /* initialize iterator */
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
 
    for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
    {
       SCIP_CONS* cons;
-      SCIP_CONSEXPR_EXPR* expr;
-      SCIP_CONSEXPR_EXPR* root;
+      SCIP_EXPR* expr;
+      SCIP_EXPR* root;
 
       cons = SCIPconshdlrGetConss(conshdlr)[c];
       assert(cons != NULL);
-      root = SCIPgetExprConsExpr(scip, cons);
+      root = SCIPgetExprNonlinear(cons);
       assert(root != NULL);
 
-      for( expr = SCIPexpriteratorRestartDFS(it, root); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, root); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
-         SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-         SCIP_CONSEXPR_EXPR** children;
+         SCIP_EXPR** children;
          SCIP_VAR* auxvar;
 
          SCIPdebugMsg(scip, "visit expression %p in constraint %s\n", (void*)expr, SCIPconsGetName(cons));
 
          /* check whether the expression has an auxiliary variable */
-         auxvar = SCIPgetConsExprExprAuxVar(expr);
+         auxvar = SCIPgetExprAuxVarNonlinear(expr);
          if( auxvar == NULL )
          {
             SCIPdebugMsg(scip, "expression has no auxiliary variable -> skip\n");
             continue;
          }
 
-         exprhdlr = SCIPgetConsExprExprHdlr(expr);
-         assert(exprhdlr != NULL);
-         children = SCIPgetConsExprExprChildren(expr);
+         children = SCIPexprGetChildren(expr);
 
          /* check for expr = (x)^2 */
-         if( SCIPgetConsExprExprNChildren(expr) == 1 && exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr)
-            && SCIPgetConsExprExprPowExponent(expr) == 2.0
-            && SCIPgetConsExprExprAuxVar(children[0]) != NULL )
+         if( SCIPexprGetNChildren(expr) == 1 && SCIPisExprPower(scip, expr)
+            && SCIPgetExponentExprPow(expr) == 2.0
+            && SCIPgetExprAuxVarNonlinear(children[0]) != NULL )
          {
             SCIP_VAR* quadvar;
 
             assert(children[0] != NULL);
 
-            quadvar = SCIPgetConsExprExprAuxVar(children[0]);
+            quadvar = SCIPgetExprAuxVarNonlinear(children[0]);
             assert(quadvar != NULL);
 
             SCIP_CALL( insertIndex(scip, rowmap, quadvar, quadvar, auxvar, rowvars, &nrowvars) );
          }
          /* check for expr = x_i * x_k */
-         else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr)
-            && SCIPgetConsExprExprAuxVar(children[0]) != NULL && SCIPgetConsExprExprAuxVar(children[1]) != NULL )
+         else if( SCIPexprGetNChildren(expr) == 2 && SCIPisExprProduct(scip, expr)
+            && SCIPgetExprAuxVarNonlinear(children[0]) != NULL && SCIPgetExprAuxVarNonlinear(children[1]) != NULL )
          {
             SCIP_VAR* xi;
             SCIP_VAR* xk;
@@ -389,8 +387,8 @@ SCIP_RETCODE detectMinors(
             assert(children[0] != NULL);
             assert(children[1] != NULL);
 
-            xi = SCIPgetConsExprExprAuxVar(children[0]);
-            xk = SCIPgetConsExprExprAuxVar(children[1]);
+            xi = SCIPgetExprAuxVarNonlinear(children[0]);
+            xk = SCIPgetExprAuxVarNonlinear(children[1]);
 
             SCIP_CALL( insertIndex(scip, rowmap, xk, xi, auxvar, rowvars, &nrowvars) );
             SCIP_CALL( insertIndex(scip, rowmap, xi, xk, auxvar, rowvars, &nrowvars) );
@@ -423,8 +421,7 @@ SCIP_RETCODE detectMinors(
 
          rowj = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[j]]);
 
-         SCIP_CALL( SCIPcomputeArraysIntersection(rowi->vals, rowi->nvals, rowj->vals, rowj->nvals, intersection,
-                  &ninter) );
+         SCIPcomputeArraysIntersectionInt(rowi->vals, rowi->nvals, rowj->vals, rowj->nvals, intersection, &ninter);
 
          if( ninter > 1)
          {
@@ -512,7 +509,7 @@ SCIP_RETCODE detectMinors(
    SCIPfreeBufferArray(scip, &intersection);
    SCIPfreeBufferArray(scip, &rowvars);
    SCIPhashmapFree(&rowmap);
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
 #ifdef SCIP_STATISTIC
    totaltime += SCIPgetTotalTime(scip);
@@ -960,7 +957,7 @@ SCIP_RETCODE addColToCut(
 #endif
 
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPcolGetVar(col), cutcoef) );
-   SCIPaddRowprepConstant(rowprep, -cutcoef * SCIPcolGetPrimsol(col) );
+   SCIProwprepAddConstant(rowprep, -cutcoef * SCIPcolGetPrimsol(col) );
 
    return SCIP_OKAY;
 }
@@ -1009,7 +1006,7 @@ SCIP_RETCODE addRowToCut(
          return SCIP_OKAY;
       }
 
-      SCIPaddRowprepConstant(rowprep, SCIProwGetLhs(row) * cutcoef);
+      SCIProwprepAddConstant(rowprep, SCIProwGetLhs(row) * cutcoef);
    }
    else
    {
@@ -1020,7 +1017,7 @@ SCIP_RETCODE addRowToCut(
          return SCIP_OKAY;
       }
 
-      SCIPaddRowprepConstant(rowprep, SCIProwGetRhs(row) * cutcoef);
+      SCIProwprepAddConstant(rowprep, SCIProwGetRhs(row) * cutcoef);
    }
 
    for( i = 0; i < nnonz; i++ )
@@ -1028,7 +1025,7 @@ SCIP_RETCODE addRowToCut(
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPcolGetVar(rowcols[i]), -rowcoefs[i] * cutcoef) );
    }
 
-   SCIPaddRowprepConstant(rowprep, -SCIProwGetConstant(row) * cutcoef);
+   SCIProwprepAddConstant(rowprep, -SCIProwGetConstant(row) * cutcoef);
 
    return SCIP_OKAY;
 }
@@ -1576,7 +1573,7 @@ SCIP_RETCODE separateDeterminant(
 
    /* cut (in the nonbasic space) is of the form alpha^T x >= 1 */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
-   SCIPaddRowprepSide(rowprep, 1.0);
+   SCIProwprepAddSide(rowprep, 1.0);
 
    /* check if we have the tableau row of the variable and if not compute it */
    SCIP_CALL( getTableauRows(scip, vars, basicvarpos2tableaurow, tableau, tableaurows, &success) );
@@ -1639,7 +1636,7 @@ SCIP_RETCODE separateDeterminant(
    /* merge coefficients that belong to same variable */
    SCIPmergeRowprepTerms(scip, rowprep);
 
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, INTERCUTS_MINVIOL, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, INTERCUTS_MINVIOL, NULL, &success) );
 
    /* if cleanup was successfull, create row out of rowprep and add it */
    if( success )
@@ -1882,7 +1879,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
    int ncalls;
-   int depth;
+   int currentdepth;
 
    /* need routine to compute eigenvalues/eigenvectors */
    if( !SCIPisIpoptAvailableIpopt() )
@@ -1890,12 +1887,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   depth = SCIPgetDepth(scip);
+   currentdepth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call the separator a given number of times at each node */
-   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
-      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+   if( (currentdepth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (currentdepth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
    {
       SCIPdebugMsg(scip, "reached round limit for node\n");
       return SCIP_OKAY;

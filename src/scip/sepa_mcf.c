@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1268,6 +1268,7 @@ SCIP_RETCODE extractCapacityRows(
          /* calculate mean commodity excess: in the (un)directed case there should be exactly */
          /* one (two) flow variable per commodity. in this case commodityexcessratio = 0   */
          assert(ncoveredcommodities > 0);
+         /* coverity[divide_by_zero] */
          commodityexcessratio =
                ABS((nposflowcoefs + nnegflowcoefs)/(SCIP_Real)ncoveredcommodities - maxcolspercommoditylimit);
 
@@ -5820,7 +5821,7 @@ SCIP_RETCODE addCut(
    }
 
    /* create the cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%" SCIP_LONGINT_FORMAT "_%d", SCIPgetNLPs(scip), *ncuts);
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE,
          sepadata->dynamiccuts) );
 
@@ -5869,6 +5870,7 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
+   int                   depth,              /**< current depth */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
    NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
    int*                  ncuts,              /**< pointer to count the number of added cuts */
@@ -5917,7 +5919,7 @@ SCIP_RETCODE generateClusterCuts(
    nvars = SCIPgetNVars(scip);
 
    /* get the maximal number of cuts allowed in a separation round */
-   if( SCIPgetDepth(scip) == 0 )
+   if( depth == 0 )
       maxsepacuts = sepadata->maxsepacutsroot;
    else
       maxsepacuts = sepadata->maxsepacuts;
@@ -6611,6 +6613,7 @@ SCIP_RETCODE separateCuts(
    SCIP_SEPA*            sepa,               /**< the cut separator itself */
    SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
+   int                   depth,              /**< current depth */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
@@ -6735,7 +6738,7 @@ SCIP_RETCODE separateCuts(
          /* enumerate single node cuts */
          if( sepadata->separatesinglenodecuts )
          {
-            SCIP_CALL( generateClusterCuts(scip, sepa, sepadata, sol, allowlocal, mcfnetwork, NULL, &ncuts, &cutoff) );
+            SCIP_CALL( generateClusterCuts(scip, sepa, sepadata, sol, allowlocal, depth, mcfnetwork, NULL, &ncuts, &cutoff) );
          }
 
          if( !cutoff )
@@ -6748,7 +6751,7 @@ SCIP_RETCODE separateCuts(
 #endif
 
             /* enumerate cuts between subsets of the clusters */
-            SCIP_CALL( generateClusterCuts(scip, sepa, sepadata, sol, allowlocal, mcfnetwork, nodepartition, &ncuts, &cutoff) );
+            SCIP_CALL( generateClusterCuts(scip, sepa, sepadata, sol, allowlocal, depth, mcfnetwork, nodepartition, &ncuts, &cutoff) );
 
             /* free node partition */
             nodepartitionFree(scip, &nodepartition);
@@ -6876,7 +6879,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMcf)
       return SCIP_OKAY;
 
    /* separate cuts on the LP solution */
-   SCIP_CALL( separateCuts(scip, sepa, NULL, allowlocal, result) );
+   SCIP_CALL( separateCuts(scip, sepa, NULL, allowlocal, depth, result) );
 
    return SCIP_OKAY;
 }
@@ -6891,7 +6894,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMcf)
    *result = SCIP_DIDNOTRUN;
 
    /* separate cuts on the given primal solution */
-   SCIP_CALL( separateCuts(scip, sepa, sol, allowlocal, result) );
+   SCIP_CALL( separateCuts(scip, sepa, sol, allowlocal, depth, result) );
 
    return SCIP_OKAY;
 }

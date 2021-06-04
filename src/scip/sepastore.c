@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -240,8 +240,9 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
       /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
       return TRUE;
    }
-   if( (!SCIPsetIsInfinity(set, rhs) && SCIPsetIsFeasPositive(set, minactivity - rhs))
-      || (!SCIPsetIsInfinity(set, -lhs) && SCIPsetIsFeasNegative(set, maxactivity - lhs) ))
+
+   if( (!SCIPsetIsInfinity(set,  rhs) && SCIPsetIsFeasPositive(set, minactivity - rhs)) ||
+       (!SCIPsetIsInfinity(set, -lhs) && SCIPsetIsFeasNegative(set, maxactivity - lhs)) )
    {
       SCIPsetDebugMsg(set, "cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);

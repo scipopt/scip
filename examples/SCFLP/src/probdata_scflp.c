@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -303,7 +303,7 @@ SCIP_RETCODE createOriginalproblem(
 
                   /* add constraint var^2 <= sqrvar */
                   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqrcons(%d,%d,%d)", i, j, k);
-                  SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, name, 1, &sqrvar, &minusone, 1, &var, &var,
+                  SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, name, 1, &sqrvar, &minusone, 1, &var, &var,
                         &one, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
                   SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -512,7 +512,7 @@ SCIP_RETCODE createSubproblems(
 
                   /* add constraint var^2 <= sqrvar */
                   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqrcons(%d,%d,%d)", i, j, k);
-                  SCIP_CALL( SCIPcreateConsExprQuadratic(subproblems[k], &cons, name, 1, &sqrvar, &minusone, 1, &var, &var, &one, -SCIPinfinity(subproblems[k]), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+                  SCIP_CALL( SCIPcreateConsQuadraticNonlinear(subproblems[k], &cons, name, 1, &sqrvar, &minusone, 1, &var, &var, &one, -SCIPinfinity(subproblems[k]), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
                   SCIP_CALL( SCIPaddCons(subproblems[k], cons) );
 

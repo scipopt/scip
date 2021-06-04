@@ -20,8 +20,8 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "nlpi/nlpi_ipopt.h"
-
+#include "scip/nlpi_ipopt.h"
+#include "scip/scipdefplugins.h"
 #include "scip/sepa_minor.c"
 
 #include "include/scip_test.h"
@@ -39,14 +39,11 @@ void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   /* this includes minor separator, expression handlers and nonlinear constraint handler */
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* include minor separator */
-   SCIP_CALL( SCIPincludeSepaMinor(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(conshdlr != NULL);
 
    /* create problem */
@@ -79,8 +76,8 @@ void teardown(void)
 Test(minor, detect, .init = setup, .fini = teardown)
 {
    #define NCONSS 3
-   const char* inputs[NCONSS] = {"[expr] <c1>: 1<= <x> * <x> + <y> * <y> <= 2",
-      "[expr] <c2>: -0.5 <= <x> * <y> + <y> * <z> <= 0.5", "[expr] <c3>: -0.5 <= <z> * <z> <= 0.5"};
+   const char* inputs[NCONSS] = {"[nonlinear] <c1>: 1<= <x> * <x> + <y> * <y> <= 2",
+      "[nonlinear] <c2>: -0.5 <= <x> * <y> + <y> * <z> <= 0.5", "[nonlinear] <c3>: -0.5 <= <z> * <z> <= 0.5"};
    SCIP_SEPA* sepa;
    SCIP_SEPADATA* sepadata;
    SCIP_CONS* cons;
@@ -88,7 +85,7 @@ Test(minor, detect, .init = setup, .fini = teardown)
    SCIP_Bool success;
    int c;
 
-   /* add two expression constraints (in transformed space) */
+   /* add two nonlinear constraints (in transformed space) */
    for( c = 0; c < 3; ++c )
    {
       SCIP_CALL( SCIPparseCons(scip, &cons, inputs[c], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
@@ -128,7 +125,7 @@ Test(minor, detect, .init = setup, .fini = teardown)
  */
 Test(minor, detect_aux, .init = setup, .fini = teardown)
 {
-   const char* input = {"[expr] <c1>: 1 <= sin(<x>)^2 + sin(<x>)*sin(<y>) + sin(<y>)^2 <= 2"};
+   const char* input = {"[nonlinear] <c1>: 1 <= sin(<x>)^2 + sin(<x>)*sin(<y>) + sin(<y>)^2 <= 2"};
    SCIP_SEPA* sepa;
    SCIP_SEPADATA* sepadata;
    SCIP_CONS* cons;
@@ -200,10 +197,10 @@ Test(minor, eigenvals, .init = setup, .fini = teardown)
 Test(minor, isPackingCons, .init = setup, .fini = teardown)
 {
    const char* inputs[4] = {
-      "[expr] <c1>: 1 <= <x>^2  + <y>^2 + <z>^2 + <w>^2 + <x> * <y> + <z> * <w> <= 2",
-      "[expr] <c2>: 1 <= 2*<x>^2  + <y>^2 + <z>^2 + <w>^2 + <x> * <y> + <z> * <x> <= 2",
-      "[expr] <c3>: 1 <= <x>^2  + <y>^2 + <z>^2 + <x>^2 + <x> * <y> + <z> * <w> <= 2",
-      "[expr] <c4>: 1 <= <x>^2  + <y>^2 + <z>^2 + sin(<w>) + <x> * <y> + <z> * <w> <= 2"};
+      "[nonlinear] <c1>: 1 <= <x>^2  + <y>^2 + <z>^2 + <w>^2 + <x> * <y> + <z> * <w> <= 2",
+      "[nonlinear] <c2>: 1 <= 2*<x>^2  + <y>^2 + <z>^2 + <w>^2 + <x> * <y> + <z> * <x> <= 2",
+      "[nonlinear] <c3>: 1 <= <x>^2  + <y>^2 + <z>^2 + <x>^2 + <x> * <y> + <z> * <w> <= 2",
+      "[nonlinear] <c4>: 1 <= <x>^2  + <y>^2 + <z>^2 + sin(<w>) + <x> * <y> + <z> * <w> <= 2"};
    SCIP_CONS* cons;
    SCIP_Bool success;
    int i;
@@ -223,8 +220,8 @@ Test(minor, isPackingCons, .init = setup, .fini = teardown)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
    cr_assert(SCIPgetNConss(scip) == 4);
 
-   cr_expect(isPackingCons(scip, conshdlr, SCIPgetConss(scip)[0]));
-   cr_expect(!isPackingCons(scip, conshdlr, SCIPgetConss(scip)[1]));
-   cr_expect(!isPackingCons(scip, conshdlr, SCIPgetConss(scip)[2]));
-   cr_expect(!isPackingCons(scip, conshdlr, SCIPgetConss(scip)[3]));
+   cr_expect(isPackingCons(scip, SCIPgetConss(scip)[0]));
+   cr_expect(!isPackingCons(scip, SCIPgetConss(scip)[1]));
+   cr_expect(!isPackingCons(scip, SCIPgetConss(scip)[2]));
+   cr_expect(!isPackingCons(scip, SCIPgetConss(scip)[3]));
 }

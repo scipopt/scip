@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -207,14 +207,14 @@ SCIP_DECL_READERREAD(readerReadRpa)
 
       if( r_int > r_ext )
       {
-         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: internal radius is greater than the external one\n");
+         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: internal radius is greater than the external one\n", lineno, filename);
          error = TRUE;
          break;
       }
 
       if( demand <= 0 )
       {
-         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: demand has to be positive\n");
+         SCIPwarningMessage(scip, "invalid input line %d in file <%s>: demand has to be positive\n", lineno, filename);
          error = TRUE;
          break;
       }

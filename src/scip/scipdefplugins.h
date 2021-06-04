@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,13 +54,13 @@
 #include "scip/cons_countsols.h"
 #include "scip/cons_cumulative.h"
 #include "scip/cons_disjunction.h"
-#include "scip/cons_expr.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_integral.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_linking.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_or.h"
 #include "scip/cons_orbisack.h"
 #include "scip/cons_orbitope.h"
@@ -77,6 +77,17 @@
 #include "scip/event_estim.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
+#include "scip/expr_abs.h"
+#include "scip/expr_cos.h"
+#include "scip/expr_entropy.h"
+#include "scip/expr_exp.h"
+#include "scip/expr_log.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/expr_sin.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_value.h"
+#include "scip/expr_var.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_adaptivediving.h"
 #include "scip/heur_bound.h"
@@ -134,6 +145,13 @@
 #include "scip/heur_veclendiving.h"
 #include "scip/heur_zeroobj.h"
 #include "scip/heur_zirounding.h"
+#include "scip/nlhdlr_bilinear.h"
+#include "scip/nlhdlr_convex.h"
+#include "scip/nlhdlr_default.h"
+#include "scip/nlhdlr_perspective.h"
+#include "scip/nlhdlr_quadratic.h"
+#include "scip/nlhdlr_quotient.h"
+#include "scip/nlhdlr_soc.h"
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_breadthfirst.h"
 #include "scip/nodesel_dfs.h"
@@ -183,6 +201,7 @@
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
 #include "scip/reader_mst.h"
+#include "scip/reader_nl.h"
 #include "scip/reader_opb.h"
 #include "scip/reader_osil.h"
 #include "scip/reader_pip.h"
@@ -209,6 +228,7 @@
 #include "scip/sepa_intobj.h"
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_minor.h"
+#include "scip/sepa_mixing.h"
 #include "scip/sepa_oddcycle.h"
 #include "scip/sepa_rapidlearning.h"
 #include "scip/sepa_rlt.h"
@@ -220,10 +240,11 @@
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
 
-#include "nlpi/nlpi_ipopt.h"
-#include "nlpi/nlpi_filtersqp.h"
-#include "nlpi/nlpi_worhp.h"
-#include "nlpi/nlpi_all.h"
+#include "scip/expr_varidx.h"
+#include "scip/nlpi_ipopt.h"
+#include "scip/nlpi_filtersqp.h"
+#include "scip/nlpi_worhp.h"
+#include "scip/nlpi_all.h"
 
 #ifdef __cplusplus
 extern "C" {
