@@ -1060,6 +1060,7 @@ SCIP_RETCODE SCIPlpiExactAddCols(
          Rational spxlb;
          Rational spxub;
          Rational spxobj;
+         std::vector<Rational> spxval;
 
          SpxRSetRat(lpi, spxlb, lb[i]);
          SpxRSetRat(lpi, spxub, ub[i]);
@@ -1068,14 +1069,17 @@ SCIP_RETCODE SCIPlpiExactAddCols(
          colVector.clear();
          if( nnonz > 0 )
          {
+            Rational tmp;
+
             start = beg[i];
             last = (i == ncols-1 ? nnonz : beg[i+1]);
+            spxval.reserve(last - start);
             for( j = start; j < last; ++j )
             {
-               Rational spxval;
-               SpxRSetRat(lpi, spxval, val[j]);
-               colVector.add(ind[j], spxval);
+               spxval.push_back(tmp);
+               SpxRSetRat(lpi, spxval[j - start], val[j]);
             }
+            colVector.add(last - start, ind + start, spxval.data());
          }
          cols.add(spxobj, spxlb, colVector, spxub);
       }
@@ -1204,6 +1208,7 @@ SCIP_RETCODE SCIPlpiExactAddRows(
       {
           Rational spxlhs;
           Rational spxrhs;
+          std::vector<Rational> spxval;
 
           SpxRSetRat(lpi, spxlhs, lhs[i]);
           SpxRSetRat(lpi, spxrhs, rhs[i]);
@@ -1211,15 +1216,17 @@ SCIP_RETCODE SCIPlpiExactAddRows(
          rowVector.clear();
          if( nnonz > 0 )
          {
-
             start = beg[i];
             last = (i == nrows-1 ? nnonz : beg[i+1]);
+            spxval.reserve(last - start);
+
             for( int j = start; j < last; ++j )
             {
-               Rational spxval;
-               SpxRSetRat(lpi, spxval, val[j]);
-               rowVector.add(ind[j], spxval);
+               Rational tmp;
+               spxval.push_back(tmp);
+               SpxRSetRat(lpi, spxval[j - start], val[j]);
             }
+            rowVector.add(last - start, ind + start, spxval.data());
          }
          rows.add(spxlhs, rowVector, spxrhs);
       }
