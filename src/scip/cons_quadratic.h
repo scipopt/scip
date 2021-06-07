@@ -129,7 +129,7 @@ SCIP_RETCODE SCIPcreateConsBasicQuadratic(
 
 /** Adds a constant to the constraint function, that is, subtracts a constant from both sides
  *
- * @deprecated Use SCIPgetLhsNonlinear and SCIPgetRhsNonlinear instead.
+ * @deprecated Use SCIPchgLhsNonlinear and SCIPchgRhsNonlinear instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -229,7 +229,7 @@ SCIP_RETCODE SCIPgetNlRowQuadratic(
  *
  *  @note This method may only be called during problem creation stage for an original constraint.
  *
- *  @deprecated Use SCIPgetLhsNonlinear instead.
+ *  @deprecated Use SCIPchgLhsNonlinear instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -243,7 +243,7 @@ SCIP_RETCODE SCIPchgLhsQuadratic(
  *
  *  @note This method may only be called during problem creation stage for an original constraint.
  *
- *  @deprecated Use SCIPgetRhsNonlinear instead.
+ *  @deprecated Use SCIPchgRhsNonlinear instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
