@@ -77,6 +77,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyExp)
    return SCIP_OKAY;
 }
 
+/** expression handler copy callback */
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrExp)
 {  /*lint --e{715}*/
@@ -85,6 +86,7 @@ SCIP_DECL_EXPRCOPYHDLR(copyhdlrExp)
    return SCIP_OKAY;
 }
 
+/** expression data copy callback */
 static
 SCIP_DECL_EXPRCOPYDATA(copydataExp)
 {  /*lint --e{715}*/
@@ -97,6 +99,7 @@ SCIP_DECL_EXPRCOPYDATA(copydataExp)
    return SCIP_OKAY;
 }
 
+/** expression data free callback */
 static
 SCIP_DECL_EXPRFREEDATA(freedataExp)
 {  /*lint --e{715}*/
@@ -107,6 +110,7 @@ SCIP_DECL_EXPRFREEDATA(freedataExp)
    return SCIP_OKAY;
 }
 
+/** expression parse callback */
 static
 SCIP_DECL_EXPRPARSE(parseExp)
 {  /*lint --e{715}*/
@@ -143,7 +147,6 @@ SCIP_DECL_EXPREVAL(evalExp)
 
    return SCIP_OKAY;
 }
-
 
 /** expression derivative evaluation callback */
 static
