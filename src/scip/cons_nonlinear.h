@@ -232,6 +232,41 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    );
 
+/** creates and captures a quadratic nonlinear constraint with all its constraint flags set to their default values */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part */
+   int                   nquadterms,         /**< number of quadratic terms */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
+   SCIP_Real             rhs                 /**< right hand side of quadratic equation */
+   );
+
+/** creates and captures a signpower nonlinear constraint with all its constraint flags set to their default values
+ *
+ * \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsBasicSignpowerNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             x,                  /**< nonlinear variable x in constraint */
+   SCIP_VAR*             z,                  /**< linear variable z in constraint */
+   SCIP_Real             exponent,           /**< exponent n of |x+offset|^n term in constraint */
+   SCIP_Real             xoffset,            /**< offset in |x+offset|^n term in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of z in constraint */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   );
+
 /** gets tag indicating current local variable bounds */
 SCIP_EXPORT
 SCIP_Longint SCIPgetCurBoundsTagNonlinear(
@@ -548,7 +583,7 @@ SCIP_RETCODE SCIPchgExprNonlinear(
    SCIP_EXPR*            expr                /**< new expression */
    );
 
-/** adds coef * var to expression constraint
+/** adds coef * var to nonlinear constraint
  *
  * @attention This method can only be called in the problem stage.
  */
@@ -557,6 +592,18 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var,                /**< variable */
+   SCIP_Real             coef                /**< coefficient */
+   );
+
+/** adds coef * expr to nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddExprNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             coef                /**< coefficient */
    );
 
