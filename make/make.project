@@ -82,7 +82,7 @@ PYTHON  =   none
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	7.0.2.4
+SCIP_VERSION	=	7.0.3.5
 
 # compiling and linking parameters
 VERBOSE		=	false
