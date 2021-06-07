@@ -602,7 +602,7 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddExprNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             coef                /**< coefficient */
    );
