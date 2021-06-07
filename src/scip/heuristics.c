@@ -284,7 +284,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       return SCIP_OKAY;
 
    /* don't dive two times at the same node */
-   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 )
+   int isNotIndDiving = strcmp(SCIPheurGetName(heur), "indicatordiving");
+   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 && isNotIndDiving != 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
