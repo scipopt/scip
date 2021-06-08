@@ -50,6 +50,7 @@
  * Data structures
  */
 
+/** expression data */
 struct SCIP_ExprData
 {
    SCIP_Real             constant;           /**< constant coefficient */
@@ -159,7 +160,8 @@ SCIP_RETCODE simplifyTerm(
          for( i = 1; i < SCIPexprGetNChildren(expr); ++i )
          {
             assert(!SCIPisExprSum(scip, SCIPexprGetChildren(expr)[i]));
-            SCIP_CALL( SCIPappendExprSumExpr(scip, duplicate, SCIPexprGetChildren(expr)[i], coef * SCIPgetCoefsExprSum(expr)[i]) );
+            SCIP_CALL( SCIPappendExprSumExpr(scip, duplicate, SCIPexprGetChildren(expr)[i],
+                  coef * SCIPgetCoefsExprSum(expr)[i]) );
          }
       }
 
@@ -219,7 +221,8 @@ SCIP_RETCODE simplifyTerm(
          }
 
          /* add constant to exponential's child */
-         SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(expchild), NULL, expconstant, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(expchild), NULL, expconstant, ownercreate,
+               ownercreatedata) );
 
          /* simplify sum */
          SCIP_CALL( SCIPcallExprSimplify(scip, sum, &simplifiedsum, ownercreate, ownercreatedata) );
@@ -257,7 +260,8 @@ SCIP_RETCODE simplifyTerm(
          SCIP_CALL( SCIPreplaceExprChild(scip, duplicate, idx, simplifiedprod) );
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedprod) );
 
-         /* since the simplified product can be a sum ( exp(-1)*exp(log(x+y)+1) -> x+y ), we call the function we are in again
+         /* since the simplified product can be a sum ( exp(-1)*exp(log(x+y)+1) -> x+y ),
+          * we call the function we are in again
           * this is no endless recursion, since the coef is now +- 1
           */
          SCIP_CALL( simplifyTerm(scip, duplicate, idx, changed, ownercreate, ownercreatedata) );
@@ -293,7 +297,8 @@ SCIP_RETCODE simplifyTerm(
       }
 
       /* add constant to exponential's child */
-      SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(expr), NULL, expconstant, ownercreate, ownercreatedata) );  /* expconstant+expchild */
+      SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(expr), NULL, expconstant, ownercreate,
+            ownercreatedata) );  /* expconstant+expchild */
 
       /* simplify sum */
       SCIP_CALL( SCIPcallExprSimplify(scip, sum, &simplifiedsum, ownercreate, ownercreatedata) );
@@ -369,7 +374,9 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    changed = FALSE;
 
    /* TODO: maybe have a flag to know if it is simplified ? */
-   /* TODO: can we do this with a shallow duplicate + copy of children pointer? currently simplifyTerm may modify children, so one would need to be careful */
+   /* TODO: can we do this with a shallow duplicate + copy of children pointer? currently simplifyTerm may modify children,
+    * so one would need to be careful
+    */
    SCIP_CALL( SCIPduplicateExpr(scip, expr, &duplicate, NULL, NULL, ownercreate, ownercreatedata) );
    assert(duplicate != NULL);
 
@@ -502,7 +509,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    /* build sum expression from children */
    if( changed )
    {
-      SCIP_CALL( SCIPcreateExprSum(scip, simplifiedexpr, nnewchildren, newchildren, newcoefs, newconstant, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcreateExprSum(scip, simplifiedexpr, nnewchildren, newchildren, newcoefs, newconstant,
+            ownercreate, ownercreatedata) );
 
       goto CLEANUP;
    }
@@ -524,8 +532,8 @@ CLEANUP:
 /** the order of two sum expressions is a lexicographical order on the terms.
  *  Starting from the *last*, we find the first child where they differ, say, the i-th.
  *  Then u < v <=> u_i < v_i.
- *  If there is no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v)
- *  If there is no such children and they have the same number of children, then u < v <=> const(u) < const(v)
+ *  If there are no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v)
+ *  If there are no such children and they have the same number of children, then u < v <=> const(u) < const(v)
  *  Otherwise, they are the same
  *  Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
  *  Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
@@ -596,6 +604,7 @@ SCIP_DECL_EXPRCOMPARE(compareSum)
    return 0;
 }
 
+/** expression handler copy callback */
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrSum)
 {  /*lint --e{715}*/
@@ -604,6 +613,7 @@ SCIP_DECL_EXPRCOPYHDLR(copyhdlrSum)
    return SCIP_OKAY;
 }
 
+/** expression data copy callback */
 static
 SCIP_DECL_EXPRCOPYDATA(copydataSum)
 {  /*lint --e{715}*/
@@ -621,6 +631,7 @@ SCIP_DECL_EXPRCOPYDATA(copydataSum)
    return SCIP_OKAY;
 }
 
+/** expression data free callback */
 static
 SCIP_DECL_EXPRFREEDATA(freedataSum)
 {  /*lint --e{715}*/
@@ -639,6 +650,7 @@ SCIP_DECL_EXPRFREEDATA(freedataSum)
    return SCIP_OKAY;
 }
 
+/** expression print callback */
 static
 SCIP_DECL_EXPRPRINT(printSum)
 {  /*lint --e{715}*/
@@ -713,6 +725,7 @@ SCIP_DECL_EXPRPRINT(printSum)
    return SCIP_OKAY;
 }
 
+/** expression point evaluation callback */
 static
 SCIP_DECL_EXPREVAL(evalSum)
 {  /*lint --e{715}*/
@@ -860,6 +873,7 @@ SCIP_DECL_EXPRINITESTIMATES(initEstimatesSum)
    return SCIP_OKAY;
 }
 
+/** expression estimate callback */
 static
 SCIP_DECL_EXPRESTIMATE(estimateSum)
 {  /*lint --e{715}*/
@@ -911,7 +925,8 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropSum)
 
    SCIP_CALL( SCIPallocBufferArray(scip, &newbounds, nchildren) );
 
-   nreductions = SCIPintervalPropagateWeightedSum(SCIP_INTERVAL_INFINITY, nchildren, childrenbounds, exprdata->coefficients, exprdata->constant, bounds, newbounds, infeasible);
+   nreductions = SCIPintervalPropagateWeightedSum(SCIP_INTERVAL_INFINITY, nchildren, childrenbounds,
+         exprdata->coefficients, exprdata->constant, bounds, newbounds, infeasible);
 
    if( !*infeasible && nreductions > 0 )
       BMScopyMemoryArray(childrenbounds, newbounds, nchildren);

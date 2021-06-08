@@ -322,7 +322,6 @@ SCIP_Longint SCIPexprhdlrGetNSimplifications(
 /** @} */ /* expression handler methods */
 
 
-
 /**@name Expression Methods */
 /**@{ */
 
@@ -404,13 +403,17 @@ SCIP_Real SCIPexprGetDerivative(
    SCIP_EXPR*     expr              /**< expression */
    );
 
-/** gives the value of directional derivative from the last evaluation of a directional derivative of expression (or SCIP_INVALID if there was an error) */
+/** gives the value of directional derivative from the last evaluation of a directional derivative of expression
+ * (or SCIP_INVALID if there was an error)
+ */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetDot(
    SCIP_EXPR*     expr              /**< expression */
    );
 
-/** gives the value of directional derivative from the last evaluation of a directional derivative of derivative of root (or SCIP_INVALID if there was an error) */
+/** gives the value of directional derivative from the last evaluation of a directional derivative of derivative
+ * of root (or SCIP_INVALID if there was an error)
+ */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetBardot(
    SCIP_EXPR*     expr              /**< expression */

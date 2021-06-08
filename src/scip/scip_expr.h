@@ -98,8 +98,6 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrPower(
 
 /** @} */
 
-
-
 /**@name Expression Methods */
 /**@{ */
 
