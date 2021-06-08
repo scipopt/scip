@@ -64,10 +64,6 @@
 #define MAXCHILDABSVAL        1e+6                       /**< maximum absolute value that is accepted for propagation */
 
 /*
- * Data structures
- */
-
-/*
  * Local methods
  */
 
@@ -179,8 +175,8 @@ SCIP_Bool computeLeftTangentSin(
 }
 
 /* TODO: fix this, more cases can be considered, see at unit test
-   the underestimating of the tangents depends not only on the ub but also on the lower bound.
-   right now, this function is only checking whether the tangent underestimates independenly of the lower bound!
+ * the underestimating of the tangents depends not only on the ub but also on the lower bound.
+ * right now, this function is only checking whether the tangent underestimates independenly of the lower bound!
  */
 /** helper function to compute the tangent at upper bound if it is an underestimator
  *  returns true if the underestimator was computed successfully
@@ -356,7 +352,7 @@ SCIP_Bool computeLeftSecantSin(
    *lincoef = (sin(tangentpoint) - sin(lb)) / (tangentpoint - lb);
    *linconst = sin(lb) - (*lincoef) * lb;
 
-   /* if the bounds are to close to each other, it's possible that the underestimator is not valid */
+   /* if the bounds are too close to each other, it's possible that the underestimator is not valid */
    if( *lincoef >= cos(lb) )
       return FALSE;
 
@@ -443,7 +439,6 @@ SCIP_Bool computeRightSecantSin(
 
    return TRUE;
 }
-
 
 /** helper function to compute the new interval for child in reverse propagation */
 SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
@@ -558,7 +553,8 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sin") == 0 || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") == 0);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sin") == 0
+         || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") == 0);
    assert(SCIPisLE(scip, childlb, childub));
 
    /* if child is essentially constant, then there should be no point in estimation */
@@ -785,7 +781,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySin)
    /* check for value expression */
    if( SCIPisExprValue(scip, child) )
    {
-      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, sin(SCIPgetValueExprValue(child)), ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, sin(SCIPgetValueExprValue(child)), ownercreate,
+            ownercreatedata) );
    }
    else
    {

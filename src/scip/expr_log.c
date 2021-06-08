@@ -30,8 +30,8 @@
 
 #define EXPRHDLR_NAME         "log"
 #define EXPRHDLR_DESC         "logarithmic expression"
-#define EXPRHDLR_PRECEDENCE  80000
-#define EXPRHDLR_HASHKEY     SCIPcalcFibHash(16273.0)
+#define EXPRHDLR_PRECEDENCE   80000
+#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(16273.0)
 
 /*
  * Data structures
@@ -47,7 +47,6 @@ struct SCIP_ExprHdlrData
 /*
  * Local methods
  */
-
 
 /*
  * Callback methods of expression handler
@@ -91,6 +90,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyLog)
    return SCIP_OKAY;
 }
 
+/** expression handler copy callback */
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrLog)
 {  /*lint --e{715}*/
@@ -99,6 +99,7 @@ SCIP_DECL_EXPRCOPYHDLR(copyhdlrLog)
    return SCIP_OKAY;
 }
 
+/** expression handler free callback */
 static
 SCIP_DECL_EXPRFREEHDLR(freehdlrLog)
 {  /*lint --e{715}*/
@@ -110,6 +111,7 @@ SCIP_DECL_EXPRFREEHDLR(freehdlrLog)
    return SCIP_OKAY;
 }
 
+/** expression data copy callback */
 static
 SCIP_DECL_EXPRCOPYDATA(copydataLog)
 {  /*lint --e{715}*/
@@ -122,6 +124,7 @@ SCIP_DECL_EXPRCOPYDATA(copydataLog)
    return SCIP_OKAY;
 }
 
+/** expression data free callback */
 static
 SCIP_DECL_EXPRFREEDATA(freedataLog)
 {  /*lint --e{715}*/
@@ -132,6 +135,7 @@ SCIP_DECL_EXPRFREEDATA(freedataLog)
    return SCIP_OKAY;
 }
 
+/** expression parse callback */
 static
 SCIP_DECL_EXPRPARSE(parseLog)
 {  /*lint --e{715}*/

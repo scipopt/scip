@@ -29,8 +29,8 @@
 
 #define EXPRHDLR_NAME         "abs"
 #define EXPRHDLR_DESC         "absolute expression"
-#define EXPRHDLR_PRECEDENCE  70000
-#define EXPRHDLR_HASHKEY     SCIPcalcFibHash(7187.0)
+#define EXPRHDLR_PRECEDENCE   70000
+#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(7187.0)
 
 /*
  * Data structures
@@ -237,6 +237,7 @@ SCIP_DECL_EXPRINTEVAL(intevalAbs)
    return SCIP_OKAY;
 }
 
+/** expression estimator callback */
 static
 SCIP_DECL_EXPRESTIMATE(estimateAbs)
 {  /*lint --e{715}*/

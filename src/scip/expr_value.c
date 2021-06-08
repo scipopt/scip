@@ -43,6 +43,7 @@ SCIP_DECL_EXPRCOMPARE(compareValue)
    return val1 < val2 ? -1 : val1 == val2 ? 0 : 1; /*lint !e777*/
 }
 
+/** expression handler copy callback */
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrValue)
 {  /*lint --e{715}*/
@@ -51,6 +52,7 @@ SCIP_DECL_EXPRCOPYHDLR(copyhdlrValue)
    return SCIP_OKAY;
 }
 
+/** expression data copy callback */
 static
 SCIP_DECL_EXPRCOPYDATA(copydataValue)
 {  /*lint --e{715}*/
@@ -62,6 +64,7 @@ SCIP_DECL_EXPRCOPYDATA(copydataValue)
    return SCIP_OKAY;
 }
 
+/** expression data free callback */
 static
 SCIP_DECL_EXPRFREEDATA(freedataValue)
 {  /*lint --e{715}*/
@@ -73,6 +76,7 @@ SCIP_DECL_EXPRFREEDATA(freedataValue)
    return SCIP_OKAY;
 }
 
+/** expression print callback */
 static
 SCIP_DECL_EXPRPRINT(printValue)
 {  /*lint --e{715}*/
@@ -215,7 +219,8 @@ SCIP_RETCODE SCIPincludeExprHdlrValue(
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalValue, NULL) );
+   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE,
+         evalValue, NULL) );
    assert(exprhdlr != NULL);
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrValue, NULL);
