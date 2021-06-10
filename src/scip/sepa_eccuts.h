@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -62,6 +62,10 @@
  * representation of \f$ f_i \f$ there exist a cycle with an odd number of positive weighted edges. We look for a
  * subgraph of the graph representation of the quadratic function \f$ g(x) \f$ with the previous property using a model
  * based on binary flow arc variables.
+ *
+ * This callback is currently disabled by default. It requires additional
+ * tuning to be enabled by default. However, it may be useful to enable
+ * it on instances with nonconvex quadratic constraints, in particular boxQPs.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2648,7 +2648,7 @@ SCIP_RETCODE SCIPnlrowDelQuadElement(
    pos = nlrowSearchQuadElem(nlrow, idx1, idx2);
    if( pos == -1 )
    {
-      SCIPerrorMessage("coefficient for index pair (idx1, idx2) doesn't exist in nonlinear row <%s>\n", idx1, idx2, nlrow->name);
+      SCIPerrorMessage("coefficient for index pair (%d, %d) doesn't exist in nonlinear row <%s>\n", idx1, idx2, nlrow->name);
       return SCIP_INVALIDDATA;
    }
    assert(0 <= pos && pos < nlrow->nquadelems);
@@ -5046,7 +5046,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else
    {
-      SCIPerrorMessage("unexpected event %d on variable <%s>\n", etype, SCIPvarGetName(var) );
+      SCIPerrorMessage("unexpected event %" SCIP_EVENTTYPE_FORMAT " on variable <%s>\n", etype, SCIPvarGetName(var) );
       return SCIP_ERROR;
    }
 
@@ -5287,7 +5287,7 @@ SCIP_RETCODE SCIPnlpReset(
    nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    nlp->termstat = SCIP_NLPTERMSTAT_OTHER;
 
-   BMSfreeBlockMemoryArrayNull(blkmem, &nlp->initialguess, nlp->nvars);
+   BMSfreeBlockMemoryArrayNull(blkmem, &nlp->initialguess, nlp->sizevars);
    nlp->haveinitguess = FALSE;
 
    for(i = nlp->nnlrows - 1; i >= 0; --i)
@@ -5755,7 +5755,9 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
    }
    else
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &nlp->initialguess, initguess, nlp->nvars) );
+      assert( nlp->sizevars >= nlp->nvars );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlp->initialguess, nlp->sizevars) );
+      BMScopyMemoryArray(nlp->initialguess, initguess, nlp->nvars);
    }
    nlp->haveinitguess = TRUE;
 

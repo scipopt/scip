@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -110,6 +110,7 @@ SCIP_ROW* SCIPconsGetRow(
  *  converted to an int. A warning is passed if the SCIP_Real is not an integer.
  *  TODO: Allow val to be a pointer.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPconsAddCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which row is queried */

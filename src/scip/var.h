@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -690,6 +690,11 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
+/** returns whether variable is not allowed to be aggregated */
+SCIP_Bool SCIPvarDoNotAggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
@@ -744,6 +749,11 @@ SCIP_RETCODE SCIPvarRemove(
 
 /** marks the variable to be deleted from the problem */
 void SCIPvarMarkDeleted(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** marks the variable to not to be maggregated */
+SCIP_RETCODE SCIPvarMarkDoNotAggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,6 +29,10 @@
 #define LPINAME          "NONE"              /**< name of the LPI interface */
 #define LPIINFINITY       1e20               /**< infinity value */
 
+
+/* globally turn off lint warnings: */
+/*lint --e{715}*/
+
 /** LP interface
  *
  *  Store several statistic values about the LP. These values are only needed in order to provide a rudimentary
@@ -50,7 +54,7 @@ static
 void errorMessageAbort(
    void
    )
-{
+{  /*lint --e{2707}*/
    SCIPerrorMessage("No LP solver available (LPS=none).\n");
    SCIPerrorMessage("Ensure <lp/solvefreq = -1>; note that continuous variables might require an LP-solver.\n");
    SCIPABORT();

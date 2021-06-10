@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,6 +21,12 @@
 
 // underlying type for enum is always int
 +fei
+
+// do not attribute responsibility for last write in callee to caller (this avoids frequent warnings if returned values are not used)
+-fcw
+
+// declare SCIP_ABORT to not return
+-sem(SCIP_ABORT, r_no)
 
 // turn off the following warning, because this often arises from old lint versions
 -e72
@@ -98,6 +104,7 @@
 
 // turn off messages for quad precision
 -emacro(644,SCIPquadprecSumQD)
+-emacro(644,SCIPquadprecSumQQ)
 -emacro(644,SCIPquadprecProdQD)
 -emacro(644,QUAD_ASSIGN)
 -emacro(644,QUAD_TO_DBL)
@@ -186,6 +193,14 @@
 
 // previous value assigned to 'retcode' not used
 -emacro(838,SCIP_CALL_TERMINATE)
+
+// indeterminable mutex
+-emacro(2751,SCIPtpiInitLock)
+-emacro(2751,SCIPtpiAcquireLock)
+-emacro(2751,SCIPtpiReleaseLock)
+-emacro(2751,SCIPtpiDestroyLock)
+-emacro(2751,SCIPtpiInitCondition)
+-emacro(2751,SCIPtpiWaitCondition)
 
 // constant out of range for '>' portion of compound comparison operator '>='
 -estring(2650, ">=")

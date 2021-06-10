@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -805,7 +805,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       return SCIP_OKAY;
 
    /* only call separator up to a maximum depth */
-   if( sepadata->maxdepth >= 0 && SCIPgetDepth(scip) > sepadata->maxdepth )
+   if( sepadata->maxdepth >= 0 && depth > sepadata->maxdepth )
       return SCIP_OKAY;
 
    /* only call separator, if we are not close to terminating */
@@ -819,8 +819,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       return SCIP_OKAY;
    }
 
-   /* recompute convex NLP relaxation if the variable set changed and we are still at the root node
-    * @todo: does it make sense to do this??? */
+   /* recompute convex NLP relaxation if the variable set changed and we are still at the root node */
    if( sepadata->nlpiprob != NULL && SCIPgetNVars(scip) != sepadata->nlpinvars  && SCIPgetDepth(scip) == 0 )
    {
       SCIP_CALL( sepadataClear(scip, sepadata) );
@@ -855,7 +854,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
             sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
-      /* add rows of the LP */
+      /* add rows of the LP
+       * we do not sue the depth argument of the callback because we want to build a globally valid initia lrelaxation
+       */
       if( SCIPgetDepth(scip) == 0 )
       {
          SCIP_CALL( SCIPaddNlpiProbRows(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,

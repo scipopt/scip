@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -575,7 +575,7 @@ SCIP_Bool timinputReadLine(
             return FALSE;
          timi->lineno++;
       }
-      while( *timi->buf == '*' );
+      while( *timi->buf == '*' );   /* coverity[a_loop_bound] */
 
       /* Normalize line */
       len = (unsigned int) strlen(timi->buf);
@@ -661,6 +661,7 @@ SCIP_RETCODE readTime(
    timinputSetProbname(timi, (timinputField1(timi) == 0) ? "_TIM_" : timinputField1(timi));
 
    /* This has to be a new section */
+   /* coverity[tainted_data] */
    if( !timinputReadLine(timi) || (timinputField0(timi) == NULL) )
    {
       timinputSyntaxerror(timi);
@@ -687,6 +688,8 @@ SCIP_RETCODE readPeriods(
 {
    SCIPdebugMsg(scip, "read Periods\n");
 
+   /* coverity[tainted_data_sink_lv_call] */
+   /* coverity[tainted_data] */
    while( timinputReadLine(timi) )
    {
       if( timinputField0(timi) != NULL )
@@ -751,6 +754,7 @@ SCIP_RETCODE readTim(
 
    while( timinputSection(timi) == TIM_PERIODS )
    {
+      /* coverity[tainted_data] */
       SCIP_CALL_TERMINATE( retcode, readPeriods(timi, scip), TERMINATE );
    }
    if( timinputSection(timi) != TIM_ENDATA )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -172,6 +172,9 @@ void SCIPmessagehdlrSetQuiet(
    );
 
 /** prints a message, acting like the printf() command */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPmessagePrintInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -188,6 +191,9 @@ void SCIPmessageVPrintInfo(
    );
 
 /** prints a message into a file, acting like the fprintf() command */
+#ifdef __GNUC__
+__attribute__((format(printf, 3, 4)))
+#endif
 SCIP_EXPORT
 void SCIPmessageFPrintInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -206,6 +212,9 @@ void SCIPmessageVFPrintInfo(
    );
 
 /** prints a warning message, acting like the printf() command */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPmessagePrintWarning(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -222,6 +231,9 @@ void SCIPmessageVPrintWarning(
    );
 
 /** prints a warning message into a file, acting like the fprintf() command */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPmessageFPrintWarning(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -238,6 +250,9 @@ void SCIPmessageVFPrintWarning(
    );
 
 /** prints a dialog message that requests user interaction, acting like the printf() command */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPmessagePrintDialog(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -254,6 +269,9 @@ void SCIPmessageVPrintDialog(
    );
 
 /** prints a dialog message that requests user interaction into a file, acting like the fprintf() command */
+#ifdef __GNUC__
+__attribute__((format(printf, 3, 4)))
+#endif
 SCIP_EXPORT
 void SCIPmessageFPrintDialog(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -272,6 +290,9 @@ void SCIPmessageVFPrintDialog(
    );
 
 /** prints a message depending on the verbosity level, acting like the printf() command */
+#ifdef __GNUC__
+__attribute__((format(printf, 4, 5)))
+#endif
 SCIP_EXPORT
 void SCIPmessagePrintVerbInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -292,6 +313,9 @@ void SCIPmessageVPrintVerbInfo(
    );
 
 /** prints a message into a file depending on the verbosity level, acting like the fprintf() command */
+#ifdef __GNUC__
+__attribute__((format(printf, 5, 6)))
+#endif
 SCIP_EXPORT
 void SCIPmessageFPrintVerbInfo(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -321,6 +345,9 @@ void SCIPmessagePrintErrorHeader(
    );
 
 /** prints an error message, acting like the printf() command using the static message handler */
+#ifdef __GNUC__
+__attribute__((format(printf, 1, 2)))
+#endif
 SCIP_EXPORT
 void SCIPmessagePrintError(
    const char*           formatstr,          /**< format string like in printf() function */
