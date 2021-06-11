@@ -2062,6 +2062,9 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
+/** finds the smallest negative steplength for the current ray r_idx such that the combination
+ * of r_idx with all rays not in the recession cone is in the recession cone
+ */
 static
 SCIP_RETCODE findRho(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2169,11 +2172,18 @@ SCIP_RETCODE findRho(
 
       if( *rho < -10e+06 )
          *rho = -SCIPinfinity(scip);
+
+      /* if rho is too small, don't add it */
+      if( SCIPisZero(scip, *rho) )
+         *success = FALSE;
    }
 
    return SCIP_OKAY;
 }
 
+/** computes intersection cut using negative edge extension to strengthen rays that do not intersect
+ * (i.e., rays in the recession cone)
+ */
 static
 SCIP_RETCODE computeStrengthenedIntercut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2289,6 +2299,7 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
+/** sets variable in solution "vertex" to its nearest bound */
 static
 SCIP_RETCODE setVarToNearestBound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2322,12 +2333,16 @@ SCIP_RETCODE setVarToNearestBound(
       *factor = -1.0;
    }
 
-   //printf("var %s has bound %f --> entry = %f \n", SCIPvarGetName(var), bound, *factor);
    /* set val to bound in solution */
    SCIP_CALL( SCIPsetSolVal(scip, vertex, var, bound) );
    return SCIP_OKAY;
 }
 
+/** This function finds vertex (w.r.t. bounds of variables appearing in the quadratic) that is closest to the current
+ * solution we want to separate. Furtheremore, we store the rays corresponding to the unit vectors, i.e.,
+ *    - if x_i is at its lower bound in vertex --> r_i =  e_i
+ *    - if x_i is at its upper bound in vertex -_> r_i = -e_i
+ */
 static
 SCIP_RETCODE findVertexAndGetRays(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2354,7 +2369,7 @@ SCIP_RETCODE findVertexAndGetRays(
 
    raylength = (auxvar == NULL) ? nquadexprs + nlinexprs : nquadexprs + nlinexprs + 1;
 
-   /* store sparse rays */
+   /* create rays */
    SCIP_CALL( createBoundRays(scip, raysptr, raylength) );
    rays = *raysptr;
 
@@ -2410,6 +2425,7 @@ SCIP_RETCODE findVertexAndGetRays(
    return SCIP_OKAY;
 }
 
+/** checks if the quadratic constraint is violated by sol */
 static
 SCIP_Bool isQuadConsViolated(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2490,6 +2506,7 @@ SCIP_Bool isQuadConsViolated(
       return TRUE;
 }
 
+/** generates intersection cut that cuts off sol (which violates the quadratic constraint cons) */
 static
 SCIP_RETCODE generateIntercut(
    SCIP*                 scip,               /**< SCIP data structure */
