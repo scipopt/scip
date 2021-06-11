@@ -47,7 +47,9 @@
 // disable -Wimplicit-fallthrough as I don't want to maintain extra comments in AMPL/MP code to suppress these
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
+#if __GNUC__ >= 7
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
 #endif
 
 #include "mp/nl-reader.h"

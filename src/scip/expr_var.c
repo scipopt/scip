@@ -132,7 +132,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
 }
 
 /** the order of two variable is given by their indices
- * @note: this is affected by permutations in the problem! */
+ * @note: this is affected by permutations in the problem!
+ */
 static
 SCIP_DECL_EXPRCOMPARE(compareVar)
 {  /*lint --e{715}*/
@@ -145,6 +146,7 @@ SCIP_DECL_EXPRCOMPARE(compareVar)
    return index1 < index2 ? -1 : index1 == index2 ? 0 : 1;
 }
 
+/** expression handler copy callback */
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrVar)
 {  /*lint --e{715}*/
@@ -153,6 +155,7 @@ SCIP_DECL_EXPRCOPYHDLR(copyhdlrVar)
    return SCIP_OKAY;
 }
 
+/** expression data copy callback */
 static
 SCIP_DECL_EXPRCOPYDATA(copydataVar)
 {  /*lint --e{715}*/
@@ -174,6 +177,7 @@ SCIP_DECL_EXPRCOPYDATA(copydataVar)
    return SCIP_OKAY;
 }
 
+/** expression data free callback */
 static
 SCIP_DECL_EXPRFREEDATA(freedataVar)
 {  /*lint --e{715}*/
@@ -191,6 +195,7 @@ SCIP_DECL_EXPRFREEDATA(freedataVar)
    return SCIP_OKAY;
 }
 
+/** expression print callback */
 static
 SCIP_DECL_EXPRPRINT(printVar)
 {  /*lint --e{715}*/

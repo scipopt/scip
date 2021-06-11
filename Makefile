@@ -477,6 +477,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/compr_largestrepr.o \
 			scip/compr_weakcompr.o \
 			scip/concsolver_scip.o \
+			scip/cons_abspower.o \
 			scip/cons_and.o \
 			scip/cons_benders.o \
 			scip/cons_benderslp.o \
@@ -497,7 +498,9 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_orbisack.o \
 			scip/cons_orbitope.o \
 			scip/cons_pseudoboolean.o \
+			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
+			scip/cons_soc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \
 			scip/cons_superindicator.o \

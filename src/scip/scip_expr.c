@@ -58,8 +58,10 @@
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
 typedef struct
 {
-   SCIP_HASHMAP*         varmap;             /**< SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP */
-   SCIP_HASHMAP*         consmap;            /**< SCIP_HASHMAP mapping constraints of the source SCIP to corresponding constraints of the target SCIP */
+   SCIP_HASHMAP*         varmap;             /**< SCIP_HASHMAP mapping variables of the source SCIP to corresponding
+                                                  variables of the target SCIP */
+   SCIP_HASHMAP*         consmap;            /**< SCIP_HASHMAP mapping constraints of the source SCIP to corresponding
+                                                  constraints of the target SCIP */
    SCIP_Bool             global;             /**< should a global or a local copy be created */
    SCIP_Bool             valid;              /**< indicates whether every variable copy was valid */
 } COPY_MAPEXPR_DATA;
@@ -85,7 +87,8 @@ SCIP_DECL_EXPR_MAPEXPR(copyVarExpr)
 
    data = (COPY_MAPEXPR_DATA*)mapexprdata;
 
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, SCIPgetVarExprVar(sourceexpr), &targetvar, data->varmap, data->consmap, data->global, &valid) );
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, SCIPgetVarExprVar(sourceexpr), &targetvar, data->varmap,
+         data->consmap, data->global, &valid) );
    assert(targetvar != NULL);
 
    /* if copy was not valid, store so in mapvar data */
@@ -194,7 +197,9 @@ SCIP_RETCODE parseBase(
       else
       {
          debugParse("First time parsing variable <%s>, creating varexpr and adding it to hashmap\n", SCIPvarGetName(var));
-         /* intentionally not using createExprVar here, since parsed expressions are not part of a constraint (they will be copied when a constraint is created) */
+         /* intentionally not using createExprVar here, since parsed expressions are not part of a constraint
+          * (they will be copied when a constraint is created)
+          */
          SCIP_CALL( SCIPcreateExprVar(scip, basetree, var, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPhashmapInsert(vartoexprvarmap, (void*)var, (void*)(*basetree)) );
       }
@@ -926,7 +931,8 @@ SCIP_RETCODE SCIPcreateExpr(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( SCIPexprCreate(scip->set, scip->mem->probmem, expr, exprhdlr, exprdata, nchildren, children, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPexprCreate(scip->set, scip->mem->probmem, expr, exprhdlr, exprdata, nchildren, children, ownercreate,
+         ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -957,7 +963,8 @@ SCIP_RETCODE SCIPcreateExpr2(
    }
    else if( child2 == NULL )
    {
-      SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, child1 == NULL ? 0 : 1, &child1, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, child1 == NULL ? 0 : 1, &child1, ownercreate,
+            ownercreatedata) );
    }
    else
    {
@@ -1223,7 +1230,8 @@ SCIP_RETCODE SCIPduplicateExpr(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprCopy(scip->set, scip->stat, scip->mem->probmem, scip->set, scip->stat, scip->mem->probmem, expr, copyexpr, mapexpr, mapexprdata, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPexprCopy(scip->set, scip->stat, scip->mem->probmem, scip->set, scip->stat, scip->mem->probmem,
+         expr, copyexpr, mapexpr, mapexprdata, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -1494,8 +1502,8 @@ SCIP_RETCODE SCIPprintExprDotFinal(
  * It's signature is kept as simple as possible to make it
  * easily callable from gdb, for example.
  *
- * It prints the expression into a temporary file in dot format, then calls dot to create a postscript file, then calls ghostview (gv) to show the file.
- * SCIP will hold until ghostscript is closed.
+ * It prints the expression into a temporary file in dot format, then calls dot to create a postscript file,
+ * then calls ghostview (gv) to show the file. SCIP will hold until ghostscript is closed.
  */
 SCIP_RETCODE SCIPshowExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2123,7 +2131,8 @@ SCIP_RETCODE SCIPcallExprEvalFwdiff(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprhdlrEvalFwDiffExpr(SCIPexprGetHdlr(expr), scip->set, scip->mem->buffer, expr, val, dot, childrenvalues, NULL, direction, NULL) );
+   SCIP_CALL( SCIPexprhdlrEvalFwDiffExpr(SCIPexprGetHdlr(expr), scip->set, scip->mem->buffer, expr, val, dot,
+         childrenvalues, NULL, direction, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2154,7 +2163,8 @@ SCIP_DECL_EXPRESTIMATE(SCIPcallExprEstimate)
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPexprhdlrEstimateExpr(SCIPexprGetHdlr(expr), scip->set, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
+   SCIP_CALL( SCIPexprhdlrEstimateExpr(SCIPexprGetHdlr(expr), scip->set, expr, localbounds, globalbounds, refpoint,
+         overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
 
    return SCIP_OKAY;
 }
@@ -2170,7 +2180,8 @@ SCIP_DECL_EXPRINITESTIMATES(SCIPcallExprInitestimates)
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPexprhdlrInitEstimatesExpr(SCIPexprGetHdlr(expr), scip->set, expr, bounds, overestimate, coefs, constant, nreturned) );
+   SCIP_CALL( SCIPexprhdlrInitEstimatesExpr(SCIPexprGetHdlr(expr), scip->set, expr, bounds, overestimate, coefs,
+         constant, nreturned) );
 
    return SCIP_OKAY;
 }
@@ -2188,7 +2199,8 @@ SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify)
    assert(scip != NULL);
 
    /* use simplification of expression handlers */
-   SCIP_CALL( SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), scip->set, expr, simplifiedexpr, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), scip->set, expr, simplifiedexpr, ownercreate,
+         ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -2469,7 +2481,8 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprComputeQuadraticCurvature(scip->set, scip->mem->probmem, scip->mem->buffer, scip->messagehdlr, expr, curv, assumevarfixed, storeeigeninfo) );
+   SCIP_CALL( SCIPexprComputeQuadraticCurvature(scip->set, scip->mem->probmem, scip->mem->buffer, scip->messagehdlr,
+         expr, curv, assumevarfixed, storeeigeninfo) );
 
    return SCIP_OKAY;
 }

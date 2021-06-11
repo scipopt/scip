@@ -61,10 +61,10 @@
  * Data structures
  */
 
+/** expression data */
 struct SCIP_ExprData
 {
    SCIP_Real             coefficient;        /**< coefficient */
-
    SCIP_ROW*             row;                /**< row created during initLP() */
 };
 
@@ -82,11 +82,11 @@ struct exprnode
 
 typedef struct exprnode EXPRNODE;
 
-
 /*
  * Local methods
  */
 
+/** evaluation callback for (vertex-polyhedral) functions used as input for facet computation of its envelopes */
 static
 SCIP_DECL_VERTEXPOLYFUN(prodfunction)
 {
@@ -100,6 +100,7 @@ SCIP_DECL_VERTEXPOLYFUN(prodfunction)
    return ret;
 }
 
+/** create expression data */
 static
 SCIP_RETCODE createData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -182,7 +183,7 @@ int listLength(
    return length;
 }
 
-/** creates expression node and capture expression */
+/** creates expression node and captures expression */
 static
 SCIP_RETCODE createExprNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -226,7 +227,7 @@ SCIP_RETCODE createExprlistFromExprs(
    return SCIP_OKAY;
 }
 
-/** frees expression node and release expressions */
+/** frees expression node and releases expressions */
 static
 SCIP_RETCODE freeExprNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -438,7 +439,7 @@ SCIP_RETCODE mergeProductExprlist(
        * if type(expr) != pow, otherwise it is the child of pow
        */
 
-      /* if both are exponentials, create a new exponential with the sum of theirs children */
+      /* if both are exponentials, create a new exponential with the sum of their children */
       if( SCIPisExprExp(scip, current->expr) && SCIPisExprExp(scip, tomergenode->expr) )
       {
          SCIP_EXPR* sum;
@@ -695,7 +696,7 @@ SCIP_RETCODE mergeProductExprlist(
 
    assert(current == NULL);
 
-   /* if all nodes of finalchildren were cancelled by nodes of tomerge (ie, transfered to unsimplifiedchildren),
+   /* if all nodes of finalchildren were cancelled by nodes of tomerge (i.e., transfered to unsimplifiedchildren),
     * then the rest of tomerge is finalchildren
     */
    if( *finalchildren == NULL )
@@ -825,7 +826,7 @@ SCIP_RETCODE enforceSP10(
    return SCIP_OKAY;
 }
 
-/** check if it is entropy expression */
+/** checks if it is entropy expression */
 static
 SCIP_RETCODE enforceSP11(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1163,7 +1164,6 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-
 /*
  * Callback methods of expression handler
  */
@@ -1172,7 +1172,7 @@ CLEANUP:
  *
  * Summary: we first build a list of expressions (called finalchildren) which will be the children of the simplified product
  * and then we process this list in order to enforce SP8 and SP10
- * Description: In order to build finalchildren, we first build list of unsimplified children (called unsimplifiedchildren)
+ * Description: In order to build finalchildren, we first build a list of unsimplified children (called unsimplifiedchildren)
  * with the children of the product. Each node of the list is manipulated (see simplifyFactor) in order to satisfy
  * SP2 and SP7 as follows
  * SP7: if the node's expression is a value, multiply the value to the products's coef
@@ -1201,7 +1201,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyProduct)
 #endif
 
    /* simplify and multiply factors */
-   SCIP_CALL( simplifyMultiplyChildren(scip, SCIPexprGetChildren(expr), SCIPexprGetNChildren(expr), &simplifiedcoef, &finalchildren, &changed, ownercreate, ownercreatedata) );
+   SCIP_CALL( simplifyMultiplyChildren(scip, SCIPexprGetChildren(expr), SCIPexprGetNChildren(expr), &simplifiedcoef,
+         &finalchildren, &changed, ownercreate, ownercreatedata) );
 
 #ifdef SIMPLIFY_DEBUG
    {
@@ -1223,7 +1224,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyProduct)
 #endif
 
    /* get simplified product from simplified factors in finalchildren */
-   SCIP_CALL( buildSimplifiedProduct(scip, simplifiedcoef, &finalchildren, changed, simplifiedexpr, ownercreate, ownercreatedata) );
+   SCIP_CALL( buildSimplifiedProduct(scip, simplifiedcoef, &finalchildren, changed, simplifiedexpr, ownercreate,
+         ownercreatedata) );
    assert(finalchildren == NULL);
 
    if( *simplifiedexpr == NULL )
@@ -1296,6 +1298,7 @@ SCIP_DECL_EXPRCOMPARE(compareProduct)
    return 0;
 }
 
+/** expression handler copy callback */
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrProduct)
 {  /*lint --e{715}*/
@@ -1319,6 +1322,7 @@ SCIP_DECL_EXPRFREEHDLR(freehdlrProduct)
    return SCIP_OKAY;
 }
 
+/** expression data copy callback */
 static
 SCIP_DECL_EXPRCOPYDATA(copydataProduct)
 {  /*lint --e{715}*/
@@ -1335,6 +1339,7 @@ SCIP_DECL_EXPRCOPYDATA(copydataProduct)
    return SCIP_OKAY;
 }
 
+/** expression data free callback */
 static
 SCIP_DECL_EXPRFREEDATA(freedataProduct)
 {  /*lint --e{715}*/
@@ -1352,6 +1357,7 @@ SCIP_DECL_EXPRFREEDATA(freedataProduct)
    return SCIP_OKAY;
 }
 
+/** expression print callback */
 static
 SCIP_DECL_EXPRPRINT(printProduct)
 {  /*lint --e{715}*/
@@ -2007,7 +2013,9 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityProduct)
 
    coef = SCIPgetCoefExprProduct(expr);
 
-   /* count the number of negative children (except for childidx); if some children changes sign -> monotonicity unknown */
+   /* count the number of negative children (except for childidx); if some children changes sign
+    * -> monotonicity unknown
+    */
    nneg = 0;
    for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
    {
@@ -2077,7 +2085,8 @@ SCIP_RETCODE SCIPincludeExprHdlrProduct(
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprhdlrdata) );
    exprhdlrdata->conshdlr = SCIPfindConshdlr(scip, "nonlinear");
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalProduct, exprhdlrdata) );
+   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalProduct,
+         exprhdlrdata) );
    assert(exprhdlr != NULL);
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrProduct, freehdlrProduct);
@@ -2112,7 +2121,8 @@ SCIP_RETCODE SCIPcreateExprProduct(
 
    SCIP_CALL( createData(scip, &exprdata, coefficient) );
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrProduct(scip), exprdata, nchildren, children, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrProduct(scip), exprdata, nchildren, children, ownercreate,
+         ownercreatedata) );
 
    return SCIP_OKAY;
 }

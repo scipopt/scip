@@ -51,6 +51,7 @@
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_value.h"
+#include "scip/expr_pow.h"
 #include "scip/nlhdlr_convex.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
@@ -10761,6 +10762,82 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    return SCIP_OKAY;
 }
 
+/** creates and captures a quadratic nonlinear constraint with all its constraint flags set to their default values */
+SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part */
+   int                   nquadterms,         /**< number of quadratic terms */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
+   SCIP_Real             rhs                 /**< right hand side of quadratic equation */
+   )
+{
+   SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a signpower nonlinear constraint with all its constraint flags set to their default values
+ *
+ * \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
+ */
+SCIP_RETCODE SCIPcreateConsBasicSignpowerNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             x,                  /**< nonlinear variable x in constraint */
+   SCIP_VAR*             z,                  /**< linear variable z in constraint */
+   SCIP_Real             exponent,           /**< exponent n of |x+offset|^n term in constraint */
+   SCIP_Real             xoffset,            /**< offset in |x+offset|^n term in constraint */
+   SCIP_Real             zcoef,              /**< coefficient of z in constraint */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs                 /**< right hand side of constraint */
+   )
+{
+   SCIP_EXPR* xexpr;
+   SCIP_EXPR* terms[2];
+   SCIP_Real coefs[2];
+   SCIP_EXPR* sumexpr;
+
+   assert(x != NULL);
+   assert(z != NULL);
+
+   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
+   if( xoffset != 0.0 )
+   {
+      SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 1, &xexpr, NULL, xoffset, NULL, NULL) ); /* x + xoffset */
+      SCIP_CALL( SCIPcreateExprSignpower(scip, &terms[0], sumexpr, exponent, NULL, NULL) ); /* signpow(x + xoffset, exponent) */
+
+      SCIP_CALL( SCIPreleaseExpr(scip,  &sumexpr) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateExprSignpower(scip, &terms[0], xexpr, exponent, NULL, NULL) );  /* signpow(x, exponent) */
+   }
+   coefs[0] = 1.0;
+
+   SCIP_CALL( SCIPcreateExprVar(scip, &terms[1], z, NULL, NULL) );
+   coefs[1] = zcoef;
+
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 2, terms, coefs, 0.0, NULL, NULL) );  /* signpowexpr + zcoef * z */
+
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, cons, name, sumexpr, lhs, rhs) );
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &terms[1]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &terms[0]) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
+
+   return SCIP_OKAY;
+}
+
 /** gets tag indicating current local variable bounds */
 SCIP_Longint SCIPgetCurBoundsTagNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
@@ -11898,7 +11975,7 @@ SCIP_RETCODE SCIPchgExprNonlinear(
    return SCIP_OKAY;
 }
 
-/** adds coef * var to expression constraint
+/** adds coef * var to nonlinear constraint
  *
  * @attention This method can only be called in the problem stage.
  */
@@ -11963,6 +12040,80 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
    }
 
    SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
+
+   /* not sure we care about any of these flags for original constraints */
+   consdata->issimplified = FALSE;
+   consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** adds coef * expr to nonlinear constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_RETCODE SCIPaddExprNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             coef                /**< coefficient */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* exprowned;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("SCIPaddLinearVarNonlinear can only be called in problem stage.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* we should have an original constraint */
+   assert(SCIPconsIsOriginal(cons));
+
+   if( coef == 0.0 )
+      return SCIP_OKAY;
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   /* we should not have collected additional data for it
+    * if some of these asserts fail, we may have to remove it and add some code to keep information uptodate
+    */
+   assert(consdata->nvarexprs == 0);
+   assert(consdata->varexprs == NULL);
+   assert(!consdata->catchedevents);
+
+   /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
+   SCIP_CALL( SCIPduplicateExpr(scip, expr, &exprowned, mapexprvar, conshdlr, exprownerCreate, (void*)conshdlr) );
+
+   /* append to sum, if consdata->expr is sum and not used anywhere else */
+   if( SCIPexprGetNUses(consdata->expr) == 1 && SCIPisExprSum(scip, consdata->expr) )
+   {
+      SCIP_CALL( SCIPappendExprSumExpr(scip, consdata->expr, exprowned, coef) );
+   }
+   else
+   {
+      /* create new expression = 1 * consdata->expr + coef * var */
+      SCIP_EXPR* children[2] = { consdata->expr, exprowned };
+      SCIP_Real coefs[2] = { 1.0, coef };
+
+      SCIP_CALL( SCIPcreateExprSum(scip, &consdata->expr, 2, children, coefs, 0.0, exprownerCreate, (void*)conshdlr) );
+
+      /* release old root expr */
+      SCIP_CALL( SCIPreleaseExpr(scip, &children[0]) );
+   }
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &exprowned) );
 
    /* not sure we care about any of these flags for original constraints */
    consdata->issimplified = FALSE;

@@ -34,29 +34,6 @@
 #define EXPRHDLR_HASHKEY      20201210
 
 /*
- * Data structures
- */
-
-#ifdef SCIP_DISABLED_CODE
-/** expression data */
-struct SCIP_ExprData
-{
-};
-
-/** expression handler data */
-struct SCIP_ExprHdlrData
-{
-};
-#endif
-
-/*
- * Local methods
- */
-
-/* TODO: put your local methods here, and declare them static */
-
-
-/*
  * Callback methods of expression handler
  */
 
@@ -210,8 +187,6 @@ SCIP_RETCODE SCIPincludeExprHdlrVaridx(
 
    /* create expression handler data */
    exprhdlrdata = NULL;
-
-   /* TODO: create and store expression handler specific data here */
 
    /* include expression handler */
    SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalVaridx,
