@@ -2264,7 +2264,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
       SCIP_CALL( findRho(scip, nlhdlrdata, nlhdlrexprdata, rays, i, sidefactor, iscase4, vb, vzlp, wcoefs, wzlp, kappa,
                interpoints, &rho, success));
 
-      /* compute cut coef */  /* TODO handle rho == 0.0; should findRho start with *success = FALSE  ?? */
+      /* compute cut coef */
       if( ! *success  || SCIPisInfinity(scip, -rho) )
          cutcoef = 0.0;
       else
@@ -2546,6 +2546,7 @@ SCIP_RETCODE generateIntercut(
    SCIP_Real kappa;
    SCIP_Bool iscase4;
    SCIP_SOL* vertex;
+   SCIP_SOL* soltoseparate;
    int nquadexprs;
    int nlinexprs;
    int i;
@@ -2586,6 +2587,8 @@ SCIP_RETCODE generateIntercut(
          INTERLOG(printf("Failed to get rays: there is a var with base status ZERO!\n"); )
          return SCIP_OKAY;
       }
+
+      soltoseparate = sol;
    }
    else
    {
@@ -2622,13 +2625,15 @@ SCIP_RETCODE generateIntercut(
          *success = FALSE;
          return SCIP_OKAY;
       }
+
+      soltoseparate = vertex;
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vb, nquadexprs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vzlp, nquadexprs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &wcoefs, nquadexprs) );
 
-   SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, auxvar, sidefactor, vertex, vb, vzlp, wcoefs, &wzlp, &kappa) );
+   SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, auxvar, sidefactor, soltoseparate, vb, vzlp, wcoefs, &wzlp, &kappa) );
 
    /* check if we are in case 4 */
    if( nlinexprs == 0 && auxvar == NULL )
@@ -2645,15 +2650,13 @@ SCIP_RETCODE generateIntercut(
       }
    }
 
-   /* TODO: in the code of this function, there shouldn't be asserts checking math properties; rather, we should just
-    * abort cut generation
-    */
+   /* compute (strengthened) intersection cut */
    if( nlhdlrdata->usestrengthening )
    {
       SCIP_Bool strengthsuccess;
 
       SCIP_CALL( computeStrengthenedIntercut(scip, nlhdlrdata, nlhdlrexprdata, rays, sidefactor, iscase4, vb, vzlp, wcoefs,
-            wzlp, kappa, rowprep, sol, success, &strengthsuccess) );
+            wzlp, kappa, rowprep, soltoseparate, success, &strengthsuccess) );
 
       if( *success && strengthsuccess )
          nlhdlrdata->nstrengthenings++;
@@ -2661,7 +2664,7 @@ SCIP_RETCODE generateIntercut(
    else
    {
       SCIP_CALL( computeIntercut(scip, nlhdlrdata, nlhdlrexprdata, rays, sidefactor, iscase4, vb, vzlp, wcoefs, wzlp, kappa,
-            rowprep, NULL, vertex, success) );
+            rowprep, NULL, soltoseparate, success) );
    }
 
    SCIPfreeBufferArrayNull(scip, &wcoefs);
