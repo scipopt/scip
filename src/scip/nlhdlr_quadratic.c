@@ -572,7 +572,7 @@ SCIP_RETCODE createRays(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*rays)->rays, SCIPgetNLPCols(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*rays)->raysidx, SCIPgetNLPCols(scip)) );
 
-   /* overestimate raysbegin and lpposray TODO: shouldn't it be the max between nrows and ncols? */
+   /* overestimate raysbegin and lpposray */
    SCIP_CALL( SCIPallocBufferArray(scip, &(*rays)->raysbegin, SCIPgetNLPCols(scip) + SCIPgetNLPRows(scip) + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*rays)->lpposray, SCIPgetNLPCols(scip) + SCIPgetNLPRows(scip)) );
    (*rays)->raysbegin[0] = 0;
@@ -596,7 +596,7 @@ SCIP_RETCODE createBoundRays(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*rays)->rays, size) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*rays)->raysidx, size) );
 
-   /* overestimate raysbegin and lpposray TODO: shouldn't it be the max between nrows and ncols? */
+   /* overestimate raysbegin and lpposray */
    SCIP_CALL( SCIPallocBufferArray(scip, &(*rays)->raysbegin, size + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*rays)->lpposray, size) );
    (*rays)->raysbegin[0] = 0;
@@ -1566,7 +1566,6 @@ void doBinarySearch(
  * However, we are conservative and want a solution such that phi is negative, but close to 0;
  * thus we correct the result with a binary search
  */
-/** @todo: there is quite a bit of commented out code in this method (mainly asserts) can these be deleted? */
 static
 SCIP_Real computeRoot(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1588,9 +1587,6 @@ SCIP_Real computeRoot(
    if( SQRT( a ) <= d )
    {
       sol = SCIPinfinity(scip);
-
-      /* if SQRT(a) <= d, but a > d * d --> numerics are weird and phi might not evalate negative at infinity */
-      /*assert(a > d * d || evalPhiAtRay(sol, a, b, c, d, e) <= 0); */
       return sol;
    }
 
@@ -1606,14 +1602,14 @@ SCIP_Real computeRoot(
    /* it can still be empty because of our infinity, I guess... */
    sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : SCIPintervalGetInf(result);
 
-/*#ifdef INTERCUT_MOREDEBUG
+#ifdef INTERCUT_MOREDEBUG
    {
       SCIP_Real binsol;
       binsol = SCIPinfinity(scip);
       doBinarySearch(scip, a, b, c, d, e, &binsol);
       printf("got root %g: with binsearch get %g\n", sol, binsol);
    }
-#endif */
+#endif
 
    /* check that solution is acceptable, ideally it should be <= 0, however when it is positive, we trigger a binary
     * search to make it negative. This binary search might return a solution point that is not at accurately 0 as the
@@ -1626,8 +1622,6 @@ SCIP_Real computeRoot(
       printf("interval solution returned %g -> phival = %g, believe it\n", sol, evalPhiAtRay(sol, a, b, c, d, e));
       printf("don't do bin search\n");
 #endif
-      /*assert(SCIPisFeasZero(scip, evalPhiAtRay(sol, a, b, c, d, e) / sol)); */
-
       return sol;
    }
    else
@@ -1637,7 +1631,6 @@ SCIP_Real computeRoot(
       printf("do bin search because phival is %g\n", evalPhiAtRay(sol, a, b, c, d, e));
 #endif
       doBinarySearch(scip, a, b, c, d, e, &sol);
-      /*assert(SCIPisFeasZero(scip, evalPhiAtRay(sol, a, b, c, d, e)));*/
    }
 
    return sol;
@@ -1918,14 +1911,6 @@ void combineRays(
    idx1 = 0;
    idx2 = 0;
    *newraynnonz = 0;
-
-   /** @todo delte or transform into debugmessages */
-   /*for( int i = 0; i < raynnonz1; ++i )
-      printf("ray1 (%f, %d) \n", raycoefs1[i], rayidx1[i]);
-   for( int i = 0; i < raynnonz2; ++i )
-      printf("ray2 (%f, %d) \n", raycoefs2[i], rayidx2[i]);
-
-   printf("alpha* = %f, rho = %f \n", coef1, coef2);*/
 
    while( idx1 < raynnonz1 || idx2 < raynnonz2 )
    {
@@ -2607,7 +2592,6 @@ SCIP_RETCODE generateIntercut(
       }
    }
 
-   /* TODO move computation of vb, wcoefs, and kappa to INITLP */
    SCIP_CALL( SCIPallocBufferArray(scip, &vb, nquadexprs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vzlp, nquadexprs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &wcoefs, nquadexprs) );
