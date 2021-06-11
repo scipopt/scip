@@ -1726,6 +1726,81 @@ SCIP_Real computeIntersectionPoint(
    return MAX(sol1234a, sol4b);
 }
 
+/** checks if numerics of the coefficients are not too bad */
+static
+SCIP_Bool areCoefsNumericsGood(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLRDATA*      nlhdlrdata,         /**< nlhdlr data */
+   SCIP_Real*            coefs1234a,         /**< coefficients for case 1-3 and 4a */
+   SCIP_Real*            coefs4b,            /**< coefficients for case 4b */
+   SCIP_Bool             iscase4             /**< whether we are in case 4 */
+   )
+{
+   SCIP_Real max;
+   SCIP_Real min;
+   int j;
+
+   /* check at phi at 0 is negative (note; this could be checked before restricting to the ray) also, if this
+    * succeeds for one ray, it should suceed for every ray
+    */
+   if( SQRT( coefs1234a[2] ) - coefs1234a[4] >= 0.0 )
+   {
+      INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
+      nlhdlrdata->nphinonneg++;
+      return FALSE;
+   }
+
+   /* maybe we want to avoid a large dynamism between A, B and C */
+   if( nlhdlrdata->ignorebadrayrestriction )
+   {
+      max = 0.0; min = SCIPinfinity(scip);
+      for( j = 0; j < 3; ++j )
+      {
+         SCIP_Real absval;
+
+         absval = ABS(coefs1234a[j]);
+         if( max < absval )
+            max = absval;
+         if( absval != 0.0 && absval < min )
+            min = absval;
+      }
+
+      if( SCIPisHugeValue(scip, max / min) )
+      {
+         INTERLOG(printf("Bad numerics 1 2 3 or 4a: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
+         nlhdlrdata->nbadrayrestriction++;
+         return FALSE;
+      }
+
+      if( iscase4 )
+      {
+         max = 0.0; min = SCIPinfinity(scip);
+         for( j = 0; j < 3; ++j )
+         {
+            SCIP_Real absval;
+
+            absval = ABS(coefs4b[j]);
+            if( max < absval )
+               max = absval;
+            if( absval != 0.0 && absval < min )
+               min = absval;
+         }
+
+         if( SCIPisHugeValue(scip, max / min) )
+         {
+            INTERLOG(printf("Bad numeric 4b: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
+            nlhdlrdata->nbadrayrestriction++;
+            return FALSE;
+         }
+      }
+   }
+
+   return TRUE;
+}
+
+/** computes intersection cut cuts off sol (because solution sol violates the quadratic constraint cons)
+ * and stores it in rowprep. Here, we don't use any strengthening.
+ */
 static
 SCIP_RETCODE computeIntercut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1772,70 +1847,10 @@ SCIP_RETCODE computeIntercut(
          return SCIP_OKAY;
 
       /* if restriction to ray is numerically nasty -> abort cut separation */
-      /* TODO: put this in another function */
-      {
-         SCIP_Real max;
-         SCIP_Real min;
-         int j;
+      *success = areCoefsNumericsGood(scip, nlhdlrdata, coefs1234a, coefs4b, iscase4);
 
-         /* check at phi at 0 is negative (note; this could be checked before restricting to the ray) also, if this
-          * succeeds for one ray, it should suceed for every ray
-          */
-         if( SQRT( coefs1234a[2] ) - coefs1234a[4] >= 0.0 )
-         {
-            INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
-            *success = FALSE;
-            nlhdlrdata->nphinonneg++;
-            return SCIP_OKAY;
-         }
-
-         /* maybe we want to avoid a large dynamism between A, B and C */
-         if( nlhdlrdata->ignorebadrayrestriction )
-         {
-            max = 0.0; min = SCIPinfinity(scip);
-            for( j = 0; j < 3; ++j )
-            {
-               SCIP_Real absval;
-
-               absval = ABS(coefs1234a[j]);
-               if( max < absval )
-                  max = absval;
-               if( absval != 0.0 && absval < min )
-                  min = absval;
-            }
-
-            if( SCIPisHugeValue(scip, max / min) )
-            {
-               INTERLOG(printf("Bad numerics 1 2 3 or 4a: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
-               *success = FALSE;
-               nlhdlrdata->nbadrayrestriction++;
-               return SCIP_OKAY;
-            }
-
-            if( iscase4 )
-            {
-               max = 0.0; min = SCIPinfinity(scip);
-               for( j = 0; j < 3; ++j )
-               {
-                  SCIP_Real absval;
-
-                  absval = ABS(coefs4b[j]);
-                  if( max < absval )
-                     max = absval;
-                  if( absval != 0.0 && absval < min )
-                     min = absval;
-               }
-
-               if( SCIPisHugeValue(scip, max / min) )
-               {
-                  INTERLOG(printf("Bad numeric 4b: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
-                  *success = FALSE;
-                  nlhdlrdata->nbadrayrestriction++;
-                  return SCIP_OKAY;
-               }
-            }
-         }
-      }
+      if( ! *success )
+         return SCIP_OKAY;
 
       /* compute intersection point */
       interpoint = computeIntersectionPoint(scip, nlhdlrdata, iscase4, coefs1234a, coefs4b, coefscondition);
