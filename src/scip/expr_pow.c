@@ -361,10 +361,20 @@ void computeSecant(
        * To avoid this, we replace xub^n by a Taylor expansion of pow at xlb:
        *   xub^n = xlb^n + n xlb^(n-1) (xub-xlb) + 0.5 n*(n-1) xlb^(n-2) (xub-xlb)^2 + 1/6 n*(n-1)*(n-2) xi^(n-3) (xub-xlb)^3  for some xlb < xi < xub
        * Dropping the last term, the slope is  (with an error of O((xub-xlb)^2) = 1e-18)
-       *   n*xlb^(n-1) + 0.5 n*(n-1)*xlb^(n-2)*(xub-xlb)
-       * and the constant is
-       *   xlb^n - (n*xlb^(n-1) + 0.5 n*(n-1)*xlb^(n-2)*(xub-xlb)) * xlb
-       * = (1-n) xlb^n - 0.5 n*(n-1)xlb^(n-1) (xub-xlb)
+       *   n*xlb^(n-1) + 0.5 n*(n-1) xlb^(n-2)*(xub-xlb)
+       * = n*xlb^(n-1) (1 - 0.5*(n-1)) + 0.5 n*(n-1) xlb^(n-2)*xub
+       * = 0.5*n*((3-n)*xlb^(n-1) + (n-1) xlb^(n-2)*xub)
+       *
+       * test n=2: 0.5*2*((3-2)*xlb + (2-1) 1*xub) = xlb + xub    ok
+       *      n=3: 0.5*3*((3-3)*xlb + (3-1) xlb*xub) = 3*xlb*xub ~ xlb^2 + xlb*xub + xub^2  ok
+       *
+       * The constant is
+       *   xlb^n - 0.5*n*((3-n) xlb^(n-1) + (n-1) xlb^(n-2)*xub) * xlb
+       * = xlb^n - 0.5*n*(3-n) xlb^n - 0.5*n*(n-1) xlb^(n-1)*xub
+       * = (1-0.5*n*(3-n)) xlb^n - 0.5 n*(n-1) xlb^(n-1) xub
+       *
+       * test n=2: (1-0.5*2*(3-2)) xlb^2 - 0.5 2*(2-1) xlb xub = -xlb*xub
+       *           old formula: xlb^2 - (xlb+xub) * xlb = -xlb*xub  ok
        *
        * For signpower with xub <= 0, we can negate xlb and xub:
        *   slope: (sign(xub)|xub|^n - sign(xlb)*|xlb|^n) / (xub-xlb) = -((-xub)^n - (-xlb)^n) / (xub - xlb) = ((-xub)^n - (-xlb)^n) / (-xub - (-xlb))
@@ -384,8 +394,8 @@ void computeSecant(
       xlb_n1 = pow(xlb, exponent - 1.0);
       xlb_n2 = pow(xlb, exponent - 2.0);
 
-      *slope = exponent * xlb_n1 + 0.5 * exponent * (exponent-1.0) * xlb_n2 * (xub - xlb);
-      *constant = (1.0-exponent) * xlb_n - 0.5 * exponent * (exponent-1.0) * xlb_n1 * (xub - xlb);
+      *slope = 0.5*exponent * ((3.0-exponent) * xlb_n1 + (exponent-1.0) * xlb_n2 * xub);
+      *constant = (1.0 - 0.5*exponent*(3.0-exponent)) * xlb_n - 0.5*exponent*(exponent-1.0) * xlb_n1 * xub;
 
       if( signpower && xub <= 0.0 )
          *constant *= -1.0;
