@@ -3464,12 +3464,6 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
       return SCIP_OKAY;
    }
 
-   /* TODO: do we have to handle reverse convex differently?  */
-   /*if( (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) ||
-       ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) )
-      nlhdlrexprdata->usenormalcut = TRUE;
-      */
-
    /* only separate at selected nodes */
    node = SCIPgetCurrentNode(scip);
    depth = SCIPnodeGetDepth(node);
