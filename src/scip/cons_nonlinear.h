@@ -105,7 +105,7 @@ typedef struct SCIP_ConsNonlinear_BilinTerm SCIP_CONSNONLINEAR_BILINTERM; /**< b
 
 /** upgrading method for nonlinear constraints into more specific constraints
  *
- * the method might upgrade an nonlinear constraint into a set of upgrade constraints
+ * the method might upgrade a nonlinear constraint into a set of upgrade constraints
  * the caller provided an array upgdconss to store upgrade constraints
  * the length of upgdconss is given by upgdconsssize
  * if an upgrade is not possible, set *nupgdconss to zero
