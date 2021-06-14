@@ -647,7 +647,7 @@ SCIP_RETCODE isSolutionInNode(
                if( !(*solcontained) && SCIPboundchgGetBoundchgtype(&boundchgs[i]) != SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%.15g] %s %.15g\n",
-                     node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
+                     (void*) node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
                      SCIPboundchgGetBoundtype(&boundchgs[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
                   SCIPABORT();
                }
@@ -1109,7 +1109,7 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       if( solisinnode )
       {
          SCIPerrorMessage("debugging solution was cut off in local node #%" SCIP_LONGINT_FORMAT " (%p) at depth %d\n",
-            node->number, node, SCIPnodeGetDepth(node));
+            node->number, (void*) node, SCIPnodeGetDepth(node));
          SCIPABORT();
       }
    }
