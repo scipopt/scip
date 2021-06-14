@@ -27,6 +27,7 @@ Performance improvements
 - In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 - improved upgrade of orbisacks to packing/partitioning orbitopes
 - Improved running time of symresack cover separation.
+- Improved propagation algorithm for orbisack and symresack.
 
 Examples and applications
 -------------------------

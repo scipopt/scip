@@ -96,9 +96,15 @@
 #define DEFAULT_CHECKMONOTONICITY  TRUE /**< check whether permutation is monotone when upgrading to packing/partitioning symresacks */
 #define DEFAULT_FORCECONSCOPY     FALSE /**< whether symresack constraints should be forced to be copied to sub SCIPs */
 
-/* macros for getting bounds of pseudo solutions in propagation */
-#define ISFIXED0(x)   (SCIPvarGetUbLocal(x) < 0.5 ? TRUE : FALSE)
-#define ISFIXED1(x)   (SCIPvarGetLbLocal(x) > 0.5 ? TRUE : FALSE)
+/* Constants to store fixings */
+#define FIXED0    1                     /* When a variable is fixed to 0. */
+#define FIXED1    2                     /* When a variable is fixed to 1. */
+#define UNFIXED   3                     /* When a variable is neither fixed to 0 or to 1. */
+#define NOINIT    0                     /* A dummy entry for non-initialized variables.
+                                         * Must have value 0 because of SCIPallocCleanBufferArray. */
+/* A macro for checking if a variable was fixed during a bound change */
+#define ISFIXED(x, bdchgidx)   (SCIPvarGetUbAtIndex(x, bdchgidx, FALSE) - SCIPvarGetLbAtIndex(x, bdchgidx, FALSE) < 0.5)
+
 
 
 /*
@@ -522,7 +528,6 @@ SCIP_RETCODE consdataCreate(
       (*consdata)->ppupgrade = FALSE;
       (*consdata)->ncycles = 0;
       (*consdata)->cycledecomposition = NULL;
-
       return SCIP_OKAY;
    }
 
@@ -794,6 +799,132 @@ SCIP_RETCODE initLP(
 }
 
 
+/** Determines if a vector with additional fixings could exist that is lexicographically larger than its image.
+ *
+ * Given a vector of variables, a permutation, and a set of additional (virtual) fixings.
+ * If a vector adhering to the local variable bounds (local fixings) and to the virtual fixings exists,
+ * then infeasible is FALSE, otherwise TRUE.
+ */
+static
+SCIP_RETCODE checkFeasible(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR**            vars,               /**< array of variables affected by permutation */
+   int*                  invperm,            /**< inverse of permutation */
+   int                   nvars,              /**< number of variables */
+   int                   start,              /**< at which position to start (assuming previous positions are equal) */
+   int*                  tempfixings,        /**< array with at entry i the virtual fixing of variable vars[i] */
+   int*                  tempfixentries,     /**< the entries i that are virtually fixed until numfixentriesinit */
+   int                   numfixentriesinit,  /**< the number of virtually fixed entries */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected in these fixings */
+   int*                  infeasibleentry     /**< pointer to store at which entry a (0, 1) pattern is found */
+)
+{
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   int var1fix;
+   int var2fix;
+
+   int i;
+   int numfixentries;
+
+   /* avoid trivial problems */
+   if ( nvars < 2 )
+      return SCIP_OKAY;
+
+   assert( scip != NULL );
+   assert( vars != NULL );
+   assert( invperm != NULL );
+   assert( tempfixings != NULL );
+   assert( tempfixentries != NULL );
+   assert( infeasible != NULL );
+
+   /* A counter for how many virtual fixings we have. */
+   numfixentries = numfixentriesinit;
+
+   *infeasible = FALSE;
+
+   for (i = start; i < nvars; ++i)
+   {
+      /* there are no fixed points */
+      assert( invperm[i] != i );
+
+      /* get variables of first and second column */
+      var1 = vars[i];
+      var2 = vars[invperm[i]];
+
+      assert( var1 != NULL );
+      assert( var2 != NULL );
+
+      /* Get virtual fixing of variable in left column */
+      var1fix = tempfixings[i];
+      if ( var1fix == NOINIT )
+      {
+         if ( SCIPvarGetUbLocal(var1) < 0.5 )
+         {
+            var1fix = FIXED0;
+            assert( SCIPvarGetLbLocal(var1) <= 0.5 );
+         }
+         else if ( SCIPvarGetLbLocal(var1) > 0.5 )
+            var1fix = FIXED1;
+         else
+            var1fix = UNFIXED;
+      }
+      assert( var1fix != NOINIT );
+
+      /* Get virtual fixing of variable in right column */
+      var2fix = tempfixings[invperm[i]];
+      if ( var2fix == NOINIT )
+      {
+         if ( SCIPvarGetUbLocal(var2) < 0.5 )
+         {
+            var2fix = FIXED0;
+            assert( SCIPvarGetLbLocal(var2) <= 0.5 );
+         }
+         else if ( SCIPvarGetLbLocal(var2) > 0.5 )
+            var2fix = FIXED1;
+         else
+            var2fix = UNFIXED;
+      }
+      assert( var2fix != NOINIT );
+
+      /* Encounter one of (_, _), (_, 0), (1, _), (1, 0). In all cases (1, 0) can be constructed. Thus feasible. */
+      if ( var1fix != FIXED0 && var2fix != FIXED1 )
+         break;
+      /* Encounter (0, 1). Infeasible. */
+      else if ( var1fix == FIXED0 && var2fix == FIXED1 )
+      {
+         *infeasible = TRUE;
+         *infeasibleentry = i;
+         break;
+      }
+      /* Encounter (0, _). Virtually fix var2 to 0. */
+      else if ( var1fix == FIXED0 && var2fix == UNFIXED )
+      {
+         tempfixings[invperm[i]] = FIXED0;
+         /* Mark that we have fixed invperm[i]. */
+         tempfixentries[numfixentries++] = invperm[i];
+      }
+      /* Encounter (_, 1). Virtually fix var1 to 1. */
+      else if(var1fix == UNFIXED && var2fix == FIXED1 )
+      {
+         tempfixings[i] = FIXED0;
+         /* Mark that we have fixed invperm[i]. */
+         tempfixentries[numfixentries++] = i;
+      }
+      /* Remaining cases are (0, 0) and (1, 1). In both cases: continue. */
+   }
+
+   /* Undo virtual fixings made in this function */
+   for (i = numfixentriesinit; i < numfixentries; ++i)
+   {
+      tempfixings[tempfixentries[i]] = NOINIT;
+      tempfixentries[i] = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** perform propagation of symresack constraint */
 static
 SCIP_RETCODE propVariables(
@@ -808,6 +939,16 @@ SCIP_RETCODE propVariables(
    int* invperm;
    int nvars;
    int i;
+   int r;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   int var1fix;
+   int var2fix;
+   SCIP_Bool tightened;
+   SCIP_Bool peekinfeasible;
+   int peekinfeasibleentry;
+   int* tempfixings;
+   int* tempfixentries;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -836,22 +977,115 @@ SCIP_RETCODE propVariables(
    /* loop through all variables */
    for (i = 0; i < nvars; ++i)
    {
-      SCIP_VAR* var2;
-      SCIP_VAR* var;
-      int r;
-      SCIP_Bool tightened;
-
       /* there are no fixed points */
       assert( invperm[i] != i );
 
       /* get variables of first and second column */
-      var = vars[i];
+      var1 = vars[i];
       var2 = vars[invperm[i]];
-      assert( var != NULL );
+      assert( var1 != NULL );
       assert( var2 != NULL );
 
-      /* if first part of variable pair fixed to 0 and second part is fixed to 1 */
-      if ( ISFIXED0(var) && ISFIXED1(var2) )
+      /* Get the fixing status of the left column variable var1 */
+      if ( SCIPvarGetUbLocal(var1) < 0.5 )
+      {
+         var1fix = FIXED0;
+         assert( SCIPvarGetLbLocal(var1) <= 0.5 );
+      }
+      else if ( SCIPvarGetLbLocal(var1) > 0.5 )
+         var1fix = FIXED1;
+      else
+         var1fix = UNFIXED;
+
+      /* Get the fixing status of the right column variable var2 */
+      if ( SCIPvarGetUbLocal(var2) < 0.5 )
+      {
+         var2fix = FIXED0;
+         assert( SCIPvarGetLbLocal(var2) <= 0.5 );
+      }
+      else if ( SCIPvarGetLbLocal(var2) > 0.5 )
+         var2fix = FIXED1;
+      else
+         var2fix = UNFIXED;
+
+      /* Encounter one of (_, _), (_, 0), (1, _), (1, 0). Check if (1, 1) or (0, 0) are possible, otherwise fix. */
+      if ( var1fix != FIXED0 && var2fix != FIXED1 )
+      {
+         assert( SCIPvarGetUbLocal(var1) > 0.5 );
+         assert( SCIPvarGetLbLocal(var2) < 0.5 );
+
+         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
+         SCIPdebugMsg(scip, " -> node is feasible (could set pair to (1,0) and every earlier pair is constant).\n");
+
+         if ( var1fix == UNFIXED || var2fix == UNFIXED )
+         {
+            /* Create arrays tempfixings and tempfixentries to store virtual fixings. */
+            SCIP_CALL( SCIPallocCleanBufferArray(scip, &tempfixings, nvars) );
+            SCIP_CALL( SCIPallocCleanBufferArray(scip, &tempfixentries, nvars) );
+
+            if ( var1fix == UNFIXED )
+            {
+               assert( SCIPvarGetLbLocal(var1) < 0.5 );
+
+               /* Peek whether a lexicographical larger-or-equal vector can be created with var1 fixed to 0 */
+               SCIPdebugMsg(scip, " -> First entry is not fixed. Check if 0 is feasible.\n");
+               tempfixings[i] = FIXED0;
+               tempfixentries[0] = i;
+               SCIP_CALL( checkFeasible(scip, vars, invperm, nvars, i, tempfixings, tempfixentries, 1,
+                     &peekinfeasible, &peekinfeasibleentry) );
+
+               if ( peekinfeasible )
+               {
+                  /* No feasible vector exists with var1 set to 0, so it must be a 1-fixing. */
+                  SCIPdebugMsg(scip, " -> First entry is not fixed. 0 is not feasible. Fixing to 1.\n");
+                  SCIP_CALL( SCIPinferVarLbCons(scip, var1, 1.0, cons, i + nvars * peekinfeasibleentry,
+                     FALSE, infeasible, &tightened) ); /*lint !e713*/
+                  assert( ! *infeasible );
+
+                  if ( tightened )
+                     ++(*ngen);
+               }
+
+               tempfixings[i] = NOINIT;
+               tempfixentries[0] = 0;
+            }
+
+            if ( var2fix == UNFIXED )
+            {
+               assert( SCIPvarGetUbLocal(var2) > 0.5 );
+
+               /* Peek whether a lexicographical larger-or-equal vector can be created with var2 fixed to 1 */
+               SCIPdebugMsg(scip, " -> Second entry is not fixed. Check if 1 is feasible.\n");
+               tempfixings[invperm[i]] = FIXED1;
+               tempfixentries[0] = invperm[i];
+               SCIP_CALL( checkFeasible(scip, vars, invperm, nvars, i, tempfixings, tempfixentries, 1,
+                     &peekinfeasible, &peekinfeasibleentry) );
+
+               if ( peekinfeasible )
+               {
+                  /* No feasible vector exists with var2 set to 1, so it must be a 1-fixing. */
+                  SCIPdebugMsg(scip, " -> Second entry is not fixed. 1 is not feasible. Fixing to 0.\n");
+                  SCIP_CALL( SCIPinferVarUbCons(scip, var2, 0.0, cons, i + nvars * peekinfeasibleentry,
+                     FALSE, infeasible, &tightened) ); /*lint !e713*/
+                  assert( ! *infeasible );
+
+                  if ( tightened )
+                     ++(*ngen);
+               }
+
+               tempfixings[invperm[i]] = NOINIT;
+               tempfixentries[0] = 0;
+            }
+
+            SCIPfreeCleanBufferArray(scip, &tempfixentries);
+            SCIPfreeCleanBufferArray(scip, &tempfixings);
+         }
+
+         /* Can stop here, because this row can become (1, 0). Therefore all next rows can take arbitrary values. */
+         break;
+      }
+      /* Encounter (0, 1): If first part of variable pair fixed to 0 and second part is fixed to 1 */
+      else if ( var1fix == FIXED0 && var2fix == FIXED1 )
       {
          SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
 
@@ -877,10 +1111,10 @@ SCIP_RETCODE propVariables(
          *infeasible = TRUE;
          break;
       }
-      /* if first part of the variable pair is fixed to 0 and the second part is free --> fix second part to 0 */
-      else if ( ISFIXED0(var) && ( ! ISFIXED0(var2) ) )
+      /* Encounter (0, _): Fix second part to 0 */
+      else if ( var1fix == FIXED0 && var2fix != FIXED0 )
       {
-         assert( SCIPvarGetUbLocal(var) < 0.5 );
+         assert( SCIPvarGetUbLocal(var1) < 0.5 );
          assert( SCIPvarGetLbLocal(var2) < 0.5 );
          assert( SCIPvarGetUbLocal(var2) > 0.5 );
 
@@ -893,36 +1127,23 @@ SCIP_RETCODE propVariables(
          if ( tightened )
             ++(*ngen);
       }
-      /* if second part of the variable pair is fixed to 1 and the first part is free --> fix first part to 1 */
-      else if ( ( ! ISFIXED1(var) ) && ISFIXED1(var2) )
+      /* Encounter (_, 1): fix first part to 1 */
+      else if ( var1fix != FIXED1 && var2fix == FIXED1 )
       {
-         assert( SCIPvarGetLbLocal(var) < 0.5 );
-         assert( SCIPvarGetUbLocal(var) > 0.5 );
+         assert( SCIPvarGetLbLocal(var1) < 0.5 );
+         assert( SCIPvarGetUbLocal(var1) > 0.5 );
          assert( SCIPvarGetLbLocal(var2) > 0.5 );
 
          SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
 
-         assert( SCIPvarGetUbLocal(var) > 0.5 );
-         SCIP_CALL( SCIPinferVarLbCons(scip, var, 1.0, cons, i + nvars, FALSE, infeasible, &tightened) ); /*lint !e713*/
+         assert( SCIPvarGetUbLocal(var1) > 0.5 );
+         SCIP_CALL( SCIPinferVarLbCons(scip, var1, 1.0, cons, i, FALSE, infeasible, &tightened) ); /*lint !e713*/
          assert( ! *infeasible );
 
          if ( tightened )
             ++(*ngen);
       }
-      /* if solution is lexicographically maximal */
-      else if ( ISFIXED1(var) && ISFIXED0(var2) )
-      {
-         assert( SCIPvarGetLbLocal(var) > 0.5 );
-         assert( SCIPvarGetUbLocal(var2) < 0.5 );
-
-         SCIPdebugMsg(scip, "Check variable pair (%d,%d).\n", i, invperm[i]);
-         SCIPdebugMsg(scip, " -> node is feasible (pair was fixed to (1,0) and every earlier pair is constant).\n");
-
-         break;
-      }
-      /* cannot apply propagation */
-      else
-         break;
+      /* Remaining cases are (0, 0) and (1, 1). In these cases we can continue! */
    }
 
    return SCIP_OKAY;
@@ -2274,9 +2495,12 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
+   int* perm;
    int* invperm;
    int nvars;
    int i;
+   int varrow;
+   int infrow;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2302,66 +2526,117 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
    vars = consdata->vars;
    nvars = consdata->nvars;
+   perm = consdata->perm;
    invperm = consdata->invperm;
 
-   assert( 0 <= inferinfo && inferinfo < (2 * nvars - 1) );
+   /* inferinfo == varrow + infrow * nvars.
+    * infrow is 0 if the fixing is not caused by a lookahead.
+    */
+   varrow = inferinfo % nvars;
+   infrow = inferinfo / nvars;
 
-   /* if first part of variable pair was fixed to 0 */
-   if ( inferinfo < nvars )
+   assert( varrow >= 0 );
+   assert( varrow < nvars );
+   assert( infrow >= 0 );
+   assert( infrow < nvars );
+   assert( vars[varrow] == infervar || vars[invperm[varrow]] == infervar );
+
+   /* Up to entry varrow the vectors x and perm[x] are equal. */
+   for (i = 0; i < varrow; ++i)
    {
-      assert( vars[invperm[inferinfo]] == infervar );
-      assert( SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, FALSE) > 0.5
-         && SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, TRUE) < 0.5 );
+      /* Conflict caused by bounds of x[i] and perm(x)[i] = x[invperm[i]]. */
 
-      if ( SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, FALSE) > 0.5
-         && SCIPvarGetUbAtIndex(vars[invperm[inferinfo]], bdchgidx, TRUE) < 0.5 )
+      /* No fixed points in the permutation. */
+      assert( i != invperm[i] );
+
+      /* Up to entry varrow the vectors x and perm[x] are fixed to the same value. */
+      assert( ISFIXED(vars[i], bdchgidx) );
+      assert( ISFIXED(vars[invperm[i]], bdchgidx) );
+      assert( REALABS(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) -
+         SCIPvarGetUbAtIndex(vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
+      assert( REALABS(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) -
+         SCIPvarGetLbAtIndex(vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
+
+      /* At iteration i the vars x[i] and x[invperm[i]] are fixed.
+       * So only new information is received if i < perm[i] (i.e. there is no j < i with j = invperm[i])
+       * Or if invperm[i] > i.
+       */
+      if ( i < perm[i] )
       {
-         SCIPdebugMsg(scip, " -> reason for setting x[%d] = 0 was fixing x[%d] to 0 ", invperm[inferinfo], inferinfo);
-         SCIPdebugMsg(scip, "and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
-            inferinfo, invperm[inferinfo]);
+         assert( vars[i] != infervar );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
+      }
+      if ( invperm[i] > i )
+      {
+         assert( vars[invperm[i]] != infervar );
+         SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
+         SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
+      }
+   }
 
-         SCIP_CALL( SCIPaddConflictUb(scip, vars[inferinfo], bdchgidx) );
+   /* Case distinction: Fixing due to propagation or due to lookahead */
+   if ( infrow > 0 )
+   {
+      /* The fixing of infervar is caused by a lookahead (checkFeasible)
+       * Up to row "varrow" the entries x[i] and perm(x)[i] are forced to be equal
+       * If x[varrow] = perm(x)[varrow] is assumed, then until infrow we find x[i] = perm(x)[i] ( = x[invperm[i]] )
+       * and (x[infrow], perm(x)[infrow]) = (0, 1).
+       */
 
-         for (i = 0; i < inferinfo; ++i)
+      /* Everything after varrow to infrow is forced to a constant, and row infrow is (0, 1) */
+      for (i = varrow + 1; i <= infrow; ++i)
+      {
+         /* Conflict caused by bounds of x[i] and perm(x)[i] = x[invperm[i]]. */
+
+         /* No fixed points in the permutation. */
+         assert( i != invperm[i] );
+
+         /* The fixing are applied 'virtually', i.e. if varrow is considered constant, then fixings will follow.
+          * Thus, between entries varrow and infrow of vectorx x and gamma(x) the entries do not have to be fixed.
+          * For conflict analysis, only the fixed entries matter.
+          */
+         if ( ( i < perm[i] || i == invperm[varrow] ) && ISFIXED(vars[i], bdchgidx) )
          {
-            /* there are no fixed points */
-            assert( invperm[i] != i );
-
+            assert( vars[i] != infervar );
             SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
             SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
+         }
+         if ( ( invperm[i] > i || invperm[i] == varrow ) && ISFIXED(vars[invperm[i]], bdchgidx) )
+         {
+            assert( vars[invperm[i]] != infervar );
             SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
             SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
          }
       }
    }
-   /* if second part of variable pair was fixed to 1 */
    else
    {
-      int inferinfo2;
-
-      inferinfo2 = inferinfo - nvars;
-      assert( vars[inferinfo2] == infervar );
-      assert( SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, FALSE) < 0.5
-         && SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, TRUE) > 0.5 );
-
-      if ( SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, FALSE) < 0.5
-         && SCIPvarGetLbAtIndex(vars[inferinfo2], bdchgidx, TRUE) > 0.5 )
+      /* This is not a fixing caused by lookahead (checkFeasible),
+       * so row "varrow" was (0, _) or (_, 1) and for i < varrow x[i] = perm(x)[i].
+       */
+      if ( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
-         SCIPdebugMsg(scip, " -> reason for setting x[%d] = 1 was fixing x[%d] to 1 ", inferinfo2, invperm[inferinfo2]);
-         SCIPdebugMsg(scip, "and each pair of binary variables before (%d,%d) which are not fixed points is constant.\n",
-            inferinfo2, invperm[inferinfo2]);
+         /* Changed the lower bound of infervar to 1. That means that this fixing is due to (_, 1) */
+         assert( infervar == vars[varrow] );
+         assert( ISFIXED(vars[invperm[varrow]], bdchgidx) );
 
-         SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[inferinfo2]], bdchgidx) );
-
-         for (i = 0; i < inferinfo2; ++i)
+         if ( invperm[varrow] > varrow )
          {
-            /* there are no fixed points */
-            assert( invperm[i] != i );
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[varrow]], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[varrow]], bdchgidx) );
+         }
+      }
+      else
+      {
+         /* Changed the lower bound of infervar to 0. That means that this fixing is due to (0, _) */
+         assert( infervar == vars[invperm[varrow]] );
+         assert( ISFIXED(vars[varrow], bdchgidx) );
 
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
-            SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
-            SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
-            SCIP_CALL( SCIPaddConflictLb(scip, vars[invperm[i]], bdchgidx) );
+         if ( varrow < perm[varrow] )
+         {
+            SCIP_CALL( SCIPaddConflictUb(scip, vars[varrow], bdchgidx) );
+            SCIP_CALL( SCIPaddConflictLb(scip, vars[varrow], bdchgidx) );
          }
       }
    }
