@@ -71,6 +71,11 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** frees all debugging data */
+SCIP_RETCODE SCIPdebugFree(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** checks for validity of the debugging solution in given constraints */
 SCIP_RETCODE SCIPdebugCheckConss(
    SCIP*                 scip,               /**< SCIP data structure */
