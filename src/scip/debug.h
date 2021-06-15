@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPdebugReset(
    SCIP_SET*             set
    );
 
-/** frees debugging data */
+/** frees debugging data for the particular instance */
 SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
    );

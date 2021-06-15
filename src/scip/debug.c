@@ -706,7 +706,7 @@ SCIP_RETCODE SCIPdebugReset(
    return SCIP_OKAY;
 }
 
-/** frees all debugging solution data */
+/** frees debugging data for the particular instance */
 SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
