@@ -706,7 +706,7 @@ SCIP_RETCODE SCIPdebugReset(
    return SCIP_OKAY;
 }
 
-/** frees all debugging solution data */
+/** frees debugging data for the particular instance */
 SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -735,6 +735,22 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    /* free the debug solution */
    SCIP_CALL( SCIPdebugFreeSol(set) );
 
+   return SCIP_OKAY;
+}
+
+/** frees all debugging data */
+SCIP_RETCODE SCIPdebugFree(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+
+   assert(set != NULL);
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   SCIP_CALL( SCIPdebugFreeDebugData(set) );
    BMSfreeMemoryNull(&debugsoldata);
 
    set->debugsoldata = NULL;
