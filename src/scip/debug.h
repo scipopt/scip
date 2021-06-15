@@ -261,6 +261,7 @@ SCIP_Bool SCIPwithDebugSol(void);
 #define SCIPdebugFreeSol(set) SCIP_OKAY
 #define SCIPdebugReset(set) SCIP_OKAY
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
+#define SCIPdebugFree(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
 #define SCIPdebugCheckLbGlobal(scip,var,lb) SCIP_OKAY
