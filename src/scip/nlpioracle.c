@@ -87,7 +87,7 @@ struct SCIP_NlpiOracle
 /**@name Local functions */
 /**@{ */
 
-/** ensures that variables related arrays in oracle have at least a given length */
+/** ensures that those arrays in oracle that store information on variables have at least a given length */
 static
 SCIP_RETCODE ensureVarsSize(
    SCIP*                 scip,               /**< SCIP data structure */
