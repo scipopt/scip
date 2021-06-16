@@ -29,7 +29,7 @@
 #include "scip/type_nlhdlr.h"
 #include "scip/type_clock.h"
 
-/** generic data and callback methods of an nonlinear handler */
+/** generic data and callback methods of a nonlinear handler */
 struct SCIP_Nlhdlr
 {
    char*                 name;               /**< nonlinearity handler name */

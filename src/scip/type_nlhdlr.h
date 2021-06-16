@@ -44,7 +44,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
 
 /** nonlinear handler copy callback
  *
- * the method includes the nonlinear handler into a nonlinear constraint handler
+ * The method includes the nonlinear handler into a nonlinear constraint handler.
  *
  * This method is usually called when doing a copy of a nonlinear constraint handler.
  *
@@ -147,14 +147,15 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * @note Auxiliary variables do not exist in subexpressions during detect and are not created by a call to @ref SCIPregisterExprUsageNonlinear().
  *   They will be available when the INITSEPA callback is called.
  *
- * - scip SCIP data structure
- * - conshdlr nonlinear constraint handler
- * - nlhdlr nonlinear handler
- * - expr expression to analyze
- * - cons the constraint that expression defines, or NULL when the expr does not define any constraint, that is, when it is not the root of an expression of a constraint
- * - enforcing enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
- * - participating enforcement methods that this nonlinear handler should be called for (to be set by detect callback)
- * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
+ * input:
+ * - scip : SCIP data structure
+ * - conshdlr : nonlinear constraint handler
+ * - nlhdlr : nonlinear handler
+ * - expr : expression to analyze
+ * - cons : the constraint that expression defines, or NULL when the expr does not define any constraint, that is, when it is not the root of an expression of a constraint
+ * - enforcing : enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
+ * - participating : enforcement methods that this nonlinear handler should be called for (to be set by detect callback)
+ * - nlhdlrexprdata : nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
  */
 #define SCIP_DECL_NLHDLRDETECT(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -185,7 +186,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
 
 /** nonlinear handler interval evaluation callback
  *
- * The methods computes an interval that contains the image (range) of the expression.
+ * The method computes an interval that contains the image (range) of the expression.
  *
  * input:
  *  - scip : SCIP main data structure
@@ -357,10 +358,10 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  *  - overestimate : whether the expression needs to be over- or underestimated
  *  - targetvalue : a value the estimator shall exceed, can be +/-infinity
  *  - rowprep : a rowprep where to store the estimator
- *  - rowpreps: an array where to store the estimators
+ *  - rowpreps : an array where to store the estimators
  *  - success : buffer to indicate whether an estimator could be computed
- *  - addbranchscores: indicates whether to register branching scores
- *  - addedbranchscores: buffer to store whether the branching score callback was successful
+ *  - addbranchscores : indicates whether to register branching scores
+ *  - addedbranchscores : buffer to store whether the branching score callback was successful
  */
 #define SCIP_DECL_NLHDLRESTIMATE(x) SCIP_RETCODE x (\
    SCIP* scip, \

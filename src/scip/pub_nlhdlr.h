@@ -35,28 +35,28 @@ extern "C" {
 /**@name Nonlinear Handler Methods */
 /**@{ */
 
-/** set the copy handler callback of a nonlinear handler */
+/** sets the copy handler callback of a nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetCopyHdlr(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRCOPYHDLR((*copy))         /**< copy callback (can be NULL) */
 );
 
-/** set the nonlinear handler callback to free the nonlinear handler data */
+/** sets the nonlinear handler callback to free the nonlinear handler data */
 SCIP_EXPORT
 void SCIPnlhdlrSetFreeHdlrData(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
 );
 
-/** set the nonlinear handler callback to free expression specific data of nonlinear handler */
+/** sets the nonlinear handler callback to free expression specific data of nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetFreeExprData(
    SCIP_NLHDLR*          nlhdlr,            /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
 );
 
-/** set the initialization and deinitialization callback of a nonlinear handler */
+/** sets the initialization and deinitialization callback of a nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetInitExit(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
@@ -64,7 +64,7 @@ void SCIPnlhdlrSetInitExit(
    SCIP_DECL_NLHDLREXIT((*exit))             /**< deinitialization callback (can be NULL) */
 );
 
-/** set the propagation callbacks of a nonlinear handler */
+/** sets the propagation callbacks of a nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetProp(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
@@ -72,7 +72,7 @@ void SCIPnlhdlrSetProp(
    SCIP_DECL_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
-/** set the enforcement callbacks of a nonlinear handler */
+/** sets the enforcement callbacks of a nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetSepa(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
