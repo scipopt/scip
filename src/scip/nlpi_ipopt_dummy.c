@@ -19,7 +19,7 @@
  * @author  Stefan Vigerske
  * @author  Benjamin Müller
  *
- * This code has been separate from nlpi_ipopt.cpp, so the SCIP build system recognizes it as pure C code,
+ * This code has been separated from nlpi_ipopt.cpp, so the SCIP build system recognizes it as pure C code,
  * thus the linker does not need to be changed to C++.
  */
 

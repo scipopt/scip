@@ -100,8 +100,6 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 
 /** gets pointer to solver-internal NLP solver
  * 
- *  to do dirty stuff
- * 
  * input:
  *  - scip SCIP data structure
  *  - nlpi datastructure for solver interface

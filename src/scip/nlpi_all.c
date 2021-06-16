@@ -740,9 +740,9 @@ SCIP_DECL_NLPISETSTRINGPAR(nlpiSetStringParAll)
  * NLP solver interface specific interface methods
  */
 
-/** create solver interface for All solver and includes it into SCIP, if at least 2 NLPIs have already been included
+/** create solver interface for the solver "All" and includes it into SCIP, if at least 2 NLPIs have already been included
  *
- * this should be called after all other NLP solver interfaces have been included
+ * This method should be called after all other NLP solver interfaces have been included.
  */
 SCIP_RETCODE SCIPincludeNlpSolverAll(
    SCIP*                 scip                /**< SCIP data structure */
