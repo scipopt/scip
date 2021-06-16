@@ -2483,7 +2483,7 @@ SCIP_RETCODE readBoundsExact(
          case 'L':
             if( !RatIsZero(SCIPvarGetLbGlobalExact(var)) && RatIsLT(val, SCIPvarGetLbGlobalExact(var)) )
             {
-               SCIPwarningMessage(scip, "Relaxing already defined lower bound %q of variable <%s> to %q not allowed.\n", SCIPvarGetLbGlobalExact(var), SCIPvarGetName(var), RatApproxReal(val));
+               SCIPwarningMessage(scip, "Relaxing already defined lower bound (%.14g) of variable <%s> to (%.14g) not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), RatApproxReal(val));
             }
 
             SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );

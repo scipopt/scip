@@ -3864,7 +3864,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
 
    lpexact->solved = TRUE;
 
-   SCIPsetDebugMsg(set, "solving exact LP with %s returned solstat=%d (internal status: %d, primalfeasible=%u, dualfeasible=%u)\n",
+   SCIPsetDebugMsg(set, "solving exact LP with %d returned solstat=%d (internal status: %d, primalfeasible=%u, dualfeasible=%u)\n",
       algo, lpexact->lpsolstat, SCIPlpiExactGetInternalStatus(lpexact->lpiexact),
       SCIPlpiExactIsPrimalFeasible(lpexact->lpiexact), SCIPlpiExactIsDualFeasible(lpexact->lpiexact));
 
@@ -4068,7 +4068,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
             char tmppricingchar;
             SCIP_LPSOLSTAT solstat;
 
-            SCIPsetDebugMsg(set, "objval = %f < %f = lp->lpiobjlim, but status objlimit\n", objval, lp->lpiobjlim);
+            RatDebugMessage("objval = %q < %f = lp->lpiobjlim, but status objlimit\n", objval, lp->lpiobjlim);
 
             /* temporarily disable cutoffbound, which also disables the objective limit */
             tmpcutoff = lpexact->cutoffbound;
