@@ -921,7 +921,7 @@ SCIP_RETCODE createSubSCIP(
          currentconshdlr == conshdlrknapsack ||
          currentconshdlr == conshdlrlogicor ||
          currentconshdlr == conshdlrsetppc ||
-         currentconshdlr == conshdlrlin)
+         currentconshdlr == conshdlrlin )
       {
          continue;
       }

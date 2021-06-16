@@ -1017,7 +1017,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
    return SCIP_OKAY;   
 }
 
-/** output nonlinear row to file stream */
+/** outputs nonlinear row to file stream */
 SCIP_RETCODE SCIPnlrowPrint(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
