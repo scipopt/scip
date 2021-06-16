@@ -692,6 +692,7 @@ SCIP_RETCODE consdataCreate(
          }
       }
       assert(k >= 0);
+      assert(constant >= 0);
 
       (*consdata)->nvars = k;
 
@@ -706,10 +707,6 @@ SCIP_RETCODE consdataCreate(
       SCIPfreeBufferArray(scip, &weightsbuffer);
       SCIPfreeBufferArray(scip, &varsbuffer);
    }
-
-   /* capacity has to be greater or equal to zero */
-   assert(capacity >= 0);
-   assert(constant >= 0);
 
    (*consdata)->varssize = (*consdata)->nvars;
    (*consdata)->capacity = capacity - constant;
@@ -11927,6 +11924,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
     * - all variables must be binary
     * - all coefficients must be integral
     * - exactly one of the sides must be infinite
+    * note that this includes the case of negative capacity, which has been
+    * observed to occur, e.g., when upgrading a conflict constraint
     */
    upgrade = (nposbin + nnegbin + nposimplbin + nnegimplbin == nvars)
       && (ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars)
