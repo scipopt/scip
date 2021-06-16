@@ -171,7 +171,7 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    SCIP_CALL( sepastoreExactEnsureCutsMem(sepastoreexact, set, sepastoreexact->ncuts+1) );
    assert(sepastoreexact->ncuts < sepastoreexact->cutssize);
 
-   SCIPsetDebugMsg(set, "adding cut <%s> to exact separation storage of size %d (forcecut=%u, len=%d)\n",
+   SCIPsetDebugMsg(set, "adding cut <%s> to exact separation storage of size %d (len=%d)\n",
       SCIProwGetName(cut->fprow), sepastoreexact->ncuts, SCIProwGetNNonz(cut->fprow));
    /*SCIP_CALL( SCIPprintRow(set->scip, cut, NULL) );*/
 
@@ -243,7 +243,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
 
    for( i = 0; i < nrowsfp; ++i )
    {
-      rowexact = SCIProwGetExRow(lpexact, fplp->rows[i]);
+      rowexact = SCIProwGetRowExact(fplp->rows[i]);
       if( rowexact != NULL )
       {
          /* if the row is already in lp, do nothing */

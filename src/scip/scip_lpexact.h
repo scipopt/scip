@@ -76,8 +76,10 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< pointer to fp-row that corresponds to this row */
+   SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs                 /**< right hand side of row */
+   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_Bool             isfprelaxable      /**< is it possible to make fp-relaxation of this row */
    );
 
 /** decreases usage counter of LP row, and frees memory if necessary

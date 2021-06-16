@@ -174,6 +174,7 @@ struct SCIP_ColExact
 struct SCIP_RowExact
 {
    SCIP_ROW*             fprow;              /**< pointer to the corresponding row in the fp lp */
+   SCIP_ROW*             fprowrhs;           /**< if two rows are needed to make a relaxation of this row, this saves the rhs-part */
    SCIP_Rational*        constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
    SCIP_Rational*        lhs;                /**< left hand side of row */
    SCIP_Rational*        rhs;                /**< right hand side of row */
@@ -211,6 +212,7 @@ struct SCIP_RowExact
    unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
    unsigned int          modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
    unsigned int          removable:1;        /**< is row removable from the LP (due to aging or cleanup)? */
+   unsigned int          fprelaxable:1;      /**< is it possible to make a fp-approximation of this row (only false if vars with both bounds inf present) */
 };
 
 struct SCIP_ProjShiftData

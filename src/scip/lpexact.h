@@ -202,12 +202,6 @@ SCIP_Bool SCIProwHasExRow(
    SCIP_ROW*             row                 /**< SCIP row */
    );
 
-/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
-SCIP_ROWEXACT* SCIProwGetExRow(
-   SCIP_LPEXACT*         lpexact,            /**< exact lp data structure */
-   SCIP_ROW*             row                 /**< SCIP row */
-   );
-
 /** changes left hand side of exact LP row */
 SCIP_RETCODE SCIProwExactChgLhs(
    SCIP_ROWEXACT*        row,                /**< exact LP row */
@@ -243,9 +237,10 @@ void SCIPcolExactCalcFarkasRedcostCoef(
    );
 
 /** creates and captures an LP row */
-SCIP_RETCODE SCIProwCreateExact(
+SCIP_RETCODE SCIProwExactCreate(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
    SCIP_ROW*             fprow,              /**< corresponding fp row */
+   SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -256,6 +251,7 @@ SCIP_RETCODE SCIProwCreateExact(
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
    SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
+   SCIP_Bool             isfprelaxable,      /**< is it possible to make fp-relaxation of this row */
    void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    );
 

@@ -255,15 +255,17 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< corresponding fp-row */
+   SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs                 /**< right hand side of row */
+   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowConsExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreateExact(rowexact, fprow, scip->mem->probmem, scip->set,
+   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, fprowrhs, scip->mem->probmem, scip->set,
                                  scip->stat, scip->lpexact, 0, NULL, NULL, lhs, rhs,
-                                 SCIP_ROWORIGINTYPE_CONS, SCIProwGetOriginCons(fprow)) );
+                                 SCIP_ROWORIGINTYPE_CONS, isfprelaxable, SCIProwGetOriginCons(fprow)) );
 
    return SCIP_OKAY;
 }

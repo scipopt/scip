@@ -3057,9 +3057,10 @@ SCIP_RETCODE SCIPcolExactChgUb(
 }
 
 /** creates and captures an LP row */
-SCIP_RETCODE SCIProwCreateExact(
+SCIP_RETCODE SCIProwExactCreate(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
    SCIP_ROW*             fprow,              /**< corresponding fp row */
+   SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -3070,6 +3071,7 @@ SCIP_RETCODE SCIProwCreateExact(
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
    SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
+   SCIP_Bool             isfprelaxable,      /**< is it possible to make fp-relaxation of this row */
    void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    )
 {
@@ -3090,6 +3092,7 @@ SCIP_RETCODE SCIProwCreateExact(
    (*row)->storedsolvals = NULL;
    (*row)->integral = TRUE;
    (*row)->fprow = fprow;
+   (*row)->fprowrhs = fprowrhs;
 
    if( len > 0 )
    {
@@ -3155,6 +3158,7 @@ SCIP_RETCODE SCIProwCreateExact(
    (*row)->nonlpcolssorted = (len <= 1);
    (*row)->delaysort = FALSE;
    (*row)->nlocks = 0;
+   (*row)->fprelaxable = isfprelaxable;
 
    /* capture the row */
    SCIProwExactCapture(*row);
@@ -4449,15 +4453,43 @@ SCIP_Bool SCIProwHasExRow(
 }
 
 /** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
-SCIP_ROWEXACT* SCIProwGetExRow(
-   SCIP_LPEXACT*         lpexact,            /**< exact lp data structure */
+SCIP_ROWEXACT* SCIProwGetRowExact(
    SCIP_ROW*             row                 /**< SCIP row */
    )
 {
    assert(row != NULL);
-   assert(lpexact != NULL);
 
    return row->rowexact;
+}
+
+/** returns fp row corresponding to exact row, if it exists. Otherwise returns NULL */
+SCIP_ROW* SCIProwExactGetRow(
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->fprow;
+}
+
+/** returns rhs-relaxation part of exact row, if it exists. Otherwise returns NULL */
+SCIP_ROW* SCIProwExactGetRowRhs(
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->fprowrhs;
+}
+
+/** true if row can be relaxed (possibly as two fp rows) */
+SCIP_Bool SCIProwExactHasFpRelax(
+   SCIP_ROWEXACT*             row            /**< SCIP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->fprelaxable;
 }
 
 /** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
