@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,7 +102,7 @@ SCIP_Bool takeCut(
       takecut = (SCIPcutGetLPActivityQuot(cut) >= scip->set->sepa_minactivityquot);
       break;
    default:
-      SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n");
+      SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n", cutsel);
       SCIPABORT();
       takecut = FALSE;  /*lint !e527*/
       break;
@@ -454,6 +454,8 @@ SCIP_RETCODE copyProb(
    SCIP_CALL( SCIPconflictstoreCreate(&targetscip->conflictstore, targetscip->set) );
 
    SCIP_CALL( SCIPdecompstoreCreate(&targetscip->decompstore, SCIPblkmem(targetscip), SCIP_DECOMPSTORE_CAPA) );
+
+   SCIP_CALL( SCIPdebugSolDataCreate(&targetscip->set->debugsoldata) );
 
    if( uselocalvarmap )
    {

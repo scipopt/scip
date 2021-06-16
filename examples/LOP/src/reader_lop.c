@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,23 +18,82 @@
  * @author Marc Pfetsch
  *
  * This file implements the reader/parser used to read linear ordering problems. For more details see \ref READER. The
- * data should be given in LOLIB format, see <a href="http://www.optsicom.es/lolib/">LOLIB</a>.
+ * data should be given in LOLIB format, see <a href="http://grafo.etsii.urjc.es/optsicom/lolib/">LOLIB</a>.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "cons_lop.h"
 #include "reader_lop.h"
+#include <scip/pub_fileio.h>
 
 #define READER_NAME             "lopreader"
 #define READER_DESC             "file reader for linear ordering problems"
 #define READER_EXTENSION        "lop"
 
+#define READER_STRLEN           65536
 
 /* ----------------- auxiliary functions ------------------------ */
+
+/** Get next number from file */
+static
+SCIP_RETCODE getNextNumber(
+   SCIP_FILE*            file,               /**< file to read from */
+   char*                 buffer,             /**< buffer to store lines in */
+   char**                s,                  /**< pointer to string pointer */
+   SCIP_Real*            value               /**< pointer to store the read value */
+   )
+{
+   assert( file != NULL );
+   assert( buffer != NULL );
+   assert( s != NULL );
+   assert( value != NULL );
+
+   *value = SCIP_INVALID; /* for debugging */
+
+   /* skip whitespace */
+   while ( isspace(**s) )
+      ++(*s);
+
+   /* if we reached the end of the line, read new line */
+   if ( **s == '\n' || **s == '\0' )
+   {
+      /* read line into buffer */
+      if ( SCIPfgets(buffer, READER_STRLEN, file) == NULL )
+      {
+         SCIPerrorMessage("Error reading from file.\n");
+         return SCIP_READERROR;
+      }
+      *s = buffer;
+
+      /* skip whitespace */
+      while ( isspace(**s) )
+         ++(*s);
+   }
+
+   /* check whether we found a number */
+   if ( isdigit(**s) || **s == '-' || **s == '+' )
+   {
+      *value = atof(*s);
+
+      /* skip number */
+      while ( isdigit(**s) || **s == '-' || **s == '+' )
+         ++(*s);
+   }
+   else
+   {
+      SCIPerrorMessage("Error reading from file.\n");
+      return SCIP_READERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 
 /** read weight matrix from file (in LOLIB format)
  *
@@ -51,16 +110,18 @@ SCIP_RETCODE LOPreadFile(
    SCIP_Real***          W                   /**< pointer to store the weight matrix on exit */
    )
 {
-   char s[SCIP_MAXSTRLEN];
-   FILE *file;
-   int status;
-   int i, j;
+   char buffer[READER_STRLEN];
+   SCIP_FILE* file;
+   char* s;
+   char* nstr;
+   int i;
+   int j;
 
    assert( n != NULL );
    assert( W != NULL );
 
    /* open file */
-   file = fopen(filename, "r");
+   file = SCIPfopen(filename, "r");
    if ( file == NULL )
    {
       SCIPerrorMessage("Could not open file <%s>.\n", filename);
@@ -68,21 +129,39 @@ SCIP_RETCODE LOPreadFile(
       return SCIP_NOFILE;
    }
 
-   /* skip comment line */
-   if ( fgets(s, SCIP_MAXSTRLEN, file) == NULL )
+   /* skip lines as comments until we found the first line that only contains the number of elements */
+   *n = -1;
+   do
    {
-      SCIPerrorMessage("Error reading file <%s>.\n", filename);
-      return SCIP_READERROR;
-   }
+      /* read line */
+      if ( SCIPfgets(buffer, READER_STRLEN, file) == NULL )
+      {
+         SCIPerrorMessage("Error reading file <%s>.\n", filename);
+         return SCIP_READERROR;
+      }
 
-   /* read number of elements */
-   status = fscanf(file, "%d", n);
-   if ( ! status )
+      /* skip whitespace */
+      s = buffer;
+      while( isspace(*s) )
+         ++s;
+
+      /* check whether rest of line only contains whitespace or numbers */
+      nstr = s;
+      while ( *s != '\0' && (isspace(*s) || isdigit(*s)) )
+         ++s;
+
+      /* if the line only contains a number, use this as the number of elements */
+      if ( *s == '\0' || *s == '\n' )
+         *n = atoi(nstr);
+   }
+   while ( ! SCIPfeof(file) && *n < 0 );
+
+   if ( *n <= 0 )
    {
       SCIPerrorMessage("Reading of number of elements failed.\n");
       return SCIP_READERROR;
    }
-   assert( 0 < *n );
+   assert( *n > 0 );
 
    /* set up matrix */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, W, *n) );
@@ -95,16 +174,13 @@ SCIP_RETCODE LOPreadFile(
       for (j = 0; j < *n; ++j)
       {
 	 SCIP_Real val;
-	 status = fscanf(file, "%lf", &val);
-	 if ( ! status )
-	 {
-	    SCIPerrorMessage("Reading failed.\n");
-	    return SCIP_READERROR;
-	 }
+
+         SCIP_CALL( getNextNumber(file, buffer, &s, &val) );
+         assert( val != SCIP_INVALID );
 	 (*W)[i][j] = val;
       }
    }
-   fclose( file );
+   (void) SCIPfclose(file);
 
    return SCIP_OKAY;
 }

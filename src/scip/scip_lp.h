@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1758,16 +1758,17 @@ SCIP_Bool SCIPinDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** computes the changes to the problem when fixing to the optimal face
+/** computes two measures for dual degeneracy (dual degeneracy rate and variable-constraint ratio)
+ *  based on the changes applied when reducing the problem to the optimal face
  *
- *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
- *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ *  returns the dual degeneracy rate, i.e., the share of nonbasic variables with reduced cost 0
+ *  and the variable-constraint ratio, i.e., the number of unfixed variables in relation to the basis size
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetLPDegeneracy(
+SCIP_RETCODE SCIPgetLPDualDegeneracy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
-   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
+   SCIP_Real*            degeneracy,         /**< pointer to store the dual degeneracy rate */
+   SCIP_Real*            varconsratio        /**< pointer to store the variable constraint ratio */
    );
 
 /**@} */

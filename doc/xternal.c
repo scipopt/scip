@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -77,7 +77,7 @@
  *
  * \verbinclude output.log
  *
- * @version  7.0.2
+ * @version  7.0.3.5
  *
  * \image html scippy.png
  */
@@ -155,11 +155,11 @@
  *
  * - @subpage WHATPROBLEMS "What types of optimization problems does SCIP solve?"
  *
- * - @subpage LICENSE "License"
- * - @subpage INSTALL "Installation"
+ * - @subpage LICENSE     "License"
+ * - @subpage INSTALL     "Installation"
  * - @subpage SHELL       "Tutorial: the interactive shell"
  * - @subpage FILEREADERS "Readable file formats"
- * - @subpage INTERFACES "Interfaces"
+ * - @subpage INTERFACES  "Interfaces"
  * - @subpage START       "How to start a new project"
  * - @subpage DOC         "How to search the documentation for interface methods"
  */
@@ -183,10 +183,9 @@
  *
  * Please note that there are differences between both systems, most notably, the generated
  * library libscip will not be compatible between the versions. For more information, we
- * refer to the INSTALL file of the SCIP source code distribution.
+ * refer to the INSTALL.md file of the SCIP source code distribution.
  *
- * - @subpage CMAKE   "Installation information using CMake (recommended for new users)"
- * - @subpage MAKE    "Installation information using Makefiles"
+ * - @subpage md_INSTALL  "Installation instructions"
  * - @subpage LPI         "Available implementations of the LP solver interface"
  * - @subpage NLPISOLVERS "Available implementations of the NLP solver interface"
  * - @subpage INSTALL_APPLICATIONS_EXAMPLES "Installation of applications and examples"
@@ -366,7 +365,6 @@
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
  *          <li>Compile with <code>WORHP=true</code> for better performance.</li>
  *          <li>Compile with <code>FILTERSQP=true</code> for better performance.</li>
- *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
  *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
  *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
  *          <li>Mixed-integer quadratically constrained programs (MIQCP) can also be formulated in the file formats
@@ -553,8 +551,8 @@
  * @section CODEDOC Documentation:
  *
  * - Document functions, parameters, and variables in a doxygen conformed way.
- * - Do not leave code in comments that has been commented out; put the code within defines,
- *   e.g., `SCIP_DISABLED_CODE` and/or add an explanation
+ * - Please do not leave code in comments that has been commented out, don't use `#if
+ *   0`. Instead put the code within defines `#ifdef SCIP_DISABLED_CODE` and add an explanation.
  * - Todos need double stars to be registered by doxygen.
  * - When documenting methods, the first brief description starts with lower case and is separated by semi-colons, if necessary
  *   The longer description starts capitalized and consists of complete sentences.
@@ -576,419 +574,6 @@
  * Eclipse user can use the profile below. This profile does not match the \SCIP coding guideline completely.
  *
  * \include codestyle/eclipse_scip_codestyle.xml
- */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-/**@page CMAKE Building SCIP with CMake
- *
- * <a href=https://cmake.org/>CMake</a> is a build system generator that can create, e.g., Makefiles for UNIX and Mac
- * or Visual Studio project files for Windows.
- *
- * CMake provides an <a href="https://cmake.org/cmake/help/latest/manual/cmake.1.html">extensive documentation</a>
- * explaining available features and use cases as well as an <a href="https://cmake.org/Wiki/CMake_FAQ">FAQ section</a>.
- * It's recommended to use the latest stable CMake version available. `cmake --help` is also a good first step to see
- * available options and usage information.
- *
- * Platform independent build instructions:
- *
- * ```
- * cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
- * cmake --build build --config Release
- * ```
- *
- * Linux/macOS Makefile-based build instructions:
- *
- * ```
- * mkdir build
- * cd build
- * cmake .. [-DSOPLEX_DIR=/path/to/soplex]
- * make
- * # optional: run a quick check on some instances
- * make check
- * # optional: install scip executable, library, and headers
- * make install
- * ```
- *
- * CMake uses an out-of-source build, i.e., compiled binaries and object files are separated from the source tree and
- * located in another directory. Usually this directory is called `build` or `debug` or whatever you prefer. From within
- * this directory, run `cmake <path/to/SCIP>` to configure your build, followed by `make` to compile the code according
- * to the current configuration (this assumes that you chose Linux Makefiles as CMake Generator). By default, SCIP
- * searches for Soplex as LP solver. If SoPlex is not installed systemwide, the path to a CMake build directory
- * of SoPlex must be specified (ie one that contains "soplex-config.cmake"). Alternatively, a different LP solver
- * can be specified with the `LPS` variable, see \ref CMAKE_CONFIG and \ref LPI.
- *
- * Afterwards,
- * successive calls to `make` are going to recompile modified source code,
- * without requiring another call to `cmake`. The initial configuration step checks your environment for available
- * third-party libraries and packages and sets up the configuration accordingly, e.g., disabling support for GMP if not
- * installed.
- *
- * The generated executable and libraries are put in directories `bin` and `lib` respectively and will simply be named
- * `scip` or `libscip.so`. This is different from the naming convention of the previous Makefile setup that
- * appended the configuration details like OS and third party dependencies directly to the name of the binary or library.
- * The CMake setup tries to follow the established Linux/UNIX compilation conventions to facilitate the use of the
- * libraries in other applications. The previously generated sub-libraries like `liblpi.so` or `libobjscip.so` are not
- * created by default anymore. They can be built using the respective targets `liblpi`, `libobjscip`, etc. The main
- * library `libscip.so` will contain all SCIP sources and won't have dependencies to the other sub-libs.
- *
- * @section CMAKE_CONFIG Modifying a CMake configuration
- *
- * There are several options that can be passed to the `cmake <path/to/SCIP>` call to modify how the code is built.
- * For all of these options and parameters you have to use `-D<Parameter_name>=<value>`. Following a list of available
- * options, for the full list run
- *
- * ```
- * cmake <path/to/SCIP> -LH
- * ```
- *
- * CMake option         | Available values               | Makefile equivalent    | Remarks                                    |
- * ---------------------|--------------------------------|------------------------|--------------------------------------------|
- * CMAKE_BUILD_TYPE     | Release, Debug, ...            | OPT=[opt, dbg]         |                                            |
- * GMP                  | on, off                        | GMP=[true, false]      | specify GMP_DIR if not found automatically |
- * IPOPT                | on, off                        | IPOPT=[true,false]     | requires IPOPT version >= 3.12.0; specify IPOPT_DIR if not found automatically |
- * LPS                  | spx, cpx, grb, xprs, ...       | LPS=...                | See \ref LPI for a complete list; specify SOPLEX_DIR, CPLEX_DIR, MOSEK_DIR, ... if LP solver is not found automatically |
- * SYM                  | bliss, none                    | --                     | for bliss, specify BLISS_DIR |
- * WORHP                | on, off                        | WORHP=[true,false]     | should worhp be linked; specify WORHP_DIR if not found automatically |
- * ZIMPL                | on, off                        | ZIMPL=[true, false]    | specify ZIMPL_DIR if not found automatically |
- * READLINE             | on, off                        | READLINE=[true, false] |                                            |
- * ..._DIR              | <custom/path/to/.../package>   | --                     | e.g. IPOPT_DIR, CPLEX_DIR, WORHP_DIR, Readline_DIR ...  |
- * CMAKE_INSTALL_PREFIX | \<path\>                       | INSTALLDIR=\<path\>    |                                            |
- * SHARED               | on, off                        | SHARED=[true, false]   |                                            |
- * CXXONLY              | on, off                        | --                     | use a C++ compiler for all source files    |
- * COVERAGE             | on, off                        | --                     | use with gcc, lcov, gcov in **debug** mode |
- * COVERAGE_CTEST_ARGS  | ctest argument string          | --                     | see `ctest --help` for arguments           |
- * DEBUGSOL             | on, off                        | DEBUGSOL=[true,false]  | specify a debugging solution by setting the "misc/debugsol" parameter of SCIP |
- * LPSCHECK             | on, off                        | LPSCHECK=[true,false]  | double check SoPlex results with CPLEX     |
- * NOBLKMEM             | on, off                        | NOBLKMEM=[true,false]  |                                            |
- * NOBUFMEM             | on, off                        | NOBUFMEM=[true,false]  |                                            |
- * NOBLKBUFMEM          | on, off                        | NOBLKBUFMEM=[true,false] |                                          |
- * MT                   | on, off                        |                        | use static runtime libraries for Visual Studio compiler on Windows |
- * PARASCIP             | on, off                        | PARASCIP=[true,false]  | thread safe compilation                    |
- * SANITIZE_...         | on, off                        | --                     | enable sanitizer in debug mode if available |
- * TPI                  | tny, omp, none                 | TPI=[tny,omp,none]     | enable task processing interface required for concurrent solver |
- *
- * Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing
- * configuration.
- *
- * @section CTEST Testing with CTest
- *
- * There is an extensive test suite written for <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html">CTest</a>,
- * that may take a while to complete. To perform a quick test to see whether the compilation was really successful you may
- * run `make check`. To see all available tests, run
- *
- * ```
- * ctest -N
- * ```
- *
- * and to perform a memory check, run
- *
- * ```
- * ctest -T MemCheck
- * ```
- *
- * If <a href="https://criterion.readthedocs.io/en/master/">Criterion</a> is installed (set
- * custom path with `-DCRITERION_DIR=<path>`) the target `unittests` can be used to compile and run the available unit tests.
- *
- * A coverage report for the entire test suite can be generated. This requires a modification of the
- * compilation process. Two variables govern the report generation, `COVERAGE` and `COVERAGE_CTEST_ARGS`.
- * It is recommended to use the Debug build type.
- *
- * ```
- * cmake .. -DCOVERAGE=on -DCOVERAGE_CTEST_ARGS="-R MIP -E stein -j4" -DCMAKE_BUILD_TYPE=Debug
- * ```
- *
- * In this example, coverage is enabled in combination with the build type Debug. In addition, only the coverage
- * for tests with "MIP" in the name are run, excluding those that have "stein" in the name.
- * The tests are performed in parallel using 4 cores.
- *
- * Use the `coverage` target, e.g., `make coverage`, to build the coverage report. The generated report can be found
- * under "coverage/index.html".
- *
- * @section CMAKE_INSTALL Installation
- *
- * CMake uses a default directory for installation, e.g., /usr/local on Linux. This can be modified by either changing
- * the configuration using `-DCMAKE_INSTALL_PREFIX` as explained in \ref CMAKE_CONFIG or by setting the environment
- * variable `DESTDIR` during or before the install command, e.g., `DESTDIR=<custom/install/dir> make install`.
- *
- * @section CMAKE_TARGETS Additional targets
- *
- * There are several further targets available, which can be listed using `make help`. For instance, there are some
- * examples that can be built with `make examples` or by specifying a certain one: `make <example-name>`.
- *
- * | CMake target    | Description                                           | Requirements                          |
- * |-----------------|-------------------------------------------------------|---------------------------------------|
- * | scip            | build SCIP executable                                 |                                       |
- * | applications    | build executables for all applications                |                                       |
- * | examples        | build executables for all examples                    |                                       |
- * | unittests       | build unit tests                                      | the Criterion package, see \ref CTEST |
- * | all_executables | build all of the above                                |                                       |
- * | libscip         | build the SCIP library                                |                                       |
- * | install         | install SCIP, see \ref CMAKE_INSTALL                  |                                       |
- * | coverage        | run the test suite and create a coverage report       | build flag `-DCOVERAGE=on`            |
- * | liblpi          | build the LPI library                                 |                                       |
- * | libnlpi         | build the NLPI library                                |                                       |
- * | libobjscip      | build the ObjSCIP library for the C++ wrapper classes |                                       |
- */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-/**@page MAKE Makefiles / Installation information
- *
- * <b>Please note, that the Makefile system is not actively maintained anymore.
- * If possible, please use \ref CMAKE "the cmake system".</b>
- *
- * In most cases (LINUX and MAC) it is quite easy to compile and install \SCIP. Therefore, reading the section
- * \ref BRIEFINSTALL "Brief installation description" should usually be enough. If this is not the case you find a
- * \ref DETAILEDINSTALL "Detailed installation description" below as well as \ref EXAMPLE1 "Examples".
- * We recommend using GCC version 4.8 or later.
- *
- * @section BRIEFINSTALL Brief installation description
- *
- * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL.
- * For that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
- * to specify any directories, the compiling process is fully automated).
- *
- * Compiling \SCIP directly can be done as follows:
- *
- * -# unpack the tarball <code>tar xvf scip-x.y.z.tgz</code>
- * -# change to the directory <code>cd scip-x.y.z</code>
- * -# start compiling \SCIP by typing <code>make</code>
- * -# (optional) install the header, libraries, and binary <code>make install INSTALLDIR="/usr/local/</code>
- *
- * During your first compilation you will be asked for some soft-link targets,
- * depending on the LP solver you want to use. Usually, \SCIP needs the
- * following information
- * -# the directory where the include files of the LP solver lie
- * -# the library file(s) "lib*.a" or/and "lib*.so"
- *
- * Besides that, \SCIP needs some soft-link targets, for ZIMPL
- * -# the directory where the include files of ZIMPL lie
- * -# the library file(s) "lib*.a" or/and "lib*.so"
- *
- * You will need either the .a or the .so files and can skip the others by
- * just pressing return.
- *
- * The most common compiling issue is that some libraries are missing
- * on your system or that they are outdated. \SCIP per default requires
- * zlib, gmp and readline.  Try compiling with: <code> make ZLIB=false
- * READLINE=false ZIMPL=false</code> or, better, install them. Note
- * that under Linux-based systems, you need to install the
- * developer-versions of gmp/zlib/readline, in order to also have the
- * header-files available.
- *
- @section DETAILEDINSTALL Detailed installation description
- *
- * In this section we describe the use, and a few features, of the \SCIP Makefile. We also give two examples for how to install
- * \SCIP. The \ref EXAMPLE1 "first example" illustrates the default installation. This means, with SoPleX and ZIMPL. The
- * \ref EXAMPLE2 "second example" shows how to get CPLEX linked to \SCIP without ZIMPL. This is followed by a section which
- * gives some hints on what to do if the \ref COMPILERPROBLEMS "compilation throws an error". We give some comments on
- * how to install \SCIP under \ref WINDOWS "WINDOWS" and show \ref RUN "how to start \SCIP".
- *
- * If you experience any problems during the installation, you will find help in the INSTALL file.
- *
- * \SCIP contains a makefile system, which allows the individual setting of several parameters. A detailed list of parameter settings
- * obtained by <code>make help</code>. For instance, the following settings are supported:
- *
- * - <code>OPT=\<dbg|opt\></code> Here <code>dbg</code> turns on the debug mode of \SCIP. This enables asserts
- *   and avoids macros for several function in order to ease debugging.
- *
- * - <code>LPS=\<clp|cpx|grb|msk|qso|spx|xprs|none\></code> This determines the LP-solver, which should be
- *   installed separately from \SCIP. The options are the following:
- *      - <code>clp</code>: COIN-OR Clp LP-solver
- *      - <code>cpx</code>: CPLEX LP-solver
- *      - <code>grb</code>: Gurobi LP-solver (interface is in beta stage)
- *      - <code>msk</code>: Mosek LP-solver
- *      - <code>qso</code>: QSopt LP-solver
- *      - <code>spx</code>: old SoPlex LP-solver (for versions < 2)
- *      - <code>spx2</code>: new SoPlex LP-solver (default) (from version 2)
- *      - <code>xprs</code>: XPress LP-solver
- *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
- *
- * - <code>LPSOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized version (or old GCC optimized) version of
- *   the LP-solver (currently only available for SoPlex and CLP).
- *
- * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in \SCIP on (default) or off, respectively.\n
- *   If the ZIMPL-support is disabled, the GMP-library is no longer needed for \SCIP and therefore not linked to \SCIP.
- *
- * - <code>ZIMPLOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized (default) (or old GCC optimized)
- *   version of ZIMPL, if ZIMPL support is enabled.
- *
- * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
- *
- * - <code>FILTERSQP=\<true|false\></code> Enable or disable (default) FilterSQP interface.
- *
- * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.12).
- *
- * - <code>WORHP=\<true|false\></code> Enable or disable (default) WORHP interface (needs WORHP >= 2.0).
- *
- * - <code>EXPRINT=\<cppad|none\></code> Use CppAD as expressions interpreter (default) or no expressions interpreter.
- *
- * - <code>GAMS=\<true|false\></code> Enable or disable (default) reading functionality in GAMS reader (needs GAMS).
- *
- * - <code>NOBLKBUFMEM=\<true|false\></code> Turns the internal \SCIP block and buffer memory off or on (default).
- *   This way the code can be checked by valgrind or similar tools. (The individual options <code>NOBLKMEM=\<true|false\></code>
- *   and <code>NOBUFMEM=\<true|false\></code> to turn off the \SCIP block and buffer memory, respectively, exist as well).
- *
- * - <code>TPI=\<tny|omp|none\></code> This determines the threading library that is used for the concurrent solver.
- *   The options are the following:
- *      - <code>none</code>: use no threading library and therefore disable the concurrent solver feature
- *      - <code>tny</code>: use the tinycthread's library which is bundled with SCIP. This
- *                          is a wrapper around the plattform specific threading library ad should work
- *                          for Linux, Mac OS X and Windows.
- *      - <code>omp</code>: use the OpenMP. This will not work with microsoft compilers, since they do not support
- *                          the required OpenMP version.
- *
- * - <code>SYM=\<bliss|none\></code> This determines the graph automorphism code used to compute symmetries of mixed
- *   integer programs if symmetry handling is enabled. The options are the following:
- *      - <code>none</code>: do not use a graph automorphism code, i.e., symmetries cannot be handled
- *      - <code>bliss</code>: use bliss to compute symmetries.
- *
- * You can use other compilers - depending on the system:
- *
- * - <code>COMP=<clang|gnu|intel></code> Use Clang, Gnu (default) or Intel compiler.
- *
- * There are additional parameters for Linux/Gnu compilers:
- *
- * - <code>SHARED=\<true\></code> generates a shared object of the \SCIP libraries.  (The binary uses these shared
- *   libraries as well.)
- * - <code>OPT=prf</code> generates a profiling version of \SCIP providing a detailed statistic of the time usage of
- *   every method of \SCIP.
- *
- * There is the possibility to watch the compilation more precisely:
- *
- * - <code>VERBOSE=\<true|false\></code> Turns the extensive output on or off (default).
- *
- * The \SCIP makefile supports several targets (used via <code>make ... "target"</code>):
- *
- * - <code>all</code> (or no target) Build \SCIP library and binary.
- * - <code>links</code> Reconfigures the links in the "lib" directory.
- * - <code>doc</code> Creates documentation in the "doc" directory.
- * - <code>clean</code> Removes all object files.
- * - <code>depend</code> Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` or NPARASCIP in source files.
- * - <code>check</code> or <code>test</code> Runs the check script, see \ref TEST.
- * - <code>lint</code> Statically checks the code via flexelint. The call produces the file <code>lint.out</code>
- *   which contains all the detected warnings.
- * - <code>tags</code> Generates tags which can be used in the editor <b>emacs</b> and <b>xemacs</b>.
-
- * The \SCIP makefiles are structured as follows.
- *
- * - <code>Makefile</code> This is the basic makefile in the \SCIP root directory. It loads
- *   additional makefile information depending on the parameters set.
- * - <code>make/make.project</code> This file contains definitions that are useful for all codes
- *   that use \SCIP, for instance, the example.
- * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf|opt-gccold\></code> These file contain system/compiler specific
- *   definitions. If you have an unsupported compiler, you can copy one of these and modify it
- *   accordingly.
- *
- * If your platform or compiler is not supported by \SCIP you might try and copy one of the existing
- * makefiles in the <code>make</code> directory and modify it. If you succeed, we are always
- * interested in including more Makefiles into the system.
- *
- *
- * @section EXAMPLE1 Example 1 (defaults: SoPlex, with ZIMPL support):
- *
- * Typing <code>make</code> uses SoPlex as LP solver and includes support for the modeling language ZIMPL. You will be asked the
- * following questions on the first call to "make" (example answers are already given):
- *
- * \verbinclude makeexamples/example1.txt
- *
- * @section EXAMPLE2 Example 2 (CPLEX, with no ZIMPL support):
- *
- * Typing <code>make LPS=cpx ZIMPL=false</code>  uses CPLEX as LP solver. You will be asked the following questions on
- * the first call to "make" (example answers are already given):
- *
- * \verbinclude makeexamples/example2.txt
- *
- *
- * @section COMPILERPROBLEMS Compilation problems:
- *
- * - If the soft-link query script does not work on your machine, read step 2 in the INSTALL file for
- * instructions on manually creating the soft-links.
- *
- * - If you get an error message of the type\n
- * <code>make: *** No rule to make target `lib/???', needed by `obj/O.linux.x86.gnu.opt/lib/scip/???.o'.  Stop.</code>\n
- * the corresponding soft-link was not created or points to a wrong location.  Check the soft-link targets in the "lib/"
- * subdirectory. Try to delete all soft-links from the "lib/" directory\n and call "make links" to generate them
- * again. If this still fails, read step 2 for instructions on manually\n creating the soft-links.
- *
- * - If you get an error message of the type\n
- * <code>make: *** No rule to make target `make/make.?.?.?.?.?'.  Stop.</code>,\n
- * the corresponding machine dependent makefile for your architecture and compiler is missing.\n Create one of the given
- * name in the "make/" subdirectory. You may take\n "make/make.linux.x86.gnu.opt" or any other file in the make
- * subdirectory as example.\n
- *
- * - The readline library seems to differ slightly on different OS distributions. Some versions do
- * not support the <code>remove_history()</code> call.  In this case, you have to either add
- * <code>-DNO_REMOVE_HISTORY</code> to the FLAGS in the appropriate "make/make.*" file, or to
- * compile with <code>make USRFLAGS=-DNO_REMOVE_HISTORY</code>.  Make sure, the file
- * "src/scip/dialog.c" is recompiled.  If this doesn't work either, disable the readline library
- * with <code>make READLINE=false</code>.
- *
- * - On some systems, the <code>sigaction()</code> method is not available. In this case, you have
- * to either add <code>-DNO_SIGACTION</code> to the FLAGS in the appropriate "make/make.*" file, or
- * to compile with <code>make USRFLAGS=-DNO_SIGACTION</code>.  Make sure, the file
- * "src/scip/interrupt.c" is recompiled.
- *
- * - On some systems, the <code>rand_r()</code> method is not available.  In this case, you have to either add
- * <code>-DNO_RAND_R</code> to the FLAGS in the appropriate "make/make.*" file, or to compile with
- * <code>make USRFLAGS=-DNO_RAND_R</code>.  Make sure, the file "src/scip/misc.c" is recompiled.
- *
- * - On some systems, the <code>strtok_r()</code> method is not available.  In this case, you have
- * to either add <code>-DNO_STRTOK_R</code> to the FLAGS in the appropriate make/make.* file, or to
- * compile with <code>make USRFLAGS=-DNO_STRTOK_R</code>.  Make sure, the file "src/scip/misc.c" is
- * recompiled.
- *
- * - On some systems, the <code>strerror_r()</code> method is not available.  In this case, you have
- * to either add <code>-DNO_STRERROR_R</code> to the FLAGS in the appropriate "make/make.*" file, or
- * to compile with <code>make USRFLAGS=-DNO_STRERROR_R</code>.  Make sure, the file
- * "src/scip/misc.c" is recompiled.
- *
- * - On some systems, the option [-e] is not available for the read command.  You have to compile with READ=read.
- *
- * - If you encounter other compiler or linker errors, you should recompile with <code>make
- * VERBOSE=true ...</code> in order to get the full compiler invocation. This might help to fix the
- * corresponding machine dependent makefile in the make subdirectory.
- *
- * @section WINDOWS Remarks on Installing under Windows using MinGW
- *
- * To build your own windows binaries under windows we recommend using the MinGW-Compiler with MSYS
- * from <a href="http://www.mingw.org">www.mingw.org</a> .
- *
- * First install MSYS, then MinGW to the mingw folder inside the msys folder.
- * Now you need to install the following packages to the mingw folder:
- * - zlib (or use ZLIB=false)
- * - pcre (here suffices the pcre7.0-lib.zip (or equivalent) to be extracted into the mingw-folder)
- *
- * After calling <code>make clean</code> in the ZIMPL folder you will also need flex and bison to
- * remake ZIMPL. We recommend NOT to use <code>"make clean"</code> inside the ZIMPL-folder if you do
- * not have these packages installed.
- *
- * You can download these additional packages from <a href="http://gnuwin32.sourceforge.net/packages.html">here</a>
- * or compile the source on your own from their homepages.
- *
- * Second you need to copy the file <code>sh.exe</code> to <code>bash.exe</code> otherwise various
- * scripts (including makefiles) will not work.  Normally <code>unistd.h</code> covers also the
- * getopt-options, but for mingw you need to add the entry <code>\#include <getopt.h></code> into
- * "/mingw/include/unistd.h" after the other include-entries (if not present).
- *
- * Finally, there is one package you need to compile if you want to use ZIMPL and ZIMPL-support in
- * \SCIP (otherwise use <code>ZIMPL=false</code> as parameter with the make-call): the
- * <code>gmplib</code> from <a href="http://www.gmplib.org">gmplib.org</a>. The command
- * <code>./configure --prefix=/mingw ; make ; make install</code> should succeed without problems
- * and installs the gmplib to the mingw folder.
- *
- * Now <code>make READLINE=false</code> should be compiling without errors.  Please note that we
- * do NOT support creating the doxygen documentation and readline-usage under windows.
- *
- *
- * @section RUN How to run SCIP after a successful compilation
- *
- * To run the program, enter <code>bin/scip</code> for the last compiled version. If you have more than one compiled
- * binary (i. e., one in debug and one in optimized mode) and wish to specify the binary, type
- * <code>bin/scip.\$(OSTYPE).\$(ARCH).\$(COMP).\$(OPT).\$(LPS)</code>
- * (e.g. <code>bin/scip.linux.x86_64.gnu.opt.spx</code>).
- *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1146,6 +731,14 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  @subpage SUDOKU_MAIN "Sudoku example"
+ *  </td>
+ *  <td>
+ *  An example solving sudokus.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  @subpage LOP_MAIN "Linear Ordering"
  *  </td>
  *  <td>
@@ -1286,7 +879,7 @@
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
  * href="http://scipopt.org/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
- * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
+ * in the INSTALL.md file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scipopt.org/#download">SCIP download
@@ -1859,6 +1452,23 @@
  * if all integer variables in the constraint are already fixed.
  * In this case, the LP has to be solved in order to get a solution that satisfies the linear constraint.
  *
+ * @subsection CONSENFORELAX
+ *
+ * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
+ *
+ * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
+ * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
+ * solutions that satisfy all active LP-constraints.
+ *
+ * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
+ * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
+ * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
+ * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
+ *
+ * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
+ * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
+ * via user-plugins.
+ *
  * @subsection CONSLOCK
  *
  * The CONSLOCK callback provides dual information for a single constraint.
@@ -2073,23 +1683,6 @@
  * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
  * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
  * calling CONSSEPASOL.
- *
- * @subsection CONSENFORELAX
- *
- * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
- *
- * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
- * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
- * solutions that satisfy all active LP-constraints.
- *
- * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
- * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
- * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
- * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
- *
- * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
- * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
- * via user-plugins.
  *
  * @subsection CONSPROP
  *
@@ -7508,6 +7101,26 @@
  *
  *  Furthermore you can also use the script <code>allcmpres.sh</code> for comparing results.
  *
+ *  @section PYTHON Testing using PySCIPOpt
+ *
+ *  To run a python script that uses PySCIPOpt with <code>make test</code> or <code>make testcluster</code>, one has to
+ *  specify the python code to execute with the option <code>EXECUTABLE=/full/path/to/python-script.py</code>.
+ *  Note that <code>python-script.py</code> must be an executable file.
+ *  In addition, one <b>must</b> specify which python it should run with the option <code>PYTHON=my-python</code>.
+ *  The reason for this is that one usually installs PySCIPOpt in a virtual environment, thus only the python of the
+ *  virtual environment will work with the python script.
+ *
+ *  The scripts work in such a way that they pass information to SCIP like the setting files, the instance name, and some other options.
+ *  It is the responsability of the python script <code>python-script.py</code> to parse this information.
+ *  Thus, you need to modify your python script to read the setting files and the other options provided by the testing scripts.
+ *  An example of how to do this is provided in <code>scip/check/scip-runner.py</code>.
+ *  One should either modify <code>scip/check/scip-runner.py</code> or include the <code>build_model()</code> function
+ *  into your script to correctly read the options passed by the scripts.
+ *
+ *  An example of how to run the tests is
+ *  \code
+ *  make test EXECUTABLE=/full/path/to/scip/check/scip-runner.py PYTHON=python
+ *  \endcode
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7528,10 +7141,16 @@
  *
  * <code>SCIP&gt; count</code>
  *
- * That means SCIP will count the number of solution but does not store (enumerate) them. If you are interested in that see
- * \ref COLLECTALLFEASEBLES.
+ * @note After completing the counting process, SCIP will terminate with status <tt>infeasible</tt>.  This is intended
+ * behavior, because SCIP counts solutions by the following internal mechanism.  Each feasible solution that is found is
+ * reported as infeasible to the SCIP core. This avoids that SCIP performs reductions based on the primal bound that
+ * could cut off suboptimal feasible solutions, which would then be missing in the count.  However, as a result, the
+ * SCIP core has not found any feasible solutions during the search and reports status <tt>infeasible</tt>.
  *
- * @note Since SCIP version 2.0.0 you do not have to worry about <tt>dual</tt> reductions anymore. These are
+ * By default, SCIP only counts the number of solutions but does not store (enumerate) them. If you are interested in
+ * that see \ref COLLECTALLFEASEBLES.
+ *
+ * @note Since SCIP version 2.0.0 you do not have to worry about the impact of dual reductions anymore. These are
  * automatically turned off. The only thing you should switch off are restarts. These restarts can lead to a wrong
  * counting process. We recommend using the counting settings which can be set in the interactive shell as follows:
  *
@@ -7562,7 +7181,7 @@
  * subtree detection. Using this technique it is possible to detect several solutions at once. Therefore, it can happen
  * that the solution limit is exceeded before SCIP is stopped.
  *
- * @section COLLECTALLFEASEBLES Collect all feasible solution
+ * @section COLLECTALLFEASEBLES Collect all feasible solutions
  *
  * Per default SCIP only counts all feasible solutions. This means, these solutions are not stored. If you switch the
  * parameter <code>constraints/countsols/collect</code> to TRUE (the default value is FALSE) the detected solutions are
@@ -7664,8 +7283,8 @@
   * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
   * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
   * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
-  * The AMPL, GAMS, and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface originated <a
-  * href="https://projects.coin-or.org/GAMSlinks">here</a>.
+  * The AMPL and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface is available <a
+  * href="https://github.com/coin-or/GAMSlinks">here</a>.
   *
   * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
   * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
@@ -7684,7 +7303,7 @@
   * @section OTHER Interfaces for other programming languages
   *
   * Interfaces for other programming languages are developed and maintained independently from the SCIP Optimization Suite
-  * on <a href="https://github.com/SCIP-Interfaces">GitHub</a> in order to provide extensions and patches faster
+  * on <a href="https://github.com/scipopt">GitHub</a> in order to provide extensions and patches faster
   * and to collaborate on them more easily. Besides the popular interfaces for Python and Java, there is also an interface
   * for Julia available. Contributions to these projects are very welcome.
   *
@@ -8246,7 +7865,6 @@
  * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
  * <tr><td>\ref reader_diff.h "DIFF format"</td> <td>for reading a new objective function for mixed-integer programs</td></tr>
  * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc</td></tr>
- * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer nonlinear programs (<a href="http://www.gams.com/docs/document.htm">GAMS</a>) [reading requires compilation with GAMS=true and a working GAMS system]</td></tr>
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>
  * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programs</td></tr>
  * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for pseudo-Boolean optimization instances</td></tr>

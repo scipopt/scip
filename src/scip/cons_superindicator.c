@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1761,6 +1761,7 @@ SCIP_DECL_CONSPARSE(consParseSuperindicator)
    *success = FALSE;
 
    /* extract binary variable name and value which triggers slack constraint */
+   /* coverity[secure_coding] */
    nargs = sscanf(str, " <%1023[^>]>[B] = %d", binvarname, &zeroone);
 
    if( nargs != 2 || (zeroone != 0 && zeroone != 1) )

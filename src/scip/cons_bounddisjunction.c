@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -354,7 +354,7 @@ SCIP_RETCODE consdataCreate(
                if( (boundtype == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPvarGetLbLocal(var), bound))
                || (boundtype == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPvarGetUbLocal(var), bound)) )
                {
-                  /* safe this feasible assignment at the first position */
+                  /* save this feasible assignment at the first position */
                   varsbuffer[0] = var;
                   boundtypesbuffer[0] = boundtype;
                   boundsbuffer[0] = bound;
@@ -432,7 +432,177 @@ SCIP_RETCODE consdataCreate(
    }
 
    return SCIP_OKAY;
-}   
+}
+
+/** creates a bound disjunction constraint data object with possibly redundant literals */
+static
+SCIP_RETCODE consdataCreateRedundant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA**       consdata,           /**< pointer to store the bound disjunction constraint data */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< variables of the literals in the constraint */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< types of bounds of the literals (lower or upper bounds) */
+   SCIP_Real*            bounds              /**< bounds of the literals */
+   )
+{
+   assert(consdata != NULL);
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || boundtypes != NULL);
+   assert(nvars == 0 || bounds != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
+
+   if( nvars > 0 )
+   {
+      SCIP_BOUNDTYPE* boundtypesbuffer;
+      SCIP_Real* boundsbuffer;
+      SCIP_VAR** varsbuffer;
+      SCIP_VAR* var;
+      int nvarsbuffer = 0;
+      int nviolated = 0;
+      int v;
+
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &varsbuffer, vars, nvars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &boundtypesbuffer, boundtypes, nvars) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &boundsbuffer, bounds, nvars) );
+
+      /* sort variables according to index; this allows us to check for redundancy easily below because duplicate
+       * variables must now appear consecutively */
+      SCIPsortPtrRealInt((void**)varsbuffer, boundsbuffer, (int*) boundtypesbuffer, SCIPvarComp, nvars);
+
+      /* filter out redundant literals */
+      for( v = 0; v < nvars; ++v )
+      {
+         int w;
+
+         /* if we should compress fixed variables */
+         if( SCIPisConsCompressionEnabled(scip) && varsbuffer[v] != NULL )
+         {
+            var = varsbuffer[v];
+
+            /* if the variable is fixed */
+            if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+            {
+               /* If the literal is feasible for the fixed variable, then the whole constraint is feasible. In this
+                * case, we reduce the constraint to only this literal. */
+               if( (boundtypesbuffer[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, var, SCIPvarGetLbLocal(var), boundsbuffer[v]))
+                || (boundtypesbuffer[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, var, SCIPvarGetUbLocal(var), boundsbuffer[v])) )
+               {
+                  /* save this feasible assignment at the first position */
+                  varsbuffer[0] = var;
+                  boundtypesbuffer[0] = boundtypesbuffer[v];
+                  boundsbuffer[0] = boundsbuffer[v];
+                  nvarsbuffer = 1;
+                  break;
+               }
+               else
+               {
+                  /* otherwise the literal is violated - we skip the literal */
+                  ++nviolated;
+                  continue;
+               }
+            }
+         }
+
+         /* check subsequent variables with the same variable for redundancy */
+         for( w = v + 1; w < nvars && varsbuffer[v] == varsbuffer[w]; ++w )
+         {
+            if( boundtypesbuffer[v] == boundtypesbuffer[w] )
+            {
+               if( boundtypesbuffer[v] == SCIP_BOUNDTYPE_LOWER )
+               {
+                  /* check whether current bound is as strong */
+                  if( SCIPisLE(scip, boundsbuffer[v], boundsbuffer[w]) )
+                     varsbuffer[v] = NULL;  /* skip current bound */
+                  else if ( SCIPisGT(scip, boundsbuffer[v], bounds[w]) )
+                     varsbuffer[w] = NULL;  /* remove later bound */
+               }
+               else
+               {
+                  assert(boundtypesbuffer[v] == SCIP_BOUNDTYPE_UPPER);
+
+                  /* check whether current bound is as strong */
+                  if( SCIPisGE(scip, boundsbuffer[v], boundsbuffer[w]) )
+                     varsbuffer[v] = NULL;  /* skip current bound */
+                  else if ( SCIPisLT(scip, boundsbuffer[v], boundsbuffer[w]) )
+                     varsbuffer[w] = NULL;  /* remove later bound */
+               }
+            }
+         }
+
+         /* keep current bound if it is not redundant (possibly redundant variable w is treated later) */
+         if( varsbuffer[v] != NULL )
+         {
+            /* switch last and current bound */
+            varsbuffer[nvarsbuffer] = varsbuffer[v];
+            boundtypesbuffer[nvarsbuffer] = boundtypesbuffer[v];
+            boundsbuffer[nvarsbuffer] = boundsbuffer[v];
+            ++nvarsbuffer;
+         }
+      }
+      assert( nvarsbuffer > 0 || SCIPisConsCompressionEnabled(scip) ); /* no variables can only happen if compression is enabled */
+
+#ifndef NDEBUG
+      /* if there are no variables left, this is because all literals are infeasible */
+      if( nvarsbuffer == 0 )
+      {
+         for( v = 0; v < nvars; v++ )
+         {
+            var = vars[v];
+            assert( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) );
+            assert( (boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasLT(scip, var, SCIPvarGetLbLocal(var), bounds[v]))
+               ||   (boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasGT(scip, var, SCIPvarGetUbLocal(var), bounds[v])) );
+         }
+      }
+      else
+      {
+         /* check that the literals are not redundant */
+         for( v = 0; v < nvarsbuffer; v++ )
+         {
+            int v2;
+            assert(varsbuffer[v] != NULL);
+            for( v2 = v+1; v2 < nvarsbuffer; v2++ )
+               assert(varsbuffer[v] != varsbuffer[v2] || boundtypesbuffer[v] != boundtypesbuffer[v2]);
+         }
+      }
+#endif
+
+      /* if all literals are infeasible, we keep the first */
+      if( SCIPisConsCompressionEnabled(scip) && nviolated > 0 && nvarsbuffer == 0 )
+         nvarsbuffer = 1;
+
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, nvarsbuffer) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->boundtypes, boundtypesbuffer, nvarsbuffer) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->bounds, boundsbuffer, nvarsbuffer) );
+      (*consdata)->varssize = nvarsbuffer;
+      (*consdata)->nvars = nvarsbuffer;
+
+      /* free buffer storage */
+      SCIPfreeBufferArray(scip, &boundsbuffer);
+      SCIPfreeBufferArray(scip, &boundtypesbuffer);
+      SCIPfreeBufferArray(scip, &varsbuffer);
+   }
+   else
+   {
+      (*consdata)->vars = NULL;
+      (*consdata)->boundtypes = NULL;
+      (*consdata)->bounds = NULL;
+      (*consdata)->varssize = 0;
+      (*consdata)->nvars = 0;
+   }
+   (*consdata)->watchedvar1 = -1;
+   (*consdata)->watchedvar2 = -1;
+   (*consdata)->filterpos1 = -1;
+   (*consdata)->filterpos2 = -1;
+
+   /* get transformed variables, if we are in the transformed problem */
+   if( SCIPisTransformed(scip) )
+   {
+      SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** frees a bound disjunction constraint data */
 static
@@ -1441,6 +1611,7 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< bound disjunction constraint which variables should be registered for branching */
    SCIP_SOL*             sol,                /**< solution (NULL for LP solution) */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the constraint cannot be made feasible by branching */
    SCIP_Bool*            neednarybranch      /**< pointer to store TRUE, if n-ary branching is necessary to enforce this constraint */
    )
 {
@@ -1457,6 +1628,7 @@ SCIP_RETCODE registerBranchingCandidates(
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(cutoff != NULL);
    assert(neednarybranch != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -1469,6 +1641,7 @@ SCIP_RETCODE registerBranchingCandidates(
    assert(nvars == 0 || boundtypes != NULL);
    assert(nvars == 0 || bounds != NULL);
 
+   *cutoff = TRUE;
    *neednarybranch = TRUE;
 
    for( v = 0; v < nvars; ++v )
@@ -1513,6 +1686,7 @@ SCIP_RETCODE registerBranchingCandidates(
          SCIP_CALL( SCIPaddExternBranchCand(scip, var, REALABS(violation), bounds[v]) );
          *neednarybranch = FALSE;
       }
+      *cutoff = FALSE;
    }
 
    return SCIP_OKAY;
@@ -1561,7 +1735,7 @@ SCIP_RETCODE enforceCurrentSol(
          *infeasible = TRUE;
 
          /* register branching candidates */
-         SCIP_CALL( registerBranchingCandidates(scip, cons, sol, &neednarybranch) );
+         SCIP_CALL( registerBranchingCandidates(scip, cons, sol, cutoff, &neednarybranch) );
 
          if( !neednarybranch )
             *registeredbrcand = TRUE;
@@ -3422,6 +3596,92 @@ SCIP_RETCODE SCIPcreateConsBasicBounddisjunction(
    assert(scip != NULL);
 
    SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name, nvars, vars, boundtypes, bounds,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a bound disjunction constraint with possibly redundant literals
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBounddisjunctionRedundant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< variables of the literals in the constraint */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< types of bounds of the literals (lower or upper bounds) */
+   SCIP_Real*            bounds,             /**< bounds of the literals */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+
+   /* find the bounddisjunction constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("bound disjunction constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* create the constraint specific data */
+   SCIP_CALL( consdataCreateRedundant(scip, &consdata, nvars, vars, boundtypes, bounds) );
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+         local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a bound disjunction constraint with possibly redundant literals
+ *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
+ *  method SCIPcreateConsBounddisjunction(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+ *
+ *  @see SCIPcreateConsBounddisjunction() for information about the basic constraint flag configuration
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_RETCODE SCIPcreateConsBasicBounddisjunctionRedundant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< variables of the literals in the constraint */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< types of bounds of the literals (lower or upper bounds) */
+   SCIP_Real*            bounds              /**< bounds of the literals */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcreateConsBounddisjunctionRedundant(scip, cons, name, nvars, vars, boundtypes, bounds,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;

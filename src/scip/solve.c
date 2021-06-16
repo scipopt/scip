@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1249,21 +1249,16 @@ SCIP_RETCODE initLP(
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
 
-         if( SCIPvarIsInitial(var) )
+         if( SCIPvarIsInitial(var) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN || !SCIPcolIsInLP(SCIPvarGetCol(var))) )
          {
-            SCIP_COL* col;
-
-            col = SCIPvarGetCol(var);
-            if( col == NULL || ! SCIPcolIsInLP(col) )
-            {
-               SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
-            }
+            SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
          }
 
          /* check for empty domains (necessary if no presolving was performed) */
          if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             *cutoff = TRUE;
       }
+      assert(lp->nremovablecols == 0);
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
 
       /* inform pricing storage, that initial LP setup is now finished */
@@ -2346,7 +2341,6 @@ SCIP_RETCODE priceAndCutLoop(
       maxnsepastallrounds = INT_MAX;
 
    /* solve initial LP of price-and-cut loop */
-   /* @todo check if LP is always already solved, because of calling solveNodeInitialLP() in solveNodeLP()? */
    SCIPsetDebugMsg(set, "node: solve LP with price and cut\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem,  stat, eventqueue, eventfilter, transprob,
          set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
@@ -5263,7 +5257,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
    assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
-   SCIPsetDebugMsg(set, "Problem solving finished with status %u (restart=%u, userrestart=%u)\n", stat->status, *restart, stat->userrestart);
+   SCIPsetDebugMsg(set, "Problem solving finished with status %d (restart=%u, userrestart=%u)\n", stat->status, *restart, stat->userrestart);
 
    /* cuts off nodes with lower bound is not better than given cutoff bound, manually; this necessary to ensure that
     * SCIP terminates with a proper solve stage

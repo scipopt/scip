@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1151,13 +1151,13 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
-/** updates current pseudo and loose objective value for a change in a variable's objective value */
+/** updates current pseudo and loose objective value for a change in a variable's objective coefficient */
 SCIP_RETCODE SCIPlpUpdateVarObj(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
-   SCIP_Real             oldobj,             /**< old objective value of variable */
-   SCIP_Real             newobj              /**< new objective value of variable */
+   SCIP_Real             oldobj,             /**< old objective coefficient of variable */
+   SCIP_Real             newobj              /**< new objective coefficient of variable */
    );
 
 /** updates current root pseudo objective value for a global change in a variable's lower bound */
@@ -1438,17 +1438,18 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
    SCIP_Bool*            success             /**< buffer to indicate whether interior point was successfully computed */
    );
 
-/** computes the changes to the problem when fixing to the optimal face
+/** computes two measures for dual degeneracy (dual degeneracy rate and variable-constraint ratio)
+ *  based on the changes applied when reducing the problem to the optimal face
  *
- *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
- *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ *  returns the dual degeneracy rate, i.e., the share of nonbasic variables with reduced cost 0
+ *  and the variable-constraint ratio, i.e., the number of unfixed variables in relation to the basis size
  */
-SCIP_RETCODE SCIPlpGetDegeneracy(
+SCIP_RETCODE SCIPlpGetDualDegeneracy(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
-   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
+   SCIP_Real*            degeneracy,         /**< pointer to store the dual degeneracy rate */
+   SCIP_Real*            varconsratio        /**< pointer to store the variable-constraint ratio */
    );
 
 /** gets array with columns of the LP */
@@ -1579,6 +1580,64 @@ SCIP_Bool SCIPlpDivingRowsChanged(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** checks, if absolute difference of values is in range of LP primal feastol */
+SCIP_Bool SCIPlpIsFeasEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if absolute difference of val1 and val2 is lower than LP primal feastol */
+SCIP_Bool SCIPlpIsFeasLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if absolute difference of val1 and val2 is not greater than LP primal feastol */
+SCIP_Bool SCIPlpIsFeasLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if absolute difference of val1 and val2 is greater than LP primal feastol */
+SCIP_Bool SCIPlpIsFeasGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if absolute difference of val1 and val2 is not lower than -LP primal feastol */
+SCIP_Bool SCIPlpIsFeasGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if value is in range LP primal feasibility tolerance of 0.0 */
+SCIP_Bool SCIPlpIsFeasZero(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is greater than LP primal feasibility tolerance */
+SCIP_Bool SCIPlpIsFeasPositive(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is lower than -LP primal feasibility tolerance */
+SCIP_Bool SCIPlpIsFeasNegative(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
 
 #ifdef NDEBUG
 
@@ -1608,6 +1667,15 @@ SCIP_Bool SCIPlpDivingRowsChanged(
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
 #define SCIPlpUnmarkDivingObjChanged(lp) ((lp)->divingobjchg = FALSE)
 #define SCIPlpDivingRowsChanged(lp)     ((lp)->ndivechgsides > 0)
+
+#define SCIPlpIsFeasEQ(set, lp, val1, val2) ( EPSEQ(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasLT(set, lp, val1, val2) ( EPSLT(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasLE(set, lp, val1, val2) ( EPSLE(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasGT(set, lp, val1, val2) ( EPSGT(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasGE(set, lp, val1, val2) ( EPSGE(val1, val2, (lp)->feastol) )
+#define SCIPlpIsFeasZero(lp, val)        ( EPSZ(val, (lp)->feastol) )
+#define SCIPlpIsFeasPositive(lp, val)    ( EPSP(val, (lp)->feastol) )
+#define SCIPlpIsFeasNegative(lp, val)    ( EPSN(val, (lp)->feastol) )
 
 #endif
 

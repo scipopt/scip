@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1663,7 +1663,7 @@ SCIP_RETCODE SCIPprobScaleObj(
             SCIP_Longint absobj;
 
             /* if absobj exceeds maximum SCIP_Longint value, return */
-            if( REALABS(objvals[v]) * intscalar + 0.5 > SCIP_LONGINT_MAX )
+            if( REALABS(objvals[v]) * intscalar + 0.5 > (SCIP_Real)SCIP_LONGINT_MAX )
             {
                SCIPsetFreeBufferArray(set, &objvals);
                return SCIP_OKAY;
@@ -1916,8 +1916,12 @@ SCIP_RETCODE SCIPprobExitSolve(
       SCIP_CALL( prob->probexitsol(set->scip, prob->probdata, restart) );
    }
 
-   /* convert all COLUMN variables back into LOOSE variables */
-   if( prob->ncolvars > 0 )
+   /* - convert all COLUMN variables back into LOOSE variables
+    * - mark relaxation-only variables for deletion, if possible and restarting
+    *   - initPresolve will then call SCIPprobPerformVarDeletions
+    *   - if no restart, then the whole transformed problem will be deleted anyway
+    */
+   if( prob->ncolvars > 0 || restart )
    {
       for( v = 0; v < prob->nvars; ++v )
       {
@@ -1929,6 +1933,27 @@ SCIP_RETCODE SCIPprobExitSolve(
 
          /* invalidate root reduced cost, root reduced solution, and root LP objective value for each variable */
          SCIPvarSetBestRootSol(var, 0.0, 0.0, SCIP_INVALID);
+
+         if( SCIPvarIsRelaxationOnly(var) && restart )
+         {
+            /* relaxation variables should be unlocked and only captured by prob at this moment */
+            assert(SCIPvarGetNLocksDown(var) == 0);
+            assert(SCIPvarGetNLocksUp(var) == 0);
+            assert(SCIPvarGetNUses(var) == 1);
+
+            if( SCIPvarIsDeletable(var) )
+            {
+               SCIP_Bool deleted;
+
+               SCIPsetDebugMsg(set, "queue relaxation-only variable <%s> for deletion\n", SCIPvarGetName(var));
+               SCIP_CALL( SCIPprobDelVar(prob, blkmem, set, eventqueue, var, &deleted) );
+               assert(deleted);
+            }
+            else
+            {
+               SCIPsetDebugMsg(set, "cannot queue relaxation-only variable <%s> for deletion because it is marked non-deletable\n", SCIPvarGetName(var));
+            }
+         }
       }
    }
    assert(prob->ncolvars == 0);

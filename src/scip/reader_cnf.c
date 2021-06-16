@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -404,7 +404,13 @@ SCIP_DECL_READERREAD(readerReadCnf)
    }
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   retcode = SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPerrorMessage("Error creating problem for filename <%s>\n", filename);
+      SCIPfclose(f);
+      return retcode;
+   }
 
    /* read cnf file */
    retcode = readCnf(scip, f);

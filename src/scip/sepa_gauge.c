@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -519,7 +519,7 @@ SCIP_RETCODE findBoundaryPoint(
 
       /* find poisition of point: boundary, interior, exterior */
       SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, position) );
-      SCIPdebugMsg(scip, "Position: %d, lambda: %g\n", position, (ub + lb)/2.0);
+      SCIPdebugMsg(scip, "Position: %d, lambda: %g\n", *position, (ub + lb)/2.0);
 
       switch( *position )
       {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -921,15 +921,11 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
              */
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
             coef = 1.0;
-            break;
          }
-         if( *str == '-' || *str == '+' || isdigit(*str) )
-         {
+         else if( *str == '-' || *str == '+' || isdigit(*str) )
             state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
-            break;
-         }
-
-         state = SCIPPARSEPOLYNOMIAL_STATE_END;
+         else
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
 
          break;
       }
@@ -940,18 +936,15 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          {
             /* there seem to come another variable */
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
-            break;
          }
-
-         if( *str == '-' || *str == '+' || isdigit(*str) )
+         else if( *str == '-' || *str == '+' || isdigit(*str) )
          {
             /* there seem to come a coefficient, which means the next monomial */
             state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
-            break;
          }
+         else /* since we cannot detect the symbols we stop parsing the polynomial */
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
 
-         /* since we cannot detect the symbols we stop parsing the polynomial */
-         state = SCIPPARSEPOLYNOMIAL_STATE_END;
          break;
       }
 
@@ -981,7 +974,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          }
 
          /* after the coefficient we go into the intermediate state, i.e., expecting next variables */
-         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;  /*lint !e838*/
 
          break;
       }
@@ -1049,7 +1042,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          str = *endptr;
 
          /* after the exponent we go into the intermediate state, i.e., expecting next variables */
-         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;  /*lint !e838*/
          break;
       }
 
@@ -8078,7 +8071,7 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
    return SCIP_OKAY;
 }
 
-/** tightens the variable bounds due a new variable type */
+/** tightens the variable bounds due to a new variable type */
 static
 SCIP_RETCODE tightenBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8107,7 +8100,9 @@ SCIP_RETCODE tightenBounds(
        * tightening, because relaxing bounds may not be allowed
        */
       if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(var)) ||
-         (!SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) && SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)))
+         (!SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) && SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var))) ||
+         (!SCIPsetIsEQ(scip->set, SCIPvarGetLbGlobal(var), SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var))) &&
+          SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)))
         )
       {
          SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)), TRUE, infeasible, &tightened) );
@@ -8560,6 +8555,19 @@ SCIP_Bool SCIPdoNotMultaggr(
    return scip->set->presol_donotmultaggr;
 }
 
+/** returns whether variable is not allowed to be aggregated */
+SCIP_Bool SCIPdoNotAggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable x to aggregate */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(var->scip == scip);
+
+   return scip->set->presol_donotaggr || SCIPvarDoNotAggr(var);
+}
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8626,6 +8634,39 @@ SCIP_Bool SCIPallowWeakDualReds(
    assert(scip != NULL);
 
    return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
+}
+
+/** marks the variable that it must not be aggregated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *
+ *  @note There exists no "unmark" method since it has to be ensured that if a plugin requires that a variable is not
+ *        aggregated that this is will be the case.
+ */
+SCIP_RETCODE SCIPmarkDoNotAggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to delete */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(var->scip == scip);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPmarkDoNotAggrVar", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+
+   SCIP_CALL( SCIPvarMarkDoNotAggr(var) );
+
+   return SCIP_OKAY;
 }
 
 /** marks the variable that it must not be multi-aggregated

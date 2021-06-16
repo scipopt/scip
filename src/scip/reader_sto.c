@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1287,7 +1287,7 @@ SCIP_Bool stoinputReadLine(
             return FALSE;
          stoi->lineno++;
       }
-      while( *stoi->buf == '*' );
+      while( *stoi->buf == '*' );   /* coverity[a_loop_bound] */
 
       /* Normalize line */
       len = (unsigned int) strlen(stoi->buf);
@@ -1392,6 +1392,7 @@ SCIP_RETCODE readStoch(
    stoinputSetProbname(stoi, (stoinputField1(stoi) == 0) ? "_STO_" : stoinputField1(stoi));
 
    /* This hat to be a new section */
+   /* coverity[tainted_data] */
    if( !stoinputReadLine(stoi) || (stoinputField0(stoi) == NULL) )
    {
       stoinputSyntaxerror(stoi);
@@ -1477,6 +1478,7 @@ SCIP_RETCODE readBlocks(
    numstages = 0;
    (void) SCIPsnprintf(stagenames, SCIP_MAXSTRLEN, "");
 
+   /* coverity[tainted_data] */
    while( stoinputReadLine(stoi) )
    {
       if( stoinputField0(stoi) != NULL )
@@ -1634,6 +1636,7 @@ SCIP_RETCODE readScenarios(
    SCIP_CALL( setScenarioNum(scip, readerdata->scenariotree, 0) );
    SCIP_CALL( setScenarioStageNum(scip, readerdata->scenariotree, 0) );
 
+   /* coverity[tainted_data] */
    while( stoinputReadLine(stoi) )
    {
       if( stoinputField0(stoi) != NULL )
@@ -1983,12 +1986,6 @@ SCIP_RETCODE addScenarioVarsToProb(
       obj = SCIPvarGetObj(vars[i])*probability;
 
       vartype = SCIPvarGetType(vars[i]);
-#if 0
-      if( getScenarioStageNum(scip, scenario) == 0 )
-         vartype = SCIPvarGetType(vars[i]);
-      else
-         vartype = SCIP_VARTYPE_CONTINUOUS;
-#endif
 
       /* creating a variable as a copy of the original variable. */
       getScenarioEntityName(name, SCIPvarGetName(vars[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
@@ -2153,30 +2150,33 @@ SCIP_RETCODE addScenarioConsToProb(
       SCIP_CONS* cons;
       SCIP_VAR** consvars = NULL;
       int nconsvars;
-      SCIP_Bool success;
+      SCIP_Bool success1 = TRUE;
+      SCIP_Bool success2 = TRUE;
 
       if( SCIPconsIsDeleted(conss[i]) )
          continue;
 
       /* getting the number of variables in the constraints */
-      SCIP_CALL( SCIPgetConsNVars(scip, conss[i], &nconsvars, &success) );
+      SCIP_CALL( SCIPgetConsNVars(scip, conss[i], &nconsvars, &success1) );
 
-      if( success )
+      if( success1 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
-         SCIP_CALL( SCIPgetConsVars(scip, conss[i], consvars, nconsvars, &success) );
+         SCIP_CALL( SCIPgetConsVars(scip, conss[i], consvars, nconsvars, &success2) );
+
+         /* If the get variable callback is not implemented for the constraint, then the success flag will be returned
+          * as FALSE. In this case, it is not possible to build the stochastic program, so an error will be returned.
+          */
+         if( !success2 )
+         {
+            SCIPfreeBufferArrayNull(scip, consvars);
+         }
       }
 
-      /* if the get variable callback is not implemented for the constraint, then the success flag will be returned as
-       * FALSE. In this case, it is not possible to build the stochastic program, so an error will be returned
-       */
-      if( !success )
+      if( !success1 || !success2 )
       {
          SCIPerrorMessage("It is not possible to copy constraint <%s>. The stochastic program can not be built.\n",
             SCIPconsGetName(conss[i]));
-
-         /* freeing buffer memory */
-         SCIPfreeBufferArrayNull(scip, consvars);
 
          return SCIP_READERROR;
       }
@@ -2220,13 +2220,13 @@ SCIP_RETCODE addScenarioConsToProb(
             SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]), SCIPconsIsEnforced(conss[i]),
             SCIPconsIsChecked(conss[i]), SCIPconsIsMarkedPropagate(conss[i]), SCIPconsIsLocal(conss[i]),
             SCIPconsIsModifiable(conss[i]), SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]),
-            SCIPconsIsStickingAtNode(conss[i]), TRUE, &success) );
+            SCIPconsIsStickingAtNode(conss[i]), TRUE, &success1) );
 
       /* freeing the cons vars buffer array */
       SCIPfreeBufferArray(scip, &consvars);
 
       /* if the copy failed, then the scenarios can not be created. */
-      if( !success )
+      if( !success1 )
       {
          SCIPerrorMessage("It is not possible to copy constraint <%s>. The stochastic program can not be built.\n",
             SCIPconsGetName(conss[i]));
@@ -2624,6 +2624,7 @@ SCIP_RETCODE readSto(
    {
       if( stoinputSection(stoi) == STO_BLOCKS )
       {
+         /* coverity[tainted_data] */
          SCIP_CALL_TERMINATE( retcode, readBlocks(stoi, scip, readerdata), TERMINATE );
       }
 

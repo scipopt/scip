@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,7 +20,8 @@
  * @author Stefan Heinz
  *
  * FlatZinc is a low-level solver input language that is the target language for MiniZinc. It is designed to be easy to
- * translate into the form required by a solver. For more details see http://www.g12.cs.mu.oz.au/minizinc/ .
+ * translate into the form required by a solver. For more details see https://www.minizinc.org. The format is described
+ * at https://github.com/MiniZinc/minizinc-doc/blob/develop/en/fzn-spec.rst.
  *
  * @todo Support more general constraint types
  */
@@ -69,7 +70,7 @@
 #define READER_EXTENSION        "fzn"
 
 
-#define FZN_BUFFERLEN         8192      /**< size of the line buffer for reading or writing */
+#define FZN_BUFFERLEN         65536      /**< size of the line buffer for reading or writing */
 #define FZN_MAX_PUSHEDTOKENS  1
 
 /*
@@ -188,9 +189,9 @@ struct FznInput
    int                   nvararrays;         /**< number of variables */
    int                   vararrayssize;      /**< size of variable array */
 
-   CONSTARRAY**          constarrays;        /**< variable arrays to output */
-   int                   nconstarrays;       /**< number of variables */
-   int                   constarrayssize;    /**< size of variable array */
+   CONSTARRAY**          constarrays;        /**< constant arrays */
+   int                   nconstarrays;       /**< number of constant arrays */
+   int                   constarrayssize;    /**< size of constant array */
 };
 typedef struct FznInput FZNINPUT;
 
@@ -2904,7 +2905,7 @@ CREATE_CONSTRAINT(createSetOpCons)
       return SCIP_OKAY;
 
    fzninput->valid = FALSE;
-   SCIPwarningMessage(scip, "set operation are not supported yet\n");
+   SCIPwarningMessage(scip, "Line %d: set operations are not supported yet.\n", fzninput->linenumber);
 
    return SCIP_OKAY;
 }
@@ -2921,7 +2922,7 @@ CREATE_CONSTRAINT(createArrayOpCons)
       return SCIP_OKAY;
 
    fzninput->valid = FALSE;
-   SCIPwarningMessage(scip, "array operation are not supported yet\n");
+   SCIPwarningMessage(scip, "Line %d: array operations are not supported yet.\n", fzninput->linenumber);
 
    return SCIP_OKAY;
 }
@@ -3131,7 +3132,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    /* check if the function name ends of "reif" (reified constraint) which SCIP does not support yet */
    if( equalTokens(ftokens[nftokens - 1], "reif") )
    {
-      SCIPwarningMessage(scip, "reified constraints are not supported\n");
+      SCIPwarningMessage(scip, "Line %d: reified constraints are not supported.\n", fzninput->linenumber);
       fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
@@ -3535,7 +3536,7 @@ SCIP_RETCODE parseConstraint(
    if( !hasError(fzninput) && !created )
    {
       fzninput->valid = FALSE;
-      SCIPwarningMessage(scip, "constraint <%s> is not supported yet\n", fname);
+      SCIPwarningMessage(scip, "Line %d: Constraint <%s> is not supported yet.\n", fzninput->linenumber, fname);
    }
 
    /* free memory */
@@ -4029,12 +4030,12 @@ SCIP_RETCODE printRow(
    assert( strcmp(type, "eq") == 0 || strcmp(type, "le") == 0 || strcmp(type, "ge") == 0 );
 
    /* Add a constraint of type float_lin or int_lin, depending on whether there are continuous variables or coefficients */
-   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),"constraint ") );
+   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), "constraint ") );
    if( hasfloats )
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "float_lin_%s([",type);
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "float_lin_%s([", type);
    else
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "int_lin_%s([",type);
-   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "int_lin_%s([", type);
+   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), buffer) );
 
    /* print all coefficients but the last one */
    for( v = 0; v < nvars-1; ++v )
@@ -4086,7 +4087,7 @@ SCIP_RETCODE printRow(
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s",SCIPvarGetName(vars[nvars-1]),
             SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->ndiscretevars ? "_float" : "");  /*lint !e613*/
       else
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",SCIPvarGetName(vars[nvars-1]));  /*lint !e613*/
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s", SCIPvarGetName(vars[nvars-1]));  /*lint !e613*/
 
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
    }
@@ -4100,10 +4101,10 @@ SCIP_RETCODE printRow(
    if( hasfloats )
    {
       flattenFloat(scip, rhs, buffy);
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s);\n",buffy);
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s);\n", buffy);
    }
    else
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f);\n",rhs);
+      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f);\n", rhs);
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
 
    return SCIP_OKAY;
@@ -4163,7 +4164,10 @@ SCIP_RETCODE printLinearCons(
    }
 
    /* retransform given variables to active variables */
-   SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   if( nactivevars > 0 )
+   {
+      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   }
 
    /* If there may be continuous variables or coefficients in the constraint, scan for them */
    if( mayhavefloats )
@@ -4382,16 +4386,16 @@ SCIP_RETCODE writeFzn(
             SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
 
          /* if there is a bound, store the variable and its boundtype for adding a corresponding constraint later-on */
-         if( SCIPisInfinity(scip, ub) )
-         {
-            boundedvars[nboundedvars] = v;
-            boundtypes[nboundedvars] = SCIP_BOUNDTYPE_LOWER;
-            nboundedvars++;
-         }
-         if( SCIPisInfinity(scip, -lb) )
+         if( ! SCIPisInfinity(scip, ub) )
          {
             boundedvars[nboundedvars] = v;
             boundtypes[nboundedvars] = SCIP_BOUNDTYPE_UPPER;
+            nboundedvars++;
+         }
+         if( ! SCIPisInfinity(scip, -lb) )
+         {
+            boundedvars[nboundedvars] = v;
+            boundtypes[nboundedvars] = SCIP_BOUNDTYPE_LOWER;
             nboundedvars++;
          }
       }
@@ -4678,7 +4682,7 @@ SCIP_RETCODE writeFzn(
       {
          SCIP_Real obj;
          var = vars[intobjvars[v]];
-         obj = objscale*SCIPvarGetObj(var);
+         obj = objscale * SCIPvarGetObj(var);
          SCIPdebugMsg(scip, "variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n", SCIPvarGetName(var), v, intobjvars[v], obj, objscale, SCIPvarGetObj(var));
 
          assert( SCIPisIntegral(scip, obj) );
@@ -4691,7 +4695,7 @@ SCIP_RETCODE writeFzn(
       for( v = 0; v < nfloatobjvars; v++ )
       {
          SCIP_Real obj;
-         obj = objscale*SCIPvarGetObj(vars[floatobjvars[v]]);
+         obj = objscale * SCIPvarGetObj(vars[floatobjvars[v]]);
          flattenFloat(scip, obj, buffy);
          assert( !SCIPisIntegral(scip, obj) || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_CONTINUOUS
             || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_IMPLINT);
@@ -4701,7 +4705,7 @@ SCIP_RETCODE writeFzn(
       /* potentially add an objective offset */
       if( !SCIPisZero(scip, objoffset) )
       {
-         flattenFloat(scip, objoffset, buffy);
+         flattenFloat(scip, objscale * objoffset, buffy);
          SCIPinfoMessage(scip, file, "%s%s", nfloatobjvars == 0 ? "" : ", ", buffy );
       }
 
@@ -4867,7 +4871,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
    SCIPfreeBlockMemoryArrayNull(scip, &fzninput.constarrays, fzninput.constarrayssize);
 
    /* evaluate the result */
-   if( fzninput.haserror )
+   if( fzninput.haserror || ! fzninput.valid )
       return SCIP_READERROR;
 
    *result = SCIP_SUCCESS;

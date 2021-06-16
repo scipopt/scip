@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -696,7 +696,7 @@ SCIP_RETCODE createGenVBound(
                activity += genvboundcoefs[k] * SCIPvarGetLPSol(genvboundvars[k]);
 
             SCIPdebugMsg(scip, "LVB activity = %g lpobj = %g\n", activity, SCIPgetLPObjval(scip));
-            assert(EPSZ(SCIPrelDiff(activity, SCIPgetLPObjval(scip)), 10.0 * SCIPdualfeastol(scip)));
+            assert(EPSZ(SCIPrelDiff(activity, SCIPgetLPObjval(scip)), 11.0 * SCIPdualfeastol(scip)));
 #endif
 
             SCIPdebugMsg(scip, "         adding genvbound\n");

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -6201,7 +6201,7 @@ SCIP_RETCODE generateCutFactorableDo(
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, consdata->quadvarterms[i].var, coef) );
       }
 
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_factorablesecant_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_factorablesecant_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
       rowprep->local = TRUE;
    }
@@ -6238,7 +6238,7 @@ SCIP_RETCODE generateCutFactorableDo(
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, consdata->quadvarterms[i].var, coef) );
       }
 
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_factorablelinearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_factorablelinearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
    }
 
    *success = TRUE;
@@ -7365,7 +7365,7 @@ SCIP_RETCODE generateCutLTI(
 
    rowprep->local = TRUE;
 
-   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_lti_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_lti_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    *success = TRUE;
 
@@ -7452,7 +7452,7 @@ SCIP_RETCODE generateCutConvex(
    rowprep->sidetype = violside;
    SCIPaddRowprepSide(rowprep, violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
 
-   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_side%d_linearization_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
+   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_side%d_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
 
    return SCIP_OKAY;
 }
@@ -7520,7 +7520,7 @@ void updateBilinearRelaxation(
    for( i = 0; i < nineqs; ++i )
    {
       constshift[i] = MAX(0.0, ineqs[3*i] * refx - ineqs[3*i+1] * refy - ineqs[3*i+2]);
-      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", constshift[i]);
+      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", i, constshift[i]);
    }
 
    /* try to use both inequalities */
@@ -7692,7 +7692,7 @@ SCIP_RETCODE generateCutNonConvex(
          lby = SCIPvarGetLbLocal(y);
          uby = SCIPvarGetUbLocal(y);
          SCIPdebugMsg(scip, "bilinear term %g %s %s with (%g,%g) in [%g,%g]x[%g,%g] overestimate=%u\n", bilinterm->coef,
-            SCIPvarGetName(x), SCIPvarGetName(y), refx, refy, lbx, ubx, lby, uby, violside == SCIP_SIDETYPE_LEFT);
+            SCIPvarGetName(x), SCIPvarGetName(y), refx, refy, lbx, ubx, lby, uby, (SCIP_Bool) (violside == SCIP_SIDETYPE_LEFT));
 
          /* use the McCormick relaxation for under- or overestimating the bilinear term */
          coef = 0.0;
@@ -7785,7 +7785,7 @@ SCIP_RETCODE generateCutNonConvex(
    rowprep->sidetype = violside;
    SCIPaddRowprepSide(rowprep, violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
 
-   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_side%d_estimation_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
+   (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_side%d_estimation_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
 
    return SCIP_OKAY;
 }

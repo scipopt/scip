@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -77,10 +77,12 @@ BINID           =       $(notdir $(EXECUTABLE))
 OUTPUTDIR       =       results
 CLUSTERNODES    =       all
 SLURMACCOUNT    =       default
+GAMS		=	gams
+PYTHON  =   none
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	7.0.2
+SCIP_VERSION	=	7.0.3.5
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -115,8 +117,11 @@ ifeq ($(DEBUGTOOL),auto)
    endif
 endif
 
-#will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
+# for backward compability
 PARASCIP	=	false
+
+# Should the code be thread safe?
+THREADSAFE	=	true
 
 # enable debug-solution mechanism
 DEBUGSOL =  false
@@ -136,7 +141,6 @@ ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 WORHPOPT	=	opt
 LPSCHECK        =	false
-GAMS		=	false
 
 # compiler and linker parameters
 CC		=	gcc
@@ -211,9 +215,12 @@ DFLAGS		=	-MMD
 GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
-			-Wsign-compare -Wstrict-prototypes -Wno-unknown-warning-option \
+			-Wsign-compare -Wstrict-prototypes \
 			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
 # GCCWARN is not only used for GCC!
+ifeq ($(COMP),clang)
+GCCWARN += -Wno-unknown-warning-option
+endif
 ifeq ($(COMP),gnu)
 GCCWARN += -Wno-maybe-uninitialized
 endif
@@ -319,15 +326,18 @@ else
 endif
 
 #-----------------------------------------------------------------------------
-# PARASCIP
+# THREADSAFE
 #-----------------------------------------------------------------------------
 
-ifeq ($(PARASCIP),false)
-FLAGS		+=	-DNPARASCIP
-else
-ifeq ($(FILTERSQP),true)
-LDFLAGS 	+=	-lpthread
+ifeq ($(PARASCIP),true)
+   override THREADSAFE = true
 endif
+
+ifeq ($(THREADSAFE),true)
+   FLAGS	+=	-DSCIP_THREADSAFE
+   ifeq ($(FILTERSQP),true)
+      LDFLAGS 	+=	$(LINKCC_l)pthread$(LINKLIBSUFFIX)
+   endif
 endif
 
 #-----------------------------------------------------------------------------
@@ -630,10 +640,6 @@ endif
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
 NLPILIBSHORTNAMECPPAD = .cppad
-endif
-
-ifeq ($(GAMS),true)
-LDFLAGS		+=	-ldl -lpthread
 endif
 
 #-----------------------------------------------------------------------------

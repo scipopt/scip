@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,7 +23,7 @@
 #ifndef __SCIP_TYPE_SYMMETRY_H_
 #define __SCIP_TYPE_SYMMETRY_H_
 
-#include <scip/scip.h>
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +35,11 @@ extern "C" {
 #define SYM_SPEC_REAL                   UINT32_C(0x00000004)  /**< need symmetries also for continuous variables */
 
 typedef uint32_t SYM_SPEC;              /**< types of variables handled by symmetry */
+
+/** symmetry timings */
+#define SYM_COMPUTETIMING_BEFOREPRESOL    0  /**< compute symmetries before presolving */
+#define SYM_COMPUTETIMING_DURINGPRESOL    1  /**< compute symmetries during presolving */
+#define SYM_COMPUTETIMING_AFTERPRESOL     2  /**< compute symmetries after presolving */
 
 /** define sense of rhs */
 enum SYM_Rhssense
@@ -54,11 +59,52 @@ typedef enum SYM_Rhssense SYM_RHSSENSE;
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
 #define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
 #define SYM_HANDLETYPE_ORBITALFIXING    UINT32_C(0x00000002)  /**< orbital fixing */
+#define SYM_HANDLETYPE_SST              UINT32_C(0x00000004)  /**< Schreier Sims cuts */
+#define SYM_HANDLETYPE_SYMCONS (SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_SST)
 
 typedef uint32_t SYM_HANDLETYPE;        /**< type of symmetry handling */
 
 typedef struct SYM_Vartype SYM_VARTYPE;      /**< data of variables that are considered to be equivalent */
 typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation */
+
+/** selection rules for leaders in SST cuts */
+enum SCIP_LeaderRule
+{
+   SCIP_LEADERRULE_FIRSTINORBIT        = 0,       /**< first var in orbit */
+   SCIP_LEADERRULE_LASTINORBIT         = 1,       /**< last var in orbit */
+   SCIP_LEADERRULE_MAXCONFLICTSINORBIT = 2,       /**< var with most conflicting vars in its orbit */
+   SCIP_LEADERRULE_MAXCONFLICTS        = 3        /**< var with most conflicting vars in problem */
+};
+typedef enum SCIP_LeaderRule SCIP_LEADERRULE;
+
+/** tie breaks for leader rule based on the leader's orbit */
+enum SCIP_LeaderTiebreakRule
+{
+   SCIP_LEADERTIEBREAKRULE_MINORBIT            = 0,    /**< orbit of minimum size */
+   SCIP_LEADERTIEBREAKRULE_MAXORBIT            = 1,    /**< orbit of maximum size */
+   SCIP_LEADERTIEBREAKRULE_MAXCONFLICTSINORBIT = 2     /**< orbit with maximum number of vars in conflict with leader */
+};
+
+/** variable types for leader in Schreier Sims cuts */
+enum SCIP_SSTType
+{
+   SCIP_SSTTYPE_BINARY                 = 1,    /**< binary variables */
+   SCIP_SSTTYPE_INTEGER                = 2,    /**< integer variables */
+   SCIP_SSTTYPE_IMPLINT                = 4,    /**< implicitly integer variables */
+   SCIP_SSTTYPE_CONTINUOUS             = 8     /**< continuous variables */
+};
+
+typedef enum SCIP_SSTType SCIP_SSTTYPE;
+
+/** type of orbitope constraint: full, packing, or partitioning orbitope */
+enum SCIP_OrbitopeType
+{
+   SCIP_ORBITOPETYPE_FULL         = 0,       /**< constraint is a full orbitope constraint:         rowsum(x) unrestricted */
+   SCIP_ORBITOPETYPE_PARTITIONING = 1,       /**< constraint is a partitioning orbitope constraint: rowsum(x) == 1 */
+   SCIP_ORBITOPETYPE_PACKING      = 2        /**< constraint is a packing orbitope constraint:      rowsum(x) <= 1 */
+};
+typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
+
 
 #ifdef __cplusplus
 }

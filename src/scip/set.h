@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -263,14 +263,6 @@ SCIP_RETCODE SCIPsetChgParamFixed(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
    SCIP_Bool             fixed               /**< new fixing status of the parameter */
-   );
-
-/** changes the value of an existing parameter */
-SCIP_RETCODE SCIPsetSetParam(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Bool parameter */
@@ -1726,6 +1718,9 @@ SCIP_Bool SCIPsetGetSubscipsOff(
 
 
 /** prints a debug message */
+#ifdef __GNUC__
+__attribute__((format(printf, 4, 5)))
+#endif
 SCIP_EXPORT
 void SCIPsetPrintDebugMessage(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1736,6 +1731,9 @@ void SCIPsetPrintDebugMessage(
    );
 
 /** prints a debug message without precode */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPsetDebugMessagePrint(
    SCIP_SET*             set,                /**< global SCIP settings */

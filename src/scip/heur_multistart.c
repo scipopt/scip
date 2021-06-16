@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -447,7 +447,13 @@ SCIP_RETCODE improvePoint(
          for( j = 0; j < nvars; ++j )
             updatevec[j] += scale * grad[j];
       }
-      assert(nviolnlrows > 0);
+
+      /* if there are no violated rows, stop since start point is feasible */
+      if( nviolnlrows == 0 )
+      {
+         assert(updatevec[i] == 0.0);
+         return SCIP_OKAY;
+      }
 
       for( i = 0; i < nvars; ++i )
       {
@@ -559,10 +565,12 @@ SCIP_Real getRelDistance(
 
    assert(x != NULL);
    assert(y != NULL);
-   assert(SCIPgetNVars(scip) > 0);
 
    vars = SCIPgetVars(scip);
    distance = 0.0;
+
+   if( SCIPgetNVars(scip) == 0 )
+      return 0.0;
 
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
@@ -919,7 +927,7 @@ SCIP_RETCODE applyHeur(
       /* call sub-NLP heuristic */
       SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start, -1LL, timelimit,
             heurdata->nlpminimpr, &success) );
-      SCIPdebugMsg(scip, "solveNLP result = %d\n", success);
+      SCIPdebugMsg(scip, "solveNLP result = %u\n", success);
 
       if( success )
          *result = SCIP_FOUNDSOL;

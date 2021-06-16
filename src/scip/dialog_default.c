@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3723,13 +3723,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
             else
             {
                SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "finite solution could not be created\n");
-               SCIPdialogMessage(scip, NULL, "finite solution could not be created\n", filename);
+               SCIPdialogMessage(scip, NULL, "finite solution could not be created\n");
             }
          }
          else
          {
             SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no solution available\n");
-            SCIPdialogMessage(scip, NULL, "no solution available\n", filename);
+            SCIPdialogMessage(scip, NULL, "no solution available\n");
          }
 
          fclose(file);
