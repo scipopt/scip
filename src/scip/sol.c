@@ -1748,7 +1748,7 @@ SCIP_RETCODE SCIPsolSetValExact(
       if( !RatIsEqual(val, SCIPvarGetLbGlobalExact(var)) )
       {
          SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
-            SCIPvarGetName(var), SCIPvarGetLbGlobalExact(var), val);
+            SCIPvarGetName(var), RatApproxReal(SCIPvarGetLbGlobalExact(var)), RatApproxReal(val));
          return SCIP_INVALIDDATA;
       }
       return SCIP_OKAY;
