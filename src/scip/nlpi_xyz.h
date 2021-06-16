@@ -13,6 +13,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* This is a TEMPLATE for a NLPI. Use this as starting point to implement your own NLPI.
+ * Copy the file, rename it, and replace all occurences of XYZ by the name of your NLP solver.
+ */
+
 /**@file    nlpi_xyz.h
  * @brief   XYZ NLP interface
  * @ingroup NLPIS
