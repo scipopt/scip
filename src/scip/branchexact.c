@@ -330,7 +330,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
-      SCIPerrorMessage("Cannot branch exactly on continuous variables.\n", SCIPvarGetName(var));
+      SCIPerrorMessage("Cannot branch exactly on continuous variable %s.\n", SCIPvarGetName(var));
       SCIPABORT();
       return SCIP_INVALIDDATA; /*lint !e527*/
    }

@@ -3531,7 +3531,7 @@ void SCIPprintLPStatistics(
             scip->stat->nfailexlp, scip->stat->boundingerrorexlp/scip->stat->nexlp);
       }
       else
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          - %10.2f\n", scip->stat->nfailexlp, scip->stat->nfailexlp, scip->stat->boundingerrorexlp/scip->stat->nexlp);
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          - %10.2f\n", scip->stat->nfailexlp, scip->stat->boundingerrorexlp/scip->stat->nexlp);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp infeas  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
          SCIPclockGetTime(scip->stat->provedinfeaslptime),
@@ -3569,7 +3569,7 @@ void SCIPprintLPStatistics(
          scip->stat->nprojshiftinf,
          scip->stat->nfailprojshiftinf);
 
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Meta heuristic     :   Time Success (%.2f) TimeFail (%.2f) Calls (%d) Found (%d) \n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Meta heuristic     :   Time Success (%.2f) TimeFail (%.2f) Calls (%lld) Found (%lld) \n",
          scip->stat->timesuccessexactsol, scip->stat->timefailexactsol, scip->stat->ncallsexactsol, scip->stat->nfoundexactsol);
       {
          SCIP_Longint ncalls;
