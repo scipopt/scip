@@ -881,8 +881,24 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+   assert(SCIPnlpiOracleGetNVars(problem->oracle) == dstatssize);
 
    SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, problem->oracle, dstats) );
+
+   if( problem->initguess != NULL )
+   {
+      // update initguess
+      int i;
+      for( i = 0; i < dstatssize; ++i )
+      {
+         if( dstats[i] != -1 )
+         {
+            assert(dstats[i] >= 0);
+            assert(dstats[i] < SCIPnlpiOracleGetNVars(problem->oracle));
+            problem->initguess[dstats[i]] = problem->initguess[i];
+         }
+      }
+   }
 
    problem->firstrun = TRUE;
 
