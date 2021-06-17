@@ -47,24 +47,15 @@
 #include <new>      /* for std::bad_alloc */
 #include <sstream>
 
-/* fallback to non-thread-safe version if C++ is too old to have mutex */
-#if __cplusplus < 201103L && defined(SCIP_THREADSAFE)
-#undef SCIP_THREADSAFE
-#endif
-
-#ifdef SCIP_THREADSAFE
-#include <mutex>
-static std::mutex solve_mutex;  /*lint !e1756*/
-#endif
-
 /* turn off some lint warnings for file */
 /*lint --e{1540,750,3701}*/
 
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wshadow"
-#endif
 #define IPOPT_DEPRECATED  // to avoid warnings about using functions that became deprecated in Ipopt 3.14
 #include "IpoptConfig.h"
+
+#if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
 #include "IpIpoptApplication.hpp"
 #include "IpIpoptCalculatedQuantities.hpp"
 #include "IpSolveStatistics.hpp"
@@ -73,12 +64,24 @@ static std::mutex solve_mutex;  /*lint !e1756*/
 #include "IpTNLPAdapter.hpp"
 #include "IpOrigIpoptNLP.hpp"
 #include "IpLapack.hpp"
-#ifdef __GNUC__
+#if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
 
 #if (IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12))
 #error "The Ipopt interface requires at least 3.12."
+#endif
+
+/* MUMPS that can be used by Ipopt is not threadsafe
+ * If we want SCIP to be threadsafe (SCIP_THREADSAFE), have std::mutex (C++11 or higher), and use Ipopt before 3.14,
+ * then we protect the call to Ipopt by a mutex if MUMPS is used as linear solver.
+ * Thus, we allow only one Ipopt run at a time.
+ * Ipopt 3.14 has this build-in to its MUMPS interface, so we won't have to take care of this.
+ */
+#if defined(SCIP_THREADSAFE) && __cplusplus >= 201103L && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
+#define PROTECT_SOLVE_BY_MUTEX
+#include <mutex>
+static std::mutex solve_mutex;  /*lint !e1756*/
 #endif
 
 using namespace Ipopt;
@@ -1064,7 +1067,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    {
       SmartPtr<SolveStatistics> stats;
 
-#ifdef SCIP_THREADSAFE
+#ifdef PROTECT_SOLVE_BY_MUTEX
       /* lock solve_mutex if Ipopt is going to use Mumps as linear solver
        * unlocking will happen in the destructor of guard, which is called when this block is left
        */
