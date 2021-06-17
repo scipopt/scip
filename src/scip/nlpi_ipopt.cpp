@@ -885,7 +885,6 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
    SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, problem->oracle, dstats) );
 
    problem->firstrun = TRUE;
-   BMSfreeMemoryArrayNull(&problem->initguess); // @TODO keep initguess for remaining variables 
 
    invalidateSolution(problem);
 
@@ -1004,8 +1003,7 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
    {
       if( !problem->initguess )
       {
-         if( BMSduplicateMemoryArray(&problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSduplicateMemoryArray(&problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) );
       }
       else
       {
@@ -1091,9 +1089,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          }
 
 #ifdef SCIP_DEBUG
-         // enabling the derivative tester leads to calling TNLP::get_starting_point() twice, which has undesired consequences if the starting point is generated randomly
-         // so we don't enable derivative tester if SCIP_DEBUG is defined for now
-         // problem->ipopt->Options()->SetStringValue("derivative_test", problem->nlp->approxhessian ? "first-order" : "second-order");
+         problem->ipopt->Options()->SetStringValue("derivative_test", problem->nlp->approxhessian ? "first-order" : "second-order");
 #endif
 
          status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
@@ -2111,7 +2107,7 @@ bool ScipNLP::get_starting_point(
 
    if( init_x )
    {
-      if( nlpiproblem->initguess )
+      if( nlpiproblem->initguess != NULL )
       {
          BMScopyMemoryArray(x, nlpiproblem->initguess, n);
       }
@@ -2121,17 +2117,19 @@ bool ScipNLP::get_starting_point(
 
          SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
-         // FIXME store this point in nlpiproblem->initguess, since Ipopt calls get_starting_point() (at least) twice and we should return the same point
+         if( BMSallocMemoryArray(&nlpiproblem->initguess, n) == NULL )
+            return false;
+
          for( int i = 0; i < n; ++i )
          {
             lb = SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle)[i];
             ub = SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle)[i];
             if( lb > 0.0 )
-               x[i] = SCIPrandomGetReal(randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+               x[i] = nlpiproblem->initguess[i] = SCIPrandomGetReal(randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
             else if( ub < 0.0 )
-               x[i] = SCIPrandomGetReal(randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+               x[i] = nlpiproblem->initguess[i] = SCIPrandomGetReal(randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
             else
-               x[i] = SCIPrandomGetReal(randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+               x[i] = nlpiproblem->initguess[i] = SCIPrandomGetReal(randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
          }
       }
    }
