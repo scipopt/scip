@@ -50,7 +50,6 @@
 /* turn off some lint warnings for file */
 /*lint --e{1540,750,3701}*/
 
-#define IPOPT_DEPRECATED  // to avoid warnings about using functions that became deprecated in Ipopt 3.14
 #include "IpoptConfig.h"
 
 #if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
@@ -1153,7 +1152,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       if( IsValid(stats) )
       {
          problem->lastniter = stats->IterationCount();
-         problem->lasttime  = stats->TotalCPUTime();
+         problem->lasttime  = stats->TotalCpuTime();
       }
       else
       {
@@ -2528,8 +2527,11 @@ bool ScipNLP::intermediate_callback(
          BMSclearMemoryArray(nlpiproblem->lastsoldualvarub, SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
          assert(IsValid(ip_data->curr()->z_L()));
          assert(IsValid(ip_data->curr()->z_U()));
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
          tnlp_adapter->ResortBnds(*ip_data->curr()->z_L(), nlpiproblem->lastsoldualvarlb, *ip_data->curr()->z_U(), nlpiproblem->lastsoldualvarub);
-
+#else
+         tnlp_adapter->ResortBounds(*ip_data->curr()->z_L(), nlpiproblem->lastsoldualvarlb, *ip_data->curr()->z_U(), nlpiproblem->lastsoldualvarub);
+#endif
       }
    }
 
@@ -2846,7 +2848,11 @@ SCIP_RETCODE LapackDsyev(
 {
    int info;
 
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
    IpLapackDsyev((bool)computeeigenvectors, N, a, N, w, info);
+#else
+   IpLapackSyev((bool)computeeigenvectors, N, a, N, w, info);
+#endif
 
    if( info != 0 )
    {
@@ -2881,7 +2887,11 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    BMScopyMemoryArray(bcopy, b, N);
 
    /* compute the LU factorization */
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
    IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+#else
+   IpLapackGetrf(N, Acopy, pivotcopy, N, info);
+#endif
 
    if( info != 0 )
    {
@@ -2893,7 +2903,11 @@ SCIP_RETCODE SCIPsolveLinearProb3(
       *success = TRUE;
 
       /* solve linear problem */
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
       IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+#else
+      IpLapackGetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+#endif
 
       /* copy the solution */
       BMScopyMemoryArray(x, bcopy, N);
@@ -2943,7 +2957,11 @@ SCIP_RETCODE SCIPsolveLinearProb(
    SCIP_ALLOC( BMSallocMemoryArray(&pivotcopy, N) );
 
    /* compute the LU factorization */
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
    IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+#else
+   IpLapackGetrf(N, Acopy, pivotcopy, N, info);
+#endif
 
    if( info != 0 )
    {
@@ -2955,7 +2973,11 @@ SCIP_RETCODE SCIPsolveLinearProb(
       *success = TRUE;
 
       /* solve linear problem */
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
       IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+#else
+      IpLapackGetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+#endif
 
       /* copy the solution */
       BMScopyMemoryArray(x, bcopy, N);
