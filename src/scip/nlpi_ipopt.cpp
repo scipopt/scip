@@ -151,7 +151,6 @@ public:
    SmartPtr<IpoptApplication>  ipopt;        /**< Ipopt application */
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
    std::string                 optfile;      /**< name of options file */
-   bool                        storeintermediate;/**< whether to store intermediate solutions */
    bool                        fastfail;     /**< whether to stop Ipopt if convergence seems slow */
 
    SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
@@ -170,7 +169,7 @@ public:
    /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL),
-        storeintermediate(false), fastfail(false),
+        fastfail(false),
         firstrun(TRUE), initguess(NULL),
         lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
         lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
@@ -615,7 +614,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 #endif
 
    /* modify Ipopt's default settings to what we believe is appropriate */
-   (*problem)->ipopt->RegOptions()->AddStringOption2("store_intermediate", "whether to store the most feasible intermediate solutions", "no", "yes", "", "no", "", "useful when Ipopt looses a once found feasible solution and then terminates with an infeasible point");
    (void) (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
 #ifdef SCIP_DEBUG
@@ -1515,7 +1513,6 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
       if( ival == 0 || ival == 1 )
       {
          problem->fastfail = (bool)ival;
-         problem->storeintermediate = (bool)ival;
       }
       else
       {
@@ -1891,7 +1888,6 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
          SCIPerrorMessage("Error initializing Ipopt using optionfile \"%s\"\n", problem->optfile.c_str());
          return SCIP_ERROR;
       }
-      (void) problem->ipopt->Options()->GetBoolValue("store_intermediate", problem->storeintermediate, "");
       problem->firstrun = TRUE;
 
       return SCIP_OKAY;
@@ -2480,60 +2476,6 @@ bool ScipNLP::intermediate_callback(
    IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
    )
 {  /*lint --e{715}*/
-   if( nlpiproblem->storeintermediate && mode == RegularMode && inf_pr < nlpiproblem->lastsolinfeas )
-   {
-      Ipopt::TNLPAdapter* tnlp_adapter;
-
-      tnlp_adapter = NULL;
-      if( ip_cq != NULL )
-      {
-         Ipopt::OrigIpoptNLP* orignlp;
-
-         orignlp = dynamic_cast<OrigIpoptNLP*>(GetRawPtr(ip_cq->GetIpoptNLP()));
-         if( orignlp != NULL )
-            tnlp_adapter = dynamic_cast<TNLPAdapter*>(GetRawPtr(orignlp->nlp()));
-      }
-
-      if( tnlp_adapter != NULL && ip_data != NULL && IsValid(ip_data->curr()) )
-      {
-         SCIPdebugMsg(scip, "update lastsol: inf_pr old = %g -> new = %g\n", nlpiproblem->lastsolinfeas, inf_pr);
-
-         if( nlpiproblem->lastsolprimals == NULL )
-         {
-            assert(nlpiproblem->lastsoldualcons == NULL);
-            assert(nlpiproblem->lastsoldualvarlb == NULL);
-            assert(nlpiproblem->lastsoldualvarub == NULL);
-            if( BMSallocMemoryArray(&nlpiproblem->lastsolprimals, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL ||
-               BMSallocMemoryArray(&nlpiproblem->lastsoldualcons, SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle)) == NULL ||
-               BMSallocMemoryArray(&nlpiproblem->lastsoldualvarlb, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL ||
-               BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL )
-            {
-               SCIPerrorMessage("out-of-memory in ScipNLP::intermediate_callback()\n");
-               return true;
-            }
-         }
-
-         assert(IsValid(ip_data->curr()->x()));
-         tnlp_adapter->ResortX(*ip_data->curr()->x(), nlpiproblem->lastsolprimals);
-         nlpiproblem->lastsolinfeas = inf_pr;
-
-         assert(IsValid(ip_data->curr()->y_c()));
-         assert(IsValid(ip_data->curr()->y_d()));
-         tnlp_adapter->ResortG(*ip_data->curr()->y_c(), *ip_data->curr()->y_d(), nlpiproblem->lastsoldualcons);
-
-         // need to clear arrays first because ResortBnds only sets values for non-fixed variables
-         BMSclearMemoryArray(nlpiproblem->lastsoldualvarlb, SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
-         BMSclearMemoryArray(nlpiproblem->lastsoldualvarub, SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
-         assert(IsValid(ip_data->curr()->z_L()));
-         assert(IsValid(ip_data->curr()->z_U()));
-#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
-         tnlp_adapter->ResortBnds(*ip_data->curr()->z_L(), nlpiproblem->lastsoldualvarlb, *ip_data->curr()->z_U(), nlpiproblem->lastsoldualvarub);
-#else
-         tnlp_adapter->ResortBounds(*ip_data->curr()->z_L(), nlpiproblem->lastsoldualvarlb, *ip_data->curr()->z_U(), nlpiproblem->lastsoldualvarub);
-#endif
-      }
-   }
-
    /* do convergence test if fastfail is enabled */
    if( nlpiproblem->fastfail )
    {
