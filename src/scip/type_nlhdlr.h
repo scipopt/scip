@@ -140,7 +140,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  *
  * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
  * @ref SCIPregisterExprUsageNonlinear() for every subexpression that it will use and indicate whether
- * - it will use an auxiliary variables,
+ * - it will use an auxiliary variable,
  * - it will use activity for some subexpressions when computing estimators or cuts, and
  * - it will use activity for some subexpressions when for INTEVAL or REVERSEPROP.
  *
