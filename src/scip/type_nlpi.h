@@ -83,257 +83,312 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
- * input:
- *  - scip target SCIP where to include copy of NLPI
- *  - sourcenlpi the NLP interface to copy
+ *  - scip       : target SCIP where to include copy of NLPI
+ *  - sourcenlpi : the NLP interface to copy
  */
-#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* sourcenlpi)
+#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_NLPI* sourcenlpi)
 
-/** destructor of NLP interface to free nlpi data
+/** frees the data of the NLP interface
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - nlpidata NLPI data to free
+ *  - scip     : SCIP data structure
+ *  - nlpi     : datastructure for solver interface
+ *  - nlpidata : NLPI data to free
  */
-#define SCIP_DECL_NLPIFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIDATA** nlpidata)
+#define SCIP_DECL_NLPIFREE(x) SCIP_RETCODE x (\
+   SCIP*           scip, \
+   SCIP_NLPI*      nlpi, \
+   SCIP_NLPIDATA** nlpidata)
 
 /** gets pointer to solver-internal NLP solver
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
+ *  - scip : SCIP data structure
+ *  - nlpi : datastructure for solver interface
  *  
  * return: void pointer to solver
  */
-#define SCIP_DECL_NLPIGETSOLVERPOINTER(x) void* x (SCIP* scip, SCIP_NLPI* nlpi)
+#define SCIP_DECL_NLPIGETSOLVERPOINTER(x) void* x (\
+   SCIP*      scip, \
+   SCIP_NLPI* nlpi)
 
 /** creates a problem instance
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem pointer to store the problem data
- *  - name name of problem, can be NULL
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : pointer to store the problem data
+ *  - name    : name of problem, can be NULL
  */
-#define SCIP_DECL_NLPICREATEPROBLEM(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM** problem, const char* name)
+#define SCIP_DECL_NLPICREATEPROBLEM(x) SCIP_RETCODE x (\
+   SCIP*              scip, \
+   SCIP_NLPI*         nlpi, \
+   SCIP_NLPIPROBLEM** problem, \
+   const char*        name)
 
 /** free a problem instance
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem pointer where problem data is stored 
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : pointer where problem data is stored
  */
-#define SCIP_DECL_NLPIFREEPROBLEM(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM** problem)
+#define SCIP_DECL_NLPIFREEPROBLEM(x) SCIP_RETCODE x (\
+   SCIP*              scip, \
+   SCIP_NLPI*         nlpi, \
+   SCIP_NLPIPROBLEM** problem)
 
 /** gets pointer to solver-internal problem instance
  * 
- *  to do dirty stuff
- * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
  *  
  * return: void pointer to problem instance
  */
-#define SCIP_DECL_NLPIGETPROBLEMPOINTER(x) void* x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem)
+#define SCIP_DECL_NLPIGETPROBLEMPOINTER(x) void* x (\
+   SCIP*             scip, \
+   SCIP_NLPI*        nlpi, \
+   SCIP_NLPIPROBLEM* problem)
 
-/** add variables
- * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nvars number of variables 
- *  - lbs lower bounds of variables, can be NULL if -infinity
- *  - ubs upper bounds of variables, can be NULL if +infinity
- *  - varnames names of variables, can be NULL
+/** adds variables
+ *
+ *  - scip     : SCIP data structure
+ *  - nlpi     :  datastructure for solver interface
+ *  - problem  : datastructure for problem instance
+ *  - nvars    : number of variables
+ *  - lbs      : lower bounds of variables, can be NULL if -infinity
+ *  - ubs      : upper bounds of variables, can be NULL if +infinity
+ *  - varnames : names of variables, can be NULL
  */
-#define SCIP_DECL_NLPIADDVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nvars, const SCIP_Real* lbs, \
-      const SCIP_Real* ubs, const char** varnames)
+#define SCIP_DECL_NLPIADDVARS(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   int               nvars,   \
+   const SCIP_Real*  lbs,     \
+   const SCIP_Real*  ubs,     \
+   const char**      varnames)
 
 /** add constraints
- * quadratic coefficiens: row oriented matrix for each constraint
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - ncons number of added constraints
- *  - lhss left hand sides of constraints, can be NULL if -infinity
- *  - rhss right hand sides of constraints, can be NULL if +infinity
- *  - nlininds number of linear coefficients for each constraint
- *    may be NULL in case of no linear part
- *  - lininds indices of variables for linear coefficients for each constraint
- *    may be NULL in case of no linear part
- *  - linvals values of linear coefficient for each constraint
- *    may be NULL in case of no linear part
- *  - exprs expressions for nonlinear part of constraints
- *    entry of array may be NULL in case of no nonlinear part
- *    may be NULL in case of no nonlinear part in any constraint
- *  - names of constraints, may be NULL or entries may be NULL
+ *  - scip     : SCIP data structure
+ *  - nlpi     : datastructure for solver interface
+ *  - problem  : datastructure for problem instance
+ *  - ncons    : number of added constraints
+ *  - lhss     : left hand sides of constraints, can be NULL if -infinity
+ *  - rhss     : right hand sides of constraints, can be NULL if +infinity
+ *  - nlininds : number of linear coefficients for each constraint; may be NULL in case of no linear part
+ *  - lininds  : indices of variables for linear coefficients for each constraint; may be NULL in case of no linear part
+ *  - linvals  : values of linear coefficient for each constraint; may be NULL in case of no linear part
+ *  - exprs    : expressions for nonlinear part of constraints; may be NULL or entries may be NULL when no nonlinear parts
+ *  - names    : names of constraints; may be NULL or entries may be NULL
  */
-#define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nconss, const SCIP_Real* lhss, \
-      const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, \
-      SCIP_EXPR** exprs, const char** names)
+#define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (\
+   SCIP*             scip,     \
+   SCIP_NLPI*        nlpi,     \
+   SCIP_NLPIPROBLEM* problem,  \
+   int               nconss,   \
+   const SCIP_Real*  lhss,     \
+   const SCIP_Real*  rhss,     \
+   const int*        nlininds, \
+   int* const*       lininds,  \
+   SCIP_Real* const* linvals,  \
+   SCIP_EXPR**       exprs,    \
+   const char**      names)
 
 /** sets or overwrites objective, a minimization problem is expected
  *  May change sparsity pattern.
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nlins number of linear variables
- *  - lininds variable indices
- *    may be NULL in case of no linear part
- *  - linvals coefficient values
- *    may be NULL in case of no linear part
- *  - expr expression for nonlinear part of objective function
- *    may be NULL in case of no nonlinear part
- *  - constant objective value offset
+ *  - scip     : SCIP data structure
+ *  - nlpi     : datastructure for solver interface
+ *  - problem  : datastructure for problem instance
+ *  - nlins    : number of linear variables
+ *  - lininds  : variable indices; may be NULL in case of no linear part
+ *  - linvals  : coefficient values; may be NULL in case of no linear part
+ *  - expr     : expression for nonlinear part of objective function; may be NULL in case of no nonlinear part
+ *  - constant : objective value offset
  */
-#define SCIP_DECL_NLPISETOBJECTIVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nlins, const int* lininds, \
-      const SCIP_Real* linvals, SCIP_EXPR* expr, \
-      const SCIP_Real constant)
+#define SCIP_DECL_NLPISETOBJECTIVE(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   int               nlins,   \
+   const int*        lininds, \
+   const SCIP_Real*  linvals, \
+   SCIP_EXPR*        expr,    \
+   const SCIP_Real   constant)
 
 /** change variable bounds
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nvars number of variables to change bounds
- *  - indices indices of variables to change bounds
- *  - lbs new lower bounds
- *  - ubs new upper bounds
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
+ *  - nvars   : number of variables to change bounds
+ *  - indices : indices of variables to change bounds
+ *  - lbs     : new lower bounds
+ *  - ubs     : new upper bounds
  */
-#define SCIP_DECL_NLPICHGVARBOUNDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, const int nvars, const int* indices, \
-      const SCIP_Real* lbs, const SCIP_Real* ubs)
+#define SCIP_DECL_NLPICHGVARBOUNDS(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   const int         nvars,   \
+   const int*        indices, \
+   const SCIP_Real*  lbs,     \
+   const SCIP_Real*  ubs)
 
 /** change constraint sides
  *
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nconss number of constraints to change sides
- *  - indices indices of constraints to change sides
- *  - lhss new left hand sides
- *  - rhss new right hand sides
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
+ *  - nconss  : number of constraints to change sides
+ *  - indices : indices of constraints to change sides
+ *  - lhss    : new left hand sides
+ *  - rhss    : new right hand sides
  */
-#define SCIP_DECL_NLPICHGCONSSIDES(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nconss, const int* indices, \
-      const SCIP_Real* lhss, const SCIP_Real* rhss)
+#define SCIP_DECL_NLPICHGCONSSIDES(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   int               nconss,  \
+   const int*        indices, \
+   const SCIP_Real*  lhss,    \
+   const SCIP_Real*  rhss)
 
 /** delete a set of variables
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - dstats deletion status of vars; 1 if var should be deleted, 0 if not
- *  - dstatssize size of the dstats array
- * 
- * output:
- *  - dstats new position of var, -1 if var was deleted
+ *  - scip       : SCIP data structure
+ *  - nlpi       : datastructure for solver interface
+ *  - problem    : datastructure for problem instance
+ *  - dstats     : deletion status of vars on input (1 if var should be deleted, 0 if not)
+ *                 new position of var on output, -1 if var was deleted
+ *  - dstatssize : size of the dstats array
  */
-#define SCIP_DECL_NLPIDELVARSET(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int* dstats, int dstatssize)
+#define SCIP_DECL_NLPIDELVARSET(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   int*              dstats,  \
+   int               dstatssize)
 
 /** delete a set of constraints
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - dstats deletion status of constraints; 1 if constraint should be deleted, 0 if not
- *  - dstatssize size of the dstats array
- * 
- * output:
- *  - dstats new position of row, -1 if row was deleted
+ *  - scip       : SCIP data structure
+ *  - nlpi       : datastructure for solver interface
+ *  - problem    : datastructure for problem instance
+ *  - dstats     : deletion status of constraints on input (1 if constraint should be deleted, 0 if not)
+ *                 new position of row on output, -1 if row was deleted
+ *  - dstatssize : size of the dstats array
  */
-#define SCIP_DECL_NLPIDELCONSSET(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int* dstats, int dstatssize)
+#define SCIP_DECL_NLPIDELCONSSET(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   int*              dstats,  \
+   int               dstatssize)
 
 /** changes (or adds) linear coefficients in a constraint or objective
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idx index of constraint or -1 for objective
- *  - nvals number of values in linear constraint to change
- *  - varidxs indices of variables which coefficient to change
- *  - vals new values for coefficients
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
+ *  - idx     : index of constraint or -1 for objective
+ *  - nvals   : number of values in linear constraint to change
+ *  - varidxs : indices of variables which coefficient to change
+ *  - vals    : new values for coefficients
  */
-#define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idx, int nvals, \
-      const int* varidxs, const SCIP_Real* vals)
+#define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   int               idx,     \
+   int               nvals,   \
+   const int*        varidxs, \
+   const SCIP_Real*  vals)
 
 /** replaces the expression of a constraint or objective
  *
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idxcons index of constraint or -1 for objective
- *  - expr new expression for constraint or objective, or NULL to only remove previous tree
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
+ *  - idxcons : index of constraint or -1 for objective
+ *  - expr    : new expression for constraint or objective, or NULL to only remove previous tree
  */
-#define SCIP_DECL_NLPICHGEXPR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, SCIP_EXPR* expr)
+#define SCIP_DECL_NLPICHGEXPR(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   int               idxcons, \
+   SCIP_EXPR*        expr)
 
 /** change the constant offset in the objective
  *
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - objconstant new value for objective constant
+ *  - scip        : SCIP data structure
+ *  - nlpi        : datastructure for solver interface
+ *  - problem     : datastructure for problem instance
+ *  - objconstant : new value for objective constant
  */
-#define SCIP_DECL_NLPICHGOBJCONSTANT(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real objconstant)
+#define SCIP_DECL_NLPICHGOBJCONSTANT(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   SCIP_Real         objconstant)
 
 /** sets initial guess for primal variables
  *
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - primalvalues initial primal values for variables, or NULL to clear previous values
- *  - consdualvalues initial dual values for constraints, or NULL to clear previous values
- *  - varlbdualvalues  initial dual values for variable lower bounds, or NULL to clear previous values
- *  - varubdualvalues  initial dual values for variable upper bounds, or NULL to clear previous values
+ *  - scip            : SCIP data structure
+ *  - nlpi            : datastructure for solver interface
+ *  - problem         : datastructure for problem instance
+ *  - primalvalues    : initial primal values for variables, or NULL to clear previous values
+ *  - consdualvalues  : initial dual values for constraints, or NULL to clear previous values
+ *  - varlbdualvalues : initial dual values for variable lower bounds, or NULL to clear previous values
+ *  - varubdualvalues : initial dual values for variable upper bounds, or NULL to clear previous values
  */
-#define SCIP_DECL_NLPISETINITIALGUESS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real* primalvalues, \
-      SCIP_Real* consdualvalues, SCIP_Real* varlbdualvalues, SCIP_Real* varubdualvalues)
+#define SCIP_DECL_NLPISETINITIALGUESS(x) SCIP_RETCODE x (\
+   SCIP*             scip,            \
+   SCIP_NLPI*        nlpi,            \
+   SCIP_NLPIPROBLEM* problem,         \
+   SCIP_Real*        primalvalues,    \
+   SCIP_Real*        consdualvalues,  \
+   SCIP_Real*        varlbdualvalues, \
+   SCIP_Real*        varubdualvalues)
 
 /** tries to solve NLP
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
  */
-#define SCIP_DECL_NLPISOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem)
+#define SCIP_DECL_NLPISOLVE(x) SCIP_RETCODE x (\
+   SCIP*             scip, \
+   SCIP_NLPI*        nlpi, \
+   SCIP_NLPIPROBLEM* problem)
 
 /** gives solution status
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
  * 
  * return: Solution Status
  */
-#define SCIP_DECL_NLPIGETSOLSTAT(x) SCIP_NLPSOLSTAT x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem)
+#define SCIP_DECL_NLPIGETSOLSTAT(x) SCIP_NLPSOLSTAT x (\
+   SCIP*             scip, \
+   SCIP_NLPI*        nlpi, \
+   SCIP_NLPIPROBLEM* problem)
 
 /** gives termination reason
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
  * 
  * return: Termination Status
  */
-#define SCIP_DECL_NLPIGETTERMSTAT(x) SCIP_NLPTERMSTAT x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem)
+#define SCIP_DECL_NLPIGETTERMSTAT(x) SCIP_NLPTERMSTAT x (\
+   SCIP*             scip, \
+   SCIP_NLPI*        nlpi, \
+   SCIP_NLPIPROBLEM* problem)
 
 /** gives primal and dual solution values
  * 
@@ -342,149 +397,173 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *
  * for a ranged constraint, the dual variable is positive if the right hand side is active and negative if the left hand side is active
  *
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - primalvalues buffer to store pointer to array to primal values, or NULL if not needed
- *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
- *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
- *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
- *  - objval pointer to store the objective value, or NULL if not needed
+ *  - scip            : SCIP data structure
+ *  - nlpi            : datastructure for solver interface
+ *  - problem         : datastructure for problem instance
+ *  - primalvalues    : buffer to store pointer to array to primal values, or NULL if not needed
+ *  - consdualvalues  : buffer to store pointer to array to dual values of constraints, or NULL if not needed
+ *  - varlbdualvalues : buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - varubdualvalues : buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - objval          : pointer to store the objective value, or NULL if not needed
  */
-#define SCIP_DECL_NLPIGETSOLUTION(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real** primalvalues, \
-      SCIP_Real** consdualvalues, SCIP_Real** varlbdualvalues, SCIP_Real** varubdualvalues, SCIP_Real* objval)
+#define SCIP_DECL_NLPIGETSOLUTION(x) SCIP_RETCODE x (\
+   SCIP*             scip,            \
+   SCIP_NLPI*        nlpi,            \
+   SCIP_NLPIPROBLEM* problem,         \
+   SCIP_Real**       primalvalues,    \
+   SCIP_Real**       consdualvalues,  \
+   SCIP_Real**       varlbdualvalues, \
+   SCIP_Real**       varubdualvalues, \
+   SCIP_Real*        objval)
 
 /** gives solve statistics
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - statistics pointer to store statistics
- * 
- * output:
- *  - statistics solve statistics
+ *  - scip       : SCIP data structure
+ *  - nlpi       : datastructure for solver interface
+ *  - problem    : datastructure for problem instance
+ *  - statistics : datastructure where to store statistics
  */
-#define SCIP_DECL_NLPIGETSTATISTICS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPSTATISTICS* statistics)
+#define SCIP_DECL_NLPIGETSTATISTICS(x) SCIP_RETCODE x (\
+   SCIP*               scip,    \
+   SCIP_NLPI*          nlpi,    \
+   SCIP_NLPIPROBLEM*   problem, \
+   SCIP_NLPSTATISTICS* statistics)
 
 /** gives required size of a buffer to store a warmstart object
  * 
- *  input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - size pointer to store required size for warmstart buffer
- * 
- * output:
- *  - size required size for warmstart buffer
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
+ *  - size    : buffer to store required size for warmstart buffer
  */
-#define SCIP_DECL_NLPIGETWARMSTARTSIZE(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, size_t* size)
+#define SCIP_DECL_NLPIGETWARMSTARTSIZE(x) SCIP_RETCODE x (\
+   SCIP*             scip, \
+   SCIP_NLPI*        nlpi, \
+   SCIP_NLPIPROBLEM* problem, \
+   size_t*           size)
 
 /** stores warmstart information in buffer
  * 
  * required size of buffer should have been obtained by SCIPnlpiGetWarmstartSize before
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - buffer memory to store warmstart information
- * 
- * output:
- *  - buffer warmstart information in solver specific data structure
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
+ *  - buffer  : memory to store warmstart information
  */
-#define SCIP_DECL_NLPIGETWARMSTARTMEMO(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, void* buffer)
+#define SCIP_DECL_NLPIGETWARMSTARTMEMO(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   void*             buffer)
 
 /** sets warmstart information in solver
  * 
  * write warmstart to buffer
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - buffer warmstart information
+ *  - scip    : SCIP data structure
+ *  - nlpi    : datastructure for solver interface
+ *  - problem : datastructure for problem instance
+ *  - buffer  : warmstart information
  */
-#define SCIP_DECL_NLPISETWARMSTARTMEMO(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, void* buffer)
+#define SCIP_DECL_NLPISETWARMSTARTMEMO(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   void*             buffer)
 
 /**@name Parameter Methods */
 /**@{ */
 
 /** gets integer parameter of NLP
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - ival pointer to store the parameter value
- * 
- * output:
- *  - ival parameter value
+ *  - scip    : SCIP data structure
+ *  - nlpi    : NLP interface structure
+ *  - problem : datastructure for problem instance
+ *  - type    : parameter number
+ *  - ival    : buffer to store the parameter value
  */
-#define SCIP_DECL_NLPIGETINTPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, int* ival)
+#define SCIP_DECL_NLPIGETINTPAR(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   SCIP_NLPPARAM     type,    \
+   int*              ival)
 
 /** sets integer parameter of NLP
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - ival parameter value
+ *  - scip    : SCIP data structure
+ *  - nlpi    : NLP interface structure
+ *  - problem : datastructure for problem instance
+ *  - type    : parameter number
+ *  - ival    : parameter value
  */
-#define SCIP_DECL_NLPISETINTPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, int ival)
+#define SCIP_DECL_NLPISETINTPAR(x) SCIP_RETCODE x (\
+   SCIP*             scip, \
+   SCIP_NLPI*        nlpi, \
+   SCIP_NLPIPROBLEM* problem, \
+   SCIP_NLPPARAM     type, \
+   int               ival)
 
 /** gets floating point parameter of NLP
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
- *  - type parameter number
- *  - dval pointer to store the parameter value
- * 
- * output:
- *  - dval parameter value
+ *  - scip    : SCIP data structure
+ *  - nlpi    : NLP interface structure
+ *  - problem : datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
+ *  - type    : parameter number
+ *  - dval    : buffer to store the parameter value
  */
-#define SCIP_DECL_NLPIGETREALPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, SCIP_Real* dval)
+#define SCIP_DECL_NLPIGETREALPAR(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   SCIP_NLPPARAM     type,    \
+   SCIP_Real*        dval)
 
 /** sets floating point parameter of NLP
- * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
- *  - type parameter number
- *  - dval parameter value
+ *
+ *  - scip    : SCIP data structure
+ *  - nlpi    : NLP interface structure
+ *  - problem : datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
+ *  - type    : parameter number
+ *  - dval    : parameter value
  */
-#define SCIP_DECL_NLPISETREALPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, SCIP_Real dval)
+#define SCIP_DECL_NLPISETREALPAR(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   SCIP_NLPPARAM     type,    \
+   SCIP_Real         dval)
 
 /** gets string parameter of NLP
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - sval pointer to store the string value, the user must not modify the string
- * 
- * output:
- *  - sval parameter value
+ *  - scip    : SCIP data structure
+ *  - nlpi    : NLP interface structure
+ *  - problem : datastructure for problem instance
+ *  - type    : parameter number
+ *  - sval    : buffer to store the string value, the user must not modify the string
  */
-#define SCIP_DECL_NLPIGETSTRINGPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, const char** sval)
+#define SCIP_DECL_NLPIGETSTRINGPAR(x) SCIP_RETCODE x (\
+   SCIP*             scip,    \
+   SCIP_NLPI*        nlpi,    \
+   SCIP_NLPIPROBLEM* problem, \
+   SCIP_NLPPARAM     type,    \
+   const char**      sval)
 
 /** sets string parameter of NLP
  * 
- * input:
- *  - scip SCIP data structure
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - sval parameter value
+ *  - scip    : SCIP data structure
+ *  - nlpi    : NLP interface structure
+ *  - problem : datastructure for problem instance
+ *  - type    : parameter number
+ *  - sval    : parameter value
  */
-#define SCIP_DECL_NLPISETSTRINGPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_NLPPARAM type, const char* sval)
+#define SCIP_DECL_NLPISETSTRINGPAR(x) SCIP_RETCODE x (\
+    SCIP*             scip,    \
+    SCIP_NLPI*        nlpi,    \
+    SCIP_NLPIPROBLEM* problem, \
+    SCIP_NLPPARAM     type,    \
+    const char* sval)
 
 /**@} */
 #ifdef __cplusplus
