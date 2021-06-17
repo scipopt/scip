@@ -97,7 +97,7 @@ using namespace Ipopt;
 #define DEFAULT_MAXITER    3000              /**< default iteration limit for Ipopt */
 
 #define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
-#define FEASTOLFACTOR      0.05              /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
+#define FEASTOLFACTOR      0.9               /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
 
 #define DEFAULT_RANDSEED   71                /**< initial random seed */
 
