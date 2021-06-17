@@ -582,13 +582,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    {
       /* initialize IPOPT without default journal */
       (*problem)->ipopt = new IpoptApplication(false);
-      if( IsNull((*problem)->ipopt) )
-         throw std::bad_alloc();
 
       /* plugin our journal to get output through SCIP message handler */
       SmartPtr<Journal> jrnl = new ScipJournal("console", J_ITERSUMMARY, scip);
-      if( IsNull(jrnl) )
-         throw std::bad_alloc();
       jrnl->SetPrintLevel(J_DBG, J_NONE);
       if( !(*problem)->ipopt->Jnlst()->AddJournal(jrnl) )
       {
@@ -597,8 +593,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 
       /* initialize Ipopt/SCIP NLP interface */
       (*problem)->nlp = new ScipNLP(*problem, scip);
-      if( IsNull((*problem)->nlp) )
-         throw std::bad_alloc();
    }
    catch( const std::bad_alloc& )
    {
@@ -1106,6 +1100,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       }
       else
       {
+         // TODO set warm_start_same_structure if possible
          status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
       }
 
@@ -2070,7 +2065,7 @@ bool ScipNLP::get_bounds_info(
 
    /* Ipopt performs better when unused variables do not appear, which we can achieve by fixing them,
     * since Ipopts TNLPAdapter will hide them from Ipopts NLP. In the dual solution, bound multipliers (z_L, z_U)
-    * for fixed variables have value 0.0.
+    * for these variables should have value 0.0 (they are set to -grad Lagrangian).
     */
    for( int i = 0; i < n; ++i )
    {
@@ -2126,6 +2121,7 @@ bool ScipNLP::get_starting_point(
 
          SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
+         // FIXME store this point in nlpiproblem->initguess, since Ipopt calls get_starting_point() (at least) twice and we should return the same point
          for( int i = 0; i < n; ++i )
          {
             lb = SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle)[i];
