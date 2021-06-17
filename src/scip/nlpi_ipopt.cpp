@@ -67,8 +67,8 @@
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
 
-#if (IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12))
-#error "The Ipopt interface requires at least 3.12."
+#if (IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE < 5))
+#error "The Ipopt interface requires at least 3.12.5"
 #endif
 
 /* MUMPS that can be used by Ipopt is not threadsafe
@@ -457,14 +457,7 @@ void invalidateSolution(
    problem->lastsolinfeas = SCIP_INVALID;
 }
 
-/** sets feasibility tolerance parameters in Ipopt
- *
- * Sets tol and constr_viol_tol to FEASTOLFACTOR*feastol and acceptable_tol and acceptable_viol_tol to feastol.
- * Since the users and Ipopts conception of feasibility may differ, we let Ipopt try to compute solutions
- * that are more accurate (w.r.t. constraint violation) than requested by the user.
- * Only if Ipopt has problems to achieve this accuracy, we also accept solutions that are accurate w.r.t. feastol only.
- * The additional effort for computing a more accurate solution should be small if one can assume fast convergence when close to a local minimizer.
- */
+/** sets feasibility tolerance parameter in Ipopt */
 static
 void setFeastol(
    SCIP_NLPIPROBLEM* nlpiproblem,
@@ -473,28 +466,19 @@ void setFeastol(
 {
    assert(nlpiproblem != NULL);
 
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", FEASTOLFACTOR * feastol);
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * feastol);
-
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_tol", feastol);
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", feastol);
-
-   /* It seem to be better to let Ipopt relax bounds a bit to ensure that a relative interior exists.
-    * However, if we relax the bounds too much, then the solutions tend to be slightly infeasible.
-    * If the user wants to set a tight feasibility tolerance, then (s)he has probably difficulties to compute accurate enough solutions.
-    * Thus, we turn off the bound_relax_factor completely if it would be below its default value of 1e-8.
-    */
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("bound_relax_factor", feastol < 1e-8/FEASTOLFACTOR ? 0.0 : FEASTOLFACTOR * feastol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", FEASTOLFACTOR * feastol);
 }
 
 /** sets optimality tolerance parameters in Ipopt
  *
- * Sets dual_inf_tol and compl_inf_tol to opttol.
- * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched, which means that if Ipopt has convergence problems, then
+ * Sets dual_inf_tol, compl_inf_tol, and tol to opttol.
+ * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched for now, which means that if Ipopt has convergence problems, then
  * it can stop with a solution that is still feasible (see setFeastol), but essentially without a proof of local optimality.
- * Note, that we report the solution as feasible only if Ipopt stopped on an "acceptable point" (see ScipNLP::finalize_solution).
+ * Note, that in this case we report only feasibility and not optimality of the solution (see ScipNLP::finalize_solution).
  *
- * Note, that parameters tol and acceptable_tol (set in setFeastol) also apply.
+ * TODO it makes sense to set tol (maximal errors in scaled problem) depending on user parameters somewhere
+ *      NLPI parameter RELOBJTOL seems better suited for this than FEASTOL, but maybe we need another one?
  */
 static
 void setOpttol(
@@ -506,6 +490,7 @@ void setOpttol(
 
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", opttol);
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", opttol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", opttol);
 }
 
 /** copy method of NLP interface (called when SCIP copies plugins)
@@ -622,6 +607,13 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       return SCIP_NOMEMORY;
    }
 
+#if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
+   /* Turn off bound relaxation for older Ipopt, as solutions may be out of bounds by more than constr_viol_tol.
+    * For Ipopt 3.14, bounds are relaxed by at most constr_viol_tol, so can leave bound_relax_factor at its default.
+    */
+   (void) (*problem)->ipopt->Options()->SetNumericValue("bound_relax_factor", 0.0);
+#endif
+
    /* modify Ipopt's default settings to what we believe is appropriate */
    (*problem)->ipopt->RegOptions()->AddStringOption2("store_intermediate", "whether to store the most feasible intermediate solutions", "no", "yes", "", "no", "", "useful when Ipopt looses a once found feasible solution and then terminates with an infeasible point");
    (void) (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
@@ -634,8 +626,10 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
+   // disable acceptable-point heuristic for now
+   // we should add some options to the NLPI to let the user control this
+   (void) (*problem)->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
    /* (void) (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
-   /* if the expression interpreter does not give hessians, tell Ipopt to approximate hessian */
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
    setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
 
@@ -644,11 +638,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    {
       std::istringstream is(data->defoptions);
 
-#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE >= 5)
       if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is, true) )
-#else
-      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
-#endif
       {
          SCIPerrorMessage("Error when modifying Ipopt options using options string\n%s\n", data->defoptions.c_str());
          return SCIP_ERROR;
@@ -1580,7 +1570,8 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 
    case SCIP_NLPPAR_FEASTOL:
    {
-      (void) problem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", *dval, "");
+      (void) problem->ipopt->Options()->GetNumericValue("constr_viol_tol", *dval, "");
+      *dval /= FEASTOLFACTOR;
       break;
    }
 
