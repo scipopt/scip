@@ -1142,7 +1142,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       if( IsValid(stats) )
       {
          problem->lastniter = stats->IterationCount();
-         problem->lasttime  = stats->TotalCpuTime();
+         problem->lasttime  = stats->TotalWallclockTime();
       }
       else
       {
@@ -1595,7 +1595,11 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 
    case SCIP_NLPPAR_TILIM:
    {
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+      (void) problem->ipopt->Options()->GetNumericValue("max_wall_time", *dval, "");
+#else
       (void) problem->ipopt->Options()->GetNumericValue("max_cpu_time", *dval, "");
+#endif
       break;
    }
 
@@ -1695,7 +1699,11 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
       if( dval >= 0.0 )
       {
          /* Ipopt doesn't like a setting of exactly 0 for the max_cpu_time, so increase as little as possible in that case */
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+         (void) problem->ipopt->Options()->SetNumericValue("max_wall_time", MAX(dval, DBL_MIN));
+#else
          (void) problem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(dval, DBL_MIN));
+#endif
       }
       else
       {
