@@ -173,7 +173,7 @@ SCIP_RETCODE freeNLP(
    return SCIP_OKAY;
 }
 
-/** add or updates the regularization constraints to the NLP; for a given parameter theta we add for each non-fixed
+/** adds or updates the regularization constraints to the NLP; for a given parameter theta we add for each non-fixed
  *  binary variable z the constraint z*(1-z) <= theta; if these constraint are already present we update the theta on
  *  the right-hand side
  */
@@ -279,7 +279,6 @@ int getExprSize(
    }
    return 1 + sum;
 }
-
 
 /** returns the available time limit that is left */
 static

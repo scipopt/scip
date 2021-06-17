@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -44,62 +44,61 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
 
 /** nonlinear handler copy callback
  *
- * the method includes the nonlinear handler into a nonlinear constraint handler
+ * The method includes the nonlinear handler into a nonlinear constraint handler.
  *
  * This method is usually called when doing a copy of a nonlinear constraint handler.
  *
- *  input:
- *  - targetscip      : target SCIP main data structure
- *  - targetconshdlr  : target nonlinear constraint handler
- *  - sourceconshdlr  : nonlinear constraint handler in source SCIP
- *  - sourcenlhdlr    : nonlinear handler in source SCIP
+ * - targetscip      : target SCIP main data structure
+ * - targetconshdlr  : target nonlinear constraint handler
+ * - sourceconshdlr  : nonlinear constraint handler in source SCIP
+ * - sourcenlhdlr    : nonlinear handler in source SCIP
  */
 #define SCIP_DECL_NLHDLRCOPYHDLR(x) SCIP_RETCODE x (\
-   SCIP* targetscip, \
+   SCIP*          targetscip,     \
    SCIP_CONSHDLR* targetconshdlr, \
    SCIP_CONSHDLR* sourceconshdlr, \
-   SCIP_NLHDLR* sourcenlhdlr)
+   SCIP_NLHDLR*   sourcenlhdlr)
 
 /** callback to free data of handler
  *
- * - scip SCIP data structure
- * - nlhdlr nonlinear handler
- * - nlhdlrdata nonlinear handler data to be freed
+ * - scip       : SCIP data structure
+ * - nlhdlr     : nonlinear handler
+ * - nlhdlrdata : nonlinear handler data to be freed
  */
 #define SCIP_DECL_NLHDLRFREEHDLRDATA(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_NLHDLR* nlhdlr, \
+   SCIP*             scip,   \
+   SCIP_NLHDLR*      nlhdlr, \
    SCIP_NLHDLRDATA** nlhdlrdata)
 
 /** callback to free expression specific data
  *
- * - scip SCIP data structure
- * - nlhdlr nonlinear handler
- * - expr expression
- * - nlhdlrexprdata nonlinear handler expression data to be freed
+ * - scip           : SCIP data structure
+ * - nlhdlr         : nonlinear handler
+ * - expr           : expression
+ * - nlhdlrexprdata : nonlinear handler expression data to be freed
  */
 #define SCIP_DECL_NLHDLRFREEEXPRDATA(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_NLHDLR* nlhdlr, \
-   SCIP_EXPR* expr, \
+   SCIP*                 scip,   \
+   SCIP_NLHDLR*          nlhdlr, \
+   SCIP_EXPR*            expr,   \
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** callback to be called in initialization
  *
- * - scip SCIP data structure
- * - nlhdlr nonlinear handler
+ * - scip   : SCIP data structure
+ * - nlhdlr : nonlinear handler
  */
 #define SCIP_DECL_NLHDLRINIT(x) SCIP_RETCODE x (\
-   SCIP* scip, \
+   SCIP*        scip, \
    SCIP_NLHDLR* nlhdlr)
 
 /** callback to be called in deinitialization
  *
- * - scip SCIP data structure
- * - nlhdlr nonlinear handler
+ * - scip   : SCIP data structure
+ * - nlhdlr : nonlinear handler
  */
 #define SCIP_DECL_NLHDLREXIT(x) SCIP_RETCODE x (\
-   SCIP* scip, \
+   SCIP*        scip, \
    SCIP_NLHDLR* nlhdlr)
 
 /** callback to detect structure in expression tree
@@ -140,30 +139,30 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  *
  * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
  * @ref SCIPregisterExprUsageNonlinear() for every subexpression that it will use and indicate whether
- * - it will use an auxiliary variables,
+ * - it will use an auxiliary variable,
  * - it will use activity for some subexpressions when computing estimators or cuts, and
  * - it will use activity for some subexpressions when for INTEVAL or REVERSEPROP.
  *
  * @note Auxiliary variables do not exist in subexpressions during detect and are not created by a call to @ref SCIPregisterExprUsageNonlinear().
  *   They will be available when the INITSEPA callback is called.
  *
- * - scip SCIP data structure
- * - conshdlr nonlinear constraint handler
- * - nlhdlr nonlinear handler
- * - expr expression to analyze
- * - cons the constraint that expression defines, or NULL when the expr does not define any constraint, that is, when it is not the root of an expression of a constraint
- * - enforcing enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
- * - participating enforcement methods that this nonlinear handler should be called for (to be set by detect callback)
- * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
+ * - scip           : SCIP data structure
+ * - conshdlr       : nonlinear constraint handler
+ * - nlhdlr         : nonlinear handler
+ * - expr           : expression to analyze
+ * - cons           : the constraint that expression defines, or NULL when the expr does not define any constraint, that is, when it is not the root of an expression of a constraint
+ * - enforcing      : enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
+ * - participating  : enforcement methods that this nonlinear handler should be called for (to be set by detect callback)
+ * - nlhdlrexprdata : nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
  */
 #define SCIP_DECL_NLHDLRDETECT(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_NLHDLR* nlhdlr, \
-   SCIP_EXPR* expr, \
-   SCIP_CONS* cons, \
-   SCIP_NLHDLR_METHOD* enforcing, \
-   SCIP_NLHDLR_METHOD* participating, \
+   SCIP*                 scip,          \
+   SCIP_CONSHDLR*        conshdlr,      \
+   SCIP_NLHDLR*          nlhdlr,        \
+   SCIP_EXPR*            expr,          \
+   SCIP_CONS*            cons,          \
+   SCIP_NLHDLR_METHOD*   enforcing,     \
+   SCIP_NLHDLR_METHOD*   participating, \
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** auxiliary evaluation callback of nonlinear handler
@@ -174,36 +173,42 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * decide whether separation or branching score callbacks should be called.
  *
  * It can be assumed that the expression itself has been evaluated in the given sol.
+ *
+ * - scip           : SCIP data structure
+ * - nlhdlr         : nonlinear handler
+ * - expr           : expression to evaluate
+ * - nlhdlrexprdata : expression specific data of the nonlinear handler
+ * - auxvalue       : buffer to store value of expression w.r.t. auxiliary variables
+ * - sol            : point to evaluate
  */
 #define SCIP_DECL_NLHDLREVALAUX(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_NLHDLR* nlhdlr, \
-   SCIP_EXPR* expr, \
+   SCIP*                scip,           \
+   SCIP_NLHDLR*         nlhdlr,         \
+   SCIP_EXPR*           expr,           \
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_Real* auxvalue, \
-   SCIP_SOL* sol)
+   SCIP_Real*           auxvalue,       \
+   SCIP_SOL*            sol)
 
 /** nonlinear handler interval evaluation callback
  *
- * The methods computes an interval that contains the image (range) of the expression.
+ * The method computes an interval that contains the image (range) of the expression.
  *
- * input:
- *  - scip : SCIP main data structure
- *  - nlhdlr : nonlinear handler
- *  - expr : expression
- *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - interval : buffer where to store interval (on input: current interval for expr, on output: computed interval for expr)
- *  - intevalvar : callback to be called when interval evaluating a variable
- *  - intevalvardata : data to be passed to intevalvar callback
+ * - scip           : SCIP main data structure
+ * - nlhdlr         : nonlinear handler
+ * - expr           : expression
+ * - nlhdlrexprdata : expression specific data of the nonlinear handler
+ * - interval       : buffer where to store interval (on input: current interval for expr, on output: computed interval for expr)
+ * - intevalvar     : callback to be called when interval evaluating a variable
+ * - intevalvardata : data to be passed to intevalvar callback
  */
 #define SCIP_DECL_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_NLHDLR* nlhdlr, \
-   SCIP_EXPR* expr, \
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_INTERVAL* interval, \
+   SCIP*                scip,                \
+   SCIP_NLHDLR*         nlhdlr,              \
+   SCIP_EXPR*           expr,                \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,      \
+   SCIP_INTERVAL*       interval,            \
    SCIP_DECL_EXPR_INTEVALVAR((*intevalvar)), \
-   void* intevalvardata)
+   void*                intevalvardata)
 
 /** nonlinear handler callback for reverse propagation
  *
@@ -211,65 +216,60 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * The arguments of an expression are other expressions and the tighter intervals should be passed
  * to the corresponding argument (expression) via SCIPtightenExprIntervalNonlinear().
  *
- * input:
- *  - scip : SCIP main data structure
- *  - conshdlr: nonlinear constraint handler
- *  - nlhdlr : nonlinear handler
- *  - expr : expression
- *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - bounds : the bounds on the expression that should be propagated
- *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
- *  - nreductions : buffer to store the number of interval reductions of all children
+ * - scip           : SCIP main data structure
+ * - conshdlr       : nonlinear constraint handler
+ * - nlhdlr         : nonlinear handler
+ * - expr           : expression
+ * - nlhdlrexprdata : expression specific data of the nonlinear handler
+ * - bounds         : the bounds on the expression that should be propagated
+ * - infeasible     : buffer to store whether an expression's bounds were propagated to an empty interval
+ * - nreductions    : buffer to store the number of interval reductions of all children
  */
 #define SCIP_DECL_NLHDLRREVERSEPROP(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_NLHDLR* nlhdlr, \
-   SCIP_EXPR* expr, \
+   SCIP*                scip,           \
+   SCIP_CONSHDLR*       conshdlr,       \
+   SCIP_NLHDLR*         nlhdlr,         \
+   SCIP_EXPR*           expr,           \
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_INTERVAL bounds, \
-   SCIP_Bool* infeasible, \
-   int* nreductions )
+   SCIP_INTERVAL        bounds,         \
+   SCIP_Bool*           infeasible,     \
+   int*                 nreductions)
 
 /** separation initialization method of a nonlinear handler (called during CONSINITLP)
  *
- *  input:
- *  - scip            : SCIP main data structure
- *  - conshdlr        : nonlinear constraint handler
- *  - cons            : nonlinear constraint
- *  - nlhdlr          : nonlinear handler
- *  - nlhdlrexprdata  : exprdata of nonlinear handler
- *  - expr            : expression
- *  - overestimate    : whether the expression needs to be overestimated
- *  - underestimate   : whether the expression needs to be underestimated
- *
- *  output:
- *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
+ * - scip           : SCIP main data structure
+ * - conshdlr       : nonlinear constraint handler
+ * - cons           : nonlinear constraint
+ * - nlhdlr         : nonlinear handler
+ * - nlhdlrexprdata : exprdata of nonlinear handler
+ * - expr           : expression
+ * - overestimate   : whether the expression needs to be overestimated
+ * - underestimate  : whether the expression needs to be underestimated
+ * - infeasible     : pointer to store whether an infeasibility was detected while building the LP
  */
 #define SCIP_DECL_NLHDLRINITSEPA(x) SCIP_RETCODE x (\
-      SCIP* scip, \
-      SCIP_CONSHDLR* conshdlr, \
-      SCIP_CONS* cons, \
-      SCIP_NLHDLR* nlhdlr, \
-      SCIP_EXPR* expr, \
-      SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
-      SCIP_Bool overestimate, \
-      SCIP_Bool underestimate, \
-      SCIP_Bool* infeasible)
+   SCIP*                scip,           \
+   SCIP_CONSHDLR*       conshdlr,       \
+   SCIP_CONS*           cons,           \
+   SCIP_NLHDLR*         nlhdlr,         \
+   SCIP_EXPR*           expr,           \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_Bool            overestimate,   \
+   SCIP_Bool            underestimate,  \
+   SCIP_Bool*           infeasible)
 
 /** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL)
  *
- *  input:
- *  - scip            : SCIP main data structure
- *  - nlhdlr          : nonlinear handler
- *  - nlhdlrexprdata  : exprdata of nonlinear handler
- *  - expr            : expression
+ * - scip            : SCIP main data structure
+ * - nlhdlr          : nonlinear handler
+ * - nlhdlrexprdata  : exprdata of nonlinear handler
+ * - expr            : expression
  */
 #define SCIP_DECL_NLHDLREXITSEPA(x) SCIP_RETCODE x (\
-      SCIP* scip, \
-      SCIP_NLHDLR* nlhdlr, \
-      SCIP_EXPR* expr, \
-      SCIP_NLHDLREXPRDATA* nlhdlrexprdata)
+   SCIP*                scip,   \
+   SCIP_NLHDLR*         nlhdlr, \
+   SCIP_EXPR*           expr,   \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata)
 
 /** nonlinear handler separation and enforcement callback
  *
@@ -305,35 +305,34 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * a bound change, and to SCIP_BRANCHED if it added branching scores.
  * Otherwise, it may set result to SCIP_DIDNOTRUN or SCIP_DIDNOTFIND.
  *
- * input:
- *  - scip : SCIP main data structure
- *  - conshdlr : cons nonlinear handler
- *  - cons : nonlinear constraint
- *  - nlhdlr : nonlinear handler
- *  - expr : expression
- *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - sol : solution to be separated (NULL for the LP solution)
- *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
- *  - overestimate : whether the expression needs to be over- or underestimated
- *  - allowweakcuts : whether we should only look for "strong" cuts, or anything that separates is fine
- *  - separated : whether another nonlinear handler already added a cut for this expression
- *  - inenforcement: whether we are in enforcement, or only in separation
- *  - result : pointer to store the result
+ * - scip           : SCIP main data structure
+ * - conshdlr       : cons nonlinear handler
+ * - cons           : nonlinear constraint
+ * - nlhdlr         : nonlinear handler
+ * - expr           : expression
+ * - nlhdlrexprdata : expression specific data of the nonlinear handler
+ * - sol            : solution to be separated (NULL for the LP solution)
+ * - auxvalue       : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
+ * - overestimate   : whether the expression needs to be over- or underestimated
+ * - allowweakcuts  : whether we should only look for "strong" cuts, or anything that separates is fine
+ * - separated      : whether another nonlinear handler already added a cut for this expression
+ * - inenforcement  : whether we are in enforcement, or only in separation
+ * - result         : pointer to store the result
  */
 #define SCIP_DECL_NLHDLRENFO(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONS* cons, \
-   SCIP_NLHDLR* nlhdlr, \
-   SCIP_EXPR* expr, \
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_SOL* sol, \
-   SCIP_Real auxvalue, \
-   SCIP_Bool overestimate, \
-   SCIP_Bool allowweakcuts, \
-   SCIP_Bool separated, \
-   SCIP_Bool addbranchscores, \
-   SCIP_RESULT* result)
+   SCIP*                scip,            \
+   SCIP_CONSHDLR*       conshdlr,        \
+   SCIP_CONS*           cons,            \
+   SCIP_NLHDLR*         nlhdlr,          \
+   SCIP_EXPR*           expr,            \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,  \
+   SCIP_SOL*            sol,             \
+   SCIP_Real            auxvalue,        \
+   SCIP_Bool            overestimate,    \
+   SCIP_Bool            allowweakcuts,   \
+   SCIP_Bool            separated,       \
+   SCIP_Bool            addbranchscores, \
+   SCIP_RESULT*         result)
 
 /** nonlinear handler under/overestimation callback
  *
@@ -346,36 +345,35 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * rowprep->local flag accordingly.
  * It is assumed that the sidetype of the rowprep is not changed by the callback.
  *
- * input:
- *  - scip : SCIP main data structure
- *  - conshdlr : constraint handler
- *  - nlhdlr : nonlinear handler
- *  - expr : expression
- *  - nlhdlrexprdata : expression data of nonlinear handler
- *  - sol  : solution at which to estimate (NULL for the LP solution)
- *  - auxvalue : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
- *  - overestimate : whether the expression needs to be over- or underestimated
- *  - targetvalue : a value the estimator shall exceed, can be +/-infinity
- *  - rowprep : a rowprep where to store the estimator
- *  - rowpreps: an array where to store the estimators
- *  - success : buffer to indicate whether an estimator could be computed
- *  - addbranchscores: indicates whether to register branching scores
- *  - addedbranchscores: buffer to store whether the branching score callback was successful
+ *  - scip              : SCIP main data structure
+ *  - conshdlr          : constraint handler
+ *  - nlhdlr            : nonlinear handler
+ *  - expr              : expression
+ *  - nlhdlrexprdata    : expression data of nonlinear handler
+ *  - sol               : solution at which to estimate (NULL for the LP solution)
+ *  - auxvalue          : current value of expression w.r.t. auxiliary variables as obtained from EVALAUX
+ *  - overestimate      : whether the expression needs to be over- or underestimated
+ *  - targetvalue       : a value the estimator shall exceed, can be +/-infinity
+ *  - rowprep           : a rowprep where to store the estimator
+ *  - rowpreps          : an array where to store the estimators
+ *  - success           : buffer to indicate whether an estimator could be computed
+ *  - addbranchscores   : indicates whether to register branching scores
+ *  - addedbranchscores : buffer to store whether the branching score callback was successful
  */
 #define SCIP_DECL_NLHDLRESTIMATE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_NLHDLR* nlhdlr, \
-   SCIP_EXPR* expr, \
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
-   SCIP_SOL* sol, \
-   SCIP_Real auxvalue, \
-   SCIP_Bool overestimate, \
-   SCIP_Real targetvalue, \
-   SCIP_PTRARRAY* rowpreps, \
-   SCIP_Bool* success, \
-   SCIP_Bool addbranchscores, \
-   SCIP_Bool* addedbranchscores)
+   SCIP*                scip,            \
+   SCIP_CONSHDLR*       conshdlr,        \
+   SCIP_NLHDLR*         nlhdlr,          \
+   SCIP_EXPR*           expr,            \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,  \
+   SCIP_SOL*            sol,             \
+   SCIP_Real            auxvalue,        \
+   SCIP_Bool            overestimate,    \
+   SCIP_Real            targetvalue,     \
+   SCIP_PTRARRAY*       rowpreps,        \
+   SCIP_Bool*           success,         \
+   SCIP_Bool            addbranchscores, \
+   SCIP_Bool*           addedbranchscores)
 
 typedef struct SCIP_Nlhdlr         SCIP_NLHDLR;          /**< nonlinear handler */
 typedef struct SCIP_NlhdlrData     SCIP_NLHDLRDATA;      /**< nonlinear handler data */
