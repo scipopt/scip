@@ -1952,7 +1952,7 @@ const char* SCIPgetSolverNameIpopt(void)
 /** gets string that describes Ipopt */
 const char* SCIPgetSolverDescIpopt(void)
 {
-   return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
+   return "Interior Point Optimizer developed by A. Waechter et.al. (github.com/coin-or/Ipopt)";
 }
 
 /** returns whether Ipopt is available, i.e., whether it has been linked in */
