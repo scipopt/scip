@@ -60,6 +60,9 @@ struct SCIP_NlpiOracle
    SCIP_Real*            varlbs;             /**< array with variable lower bounds */
    SCIP_Real*            varubs;             /**< array with variable upper bounds */
    char**                varnames;           /**< array with variable names */
+   /* TODO we should replace these by the number of objectives/constraints where the variable appears linearly or nonlinearly
+    * that could be kept uptodate faster when the problem changes
+    */
    int*                  vardegrees;         /**< array with maximal degree of variable over objective and all constraints */
    SCIP_Bool             vardegreesuptodate; /**< whether the variable degrees are up to date */
 

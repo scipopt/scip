@@ -153,7 +153,8 @@ public:
    std::string                 optfile;      /**< name of options file */
    bool                        fastfail;     /**< whether to stop Ipopt if convergence seems slow */
 
-   SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
+   bool                        firstrun;     /**< whether the next NLP solve will be the first one */
+   bool                        samestructure;/**< whether the NLP solved next will still have the same (Ipopt-internal) structure (same number of variables, constraints, bounds, and nonzero pattern) */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
 
    SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
@@ -170,7 +171,7 @@ public:
    SCIP_NlpiProblem()
       : oracle(NULL),
         fastfail(false),
-        firstrun(TRUE), initguess(NULL),
+        firstrun(true), samestructure(true), initguess(NULL),
         lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
         lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
         lastsolinfeas(0.0), lastniter(-1), lasttime(-1.0)
@@ -713,7 +714,7 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
 
    SCIP_CALL( SCIPnlpiOracleAddVars(scip, problem->oracle, nvars, lbs, ubs, varnames) );
 
-   problem->firstrun = TRUE;
+   problem->samestructure = false;
    BMSfreeMemoryArrayNull(&problem->initguess);
    invalidateSolution(problem);
 
@@ -758,7 +759,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
 
    SCIP_CALL( SCIPnlpiOracleAddConstraints(scip, problem->oracle, nconss, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
 
-   problem->firstrun = TRUE;
+   problem->samestructure = false;
    invalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -792,12 +793,12 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   /* We pass the objective gradient in dense form to Ipopt, so if the sparsity of that gradient changes, we do not need to reset Ipopt (firstrun=TRUE).
+   /* We pass the objective gradient in dense form to Ipopt, so if the sparsity of that gradient changes, we do not change the structure of the problem inside Ipopt.
     * However, if the sparsity of the Hessian matrix of the objective changes, then the sparsity pattern of the Hessian of the Lagrangian may change.
-    * Thus, reset Ipopt if the objective was and/or becomes nonlinear, but leave firstrun untouched if it was and stays linear.
+    * Thus, set samestructure=false if the objective was and/or becomes nonlinear, but leave samestructure untouched if it was and stays linear.
     */
    if( expr != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
-      problem->firstrun = TRUE;
+      problem->samestructure = false;
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle, constant, nlins, lininds, linvals, expr) );
 
@@ -819,19 +820,27 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 static
 SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 {
-   int i;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   /* If some variable is fixed or unfixed, then better don't reoptimize the NLP in the next solve.
-    * Calling Optimize instead of ReOptimize should remove fixed variables from the problem that is solved by Ipopt.
-    * This way, the variable fixing is satisfied exactly in a solution, see also #1254.
+   /* Check whether the structure of the Ipopt internal NLP changes, if problem->samestructure at the moment.
+    * We need to check whether variables become fixed or unfixed and whether bounds are added or removed.
     */
-   for( i = 0; i < nvars && !problem->firstrun; ++i )
-      if( (SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]] == SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]]) != (lbs[i] == ubs[i]) )  /*lint !e777*/
-         problem->firstrun = TRUE;
+   for( int i = 0; i < nvars && problem->samestructure; ++i )
+   {
+      SCIP_Real oldlb;
+      SCIP_Real oldub;
+      oldlb = SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]];
+      oldub = SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]];
+
+      if( (oldlb == oldub) != (lbs[i] == ubs[i]) )  /*lint !e777*/
+         problem->samestructure = false;
+      else if( SCIPisInfinity(scip, -oldlb) != SCIPisInfinity(scip, -lbs[i]) )
+         problem->samestructure = false;
+      else if( SCIPisInfinity(scip,  oldub) != SCIPisInfinity(scip,  ubs[i]) )
+         problem->samestructure = false;
+   }
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, problem->oracle, nvars, indices, lbs, ubs) );
 
@@ -856,6 +865,24 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesIpopt)
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   /* Check whether the structure of the Ipopt internal NLP changes, if problem->samestructure at the moment.
+    * We need to check whether constraints change from equality to inequality and whether sides are added or removed.
+    */
+   for( int i = 0; i < nconss && problem->samestructure; ++i )
+   {
+      SCIP_Real oldlhs;
+      SCIP_Real oldrhs;
+      oldlhs = SCIPnlpiOracleGetConstraintLhs(problem->oracle, indices[i]);
+      oldrhs = SCIPnlpiOracleGetConstraintRhs(problem->oracle, indices[i]);
+
+      if( (oldlhs == oldrhs) != (lhss[i] == rhss[i]) )  /*lint !e777*/
+         problem->samestructure = false;
+      else if( SCIPisInfinity(scip, -oldlhs) != SCIPisInfinity(scip, -lhss[i]) )
+         problem->samestructure = false;
+      else if( SCIPisInfinity(scip,  oldrhs) != SCIPisInfinity(scip,  rhss[i]) )
+         problem->samestructure = false;
+   }
 
    SCIP_CALL( SCIPnlpiOracleChgConsSides(scip, problem->oracle, nconss, indices, lhss, rhss) );
 
@@ -900,7 +927,7 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
       }
    }
 
-   problem->firstrun = TRUE;
+   problem->samestructure = false;
 
    invalidateSolution(problem);
 
@@ -926,7 +953,7 @@ SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetIpopt)
 
    SCIP_CALL( SCIPnlpiOracleDelConsSet(scip, problem->oracle, dstats) );
 
-   problem->firstrun = TRUE;
+   problem->samestructure = false;
 
    invalidateSolution(problem);
 
@@ -953,6 +980,7 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, problem->oracle, idx, nvals, varidxs, vals) );
+
    invalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -974,6 +1002,8 @@ SCIP_DECL_NLPICHGEXPR(nlpiChgExprIpopt)
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgExpr(scip, problem->oracle, idxcons, expr) );
+
+   problem->samestructure = false;  // nonzero patterns may have changed
    invalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -1112,7 +1142,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       }
       else
       {
-         // TODO set warm_start_same_structure if possible
+         // TODO to be strict, we should check whether the eval capability has been changed and the Hessian approximation needs to be enabled (in which case we should call OptimizeTNLP instead)
+         problem->ipopt->Options()->SetStringValue("warm_start_same_structure", problem->samestructure ? "yes" : "no");
          status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
       }
 
@@ -1140,7 +1171,11 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
             problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
             break;
-         default: ;
+         default:
+            // ipopt should, at least, have been properly initialized, so can warmstart next time
+            problem->firstrun = false;
+            problem->samestructure = true;
+            break;
       }
 
       stats = problem->ipopt->Statistics();
@@ -1161,8 +1196,6 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       SCIPerrorMessage("Ipopt returned with exception: %s\n", except.Message().c_str());
       return SCIP_ERROR;
    }
-
-   problem->firstrun = FALSE;
 
    return SCIP_OKAY;
 }
