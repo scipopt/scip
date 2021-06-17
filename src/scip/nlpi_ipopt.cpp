@@ -2609,8 +2609,6 @@ void ScipNLP::finalize_solution(
       break;
 
    case LOCAL_INFEASIBILITY:
-      /* still check feasibility, since we let Ipopt solve with higher tolerance than actually required */
-      check_feasibility = true;
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -2650,70 +2648,47 @@ void ScipNLP::finalize_solution(
       break;
    }
 
-   /* if Ipopt reports its solution as locally infeasible or we don't know feasibility, then report the intermediate point with lowest constraint violation, if available */
-   if( (x == NULL || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nlpiproblem->lastsolinfeas != SCIP_INVALID )  /*lint !e777*/
-   {
-      /* if infeasibility of lastsol is not invalid, then lastsol values should exist */
-      assert(nlpiproblem->lastsolprimals != NULL);
-      assert(nlpiproblem->lastsoldualcons != NULL);
-      assert(nlpiproblem->lastsoldualvarlb != NULL);
-      assert(nlpiproblem->lastsoldualvarub != NULL);
+   assert(x != NULL);
+   assert(lambda != NULL);
+   assert(z_L != NULL);
+   assert(z_U != NULL);
 
-      /* check if lastsol is feasible */
-      Number constrvioltol;
-      (void) nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
-      if( nlpiproblem->lastsolinfeas <= constrvioltol )
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-      else
+   if( nlpiproblem->lastsolprimals == NULL )
+   {
+      assert(nlpiproblem->lastsoldualcons == NULL);
+      assert(nlpiproblem->lastsoldualvarlb == NULL);
+      assert(nlpiproblem->lastsoldualvarub == NULL);
+      BMSallocMemoryArray(&nlpiproblem->lastsolprimals,   n);
+      BMSallocMemoryArray(&nlpiproblem->lastsoldualcons,  m);
+      BMSallocMemoryArray(&nlpiproblem->lastsoldualvarlb, n);
+      BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, n);
+
+      if( nlpiproblem->lastsolprimals == NULL || nlpiproblem->lastsoldualcons == NULL ||
+         nlpiproblem->lastsoldualvarlb == NULL || nlpiproblem->lastsoldualvarub == NULL )
+      {
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-
-      SCIPdebugMsg(scip, "drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead (acceptable: %g)\n",
-         nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas, constrvioltol);
+         nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
+         return;
+      }
    }
-   else
+
+   BMScopyMemoryArray(nlpiproblem->lastsolprimals, x, n);
+   BMScopyMemoryArray(nlpiproblem->lastsoldualcons, lambda, m);
+   BMScopyMemoryArray(nlpiproblem->lastsoldualvarlb, z_L, n);
+   BMScopyMemoryArray(nlpiproblem->lastsoldualvarub, z_U, n);
+
+   if( check_feasibility && cq != NULL )
    {
-      assert(x != NULL);
-      assert(lambda != NULL);
-      assert(z_L != NULL);
-      assert(z_U != NULL);
+      Number constrviol;
+      Number constrvioltol;
 
-      if( nlpiproblem->lastsolprimals == NULL )
-      {
-         assert(nlpiproblem->lastsoldualcons == NULL);
-         assert(nlpiproblem->lastsoldualvarlb == NULL);
-         assert(nlpiproblem->lastsoldualvarub == NULL);
-         BMSallocMemoryArray(&nlpiproblem->lastsolprimals,   n);
-         BMSallocMemoryArray(&nlpiproblem->lastsoldualcons,  m);
-         BMSallocMemoryArray(&nlpiproblem->lastsoldualvarlb, n);
-         BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, n);
+      constrviol = cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX);
 
-         if( nlpiproblem->lastsolprimals == NULL || nlpiproblem->lastsoldualcons == NULL ||
-            nlpiproblem->lastsoldualvarlb == NULL || nlpiproblem->lastsoldualvarub == NULL )
-         {
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-            nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
-            return;
-         }
-      }
-
-      BMScopyMemoryArray(nlpiproblem->lastsolprimals, x, n);
-      BMScopyMemoryArray(nlpiproblem->lastsoldualcons, lambda, m);
-      BMScopyMemoryArray(nlpiproblem->lastsoldualvarlb, z_L, n);
-      BMScopyMemoryArray(nlpiproblem->lastsoldualvarub, z_U, n);
-
-      if( check_feasibility && cq != NULL )
-      {
-         Number constrviol;
-         Number constrvioltol;
-
-         constrviol = cq->curr_constraint_violation();
-
-         (void) nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
-         if( constrviol <= constrvioltol )
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-         else if( nlpiproblem->lastsolstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      }
+      (void) nlpiproblem->ipopt->Options()->GetNumericValue("constr_viol_tol", constrvioltol, "");
+      if( constrviol <= constrvioltol/FEASTOLFACTOR )
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      else if( nlpiproblem->lastsolstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    }
 
    if( nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE )
