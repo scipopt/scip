@@ -20,7 +20,6 @@
  * @author  Benjamin Müller
  *
  * @todo warm starts
- * @todo influence output by SCIP verblevel, too, e.g., print strong warnings if SCIP verblevel is full; but currently we have no access to SCIP verblevel
  * @todo if too few degrees of freedom, solve a slack-minimization problem instead?
  *
  * This file can only be compiled if Ipopt is available.
@@ -91,7 +90,7 @@ using namespace Ipopt;
 #ifdef SCIP_DEBUG
 #define DEFAULT_PRINTLEVEL J_ITERSUMMARY     /**< default print level of Ipopt */
 #else
-#define DEFAULT_PRINTLEVEL J_ERROR           /**< default print level of Ipopt */
+#define DEFAULT_PRINTLEVEL J_STRONGWARNING  /**< default print level of Ipopt */
 #endif
 #define DEFAULT_MAXITER    3000              /**< default iteration limit for Ipopt */
 
@@ -410,11 +409,18 @@ protected:
    {  /*lint --e{715} */
       if( level == J_ERROR )
       {
-         SCIPmessagePrintError("%s", str);
+         SCIPerrorMessage("%s", str);
       }
       else
       {
-         SCIPinfoMessage(scip, NULL, "%s", str);
+         SCIP_VERBLEVEL msgverblevel;
+         if( level <= J_WARNING )
+            msgverblevel = SCIP_VERBLEVEL_DIALOG;
+         else if( level <= J_SUMMARY )
+            msgverblevel = SCIP_VERBLEVEL_MINIMAL;
+         else
+            msgverblevel = SCIP_VERBLEVEL_HIGH;
+         SCIPverbMessage(scip, msgverblevel, NULL, "%s", str);
       }
    }
 
@@ -428,11 +434,18 @@ protected:
    {  /*lint --e{715} */
       if( level == J_ERROR )
       {
-         SCIPmessageVPrintError(pformat, ap);
+         SCIPerrorMessage(pformat, ap);
       }
       else
       {
-         SCIPmessageVPrintInfo(SCIPgetMessagehdlr(scip), pformat, ap);
+         SCIP_VERBLEVEL msgverblevel;
+         if( level <= J_WARNING )
+            msgverblevel = SCIP_VERBLEVEL_DIALOG;
+         else if( level <= J_SUMMARY )
+            msgverblevel = SCIP_VERBLEVEL_MINIMAL;
+         else
+            msgverblevel = SCIP_VERBLEVEL_HIGH;
+         SCIPmessageVPrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), msgverblevel, pformat, ap);
       }
    }
 
