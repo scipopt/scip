@@ -98,8 +98,9 @@ Test(depthlevel, hit_depth_limit, .description = "show problem when hitting dept
    abort(); /* return SIGABORT */
 #endif
 
-   /* turn off presolving */
+   /* turn off presolving and rapid learning to avoid detecting infeasibility */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/rapidlearning/freq", -1) );
 
    /* use DFS */
    SCIP_CALL( SCIPsetIntParam(scip, "nodeselection/dfs/stdpriority", 10000000) );
