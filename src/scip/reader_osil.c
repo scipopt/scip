@@ -2351,7 +2351,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    doingfine = TRUE;
    vars = NULL;
    nvars = 0;
-   nconss = 0;
+   nconss = -1;
 
    /* read OSiL xml file */
    start = xmlProcess(filename);
@@ -2490,14 +2490,14 @@ SCIP_DECL_READERREAD(readerReadOsil)
       SCIPfreeBufferArrayNull(scip, &lincoefs[c]);
       SCIPfreeBufferArrayNull(scip, &linvars[c]);
    }
-   SCIPfreeBufferArray(scip, &nlexprs);
-   SCIPfreeBufferArray(scip, &nquadterms);
-   SCIPfreeBufferArray(scip, &quadcoefs);
-   SCIPfreeBufferArray(scip, &quadvars2);
-   SCIPfreeBufferArray(scip, &quadvars1);
-   SCIPfreeBufferArray(scip, &nlinvars);
-   SCIPfreeBufferArray(scip, &lincoefs);
-   SCIPfreeBufferArray(scip, &linvars);
+   SCIPfreeBufferArrayNull(scip, &nlexprs);
+   SCIPfreeBufferArrayNull(scip, &nquadterms);
+   SCIPfreeBufferArrayNull(scip, &quadcoefs);
+   SCIPfreeBufferArrayNull(scip, &quadvars2);
+   SCIPfreeBufferArrayNull(scip, &quadvars1);
+   SCIPfreeBufferArrayNull(scip, &nlinvars);
+   SCIPfreeBufferArrayNull(scip, &lincoefs);
+   SCIPfreeBufferArrayNull(scip, &linvars);
 
    /* free variables */
    for( i = 0; i < nvars; ++i )
