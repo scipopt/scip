@@ -163,7 +163,7 @@ public:
    SCIP_Real*                  lastsoldualcons; /**< dual solution values of constraints from last run, if available */
    SCIP_Real*                  lastsoldualvarlb; /**< dual solution values of variable lower bounds from last run, if available */
    SCIP_Real*                  lastsoldualvarub; /**< dual solution values of variable upper bounds from last run, if available */
-   SCIP_Real                   lastsolinfeas;/**< infeasibility (constraint violation) of solution stored in lastsolprimals */
+   SCIP_Real                   lastsolobjval;/**< objective function value in solution from last run */
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
@@ -174,7 +174,7 @@ public:
         firstrun(true), samestructure(true), initguess(NULL),
         lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
         lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
-        lastsolinfeas(0.0), lastniter(-1), lasttime(-1.0)
+        lastsolobjval(SCIP_INVALID), lastniter(-1), lasttime(-1.0)
    { }
 };
 
@@ -442,7 +442,7 @@ void invalidateSolution(
    BMSfreeMemoryArrayNull(&problem->lastsoldualvarub);
    problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
-   problem->lastsolinfeas = SCIP_INVALID;
+   problem->lastsolobjval = SCIP_INVALID;
 }
 
 /** sets feasibility tolerance parameter in Ipopt */
@@ -1074,7 +1074,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 
    problem->lastniter = -1;
    problem->lasttime  = -1.0;
-   problem->lastsolinfeas = SCIP_INVALID;
+   problem->lastsolobjval = SCIP_INVALID;
 
    try
    {
@@ -1252,15 +1252,7 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
       *varubdualvalues = problem->lastsoldualvarub;
 
    if( objval != NULL )
-   {
-      if( problem->lastsolprimals != NULL )
-      {
-         /* TODO store last solution value instead of reevaluating the objective function */
-         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(scip, problem->oracle, problem->lastsolprimals, objval) );
-      }
-      else
-         *objval = SCIP_INVALID;
-   }
+      *objval = problem->lastsolobjval;
 
    return SCIP_OKAY;
 }
@@ -2666,6 +2658,7 @@ void ScipNLP::finalize_solution(
    BMScopyMemoryArray(nlpiproblem->lastsoldualcons, lambda, m);
    BMScopyMemoryArray(nlpiproblem->lastsoldualvarlb, z_L, n);
    BMScopyMemoryArray(nlpiproblem->lastsoldualvarub, z_U, n);
+   nlpiproblem->lastsolobjval = obj_value;
 
    if( check_feasibility && cq != NULL )
    {
