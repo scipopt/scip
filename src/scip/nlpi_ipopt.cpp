@@ -252,18 +252,6 @@ public:
       Number*            lambda              /**< buffer to store dual values of constraints */
       );
 
-   /** Method to return the variables linearity. */
-   bool get_variables_linearity(
-      Index              n,                  /**< number of variables */ 
-      LinearityType*     var_types           /**< buffer to store linearity types of variables */
-      );
-
-   /** Method to return the constraint linearity. */
-   bool get_constraints_linearity(
-      Index              m,                  /**< number of constraints */
-      LinearityType*     const_types         /**< buffer to store linearity types of constraints */
-      );
-
    /** Method to return the number of nonlinear variables. */
    Index get_number_of_nonlinear_variables();
 
@@ -2184,47 +2172,6 @@ bool ScipNLP::get_starting_point(
    }
    if( init_z || init_lambda )
       return false;
-
-   return true;
-}
-
-/** Method to return the variables linearity. */
-bool ScipNLP::get_variables_linearity(
-   Index              n,                  /**< number of variables */ 
-   LinearityType*     var_types           /**< buffer to store linearity types of variables */
-   )
-{
-   assert(nlpiproblem != NULL);
-   assert(nlpiproblem->oracle != NULL);
-
-   assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
-
-   for( int i = 0; i < n; ++i )
-   {
-      int vardegree;
-      if( SCIPnlpiOracleGetVarDegree(scip, nlpiproblem->oracle, i, &vardegree) != SCIP_OKAY )
-         return false;
-      var_types[i] = vardegree <= 1 ? LINEAR : NON_LINEAR;
-   }
-
-   return true;
-}
-
-/** Method to return the constraint linearity. */
-bool ScipNLP::get_constraints_linearity(
-   Index              m,                  /**< number of constraints */
-   LinearityType*     const_types         /**< buffer to store linearity types of constraints */
-   )
-{
-   int i;
-
-   assert(nlpiproblem != NULL);
-   assert(nlpiproblem->oracle != NULL);
-
-   assert(m == SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
-
-   for( i = 0; i < m; ++i )
-      const_types[i] = (SCIPnlpiOracleGetConstraintDegree(nlpiproblem->oracle, i) <= 1 ? LINEAR : NON_LINEAR);
 
    return true;
 }
