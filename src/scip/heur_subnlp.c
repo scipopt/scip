@@ -2038,7 +2038,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/resolvetolfactor",
          "if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)",
-         &heurdata->resolvetolfactor, TRUE, 0.001, 0.0, 1.0, NULL, NULL) );
+         &heurdata->resolvetolfactor, TRUE, 1.0, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/resolvefromscratch",
          "should the NLP resolve be started from the original starting point or the infeasible solution?",
