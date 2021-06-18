@@ -20,7 +20,6 @@
  * @author  Benjamin Müller
  *
  * @todo warm starts
- * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
  * @todo influence output by SCIP verblevel, too, e.g., print strong warnings if SCIP verblevel is full; but currently we have no access to SCIP verblevel
  * @todo if too few degrees of freedom, solve a slack-minimization problem instead?
  *
@@ -191,6 +190,10 @@ private:
    int                   conv_iterlim[convcheck_nchecks];  /**< iteration number where target primal infeasibility should to be achieved */
    int                   conv_lastrestoiter;               /**< last iteration number in restoration mode, or -1 if none */
 
+   unsigned int          current_x;          /**< unique number that identifies current iterate (x): incremented when Ipopt calls with new_x=true */
+   unsigned int          last_f_eval_x;      /**< the number of the iterate for which the objective was last evaluated (eval_f) */
+   unsigned int          last_g_eval_x;      /**< the number of the iterate for which the constraints were last evaluated (eval_g) */
+
 public:
    bool                  approxhessian;      /**< do we tell Ipopt to approximate the hessian? (may also be false if user set to approx. hessian via option file) */
 
@@ -200,7 +203,9 @@ public:
       SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
       SCIP*              scip_ = NULL        /**< SCIP data structure */
       )
-      : nlpiproblem(nlpiproblem_), randnumgen(NULL), scip(scip_), conv_lastrestoiter(-1), approxhessian(false)
+      : nlpiproblem(nlpiproblem_), randnumgen(NULL), scip(scip_), conv_lastrestoiter(-1),
+        current_x(1), last_f_eval_x(0), last_g_eval_x(0),
+        approxhessian(false)
    {
       assert(scip != NULL);
       SCIP_CALL_ABORT_QUIET( SCIPcreateRandom(scip, &randnumgen, DEFAULT_RANDSEED, TRUE) );
@@ -218,6 +223,12 @@ public:
    {
       assert(nlpiproblem_ != NULL);
       nlpiproblem = nlpiproblem_;
+
+      // it appears we are about to start a new solve
+      // use this call as an opportunity to reset the counts on x
+      current_x = 1;
+      last_f_eval_x = 0;
+      last_g_eval_x = 0;
    }
 
    /** Method to return some info about the nlp */
@@ -1102,7 +1113,6 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
           */
          if( (cap & (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)) != (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN) )
          {
-            /* @todo could enable Jacobian approximation in Ipopt */
             if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_FUNCVALUE) ||
                 !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_GRADIENT) )
             {
@@ -1351,7 +1361,6 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
    assert(problem != NULL);
    assert(IsValid(problem->ipopt));
 
-   //@TODO try-catch block for Ipopt exceptions
    switch( type )
    {
    case SCIP_NLPPAR_FROMSCRATCH:
@@ -2183,8 +2192,8 @@ Index ScipNLP::get_number_of_nonlinear_variables()
    for( int i = 0; i < n; ++i )
    {
       int vardegree;
-      if( SCIPnlpiOracleGetVarDegree(scip, nlpiproblem->oracle, i, &vardegree) != FALSE )
-         return -1;  // TODO what is the right way to report an error back to Ipopt here?
+      if( SCIPnlpiOracleGetVarDegree(scip, nlpiproblem->oracle, i, &vardegree) != SCIP_OKAY )
+         return -1;  // this will make Ipopt assume that all variables are nonlinear, which I guess is ok if we got an error here
       if( vardegree > 1 )
          ++count;
    }
@@ -2293,6 +2302,10 @@ bool ScipNLP::eval_f(
 
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
 
+   if( new_x )
+      ++current_x;
+   last_f_eval_x = current_x;
+
    return SCIPnlpiOracleEvalObjectiveValue(scip, nlpiproblem->oracle, x, &obj_value) == SCIP_OKAY;
 }
 
@@ -2311,7 +2324,18 @@ bool ScipNLP::eval_grad_f(
 
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
 
-   return SCIPnlpiOracleEvalObjectiveGradient(scip, nlpiproblem->oracle, x, TRUE, &dummy, grad_f) == SCIP_OKAY;
+   if( new_x )
+      ++current_x;
+   else
+   {
+      // pass new_x = TRUE to objective gradient eval iff we have not evaluated the objective function at this point yet
+      new_x = last_f_eval_x < current_x;
+   }
+   // if we evaluate the objective gradient with new_x = true, then this will also evaluate the objective function
+   // (and if we do with new_x = false, then we already have last_f_eval_x == current_x anyway)
+   last_f_eval_x = current_x;
+
+   return SCIPnlpiOracleEvalObjectiveGradient(scip, nlpiproblem->oracle, x, new_x, &dummy, grad_f) == SCIP_OKAY;
 }
 
 /** Method to return the constraint residuals */  /*lint -e{715}*/
@@ -2327,6 +2351,10 @@ bool ScipNLP::eval_g(
    assert(nlpiproblem->oracle != NULL);
 
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
+
+   if( new_x )
+      ++current_x;
+   last_g_eval_x = current_x;
 
    return SCIPnlpiOracleEvalConstraintValues(scip, nlpiproblem->oracle, x, g) == SCIP_OKAY;
 }
@@ -2376,7 +2404,18 @@ bool ScipNLP::eval_jac_g(
    }
    else
    {
-      if( SCIPnlpiOracleEvalJacobian(scip, nlpiproblem->oracle, x, TRUE, NULL, values) != SCIP_OKAY )
+      if( new_x )
+         ++current_x;
+      else
+      {
+         // pass new_x = TRUE to Jacobian eval iff we have not evaluated the constraint functions at this point yet
+         new_x = last_g_eval_x < current_x;
+      }
+      // if we evaluate the Jacobian with new_x = true, then this will also evaluate the constraint functions
+      // (and if we do with new_x = false, then we already have last_g_eval_x == current_x anyway)
+      last_f_eval_x = current_x;
+
+      if( SCIPnlpiOracleEvalJacobian(scip, nlpiproblem->oracle, x, new_x, NULL, values) != SCIP_OKAY )
          return false;
    }
 
@@ -2431,7 +2470,22 @@ bool ScipNLP::eval_h(
    }
    else
    {
-      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, TRUE, obj_factor, lambda, values) != SCIP_OKAY )
+      bool new_x_obj = new_x;
+      bool new_x_cons = new_x;
+      if( new_x )
+         ++current_x;
+      else
+      {
+         // pass new_x_obj = TRUE iff we have not evaluated the objective function at this point yet
+         // pass new_x_cons = TRUE iff we have not evaluated the constraint functions at this point yet
+         new_x_obj = last_f_eval_x < current_x;
+         new_x_cons = last_f_eval_x < current_x;
+      }
+      // evaluating Hessians with new_x will also evaluate the functions itself
+      last_f_eval_x = current_x;
+      last_g_eval_x = current_x;
+
+      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, new_x_obj, new_x_cons, obj_factor, lambda, values) != SCIP_OKAY )
          return false;
    }
 

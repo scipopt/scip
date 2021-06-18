@@ -599,7 +599,7 @@ SCIP_RETCODE userHM(
 
    /* evaluate hessian */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hessianvals, problem->wsp->HM.nnz) );
-   retcode = SCIPnlpiOracleEvalHessianLag(scip, problem->oracle, problem->opt->X, TRUE, problem->wsp->ScaleObj,
+   retcode = SCIPnlpiOracleEvalHessianLag(scip, problem->oracle, problem->opt->X, TRUE, TRUE, problem->wsp->ScaleObj,
          problem->opt->Mu, hessianvals);
 
    if( retcode == SCIP_OKAY )

@@ -497,7 +497,7 @@ F77_FUNC(hessian,HESSIAN)(
    for( i = 0; i < *m; ++i )
       lambda[i] = -lam[*n+i];
 
-   if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, x, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, problem->evalbuffer) == SCIP_OKAY )
+   if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, x, TRUE, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, problem->evalbuffer) == SCIP_OKAY )
    {
       *l_hess = nnz;
 

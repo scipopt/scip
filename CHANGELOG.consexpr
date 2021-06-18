@@ -344,7 +344,8 @@ nlpi:
 - replaced argument BMS_BLKMEM* blkmem of SCIPnlpiOracleCreate() by SCIP* scip
 - added argument SCIP* scip to SCIPnlpiOracleFree(), SCIPnlpiOracleSetProblemName(), SCIPnlpiOracleAddVars(), SCIPnlpiOracleAddConstraints(), SCIPnlpiOracleSetObjective(), SCIPnlpiOracleChgVarBounds(), SCIPnlpiOracleChgConsSides(), SCIPnlpiOracleDelVarSet(), SCIPnlpiOracleDelConsSet(), SCIPnlpiOracleChgLinearCoefs(), SCIPnlpiOracleChgObjConstant(), SCIPnlpiOracleGetVarDegree(), SCIPnlpiOracleGetVarDegrees(), SCIPnlpiOracleGetEvalCapability(), SCIPnlpiOracleEvalObjectiveValue(), SCIPnlpiOracleEvalConstraintValue(), SCIPnlpiOracleEvalConstraintValues(), SCIPnlpiOracleEvalObjectiveGradient(), SCIPnlpiOracleEvalConstraintGradient(), SCIPnlpiOracleGetJacobianSparsity(), SCIPnlpiOracleEvalJacobian(), SCIPnlpiOracleGetHessianLagSparsity(), SCIPnlpiOracleEvalHessianLag(), SCIPnlpiOraclePrintProblem(), SCIPnlpiOraclePrintProblemGams()
 - removed arguments nquadelems, quadelems, exprvaridxs, exprtrees from SCIPnlpiOracleAddConstraints(), added argument SCIP_EXPR** exprs
-- removed arugments nquadelems, quadelems, exprvaridxs, exprtree from SCIPnlpiOracleSetObjective(), added argument SCIP_EXPR* expr
+- removed arguments nquadelems, quadelems, exprvaridxs, exprtree from SCIPnlpiOracleSetObjective(), added argument SCIP_EXPR* expr
+- replaced arguments isnewx of SCIPnlpiOracleEvalHessianLag() by two arguments isnewx_obj and isnewx_cons
 - removed SCIPnlpiOracleChgExprtree(), use SCIPnlpiOracleChgExpr() instead
 - removed SCIPnlpiOracleSetInfinity(), SCIPnlpiOracleGetInfinity(), SCIPnlpiOracleChgQuadCoefs(), SCIPnlpiOracleChgExprParam(), SCIPnlpiOracleGetMaxDegree()
 - added argument int* vardegree to SCIPnlpiOracleGetVarDegree() and changed return type to SCIP_RETCODE
