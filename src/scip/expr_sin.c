@@ -756,7 +756,7 @@ SCIP_EXPRCURV SCIPcomputeCurvatureSin(
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrSin)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
 
    return SCIP_OKAY;
 }
@@ -1062,14 +1062,14 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySin)
 }
 
 /** creates the handler for sin expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprHdlrSin(
+SCIP_RETCODE SCIPincludeExprhdlrSin(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalSin, NULL) );
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalSin, NULL) );
    assert(exprhdlr != NULL);
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrSin, NULL);
@@ -1097,9 +1097,9 @@ SCIP_RETCODE SCIPcreateExprSin(
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindExprHdlr(scip, EXPRHDLR_NAME) != NULL);
+   assert(SCIPfindExprhdlr(scip, EXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate,
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate,
             ownercreatedata) );
 
    return SCIP_OKAY;

@@ -38,7 +38,7 @@
  */
 
 /** expression handler data */
-struct SCIP_ExprHdlrData
+struct SCIP_ExprhdlrData
 {
    SCIP_Real             minzerodistance;    /**< minimal distance from zero to enforce for child in bound tightening */
    SCIP_Bool             warnedonpole;       /**< whether we warned on enforcing a minimal non-zero bound for child */
@@ -94,7 +94,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyLog)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrLog)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
 
    return SCIP_OKAY;
 }
@@ -472,7 +472,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityLog)
 }
 
 /** creates the handler for logarithmic expression and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrLog(
+SCIP_RETCODE SCIPincludeExprhdlrLog(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -481,7 +481,7 @@ SCIP_RETCODE SCIPincludeExprHdlrLog(
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprhdlrdata) );
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalLog,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalLog,
          exprhdlrdata) );
    assert(exprhdlr != NULL);
 
@@ -516,7 +516,7 @@ SCIP_RETCODE SCIPcreateExprLog(
    assert(expr != NULL);
    assert(child != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate,
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate,
          ownercreatedata) );
 
    return SCIP_OKAY;

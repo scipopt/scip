@@ -29,7 +29,7 @@
 #include "scip/type_stat.h"
 
 /** generic data and callback methods of an expression handler */
-struct SCIP_ExprHdlr
+struct SCIP_Exprhdlr
 {
    char*                 name;               /**< expression handler name */
    char*                 desc;               /**< expression handler description (can be NULL) */

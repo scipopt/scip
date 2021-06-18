@@ -41,7 +41,7 @@ struct SCIP_ExprData
 };
 
 /** expression handler data */
-struct SCIP_ExprHdlrData
+struct SCIP_ExprhdlrData
 {
 };
 
@@ -297,7 +297,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityXyz)
 }
 
 /** creates the handler for xyz expressions and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrXyz(
+SCIP_RETCODE SCIPincludeExprhdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -310,7 +310,7 @@ SCIP_RETCODE SCIPincludeExprHdlrXyz(
    /* TODO: create and store expression handler specific data here */
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalXyz,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalXyz,
          exprhdlrdata) );
    assert(exprhdlr != NULL);
 
@@ -347,7 +347,7 @@ SCIP_RETCODE SCIPcreateExprXyz(
 
    assert(expr != NULL);
 
-   exprhdlr = SCIPfindExprHdlr(scip, EXPRHDLR_NAME);
+   exprhdlr = SCIPfindExprhdlr(scip, EXPRHDLR_NAME);
 
    if( exprhdlr != NULL )
    {

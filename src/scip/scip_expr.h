@@ -37,7 +37,7 @@ extern "C" {
 
 /** creates the handler for an expression handler and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlr(
+SCIP_RETCODE SCIPincludeExprhdlr(
    SCIP*                 scip,         /**< SCIP data structure */
    SCIP_EXPRHDLR**       exprhdlr,     /**< buffer where to store created expression handler */
    const char*           name,         /**< name of expression handler (must not be NULL) */
@@ -49,50 +49,50 @@ SCIP_RETCODE SCIPincludeExprHdlr(
 
 /** gives expression handlers */
 SCIP_EXPORT
-SCIP_EXPRHDLR** SCIPgetExprHdlrs(
+SCIP_EXPRHDLR** SCIPgetExprhdlrs(
    SCIP*                      scip           /**< SCIP data structure */
 );
 
 /** gives number of expression handlers */
 SCIP_EXPORT
-int SCIPgetNExprHdlrs(
+int SCIPgetNExprhdlrs(
    SCIP*                      scip           /**< SCIP data structure */
 );
 
 /** returns an expression handler of a given name (or NULL if not found) */
 SCIP_EXPORT
-SCIP_EXPRHDLR* SCIPfindExprHdlr(
+SCIP_EXPRHDLR* SCIPfindExprhdlr(
    SCIP*                      scip,          /**< SCIP data structure */
    const char*                name           /**< name of expression handler */
    );
 
 /** returns expression handler for variable expressions (or NULL if not included) */
 SCIP_EXPORT
-SCIP_EXPRHDLR* SCIPgetExprHdlrVar(
+SCIP_EXPRHDLR* SCIPgetExprhdlrVar(
    SCIP*                      scip           /**< SCIP data structure */
    );
 
 /** returns expression handler for constant value expressions (or NULL if not included) */
 SCIP_EXPORT
-SCIP_EXPRHDLR* SCIPgetExprHdlrValue(
+SCIP_EXPRHDLR* SCIPgetExprhdlrValue(
    SCIP*                      scip           /**< SCIP data structure */
    );
 
 /** returns expression handler for sum expressions (or NULL if not included) */
 SCIP_EXPORT
-SCIP_EXPRHDLR* SCIPgetExprHdlrSum(
+SCIP_EXPRHDLR* SCIPgetExprhdlrSum(
    SCIP*                      scip           /**< SCIP data structure */
    );
 
 /** returns expression handler for product expressions (or NULL if not included) */
 SCIP_EXPORT
-SCIP_EXPRHDLR* SCIPgetExprHdlrProduct(
+SCIP_EXPRHDLR* SCIPgetExprhdlrProduct(
    SCIP*                      scip           /**< SCIP data structure */
    );
 
 /** returns expression handler for power expressions (or NULL if not included) */
 SCIP_EXPORT
-SCIP_EXPRHDLR* SCIPgetExprHdlrPower(
+SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
    SCIP*                      scip           /**< SCIP data structure */
    );
 

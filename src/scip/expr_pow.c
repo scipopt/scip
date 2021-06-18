@@ -80,7 +80,7 @@ SCIP_Real signpow_roots[SIGNPOW_ROOTS_KNOWN+1] = {
 };
 
 /** expression handler data */
-struct SCIP_ExprHdlrData
+struct SCIP_ExprhdlrData
 {
    SCIP_Real             minzerodistance;    /**< minimal distance from zero to enforce for child in bound tightening */
    SCIP_Bool             warnedonpole;       /**< whether we warned on enforcing a minimal distance from zero for child */
@@ -1721,7 +1721,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrPow)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
 
    return SCIP_OKAY;
 }
@@ -2582,7 +2582,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrSignpower)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrSignpower(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSignpower(scip) );
 
    return SCIP_OKAY;
 }
@@ -3030,7 +3030,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySignpower)
 }
 
 /** creates the handler for power expression and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrPow(
+SCIP_RETCODE SCIPincludeExprhdlrPow(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -3039,7 +3039,7 @@ SCIP_RETCODE SCIPincludeExprHdlrPow(
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprhdlrdata) );
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, POWEXPRHDLR_NAME, POWEXPRHDLR_DESC, POWEXPRHDLR_PRECEDENCE,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, POWEXPRHDLR_NAME, POWEXPRHDLR_DESC, POWEXPRHDLR_PRECEDENCE,
               evalPow, exprhdlrdata) );
    assert(exprhdlr != NULL);
 
@@ -3065,13 +3065,13 @@ SCIP_RETCODE SCIPincludeExprHdlrPow(
 }
 
 /** creates the handler for signed power expression and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrSignpower(
+SCIP_RETCODE SCIPincludeExprhdlrSignpower(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, SIGNPOWEXPRHDLR_NAME, SIGNPOWEXPRHDLR_DESC,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, SIGNPOWEXPRHDLR_NAME, SIGNPOWEXPRHDLR_DESC,
               SIGNPOWEXPRHDLR_PRECEDENCE, evalSignpower, NULL) );
    assert(exprhdlr != NULL);
 
@@ -3111,7 +3111,7 @@ SCIP_RETCODE SCIPcreateExprPow(
    SCIP_CALL( createData(scip, &exprdata, exponent) );
    assert(exprdata != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrPower(scip), exprdata, 1, &child, ownercreate,
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrPower(scip), exprdata, 1, &child, ownercreate,
               ownercreatedata) );
 
    return SCIP_OKAY;
@@ -3131,12 +3131,12 @@ SCIP_RETCODE SCIPcreateExprSignpower(
 
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindExprHdlr(scip, SIGNPOWEXPRHDLR_NAME) != NULL);
+   assert(SCIPfindExprhdlr(scip, SIGNPOWEXPRHDLR_NAME) != NULL);
 
    SCIP_CALL( createData(scip, &exprdata, exponent) );
    assert(exprdata != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, SIGNPOWEXPRHDLR_NAME), exprdata, 1, &child,
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, SIGNPOWEXPRHDLR_NAME), exprdata, 1, &child,
               ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;

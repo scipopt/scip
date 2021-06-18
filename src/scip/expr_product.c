@@ -68,7 +68,7 @@ struct SCIP_ExprData
    SCIP_ROW*             row;                /**< row created during initLP() */
 };
 
-struct SCIP_ExprHdlrData
+struct SCIP_ExprhdlrData
 {
    SCIP_CONSHDLR*        conshdlr;           /**< nonlinear constraint handler (to compute estimates for > 2-dim products) */
 };
@@ -1302,7 +1302,7 @@ SCIP_DECL_EXPRCOMPARE(compareProduct)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrProduct)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
 
    return SCIP_OKAY;
 }
@@ -2074,7 +2074,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityProduct)
 }
 
 /** creates the handler for product expressions and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrProduct(
+SCIP_RETCODE SCIPincludeExprhdlrProduct(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -2085,7 +2085,7 @@ SCIP_RETCODE SCIPincludeExprHdlrProduct(
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprhdlrdata) );
    exprhdlrdata->conshdlr = SCIPfindConshdlr(scip, "nonlinear");
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalProduct,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalProduct,
          exprhdlrdata) );
    assert(exprhdlr != NULL);
 
@@ -2121,7 +2121,7 @@ SCIP_RETCODE SCIPcreateExprProduct(
 
    SCIP_CALL( createData(scip, &exprdata, coefficient) );
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrProduct(scip), exprdata, nchildren, children, ownercreate,
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrProduct(scip), exprdata, nchildren, children, ownercreate,
          ownercreatedata) );
 
    return SCIP_OKAY;

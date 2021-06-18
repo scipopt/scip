@@ -37,7 +37,7 @@ extern "C" {
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrVaridx(
+SCIP_RETCODE SCIPincludeExprhdlrVaridx(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -91,7 +91,7 @@ SCIP_Bool SCIPisExprSignpower(
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrPow(
+SCIP_RETCODE SCIPincludeExprhdlrPow(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -100,7 +100,7 @@ SCIP_RETCODE SCIPincludeExprHdlrPow(
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrSignpower(
+SCIP_RETCODE SCIPincludeExprhdlrSignpower(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

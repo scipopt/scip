@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPcreateExprAbs(
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrAbs(
+SCIP_RETCODE SCIPincludeExprhdlrAbs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

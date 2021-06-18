@@ -157,7 +157,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyAbs)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrAbs)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
 
    return SCIP_OKAY;
 }
@@ -478,13 +478,13 @@ SCIP_DECL_EXPRINTEGRALITY(integralityAbs)
 
 
 /** creates the handler for absolute expression and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprHdlrAbs(
+SCIP_RETCODE SCIPincludeExprhdlrAbs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
          EXPRHDLR_PRECEDENCE, evalAbs, NULL) );
    assert(exprhdlr != NULL);
 
@@ -514,9 +514,9 @@ SCIP_RETCODE SCIPcreateExprAbs(
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindExprHdlr(scip, EXPRHDLR_NAME) != NULL);
+   assert(SCIPfindExprhdlr(scip, EXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

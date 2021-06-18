@@ -81,7 +81,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyExp)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrExp)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
 
    return SCIP_OKAY;
 }
@@ -359,13 +359,13 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityExp)
 }
 
 /** creates the handler for exponential expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprHdlrExp(
+SCIP_RETCODE SCIPincludeExprhdlrExp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
          EXPRHDLR_PRECEDENCE, evalExp, NULL) );
    assert(exprhdlr != NULL);
 
@@ -395,9 +395,9 @@ SCIP_RETCODE SCIPcreateExprExp(
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindExprHdlr(scip, EXPRHDLR_NAME) != NULL);
+   assert(SCIPfindExprhdlr(scip, EXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

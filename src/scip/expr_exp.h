@@ -72,7 +72,7 @@ SCIP_Bool SCIPisExprExp(
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrExp(
+SCIP_RETCODE SCIPincludeExprhdlrExp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

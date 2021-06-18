@@ -150,7 +150,7 @@ SCIP_DECL_EXPRCOMPARE(compareVar)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrVar)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
 
    return SCIP_OKAY;
 }
@@ -342,13 +342,13 @@ SCIP_DECL_EXPRINTEGRALITY(integralityVar)
 }
 
 /** creates the handler for variable expression and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrVar(
+SCIP_RETCODE SCIPincludeExprhdlrVar(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalVar, NULL) );
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalVar, NULL) );
    assert(exprhdlr != NULL);
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrVar, NULL);
@@ -385,7 +385,7 @@ SCIP_RETCODE SCIPcreateExprVar(
 
    exprdata = (SCIP_EXPRDATA*)var;
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrVar(scip), exprdata, 0, NULL, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrVar(scip), exprdata, 0, NULL, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

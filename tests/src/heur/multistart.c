@@ -63,16 +63,16 @@ void setup(void)
 
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );
    SCIP_CALL( SCIPincludeHeurSubNlp(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrAbs(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrExp(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrProduct(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 

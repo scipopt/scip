@@ -163,16 +163,16 @@ void evaluation_setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include some expr handlers */
-   SCIP_CALL( SCIPincludeExprHdlrAbs(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrExp(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrProduct(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
 
    /* if no IPOPT available, don't run test */
    if( ! SCIPisIpoptAvailableIpopt() )
@@ -493,18 +493,18 @@ Test(interior_point, compute_interior_point)
    SCIP_SEPADATA* sepadata;
 
    SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPincludeExprHdlrAbs(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrExp(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrProduct(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrVaridx(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
 
    /* if no IPOPT available, don't run test */
    if( ! SCIPisIpoptAvailableIpopt() )

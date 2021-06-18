@@ -172,8 +172,8 @@ typedef enum
 /**@name Expression Handler */
 /**@{ */
 
-typedef struct SCIP_ExprHdlr     SCIP_EXPRHDLR;     /**< expression handler */
-typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data */
+typedef struct SCIP_Exprhdlr     SCIP_EXPRHDLR;     /**< expression handler */
+typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data */
 
 /** expression handler copy callback
  *

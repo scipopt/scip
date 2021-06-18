@@ -64,7 +64,7 @@ SCIP_Real errorf(
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrErf)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrErf(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrErf(scip) );
 
    return SCIP_OKAY;
 }
@@ -278,14 +278,14 @@ SCIP_DECL_EXPRINTEGRALITY(integralityErf)
 }
 
 /** creates the handler for erf expressions and includes it SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrErf(
+SCIP_RETCODE SCIPincludeExprhdlrErf(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalErf, NULL) );
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalErf, NULL) );
    assert(exprhdlr != NULL);
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrErf, NULL);
@@ -318,7 +318,7 @@ SCIP_RETCODE SCIPcreateExprErf(
    assert(expr != NULL);
    assert(child != NULL);
 
-   exprhdlr = SCIPfindExprHdlr(scip, EXPRHDLR_NAME);
+   exprhdlr = SCIPfindExprhdlr(scip, EXPRHDLR_NAME);
    if( exprhdlr == NULL )
    {
       SCIPerrorMessage("could not find %s expression handler -> abort\n", EXPRHDLR_NAME);

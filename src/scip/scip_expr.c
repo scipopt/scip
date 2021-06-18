@@ -258,7 +258,7 @@ SCIP_RETCODE parseBase(
       }
 
       /* search for expression handler */
-      exprhdlr = SCIPfindExprHdlr(scip, operatorname);
+      exprhdlr = SCIPfindExprhdlr(scip, operatorname);
 
       /* check expression handler exists and has a parsing method */
       if( exprhdlr == NULL )
@@ -799,7 +799,7 @@ SCIP_RETCODE hashExpr(
 
 /** creates the handler for an expression handler and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlr(
+SCIP_RETCODE SCIPincludeExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
    const char*           name,               /**< name of expression handler (must not be NULL) */
@@ -822,7 +822,7 @@ SCIP_RETCODE SCIPincludeExprHdlr(
 }
 
 /** gives expression handlers */
-SCIP_EXPRHDLR** SCIPgetExprHdlrs(
+SCIP_EXPRHDLR** SCIPgetExprhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -833,7 +833,7 @@ SCIP_EXPRHDLR** SCIPgetExprHdlrs(
 }
 
 /** gives number of expression handlers */
-int SCIPgetNExprHdlrs(
+int SCIPgetNExprhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -844,7 +844,7 @@ int SCIPgetNExprHdlrs(
 }
 
 /** returns an expression handler of a given name (or NULL if not found) */
-SCIP_EXPRHDLR* SCIPfindExprHdlr(
+SCIP_EXPRHDLR* SCIPfindExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of expression handler */
    )
@@ -856,7 +856,7 @@ SCIP_EXPRHDLR* SCIPfindExprHdlr(
 }
 
 /** returns expression handler for variable expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrVar(
+SCIP_EXPRHDLR* SCIPgetExprhdlrVar(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -867,7 +867,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrVar(
 }
 
 /** returns expression handler for constant value expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrValue(
+SCIP_EXPRHDLR* SCIPgetExprhdlrValue(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -878,7 +878,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrValue(
 }
 
 /** returns expression handler for sum expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrSum(
+SCIP_EXPRHDLR* SCIPgetExprhdlrSum(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -889,7 +889,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrSum(
 }
 
 /** returns expression handler for product expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrProduct(
+SCIP_EXPRHDLR* SCIPgetExprhdlrProduct(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -900,7 +900,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrProduct(
 }
 
 /** returns expression handler for power expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrPower(
+SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
