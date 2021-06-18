@@ -761,7 +761,9 @@ SCIP_RETCODE solveSubNLP(
          if( stored )
          {
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "SCIP stored solution from sub-SCIP root node\n");
+            {
+               SCIPinfoMessage(scip, NULL, "SCIP stored solution from sub-SCIP root node\n");
+            }
             else
             {
                SCIPdebugMsg(scip, "SCIP stored solution from sub-SCIP root node\n");
@@ -773,7 +775,9 @@ SCIP_RETCODE solveSubNLP(
          else
          {
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "SCIP did not store sub-SCIP optimal solution\n");
+            {
+               SCIPinfoMessage(scip, NULL, "SCIP did not store sub-SCIP optimal solution\n");
+            }
             else
             {
                SCIPdebugMsg(scip, "SCIP did not store sub-SCIP optimal solution\n");
@@ -789,7 +793,9 @@ SCIP_RETCODE solveSubNLP(
          if( stored )
          {
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "SCIP solution from sub-SCIP root node is feasible\n");
+            {
+               SCIPinfoMessage(scip, NULL, "SCIP solution from sub-SCIP root node is feasible\n");
+            }
             else
             {
                SCIPdebugMsg(scip, "SCIP solution from sub-SCIP root node is feasible\n");
@@ -801,7 +807,9 @@ SCIP_RETCODE solveSubNLP(
          else
          {
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "SCIP solution form sub-SCIP root node is not feasible\n");
+            {
+               SCIPinfoMessage(scip, NULL, "SCIP solution form sub-SCIP root node is not feasible\n");
+            }
             else
             {
                SCIPdebugMsg(scip, "SCIP solution form sub-SCIP root node is not feasible\n");
@@ -817,7 +825,9 @@ SCIP_RETCODE solveSubNLP(
    if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
    {
       if( heurdata->nlpverblevel >= 1 )
-         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "sub-SCIP detected infeasibility\n");
+      {
+         SCIPinfoMessage(scip, NULL, "sub-SCIP detected infeasibility\n");
+      }
       else
       {
          SCIPdebugMsg(scip, "sub-SCIP detected infeasibility\n");
@@ -866,7 +876,9 @@ SCIP_RETCODE solveSubNLP(
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, SCIPgetNNLPVars(heurdata->subscip)) );
 
    if( heurdata->nlpverblevel >= 2 )
-      SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "set NLP starting point\n");
+   {
+      SCIPinfoMessage(scip, NULL, "set NLP starting point\n");
+   }
 
    for( i = 0; i < SCIPgetNNLPVars(heurdata->subscip); ++i )
    {
@@ -884,7 +896,9 @@ SCIP_RETCODE solveSubNLP(
          startpoint[i] = constant;
 
          if( heurdata->nlpverblevel >= 2 && !SCIPisZero(heurdata->subscip, startpoint[i]) )
-            SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "%s = %e\n", SCIPvarGetName(SCIPgetNLPVars(heurdata->subscip)[i]), startpoint[i]);
+         {
+            SCIPinfoMessage(scip, NULL, "%s = %e\n", SCIPvarGetName(SCIPgetNLPVars(heurdata->subscip)[i]), startpoint[i]);
+         }
 
          continue;
       }
@@ -899,7 +913,9 @@ SCIP_RETCODE solveSubNLP(
          startpoint[i] = scalar * SCIPgetSolVal(scip, refpoint, var) + constant;
 
       if( heurdata->nlpverblevel >= 2  && !SCIPisZero(heurdata->subscip, startpoint[i]) )
-         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "%s = %e\n", SCIPvarGetName(SCIPgetNLPVars(heurdata->subscip)[i]), startpoint[i]);
+      {
+         SCIPinfoMessage(scip, NULL, "%s = %e\n", SCIPvarGetName(SCIPgetNLPVars(heurdata->subscip)[i]), startpoint[i]);
+      }
    }
    SCIP_CALL( SCIPsetNLPInitialGuess(heurdata->subscip, startpoint) );
 
@@ -952,8 +968,10 @@ SCIP_RETCODE solveSubNLP(
    {
       /* oops, something did not go well at all */
      if( heurdata->nlpverblevel >= 1 )
-        SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "NLP solver in subNLP heuristic for problem <%s> returned with bad termination status %d.",
+     {
+        SCIPinfoMessage(scip, NULL, "NLP solver in subNLP heuristic for problem <%s> returned with bad termination status %d.",
            SCIPgetProbName(scip), SCIPgetNLPTermstat(heurdata->subscip));
+     }
 
      ++(heurdata->nseriousnlpierror);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, 
@@ -1013,7 +1031,9 @@ SCIP_RETCODE solveSubNLP(
          if( stored )
          {  /* SCIP stored solution (yippi!), so we are done */
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "SCIP stored subnlp solution\n");
+            {
+               SCIPinfoMessage(scip, NULL, "SCIP stored subnlp solution\n");
+            }
             else
             {
                SCIPdebugMsg(scip, "SCIP stored subnlp solution\n");
@@ -1026,8 +1046,10 @@ SCIP_RETCODE solveSubNLP(
          {
             /* if SCIP does not like solution, we try again with tighter tolerances recreate subproblem and resolve with tighter tolerances */
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g and epsilon %g\n",
+            {
+               SCIPinfoMessage(scip, NULL, "solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g and epsilon %g\n",
                   heurdata->resolvetolfactor*SCIPfeastol(scip), heurdata->resolvetolfactor*SCIPepsilon(scip));
+            }
             else
             {
                SCIPdebugMsg(scip, "solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g and epsilon %g\n",
@@ -1042,7 +1064,9 @@ SCIP_RETCODE solveSubNLP(
          else
          {
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "solution reported by NLP solver not stored by SCIP\n");
+            {
+               SCIPinfoMessage(scip, NULL, "solution reported by NLP solver not stored by SCIP\n");
+            }
             else
             {
                SCIPdebugMsg(scip, "solution reported by NLP solver not stored by SCIP\n");
@@ -1071,7 +1095,7 @@ SCIP_RETCODE solveSubNLP(
          {
             /* SCIP find solution feasible, so we are done */
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "solution reported by NLP solver feasible for SCIP\n");
+               SCIPinfoMessage(scip, NULL, "solution reported by NLP solver feasible for SCIP\n");
             else
             {
                SCIPdebugMsg(scip, "solution reported by NLP solver feasible for SCIP\n");
@@ -1088,9 +1112,11 @@ SCIP_RETCODE solveSubNLP(
              * recreate subproblem and resolve with tighter tolerances
              */
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip),
+            {
+               SCIPinfoMessage(scip, NULL,
                   "solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g and epsilon %g\n",
                   heurdata->resolvetolfactor*SCIPfeastol(scip), heurdata->resolvetolfactor*SCIPepsilon(scip));
+            }
             else
             {
                SCIPdebugMsg(scip, "solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g and epsilon %g\n",
@@ -1102,7 +1128,9 @@ SCIP_RETCODE solveSubNLP(
          else
          {
             if( heurdata->nlpverblevel >= 1 )
-               SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "solution reported by NLP solver not feasible for SCIP\n");
+            {
+               SCIPinfoMessage(scip, NULL, "solution reported by NLP solver not feasible for SCIP\n");
+            }
             else
             {
                SCIPdebugMsg(scip, "solution reported by NLP solver not feasible for SCIP\n");
@@ -1121,7 +1149,7 @@ SCIP_RETCODE solveSubNLP(
          sol = NULL;
          SCIP_CALL( createSolFromNLP(scip, heur, &sol, authorheur) );
 
-         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "subnlp solution is infeasible\n");
+         SCIPinfoMessage(scip, NULL, "subnlp solution is infeasible\n");
 
          /* print the infeasibilities to stdout */
          SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
@@ -1131,7 +1159,7 @@ SCIP_RETCODE solveSubNLP(
       else if( heurdata->nlpverblevel >= 1
          && !SCIPisLE(scip, SCIPgetNLPObjval(heurdata->subscip), SCIPgetObjlimit(heurdata->subscip)) )
       {
-         SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "subnlp solution objval %e is above the objlimit %e\n",
+         SCIPinfoMessage(scip, NULL, "subnlp solution objval %e is above the objlimit %e\n",
             SCIPgetNLPObjval(heurdata->subscip), SCIPgetObjlimit(heurdata->subscip));
       }
    }
@@ -1930,7 +1958,9 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    *result = SCIP_DIDNOTFIND;
 
    if( heurdata->nlpverblevel >= 1 )
-      SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "calling subnlp heuristic\n");
+   {
+      SCIPinfoMessage(scip, NULL, "calling subnlp heuristic\n");
+   }
 
    SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent, timelimit,
          heurdata->minimprove, &iterused, NULL) );
