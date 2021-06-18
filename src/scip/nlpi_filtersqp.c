@@ -62,7 +62,6 @@
 #define OPTTOLFACTOR           0.5           /**< factor to apply to optimality tolerance, because FilterSQP do scaling */
 #define DEFAULT_LOBJLIM        (real)(-1e100) /**< default lower objective limit (should mean "unlimited") */
 #define DEFAULT_FEASOPTTOL     1e-6          /**< default feasibility and optimality tolerance */
-#define DEFAULT_MAXITER        3000          /**< default iteration limit */
 
 /*
  * Data structures
@@ -942,7 +941,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    (*problem)->opttol = DEFAULT_FEASOPTTOL;
    (*problem)->fmin = DEFAULT_LOBJLIM;
    (*problem)->maxtime = DBL_MAX;
-   (*problem)->maxiter = DEFAULT_MAXITER;
+   (*problem)->maxiter = INT_MAX;
    (*problem)->iprint = 0;
 
    invalidateSolution(*problem);

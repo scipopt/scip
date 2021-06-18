@@ -53,7 +53,6 @@
 
 #define DEFAULT_VERBLEVEL      0                            /**< default verbosity level (0: normal 1: full 2: debug >2: more debug) */
 #define DEFAULT_SCALEDKKT      TRUE                         /**< default whether KKT conditions are allowed to be scaled in the solver */
-#define DEFAULT_MAXITER        3000                         /**< default iteration limit for Worhp */
 #define DEFAULT_RANDSEED       107                          /**< initial random seed */
 
 #define MAXPERTURB             0.01                         /**< maximal perturbation of bounds in starting point heuristic */
@@ -971,7 +970,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    (*problem)->timelim = SCIP_DEFAULT_INFINITY;
    (*problem)->fromscratch = 0;
    (*problem)->verblevel = DEFAULT_VERBLEVEL;
-   (*problem)->itlim = DEFAULT_MAXITER;
+   (*problem)->itlim = INT_MAX;
    (*problem)->fastfail = 0;
 
    /* create random number generator */

@@ -154,6 +154,7 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
       }
    }
    SCIP_CALL( SCIPsetNlpiRealPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   SCIP_CALL( SCIPsetNlpiIntPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_ITLIM, 3000) );  // TODO what could be a meaningful limit?
 
 #ifdef SCIP_MOREDEBUG
       SCIP_CALL( SCIPsetNlpiIntPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );

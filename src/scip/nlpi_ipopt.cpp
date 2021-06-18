@@ -92,7 +92,6 @@ using namespace Ipopt;
 #else
 #define DEFAULT_PRINTLEVEL J_STRONGWARNING  /**< default print level of Ipopt */
 #endif
-#define DEFAULT_MAXITER    3000              /**< default iteration limit for Ipopt */
 
 #define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
 #define FEASTOLFACTOR      0.9               /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
@@ -627,7 +626,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (void) (*problem)->ipopt->Options()->SetStringValue("print_user_options", "yes");
 #endif
    (void) (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
-   (void) (*problem)->ipopt->Options()->SetIntegerValue("max_iter", DEFAULT_MAXITER);
+   (void) (*problem)->ipopt->Options()->SetIntegerValue("max_iter", INT_MAX);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
