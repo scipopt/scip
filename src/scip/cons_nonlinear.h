@@ -537,7 +537,7 @@ SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** returns representation of the expression of the given expression constraint as quadratic form, if possible
+/** checks whether expression of constraint can be represented as quadratic form
  *
  * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
  * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
