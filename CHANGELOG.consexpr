@@ -90,6 +90,7 @@ Performance improvements
 - improved under/overestimation of multidimensional vertex-polyhedral (e.g., multilinear or concave) functions by use of scaling and keeping the cut generating LP around
 - products in nonlinear constraints are no longer disaggregated for the extended formulation
 - no longer relax bounds of integral variables when computing bounds on activity in nonlinear constraints
+- revised and improved Ipopt interface
 
 Examples and applications
 -------------------------
