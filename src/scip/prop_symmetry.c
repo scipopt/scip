@@ -2741,8 +2741,8 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-   /* set up data for Schreier Sims constraints */
-   if ( propdata->sstenabled && ! propdata->ofenabled )
+   /* set up data for Schreier Sims constraints or subgroup detection */
+   if ( (propdata->sstenabled || propdata->detectsubgroups) && ! propdata->ofenabled )
    {
       int v;
 
@@ -4134,7 +4134,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int nusedperms;
       int ntrivialcolors = 0;
       int j;
-      SCIP_Bool useorbitope;
       int* lexorder = NULL;
       int nvarslexorder = 0;
       int maxnvarslexorder = 0;
@@ -4295,6 +4294,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          int k;
          SCIP_Bool isorbitope = TRUE;
          SCIP_Bool orbitopeadded = FALSE;
+         SCIP_Bool useorbitope;
 #ifdef SCIP_DEBUG
          SCIP_Bool binaffected = FALSE;
          SCIP_Bool intaffected = FALSE;
