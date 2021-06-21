@@ -31,7 +31,7 @@ do
 done
 
 TESTSETS=""
-for i in $(ls -1 "${FILES}" | sed 's!\(.*\)check\.\([^ .]*\)\.\([^ ]*\)\.res!\2!g' | sort -u)
+for i in $(ls -1 ${FILES} | sed 's!\(.*\)check\.\([^ .]*\)\.\([^ ]*\)\.res!\2!g' | sort -u)
 do
     TESTSETS="${TESTSETS} ${i}"
 done
@@ -42,6 +42,6 @@ for i in ${TESTSETS}
 do
     echo
     echo "====vvvv==== ${i} ====vvvv===="
-    awk -f cmpres.awk "${AWKARGS}" texcmpfile="cmpres.${i}.tex" $(ls -1f "${FILES}" | grep "${i}\..*\.res")
+    awk -f cmpres.awk "${AWKARGS}" texcmpfile="cmpres.${i}.tex" $(ls -1f ${FILES} | grep "${i}\..*\.res")
     echo "====^^^^==== ${i} ====^^^^===="
 done
