@@ -1270,9 +1270,9 @@ SCIP_RETCODE SCIPreleaseVar(
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
-      if( !SCIPvarIsTransformed(*var) && (*var)->nuses == 1 )
+      if( !SCIPvarIsTransformed(*var) && (*var)->nuses == 1 && (*var)->data.original.transvar != NULL )
       {
-         SCIPerrorMessage("cannot release last use of original variable while the transformed problem exists\n");
+         SCIPerrorMessage("cannot release last use of original variable while associated transformed variable exists\n");
          return SCIP_INVALIDCALL;
       }
       SCIP_CALL( SCIPvarRelease(var, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
