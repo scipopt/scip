@@ -54,5 +54,6 @@ do
     # defines the following environment variable: SOLUFILE
     . ./configuration_solufile.sh "${TSTNAME}"
 
-    awk -f check_count.awk "${AWKARGS}" "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
+    # the variable AWKARGS needs to be without quotation marks here
+    awk -f check_count.awk ${AWKARGS} "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"
 done

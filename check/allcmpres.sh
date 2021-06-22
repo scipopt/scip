@@ -17,6 +17,7 @@
 # Generate a comparison of two testruns, i.e. with different settings.
 #
 # Usage: 'allcmpres.sh check.run1.res check.run2.res'
+#        'allcmpres.sh check.run1.*.res'
 
 AWKARGS=""
 FILES=""
@@ -42,6 +43,7 @@ for i in ${TESTSETS}
 do
     echo
     echo "====vvvv==== ${i} ====vvvv===="
-    awk -f cmpres.awk "${AWKARGS}" texcmpfile="cmpres.${i}.tex" $(ls -1f ${FILES} | grep "${i}\..*\.res")
+    # the variable AWKARGS needs to be without quotation marks here
+    awk -f cmpres.awk ${AWKARGS} texcmpfile="cmpres.${i}.tex" $(ls -1f ${FILES} | grep "${i}\..*\.res")
     echo "====^^^^==== ${i} ====^^^^===="
 done
