@@ -3065,10 +3065,6 @@ SCIP_RETCODE nlpSolve(
       SCIPsetFreeBufferArray(set, &initialguess_solver);
    }
 
-   /* set NLP tolerances to current SCIP primal and dual feasibility tolerance */
-   SCIP_CALL( SCIPnlpiSetRealPar(set, nlp->solver, nlp->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
-   SCIP_CALL( SCIPnlpiSetRealPar(set, nlp->solver, nlp->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
-
    /* set the NLP timelimit to the remaining time */
    SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &sciptimelimit) );
    timeleft = sciptimelimit - SCIPclockGetTime(stat->solvingtime);
@@ -3456,6 +3452,10 @@ SCIP_RETCODE SCIPnlpCreate(
       }
       assert((*nlp)->solver != NULL);
       SCIP_CALL( SCIPnlpiCreateProblem(set, (*nlp)->solver, &(*nlp)->problem, "scip_nlp") );
+
+      /* set NLP tolerances to current SCIP primal and dual feasibility tolerance */
+      SCIP_CALL( SCIPnlpiSetRealPar(set, (*nlp)->solver, (*nlp)->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
+      SCIP_CALL( SCIPnlpiSetRealPar(set, (*nlp)->solver, (*nlp)->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
    }
    else
    {
