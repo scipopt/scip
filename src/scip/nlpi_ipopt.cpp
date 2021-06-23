@@ -631,9 +631,10 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
-   // disable acceptable-point heuristic for now
-   // we should add some options to the NLPI to let the user control this
-   (void) (*problem)->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
+   // todo disable acceptable-point heuristic?
+   // it seems useful to have Ipopt stop when it obviously doesn't make progress (like one of the NLPs in the bendersqp ctest)
+   // maybe there should be some option to the NLPI to let the user control this
+   // (void) (*problem)->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
    /* (void) (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
    setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
