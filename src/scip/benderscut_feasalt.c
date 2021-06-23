@@ -382,7 +382,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
                SCIPbenderscutGetNFound(benderscut));
          }
       }
-      SCIPdebugMsg(masterprob, "Constraints %s has been added to the master problem.\n", cutname);
+      SCIPdebugMsg(masterprob, "Constraint <%s> has been added to the master problem.\n", cutname);
    }
 
    return SCIP_OKAY;

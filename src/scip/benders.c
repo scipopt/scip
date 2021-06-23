@@ -4673,7 +4673,9 @@ SCIP_RETCODE setSubproblemParams(
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subproblem, "misc/catchctrlc", FALSE) );
 
+#ifndef SCIP_MOREDEBUG
    SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+#endif
 
    SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxrounds", 0) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "propagating/maxroundsroot", 0) );

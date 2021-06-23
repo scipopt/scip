@@ -900,6 +900,12 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
          verifyobj += SCIPgetLhsLinear(masterprob, cons) - SCIPgetActivityLinear(masterprob, cons, sol);
       }
 
+      if( feasibilitycut && verifyobj < SCIPfeastol(masterprob) )
+      {
+         success = FALSE;
+         SCIPdebugMsg(masterprob, "The violation of the feasibility cut (%g) is too small. Skipping feasibility cut.\n", verifyobj);
+      }
+
       /* it is possible that numerics will cause the generated cut to be invalid. This cut should not be added to the
        * master problem, since its addition could cut off feasible solutions. The success flag is set of false, indicating
        * that the Benders' cut could not find a valid cut.
@@ -990,7 +996,7 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
       else
       {
          (*result) = SCIP_DIDNOTFIND;
-         SCIPdebugMsg(masterprob, "Error in generating Benders' optimality cut for problem %d.\n", probnumber);
+         SCIPdebugMsg(masterprob, "Error in generating Benders' %s cut for problem %d.\n", feasibilitycut ? "feasibility" : "optimality", probnumber);
       }
 
       /* releasing the row or constraint */
