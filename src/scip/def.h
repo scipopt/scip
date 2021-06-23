@@ -57,8 +57,11 @@
 
 /*
  * define whether compiler allows variadic macros
+ * __STDC_VERSION__ only exists for C code
+ * added the extra check using the GCC_VERSION to enable variadic macros also with C++ code with GCC atleast
+ *
  */
-#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L )
+#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L ) || ( GCC_VERSION >= 480 )
 #define SCIP_HAVE_VARIADIC_MACROS 1
 #endif
 
