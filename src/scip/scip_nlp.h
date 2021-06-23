@@ -345,8 +345,10 @@ SCIP_Real SCIPgetNLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** indicates whether a feasible solution for the current NLP is available
- * thus, returns whether the solution status <= feasible
+/** indicates whether a solution for the current NLP is available
+ *
+ * The solution may be optimal, feasible, or infeasible.
+ * Thus, returns whether the NLP solution status is at most locinfeasible.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE

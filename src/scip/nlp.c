@@ -4383,15 +4383,18 @@ SCIP_RETCODE SCIPnlpGetStatistics(
    return SCIP_OKAY;
 }
 
-/** indicates whether a feasible solution for the current NLP is available
- * thus, returns whether the solution status <= feasible  */
+/** indicates whether a solution for the current NLP is available
+ *
+ * The solution may be optimal, feasible, or infeasible.
+ * Thus, returns whether the NLP solution status is at most locinfeasible.
+ */
 SCIP_Bool SCIPnlpHasSolution(
    SCIP_NLP*             nlp                 /**< current NLP data */
    )
 {
    assert(nlp != NULL);
 
-   return nlp->solstat <= SCIP_NLPSOLSTAT_FEASIBLE;
+   return nlp->solstat <= SCIP_NLPSOLSTAT_LOCINFEASIBLE;
 }
 
 /** gets integer parameter of NLP */

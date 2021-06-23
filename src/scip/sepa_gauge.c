@@ -929,7 +929,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
          SCIP_CALL( SCIPcreateSolCopy(scip, &sepadata->intsol, SCIPgetBestSol(scip)) );
          sepadata->isintsolavailable = TRUE;
       }
-      else if( SCIPhasNLPSolution(scip) )
+      else if( SCIPnlpGetSolstat(scip) <= SCIP_NLPSOLSTAT_FEASIBLE )
       {
          SCIPdebugMsg(scip, "Using NLP solution as interior point!\n");
          SCIP_CALL( SCIPcreateNLPSol(scip, &sepadata->intsol, NULL) );
