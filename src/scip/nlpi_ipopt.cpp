@@ -433,7 +433,8 @@ protected:
    {  /*lint --e{715} */
       if( level == J_ERROR )
       {
-         SCIPerrorMessage(pformat, ap);
+         SCIPmessagePrintErrorHeader(__FILE__, __LINE__);
+         SCIPmessageVPrintError(pformat, ap);
       }
       else
       {
