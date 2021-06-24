@@ -226,9 +226,7 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
-   SCIP_VAR** subvars;
    int nrows;
-   int nsubvars;
    SCIP_Real activity;
    SCIP_Real dirderiv;
    SCIP_Real dualsol;
@@ -241,9 +239,6 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    assert(SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_LOCINFEASIBLE || SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE);
 
    (*success) = FALSE;
-
-   nsubvars = SCIPgetNNLPVars(subproblem);
-   subvars = SCIPgetNLPVars(subproblem);
 
    *lhs = 0.0;
    dirderiv = 0.0;
@@ -278,32 +273,6 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
          assert(!SCIPisInfinity(subproblem, -SCIPnlrowGetLhs(nlrow)));
          *lhs += dualsol * (activity - SCIPnlrowGetLhs(nlrow));
       }
-   }
-
-   /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
-   for( i = 0; i < nsubvars; i++ )
-   {
-      SCIP_VAR* var;
-      SCIP_VAR* mastervar;
-      SCIP_Real coef;
-
-      var = subvars[i];
-
-      /* retrieving the master problem variable for the given subproblem variable. */
-      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
-
-      dualsol = SCIPgetNLPVarsUbDualsol(subproblem)[i] - SCIPgetNLPVarsLbDualsol(subproblem)[i];
-
-      /* checking whether the subproblem variable has a corresponding master variable. */
-      if( mastervar == NULL || dualsol == 0.0 )
-         continue;
-
-      coef = -dualsol;
-
-      /* adding the variable to the storage */
-      SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
-
-      dirderiv += coef * SCIPvarGetNLPSol(var);
    }
 
    *lhs += dirderiv;
