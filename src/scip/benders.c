@@ -63,7 +63,8 @@
 #define SCIP_DEFAULT_STRENGTHENINTPOINT     'r'  /** where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros) */
 #define SCIP_DEFAULT_NUMTHREADS               1  /** the number of parallel threads to use when solving the subproblems */
 #define SCIP_DEFAULT_EXECFEASPHASE        FALSE  /** should a feasibility phase be executed during the root node processing */
-#define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the objective coefficient of the slack variables in the subproblem */
+#define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the initial objective coefficient of the slack variables in the subproblem */
+#define SCIP_DEFAULT_MAXSLACKVARCOEF       1e+9  /** the maximal objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
@@ -1168,8 +1169,13 @@ SCIP_RETCODE doBendersCreate(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/slackvarcoef", name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
-         "the objective coefficient of the slack variables in the subproblem", &(*benders)->slackvarcoef, FALSE,
+         "the initial objective coefficient of the slack variables in the subproblem", &(*benders)->slackvarcoef, FALSE,
          SCIP_DEFAULT_SLACKVARCOEF, 0.0, SCIPsetInfinity(set), NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/maxslackvarcoef", name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
+         "the maximal objective coefficient of the slack variables in the subproblem", &(*benders)->maxslackvarcoef, FALSE,
+         SCIP_DEFAULT_MAXSLACKVARCOEF, 0.0, SCIPsetInfinity(set), NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/checkconsconvexity", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
@@ -4060,9 +4066,16 @@ TERMINATE:
          else
          {
             /* increasing the value of the slack variable by a factor of 10 */
-            benders->slackvarcoef *= 10;
+            benders->slackvarcoef *= 10.0;
 
-            printf("Increasing the slack variable coefficient to %g\n", benders->slackvarcoef);
+            if( benders->slackvarcoef <= benders->maxslackvarcoef )
+            {
+               SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(set->scip), set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "Increasing the slack variable coefficient to %g.\n", benders->slackvarcoef);
+            }
+            else
+            {
+               SCIPmessagePrintVerbInfo(SCIPgetMessagehdlr(set->scip), set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "Fixing the slack variables to zero.\n");
+            }
 
             /* resolving the subproblems with an increased slack variable */
             SCIP_CALL( SCIPsolveBendersSubproblems(set->scip, benders, sol, result, infeasible, auxviol, type, checkint) );
@@ -4432,12 +4445,19 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
           */
          if( benders->feasibilityphase && SCIPgetDepth(set->scip) == 0 && type != SCIP_BENDERSENFOTYPE_CHECK )
          {
-            /* The coefficient update can only be performed if the subproblem is in probing mode. */
+            /* The coefficient update or variable fixing can only be performed if the subproblem is in probing mode.
+             * If the slack var coef gets very large, then we fix the slack variable to 0 instead.
+             */
             if( SCIPinProbing(subproblem) )
             {
-               SCIP_Real coef = benders->slackvarcoef;
-
-               SCIP_CALL( SCIPchgVarObjProbing(subproblem, vars[i], coef) );
+               if( benders->slackvarcoef <= benders->maxslackvarcoef )
+               {
+                  SCIP_CALL( SCIPchgVarObjProbing(subproblem, vars[i], benders->slackvarcoef) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPchgVarUbProbing(subproblem, vars[i], 0.0) );
+               }
             }
          }
          else
