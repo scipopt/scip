@@ -1945,9 +1945,9 @@ SCIP_RETCODE setParams(
    if( setParamsSepaIsBad(probdata) )
    {
       const int zerhalf_nrounds = sepaBadGetZeroHalfMaxrounds(graph);
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 0));
-	   SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 0));
-	   SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 0));
+      SCIP_CALL(SCIPsetBoolParam(scip, "separating/aggregation/delay", TRUE));
+	   SCIP_CALL(SCIPsetBoolParam(scip, "separating/strongcg/delay", TRUE));
+	   SCIP_CALL(SCIPsetBoolParam(scip, "separating/gomory/delay", TRUE));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", zerhalf_nrounds));
    }
    else
