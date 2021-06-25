@@ -2878,6 +2878,9 @@ SCIP_RETCODE SCIPsetFree(
    }
    BMSfreeMemoryArrayNull(&(*set)->banditvtables);
 
+   /* free debugging data structure */
+   SCIP_CALL( SCIPdebugFree(*set) );
+
    BMSfreeMemory(set);
 
    return SCIP_OKAY;
