@@ -19,6 +19,8 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- add missing SCIP_EXPORT to SCIPexprCreateQuadratic(), thanks to Liding Xu
+
 ### New API functions
 
 ### Command line interface
