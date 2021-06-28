@@ -483,72 +483,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 }
 
 
-/** adds logic-or constraints to NLP */
-static
-SCIP_RETCODE addLogicOrConstraints(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler for linear constraints */
-   )
-{
-   SCIP_CONS**   conss;
-   int           nconss;
-   SCIP_NLROW*   nlrow;
-   int           i;
-   int           j;
-   SCIP_Real*    coefs;
-   int           coefssize;
-   int           nvars;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-
-   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-   if( !nconss )
-      return SCIP_OKAY;
-
-   conss = SCIPconshdlrGetConss(conshdlr);
-
-   coefs = NULL;
-   coefssize = 0;
-
-   for( i = 0; i < nconss; ++i )
-   {
-      /* skip local and redundant constraints */
-      if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
-         continue;
-
-      nvars = SCIPgetNVarsLogicor(scip, conss[i]);
-
-      if( coefssize < nvars )
-      {
-         if( coefs == NULL )
-         {
-            SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, nvars) );
-         }
-         for( j = coefssize; j < nvars; ++j )
-            coefs[j] = 1.0;
-         coefssize = nvars;
-      }
-
-      /* logic or constraints: 1 <= sum_j x_j */
-
-      SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs, NULL,
-            1.0, SCIPinfinity(scip),
-            SCIP_EXPRCURV_LINEAR) );
-
-      SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
-      SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
-   }
-
-   SCIPfreeBufferArrayNull(scip, &coefs);
-
-   return SCIP_OKAY;
-}
 
 /** adds setppc constraints to NLP */
 static
@@ -723,13 +657,6 @@ SCIP_RETCODE addLinearConstraintsToNlp(
 
    if( addcombconss )
    {
-      /* add logic-or constraints */
-      conshdlr = SCIPfindConshdlr(scip, "logicor");
-      if( conshdlr != NULL )
-      {
-         SCIP_CALL( addLogicOrConstraints(scip, conshdlr) );
-      }
-
       /* add setppc constraints */
       conshdlr = SCIPfindConshdlr(scip, "setppc");
       if( conshdlr != NULL )
