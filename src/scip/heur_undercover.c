@@ -2869,7 +2869,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    if( heurdata->nlconshdlrs[h] != NULL )
       h++;
 
-   heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "expr");
+   heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "nonlinear");
    if( heurdata->nlconshdlrs[h] != NULL )
       h++;
 
