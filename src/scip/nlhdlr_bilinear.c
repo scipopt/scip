@@ -763,7 +763,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
    int restotal = 0;
    int c;
 
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(conshdlr != NULL);
    nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, NLHDLR_NAME);
    assert(nlhdlr != NULL);
