@@ -483,62 +483,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 }
 
 
-/** adds variable bound constraints from a SCIP instance to its NLP */
-static
-SCIP_RETCODE addVarboundConstraints(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for linear constraints */
-   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints to NLP */
-   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints to NLP */
-   )
-{
-   SCIP_CONS**   conss;
-   int           nconss;
-   SCIP_NLROW*   nlrow;
-   int           i;
-   SCIP_VAR*     vars[2];
-   SCIP_Real     coefs[2];
-   SCIP_Bool     iscombinatorial;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-
-   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-   conss  = SCIPconshdlrGetConss(conshdlr);
-
-   if( nconss == 0 )
-      return SCIP_OKAY;
-
-   for( i = 0; i < nconss; ++i )
-   {
-      /* skip local and redundant constraints */
-      if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
-         continue;
-
-      vars[0] = SCIPgetVarVarbound(scip, conss[i]);
-      vars[1] = SCIPgetVbdvarVarbound(scip, conss[i]);
-
-      iscombinatorial = SCIPvarGetType(vars[0]) < SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[1]) < SCIP_VARTYPE_CONTINUOUS;
-
-      /* skip constraint, if not of interest */
-      if( (iscombinatorial && !addcombconss) || (!iscombinatorial && !addcontconss) )
-         continue;
-
-      coefs[0] = 1.0;
-      coefs[1] = SCIPgetVbdcoefVarbound(scip, conss[i]);
-
-      SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            2, vars, coefs, NULL,
-            SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i]),
-            SCIP_EXPRCURV_LINEAR) );
-
-      SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
-      SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** adds logic-or constraints to NLP */
 static
 SCIP_RETCODE addLogicOrConstraints(
@@ -776,13 +720,6 @@ SCIP_RETCODE addLinearConstraintsToNlp(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-
-   /* add varbound constraints */
-   conshdlr = SCIPfindConshdlr(scip, "varbound");
-   if( conshdlr != NULL )
-   {
-      SCIP_CALL( addVarboundConstraints(scip, conshdlr, addcombconss, addcontconss) );
-   }
 
    if( addcombconss )
    {
