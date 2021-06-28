@@ -772,7 +772,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
 
    /* allocate memory */
    SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nlhdlrdata->nexprs) );
-   SCIP_CALL( SCIPcreateExpriter(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
 
    for( c = 0; c < nlhdlrdata->nexprs; ++c )
    {
@@ -786,7 +786,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
       SCIP_CONS* cons = SCIPconshdlrGetConss(conshdlr)[c];
       SCIP_EXPR* expr;
 
-      SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprNonlinear(scip, cons), SCIP_EXPRITER_DFS, FALSE) );
+      SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprNonlinear(cons), SCIP_EXPRITER_DFS, FALSE) );
 
       for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
