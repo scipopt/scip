@@ -72,9 +72,9 @@ SCIP_Bool SCIPisNLPEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** marks that there are constraints that are representable by nonlinear rows
+/** notifies SCIP that the NLP relaxation should be initialized in INITSOLVE
  *
- *  This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
+ *  This method is typically called by a constraint handler that handles constraints that have a nonlinear representation as nonlinear rows, e.g., cons_nonlinear.
  *
  *  The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
  *
@@ -83,8 +83,6 @@ SCIP_Bool SCIPisNLPEnabled(
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
 void SCIPenableNLP(

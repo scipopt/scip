@@ -133,6 +133,7 @@ NLP:
 - removed arguments nquadvars, quadvars, nquadelems, quadelems from SCIPcreateNlRow(); argument expr(ession) is now of type SCIP_EXPR*
 - removed SCIPaddQuadVarToNlRow(), SCIPaddQuadVarsToNlRow(), SCIPaddQuadElementToNlRow(), SCIPaddQuadElementsToNlRow(), SCIPchgNlRowQuadElement(), SCIPsetNlRowExprtreeParam(), SCIPsetNlRowExprtreeParams()
 - renamed SCIPsetNlRowExprtree() to SCIPsetNlRowExpr() and changed type of expr(tree) argument to SCIP_EXPR*
+- SCIPenableNLP() is no longer allowed in stages INITSOLVE and SOLVING
 
 exprinterpret:
 - removed functions that operated with SCIPInterval
