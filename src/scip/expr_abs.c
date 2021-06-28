@@ -54,7 +54,6 @@ SCIP_RETCODE computeCutsAbs(
    assert(scip != NULL);
 
    *nreturned = 0;
-   printf("building cut for |x| x in %g %g\n", bounds.inf, bounds.sup);
 
    if( ! overestimate )
    {
