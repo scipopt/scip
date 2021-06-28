@@ -203,6 +203,7 @@ struct SCIP_ConsData
    uint64_t              possignature;       /**< bit signature of coefficients that may take a positive value */
    uint64_t              negsignature;       /**< bit signature of coefficients that may take a negative value */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
+   SCIP_NLROW*           nlrow;              /**< NLP row, if constraint has been added to NLP relaxation */
    SCIP_VAR**            vars;               /**< variables of constraint entries */
    SCIP_Real*            vals;               /**< coefficients of constraint entries */
    SCIP_EVENTDATA**      eventdata;          /**< event data for bound change events of the variables */
@@ -964,6 +965,7 @@ SCIP_RETCODE consdataCreate(
    }
 
    (*consdata)->row = NULL;
+   (*consdata)->nlrow = NULL;
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
    (*consdata)->maxabsval = SCIP_INVALID;
@@ -1056,6 +1058,12 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* release the nlrow */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
    /* release variables */
@@ -7573,6 +7581,42 @@ SCIP_RETCODE addRelaxation(
          assert( pr == 0 || cr == 0 );
       }
 #endif
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds linear constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< linear constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local linear constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      assert(consdata->lhs <= consdata->rhs);
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+         0.0, consdata->nvars, consdata->vars, consdata->vals, NULL, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_LINEAR) );
+
+      assert(consdata->nlrow != NULL);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -15650,6 +15694,23 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolLinear)
+{  /*lint --e{715}*/
+
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -15659,7 +15720,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 
    assert(scip != NULL);
 
-   /* release the rows of all constraints */
+   /* release the rows and nlrows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
@@ -15670,6 +15731,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
 
@@ -15698,24 +15764,38 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 }
 
 
+/** constraint activation notification method of constraint handler */
+static
+SCIP_DECL_CONSACTIVE(consActiveLinear)
+{  /*lint --e{715}*/
+   assert(cons != NULL);
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** constraint deactivation notification method of constraint handler */
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveLinear)
 {  /*lint --e{715}*/
-   assert( cons != NULL );
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(cons != NULL );
+
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
    if( SCIPconsIsDeleted(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
-      SCIP_CONSDATA* consdata;
-
-      assert(scip != NULL);
-      assert(conshdlr != NULL);
-      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-      /* get constraint data */
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
 
       /* check for event handler */
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -15729,6 +15809,14 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLinear)
          SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
       }
       assert(consdata->eventdata == NULL);
+   }
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -17471,11 +17559,13 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinear, consCopyLinear) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveLinear) );
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveLinear) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinear) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsLinear) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitLinear) );
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreLinear) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolLinear) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolLinear) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeLinear) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsLinear) );

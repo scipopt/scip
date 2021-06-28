@@ -482,77 +482,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    return SCIP_OKAY;
 }
 
-/** adds linear constraints from a SCIP instance to its NLP */
-static
-SCIP_RETCODE addLinearConstraints(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for linear constraints */
-   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints to NLP */
-   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints to NLP */
-   )
-{
-   SCIP_CONS**   conss;
-   int           nconss;
-   SCIP_NLROW*   nlrow;
-   int           i;
-   int           j;
-   SCIP_Bool     iscombinatorial;
-   int           nvars;
-   SCIP_VAR**    vars;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-
-   nconss = SCIPconshdlrGetNActiveConss(conshdlr);
-   conss  = SCIPconshdlrGetConss(conshdlr);
-
-   if( nconss == 0 )
-      return SCIP_OKAY;
-
-   for( i = 0; i < nconss; ++i )
-   {
-      /* skip local and redundant constraints */
-      if( !SCIPconsIsEnabled(conss[i]) || !SCIPconsIsChecked(conss[i]) )
-         continue;
-
-      /* under some circumstances, this method may be called even though the problem has been shown to be infeasible in presolve already
-       * this infeasibility may come from a linear constraint with lhs > rhs
-       * the NLP does not allow such constraints, so we skip them here
-       */
-      if( !SCIPisRelLE(scip, SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i])) )
-         continue;
-
-      nvars = SCIPgetNVarsLinear(scip, conss[i]);
-      vars  = SCIPgetVarsLinear(scip, conss[i]);
-
-      /* check if constraint should be added, only need this check if we do not wanna any constraint anyway */
-      if( !addcombconss || !addcontconss )
-      {
-         iscombinatorial = TRUE;
-
-         for( j = 0; j < nvars; ++j )
-            if( SCIPvarGetType(vars[j]) >= SCIP_VARTYPE_CONTINUOUS )
-            {
-               iscombinatorial = FALSE;
-               break;
-            }
-
-         /* skip constraint, if not of interest */
-         if( (iscombinatorial && !addcombconss) || (!iscombinatorial && !addcontconss) )
-            continue;
-      }
-
-      SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]), NULL,
-            SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i]),
-            SCIP_EXPRCURV_LINEAR) );
-
-      SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
-      SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
-   }
-
-   return SCIP_OKAY;
-}
 
 /** adds variable bound constraints from a SCIP instance to its NLP */
 static
@@ -847,13 +776,6 @@ SCIP_RETCODE addLinearConstraintsToNlp(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-
-   /* add linear constraints */
-   conshdlr = SCIPfindConshdlr(scip, "linear");
-   if( conshdlr != NULL )
-   {
-      SCIP_CALL( addLinearConstraints(scip, conshdlr, addcombconss, addcontconss) );
-   }
 
    /* add varbound constraints */
    conshdlr = SCIPfindConshdlr(scip, "varbound");
