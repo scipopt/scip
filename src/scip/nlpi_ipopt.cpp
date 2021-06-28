@@ -144,6 +144,7 @@ struct SCIP_NlpiProblem
 {
 public:
    SCIP_NLPIORACLE*            oracle;       /**< Oracle-helper to store and evaluate NLP */
+   SCIP_RANDNUMGEN*            randnumgen;   /**< random number generator */
 
    SmartPtr<IpoptApplication>  ipopt;        /**< Ipopt application */
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
@@ -152,6 +153,7 @@ public:
 
    bool                        firstrun;     /**< whether the next NLP solve will be the first one */
    bool                        samestructure;/**< whether the NLP solved next will still have the same (Ipopt-internal) structure (same number of variables, constraints, bounds, and nonzero pattern) */
+   bool                        initguessrandom; /**< whether the initial guess should be set to random values for the next solve */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
 
    SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
@@ -166,9 +168,9 @@ public:
 
    /** constructor */
    SCIP_NlpiProblem()
-      : oracle(NULL),
+      : oracle(NULL), randnumgen(NULL),
         fastfail(false),
-        firstrun(true), samestructure(true), initguess(NULL),
+        firstrun(true), samestructure(true), initguessrandom(true), initguess(NULL),
         lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
         lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
         lastsolobjval(SCIP_INVALID), lastniter(-1), lasttime(-1.0)
@@ -180,7 +182,6 @@ class ScipNLP : public TNLP
 {
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
-   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP*                 scip;               /**< SCIP data structure */
 
    SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
@@ -201,19 +202,16 @@ public:
       SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
       SCIP*              scip_ = NULL        /**< SCIP data structure */
       )
-      : nlpiproblem(nlpiproblem_), randnumgen(NULL), scip(scip_), conv_lastrestoiter(-1),
+      : nlpiproblem(nlpiproblem_), scip(scip_), conv_lastrestoiter(-1),
         current_x(1), last_f_eval_x(0), last_g_eval_x(0),
         approxhessian(false)
    {
       assert(scip != NULL);
-      SCIP_CALL_ABORT_QUIET( SCIPcreateRandom(scip, &randnumgen, DEFAULT_RANDSEED, TRUE) );
    }
 
    /** destructor */
    ~ScipNLP()
    { /*lint --e{1540}*/
-      assert(randnumgen != NULL);
-      SCIPfreeRandom(scip, &randnumgen);
    }
 
    /** sets NLPI data structure */
@@ -469,6 +467,47 @@ void invalidateSolution(
    problem->lastsolobjval = SCIP_INVALID;
 }
 
+/** sets randomly generated initial guess */
+static
+SCIP_RETCODE generateInitGuess(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
+   )
+{
+   SCIP_Real lb, ub;
+   int n;
+
+   assert(problem != NULL);
+
+   SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+
+   n = SCIPnlpiOracleGetNVars(problem->oracle);
+
+   if( problem->randnumgen == NULL )
+   {
+      SCIP_CALL( SCIPcreateRandom(scip, &problem->randnumgen, DEFAULT_RANDSEED, TRUE) );
+   }
+
+   if( problem->initguess == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->initguess, n) );
+   }
+
+   for( int i = 0; i < n; ++i )
+   {
+      lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
+      ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
+      if( lb > 0.0 )
+         problem->initguess[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+      else if( ub < 0.0 )
+         problem->initguess[i] = SCIPrandomGetReal(problem->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+      else
+         problem->initguess[i] = SCIPrandomGetReal(problem->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+   }
+
+   return SCIP_OKAY;
+}
+
 /** sets feasibility tolerance parameter in Ipopt */
 static
 void setFeastol(
@@ -678,6 +717,11 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
    if( (*problem)->oracle != NULL )
    {
       SCIP_CALL( SCIPnlpiOracleFree(scip, &(*problem)->oracle) );
+   }
+
+   if( (*problem)->randnumgen != NULL )
+   {
+      SCIPfreeRandom(scip, &(*problem)->randnumgen);
    }
 
    BMSfreeMemoryArrayNull(&(*problem)->initguess);
@@ -926,9 +970,9 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
 
    SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, problem->oracle, dstats) );
 
-   if( problem->initguess != NULL )
+   if( problem->initguess != NULL && !problem->initguessrandom )
    {
-      // update initguess
+      // update initguess if we won't overwrite with a random one in the next solve
       int i;
       for( i = 0; i < dstatssize; ++i )
       {
@@ -1069,6 +1113,7 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
       {
          BMScopyMemoryArray(problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle));
       }
+      problem->initguessrandom = false;
    }
    else
    {
@@ -1101,6 +1146,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    problem->lastniter = -1;
    problem->lasttime  = -1.0;
    problem->lastsolobjval = SCIP_INVALID;
+
+   // set initial point if not given
+   if( problem->initguess == NULL || problem->initguessrandom )
+   {
+      SCIP_CALL( generateInitGuess(scip, problem) );
+   }
 
    try
    {
@@ -2160,32 +2211,10 @@ bool ScipNLP::get_starting_point(
 
    if( init_x )
    {
-      if( nlpiproblem->initguess != NULL )
-      {
-         BMScopyMemoryArray(x, nlpiproblem->initguess, n);
-      }
-      else
-      {
-         SCIP_Real lb, ub;
-
-         SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
-
-         if( BMSallocMemoryArray(&nlpiproblem->initguess, n) == NULL )
-            return false;
-
-         for( int i = 0; i < n; ++i )
-         {
-            lb = SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle)[i];
-            ub = SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle)[i];
-            if( lb > 0.0 )
-               x[i] = nlpiproblem->initguess[i] = SCIPrandomGetReal(randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
-            else if( ub < 0.0 )
-               x[i] = nlpiproblem->initguess[i] = SCIPrandomGetReal(randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
-            else
-               x[i] = nlpiproblem->initguess[i] = SCIPrandomGetReal(randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
-         }
-      }
+      assert(nlpiproblem->initguess != NULL);
+      BMScopyMemoryArray(x, nlpiproblem->initguess, n);
    }
+
    if( init_z || init_lambda )
       return false;
 
