@@ -677,7 +677,6 @@ static
 SCIP_DECL_HEUREXEC(heurExecMpec)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
-   SCIP_CONSHDLR* andhdlr = SCIPfindConshdlr(scip, "and");
    SCIP_CONSHDLR* sosonehdlr = SCIPfindConshdlr(scip, "SOS1");
    SCIP_CONSHDLR* sostwohdlr = SCIPfindConshdlr(scip, "SOS2");
 
@@ -692,8 +691,7 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
       return SCIP_OKAY;
 
    /* skip heuristic if constraints without a nonlinear representation are present */
-   if( (andhdlr != NULL && SCIPconshdlrGetNConss(andhdlr) > 0) ||
-      (sosonehdlr != NULL && SCIPconshdlrGetNConss(sosonehdlr) > 0) ||
+   if( (sosonehdlr != NULL && SCIPconshdlrGetNConss(sosonehdlr) > 0) ||
       (sostwohdlr != NULL && SCIPconshdlrGetNConss(sostwohdlr) > 0) )
    {
       return SCIP_OKAY;
