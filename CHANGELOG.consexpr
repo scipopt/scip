@@ -73,6 +73,7 @@ conshdlr:
 - new branching rule for variables in nonlinear constraints (implemented in the conshdlr) that scores candidates based on constraint violation, variable type, and pseudo-costs simultaneously
 - added tables to print statistics of nonlinear constraint handler and nonlinear handlers
 - added table to print statistics on quadratic nonlinear handlers
+- knapsack, linear, logicor, setppc, and varbound constraints now add themselves to the NLP relaxation, if enabled
 
 Performance improvements
 ------------------------
@@ -134,6 +135,7 @@ NLP:
 - removed SCIPaddQuadVarToNlRow(), SCIPaddQuadVarsToNlRow(), SCIPaddQuadElementToNlRow(), SCIPaddQuadElementsToNlRow(), SCIPchgNlRowQuadElement(), SCIPsetNlRowExprtreeParam(), SCIPsetNlRowExprtreeParams()
 - renamed SCIPsetNlRowExprtree() to SCIPsetNlRowExpr() and changed type of expr(tree) argument to SCIP_EXPR*
 - SCIPenableNLP() is no longer allowed in stages INITSOLVE and SOLVING
+- removed SCIPaddLinearConsToNlpHeurSubNlp()
 
 exprinterpret:
 - removed functions that operated with SCIPInterval

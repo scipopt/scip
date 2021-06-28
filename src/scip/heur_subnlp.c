@@ -482,21 +482,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    return SCIP_OKAY;
 }
 
-
-
-
-/** adds combinatorial and/or continuous variants of linear constraints from a SCIP instance to its NLP */
-static
-SCIP_RETCODE addLinearConstraintsToNlp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints to NLP */
-   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints to NLP */
-   )
-{
-
-   return SCIP_OKAY;
-}
-
 /* creates a SCIP_SOL in our SCIP space out of the solution from NLP solver in sub-SCIP */
 static
 SCIP_RETCODE createSolFromNLP(
@@ -883,9 +868,6 @@ SCIP_RETCODE solveSubNLP(
       SCIPerrorMessage("unexpected status of sub-SCIP: <%d>\n", SCIPgetStatus(heurdata->subscip));
       return SCIP_ERROR;
    } /*lint !e788*/
-
-   /* add non-combinatorial linear constraints from subscip into subNLP (shall be replaced by catching row events in NLP) */
-   SCIP_CALL( addLinearConstraintsToNlp(heurdata->subscip, FALSE, TRUE) );
 
    /* set starting values (=refpoint, if not NULL; otherwise LP solution (or pseudo solution)) */
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, SCIPgetNNLPVars(heurdata->subscip)) );
@@ -2070,39 +2052,6 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/keepcopy",
          "whether to keep SCIP copy or to create new copy each time heuristic is applied",
          &heurdata->keepcopy, TRUE, TRUE, NULL, NULL) );
-
-   return SCIP_OKAY;
-}
-
-/** adds all known linear constraint to the NLP, if initialized and not done already
- * This function is temporary and will hopefully become obsolete in the near future.
- */ 
-SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
-   SCIP*                 scip,               /**< original SCIP data structure                                   */
-   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
-   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints, i.e., linear constraints that involve only discrete variables */
-   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints, i.e., linear constraints that involve not only discrete variables */
-   )
-{
-   SCIP_HEURDATA* heurdata;
-
-   assert(scip != NULL);
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* return, if nothing to do */
-   if( (!addcombconss || heurdata->comblinearconsadded) && (!addcontconss || heurdata->contlinearconsadded) )
-      return SCIP_OKAY;
-
-   SCIP_CALL( addLinearConstraintsToNlp(scip,
-         addcombconss && !heurdata->comblinearconsadded,
-         addcontconss && !heurdata->contlinearconsadded) );
-
-   heurdata->comblinearconsadded |= addcombconss;
-   heurdata->contlinearconsadded |= addcontconss;
 
    return SCIP_OKAY;
 }

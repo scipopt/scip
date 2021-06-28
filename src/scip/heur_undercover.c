@@ -2890,12 +2890,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    /* find NLP local search heuristic */
    heurdata->nlpheur = SCIPfindHeur(scip, "subnlp");
 
-   /* add global linear constraints to NLP relaxation */
-   if( SCIPisNLPConstructed(scip) && heurdata->nlpheur != NULL )
-   {
-      SCIP_CALL( SCIPaddLinearConsToNlpHeurSubNlp(scip, heurdata->nlpheur, TRUE, TRUE) );
-   }
-
    return SCIP_OKAY;
 }
 
