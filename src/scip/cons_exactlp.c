@@ -7562,7 +7562,6 @@ SCIP_RETCODE addRelaxation(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7594,7 +7593,7 @@ SCIP_RETCODE addRelaxation(
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->rowlhs, FALSE, cutoff) );
          SCIP_CALL( SCIPsepastoreexAddCut(scip->sepastoreexact, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->lpexact, consdata->rowexact, &infeasible) );
+            scip->lpexact, consdata->rowexact) );
       }
 #ifndef NDEBUG
       else

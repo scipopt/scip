@@ -9531,7 +9531,7 @@ SCIP_RETCODE varEventGubChangedExact(
    {
       SCIP_EVENT* event;
 
-      SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
+      SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, RatApproxReal(oldbound), RatApproxReal(newbound));
 
       SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
@@ -11117,7 +11117,7 @@ SCIP_RETCODE varEventUbChangedExact(
    {
       SCIP_EVENT* event;
 
-      SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
+      SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, RatApproxReal(oldbound), RatApproxReal(newbound));
 
       SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );

@@ -1088,7 +1088,7 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    SCIP_CALL( RatCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    assert(lpexact->nrows > 0);
@@ -1302,7 +1302,7 @@ SCIP_RETCODE projectShift(
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    nextendedrows = projshiftdata->nextendedrows;
@@ -2091,8 +2091,8 @@ SCIP_RETCODE boundShift(
 
    /** @todo exip: actually we only need to link the rows and cols in the exact lp. So possible performance improvement if we don't
     * flush it to the lpiexact */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
-   // SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
+   SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
 
    /* reset proved bound status */
    lp->hasprovedbound = FALSE;
@@ -2187,7 +2187,7 @@ SCIP_RETCODE boundShift(
       SCIPintervalScalprodScalarsInf(SCIPsetInfinity(set), &productcoldualval[j], colexact->nlprows, lpcolvals, fpdualcolwise);
 
 #ifndef NDEBUG
-      for( i = colexact->nlprows; i < col->len; ++i )
+      for( i = colexact->nlprows; i < colexact->len; ++i )
       {
          assert(colexact->rows[i] != NULL);
          assert(colexact->rows[i]->lppos == -1);
@@ -2360,7 +2360,7 @@ SCIP_RETCODE boundShift(
       SCIP_Real cand1, cand2;
       SCIP_Real value;
       /* set up the exact lpi for the current node */
-      SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
+      SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
       SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
       for( j = 0; j < lpexact->nrows; j++ )
       {

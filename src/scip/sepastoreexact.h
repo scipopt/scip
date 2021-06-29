@@ -65,10 +65,8 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
    SCIP_LPEXACT*         lp,                 /**< LP data */
-   SCIP_ROWEXACT*        cut,                /**< separated cut */
-   SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
+   SCIP_ROWEXACT*        cut                 /**< separated cut */
    );
 
 /** adds cuts to the LP and clears separation storage */
@@ -78,6 +76,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lp,                 /**< LP data */
+   SCIP_PROB*            prob,               /**< scip prob structure */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 

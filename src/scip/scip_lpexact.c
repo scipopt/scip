@@ -88,6 +88,7 @@
 #include "scip/scipgithash.h"
 #include "scip/sepa.h"
 #include "scip/sepastore.h"
+#include "scip/sepastoreexact.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/solve.h"
@@ -614,6 +615,41 @@ SCIP_RETCODE SCIPchgVarUbExactDive(
    }
 
    SCIP_CALL( SCIPvarChgUbExactDive(var, scip->set, scip->lpexact, newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** writes current exact LP to a file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPwriteLPexact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< file name */
+   )
+{
+   SCIP_Bool cutoff;
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPwriteLPexact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+   {
+      SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+            scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand,
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
+   }
+
+   /* we need a flushed lp to write the current lp */
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, scip->transprob, scip->eventqueue) );
+   SCIP_CALL( SCIPlpExactFlush(scip->lpexact, scip->mem->probmem, scip->set, scip->eventqueue) );
+
+   SCIP_CALL( SCIPlpExactWrite(scip->lpexact, filename) );
 
    return SCIP_OKAY;
 }

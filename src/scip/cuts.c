@@ -21,18 +21,19 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include "blockmemshell/memory.h"
 #include "scip/cuts.h"
 #include "scip/dbldblarith.h"
 #include "scip/lp.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cut.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -44,6 +45,7 @@
 #include "scip/struct_lp.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
+#include "scip/rational.h"
 
 /* =========================================== general static functions =========================================== */
 #ifdef SCIP_DEBUG
@@ -152,6 +154,55 @@ SCIP_RETCODE varVecAddScaledRowCoefs(
 
 /** add a scaled row to a dense vector indexed over the problem variables and keep the
  *  index of non-zeros up-to-date
+ */
+static
+SCIP_RETCODE varVecAddScaledRowCoefsSafely(
+   int*RESTRICT          inds,               /**< pointer to array with variable problem indices of non-zeros in variable vector */
+   SCIP_Real*RESTRICT    vals,               /**< array with values of variable vector */
+   int*RESTRICT          nnz,                /**< number of non-zeros coefficients of variable vector */
+   SCIP_ROW*             row,                /**< row coefficients to add to variable vector */
+   SCIP_Real             scale               /**< scale for adding given row to variable vector */
+   )
+{
+   int i;
+   SCIP_ROUNDMODE previousroundmode;
+
+   assert(inds != NULL);
+   assert(vals != NULL);
+   assert(nnz != NULL);
+   assert(row != NULL);
+
+   previousroundmode = SCIPintervalGetRoundingMode();
+   SCIPintervalSetRoundingModeDownwards();
+
+   /* add the non-zeros to the aggregation row and keep non-zero index up to date */
+   for( i = 0 ; i < row->len; ++i )
+   {
+      SCIP_Real val;
+      int probindex;
+
+      probindex = row->cols[i]->var_probindex;
+      val = vals[probindex];
+
+      if( val == 0.0 )
+         inds[(*nnz)++] = probindex;
+
+      val += row->vals[i] * scale;
+
+      /* the value must not be exactly zero due to sparsity pattern */
+      val = NONZERO(val);
+
+      assert(val != 0.0);
+      vals[probindex] = val;
+   }
+
+   SCIPintervalSetRoundingMode(previousroundmode);
+
+   return SCIP_OKAY;
+}
+
+/** add a scaled row to a dense vector indexed over the problem variables and keep the
+ *  index of non-zeros up-to-date
  *
  *  This is the quad precision version of varVecAddScaledRowCoefs().
  */
@@ -191,6 +242,59 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuad(
 
       QUAD_ARRAY_STORE(vals, probindex, val);
    }
+
+   return SCIP_OKAY;
+}
+
+/** add a scaled row to a dense vector indexed over the problem variables and keep the
+ *  index of non-zeros up-to-date
+ *
+ *  This is the quad precision version of varVecAddScaledRowCoefs().
+ *
+ * * @note this method is safe for usage in exact solving mode
+ */
+static
+SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
+   int*RESTRICT          inds,               /**< pointer to array with variable problem indices of non-zeros in variable vector */
+   SCIP_Real*RESTRICT    vals,               /**< array with values of variable vector */
+   int*RESTRICT          nnz,                /**< number of non-zeros coefficients of variable vector */
+   SCIP_ROW*             row,                /**< row coefficients to add to variable vector */
+   SCIP_Real             scale               /**< scale for adding given row to variable vector */
+   )
+{
+   int i;
+   SCIP_ROUNDMODE previousroundmode;
+
+   assert(inds != NULL);
+   assert(vals != NULL);
+   assert(nnz != NULL);
+   assert(row != NULL);
+
+   previousroundmode = SCIPintervalGetRoundingMode();
+   SCIPintervalSetRoundingModeDownwards();
+
+   /* add the non-zeros to the aggregation row and keep non-zero index up to date */
+   for( i = 0 ; i < row->len; ++i )
+   {
+      SCIP_Real QUAD(val);
+      int probindex;
+
+      probindex = row->cols[i]->var_probindex;
+      QUAD_ARRAY_LOAD(val, vals, probindex);
+
+      if( QUAD_HI(val) == 0.0 )
+         inds[(*nnz)++] = probindex;
+
+      SCIPquadprecSumQD(val, val, row->vals[i] * scale);
+
+      /* the value must not be exactly zero due to sparsity pattern */
+      QUAD_HI(val) = NONZERO(QUAD_HI(val));
+      assert(QUAD_HI(val) != 0.0);
+
+      QUAD_ARRAY_STORE(vals, probindex, val);
+   }
+
+   SCIPintervalSetRoundingMode(previousroundmode);
 
    return SCIP_OKAY;
 }
@@ -326,6 +430,8 @@ SCIP_Real calcEfficacyDenseStorageQuad(
  *
  *  Returns TRUE if the cut became redundant.
  *  If it is a local cut, use local bounds, otherwise, use global bounds.
+ *
+ * * @note this method is safe for usage in exact solving mode
  */
 static
 SCIP_Bool removeZerosQuad(
@@ -340,6 +446,13 @@ SCIP_Bool removeZerosQuad(
 {
    int i;
    SCIP_VAR** vars;
+   SCIP_ROUNDMODE previousroundmode;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      previousroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+   }
 
    vars = SCIPgetVars(scip);
 
@@ -378,21 +491,29 @@ SCIP_Bool removeZerosQuad(
             if( QUAD_TO_DBL(val) < 0.0 )
             {
                if( SCIPisInfinity(scip, ub) )
+               {
+                  if( SCIPisExactSolve(scip) )
+                     SCIPintervalSetRoundingMode(previousroundmode);
                   return TRUE;
+               }
                else
                {
-                  SCIPquadprecProdQD(val, val, ub);
-                  SCIPquadprecSumQQ(*cutrhs, *cutrhs, -val);
+                  SCIPquadprecProdQD(val, -val, ub);
+                  SCIPquadprecSumQQ(*cutrhs, *cutrhs, val);
                }
             }
             else
             {
                if( SCIPisInfinity(scip, -lb) )
+               {
+                  if( SCIPisExactSolve(scip) )
+                     SCIPintervalSetRoundingMode(previousroundmode);
                   return TRUE;
+               }
                else
                {
-                  SCIPquadprecProdQD(val, val, lb);
-                  SCIPquadprecSumQQ(*cutrhs, *cutrhs, -val);
+                  SCIPquadprecProdQD(val, -val, lb);
+                  SCIPquadprecSumQQ(*cutrhs, *cutrhs, val);
                }
             }
          }
@@ -411,6 +532,9 @@ SCIP_Bool removeZerosQuad(
    /* relax rhs to 0, if it's very close to 0 */
    if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= -SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
+
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingMode(previousroundmode);
 
    return FALSE;
 }
@@ -1791,6 +1915,106 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    return SCIP_OKAY;
 }
 
+/** add weighted row to aggregation row
+ * @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
+ */
+SCIP_RETCODE SCIPaggrRowAddRowSafely(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_ROW*             row,                /**< row to add to aggregation row */
+   SCIP_Real             weight,             /**< scale for adding given row to aggregation row */
+   int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   )
+{
+   SCIP_Real sideval;
+   SCIP_Bool uselhs;
+   SCIP_ROW* userow;
+   SCIP_ROWEXACT* rowexact;
+   SCIP_ROUNDMODE previousroundmode;
+   int i;
+
+   assert(row->lppos >= 0);
+
+   /* update local flag */
+   aggrrow->local = aggrrow->local || row->local;
+
+   /* update rank */
+   aggrrow->rank = MAX(row->rank, aggrrow->rank);
+
+   i = aggrrow->nrows++;
+
+   if( aggrrow->nrows > aggrrow->rowssize )
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, aggrrow->nrows);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowsinds, aggrrow->rowssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->slacksign, aggrrow->rowssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowweights, aggrrow->rowssize, newsize) );
+      aggrrow->rowssize = newsize;
+   }
+   aggrrow->rowsinds[i] = SCIProwGetLPPos(row);
+   aggrrow->rowweights[i] = weight;
+
+   if( sidetype == -1 )
+   {
+      assert( ! SCIPisInfinity(scip, -row->lhs) );
+      uselhs = TRUE;
+   }
+   else if( sidetype == 1 )
+   {
+      assert( ! SCIPisInfinity(scip, row->rhs) );
+      uselhs = FALSE;
+   }
+   else
+   {
+      /* Automatically decide, whether we want to use the left or the right hand side of the row in the summation.
+       * If possible, use the side that leads to a positive slack value in the summation.
+       */
+      if( SCIPisInfinity(scip, row->rhs) || (!SCIPisInfinity(scip, -row->lhs) && weight < 0.0) )
+         uselhs = TRUE;
+      else
+         uselhs = FALSE;
+   }
+   rowexact = SCIProwGetRowExact(row);
+   if( !SCIProwExactHasFpRelax(rowexact) )
+   {
+      SCIPerrorMessage("cannot aggregate row that admits no fp relaxation");
+      SCIPABORT();
+   }
+   else if( SCIProwExactGetRowRhs(rowexact) != NULL && !uselhs )
+      userow = SCIProwExactGetRowRhs(rowexact);
+   else
+      userow = row;
+
+   previousroundmode = SCIPintervalGetRoundingMode();
+
+   if( uselhs )
+   {
+      SCIPintervalSetRoundingModeDownwards();
+      aggrrow->slacksign[i] = -1;
+      sideval = row->lhs - row->constant;
+      if( row->integral )
+         sideval = ceil(sideval); /* row is integral: round left hand side up */
+   }
+   else
+   {
+      SCIPintervalSetRoundingModeUpwards();
+      aggrrow->slacksign[i] = +1;
+      sideval = row->rhs - row->constant;
+      if( row->integral )
+         sideval = floor(sideval); /* row is integral: round right hand side up */
+   }
+
+   SCIPintervalSetRoundingModeUpwards();
+   SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, weight * sideval);
+
+   /* add up coefficients */
+   SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(aggrrow->inds, aggrrow->vals, &aggrrow->nnz, row, weight) );
+
+   SCIPintervalSetRoundingMode(previousroundmode);
+
+   return SCIP_OKAY;
+}
+
 /** Removes a given variable @p var from position @p pos the aggregation row and updates the right-hand side according
  *  to sign of the coefficient, i.e., rhs -= coef * bound, where bound = lb if coef >= 0 and bound = ub, otherwise.
  *
@@ -2119,8 +2343,143 @@ SCIP_RETCODE addOneRow(
    return SCIP_OKAY;
 }
 
+/** Adds one row to the aggregation row. Differs from SCIPaggrRowAddRow() by providing some additional
+ *  parameters required for SCIPaggrRowSumRows()
+ *  @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
+ */
+static
+SCIP_RETCODE addOneRowSafely(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_ROW*             row,                /**< the row to add */
+   SCIP_Real             weight,             /**< weight of row to add */
+   SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
+   SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
+   int                   negslack,           /**< should negative slack variables allowed to be used? (0: no, 1: only for integral rows, 2: yes) */
+   int                   maxaggrlen,         /**< maximal length of aggregation row */
+   SCIP_Bool*            rowtoolong          /**< is the aggregated row too long */
+   )
+{
+   SCIP_Real sideval;
+   SCIP_Bool uselhs;
+   SCIP_ROW* userow;
+   SCIP_ROWEXACT* rowexact;
+   SCIP_ROUNDMODE previousroundmode;
+   int i;
+
+   assert( rowtoolong != NULL );
+   *rowtoolong = FALSE;
+
+   if( SCIPisFeasZero(scip, weight) || SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !allowlocal) )
+   {
+      return SCIP_OKAY;
+   }
+
+   if( sidetypebasis && !SCIPisEQ(scip, SCIProwGetLhs(row), SCIProwGetRhs(row)) )
+   {
+      SCIP_BASESTAT stat = SCIProwGetBasisStatus(row);
+
+      if( stat == SCIP_BASESTAT_LOWER )
+      {
+         assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
+         uselhs = TRUE;
+      }
+      else if( stat == SCIP_BASESTAT_UPPER )
+      {
+         assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
+         uselhs = FALSE;
+      }
+      else if( SCIPisInfinity(scip, SCIProwGetRhs(row)) || (weight < 0.0 && ! SCIPisInfinity(scip, -SCIProwGetLhs(row))) )
+         uselhs = TRUE;
+      else
+         uselhs = FALSE;
+   }
+   else if( (weight < 0.0 && !SCIPisInfinity(scip, -row->lhs)) || SCIPisInfinity(scip, row->rhs) )
+      uselhs = TRUE;
+   else
+      uselhs = FALSE;
+
+   rowexact = SCIProwGetRowExact(row);
+   if( !SCIProwExactHasFpRelax(rowexact) )
+   {
+      SCIPerrorMessage("cannot aggregate row that admits no fp relaxation");
+      SCIPABORT();
+   }
+   else if( SCIProwExactGetRowRhs(rowexact) != NULL && !uselhs )
+      userow = SCIProwExactGetRowRhs(rowexact);
+   else
+      userow = row;
+
+   previousroundmode = SCIPintervalGetRoundingMode();
+
+   if( uselhs )
+   {
+      assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
+
+      if( weight > 0.0 && ((negslack == 0) || (negslack == 1 && !row->integral)) )
+         return SCIP_OKAY;
+
+      SCIPintervalSetRoundingModeDownwards();
+
+      sideval = row->lhs - row->constant;
+      /* row is integral? round left hand side up */
+      if( row->integral )
+         sideval = ceil(sideval);
+   }
+   else
+   {
+      assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
+
+      if( weight < 0.0 && ((negslack == 0) || (negslack == 1 && !row->integral)) )
+         return SCIP_OKAY;
+
+      SCIPintervalSetRoundingModeUpwards();
+
+      sideval = row->rhs - row->constant;
+      /* row is integral? round right hand side down */
+      if( row->integral )
+         sideval = floor(sideval);
+   }
+
+   SCIPintervalSetRoundingModeUpwards();
+
+   /* add right hand side, update rank and local flag */
+   SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, sideval * weight);
+   aggrrow->rank = MAX(aggrrow->rank, row->rank);
+   aggrrow->local = aggrrow->local || row->local;
+
+   /* ensure the array for storing the row information is large enough */
+   i = aggrrow->nrows++;
+   if( aggrrow->nrows > aggrrow->rowssize )
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, aggrrow->nrows);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowsinds, aggrrow->rowssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->slacksign, aggrrow->rowssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowweights, aggrrow->rowssize, newsize) );
+      aggrrow->rowssize = newsize;
+   }
+
+   /* add information of addditional row */
+   aggrrow->rowsinds[i] = row->lppos;
+   aggrrow->rowweights[i] = weight;
+   aggrrow->slacksign[i] = uselhs ? -1 : 1;
+
+   /* add up coefficients */
+   SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(aggrrow->inds, aggrrow->vals, &aggrrow->nnz, row, weight) );
+
+   /* check if row is too long now */
+   if( aggrrow->nnz > maxaggrlen )
+      *rowtoolong = TRUE;
+
+   SCIPintervalSetRoundingMode(previousroundmode);
+
+   return SCIP_OKAY;
+}
+
 /** aggregate rows using the given weights; the current content of the aggregation
  *  row, \p aggrrow, gets overwritten
+ *
+ *  @note this method is safe for usage in exact solving mode
  */
 SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2156,7 +2515,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    {
       for( k = 0; k < nrowinds; ++k )
       {
-         SCIP_CALL( addOneRow(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+         if( !SCIPisExactSolve(scip) )
+         {
+            SCIP_CALL( addOneRow(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+         }
+         else
+         {
+            SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+         }
 
          if( rowtoolong )
             return SCIP_OKAY;
@@ -2168,7 +2534,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       {
          if( weights[k] != 0.0 )
          {
-            SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+            if( !SCIPisExactSolve(scip) )
+            {
+               SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+            }
+            else
+            {
+               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+            }
 
             if( rowtoolong )
                return SCIP_OKAY;
@@ -2321,11 +2694,22 @@ void SCIPaggrRowRemoveZeros(
    SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
    )
 {
+   SCIP_ROUNDMODE previousroundmode;
+
    assert(aggrrow != NULL);
    assert(valid != NULL);
 
+   if( SCIPisExactSolve(scip) )
+   {
+      previousroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+   }
+
    *valid = ! removeZerosQuad(scip, SCIPsumepsilon(scip), useglbbounds ? FALSE : aggrrow->local, aggrrow->vals,
       QUAD(&aggrrow->rhs), aggrrow->inds, &aggrrow->nnz);
+
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingMode(previousroundmode);
 }
 
 /** get number of aggregated rows */
@@ -2806,6 +3190,7 @@ SCIP_RETCODE findBestUb(
    return SCIP_OKAY;
 }
 
+/** @todo exip: check if this needs to be made safe */
 /** determine the best bounds with respect to the given solution for complementing the given variable */
 static
 SCIP_RETCODE determineBestBounds(
@@ -3005,7 +3390,9 @@ SCIP_RETCODE determineBestBounds(
    return SCIP_OKAY; /*lint !e438*/
 }
 
-/** performs the bound substitution step with the given variable or simple bounds for the variable with the given problem index */
+/** performs the bound substitution step with the given variable or simple bounds for the variable with the given problem index
+ *  @note this method is safe for usage in exact solving mode
+ */
 static
 void performBoundSubstitution(
    SCIP*                 scip,               /**< SCIP datastructure */
@@ -3023,16 +3410,23 @@ void performBoundSubstitution(
 {
    SCIP_Real QUAD(coef);
    SCIP_Real QUAD(tmp);
+   SCIP_ROUNDMODE previousroundmode;
 
    assert(!SCIPisInfinity(scip, -varsign * boundval));
+
+   if( SCIPisExactSolve(scip) )
+   {
+      previousroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+   }
 
    QUAD_ARRAY_LOAD(coef, cutcoefs, probindex);
 
    /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
    if( boundtype < 0 )
    {
-      SCIPquadprecProdQD(tmp, coef, boundval);
-      SCIPquadprecSumQQ(*cutrhs, *cutrhs, -tmp);
+      SCIPquadprecProdQD(tmp, coef, -boundval);
+      SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
       *localbdsused = *localbdsused || (boundtype == -2);
    }
    else
@@ -3043,6 +3437,9 @@ void performBoundSubstitution(
       SCIP_Real QUAD(zcoef);
       int zidx;
       SCIP_VAR* var = SCIPgetVars(scip)[probindex];
+
+      /* we don't support vlbs in exact mode yet */
+      assert(!SCIPisExactSolve(scip));
 
       if( varsign == +1 )
       {
@@ -3083,9 +3480,14 @@ void performBoundSubstitution(
 
       QUAD_ARRAY_STORE(cutcoefs, zidx, zcoef);
    }
+
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingMode(previousroundmode);
 }
 
-/** performs the bound substitution step with the simple bound for the variable with the given problem index */
+/** performs the bound substitution step with the simple bound for the variable with the given problem index
+ *  @note this method is safe for usage in exact solving mode
+*/
 static
 void performBoundSubstitutionSimple(
    SCIP*                 scip,               /**< SCIP datastructure */
@@ -3100,17 +3502,27 @@ void performBoundSubstitutionSimple(
 {
    SCIP_Real QUAD(coef);
    SCIP_Real QUAD(tmp);
+   SCIP_ROUNDMODE previousroundmode;
 
    assert(!SCIPisInfinity(scip, ABS(boundval)));
+
+   if( SCIPisExactSolve(scip) )
+   {
+      previousroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+   }
 
    QUAD_ARRAY_LOAD(coef, cutcoefs, probindex);
 
    /* must be a standard bound */
    assert( boundtype < 0 );
 
-   SCIPquadprecProdQD(tmp, coef, boundval);
-   SCIPquadprecSumQQ(*cutrhs, *cutrhs, -tmp);
+   SCIPquadprecProdQD(tmp, coef, -boundval);
+   SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
    *localbdsused = *localbdsused || (boundtype == -2);
+
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingMode(previousroundmode);
 }
 
 
@@ -3140,6 +3552,8 @@ void performBoundSubstitutionSimple(
  *    a_{zu_j} := a_{zu_j} + a_j\, bu_j &
  *  \end{array}
  *  \f]
+ *
+ *  @note this method is safe for usage in exact solving mode
  */
 static
 SCIP_RETCODE cutsTransformMIR(
@@ -3180,10 +3594,18 @@ SCIP_RETCODE cutsTransformMIR(
    int firstcontvar;
    SCIP_VAR** vars;
 
+   SCIP_ROUNDMODE previousroundmode;
+
    assert(varsign != NULL);
    assert(boundtype != NULL);
    assert(freevariable != NULL);
    assert(localbdsused != NULL);
+
+   if( SCIPisExactSolve(scip) )
+   {
+      previousroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+   }
 
    *freevariable = FALSE;
    *localbdsused = FALSE;
@@ -3258,7 +3680,7 @@ SCIP_RETCODE cutsTransformMIR(
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
       /* due to variable bound usage for the continous variables cancellation may have occurred */
-      if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
+      if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) && !(SCIPisExactSolve(scip)) )
       {
          QUAD_ASSIGN(coef, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, coef);
@@ -3310,7 +3732,7 @@ SCIP_RETCODE cutsTransformMIR(
       }
    }
 
-   if( fixintegralrhs )
+   if( fixintegralrhs && !SCIPisExactSolve(scip) )
    {
       SCIP_Real f0;
 
@@ -3437,6 +3859,9 @@ SCIP_RETCODE cutsTransformMIR(
 
   TERMINATE:
 
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingMode(previousroundmode);
+
    /*free temporary memory */
    SCIPfreeBufferArray(scip, &selectedbounds);
    SCIPfreeBufferArray(scip, &bestubtypes);
@@ -3496,6 +3921,8 @@ SCIP_RETCODE cutsTransformMIR(
  *    \hat{a}_{zu_j} := \hat{a}_{zu_j} + \tilde{a}_j\, bu_j = \hat{a}_{zu_j} - \hat{a}_j\, bu_j &
  * \end{array}
  * \f]
+ *
+ *  @note this method is safe for usage in exact solving mode
  */
 static
 SCIP_RETCODE cutsRoundMIR(
@@ -3515,6 +3942,7 @@ SCIP_RETCODE cutsRoundMIR(
    int firstcontvar;
    SCIP_VAR** vars;
    int ndelcontvars;
+   SCIP_ROUNDMODE previousroundmode;
 
    assert(QUAD_HI(cutrhs) != NULL);
    assert(cutcoefs != NULL);
@@ -3524,8 +3952,21 @@ SCIP_RETCODE cutsRoundMIR(
    assert(varsign != NULL);
    assert(0.0 < QUAD_TO_DBL(f0) && QUAD_TO_DBL(f0) < 1.0);
 
-   SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
-   SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
+   /* round up at first, since we are dividing and divisor should be as large as possible,
+    * then switch to down since we are working on lhs */
+   if( SCIPisExactSolve(scip) )
+   {
+      previousroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+      SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
+      SCIPintervalSetRoundingModeDownwards();
+      SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
+   }
+   else
+   {
+      SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
+      SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
+   }
 
    /* Loop backwards to process integral variables first and be able to delete coefficients of integral variables
     * without destroying the ordering of the aggrrow's non-zeros.
@@ -3546,6 +3987,10 @@ SCIP_RETCODE cutsRoundMIR(
       ++i;
    }
 #endif
+
+   /* round down everything on lhs (excepts for the denominator part above) */
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingModeDownwards();
 
    for( i = *nnz - 1; i >= 0 && cutinds[i] < firstcontvar; --i )
    {
@@ -3570,11 +4015,15 @@ SCIP_RETCODE cutsRoundMIR(
          QUAD_ARRAY_LOAD(aj, cutcoefs, v);
          QUAD_SCALE(aj, varsign[i]);
 
-         SCIPquadprecEpsFloorQ(downaj, aj, SCIPepsilon(scip)); /*lint !e666*/
+         if( !SCIPisExactSolve(scip) )
+            SCIPquadprecEpsFloorQ(downaj, aj, SCIPepsilon(scip)); /*lint !e666*/
+         else
+            SCIPquadprecFloorQ(downaj, aj);
          SCIPquadprecSumQQ(fj, aj, -downaj);
-         assert(QUAD_TO_DBL(fj) >= -SCIPepsilon(scip) && QUAD_TO_DBL(fj) < 1.0);
 
-         if( SCIPisLE(scip, QUAD_TO_DBL(fj), QUAD_TO_DBL(f0)) )
+         assert(QUAD_TO_DBL(fj) >= -SCIPepsilon(scip) && QUAD_TO_DBL(fj) <= 1.0);
+
+         if( SCIPisLE(scip, QUAD_TO_DBL(fj), QUAD_TO_DBL(f0)) || (SCIPisExactSolve(scip) && QUAD_TO_DBL(fj) <= QUAD_TO_DBL(f0)) )
          {
             QUAD_ASSIGN_Q(cutaj, downaj);
          }
@@ -3588,8 +4037,8 @@ SCIP_RETCODE cutsRoundMIR(
          QUAD_SCALE(cutaj, varsign[i]);
       }
 
-      /* remove zero cut coefficients from cut */
-      if( EPSZ(QUAD_TO_DBL(cutaj), QUAD_EPSILON) )
+      /* remove zero cut coefficients from cut, only remove positive coefficients in exact solving mode */
+      if( EPSZ(QUAD_TO_DBL(cutaj), QUAD_EPSILON) && (!SCIPisExactSolve(scip) || QUAD_TO_DBL(cutaj) >= 0.0) )
       {
          QUAD_ASSIGN(cutaj, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, cutaj);
@@ -3602,6 +4051,10 @@ SCIP_RETCODE cutsRoundMIR(
 
       /* integral var uses standard bound */
       assert(boundtype[i] < 0);
+
+      /* rhs needs to be rounded up to produce valid cut in exact mode */
+      if( SCIPisExactSolve(scip) )
+         SCIPintervalSetRoundingModeUpwards();
 
       /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
       if( varsign[i] == +1 )
@@ -3638,6 +4091,10 @@ SCIP_RETCODE cutsRoundMIR(
       }
    }
 
+   /* adapt lhs -> round down */
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingModeDownwards();
+
    /* now process the continuous variables; postpone deletetion of zeros till all continuous variables have been processed */
    ndelcontvars = 0;
    while( i >= ndelcontvars )
@@ -3668,7 +4125,7 @@ SCIP_RETCODE cutsRoundMIR(
        * to the current position, so that all integral variables stay behind the continuous
        * variables
        */
-      if( EPSZ(QUAD_TO_DBL(cutaj), QUAD_EPSILON) )
+      if( EPSZ(QUAD_TO_DBL(cutaj), QUAD_EPSILON) && (!SCIPisExactSolve(scip) || QUAD_TO_DBL(cutaj) >= 0.0) )
       {
          QUAD_ASSIGN(cutaj, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, cutaj);
@@ -3680,6 +4137,10 @@ SCIP_RETCODE cutsRoundMIR(
       }
 
       QUAD_ARRAY_STORE(cutcoefs, v, cutaj);
+
+      /* rhs needs to be rounded up to generate valid cut in exact sense */
+      if( SCIPisExactSolve(scip) )
+         SCIPintervalSetRoundingModeUpwards();
 
       /* check for variable bound use */
       if( boundtype[i] < 0 )
@@ -3728,6 +4189,8 @@ SCIP_RETCODE cutsRoundMIR(
          SCIP_Real QUAD(zcoef);
          int vbidx;
          int zidx;
+
+         assert(!SCIPisExactSolve(scip));
 
          /* variable bound */
          vbidx = boundtype[i];
@@ -3788,6 +4251,9 @@ SCIP_RETCODE cutsRoundMIR(
       }
    }
 
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingMode(previousroundmode);
+
    return SCIP_OKAY;
 }
 
@@ -3807,6 +4273,8 @@ SCIP_RETCODE cutsRoundMIR(
  *  \f]
  *
  *  Substitute \f$ \hat{a}_r \cdot s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
+ *
+ * @note this method is safe for usage in exact solving mode
  */
 static
 SCIP_RETCODE cutsSubstituteMIR(
@@ -3825,6 +4293,7 @@ SCIP_RETCODE cutsSubstituteMIR(
 {  /*lint --e{715}*/
    SCIP_ROW** rows;
    SCIP_Real QUAD(onedivoneminusf0);
+   SCIP_ROUNDMODE previousroundmode;
    int i;
 
    assert(scip != NULL);
@@ -3838,8 +4307,21 @@ SCIP_RETCODE cutsSubstituteMIR(
    assert(nnz != NULL);
    assert(0.0 < QUAD_TO_DBL(f0) && QUAD_TO_DBL(f0) < 1.0);
 
-   SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
-   SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
+   /* round up at first, since we are dividing and divisor should be as large as possible,
+    * then switch to down since we are working on lhs */
+   if( SCIPisExactSolve(scip) )
+   {
+      previousroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+      SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
+      SCIPintervalSetRoundingModeDownwards();
+      SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
+   }
+   else
+   {
+      SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
+      SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
+   }
 
    rows = SCIPgetLPRows(scip);
    for( i = 0; i < nrowinds; i++ )
@@ -3876,9 +4358,13 @@ SCIP_RETCODE cutsSubstituteMIR(
           *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
           *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
-         downar = EPSFLOOR(ar, QUAD_EPSILON);
+         if( !SCIPisExactSolve(scip) )
+            downar = EPSFLOOR(ar, QUAD_EPSILON);
+         else
+            downar = floor(ar);
+
          SCIPquadprecSumDD(fr, ar, -downar);
-         if( SCIPisLE(scip, QUAD_TO_DBL(fr), QUAD_TO_DBL(f0)) )
+         if( SCIPisLE(scip, QUAD_TO_DBL(fr), QUAD_TO_DBL(f0)) && (!SCIPisExactSolve(scip) || QUAD_TO_DBL(fr) <= QUAD_TO_DBL(f0)) )
             QUAD_ASSIGN(cutar, downar);
          else
          {
@@ -3900,7 +4386,7 @@ SCIP_RETCODE cutsSubstituteMIR(
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */
-      if( EPSZ(QUAD_TO_DBL(cutar), QUAD_EPSILON) )
+      if( EPSZ(QUAD_TO_DBL(cutar), QUAD_EPSILON) && (!SCIPisExactSolve(scip) || (QUAD_TO_DBL(cutar) == 0)) )
          continue;
 
       /* depending on the slack's sign, we have
@@ -3910,7 +4396,16 @@ SCIP_RETCODE cutsSubstituteMIR(
       mul = -slacksign[i] * QUAD_TO_DBL(cutar); /*lint !e613*/
 
       /* add the slack's definition multiplied with a^_j to the cut */
-      SCIP_CALL( varVecAddScaledRowCoefsQuad(cutinds, cutcoefs, nnz, row, mul) );
+      if( !SCIPisExactSolve(scip) )
+      {
+         SCIP_CALL( varVecAddScaledRowCoefsQuad(cutinds, cutcoefs, nnz, row, mul) );
+      }
+      else
+      {
+         SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(cutinds, cutcoefs, nnz, row, mul) );
+         /* move to rhs -> need to round up */
+         SCIPintervalSetRoundingModeUpwards();
+      }
 
       /* move slack's constant to the right hand side */
       if( slacksign[i] == +1 ) /*lint !e613*/
@@ -3923,7 +4418,10 @@ SCIP_RETCODE cutsSubstituteMIR(
          if( row->integral )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
-            QUAD_ASSIGN(rowrhs, SCIPfloor(scip, QUAD_TO_DBL(rowrhs)));
+            if( !SCIPisExactSolve(scip) )
+               QUAD_ASSIGN(rowrhs, SCIPfloor(scip, QUAD_TO_DBL(rowrhs)));
+            else
+               QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
          }
          SCIPquadprecProdQQ(tmp, cutar, rowrhs);
          SCIPquadprecSumQQ(*cutrhs, *cutrhs, -tmp);
@@ -3938,7 +4436,10 @@ SCIP_RETCODE cutsSubstituteMIR(
          if( row->integral )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
-            QUAD_ASSIGN(rowlhs, SCIPceil(scip, QUAD_TO_DBL(rowlhs)));
+            if( !SCIPisExactSolve(scip) )
+               QUAD_ASSIGN(rowlhs, SCIPceil(scip, QUAD_TO_DBL(rowlhs)));
+            else
+               QUAD_ASSIGN(rowlhs, floor(QUAD_TO_DBL(rowlhs)));
          }
          SCIPquadprecProdQQ(tmp, cutar, rowlhs);
          SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
@@ -3946,8 +4447,11 @@ SCIP_RETCODE cutsSubstituteMIR(
    }
 
    /* relax rhs to zero, if it's very close to */
-   if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= SCIPepsilon(scip) )
+   if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= -SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
+
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingMode(previousroundmode);
 
    return SCIP_OKAY;
 }
@@ -3962,6 +4466,8 @@ SCIP_RETCODE cutsSubstituteMIR(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @note this method is safe for usage in exact solving mode
  */
 SCIP_RETCODE SCIPcalcMIR(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4002,6 +4508,9 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool freevariable;
    SCIP_Bool localbdsused;
 
+   SCIP_ROUNDMODE previousroundmode;
+
+
    assert(aggrrow != NULL);
    assert(SCIPisPositive(scip, scale));
    assert(success != NULL);
@@ -4019,6 +4528,12 @@ SCIP_RETCODE SCIPcalcMIR(
    /* initialize cut with aggregation */
    *cutnnz = aggrrow->nnz;
    *cutislocal = aggrrow->local;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      previousroundmode = SCIPintervalGetRoundingMode();
+      SCIPintervalSetRoundingModeUpwards();
+   }
 
    SCIPquadprecProdQD(rhs, aggrrow->rhs, scale);
 
@@ -4092,7 +4607,10 @@ SCIP_RETCODE SCIPcalcMIR(
     *   a^_{zl_j} := a^_{zl_j} - a~_j * bl_j == a^_{zl_j} - a^_j * bl_j, or
     *   a^_{zu_j} := a^_{zu_j} + a~_j * bu_j == a^_{zu_j} - a^_j * bu_j
     */
-   SCIPquadprecEpsFloorQ(downrhs, rhs, SCIPepsilon(scip)); /*lint !e666*/
+   if( !SCIPisExactSolve(scip) )
+      SCIPquadprecEpsFloorQ(downrhs, rhs, SCIPepsilon(scip)); /*lint !e666*/
+   else
+      SCIPquadprecFloorQ(downrhs, rhs);
 
    SCIPquadprecSumQQ(f0, rhs, -downrhs);
 
@@ -4134,7 +4652,11 @@ SCIP_RETCODE SCIPcalcMIR(
          aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0)) );
    SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE) );
 
-   if( postprocess )
+   /* we work on rhs -> round up */
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingModeUpwards();
+
+   if( postprocess && !SCIPisExactSolve(scip) )
    {
       /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
        * prevent numerical rounding errors
@@ -4143,7 +4665,7 @@ SCIP_RETCODE SCIPcalcMIR(
    }
    else
    {
-      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), *cutislocal, tmpcoefs, QUAD(&rhs), cutnnz, cutinds);
+      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), *cutislocal, tmpcoefs, QUAD(&rhs), cutinds, cutnnz);
    }
 
    SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE) );
@@ -4173,6 +4695,11 @@ SCIP_RETCODE SCIPcalcMIR(
    }
 
   TERMINATE:
+
+   /* reset the rounding mode in exact mode */
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingMode(previousroundmode);
+
    if( !(*success) )
    {
       SCIP_Real QUAD(tmp);
