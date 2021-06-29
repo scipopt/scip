@@ -27,6 +27,8 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_var.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
@@ -39,9 +41,11 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_event.h"
+#include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -2033,6 +2037,81 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolBounddisjunction)
+{  /*lint --e{715}*/
+   /* add nlrow representation to NLP, if NLP had been constructed and disjunction is simple enough */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_NLROW* nlrow;
+      SCIP_EXPR* expr;
+      SCIP_EXPR* exprvar;
+      SCIP_Real lincoef;
+      SCIP_Real a, b;
+      int c;
+
+      for( c = 0; c < nconss; ++c )
+      {
+         /* skip deactivated or redundant constraints */
+         if( !SCIPconsIsActive(conss[c]) || !SCIPconsIsChecked(conss[c]) )
+            return SCIP_OKAY;
+
+         assert(!SCIPconsIsLocal(conss[c]));  /* we are at the root node (or short before) */
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
+         /* look for a bounddisjunction of the form
+          *    x <= a  or  x >= b   with a < b
+          * only one of the inequalities can be strictly satisfied, so we can reformulate as
+          *    (x-a)*(b-x) <= 0
+          * this should be sufficient to get bounddisjunction constraints that represent semi-continuous variables into the NLP
+          */
+
+         if( consdata->nvars != 2 )
+            continue;
+
+         if( consdata->vars[0] != consdata->vars[1] )
+            continue;
+
+         if( consdata->boundtypes[0] == SCIP_BOUNDTYPE_UPPER && consdata->boundtypes[1] == SCIP_BOUNDTYPE_LOWER )
+         {
+            a = consdata->bounds[0];
+            b = consdata->bounds[1];
+         }
+         else if( consdata->boundtypes[0] == SCIP_BOUNDTYPE_LOWER && consdata->boundtypes[1] == SCIP_BOUNDTYPE_UPPER )
+         {
+            a = consdata->bounds[1];
+            b = consdata->bounds[0];
+         }
+         else
+         {
+            continue;
+         }
+
+         if( a >= b )
+            continue;
+
+         SCIP_CALL( SCIPcreateExprVar(scip, &exprvar, consdata->vars[0], NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &expr, exprvar, 2.0, NULL, NULL) );
+
+         /* add xb-xx-ab+ax <= 0 as -ab <= -(a+b)x + x^2 */
+         lincoef = -a - b;
+         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]),
+            0.0, 1, consdata->vars, &lincoef, expr, -a*b, SCIPinfinity(scip), SCIP_EXPRCURV_CONVEX) );
+
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &exprvar) );
+
+         SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
+         SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** frees specific constraint data */
 static
@@ -3067,6 +3146,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBounddisjunction) );
