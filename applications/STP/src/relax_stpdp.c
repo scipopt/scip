@@ -204,10 +204,12 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
       // ONLY FOR TESTING REMOVE ASAP
       graph = SCIPprobdataGetGraph2(scip);
 
-      if( first && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 903132194120 )
+      if( first && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 828921629760 )
       {
          graph_printInfo(graph);
-         *lowerbound = 30202.0;
+         *lowerbound = 30068.0;
+         //exit(1);
+
 //#ifdef _OPENMP
 //#include <omp.h>      //  SCIP_CALL( dpheur_runparallel(scip, graph) );
          //#endif

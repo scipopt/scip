@@ -40,6 +40,48 @@
 
 #define EXT_COSTS_RECOMPBOUND 10
 
+/*
+ * Local methods
+ */
+
+
+/** gets next subset of given size, returns FALSE if no further subset possible, otherwise TRUE */
+static inline
+SCIP_Bool ksubsetGetNext(
+   int                   k,                  /**< size of subset */
+   int                   n,                  /**< size of underlying set */
+   SCIP_Bool             isFirstSubset,      /**< first call? */
+   int*                  ksubset             /**< the k-subset IN/OUT */
+)
+{
+   assert(0 < k && k <= n);
+
+   if( isFirstSubset )
+   {
+      for( int i = 0; i < k; i++ )
+         ksubset[i] = i;
+
+      return TRUE;
+   }
+
+   for( int i = k - 1; i >= 0; i-- )
+   {
+      /* can index be incremented? */
+      if( ksubset[i] < n - k + i )
+      {
+         ksubset[i]++;
+
+         /* set right entries in incremental order */
+         while( ++i < k )
+            ksubset[i] = ksubset[i - 1] + 1;
+
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 
 /** are the given extension vertices in conflict with the extension conditions? */
 static inline
@@ -971,6 +1013,7 @@ void extStackAddCompsExpanded(
    SCIP_Bool*            ruledOut            /**< all ruled out? */
 )
 {
+   int ksubset[STP_EXT_MAXGRAD];
    int* const extstack_data = extdata->extstack_data;
    int* const extstack_start = extdata->extstack_start;
    int* const extstack_state = extdata->extstack_state;
@@ -995,50 +1038,51 @@ void extStackAddCompsExpanded(
       return;
    }
 
-   /* todo try to rule out pairs of edges with simple, 2-edge bottleneck */
-   // int* antipairs_starts;   // int* antipairs_edges; // int* anitpairs_hasharr; size nedges, clean
-
    extreduce_mstLevelHorizontalAdd(scip, graph, nextedges, extedges, extdata);
    extreduce_mstLevelClose(scip, graph, extroot, extdata);
 
+   assert(nextedges < STP_EXT_MAXGRAD);
+
    /* compute and add components (overwrite previous, non-expanded component) */
-   // todo we probably want to order so that the smallest components are put last!
-   // -we might just ignore the single edge extensions if counter & (counter - 1) == 0, then add them at the end
-   // -extra method!
-   // -if single extensions are used first, might make sense to also have a special bottleneck test for this case!
+   // todo since single extensions are used first, might make sense to also have a special bottleneck test for this case!
    // -also good if we have the method that excludes everything except for the singletons!
-   for( uint32_t counter = powsize - 1; counter >= 1; counter-- )
+   for( int setsize = nextedges; setsize >= 1; setsize--  )
    {
-      const int datasize_prev = datasize;
-      for( uint32_t j = 0; j < (uint32_t) nextedges; j++ )
+      SCIP_Bool isFirst = TRUE;
+
+      while( ksubsetGetNext(setsize, nextedges, isFirst, ksubset) )
       {
-         /* Check if jth bit in counter is set */
-         if( counter & ((uint32_t) 1 << j) )
+         const int datasize_prev = datasize;
+         isFirst = FALSE;
+
+         for( int j = 0; j < setsize; j++ )
          {
+            const int pos = ksubset[j];
+
             assert(datasize < extdata->extstack_maxsize);
-            assert(graph->tail[extedges[j]] == extroot);
+            assert(graph->tail[extedges[pos]] == extroot);
 
-            extstack_data[datasize++] = extedges[j];
-            SCIPdebugMessage(" head %d \n", graph->head[extedges[j]]);
+            extstack_data[datasize++] = extedges[pos];
+            SCIPdebugMessage(" head %d \n", graph->head[extedges[pos]]);
          }
-      }
 
-      SCIPdebugMessage("... added \n");
-      assert(stackpos < extdata->extstack_maxsize - 1);
+         SCIPdebugMessage("... added \n");
+         assert(stackpos < extdata->extstack_maxsize - 1);
 
-      if( extensionHasImplicationConflict(graph, implications, tree_deg, extdata->tree_root,
-         &(extstack_data[datasize_prev]), datasize - datasize_prev) )
-      {
-         SCIPdebugMessage("implication conflict found for root %d \n", extroot);
-         datasize = datasize_prev;
-      }
-      else
-      {
-         extstack_state[stackpos] = EXT_STATE_EXPANDED;
-         extstack_start[++stackpos] = datasize;
-      }
+         if( extensionHasImplicationConflict(graph, implications, tree_deg, extdata->tree_root,
+            &(extstack_data[datasize_prev]), datasize - datasize_prev) )
+         {
+            SCIPdebugMessage("implication conflict found for root %d \n", extroot);
+            datasize = datasize_prev;
+         }
+         else
+         {
+            extstack_state[stackpos] = EXT_STATE_EXPANDED;
+            extstack_start[++stackpos] = datasize;
+         }
 
-      assert(extstack_start[stackpos] - extstack_start[stackpos - 1] > 0);
+         assert(extstack_start[stackpos] - extstack_start[stackpos - 1] > 0);
+      }
    }
 
    /* nothing added? */
@@ -1822,6 +1866,10 @@ void extProcessComponent(
 
    extreduce_extCompClean(scip, graph, extcomp, TRUE, extdata);
 }
+
+/*
+ * Interface methods
+ */
 
 
 /** check component for possible elimination */
