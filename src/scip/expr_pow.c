@@ -314,14 +314,16 @@ void computeSecant(
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
       return;
 
-   /* usually taken care of in separatePointPow already, but we might be called with different bounds here,
-    * e.g., when handling odd or signed power
-    */
-   if( SCIPisEQ(scip, xlb, xub) )
-      return;
-
    /* first handle some special cases */
-   if( EPSISINT(exponent / 2.0, 0.0) && !signpower && xub > 0.1 && SCIPisFeasEQ(scip, xlb, -xub) )
+   if( xlb == xub )
+   {
+      /* usually taken care of in separatePointPow already, but we might be called with different bounds here,
+       * e.g., when handling odd or signed power
+       */
+      *slope = 0.0;
+      *constant = pow(xlb, exponent);
+   }
+   else if( EPSISINT(exponent / 2.0, 0.0) && !signpower && xub > 0.1 && SCIPisFeasEQ(scip, xlb, -xub) )
    {
       /* for normal power with even exponents with xlb ~ -xub the slope would be very close to 0
        * since xub^n - xlb^n is prone to cancellation here, we omit computing this secant (it's probably useless)
@@ -356,6 +358,51 @@ void computeSecant(
          *slope = pow(xlb, exponent-1.0);
       *constant = 0.0;
    }
+   else if( SCIPisEQ(scip, xlb, xub) && (!signpower || xlb >= 0.0 || xub <= 0.0) )
+   {
+      /* Computing the slope as (xub^n - xlb^n)/(xub-xlb) can lead to cancellation.
+       * To avoid this, we replace xub^n by a Taylor expansion of pow at xlb:
+       *   xub^n = xlb^n + n xlb^(n-1) (xub-xlb) + 0.5 n*(n-1) xlb^(n-2) (xub-xlb)^2 + 1/6 n*(n-1)*(n-2) xi^(n-3) (xub-xlb)^3  for some xlb < xi < xub
+       * Dropping the last term, the slope is  (with an error of O((xub-xlb)^2) = 1e-18)
+       *   n*xlb^(n-1) + 0.5 n*(n-1) xlb^(n-2)*(xub-xlb)
+       * = n*xlb^(n-1) (1 - 0.5*(n-1)) + 0.5 n*(n-1) xlb^(n-2)*xub
+       * = 0.5*n*((3-n)*xlb^(n-1) + (n-1) xlb^(n-2)*xub)
+       *
+       * test n=2: 0.5*2*((3-2)*xlb + (2-1) 1*xub) = xlb + xub    ok
+       *      n=3: 0.5*3*((3-3)*xlb + (3-1) xlb*xub) = 3*xlb*xub ~ xlb^2 + xlb*xub + xub^2  ok
+       *
+       * The constant is
+       *   xlb^n - 0.5*n*((3-n) xlb^(n-1) + (n-1) xlb^(n-2)*xub) * xlb
+       * = xlb^n - 0.5*n*(3-n) xlb^n - 0.5*n*(n-1) xlb^(n-1)*xub
+       * = (1-0.5*n*(3-n)) xlb^n - 0.5 n*(n-1) xlb^(n-1) xub
+       *
+       * test n=2: (1-0.5*2*(3-2)) xlb^2 - 0.5 2*(2-1) xlb xub = -xlb*xub
+       *           old formula: xlb^2 - (xlb+xub) * xlb = -xlb*xub  ok
+       *
+       * For signpower with xub <= 0, we can negate xlb and xub:
+       *   slope: (sign(xub)|xub|^n - sign(xlb)*|xlb|^n) / (xub-xlb) = -((-xub)^n - (-xlb)^n) / (xub - xlb) = ((-xub)^n - (-xlb)^n) / (-xub - (-xlb))
+       *   constant: sign(xlb)|xlb|^n + slope * (xub - xlb) = -((-xlb)^n - slope * (xub - xlb)) = -((-xlb)^n + slope * ((-xub) - (-xlb)))
+       */
+      SCIP_Real xlb_n;   /* xlb^n */
+      SCIP_Real xlb_n1;  /* xlb^(n-1) */
+      SCIP_Real xlb_n2;  /* xlb^(n-2) */
+
+      if( signpower && xub <= 0.0 )
+      {
+         xlb *= -1.0;
+         xub *= -1.0;
+      }
+
+      xlb_n = pow(xlb, exponent);
+      xlb_n1 = pow(xlb, exponent - 1.0);
+      xlb_n2 = pow(xlb, exponent - 2.0);
+
+      *slope = 0.5*exponent * ((3.0-exponent) * xlb_n1 + (exponent-1.0) * xlb_n2 * xub);
+      *constant = (1.0 - 0.5*exponent*(3.0-exponent)) * xlb_n - 0.5*exponent*(exponent-1.0) * xlb_n1 * xub;
+
+      if( signpower && xub <= 0.0 )
+         *constant *= -1.0;
+   }
    else
    {
       SCIP_Real lbval;
@@ -375,10 +422,8 @@ void computeSecant(
       if( !SCIPisFinite(ubval) )
          return;
 
-      /* this can have bad numerics when xlb^exponent and xub^exponent are very close
+      /* we still can have bad numerics when xlb^exponent and xub^exponent are very close, but xlb and xub are not
        * for now, only check that things did not cancel out completely
-       * - the secant would be ok, if SCIPisEQ(xlb, xub), but this is already excluded above
-       * - the secant would be ok, if SCIPisEQ(xlb, -xub) and the exponent is even, but this is already handled above
        */
       if( lbval == ubval )
          return;
@@ -2049,16 +2094,22 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    childlb = localbounds[0].inf;
    childub = localbounds[0].sup;
 
-   /* if child is essentially constant, then there should be no point in separation */
-   if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
-   {
-      SCIPdebugMsg(scip, "skip estimate as child seems essentially fixed [%.15g,%.15g]\n", childlb, childub);
-      return SCIP_OKAY;
-   }
-
    exprdata = SCIPexprGetData(expr);
    exponent = exprdata->exponent;
    assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
+
+   /* if child is constant, then return a constant estimator
+    * this can help with small infeasibilities if boundtightening is relaxing bounds too much
+    */
+   if( childlb == childub )
+   {
+      *coefs = 0.0;
+      *constant = pow(childlb, exponent);
+      *success = TRUE;
+      *islocal = globalbounds[0].inf != globalbounds[0].sup;
+      *branchcand = FALSE;
+      return SCIP_OKAY;
+   }
 
    isinteger = EPSISINT(exponent, 0.0);
 
@@ -2777,16 +2828,25 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
    childlb = localbounds[0].inf;
    childub = localbounds[0].sup;
 
-   /* if child is essentially constant, then there should be no point in separation */
-   if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
-      return SCIP_OKAY;
-
    childglb = globalbounds[0].inf;
    childgub = globalbounds[0].sup;
 
    exprdata = SCIPexprGetData(expr);
    exponent = exprdata->exponent;
    assert(exponent > 1.0); /* exponent == 1 should have been simplified */
+
+   /* if child is constant, then return a constant estimator
+    * this can help with small infeasibilities if boundtightening is relaxing bounds too much
+    */
+   if( childlb == childub )
+   {
+      *coefs = 0.0;
+      *constant = SIGN(childlb)*pow(REALABS(childlb), exponent);
+      *success = TRUE;
+      *islocal = childglb != childgub;
+      *branchcand = FALSE;
+      return SCIP_OKAY;
+   }
 
    if( childlb >= 0.0 )
    {
