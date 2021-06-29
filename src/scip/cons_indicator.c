@@ -5433,7 +5433,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
                /* get constraint handler name */
                conshdlrname = SCIPconshdlrGetName(SCIPconsGetHdlr(cons));
 
-               /* check type of constraint (only take linear constraints) */
+               /* check type of constraint (only take modifiable linear constraints) */
                if ( strcmp(conshdlrname, "linear") == 0 && ! SCIPconsIsModifiable(cons) )
                {
                   /* avoid adding linear constraints that correspond to indicator constraints */
