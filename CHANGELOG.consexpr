@@ -74,6 +74,7 @@ conshdlr:
 - added tables to print statistics of nonlinear constraint handler and nonlinear handlers
 - added table to print statistics on quadratic nonlinear handlers
 - knapsack, linear, logicor, setppc, and varbound constraints now add themselves to the NLP relaxation, if enabled
+- and and linking constraints and bounddisjunctions in one variable are added to the NLP relaxation now
 
 Performance improvements
 ------------------------
