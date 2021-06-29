@@ -2029,8 +2029,8 @@ SCIP_RETCODE addAltLPColumn(
 
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
-   assert( vars != NULL );
-   assert( vals != NULL );
+   assert( vars != NULL || nvars == 0 );
+   assert( vals != NULL || nvars == 0 );
    assert( ! SCIPisInfinity(scip, rhscoef) && ! SCIPisInfinity(scip, -rhscoef) );
    assert( SCIPisEQ(scip, sign, 1.0) || SCIPisEQ(scip, sign, -1.0) );
    assert( colindex != NULL );
@@ -4964,33 +4964,36 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdIndicator)
          maxabsvalidx = j;
       }
 
-      if ( val > 0 )
+      if ( ! SCIPvarIsBinary(var) )
       {
-         lb = SCIPvarGetLbGlobal(var);
-         ub = SCIPvarGetUbGlobal(var);
-      }
-      else
-      {
-         ub = SCIPvarGetLbGlobal(var);
-         lb = SCIPvarGetUbGlobal(var);
-      }
+         if ( val > 0.0 )
+         {
+            lb = SCIPvarGetLbGlobal(var);
+            ub = SCIPvarGetUbGlobal(var);
+         }
+         else
+         {
+            ub = SCIPvarGetLbGlobal(var);
+            lb = SCIPvarGetUbGlobal(var);
+         }
 
-      /* compute minimal activity */
-      if ( SCIPisInfinity(scip, -lb) )
-         minactivity = -SCIPinfinity(scip);
-      else
-      {
-         if ( ! SCIPisInfinity(scip, -minactivity) )
-            minactivity += val * lb;
-      }
+         /* compute minimal activity */
+         if ( SCIPisInfinity(scip, -lb) )
+            minactivity = -SCIPinfinity(scip);
+         else
+         {
+            if ( ! SCIPisInfinity(scip, -minactivity) )
+               minactivity += val * lb;
+         }
 
-      /* compute maximal activity */
-      if ( SCIPisInfinity(scip, ub) )
-         maxactivity = SCIPinfinity(scip);
-      else
-      {
-         if ( ! SCIPisInfinity(scip, maxactivity) )
-            maxactivity += val * ub;
+         /* compute maximal activity */
+         if ( SCIPisInfinity(scip, ub) )
+            maxactivity = SCIPinfinity(scip);
+         else
+         {
+            if ( ! SCIPisInfinity(scip, maxactivity) )
+               maxactivity += val * ub;
+         }
       }
    }
    assert( maxabsval >= 0.0 );
@@ -5048,14 +5051,14 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdIndicator)
       {
          /* upgrading is possible with binary variable */
          if ( SCIPisLE(scip, maxactivity, rhs) )
+            upgdrhs = TRUE;
+
+         /* upgrading is possible with negated binary variable */
+         if ( SCIPisLE(scip, maxactivity + indval, rhs) )
          {
             upgdrhs = TRUE;
             indnegrhs = TRUE;
          }
-
-         /* upgrading is possible with negated binary variable */
-         if ( SCIPisLE(scip, maxactivity - indval, rhs) )
-            upgdrhs = TRUE;
       }
 
       /* upgrade constraint */
@@ -5430,8 +5433,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
                /* get constraint handler name */
                conshdlrname = SCIPconshdlrGetName(SCIPconsGetHdlr(cons));
 
-               /* check type of constraint (only take linear constraints) */
-               if ( strcmp(conshdlrname, "linear") == 0 )
+               /* check type of constraint (only take modifiable linear constraints) */
+               if ( strcmp(conshdlrname, "linear") == 0 && ! SCIPconsIsModifiable(cons) )
                {
                   /* avoid adding linear constraints that correspond to indicator constraints */
                   if ( strncmp(SCIPconsGetName(cons), "indlin", 6) != 0 )
@@ -8538,7 +8541,7 @@ SCIP_RETCODE SCIPaddLinearConsIndicator(
    assert( lincons != NULL );
 
    /* do not add locally valid constraints (this would require much more bookkeeping) */
-   if ( ! SCIPconsIsLocal(lincons) )
+   if ( ! SCIPconsIsLocal(lincons) && ! SCIPconsIsModifiable(lincons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
 
