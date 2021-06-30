@@ -626,6 +626,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 #ifdef SCIP_DEBUG
    (void) (*problem)->ipopt->Options()->SetStringValue("print_user_options", "yes");
 #endif
+   (void) (*problem)->ipopt->Options()->SetStringValue("sb", "yes");
    (void) (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
    (void) (*problem)->ipopt->Options()->SetIntegerValue("max_iter", INT_MAX);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
