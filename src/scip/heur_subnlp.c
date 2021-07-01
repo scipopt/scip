@@ -18,7 +18,7 @@
  * @brief   NLP local search primal heuristic using sub-SCIPs
  * @author  Stefan Vigerske
  * 
- * @todo set cutoff or similar in NLP
+ * @todo set cutoff or similar in NLP? or are the tighter bounds rather hurting (see todo below)?
  * @todo reconstruct sub-SCIP if problem has changed
  */
 
@@ -1858,7 +1858,9 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       }
    }
 
-   /* if there is already a solution, add an objective cutoff in sub-SCIP */
+   /* if there is already a solution, add an objective cutoff in sub-SCIP
+    * TODO this can also influence the NLP in some way, which seems to be a disadvantage for emfl100_3_3
+    */
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_Real upperbound;
