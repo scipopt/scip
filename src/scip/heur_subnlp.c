@@ -2036,8 +2036,8 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          &heurdata->nlpverblevel, FALSE, 0, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nlpiterlimit",
-         "iteration limit of NLP solver; 0 to use solver default",
-         &heurdata->nlpiterlimit, FALSE, 0, 0, INT_MAX, NULL, NULL) );
+         "iteration limit of NLP solver; 0 for no limit",
+         &heurdata->nlpiterlimit, FALSE, 3000, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nlptimelimit",
          "time limit of NLP solver; 0 to use solver default",

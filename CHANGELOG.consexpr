@@ -497,6 +497,7 @@ nlpi:
 - changed default of presolving/qpkktref/maxrounds from -1 to 0
 - changed default of propagating/obbt/onlynonconvexvars from FALSE to TRUE
 - changed default of heuristics/subnlp/resolvetolfactor from 0.001 to 1.0
+- changed default of heuristics/subnlp/nlpiterlimit from 0 (no limit) to 3000
 
 ### New parameters
 
