@@ -80,6 +80,9 @@ SCIP_Real SCIPsumepsilon(
  *  @return feasibility tolerance for constraints
  */
 SCIP_EXPORT
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );
