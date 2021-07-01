@@ -52,6 +52,8 @@ Build system
 Fixed bugs
 ----------
 
+- fixed domain propagation in presolving of abspower constraints
+
 Miscellaneous
 -------------
 
