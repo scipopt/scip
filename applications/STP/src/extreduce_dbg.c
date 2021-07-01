@@ -1054,8 +1054,14 @@ void extreduce_printStack(
       for( int i = extstack_start[j]; i < extstack_start[j + 1]; i++ )
       {
          const int edge = extstack_data[i];
-         assert(edge >= 0 && edge < graph->edges);
 
+         if( edge == EXT_EDGE_WRAPPED )
+         {
+            printf("  EDGE_WRAPPED\n");
+            continue;
+         }
+
+         assert(edge >= 0 && edge < graph->edges);
          printf("  ");
          graph_edge_printInfo(graph, edge);
       }

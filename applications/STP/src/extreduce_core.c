@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-// #define SCIP_DEBUG
+ #define SCIP_DEBUG
 // #define STP_DEBUG_EXT
 
 #include <stdio.h>
@@ -708,6 +708,22 @@ SCIP_Bool extTreeRuleOutPeriph(
    static SCIP_Longint red = 0;
 #endif
 
+
+   if( extStackTopIsSingleton(extdata) && !extIsAtInitialComp(extdata) )
+   {
+      int todo;
+      const int edge = -1; // todo just get top!
+      SCIP_Bool ruledOutFull;
+      assert(0);
+
+      extreduce_mstLevelVerticalAddLeaf(scip, graph, edge, extdata, &ruledOutFull);
+
+      // todo: we first want to check for extended rule out
+      // if not possible, then add then add to vertical dists!
+
+      // check with special bottleneck and compute and store SD!
+   }
+
    if( extreduce_redcostRuleOutPeriph(graph, extdata) )
    {
 #ifdef EXT_PRINT_STATS
@@ -758,8 +774,7 @@ SCIP_Bool extTreeRuleOutPeriph(
 }
 
 
-/** Stores extensions of tree from current (expanded and marked) stack top that cannot be ruled-out.
- *  Also computes SDs from leaves of any extension to the tree leaves and other extension leaves. */
+/** Stores extensions of tree from current (expanded and marked) stack top that cannot be ruled-out. */
 static inline
 void extTreeFindExtensions(
    SCIP*                 scip,               /**< SCIP */
@@ -853,7 +868,7 @@ void extTreeSyncWithStack(
 #endif
 
    /* is current component expanded? */
-   if( extdata->extstack_state[stackposition] == EXT_STATE_EXPANDED )
+   if( extdata->extstack_state[stackposition] == EXT_STATE_EXPANDED && !extStackTopIsWrapped(extdata) )
    {
       /* add top component to tree */
       extTreeStackTopAdd(scip, graph, extdata, conflict);
@@ -1046,7 +1061,7 @@ void extStackAddCompsExpanded(
    /* compute and add components (overwrite previous, non-expanded component) */
    // todo since single extensions are used first, might make sense to also have a special bottleneck test for this case!
    // -also good if we have the method that excludes everything except for the singletons!
-   for( int setsize = nextedges; setsize >= 1; setsize--  )
+   for( int setsize = nextedges; setsize >= 2; setsize--  )
    {
       SCIP_Bool isFirst = TRUE;
 
@@ -1087,6 +1102,91 @@ void extStackAddCompsExpanded(
 
    /* nothing added? */
    if( stackpos == extStackGetPosition(extdata) )
+   {
+      *ruledOut = TRUE;
+   }
+   else
+   {
+      assert(stackpos > extStackGetPosition(extdata));
+      assert(stackpos >= extdata->extstack_ncomponents);
+      assert(stackpos <= extdata->extstack_maxncomponents);
+
+      extdata->extstack_ncomponents = stackpos;
+   }
+}
+
+
+/** Builds singleton components from top edges and adds them.
+ *  Backtracks if stack is too full */
+static inline
+void extStackAddCompsExpandedSing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   nextedges,          /**< number of edges for extension */
+   const int*            extedges,           /**< array of edges for extension */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            success,            /**< success pointer */
+   SCIP_Bool*            ruledOut            /**< all ruled out? */
+)
+{
+   int* const extstack_data = extdata->extstack_data;
+   int* const extstack_start = extdata->extstack_start;
+   int* const extstack_state = extdata->extstack_state;
+   const int extroot = graph->tail[extedges[0]];
+   const STP_Vectype(int) implications = extdata->reddata->nodes_implications[extroot];
+   int stackpos = extStackGetPosition(extdata);
+   int datasize = extstack_start[stackpos];
+   const int* tree_deg = graph_pc_isPc(graph) ? extdata->tree_deg : NULL;
+
+   assert(nextedges > 0 && nextedges < STP_EXT_MAXGRAD);
+   *ruledOut = FALSE;
+
+   /* stack too full? */
+   if( !extStackIsExtendable(nextedges, nextedges + 1, datasize, extdata) )
+   {
+      *success = FALSE;
+      extBacktrack(scip, graph, *success, FALSE, extdata);
+      return;
+   }
+
+   extreduce_mstLevelHorizontalAddEmpty(scip, graph, nextedges, extedges, extdata);
+   extreduce_mstLevelClose(scip, graph, extroot, extdata);
+
+   /* first we add the wrapped component */
+   extstack_data[datasize++] = EXT_EDGE_WRAPPED;
+   extstack_state[stackpos] = EXT_STATE_EXPANDED;
+   extstack_start[++stackpos] = datasize;
+
+   /* compute and add singleton components (overwrite previous, non-expanded component) */
+   for( int pos = 0; pos < nextedges; pos++  )
+   {
+      const int datasize_prev = datasize;
+
+      assert(datasize < extdata->extstack_maxsize && stackpos < extdata->extstack_maxsize - 1);
+      assert(graph->tail[extedges[pos]] == extroot);
+
+      extstack_data[datasize++] = extedges[pos];
+      SCIPdebugMessage("add singleton head %d \n", graph->head[extedges[pos]]);
+
+      if( extensionHasImplicationConflict(graph, implications, tree_deg, extdata->tree_root,
+         &(extstack_data[datasize_prev]), datasize - datasize_prev) )
+      {
+         SCIPdebugMessage("implication conflict found for root %d \n", extroot);
+         datasize = datasize_prev;
+      }
+      else
+      {
+         extstack_state[stackpos] = EXT_STATE_EXPANDED;
+         extstack_start[++stackpos] = datasize;
+      }
+
+      assert(extstack_start[stackpos] - extstack_start[stackpos - 1] > 0);
+   }
+
+   assert(stackpos > extStackGetPosition(extdata));
+
+   /* only wrapped component added? */
+   if( stackpos == extStackGetPosition(extdata) + 1 )
    {
       *ruledOut = TRUE;
    }
@@ -1173,21 +1273,55 @@ void extStackTopCollectExtEdges(
       assert(extdata->tree_deg[graph->head[edge]] == 0);
       assert(!extTreeRuleOutEdgeSimple(graph, extdata, edge));
 
+
+      // todo here we need to assemble the edges that have survived and live in mstLevel
+      assert(0);
+
+
       /* computes the SDs from 'leaf' to all tree leaves in 'sds_vertical', unless the edge is ruled out */
-      extreduce_mstLevelVerticalAddLeaf(scip, graph, edge, extdata, &ruledOut);
+      //extreduce_mstLevelVerticalAddLeaf(scip, graph, edge, extdata, &ruledOut);
 
       if( ruledOut )
       {
          continue;
       }
 
-#if 0
-     if( extRuleOutEdgeCombinations(graph, extdata, e) )
-     {
-        // todo: need some marker here to say that we have a single edge!
-        continue;
-     }
-#endif
+      extedges[(*nextedges)++] = edge;
+   }
+}
+
+
+
+/** Collects edges top component of stack that we need to consider for singletons extension */
+static inline
+void extStackTopCollectExtEdgesSing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata,            /**< extension data */
+   int*                  extedges,           /**< array of collected edges */
+   int*                  nextedges           /**< number of edges */
+)
+{
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const extstack_start = extdata->extstack_start;
+   const int stackpos = extStackGetPosition(extdata);
+
+   assert(*nextedges == 0);
+   assert(extstack_start[stackpos + 1] - extstack_start[stackpos] >= 1);
+   assert(extreduce_mstTopCompInSync(scip, graph, extdata));
+
+   /* collect edges for components (and try to rule each of them out) */
+   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   {
+      const int edge = extstack_data[i];
+
+      assert(*nextedges < STP_EXT_MAXGRAD);
+      assert(edge >= 0 && edge < graph->edges);
+      assert(extdata->tree_deg[graph->head[edge]] == 0);
+      assert(!extTreeRuleOutEdgeSimple(graph, extdata, edge));
+
+      /* reserve space for SDs from 'leaf' to all tree leaves in 'sds_vertical' */
+      extreduce_mstLevelVerticalAddLeafEmpty(scip, graph, edge, extdata);
 
       extedges[(*nextedges)++] = edge;
    }
@@ -1312,14 +1446,9 @@ void extStackTopProcessInitialEdges(
 }
 
 
-/** Expands top component of stack.
- *  I.e.. adds all possible subsets of the top component that cannot be ruled-out.
- *  Note: This method can backtrack:
- *        1. If stack is full (with success set to FALSE),
- *        2. If all edges of the component can be ruled-out (with success set to TRUE).
- *  Note: This method computes SDs for newly added leaves! */
+/** Expands top component of stack to singletons */
 static
-void extStackTopExpand(
+void extStackTopExpandSingletons(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    EXTDATA*              extdata,            /**< extension data */
@@ -1340,6 +1469,61 @@ void extStackTopExpand(
    assert(scip && graph && success);
    assert(EXT_STATE_NONE == extstack_state[stackpos]);
 #endif
+   SCIPdebugMessage("expanding singletons \n");
+
+   extreduce_mstLevelInit(reddata, extdata);
+
+   /* NOTE: space for SDs is reserved */
+   extStackTopCollectExtEdgesSing(scip, graph, extdata, extedges, &nextedges);
+   extreduce_mstLevelVerticalClose(reddata);
+
+   assert(nextedges > 0);
+
+   /* use the just collected edges 'extedges' to build singleton components and add them to the stack */
+   extStackAddCompsExpandedSing(scip, graph, nextedges, extedges, extdata, success, &ruledOut);
+
+#ifndef NDEBUG
+   {
+      const int stackpos_new = extStackGetPosition(extdata);
+      assert(extstack_state[stackpos_new] == EXT_STATE_EXPANDED || (stackpos_new < stackpos) );
+   }
+#endif
+}
+
+
+/** Expands wrapped component of stack
+ *  by adding all possible subsets of the component that cannot be ruled-out.
+ */
+static
+void extStackTopExpandWrapped(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            success             /**< success pointer */
+)
+{
+   int extedges[STP_EXT_MAXGRAD];
+   REDDATA* const reddata = extdata->reddata;
+   int nextedges = 0;
+   SCIP_Bool ruledOut = FALSE;
+
+#ifndef NDEBUG
+   const int stackpos = extStackGetPosition(extdata);
+   const int* const extstack_state = extdata->extstack_state;
+   for( int i = 0; i < STP_EXT_MAXGRAD; i++ )
+      extedges[i] = -1;
+
+   assert(scip && graph && success);
+   assert(EXT_STATE_EXPANDED == extstack_state[stackpos]);
+#endif
+   SCIPdebugMessage("expanding wrapped components \n");
+
+   assert(0);
+
+
+   // todo
+   // we need to contract the mst level...to make sure that only base edges that are used are included!
+   // we can get the edges that are still active from the mldists! all bases that are active!
 
    extreduce_mstLevelInit(reddata, extdata);
 
@@ -1376,6 +1560,26 @@ void extStackTopExpand(
 
       extBacktrack(scip, graph, *success, FALSE, extdata);
    }
+}
+
+
+/** Expands top component of stack.
+ *  Note: This method can backtrack:
+ *        1. If stack is full (with success set to FALSE),
+ *        2. If all edges of the component can be ruled-out (with success set to TRUE).
+ */
+static
+void extStackTopExpand(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            success             /**< success pointer */
+)
+{
+   if( extStackTopIsWrapped(extdata) )
+      extStackTopExpandWrapped(scip, graph, extdata, success);
+   else
+      extStackTopExpandSingletons(scip, graph, extdata, success);
 }
 
 
@@ -1829,8 +2033,8 @@ void extProcessComponent(
          continue;
       }
 
-      /* component not expanded yet? */
-      if( extstack_state[stackposition] != EXT_STATE_EXPANDED )
+      /* component not expanded yet or is wrapped? */
+      if( extstack_state[stackposition] != EXT_STATE_EXPANDED || extStackTopIsWrapped(extdata) )
       {
          assert(extstack_state[stackposition] == EXT_STATE_NONE);
 

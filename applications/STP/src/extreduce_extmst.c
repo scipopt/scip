@@ -1484,6 +1484,47 @@ void mstLevelLeafSetVerticalSDsBoth(
 }
 
 
+
+/** Reserves space for SDs from head of extension edge to all leaves of the tree.
+ * todo delete? */
+static
+void mstLevelLeafReserveVerticalSDs(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2neighbor,      /**< the edge from the tree to the neighbor */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+#ifndef NDEBUG
+   REDDATA* const reddata = extdata->reddata;
+   const int* const leaves = extdata->tree_leaves;
+   const SCIP_Bool hasBiasedSds = extReddataHasBiasedSds(reddata);
+   SCIP_Real* const adjedgecostsBiased = hasBiasedSds ? extreduce_mldistsEmptySlotTargetDists(reddata->sdsbias_vertical) : NULL;
+   const int nleaves = extdata->tree_nleaves;
+
+   int* const adjids = extreduce_mldistsEmptySlotTargetIds(reddata->sds_vertical);
+   int* const adjidsBiased = hasBiasedSds ? extreduce_mldistsEmptySlotTargetIds(reddata->sdsbias_vertical) : NULL;
+
+   assert(!extIsAtInitialComp(extdata));
+
+   for( int j = 0; j < nleaves; j++ )
+   {
+      const int leaf = leaves[j];
+
+      assert(leaf >= 0 && leaf < graph->knots);
+      assert(extdata->tree_deg[leaf] == 1 && leaf != graph->head[edge2neighbor]);
+
+      adjids[j] = leaf;
+      if( hasBiasedSds )
+      {
+         assert(adjedgecostsBiased);
+         adjidsBiased[j] = leaf;
+      }
+   }
+#endif
+}
+
+
 /** adjusts vertical SDs by removing the neighbor base entry */
 static inline
 void mstLevelLeafAdjustVerticalSDs(
@@ -1532,6 +1573,41 @@ void mstLevelLeafAdjustVerticalSDs(
      ids[nleaves - 1] = STP_MLDISTS_ID_UNSET;
 #endif
   }
+}
+
+
+/** adjusts vertical SD placeholders by removing the neighbor base entry */
+static inline
+void mstLevelLeafEmptyAdjustVerticalSDs(
+   int                   neighbor_base,      /**< the edge from the tree to the neighbor */
+   MLDISTS*              sds_vertical,       /**< SD storage, possibly biased! */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+#ifndef NDEBUG
+   SCIP_Real* const dists = extreduce_mldistsEmptySlotTargetDistsDirty(sds_vertical);
+   int* const ids = extreduce_mldistsEmptySlotTargetIdsDirty(sds_vertical);
+   const int leaves_pos = extLeafFindPos(extdata, neighbor_base);
+   const int nleaves = extdata->tree_nleaves;
+
+   assert(!extIsAtInitialComp(extdata));
+   assert(nleaves >= 2 && leaves_pos > 0 && leaves_pos < nleaves);
+   assert(ids[leaves_pos] == neighbor_base);
+   assert(neighbor_base != extdata->tree_root);
+
+   /* shift to remove the neighbor base */
+
+   for( int i = leaves_pos + 1; i < nleaves; i++ )
+   {
+      assert(EQ(dists[i], STP_MLDISTS_DIST_UNSET));
+      dists[i - 1] = dists[i];
+      ids[i - 1] = ids[i];
+   }
+
+   dists[nleaves - 1] = STP_MLDISTS_DIST_UNSET;
+   ids[nleaves - 1] = STP_MLDISTS_ID_UNSET;
+#endif
+
 }
 
 
@@ -1779,6 +1855,46 @@ void mstLevelHorizontalAddSds(
    assert(!extreduce_mldistsEmptySlotExists(sds_horizontal));
 }
 
+
+
+/** Reserves space for horizontal SDs in given ML storage */
+static
+void mstLevelHorizontalReserveSds(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   nextedges,          /**< number of edges for extension */
+   const int*            extedges,           /**< array of edges for extension */
+   EXTDATA*              extdata,            /**< extension data */
+   MLDISTS*              sds_horizontal      /**< horizontal multi-level distances (possibly biased!) */
+)
+{
+   const int* const ghead = graph->head;
+   assert(nextedges > 0);
+
+   extreduce_mldistsLevelAddTop(nextedges, nextedges - 1, sds_horizontal);
+
+   /* tree has not yet been extended, so sds_horizontal is ahead */
+   assert(extdata->tree_depth == extreduce_mldistsTopLevel(sds_horizontal) - 1);
+   assert(extreduce_mldistsEmptySlotExists(sds_horizontal));
+
+   for( int i = 0; i < nextedges; ++i )
+   {
+      int* const adjids = extreduce_mldistsEmptySlotTargetIds(sds_horizontal);
+      SCIP_Real* const adjedgecosts = extreduce_mldistsEmptySlotTargetDists(sds_horizontal);
+      const int ext_head = ghead[extedges[i]];
+
+      extreduce_mldistsEmptySlotSetBase(ext_head, sds_horizontal);
+
+      for( int j = 0; j < nextedges; ++j )
+      {
+         adjedgecosts[j] = STP_MLDISTS_DIST_UNSET;
+         adjids[j] = STP_MLDISTS_ID_UNSET;
+      }
+      extreduce_mldistsEmptySlotSetFilled(sds_horizontal);
+   }
+
+   assert(!extreduce_mldistsEmptySlotExists(sds_horizontal));
+}
+
 /** Can current tree be peripherally ruled out by using MST based arguments? */
 SCIP_Bool extreduce_mstRuleOutPeriph(
    SCIP*                 scip,               /**< SCIP */
@@ -1905,6 +2021,7 @@ void extreduce_mstLevelVerticalAddLeaf(
    assert(*leafRuledOut == FALSE);
    assert(!extIsAtInitialComp(extdata));
 
+   // todo her we want to find the next free position...or just the corresponding position? NO, next
    mstLevelLeafInit(graph, neighbor_base, neighbor, extdata);
 
    /* compute and store SDs to all leaves;
@@ -1930,6 +2047,44 @@ void extreduce_mstLevelVerticalAddLeaf(
    }
 
    mstLevelLeafExit(graph, neighbor_base, neighbor, *leafRuledOut, extdata);
+}
+
+
+/** Adds neighbor of tree for MST calculation, but keeps corresponding SDs void
+ *  Basically, placeholders for all SDs to all leafs are computed and stored in 'reddata->sds_vertical'.
+ *  Neighbor is given by head of edge 'edge2neighbor'.
+ */
+void extreduce_mstLevelVerticalAddLeafEmpty(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2neighbor,      /**< the edge from the tree to the neighbor */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   REDDATA* const reddata = extdata->reddata;
+   MLDISTS* const sds_vertical = reddata->sds_vertical;
+   MLDISTS* const sdsbias_vertical = reddata->sdsbias_vertical;
+
+   const int neighbor = graph->head[edge2neighbor];
+   const int neighbor_base = graph->tail[edge2neighbor];
+
+   assert(extdata->tree_deg[neighbor_base] == 1);
+   assert(extdata->tree_deg[neighbor] == 0);
+   assert(!extIsAtInitialComp(extdata));
+
+   extreduce_mldistsEmptySlotSetBase(neighbor, sds_vertical);
+   if( extReddataHasBiasedSds(reddata) )
+      extreduce_mldistsEmptySlotSetBase(neighbor, sdsbias_vertical);
+
+   mstLevelLeafReserveVerticalSDs(scip, graph, edge2neighbor, extdata);
+   mstLevelLeafEmptyAdjustVerticalSDs(neighbor_base, sds_vertical, extdata);
+   extreduce_mldistsEmptySlotSetFilled(sds_vertical);
+
+   if( extReddataHasBiasedSds(reddata) )
+   {
+      mstLevelLeafEmptyAdjustVerticalSDs(neighbor_base, sdsbias_vertical, extdata);
+      extreduce_mldistsEmptySlotSetFilled(sdsbias_vertical);
+   }
 }
 
 
@@ -2014,6 +2169,33 @@ void extreduce_mstLevelHorizontalAdd(
       MLDISTS* const sdsbias_horizontal = reddata->sdsbias_horizontal;
 
       mstLevelHorizontalAddSds(scip, graph, nextedges, extedges, extdata, extdata->distdata_biased, sdsbias_horizontal);
+
+      assert(extreduce_mldistsTopLevel(sds_horizontal) == extreduce_mldistsTopLevel(sdsbias_horizontal));
+   }
+}
+
+
+/** Reserve space for horizontal SDs  */
+void extreduce_mstLevelHorizontalAddEmpty(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   nextedges,          /**< number of edges for extension */
+   const int*            extedges,           /**< array of edges for extension */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   REDDATA* const reddata = extdata->reddata;
+   MLDISTS* const sds_horizontal = reddata->sds_horizontal;
+
+   assert(!(extReddataHasBiasedSds(reddata) && graph_pc_isPc(graph)));
+
+   SCIPdebugMessage("add EMPTY horizontal level %d \n", extreduce_mldistsTopLevel(sds_horizontal) + 1);
+   mstLevelHorizontalReserveSds(graph, nextedges, extedges, extdata, sds_horizontal);
+
+   if( extReddataHasBiasedSds(reddata) )
+   {
+      MLDISTS* const sdsbias_horizontal = reddata->sdsbias_horizontal;
+      mstLevelHorizontalReserveSds(graph, nextedges, extedges, extdata, sdsbias_horizontal);
 
       assert(extreduce_mldistsTopLevel(sds_horizontal) == extreduce_mldistsTopLevel(sdsbias_horizontal));
    }

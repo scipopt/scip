@@ -46,6 +46,8 @@ extern "C" {
 #define STP_EXTTREE_MAXNEDGES 25
 #define STP_EXTTREE_MAXNLEAVES 20
 #define STP_EXTTREE_MAXNLEAVES_GUARD (STP_EXTTREE_MAXNLEAVES + STP_EXT_MAXGRAD)
+#define EXT_EDGE_WRAPPED -10
+
 
 #define EXT_STATE_NONE     0
 #define EXT_STATE_EXPANDED 1
@@ -417,6 +419,40 @@ int extStackGetTopOutEdgesEnd(
    return extStackGetOutEdgesEnd(extdata, stackpos);
 }
 
+
+/** is component at top position wrapped? */
+static inline
+SCIP_Bool extStackTopIsWrapped(
+   const EXTDATA*        extdata             /**< extension data */
+   )
+{
+   const int pos = extStackGetPosition(extdata);
+
+   assert(extdata->extstack_start[pos + 1] - extdata->extstack_start[pos] >= 1);
+
+   if( extdata->extstack_start[pos + 1] - extdata->extstack_start[pos] == 1
+    && extdata->extstack_data[extdata->extstack_start[pos]] == EXT_EDGE_WRAPPED  )
+   {
+      return TRUE;
+   }
+
+   assert(extdata->extstack_data[extdata->extstack_start[pos]] != EXT_EDGE_WRAPPED);
+
+   return FALSE;
+}
+
+
+/** is component at top position a singleton edge? */
+static inline
+SCIP_Bool extStackTopIsSingleton(
+   const EXTDATA*        extdata             /**< extension data */
+   )
+{
+   const int pos = extStackGetPosition(extdata);
+   assert(extdata->extstack_start[pos + 1] - extdata->extstack_start[pos] >= 1);
+
+   return (extdata->extstack_start[pos + 1] - extdata->extstack_start[pos] == 1);
+}
 
 
 /** Finds position of given leaf in leaves data.
