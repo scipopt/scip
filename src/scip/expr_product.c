@@ -38,6 +38,7 @@
 #include "scip/expr_entropy.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
+#include "scip/nlhdlr_bilinear.h"
 
 #define EXPRHDLR_NAME         "prod"
 #define EXPRHDLR_DESC         "product of children"

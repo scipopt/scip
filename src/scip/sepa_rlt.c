@@ -34,6 +34,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_lp.h"
 #include "scip/expr_pow.h"
+#include "scip/nlhdlr_bilinear.h"
 
 
 #define SEPA_NAME              "rlt"

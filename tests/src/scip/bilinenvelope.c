@@ -19,6 +19,7 @@
  */
 
 #include "scip/scip.h"
+#include "scip/nlhdlr_bilinear.h"
 
 #include "include/scip_test.h"
 
