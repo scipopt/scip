@@ -2430,7 +2430,19 @@ SCIP_RETCODE SCIPapplyUndercover(
    }
 
    /* calculate upper bound for cover size */
-   maxcoversize = nvars*heurdata->maxcoversizevars;
+   if( heurdata->maxcoversizevars < 1.0 )
+   {
+      maxcoversize = 0.0;
+      for( i = 0; i < nvars; ++i )
+         if( !SCIPvarIsRelaxationOnly(vars[i]) )
+            maxcoversize += 1.0;
+      maxcoversize *= heurdata->maxcoversizevars;
+   }
+   else
+   {
+      /* if maxcoversizevars == 1.0, then there is no limit derived from number of variables */
+      maxcoversize = (SCIP_Real)nvars;
+   }
    if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
    {
       SCIP_Real maxcoversizeconss;
