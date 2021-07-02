@@ -150,7 +150,7 @@ struct SCIP_HeurData
    SCIP_Real             cutoffweight;       /**< weight for cutoff score in fixing order */
    SCIP_Real             inferenceweight;    /**< weight for inference score in foxing order */
    SCIP_Real             maxcoversizevars;   /**< maximum coversize (as fraction of total number of variables) */
-   SCIP_Real             maxcoversizeconss;  /**< maximum coversize maximum coversize (as ratio to the percentage of non-affected constraints) */
+   SCIP_Real             maxcoversizeconss;  /**< maximum coversize (as ratio to the percentage of non-affected constraints) */
    SCIP_Real             mincoveredrel;      /**< minimum percentage of nonlinear constraints in the original problem */
    SCIP_Real             minimprove;         /**< factor by which heuristic should at least improve the incumbent */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
@@ -3122,7 +3122,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          &heurdata->maxcoversizevars, TRUE, DEFAULT_MAXCOVERSIZEVARS, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxcoversizeconss",
-         "maximum coversize maximum coversize (as ratio to the percentage of non-affected constraints)",
+         "maximum coversize (as ratio to the percentage of non-affected constraints)",
          &heurdata->maxcoversizeconss, TRUE, DEFAULT_MAXCOVERSIZECONSS, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/mincoveredrel",
