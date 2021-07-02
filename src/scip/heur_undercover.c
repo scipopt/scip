@@ -2198,7 +2198,11 @@ SCIP_RETCODE fixAndPropagate(
    *bdlen = 0;
    vars = SCIPgetVars(scip);
 
-   /* round-fix-propagate-analyze-backtrack for each variable in the cover */
+   /* round-fix-propagate-analyze-backtrack for each variable in the cover
+    * TODO doing a fix-and-propagate for one variable at a time can be very expensive for large covers
+    *    (try, e.g., junkturn with maxcoversizevars=1)
+    *    consider splitting the cover into at most, say, 100 batches, and fix a complete batch before propagating
+    */
    for( i = 0; i < coversize && !(*infeas); i++ )
    {
       SCIP_Real* boundalts;
