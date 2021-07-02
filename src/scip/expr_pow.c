@@ -3229,3 +3229,118 @@ SCIP_Real SCIPgetExponentExprPow(
 
    return exprdata->exponent;
 }
+
+/** computes coefficients of linearization of a square term in a reference point */
+void SCIPaddSquareLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             refpoint,           /**< point where to linearize */
+   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   )
+{
+   assert(scip != NULL);
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( sqrcoef == 0.0 )
+      return;
+
+   if( SCIPisInfinity(scip, REALABS(refpoint)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   if( !isint || SCIPisIntegral(scip, refpoint) )
+   {
+      SCIP_Real tmp;
+
+      /* sqrcoef * x^2  ->  tangent in refpoint = sqrcoef * 2 * refpoint * (x - refpoint) */
+
+      tmp = sqrcoef * refpoint;
+
+      if( SCIPisInfinity(scip, 2.0 * REALABS(tmp)) )
+      {
+         *success = FALSE;
+         return;
+      }
+
+      *lincoef += 2.0 * tmp;
+      tmp *= refpoint;
+      *linconstant -= tmp;
+   }
+   else
+   {
+      /* sqrcoef * x^2 -> secant between f=floor(refpoint) and f+1 = sqrcoef * (f^2 + ((f+1)^2 - f^2) * (x-f))
+       * = sqrcoef * (-f*(f+1) + (2*f+1)*x)
+       */
+      SCIP_Real f;
+      SCIP_Real coef;
+      SCIP_Real constant;
+
+      f = SCIPfloor(scip, refpoint);
+
+      coef     =  sqrcoef * (2.0 * f + 1.0);
+      constant = -sqrcoef * f * (f + 1.0);
+
+      if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+      {
+         *success = FALSE;
+         return;
+      }
+
+      *lincoef     += coef;
+      *linconstant += constant;
+   }
+}
+
+/** computes coefficients of secant of a square term */
+void SCIPaddSquareSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             lb,                 /**< lower bound on variable */
+   SCIP_Real             ub,                 /**< upper bound on variable */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   )
+{
+   SCIP_Real coef;
+   SCIP_Real constant;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lb));
+   assert(!SCIPisInfinity(scip, -ub));
+   assert(SCIPisLE(scip, lb, ub));
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( sqrcoef == 0.0 )
+      return;
+
+   if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+   {
+      /* unboundedness */
+      *success = FALSE;
+      return;
+   }
+
+   /* sqrcoef * x^2 -> sqrcoef * (lb * lb + (ub*ub - lb*lb)/(ub-lb) * (x-lb)) = sqrcoef * (lb*lb + (ub+lb)*(x-lb))
+    *  = sqrcoef * ((lb+ub)*x - lb*ub)
+    */
+   coef     =  sqrcoef * (lb + ub);
+   constant = -sqrcoef * lb * ub;
+   if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoef     += coef;
+   *linconstant += constant;
+}
