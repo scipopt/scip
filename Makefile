@@ -786,7 +786,6 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_nlp.o \
 			scip/scip_nlpi.o \
 			scip/scip_nodesel.o \
-			scip/scip_nonlinear.o \
 			scip/scip_numerics.o \
 			scip/scip_param.o \
 			scip/scip_presol.o \

@@ -553,6 +553,7 @@ Deleted files
 - src/scip/cons_bivariate.{c,h}
 - src/scip/pub_misc_nonlinear.h
 - src/scip/misc_nonlinear.c
+- src/scip/scip_nonlinear.{c,h}
 
 
 Unit tests

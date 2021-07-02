@@ -323,7 +323,6 @@ set(scipsources
     scip/scip_nlp.c
     scip/scip_nlpi.c
     scip/scip_nodesel.c
-    scip/scip_nonlinear.c
     scip/scip_numerics.c
     scip/scip_param.c
     scip/scip_presol.c
@@ -772,7 +771,6 @@ set(scipheaders
     scip/scip_nlp.h
     scip/scip_nlpi.h
     scip/scip_nodesel.h
-    scip/scip_nonlinear.h
     scip/scip_numerics.h
     scip/scip_param.h
     scip/scip_presol.h

@@ -142,7 +142,6 @@
 #include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_nodesel.h"
-#include "scip/scip_nonlinear.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_presol.h"
