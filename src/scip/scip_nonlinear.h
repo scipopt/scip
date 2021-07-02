@@ -205,65 +205,6 @@ void SCIPaddLogLinearization(
    SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
    );
 
-/** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
- *  number of non-linearly occurrences and stores it in the nlscore array
- *
- *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
- **/
-SCIP_EXPORT
-SCIP_RETCODE SCIPcreateNlpiProb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
-   SCIP_NLROW**          nlrows,             /**< nonlinear rows */
-   int                   nnlrows,            /**< total number of nonlinear rows */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
-   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
-                                              *   problem */
-   SCIP_HASHMAP*         nlrow2idx,          /**< empty hash map to store mapping between variables and indices in nlpi
-                                              *   problem, can be NULL */
-   SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
-                                              *   needed) */
-   SCIP_Real             cutoffbound,        /**< cutoff bound */
-   SCIP_Bool             setobj,             /**< should the objective function be set? */
-   SCIP_Bool             onlyconvex          /**< filter only for convex constraints */
-   );
-
-/** updates bounds of each variable and the cutoff row in the nlpiproblem */
-SCIP_EXPORT
-SCIP_RETCODE SCIPupdateNlpiProb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem representing the convex NLP relaxation */
-   SCIP_HASHMAP*         var2nlpiidx,        /**< mapping between variables and nlpi indices */
-   SCIP_VAR**            nlpivars,           /**< array containing all variables of the nlpi */
-   int                   nlpinvars,          /**< total number of nlpi variables */
-   SCIP_Real             cutoffbound         /**< new cutoff bound */
-   );
-
-/** adds linear rows to the NLP relaxation */
-SCIP_EXPORT
-SCIP_RETCODE SCIPaddNlpiProbRows(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
-   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
-                                              *   problem */
-   SCIP_ROW**            rows,               /**< rows to add */
-   int                   nrows               /**< total number of rows to add */
-   );
-
-/** adds nonlinear rows to the NLP relaxation */
-SCIP_EXPORT
-SCIP_RETCODE SCIPaddNlpiProbNlRows(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
-   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
-                                              *   problem */
-   SCIP_NLROW**          nlrows,             /**< rows to add */
-   int                   nnlrows             /**< total number of rows to add */
-   );
-
 /**@} */
 
 #ifdef __cplusplus

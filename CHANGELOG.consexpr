@@ -346,6 +346,10 @@ nlpi:
 - added argument int* vardegree to SCIPnlpiOracleGetVarDegree() and changed return type to SCIP_RETCODE
 - added argument int** vardegrees to SCIPnlpiOracleGetVarDegrees() and changed return type to SCIP_RETCODE
 - removed argument messagehdlr from SCIPnlpiOraclePrintProblem() and SCIPnlpiOraclePrintProblemGams()
+- renamed SCIPcreateNlpiProb() to SCIPcreateNlpiProblemFromNlRows() and moved into scip_nlpi.{h,c}
+- renamed SCIPupdateNlpiProb() to SCIPupdateNlpiProblem() and moved into scip_nlpi.{h,c}
+- renamed SCIPaddNlpiProbRows() to SCIPaddNlpiProblemRows() and moved into scip_nlpi.{h,c}
+- renamed SCIPaddNlpiProbNlRows() to SCIPaddNlpiProblemNlRows() and moved into scip_nlpi.{h,c}
 
 ### New API functions
 

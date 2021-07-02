@@ -210,7 +210,7 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(masterprob, &benderscutdata->nlpirows, SCIPgetNLPNlRows(subproblem),
          benderscutdata->nlpinrows) ); /*lint !e666*/
 
-   SCIP_CALL( SCIPcreateNlpiProb(subproblem, benderscutdata->nlpi, SCIPgetNLPNlRows(subproblem), benderscutdata->nlpinrows,
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(subproblem, benderscutdata->nlpi, SCIPgetNLPNlRows(subproblem), benderscutdata->nlpinrows,
          benderscutdata->nlpiprob, benderscutdata->var2idx, benderscutdata->row2idx, NULL, SCIPinfinity(subproblem), FALSE,
          FALSE) );
 
@@ -269,7 +269,7 @@ SCIP_RETCODE updateAuxiliaryNonlinearSubproblem(
    assert(benderscutdata->row2idx != NULL);
 
    /* setting the variable bounds to that from the current subproblem */
-   SCIP_CALL( SCIPupdateNlpiProb(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->var2idx,
+   SCIP_CALL( SCIPupdateNlpiProblem(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->var2idx,
          benderscutdata->nlpivars, benderscutdata->nlpinvars, SCIPinfinity(subproblem)) );
 
    /* unfixing the slack variables */

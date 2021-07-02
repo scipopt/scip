@@ -182,7 +182,7 @@ void setup_sepadata(void)
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
    /* I shouldn't care about the cutoff, just assert that the lp solution satisfies the cutoff bound */
-   SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, nlrows, 3,
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, sepadata->nlpi, nlrows, 3,
             sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
    /* set quadratic part of objective function */

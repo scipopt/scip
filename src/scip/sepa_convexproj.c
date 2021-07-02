@@ -794,7 +794,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) ); /*lint !e666*/
 
-      SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+      SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
             sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* add rows of the LP
@@ -802,7 +802,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
        */
       if( SCIPgetDepth(scip) == 0 )
       {
-         SCIP_CALL( SCIPaddNlpiProbRows(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
+         SCIP_CALL( SCIPaddNlpiProblemRows(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
                   SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
       }
 
@@ -811,7 +811,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
    }
    else
    {
-      SCIP_CALL( SCIPupdateNlpiProb(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
+      SCIP_CALL( SCIPupdateNlpiProblem(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
             sepadata->nlpivars, sepadata->nlpinvars, SCIPgetCutoffbound(scip)) );
    }
 

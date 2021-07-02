@@ -514,7 +514,7 @@ SCIP_RETCODE applyNlobbt(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
 
-      SCIP_CALL( SCIPcreateNlpiProb(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+      SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
             propdata->nlpiprob, propdata->var2nlpiidx, NULL, propdata->nlscore, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* initialize bound status; perturb nlscores by a factor which ensures that zero scores remain zero */
@@ -528,13 +528,13 @@ SCIP_RETCODE applyNlobbt(
       /* add rows of the LP */
       if( SCIPgetDepth(scip) == 0 )
       {
-         SCIP_CALL( SCIPaddNlpiProbRows(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx,
+         SCIP_CALL( SCIPaddNlpiProblemRows(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx,
                SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
       }
    }
    else
    {
-      SCIP_CALL( SCIPupdateNlpiProb(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx,
+      SCIP_CALL( SCIPupdateNlpiProblem(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx,
             propdata->nlpivars, propdata->nlpinvars, SCIPgetCutoffbound(scip)) );
    }
 

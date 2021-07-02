@@ -27,6 +27,7 @@
 
 #include "scip/type_nlpi.h"
 #include "scip/type_misc.h"
+#include "scip/type_lp.h"
 #include "blockmemshell/memory.h"
 #include "scip/pub_nlpi.h"
 
@@ -113,7 +114,7 @@ SCIP_RETCODE SCIPsetNlpiPriority(
 SCIP_EXPORT
 SCIP_DECL_NLPIGETSOLVERPOINTER(SCIPgetNlpiSolverPointer);
 
-/** creates a problem instance */
+/** creates an empty problem instance */
 SCIP_EXPORT
 SCIP_DECL_NLPICREATEPROBLEM(SCIPcreateNlpiProblem);
 
@@ -233,6 +234,72 @@ SCIP_DECL_NLPIGETSTRINGPAR(SCIPgetNlpiStringPar);
 /** sets string parameter of NLP */
 SCIP_EXPORT
 SCIP_DECL_NLPISETSTRINGPAR(SCIPsetNlpiStringPar);
+
+/** @} */
+
+/**@name Convenience methods to setup and update a NLPI problem using NLROWS
+ *
+ * These methods can be used, for example, to create a NLPI problem that contains only the convex rows of the SCIP NLP relaxation.
+ * @{
+ */
+
+/** creates a NLPI problem from given nonlinear rows
+ *
+ * The function computes for each variable the number of non-linear occurrences and stores it in the nlscore array.
+ *
+ * @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
+ **/
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateNlpiProblemFromNlRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLROW**          nlrows,             /**< nonlinear rows */
+   int                   nnlrows,            /**< number of nonlinear rows */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpiprob */
+   SCIP_HASHMAP*         nlrow2idx,          /**< empty hash map to store mapping between variables and indices in nlpiprob, can be NULL */
+   SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not needed) */
+   SCIP_Real             cutoffbound,        /**< cutoff bound */
+   SCIP_Bool             setobj,             /**< whether the objective function should be set to one of the SCIP problem */
+   SCIP_Bool             onlyconvex          /**< filter only for convex constraints */
+   );
+
+/** updates variable bounds and the cutoff row in a NLPI problem
+ *
+ * The NLPI problem must have been setup by SCIPcreateNlpiProblemFromNlRows().
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPupdateNlpiProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem representing the convex NLP relaxation */
+   SCIP_HASHMAP*         var2nlpiidx,        /**< mapping between variables and nlpi indices */
+   SCIP_VAR**            nlpivars,           /**< array containing all variables of the nlpi */
+   int                   nlpinvars,          /**< total number of nlpi variables */
+   SCIP_Real             cutoffbound         /**< new cutoff bound */
+   );
+
+/** adds SCIP_ROWs to a NLPI problem */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddNlpiProblemRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpiprob */
+   SCIP_ROW**            rows,               /**< rows to add */
+   int                   nrows               /**< number of rows to add */
+   );
+
+/** adds SCIP_NLROWs to a NLPI problem */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddNlpiProblemNlRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpiprob */
+   SCIP_NLROW**          nlrows,             /**< rows to add */
+   int                   nnlrows             /**< number of rows to add */
+   );
 
 /** @} */
 
