@@ -48,6 +48,111 @@ struct SCIP_ExprhdlrData
  * Local methods
  */
 
+/** computes coefficients of secant of a logarithmic term */
+static
+void addLogSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lb,                 /**< lower bound on variable */
+   SCIP_Real             ub,                 /**< upper bound on variable */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   )
+{
+   SCIP_Real coef;
+   SCIP_Real constant;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lb));
+   assert(!SCIPisInfinity(scip, -ub));
+   assert(SCIPisLE(scip, lb, ub));
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( SCIPisLE(scip, lb, 0.0) || SCIPisInfinity(scip, ub) )
+   {
+      /* unboundedness */
+      *success = FALSE;
+      return;
+   }
+
+   /* if lb and ub are too close use a safe secant */
+   if( SCIPisEQ(scip, lb, ub) )
+   {
+      coef = 0.0;
+      constant = log(ub);
+   }
+   else
+   {
+      coef = (log(ub) - log(lb)) / (ub - lb);
+      constant = log(ub) - coef * ub;
+   }
+
+   if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoef     += coef;
+   *linconstant += constant;
+}
+
+/** computes coefficients of linearization of a logarithmic term in a reference point */
+static
+void addLogLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
+   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   )
+{
+   SCIP_Real constant;
+   SCIP_Real coef;
+
+   assert(scip != NULL);
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   /* can not compute a valid cut if zero is contained in [lb,ub] */
+   if( SCIPisInfinity(scip, REALABS(refpoint)) || SCIPisLE(scip, refpoint, 0.0) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   if( !isint || SCIPisIntegral(scip, refpoint) )
+   {
+      assert(refpoint != 0.0);
+      coef = 1.0 / refpoint;
+      constant = log(refpoint) - 1.0;
+   }
+   else
+   {
+      /* log(x) -> secant between f=floor(refpoint) and f+1 = log((f+1.0)/f) * x + log(f) - log((f+1.0)/f) * f */
+      SCIP_Real f;
+
+      f = SCIPfloor(scip, refpoint);
+      assert(f > 0.0);
+
+      coef     = log((f+1.0) / f);
+      constant = log(f) - coef * f;
+   }
+
+   if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoef += coef;
+   *linconstant += constant;
+}
+
 /*
  * Callback methods of expression handler
  */
@@ -287,13 +392,13 @@ SCIP_DECL_EXPRESTIMATE(estimateLog)
             refpoint[0] = 0.1;
       }
 
-      SCIPaddLogLinearization(scip, refpoint[0], SCIPexprIsIntegral(SCIPexprGetChildren(expr)[0]), coefs, constant, success);
+      addLogLinearization(scip, refpoint[0], SCIPexprIsIntegral(SCIPexprGetChildren(expr)[0]), coefs, constant, success);
       *islocal = FALSE; /* linearization is globally valid */
       *branchcand = FALSE;
    }
    else
    {
-      SCIPaddLogSecant(scip, lb, ub, coefs, constant, success);
+      addLogSecant(scip, lb, ub, coefs, constant, success);
       *islocal = TRUE; /* secants are only valid locally */
    }
 
@@ -353,7 +458,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
       if( overest[i] )
       {
          assert(i < 3);
-         SCIPaddLogLinearization(scip, refpointsover[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
+         addLogLinearization(scip, refpointsover[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
          if( success )
          {
             SCIPdebugMsg(scip, "init overestimate log(x) at x=%g -> %g*x+%g\n", refpointsover[i], coefs[*nreturned][0], constant[*nreturned]);
@@ -361,7 +466,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
       }
       else
       {
-         SCIPaddLogSecant(scip, lb, ub, coefs[*nreturned], &constant[*nreturned], &success);
+         addLogSecant(scip, lb, ub, coefs[*nreturned], &constant[*nreturned], &success);
          if( success )
          {
             SCIPdebugMsg(scip, "init underestimate log(x) on x=[%g,%g] -> %g*x+%g\n", lb, ub, coefs[*nreturned][0], constant[*nreturned]);

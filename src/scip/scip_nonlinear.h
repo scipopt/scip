@@ -161,50 +161,6 @@ void SCIPcomputeBilinEnvelope2(
    SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
    );
 
-/** computes coefficients of secant of an exponential term */
-SCIP_EXPORT
-void SCIPaddExpSecant(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lb,                 /**< lower bound on variable */
-   SCIP_Real             ub,                 /**< upper bound on variable */
-   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
-   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
-   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
-   );
-
-/** computes coefficients of linearization of an exponential term in a reference point */
-SCIP_EXPORT
-void SCIPaddExpLinearization(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
-   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
-   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
-   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
-   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
-   );
-
-/** computes coefficients of secant of a logarithmic term */
-SCIP_EXPORT
-void SCIPaddLogSecant(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             lb,                 /**< lower bound on variable */
-   SCIP_Real             ub,                 /**< upper bound on variable */
-   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
-   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
-   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
-   );
-
-/** computes coefficients of linearization of a logarithmic term in a reference point */
-SCIP_EXPORT
-void SCIPaddLogLinearization(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
-   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
-   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
-   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
-   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
-   );
-
 /**@} */
 
 #ifdef __cplusplus
