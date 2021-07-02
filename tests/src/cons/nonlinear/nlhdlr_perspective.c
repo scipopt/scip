@@ -146,7 +146,7 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
          }
       }
 
-      cr_expect(found, "variable %s must be in the cut", SCIPvarGetName(vars[j]));
+      cr_expect(found, "variable %s must be in the cut", SCIPvarGetName(var));
    }
 }
 
