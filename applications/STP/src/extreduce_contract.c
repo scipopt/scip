@@ -191,9 +191,10 @@ void compRootDistsUpdateLeavesDists(
    const int leavesSame_start = contraction->leaves_start[level - 1];
    const int leavesSame_end = contraction->leaves_start[level];
    const int comproot = extStackGetTopRoot(graph, extdata);
+   const SCIP_Bool hasSiblings = (leavesSame_start != leavesSame_end);
    const SCIP_Real* const sdvertical_dists = extreduce_mldistsTargetDists(sds_vertical, level - 1, comproot);
-   const SCIP_Real* const sdhorizontal_dists = extreduce_mldistsTargetDists(sds_horizontal, level - 1, comproot);
-   const int* const sdhorizontal_ids = extreduce_mldistsTargetIds(sds_horizontal, level - 1, comproot);
+   const SCIP_Real* const sdhorizontal_dists = hasSiblings ? extreduce_mldistsTargetDists(sds_horizontal, level - 1, comproot) : NULL;
+   const int* const sdhorizontal_ids = hasSiblings ? extreduce_mldistsTargetIds(sds_horizontal, level - 1, comproot) : NULL;
    const int sdhorizontal_ntargets = extreduce_mldistsLevelNTargets(sds_horizontal, level - 1);
 
 #ifndef NDEBUG
@@ -211,6 +212,7 @@ void compRootDistsUpdateLeavesDists(
    for( int i = leavesSame_start; i < leavesSame_end; i++ )
    {
       int j;
+      assert(sdvertical_dists && sdhorizontal_dists);
 
       for( j = 0; j < sdhorizontal_ntargets; j++ )
       {

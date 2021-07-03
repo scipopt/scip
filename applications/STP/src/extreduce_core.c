@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- #define SCIP_DEBUG
+// #define SCIP_DEBUG
 // #define STP_DEBUG_EXT
 
 #include <stdio.h>
@@ -745,12 +745,28 @@ SCIP_Bool extTreeRuleOutPeriph(
 
          extreduce_mstLevelVerticalClose(extdata->reddata);
 
-         printf("ruledOutFull=%d \n", ruledOutFull);
+         //printf("ruledOutFull=%d \n", ruledOutFull);
 
       }
 
       if( ruledOutFull )
          return TRUE;
+
+      // todo extra method
+      {
+         const int edge =
+               extdata->extstack_data[extdata->extstack_start[extStackGetPosition(extdata)]];
+         const int base = graph->tail[edge];
+         const int *tree_deg = graph_pc_isPc(graph) ? extdata->tree_deg : NULL;
+         const STP_Vectype(int) implications = extdata->reddata->nodes_implications[base];
+
+         if( extensionHasImplicationConflict(graph, implications, tree_deg,
+               extdata->tree_root, &edge, 1) )
+         {
+            SCIPdebugMessage("implication singleton rule-out \n");
+            return TRUE;
+         }
+      }
    }
 
    if( extreduce_redcostRuleOutPeriph(graph, extdata) )
@@ -1083,13 +1099,9 @@ void extStackAddCompsExpanded(
       return;
    }
 
-
-   printf("nextedges=%d \n", nextedges);
-
-
    // todo extra method
    extreduce_mldistsLevelRemoveTop(extdata->reddata->sds_horizontal);
-   if( extdata->reddata->sdsbias_horizontal )
+   if( extReddataHasBiasedSds(extdata->reddata) )
       extreduce_mldistsLevelRemoveTop(extdata->reddata->sdsbias_horizontal);
 
    extreduce_mstLevelHorizontalAdd(scip, graph, nextedges, extedges, extdata);
@@ -1142,7 +1154,9 @@ void extStackAddCompsExpanded(
    /* nothing added? */
    if( stackpos == extStackGetPosition(extdata) )
    {
+      assert(datasize == extstack_start[stackpos]);
       *ruledOut = TRUE;
+      extstack_data[datasize] = EXT_EDGE_WRAPPED;
    }
    else
    {
@@ -1172,10 +1186,8 @@ void extStackAddCompsExpandedSing(
    int* const extstack_start = extdata->extstack_start;
    int* const extstack_state = extdata->extstack_state;
    const int extroot = graph->tail[extedges[0]];
-   const STP_Vectype(int) implications = extdata->reddata->nodes_implications[extroot];
    int stackpos = extStackGetPosition(extdata);
    int datasize = extstack_start[stackpos];
-   const int* tree_deg = graph_pc_isPc(graph) ? extdata->tree_deg : NULL;
 
    assert(nextedges > 0 && nextedges < STP_EXT_MAXGRAD);
    *ruledOut = FALSE;
@@ -1199,25 +1211,14 @@ void extStackAddCompsExpandedSing(
    /* compute and add singleton components (overwrite previous, non-expanded component) */
    for( int pos = 0; pos < nextedges; pos++  )
    {
-      const int datasize_prev = datasize;
-
       assert(datasize < extdata->extstack_maxsize && stackpos < extdata->extstack_maxsize - 1);
       assert(graph->tail[extedges[pos]] == extroot);
 
       extstack_data[datasize++] = extedges[pos];
       SCIPdebugMessage("add singleton head %d \n", graph->head[extedges[pos]]);
 
-      if( extensionHasImplicationConflict(graph, implications, tree_deg, extdata->tree_root,
-         &(extstack_data[datasize_prev]), datasize - datasize_prev) )
-      {
-         SCIPdebugMessage("implication conflict found for root %d \n", extroot);
-         datasize = datasize_prev;
-      }
-      else
-      {
-         extstack_state[stackpos] = EXT_STATE_EXPANDED;
-         extstack_start[++stackpos] = datasize;
-      }
+      extstack_state[stackpos] = EXT_STATE_EXPANDED;
+      extstack_start[++stackpos] = datasize;
 
       assert(extstack_start[stackpos] - extstack_start[stackpos - 1] > 0);
    }
@@ -1306,8 +1307,6 @@ void extStackTopCollectExtEdges(
    {
       if( extdata->tree_deg[graph->head[e]] != 0 )
          continue;
-
-      graph_edge_printInfo(graph, e);
 
       if( extreduce_mldistsLevelContainsBase(sds_vertical, toplevel, graph->head[e]) )
       {
