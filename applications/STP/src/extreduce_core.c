@@ -392,27 +392,27 @@ void extInnerNodeAdd(
 static inline
 void extInnerNodeRemoveTop(
    const GRAPH*          graph,             /**< graph data structure */
-   int                   comproot,          /**< root of component that is removed */
+   int                   innernode,         /**< (top) node to remove */
    EXTDATA*              extdata            /**< extension data */
 )
 {
    assert(extdata && extdata->tree_innerNodes);
-   assert(comproot >= 0);
+   assert(innernode >= 0);
 
    /* update tree leaves array */
-   if( comproot != extdata->tree_root )
+   if( innernode != extdata->tree_root )
    {
       const SCIP_Bool isPc = (graph->prize != NULL);
 
       assert(extdata->tree_ninnerNodes >= 1);
-      assert(comproot == extdata->tree_innerNodes[extdata->tree_ninnerNodes - 1]);
+      assert(innernode == extdata->tree_innerNodes[extdata->tree_ninnerNodes - 1]);
       assert(isPc == graph_pc_isPc(graph));
 
       extdata->tree_ninnerNodes--;
 
       if( isPc )
       {
-         extdata->pcdata->tree_innerPrize -= graph->prize[comproot];
+         extdata->pcdata->tree_innerPrize -= graph->prize[innernode];
 
          assert(GE(extdata->pcdata->tree_innerPrize, 0.0));
       }
@@ -708,20 +708,49 @@ SCIP_Bool extTreeRuleOutPeriph(
    static SCIP_Longint red = 0;
 #endif
 
-
+   /* if we have a singleton edge, we first check whether the edge is redundant in all extension components
+    * and concomitantly compute the SDs to the current tree leafs */
    if( extStackTopIsSingleton(extdata) && !extIsAtInitialComp(extdata) )
    {
-      int todo;
-      const int edge = -1; // todo just get top!
-      SCIP_Bool ruledOutFull;
-      assert(0);
+      SCIP_Bool ruledOutFull = FALSE;
 
-      extreduce_mstLevelVerticalAddLeaf(scip, graph, edge, extdata, &ruledOutFull);
+      // todo extra method!
+      {
+         const int edge = extdata->extstack_data[extdata->extstack_start[extStackGetPosition(extdata)]];
+         const int base = graph->tail[edge];
+         const int leaf = graph->head[edge];
 
-      // todo: we first want to check for extended rule out
-      // if not possible, then add then add to vertical dists!
+         SCIPdebugMessage("adding SDs for edge %d->%d \n", graph->tail[edge], graph->head[edge]);
 
-      // check with special bottleneck and compute and store SD!
+         extreduce_mstLevelVerticalReopen(extdata);
+
+         assert(extdata->tree_deg[base] == 2);
+         assert(extdata->tree_deg[leaf] == 1);
+
+         /* NOTE the following is needed to keep invariants */
+         extdata->tree_deg[base] = 1;
+         extdata->tree_deg[leaf] = 0;
+         extLeafRemoveTop(graph, 1, base, extdata);
+         extInnerNodeRemoveTop(graph, base, extdata);
+
+         // todo extmst issue...MST should actually be removed, but is still on top...
+
+         extreduce_mstLevelVerticalAddLeaf(scip, graph, edge, extdata, &ruledOutFull);
+
+         extLeafRemove(base, extdata);
+         extLeafAdd(leaf, extdata);
+         extInnerNodeAdd(graph, base, extdata);
+         extdata->tree_deg[base] = 2;
+         extdata->tree_deg[leaf] = 1;
+
+         extreduce_mstLevelVerticalClose(extdata->reddata);
+
+         printf("ruledOutFull=%d \n", ruledOutFull);
+
+      }
+
+      if( ruledOutFull )
+         return TRUE;
    }
 
    if( extreduce_redcostRuleOutPeriph(graph, extdata) )
@@ -1039,8 +1068,9 @@ void extStackAddCompsExpanded(
    const uint32_t powsize = (uint32_t) pow(2.0, nextedges);
    const int* tree_deg = graph_pc_isPc(graph) ? extdata->tree_deg : NULL;
 
-   assert(nextedges > 0 && nextedges < 32);
+   assert(0 < nextedges && nextedges < STP_EXT_MAXGRAD);
    assert(powsize >= 2);
+   assert(extstack_data[datasize] == EXT_EDGE_WRAPPED);
 
    *ruledOut = FALSE;
 
@@ -1053,10 +1083,19 @@ void extStackAddCompsExpanded(
       return;
    }
 
-   extreduce_mstLevelHorizontalAdd(scip, graph, nextedges, extedges, extdata);
-   extreduce_mstLevelClose(scip, graph, extroot, extdata);
 
-   assert(nextedges < STP_EXT_MAXGRAD);
+   printf("nextedges=%d \n", nextedges);
+
+
+   // todo extra method
+   extreduce_mldistsLevelRemoveTop(extdata->reddata->sds_horizontal);
+   if( extdata->reddata->sdsbias_horizontal )
+      extreduce_mldistsLevelRemoveTop(extdata->reddata->sdsbias_horizontal);
+
+   extreduce_mstLevelHorizontalAdd(scip, graph, nextedges, extedges, extdata);
+
+   // todo probably not necessary to close! MST should be there already!
+  //extreduce_mstLevelClose(scip, graph, extroot, extdata);
 
    /* compute and add components (overwrite previous, non-expanded component) */
    // todo since single extensions are used first, might make sense to also have a special bottleneck test for this case!
@@ -1149,7 +1188,7 @@ void extStackAddCompsExpandedSing(
       return;
    }
 
-   extreduce_mstLevelHorizontalAddEmpty(scip, graph, nextedges, extedges, extdata);
+   extreduce_mstLevelHorizontalAddEmpty(graph, extdata);
    extreduce_mstLevelClose(scip, graph, extroot, extdata);
 
    /* first we add the wrapped component */
@@ -1254,39 +1293,27 @@ void extStackTopCollectExtEdges(
    int*                  nextedges           /**< number of edges */
 )
 {
-   const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
+   const MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
    const int stackpos = extStackGetPosition(extdata);
+   const int toplevel = extreduce_mldistsTopLevel(sds_vertical);
+   const int comproot = graph->tail[extdata->extstack_data[extdata->extstack_start[stackpos] + 1]];
+   // todo make that less hacky
 
    assert(*nextedges == 0);
-   assert(extstack_start[stackpos + 1] - extstack_start[stackpos] >= 1);
    assert(extreduce_mstTopCompInSync(scip, graph, extdata));
 
-   /* collect edges for components (and try to rule each of them out) */
-   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
+   for( int e = graph->outbeg[comproot]; e != EAT_LAST; e = graph->oeat[e] )
    {
-      const int edge = extstack_data[i];
-      SCIP_Bool ruledOut = FALSE;
-
-      assert(*nextedges < STP_EXT_MAXGRAD);
-      assert(edge >= 0 && edge < graph->edges);
-      assert(extdata->tree_deg[graph->head[edge]] == 0);
-      assert(!extTreeRuleOutEdgeSimple(graph, extdata, edge));
-
-
-      // todo here we need to assemble the edges that have survived and live in mstLevel
-      assert(0);
-
-
-      /* computes the SDs from 'leaf' to all tree leaves in 'sds_vertical', unless the edge is ruled out */
-      //extreduce_mstLevelVerticalAddLeaf(scip, graph, edge, extdata, &ruledOut);
-
-      if( ruledOut )
-      {
+      if( extdata->tree_deg[graph->head[e]] != 0 )
          continue;
-      }
 
-      extedges[(*nextedges)++] = edge;
+      graph_edge_printInfo(graph, e);
+
+      if( extreduce_mldistsLevelContainsBase(sds_vertical, toplevel, graph->head[e]) )
+      {
+         SCIPdebugMessage("collecting edge %d->%d \n", graph->tail[e], graph->head[e]);
+         extedges[(*nextedges)++] = e;
+      }
    }
 }
 
@@ -1319,9 +1346,6 @@ void extStackTopCollectExtEdgesSing(
       assert(edge >= 0 && edge < graph->edges);
       assert(extdata->tree_deg[graph->head[edge]] == 0);
       assert(!extTreeRuleOutEdgeSimple(graph, extdata, edge));
-
-      /* reserve space for SDs from 'leaf' to all tree leaves in 'sds_vertical' */
-      extreduce_mstLevelVerticalAddLeafEmpty(scip, graph, edge, extdata);
 
       extedges[(*nextedges)++] = edge;
    }
@@ -1456,7 +1480,6 @@ void extStackTopExpandSingletons(
 )
 {
    int extedges[STP_EXT_MAXGRAD];
-   REDDATA* const reddata = extdata->reddata;
    int nextedges = 0;
    SCIP_Bool ruledOut = FALSE;
 
@@ -1471,13 +1494,11 @@ void extStackTopExpandSingletons(
 #endif
    SCIPdebugMessage("expanding singletons \n");
 
-   extreduce_mstLevelInit(reddata, extdata);
-
-   /* NOTE: space for SDs is reserved */
    extStackTopCollectExtEdgesSing(scip, graph, extdata, extedges, &nextedges);
-   extreduce_mstLevelVerticalClose(reddata);
-
    assert(nextedges > 0);
+
+   /* add a placeholder level to keep invariants */
+   extreduce_mstLevelVerticalAddEmpty(graph, extdata);
 
    /* use the just collected edges 'extedges' to build singleton components and add them to the stack */
    extStackAddCompsExpandedSing(scip, graph, nextedges, extedges, extdata, success, &ruledOut);
@@ -1503,13 +1524,12 @@ void extStackTopExpandWrapped(
 )
 {
    int extedges[STP_EXT_MAXGRAD];
-   REDDATA* const reddata = extdata->reddata;
+   int* const extstack_state = extdata->extstack_state;
+   const int stackpos = extStackGetPosition(extdata);
    int nextedges = 0;
    SCIP_Bool ruledOut = FALSE;
 
 #ifndef NDEBUG
-   const int stackpos = extStackGetPosition(extdata);
-   const int* const extstack_state = extdata->extstack_state;
    for( int i = 0; i < STP_EXT_MAXGRAD; i++ )
       extedges[i] = -1;
 
@@ -1518,23 +1538,14 @@ void extStackTopExpandWrapped(
 #endif
    SCIPdebugMessage("expanding wrapped components \n");
 
-   assert(0);
-
-
-   // todo
-   // we need to contract the mst level...to make sure that only base edges that are used are included!
-   // we can get the edges that are still active from the mldists! all bases that are active!
-
-   extreduce_mstLevelInit(reddata, extdata);
-
-   /* Note: Also computes ancestor SDs for leaves that are not ruled-out
-    * and adds them to vertical level! */
+   /* collect surviving singleton edges */
    extStackTopCollectExtEdges(scip, graph, extdata, extedges, &nextedges);
 
-   extreduce_mstLevelVerticalClose(reddata);
+   //extreduce_mstLevelVerticalClose(reddata);
 
-   /* everything ruled out already? */
-   if( nextedges == 0 )
+   /* everything ruled out already?
+    * NOTE in the case of 1 extension edge, this edge has already been ruled out! */
+   if( nextedges == 0 || nextedges == 1 )
    {
       ruledOut = TRUE;
    }
@@ -1555,6 +1566,10 @@ void extStackTopExpandWrapped(
    if( ruledOut )
    {
       *success = TRUE;
+
+      if( extStackTopIsWrapped(extdata) )
+         extstack_state[stackpos] = EXT_STATE_NONE;
+
       assert(extstack_state[stackpos] == EXT_STATE_NONE);
       assert(stackpos != 0);  /* not the initial component! */
 
@@ -2036,7 +2051,7 @@ void extProcessComponent(
       /* component not expanded yet or is wrapped? */
       if( extstack_state[stackposition] != EXT_STATE_EXPANDED || extStackTopIsWrapped(extdata) )
       {
-         assert(extstack_state[stackposition] == EXT_STATE_NONE);
+         assert(extstack_state[stackposition] == EXT_STATE_NONE || extStackTopIsWrapped(extdata));
 
          extStackTopExpand(scip, graph, extdata, &success);
          continue;

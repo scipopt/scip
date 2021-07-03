@@ -53,6 +53,7 @@ extern "C" {
 #define EXT_STATE_EXPANDED 1
 #define EXT_STATE_MARKED   2
 
+#define STP_MLDISTS_ID_EMPTY      -2
 #define STP_MLDISTS_ID_UNSET      -1
 #define STP_MLDISTS_DIST_UNSET    -1.0
 

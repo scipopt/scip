@@ -144,7 +144,7 @@ int mldistsGetPosBase(
       {
          const int id = base_ids[i];
 
-         assert(id >= 0);
+         assert(id >= 0 || id == STP_MLDISTS_ID_EMPTY);
 
          if( id == baseid )
             return i;
@@ -299,6 +299,8 @@ SCIP_RETCODE extreduce_mldistsInit(
 )
 {
    MLDISTS* mldists;
+   /* NOTE: was also need to consider dummy/empty entry! */
+   const int maxnslots_internal = maxnslots + 1;
 
    assert(scip && mldistances);
    assert(maxnlevels >= 1 && maxnslots >= 1 && maxntargets >= 1);
@@ -310,10 +312,10 @@ SCIP_RETCODE extreduce_mldistsInit(
    mldists->nlevels = 0;
    mldists->maxnlevels = maxnlevels;
    mldists->level_maxntargets = maxntargets;
-   mldists->level_maxnslots = maxnslots;
+   mldists->level_maxnslots = maxnslots_internal;
    mldists->target_withids = use_targetids;
-   mldists->maxnslots = maxnlevels * maxnslots;
-   mldists->maxntargets = maxnlevels * maxnslots * maxntargets + emptyslot_nbuffers;
+   mldists->maxnslots = maxnlevels * maxnslots_internal;
+   mldists->maxntargets = maxnlevels * maxnslots_internal * maxntargets + emptyslot_nbuffers;
    mldists->emptyslot_number = MLDISTS_EMPTYSLOT_NONE;
 
    if( use_targetids )
@@ -482,7 +484,7 @@ void extreduce_mldistsEmptySlotSetBase(
 
    assert(extreduce_mldistsEmptySlotExists(mldists));
    assert(position >= 0 && position < mldists->maxnslots);
-   assert(baseid >= 0);
+   assert(baseid >= 0 || baseid == STP_MLDISTS_ID_EMPTY);
    assert(mldists->base_ids[position] == STP_MLDISTS_ID_UNSET);
 
    mldists->base_ids[position] = baseid;
@@ -588,6 +590,21 @@ void extreduce_mldistsLevelAddTop(
 }
 
 
+/** adds dummy level */
+void extreduce_mldistsLevelAddAndCloseEmpty(
+   int                   nslottargets,       /**< number of targets per slot */
+   MLDISTS*              mldists             /**< multi-level distances */
+)
+{
+   assert(mldists);
+
+   extreduce_mldistsLevelAddTop(1, nslottargets, mldists);
+   extreduce_mldistsEmptySlotSetBase(STP_MLDISTS_ID_EMPTY, mldists);
+   extreduce_mldistsEmptySlotSetFilled(mldists);
+   extreduce_mldistsLevelCloseTop(mldists);
+}
+
+
 /** adds root level of slots */
 void extreduce_mldistsLevelAddAndCloseRoot(
    int                   base,               /**< the base */
@@ -602,7 +619,6 @@ void extreduce_mldistsLevelAddAndCloseRoot(
    extreduce_mldistsEmptySlotSetFilled(mldists);
    extreduce_mldistsLevelCloseTop(mldists);
 }
-
 
 
 /** closes the top level for further extensions */
@@ -632,6 +648,46 @@ void extreduce_mldistsLevelCloseTop(
    }
 
    assert(!extreduce_mldistsEmptySlotExists(mldists));
+}
+
+
+
+/** reopens top level for one further extensions */
+void extreduce_mldistsLevelReopenTop(
+   MLDISTS*              mldists             /**< multi-level distances */
+)
+{
+   const int nlevels = mldists->nlevels;
+   const int nslottargets = mldists->level_ntargets[nlevels - 1];
+
+   assert(nlevels > 0);
+   assert(!extreduce_mldistsIsEmpty(mldists));
+   assert(!extreduce_mldistsEmptySlotExists(mldists));
+   assert(mldists->nlevels < mldists->maxnlevels);
+
+   mldists->emptyslot_number = mldists->level_basestart[nlevels] - mldists->level_basestart[nlevels - 1];
+   mldists->level_basestart[nlevels]++;
+   mldists->level_targetstart[nlevels] += nslottargets;
+
+   assert(extreduce_mldistsEmptySlotExists(mldists));
+
+#ifndef NDEBUG
+   {
+      const int targetend = mldists->level_targetstart[nlevels];
+      mldists->base_ids[mldists->level_basestart[nlevels] - 1] = STP_MLDISTS_ID_UNSET;
+
+      for( int i = targetend - nslottargets; i < targetend; ++i )
+         mldists->target_dists[i] = STP_MLDISTS_DIST_UNSET;
+
+      if( mldists->target_withids )
+      {
+         assert(mldists->target_ids);
+
+         for( int i = targetend - nslottargets; i < targetend; ++i )
+            mldists->target_ids[i] = STP_MLDISTS_ID_UNSET;
+      }
+   }
+#endif
 }
 
 
