@@ -663,7 +663,7 @@ void extreduce_mldistsLevelReopenTop(
    assert(nlevels > 0);
    assert(!extreduce_mldistsIsEmpty(mldists));
    assert(!extreduce_mldistsEmptySlotExists(mldists));
-   assert(mldists->nlevels < mldists->maxnlevels);
+   assert(mldists->nlevels <= mldists->maxnlevels);
 
    mldists->emptyslot_number = mldists->level_basestart[nlevels] - mldists->level_basestart[nlevels - 1];
    mldists->level_basestart[nlevels]++;
