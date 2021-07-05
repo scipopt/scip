@@ -356,15 +356,14 @@ SCIP_RETCODE SCIPincludeNlpSolverXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_NLPI* nlpi;
    SCIP_NLPIDATA* nlpidata;
 
    /* create xyz solver interface data */
    nlpidata = NULL;
    /* TODO: (optional) create solver interface specific data here */
 
-   /* create solver interface */
-   SCIP_CALL( SCIPnlpiCreate(&nlpi,
+   /* create and include solver interface */
+   SCIP_CALL( SCIPincludeNlpi(scip,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
          nlpiCopyXyz, nlpiFreeXyz, nlpiGetSolverPointerXyz,
          nlpiCreateProblemXyz, nlpiFreeProblemXyz, nlpiGetProblemPointerXyz,
@@ -373,12 +372,13 @@ SCIP_RETCODE SCIPincludeNlpSolverXyz(
          nlpiChgLinearCoefsXyz, nlpiChgExprXyz,
          nlpiChgObjConstantXyz, nlpiSetInitialGuessXyz, nlpiSolveXyz, nlpiGetSolstatXyz, nlpiGetTermstatXyz,
          nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
-         nlpiGetIntParXyz, nlpiSetIntParXyz, nlpiGetRealParXyz, nlpiSetRealParXyz, nlpiGetStringParXyz, nlpiSetStringParXyz,
+         nlpiGetIntParXyz, nlpiSetIntParXyz, nlpiGetRealParXyz, nlpiSetRealParXyz,
+         nlpiGetStringParXyz, nlpiSetStringParXyz,
          nlpidata) );
-   assert(nlpi != NULL);
 
-   /* include NLPI into SCIP */
-   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+   /* TODO: (optional) add information about third-party library
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "Xyz", "Xyz developed by Jane Doe et.al (github.com/xzy/xyz)") );
+   */
 
    return SCIP_OKAY;
 }
