@@ -474,7 +474,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  * 
  *  - scip    : SCIP data structure
  *  - nlpi    : NLP interface structure
- *  - problem : datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
+ *  - problem : datastructure for problem instance
  *  - type    : parameter number
  *  - dval    : buffer to store the parameter value
  */
@@ -489,7 +489,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *
  *  - scip    : SCIP data structure
  *  - nlpi    : NLP interface structure
- *  - problem : datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
+ *  - problem : datastructure for problem instance
  *  - type    : parameter number
  *  - dval    : parameter value
  */

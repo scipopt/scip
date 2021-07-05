@@ -202,13 +202,11 @@ SCIP_DECL_NLPIGETINTPAR(SCIPgetNlpiIntPar);
 SCIP_EXPORT
 SCIP_DECL_NLPISETINTPAR(SCIPsetNlpiIntPar);
 
-/** gets floating point parameter of NLP
- * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then gets solver-wide value for infinity */
+/** gets floating point parameter of NLP */
 SCIP_EXPORT
 SCIP_DECL_NLPIGETREALPAR(SCIPgetNlpiRealPar);
 
-/** sets floating point parameter of NLP
- * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then sets solver-wide value for infinity */
+/** sets floating point parameter of NLP */
 SCIP_EXPORT
 SCIP_DECL_NLPISETREALPAR(SCIPsetNlpiRealPar);
 
