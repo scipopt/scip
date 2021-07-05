@@ -57,6 +57,7 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
 {
    SCIP_NLPSTATISTICS* statistics;
    SCIP_NLPIPROBLEM* nlpiprob;
+   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
    SCIP_Real* dualcons;
    SCIP_Real* duallb;
    SCIP_Real* dualub;
@@ -158,8 +159,8 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    SCIP_CALL( SCIPsetNlpiInitialGuess(scip, nlpi, nlpiprob, start, NULL, NULL, NULL) );
 
    /* solve NLP */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   nlpparam.feastol = 1e-9;
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, nlpparam) );
    cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
@@ -205,8 +206,7 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    SCIP_CALL( SCIPsetNlpiInitialGuess(scip, nlpi, nlpiprob, initguess, NULL, NULL, NULL) );
 
    /* solve NLP */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, nlpparam) );
    cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
@@ -272,6 +272,7 @@ SCIP_RETCODE solveQP(
 {
    SCIP_NLPSTATISTICS* statistics;
    SCIP_NLPIPROBLEM* nlpiprob;
+   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_EXPR** varexprs;
    SCIP_EXPR* sumexpr;
@@ -343,15 +344,14 @@ SCIP_RETCODE solveQP(
    SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
 
    /* set parameters */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelim) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlim) );
-
+   nlpparam.timelimit = timelim;
+   nlpparam.iterlimit = iterlim;
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
+   nlpparam.verblevel = 1;
 #endif
 
    /* solve NLP */
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, nlpparam) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
 
    *solval = primal[n];
@@ -485,6 +485,7 @@ SCIP_RETCODE resolveAfterFixingVars(
    )
 {
    SCIP_NLPIPROBLEM* nlpiprob;
+   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
    SCIP_Real* primal;
    SCIP_Real* vals;
    int* inds;
@@ -496,7 +497,7 @@ SCIP_RETCODE resolveAfterFixingVars(
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
 
    SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "LP") );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-6) );
+   nlpparam.feastol = 1e-6;
 
    /* add variables */
    SCIP_CALL( SCIPaddNlpiVars(scip, nlpi, nlpiprob, 2, lbs, ubs, varnames) );
@@ -509,7 +510,7 @@ SCIP_RETCODE resolveAfterFixingVars(
    SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, inds, vals, NULL, 0.0) );
 
    /* first solve */
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, nlpparam) );
    cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
@@ -520,7 +521,7 @@ SCIP_RETCODE resolveAfterFixingVars(
    lbs[0] = 0.0;
    ubs[0] = 0.0;
    SCIP_CALL( SCIPchgNlpiVarBounds(scip, nlpi, nlpiprob, 1, inds, lbs, ubs) );
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, nlpparam) );
    cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );

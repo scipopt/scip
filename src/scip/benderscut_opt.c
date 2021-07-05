@@ -153,11 +153,10 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
 #ifdef SCIP_DEBUG
    SCIP_NLPTERMSTAT nlptermstat;
 #endif
+   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(subproblem) };
 #ifdef SCIP_MOREDEBUG
    SCIP_SOL* nlpsol;
 #endif
-   SCIP_Real feastol;
-   SCIP_Real objtol;
 
    assert(subproblem != NULL);
    assert(SCIPinProbing(subproblem));
@@ -165,20 +164,14 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
    (*success) = FALSE;
 
 #ifdef SCIP_MOREDEBUG
-   SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
+   nlpparam.verblevel = 1;
 #endif
 
-   SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
+   /* setting the feasibility and optimality tolerance to 0.01x the defaults */
+   nlpparam.feastol *= multiplier;
+   nlpparam.relobjtol *= multiplier;
 
-   /* getting the feasibility tolerance currently used for the NLP */
-   SCIP_CALL( SCIPgetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, &feastol) );
-   SCIP_CALL( SCIPgetNLPRealPar(subproblem, SCIP_NLPPAR_RELOBJTOL, &objtol) );
-
-   /* setting the feasibility tolerance to 0.01x the current tolerance */
-   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, feastol*multiplier) );
-   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_RELOBJTOL, objtol*multiplier) );
-
-   SCIP_CALL( SCIPsolveNLP(subproblem) );
+   SCIP_CALL( SCIPsolveNLP(subproblem, nlpparam) );
 
    nlpsolstat = SCIPgetNLPSolstat(subproblem);
 #ifdef SCIP_DEBUG
@@ -197,9 +190,6 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
 
       (*success) = TRUE;
    }
-
-   /* resetting the feasibility tolerance to 0.01x the current tolerance */
-   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, feastol) );
 
    return SCIP_OKAY;
 }

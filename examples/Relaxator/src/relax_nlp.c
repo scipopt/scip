@@ -76,6 +76,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    SCIP_HASHMAP* var2idx;
    SCIP_NLPI* nlpi;
    SCIP_Real timelimit;
+   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
    int nnlrows;
 
    *result = SCIP_DIDNOTRUN;
@@ -110,14 +111,14 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
       }
    }
 
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, NLPITERLIMIT) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * FEASTOLFAC) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * RELOBJTOLFAC) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERLEVEL) );
+   nlpparam.timelimit = timelimit;
+   nlpparam.iterlimit = NLPITERLIMIT;
+   nlpparam.feastol = SCIPfeastol(scip) * FEASTOLFAC;
+   nlpparam.relobjtol = SCIPfeastol(scip) * RELOBJTOLFAC;
+   nlpparam.verblevel = NLPVERLEVEL;
 
    /* solve NLP */
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, nlpparam) );
 
    /* forward solution if we solved to optimality; local optimality is enough since the NLP is convex */
    if( SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )

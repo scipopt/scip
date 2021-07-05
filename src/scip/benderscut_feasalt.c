@@ -135,6 +135,7 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
 {
    SCIP_Real timelimit;
    SCIP_NLPSOLSTAT nlpsolstat;
+   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
 
    assert(scip != NULL);
    assert(benderscutdata != NULL);
@@ -152,14 +153,14 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
          return SCIP_OKAY;
       }
    }
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_ITLIM, 3000) );  // TODO what could be a meaningful limit?
+   nlpparam.timelimit = timelimit;
+   nlpparam.iterlimit = 3000; // TODO what could be a meaningful limit?
 
 #ifdef SCIP_MOREDEBUG
-      SCIP_CALL( SCIPsetNlpiIntPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
+   nlpparam.verblevel = 1;
 #endif
 
-   SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, nlpparam) );
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob));
 
    nlpsolstat = SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob);

@@ -309,6 +309,7 @@ SCIP_RETCODE heurExec(
    )
 {
    SCIP_NLPSTATISTICS* nlpstatistics = NULL;
+   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
    SCIP_VAR** binvars = NULL;
    SCIP_Real* initguess = NULL;
    SCIP_Real* ubs = NULL;
@@ -373,11 +374,8 @@ SCIP_RETCODE heurExec(
    SCIP_CALL( SCIPsetNlpiInitialGuess(scip, heurdata->nlpi, heurdata->nlpiprob, initguess, NULL, NULL, NULL) );
 
    /* set parameters of NLP solver */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
-         SCIPfeastol(scip) / 10.0) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
-         SCIPdualfeastol(scip) / 10.0) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 0) );
+   nlpparam.feastol /= 10.0;
+   nlpparam.relobjtol /= 10.0;
 
    /* main loop */
    for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL && nlpcostleft > 0.0 && !SCIPisStopped(scip); ++i )
@@ -402,11 +400,11 @@ SCIP_RETCODE heurExec(
          break;
       }
 
-      SCIP_CALL( SCIPsetNlpiRealPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, timeleft) );
-      SCIP_CALL( SCIPsetNlpiIntPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_ITLIM, heurdata->maxnlpiter) );
+      nlpparam.timelimit = timeleft;
+      nlpparam.iterlimit = heurdata->maxnlpiter;
 
       /* solve NLP */
-      SCIP_CALL( SCIPsolveNlpi(scip, heurdata->nlpi, heurdata->nlpiprob) );
+      SCIP_CALL( SCIPsolveNlpi(scip, heurdata->nlpi, heurdata->nlpiprob, nlpparam) );
       solstat = SCIPgetNlpiSolstat(scip, heurdata->nlpi, heurdata->nlpiprob);
 
       /* give up if an error occurred or no primal values are accessible */

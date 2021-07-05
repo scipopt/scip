@@ -328,6 +328,7 @@ SCIP_RETCODE separateCuts(
    int*           lininds;
    SCIP_Bool      nlpunstable;
    SCIP_EXPRITER* exprit;
+   SCIP_NLPPARAM  nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
 
    nlpunstable = FALSE;
 
@@ -389,16 +390,16 @@ SCIP_RETCODE separateCuts(
    }
    if( sepadata->nlptimelimit > 0.0 )
       timelimit = MIN(sepadata->nlptimelimit, timelimit);
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   nlpparam.timelimit = timelimit;
 
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) / 10.0) ); /* use tighter tolerances for the NLP solver */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
+   nlpparam.iterlimit = iterlimit;
+   nlpparam.feastol = SCIPfeastol(scip) / 10.0; /* use tighter tolerances for the NLP solver */
+   nlpparam.relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip)); /*lint !e666*/
+   nlpparam.verblevel = NLPVERBOSITY;
 
    /* compute the projection onto the convex NLP relaxation */
-   SCIP_CALL( SCIPsolveNlpi(scip, sepadata->nlpi, sepadata->nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, sepadata->nlpi, sepadata->nlpiprob, nlpparam) );
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, sepadata->nlpi, sepadata->nlpiprob));
 
    /* if solution is feasible, add cuts */

@@ -67,12 +67,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution)),        /**< get solution */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics)),      /**< get solve statistics */
-   SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar)),          /**< get value of integer parameter */
-   SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar)),          /**< set value of integer parameter */
-   SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar)),         /**< get value of floating point parameter */
-   SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
-   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
-   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    );
 
@@ -243,7 +237,8 @@ SCIP_RETCODE SCIPnlpiSetInitialGuess(
 SCIP_RETCODE SCIPnlpiSolve(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem             /**< problem instance */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_NLPPARAM*        param               /**< solve parameters */
    );
    
 /** gives solution status */
@@ -305,65 +300,6 @@ SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
    SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
    void*                 buffer              /**< warmstart information */
    );
-
-/**@name Parameter Methods */
-/**@{ */
-
-/** gets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpiGetIntPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int*                  ival                /**< pointer to store the parameter value */
-   );
-   
-/** sets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpiSetIntPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int                   ival                /**< parameter value */
-   );
-
-/** gets floating point parameter of NLP */
-SCIP_RETCODE SCIPnlpiGetRealPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real*            dval                /**< pointer to store the parameter value */
-   );
-
-/** sets floating point parameter of NLP */
-SCIP_RETCODE SCIPnlpiSetRealPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real             dval                /**< parameter value */
-   );
-
-/** gets string parameter of NLP */
-SCIP_RETCODE SCIPnlpiGetStringPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char**          sval                /**< pointer to store the string value, the user must not modify the string */
-   );
-
-/** sets string parameter of NLP */
-SCIP_RETCODE SCIPnlpiSetStringPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char*           sval                /**< parameter value */
-   );
-
-/** @} */
 
 /** @} */
 

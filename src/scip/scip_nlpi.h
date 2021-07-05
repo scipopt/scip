@@ -69,12 +69,6 @@ SCIP_RETCODE SCIPincludeNlpi(
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution)),        /**< get solution */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics)),      /**< get solve statistics */
-   SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar)),          /**< get value of integer parameter */
-   SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar)),          /**< set value of integer parameter */
-   SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar)),         /**< get value of floating point parameter */
-   SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
-   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
-   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    );
 
@@ -191,34 +185,6 @@ SCIP_DECL_NLPIGETSOLUTION(SCIPgetNlpiSolution);
 SCIP_EXPORT
 SCIP_DECL_NLPIGETSTATISTICS(SCIPgetNlpiStatistics);
 
-/**@name Parameter Methods */
-/**@{ */
-
-/** gets integer parameter of NLP */
-SCIP_EXPORT
-SCIP_DECL_NLPIGETINTPAR(SCIPgetNlpiIntPar);
-
-/** sets integer parameter of NLP */
-SCIP_EXPORT
-SCIP_DECL_NLPISETINTPAR(SCIPsetNlpiIntPar);
-
-/** gets floating point parameter of NLP */
-SCIP_EXPORT
-SCIP_DECL_NLPIGETREALPAR(SCIPgetNlpiRealPar);
-
-/** sets floating point parameter of NLP */
-SCIP_EXPORT
-SCIP_DECL_NLPISETREALPAR(SCIPsetNlpiRealPar);
-
-/** gets string parameter of NLP */
-SCIP_EXPORT
-SCIP_DECL_NLPIGETSTRINGPAR(SCIPgetNlpiStringPar);
-
-/** sets string parameter of NLP */
-SCIP_EXPORT
-SCIP_DECL_NLPISETSTRINGPAR(SCIPsetNlpiStringPar);
-
-/** @} */
 
 /**@name Convenience methods to setup and update an NLPI problem using NLROWS
  *

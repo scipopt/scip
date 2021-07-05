@@ -294,7 +294,8 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsolveNLP(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPPARAM         param               /**< NLP solve parameters */
    );
 
 /** gets solution status of current NLP
@@ -378,102 +379,6 @@ SCIP_RETCODE SCIPgetNLPFracVars(
    int*                  npriofracvars       /**< pointer to store the number of NLP fractional variables with maximal branching priority, or NULL */
    );
 
-/** gets integer parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetNLPIntPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int*                  ival                /**< pointer to store the parameter value */
-   );
-
-/** sets integer parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetNLPIntPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int                   ival                /**< parameter value */
-   );
-
-/** gets floating point parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetNLPRealPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real*            dval                /**< pointer to store the parameter value */
-   );
-
-/** sets floating point parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetNLPRealPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real             dval                /**< parameter value */
-   );
-
-/** gets string parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetNLPStringPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char**          sval                /**< pointer to store the parameter value */
-   );
-
-/** sets string parameter of NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetNLPStringPar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char*           sval                /**< parameter value */
-   );
-
 /** writes current NLP to a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -494,12 +399,10 @@ SCIP_RETCODE SCIPwriteNLP(
  *
  *  @warning You have to make sure, that the full internal state of the NLPI does not change or is recovered completely
  *           after the end of the method that uses the NLPI. In particular, if you manipulate the NLP or its solution
- *           (e.g. by calling one of the SCIPnlpiAdd...() or the SCIPnlpiSolve() method), you have to check in advance
+ *           (e.g. by calling one of the SCIPaddNlpi...() or the SCIPsolveNlpi() method), you have to check in advance
  *           whether the NLP is currently solved.  If this is the case, you have to make sure, the internal solution
  *           status is recovered completely at the end of your method. Additionally you have to resolve the NLP with
- *           SCIPnlpiSolve() in order to reinstall the internal solution status.
- *
- *  @warning Make also sure, that all parameter values that you have changed are set back to their original values.
+ *           SCIPsolveNlpi() in order to reinstall the internal solution status.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -613,7 +516,8 @@ SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsolveDiveNLP(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPPARAM         param               /**< NLP solve parameters */
    );
 
 /**@} */

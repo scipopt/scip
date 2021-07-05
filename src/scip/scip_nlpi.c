@@ -121,12 +121,6 @@ SCIP_RETCODE SCIPincludeNlpi(
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution)),        /**< get solution */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics)),      /**< get solve statistics */
-   SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar)),          /**< get value of integer parameter */
-   SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar)),          /**< set value of integer parameter */
-   SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar)),         /**< get value of floating point parameter */
-   SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
-   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
-   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    )
 {
@@ -150,7 +144,6 @@ SCIP_RETCODE SCIPincludeNlpi(
       nlpicreateproblem, nlpifreeproblem, nlpigetproblempointer,
       nlpiaddvars, nlpiaddconstraints, nlpisetobjective, nlpichgvarbounds, nlpichgconssides, nlpidelvarset, nlpidelconsset, nlpichglinearcoefs, nlpichgexpr, nlpichgobjconstant,
       nlpisetinitialguess, nlpisolve, nlpigetsolstat, nlpigettermstat, nlpigetsolution, nlpigetstatistics,
-      nlpigetintpar, nlpisetintpar, nlpigetrealpar, nlpisetrealpar, nlpigetstringpar, nlpisetstringpar,
       nlpidata) );
    assert(nlpi != NULL);
 
@@ -373,7 +366,7 @@ SCIP_DECL_NLPISOLVE(SCIPsolveNlpi)
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPnlpiSolve(scip->set, nlpi, problem) );
+   SCIP_CALL( SCIPnlpiSolve(scip->set, nlpi, problem, &param) );
 
    return SCIP_OKAY;
 }
@@ -412,69 +405,6 @@ SCIP_DECL_NLPIGETSTATISTICS(SCIPgetNlpiStatistics)
    assert(scip != NULL);
 
    SCIP_CALL( SCIPnlpiGetStatistics(scip->set, nlpi, problem, statistics) );
-
-   return SCIP_OKAY;
-}
-
-/**@name Parameter Methods */
-/**@{ */
-
-/** gets integer parameter of NLP */
-SCIP_DECL_NLPIGETINTPAR(SCIPgetNlpiIntPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetIntPar(scip->set, nlpi, problem, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** sets integer parameter of NLP */
-SCIP_DECL_NLPISETINTPAR(SCIPsetNlpiIntPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiSetIntPar(scip->set, nlpi, problem, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** gets floating point parameter of NLP */
-SCIP_DECL_NLPIGETREALPAR(SCIPgetNlpiRealPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetRealPar(scip->set, nlpi, problem, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets floating point parameter of NLP */
-SCIP_DECL_NLPISETREALPAR(SCIPsetNlpiRealPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiSetRealPar(scip->set, nlpi, problem, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** gets string parameter of NLP */
-SCIP_DECL_NLPIGETSTRINGPAR(SCIPgetNlpiStringPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetStringPar(scip->set, nlpi, problem, type, sval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets string parameter of NLP */
-SCIP_DECL_NLPISETSTRINGPAR(SCIPsetNlpiStringPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiSetStringPar(scip->set, nlpi, problem, type, sval) );
 
    return SCIP_OKAY;
 }

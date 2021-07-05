@@ -187,6 +187,7 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_NLPIORACLE* nlpioracle;
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_NLPI* nlpi;
+   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
    SCIP_HASHMAP* var2nlpiidx;
    SCIP_Real timelimit;
    SCIP_Real objvarlb;
@@ -273,17 +274,17 @@ SCIP_RETCODE computeInteriorPoint(
    }
    if( sepadata->nlptimelimit > 0.0 )
       timelimit = MIN(sepadata->nlptimelimit, timelimit);
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
+   nlpparam.timelimit = timelimit;
 
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASFAC * SCIPfeastol(scip)) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) ); /*lint !e666*/
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
+   nlpparam.iterlimit = iterlimit;
+   nlpparam.feastol = NLPFEASFAC * SCIPfeastol(scip);
+   nlpparam.relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip)); /*lint !e666*/
+   nlpparam.verblevel = NLPVERBOSITY;
 
    /* compute interior point */
    SCIPdebugMsg(scip, "starting interior point computation\n");
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, nlpparam) );
    SCIPdebugMsg(scip, "finish interior point computation\n");
 
 #ifdef SCIP_DEBUG

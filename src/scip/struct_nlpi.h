@@ -59,12 +59,6 @@ struct SCIP_Nlpi
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat));        /**< get termination status for a problem  */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution));        /**< get solution of a problem  */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics));      /**< get solve statistics for a problem  */
-   SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar));          /**< get value of integer parameter in a problem  */
-   SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar));          /**< set value of integer parameter in a problem  */
-   SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar));         /**< get value of floating point parameter in a problem  */
-   SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar));         /**< set value of floating point parameter in a problem  */
-   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar));       /**< get value of string parameter in a problem  */
-   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar));       /**< set value of string parameter in a problem  */
    SCIP_NLPIDATA*                  nlpidata;                    /**< NLP interface local data */
 };
 

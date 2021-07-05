@@ -104,6 +104,9 @@ SCIP_Real SCIPlpfeastol(
  *  @return feasibility tolerance for reduced costs
  */
 SCIP_EXPORT
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPdualfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );

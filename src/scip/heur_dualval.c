@@ -2144,6 +2144,8 @@ SCIP_RETCODE SCIPapplyHeurDualval(
 
    if( heurdata->isnlp )
    {
+      SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(heurdata->subscip) };
+
       /* add non-combinatorial linear constraints from subscip into subNLP */
       SCIP_CALL( addLinearConstraintsToNlp(heurdata->subscip, FALSE, TRUE, heurdata) );
 
@@ -2182,16 +2184,16 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       /* don't need startpoint array anymore */
       SCIPfreeBufferArray( scip, &startpoint );
 
-      SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
+      nlpparam.verblevel = heurdata->nlpverblevel;
 
-      SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
+      SCIP_CALL( SCIPsolveNLP(heurdata->subscip, nlpparam) );
       assert(SCIPisNLPConstructed(heurdata->subscip));
 
       /* in this case there was an error in ipopt, we try to give another startpoint */
       if( SCIPgetNLPSolstat(heurdata->subscip) > SCIP_NLPSOLSTAT_FEASIBLE )
       {
          SCIP_CALL( SCIPsetNLPInitialGuess(heurdata->subscip, NULL) );
-         SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
+         SCIP_CALL( SCIPsolveNLP(heurdata->subscip, nlpparam) );
          assert(SCIPisNLPConstructed(heurdata->subscip));
       }
 

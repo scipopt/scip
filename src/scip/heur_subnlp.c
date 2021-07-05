@@ -628,6 +628,7 @@ SCIP_RETCODE solveSubNLP(
    SCIP_VAR*      subvar;
    int            i;
    SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
+   SCIP_NLPPARAM  nlpparam;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -924,23 +925,24 @@ SCIP_RETCODE solveSubNLP(
    *result = SCIP_DIDNOTFIND;
 
    /* setup NLP parameters */
+   nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(heurdata->subscip) };
 
    if( tighttolerances )
    {
       /* set feasibility tolerance, if tighttolerances is set */
-      SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
+      nlpparam.feastol = heurdata->resolvetolfactor*SCIPfeastol(scip);
    }
    /* TODO Would it make sense to already start with a tighter feastol than SCIP's?
    else
    {
-      SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_FEASTOL, 0.1*SCIPfeastol(scip)) );
+      nlpparam.feastol = 0.1*SCIPfeastol(scip);
    }
    */
 
    /* set option file to use by NLP solver */
    if( heurdata->nlpoptfile != NULL && *heurdata->nlpoptfile != '\0' )
    {
-      SCIP_CALL( SCIPsetNLPStringPar(heurdata->subscip, SCIP_NLPPAR_OPTFILE, heurdata->nlpoptfile) );
+      nlpparam.optfile = heurdata->nlpoptfile;
    }
 
    /* set iteration limit for NLP solver */
@@ -948,16 +950,16 @@ SCIP_RETCODE solveSubNLP(
       itercontingent = heurdata->nlpiterlimit;
    if( itercontingent > 0 )
    {
-      SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_ITLIM, (int)MIN(INT_MAX, itercontingent)) );
+      nlpparam.iterlimit = (int)MIN(INT_MAX, itercontingent);
    }
 
    /* set time limit for NLP solver */
-   SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_TILIM, timelimit) );
+   nlpparam.timelimit = timelimit;
 
    /* set verbosity of NLP solver
     * NLP interface may take SCIP verblevel into account, too, so temporarily increase this, too
     */
-   SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
+   nlpparam.verblevel = heurdata->nlpverblevel;
    if( heurdata->nlpverblevel >= 1 )
    {
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", SCIP_VERBLEVEL_HIGH) );  /*lint !e641*/
@@ -965,7 +967,7 @@ SCIP_RETCODE solveSubNLP(
 
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT " and timelimit %g\n", itercontingent, timelimit);
-   SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
+   SCIP_CALL( SCIPsolveNLP(heurdata->subscip, nlpparam) );
 
    SCIPdebugMsg(scip, "NLP solver returned with termination status %d and solution status %d, objective value is %g\n",
       SCIPgetNLPTermstat(heurdata->subscip), SCIPgetNLPSolstat(heurdata->subscip), SCIPgetNLPObjval(heurdata->subscip));

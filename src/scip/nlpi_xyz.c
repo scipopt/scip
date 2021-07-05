@@ -302,66 +302,6 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsXyz)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** gets integer parameter of NLP */
-static
-SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets integer parameter of NLP */
-static
-SCIP_DECL_NLPISETINTPAR(nlpiSetIntParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** gets floating point parameter of NLP */
-static
-SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets floating point parameter of NLP */
-static
-SCIP_DECL_NLPISETREALPAR(nlpiSetRealParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** gets string parameter of NLP */
-static
-SCIP_DECL_NLPIGETSTRINGPAR(nlpiGetStringParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets string parameter of NLP */
-static
-SCIP_DECL_NLPISETSTRINGPAR(nlpiSetStringParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
 /*
  * NLP solver interface specific interface methods
  */
@@ -384,11 +324,9 @@ SCIP_RETCODE SCIPincludeNlpSolverXyz(
          nlpiCreateProblemXyz, nlpiFreeProblemXyz, nlpiGetProblemPointerXyz,
          nlpiAddVarsXyz, nlpiAddConstraintsXyz, nlpiSetObjectiveXyz,
          nlpiChgVarBoundsXyz, nlpiChgConsSidesXyz, nlpiDelVarSetXyz, nlpiDelConstraintSetXyz,
-         nlpiChgLinearCoefsXyz, nlpiChgExprXyz,
-         nlpiChgObjConstantXyz, nlpiSetInitialGuessXyz, nlpiSolveXyz, nlpiGetSolstatXyz, nlpiGetTermstatXyz,
-         nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
-         nlpiGetIntParXyz, nlpiSetIntParXyz, nlpiGetRealParXyz, nlpiSetRealParXyz,
-         nlpiGetStringParXyz, nlpiSetStringParXyz,
+         nlpiChgLinearCoefsXyz, nlpiChgExprXyz, nlpiChgObjConstantXyz,
+         nlpiSetInitialGuessXyz, nlpiSolveXyz,
+         nlpiGetSolstatXyz, nlpiGetTermstatXyz, nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
          nlpidata) );
 
    /* TODO: (optional) add information about third-party library

@@ -544,6 +544,101 @@ void setOpttol(
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", opttol);
 }
 
+/// pass NLP solve parameters to Ipopt
+static
+SCIP_RETCODE handleNlpParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIPROBLEM*     nlpiproblem,        /**< NLP */
+   const SCIP_NLPPARAM   param               /**< solve parameters */
+   )
+{
+   assert(scip != NULL);
+   assert(nlpiproblem != NULL);
+
+   // TODO handle param.fromscratch
+
+   if( param.verblevel < 0 )
+   {
+      SCIPerrorMessage("Value %d for verblevel parameter out of range {0, 1, 2, ...}\n", param.verblevel);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   switch( param.verblevel )
+   {
+      case 0:
+         (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_ERROR);
+         break;
+      case 1:
+         (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
+         break;
+      case 2:
+         (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_DETAILED);
+         break;
+      default:
+         (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", MIN(J_ITERSUMMARY + (param.verblevel-1), J_ALL));
+         break;
+   }
+
+   if( param.iterlimit < 0 )
+   {
+      SCIPerrorMessage("Value %d for parameter iteration limit is negative\n", param.iterlimit);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   (void) nlpiproblem->ipopt->Options()->SetIntegerValue("max_iter", param.iterlimit);
+
+   nlpiproblem->fastfail = param.fastfail;
+
+   if( param.feastol < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter feasibility tolerance is negative\n", param.feastol);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   setFeastol(nlpiproblem, param.feastol);
+
+   if( param.relobjtol < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter relative objective tolerance is negative\n", param.relobjtol);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   setOpttol(nlpiproblem, param.relobjtol);
+
+   if( param.lobjlimit > -SCIP_REAL_MAX )
+   {
+      // TODO remove lobjlimit param ?
+      SCIPwarningMessage(scip, "Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
+   }
+
+   if( param.timelimit < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter time limit is negative\n", param.timelimit);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   /* Ipopt doesn't like a setting of exactly 0 for the max_*_time, so increase as little as possible in that case */
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("max_wall_time", MAX(param.timelimit, DBL_MIN));
+#else
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(param.timelimit, DBL_MIN));
+#endif
+
+   if( (param.optfile == NULL && !nlpiproblem->optfile.empty()) || (param.optfile != NULL && nlpiproblem->optfile != param.optfile) )
+   {
+      // TODO move optfile param into nlpi/ipopt params
+      // reinit Ipopt if optfile changed
+      if( param.optfile != NULL )
+         nlpiproblem->optfile = param.optfile;
+      else
+         nlpiproblem->optfile.clear();
+
+      if( nlpiproblem->ipopt->Initialize(nlpiproblem->optfile) != Solve_Succeeded )
+      {
+         SCIPerrorMessage("Error initializing Ipopt using optionfile \"%s\"\n", nlpiproblem->optfile.c_str());
+         return SCIP_ERROR;
+      }
+      nlpiproblem->firstrun = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
  *  input:
@@ -1153,6 +1248,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       SCIP_CALL( generateInitGuess(scip, problem) );
    }
 
+   SCIP_CALL( handleNlpParam(scip, problem, param) );
+
    try
    {
       SmartPtr<SolveStatistics> stats;
@@ -1355,602 +1452,6 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsIpopt)
    return SCIP_OKAY;
 }
 
-/** gets integer parameter of NLP
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - ival pointer to store the parameter value
- *
- *  output:
- *  - ival parameter value
- */
-static
-SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
-{
-   assert(nlpi != NULL);
-   assert(ival != NULL);
-   assert(problem != NULL);
-   assert(IsValid(problem->ipopt));
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      *ival = 1;
-      break;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      int printlevel;
-      (void) problem->ipopt->Options()->GetIntegerValue("print_level", printlevel, "");
-      if( printlevel <= J_ERROR )
-         *ival = 0;
-      else if( printlevel >= J_DETAILED )
-         *ival = printlevel - J_ITERSUMMARY + 1;
-      else /* J_SUMMARY or J_WARNING or J_ITERSUMMARY */
-         *ival = 1;
-      break;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      (void) problem->ipopt->Options()->GetIntegerValue("max_iter", *ival, "");
-      break;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("optfile parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      *ival = problem->fastfail ? 1 : 0;
-      break;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** sets integer parameter of NLP
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - ival parameter value
- */
-static
-SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-   assert(IsValid(problem->ipopt));
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      if( ival == 0 || ival == 1 )
-      {
-         SCIPwarningMessage(scip, "from scratch parameter not supported by Ipopt interface yet. Ignored.\n");
-      }
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter from scratch out of range {0, 1}\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      switch( ival )
-      {
-      case 0:
-         (void) problem->ipopt->Options()->SetIntegerValue("print_level", J_ERROR);
-         break;
-      case 1:
-         (void) problem->ipopt->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
-         break;
-      case 2:
-         (void) problem->ipopt->Options()->SetIntegerValue("print_level", J_DETAILED);
-         break;
-      default:
-         if( ival > 2 )
-         {
-            (void) problem->ipopt->Options()->SetIntegerValue("print_level", MIN(J_ITERSUMMARY + (ival-1), J_ALL));
-            break;
-         }
-         else
-         {
-            SCIPerrorMessage("Value %d for parameter from verbosity level out of range {0, 1, 2}\n", ival);
-            return SCIP_PARAMETERWRONGVAL;
-         }
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      if( ival >= 0 )
-      {
-         (void) problem->ipopt->Options()->SetIntegerValue("max_iter", ival);
-      }
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter iteration limit is negative\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("optfile parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      if( ival == 0 || ival == 1 )
-      {
-         problem->fastfail = (bool)ival;
-      }
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter fastfail out of range {0, 1}\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** gets floating point parameter of NLP
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - dval pointer to store the parameter value
- *
- *  output:
- *  - dval parameter value
- */
-static
-SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
-{
-   assert(nlpi != NULL);
-   assert(dval != NULL);
-   assert(problem != NULL);
-   assert(IsValid(problem->ipopt));
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      SCIPerrorMessage("from scratch parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      SCIPerrorMessage("verbosity level parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      (void) problem->ipopt->Options()->GetNumericValue("constr_viol_tol", *dval, "");
-      *dval /= FEASTOLFACTOR;
-      break;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      (void) problem->ipopt->Options()->GetNumericValue("dual_inf_tol", *dval, "");
-      break;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      *dval = -SCIPinfinity(scip);
-      break;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      SCIPerrorMessage("iteration limit parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
-      (void) problem->ipopt->Options()->GetNumericValue("max_wall_time", *dval, "");
-#else
-      (void) problem->ipopt->Options()->GetNumericValue("max_cpu_time", *dval, "");
-#endif
-      break;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("option file parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      SCIPerrorMessage("fastfail parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** sets floating point parameter of NLP
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - dval parameter value
- */
-static
-SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-   assert(IsValid(problem->ipopt));
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      SCIPerrorMessage("from scratch parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      SCIPerrorMessage("verbosity level parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      if( dval >= 0 )
-      {
-         setFeastol(problem, dval);
-      }
-      else
-      {
-         SCIPerrorMessage("Value %g for parameter feasibility tolerance is negative\n", dval);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      if( dval >= 0 )
-      {
-         setOpttol(problem, dval);
-      }
-      else
-      {
-         SCIPerrorMessage("Value %g for parameter relative objective tolerance is negative\n", dval);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPwarningMessage(scip, "Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
-      break;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      SCIPerrorMessage("iteration limit parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      if( dval >= 0.0 )
-      {
-         /* Ipopt doesn't like a setting of exactly 0 for the max_cpu_time, so increase as little as possible in that case */
-#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
-         (void) problem->ipopt->Options()->SetNumericValue("max_wall_time", MAX(dval, DBL_MIN));
-#else
-         (void) problem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(dval, DBL_MIN));
-#endif
-      }
-      else
-      {
-         SCIPerrorMessage("Value %g for parameter time limit is negative\n", dval);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("option file parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      SCIPerrorMessage("fastfail parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** gets string parameter of NLP
- *
- *  input:
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - sval pointer to store the string value, the user must not modify the string
- *
- *  output:
- *  - sval parameter value
- */
-static
-SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParIpopt )
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      SCIPerrorMessage("from scratch parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      SCIPerrorMessage("verbosity level parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      SCIPerrorMessage("iteration limit parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      if( !problem->optfile.empty() )
-         *sval = problem->optfile.c_str();
-      else
-         *sval = NULL;
-      return SCIP_OKAY;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      SCIPerrorMessage("fastfail parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY; /*lint !e527*/
-}
-
-/** sets string parameter of NLP
- *
- *  input:
- *  - nlpi NLP interface structure
- *  - problem datastructure for problem instance
- *  - type parameter number
- *  - sval parameter value
- */
-static
-SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      SCIPerrorMessage("from scratch parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      SCIPerrorMessage("verbosity level parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      SCIPerrorMessage("iteration limit parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      if( sval != NULL )
-         problem->optfile = sval;
-      else
-         problem->optfile.clear();
-
-      if( problem->ipopt->Initialize(problem->optfile) != Solve_Succeeded )
-      {
-         SCIPerrorMessage("Error initializing Ipopt using optionfile \"%s\"\n", problem->optfile.c_str());
-         return SCIP_ERROR;
-      }
-      problem->firstrun = TRUE;
-
-      return SCIP_OKAY;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      SCIPerrorMessage("fastfail parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY; /*lint !e527*/
-}
-
 /** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */
 SCIP_RETCODE SCIPincludeNlpSolverIpopt(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1971,8 +1472,6 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
          nlpiChgLinearCoefsIpopt, nlpiChgExprIpopt,
          nlpiChgObjConstantIpopt, nlpiSetInitialGuessIpopt, nlpiSolveIpopt, nlpiGetSolstatIpopt, nlpiGetTermstatIpopt,
          nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
-         nlpiGetIntParIpopt, nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt,
-         nlpiGetStringParIpopt, nlpiSetStringParIpopt,
          nlpidata) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );

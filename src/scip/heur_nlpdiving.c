@@ -1606,6 +1606,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_NLPSOLSTAT nlpsolstat;
+   SCIP_NLPPARAM nlpparam;
    SCIP_LPSOLSTAT lpsolstat;
    SCIP_SOL* nlpstartsol;
    SCIP_SOL* bestsol;
@@ -1649,8 +1650,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    int lastnlpsolvedepth;
    int nfeasnlps;
    int bestcand;
-   int origiterlim;
-   int origfastfail;
    int c;
    int       backtrackdepth;   /* depth where to go when backtracking */
    SCIP_VAR* backtrackvar;     /* (first) variable to fix differently in backtracking */
@@ -1730,6 +1729,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    if( npseudocands == 0 )
       return SCIP_OKAY;
 
+   nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip) };
+
    /* set time limit for NLP solver */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
    if( !SCIPisInfinity(scip, timelim) )
@@ -1737,21 +1738,19 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    /* possibly exit if time is up (need to check here, since the paramter has to be >= 0) */
    if ( timelim <= 0.0 )
       return SCIP_OKAY;
-   SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
+   nlpparam.timelimit = timelim;
 
    *result = SCIP_DIDNOTFIND;
 
 #ifdef SCIP_DEBUG
-   /* SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, 1) ); */
+   /* nlpparam.verblevel = 1; */
 #endif
 
    /* set iteration limit */
-   SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, &origiterlim) );
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, maxnnlpiterations - heurdata->nnlpiterations) );
+   nlpparam.iterlimit = maxnnlpiterations - heurdata->nnlpiterations;
 
    /* set whether NLP solver should fail fast */
-   SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, &origfastfail) );
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, (int)heurdata->nlpfastfail) );
+   nlpparam.fastfail = heurdata->nlpfastfail;
 
    /* set starting point to lp solution */
    SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
@@ -1762,7 +1761,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       SCIP_NLPSTATISTICS* nlpstatistics;
 
-      SCIP_CALL( SCIPsolveNLP(scip) );
+      SCIP_CALL( SCIPsolveNLP(scip, nlpparam) );
       SCIPstatistic( ++heurdata->nnlpsolves );
 
       /* update iteration count */
@@ -1787,10 +1786,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             else
                heurdata->nfailnlperror++;
          )
-
-         /* reset changed NLP parameters */
-         SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
-         SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, origfastfail) );
 
          return SCIP_OKAY;
       }
@@ -1831,10 +1826,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          SCIPdebugMsg(scip, " -> solution of first NLP was integral, feasible, and good enough\n");
          *result = SCIP_FOUNDSOL;
       }
-
-      /* reset changed NLP parameters */
-      SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
-      SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, origfastfail) );
 
       return SCIP_OKAY;
    }
@@ -2435,14 +2426,15 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             SCIP_NLPTERMSTAT termstat;
             SCIP_NLPSTATISTICS* nlpstatistics;
 
+            nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip) };
             /* set iteration limit, allow at least MINNLPITER many iterations */
-            SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER)) );
+            nlpparam.iterlimit = MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER);
 
             /* set time limit for NLP solver */
             SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
             if( !SCIPisInfinity(scip, timelim) )
                timelim = MAX(0.0, timelim-SCIPgetSolvingTime(scip));/*lint !e666*/
-            SCIP_CALL( SCIPsetNLPRealPar(scip, SCIP_NLPPAR_TILIM, timelim) );
+            nlpparam.timelimit = timelim;
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
             if( heurdata->nlpstart != 'n' && backtracked )
@@ -2454,7 +2446,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, nlpstartsol) );
             }
 
-            SCIP_CALL( SCIPsolveNLP(scip) );
+            SCIP_CALL( SCIPsolveNLP(scip, nlpparam) );
             SCIPstatistic( ++heurdata->nnlpsolves );
 
             termstat = SCIPgetNLPTermstat(scip);
@@ -2644,10 +2636,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       SCIP_CALL( SCIPfreeSol(scip, &nlpstartsol) );
    }
-
-   /* reset changed NLP parameters */
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_ITLIM, origiterlim) );
-   SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_FASTFAIL, origfastfail) );
 
    /* free copied best solution */
    if( heurdata->varselrule == 'g' )

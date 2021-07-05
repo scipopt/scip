@@ -38,20 +38,40 @@ typedef struct SCIP_Nlpi          SCIP_NLPI;          /**< NLP solver interface 
 typedef struct SCIP_NlpiData      SCIP_NLPIDATA;      /**< locally defined NLP solver interface data */
 typedef struct SCIP_NlpiProblem   SCIP_NLPIPROBLEM;   /**< locally defined NLP solver interface data for a specific problem instance */
 
-/** NLP solver parameter */
-enum SCIP_NlpParam
+/** parameters for NLP solve */
+struct SCIP_NlpParam
 {
-   SCIP_NLPPAR_FROMSCRATCH    =  0,      /**< solver should start from scratch at next call?: 0 no, 1 yes (int) */
-   SCIP_NLPPAR_VERBLEVEL      =  1,      /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug (int) */
-   SCIP_NLPPAR_FEASTOL        =  2,      /**< feasibility tolerance for primal variables and slacks (real) */
-   SCIP_NLPPAR_RELOBJTOL      =  3,      /**< relative objective tolerance (real) */
-   SCIP_NLPPAR_LOBJLIM        =  4,      /**< lower objective limit (cutoff) (real) */
-   SCIP_NLPPAR_ITLIM          =  5,      /**< NLP iteration limit (int) */
-   SCIP_NLPPAR_TILIM          =  6,      /**< NLP time limit (real) */
-   SCIP_NLPPAR_OPTFILE        =  7,      /**< name of a solver specific option file (string) */
-   SCIP_NLPPAR_FASTFAIL       =  8       /**< should the NLP solver stop early if convergence is slow?: 0 no, 1 yes (int) */
+   SCIP_Bool             fromscratch;        /**< whether to start solve from scratch */
+   int                   verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
+   SCIP_Real             feastol;            /**< feasibility tolerance (maximal allowed absolute violation of constraints and variable bounds) */
+   SCIP_Real             relobjtol;          /**< relative objective tolerance */
+   SCIP_Real             lobjlimit;          /**< lower objective limit (cutoff) */
+   int                   iterlimit;          /**< iteration limit */
+   SCIP_Real             timelimit;          /**< time limit in seconds */
+   const char*           optfile;            /**< name of a solver specific option file, or NULL */
+   SCIP_Bool             fastfail;           /**< whether the NLP solver should stop early if convergence is slow */
 };
-typedef enum SCIP_NlpParam SCIP_NLPPARAM;  /**< NLP solver parameter */
+/** parameters for NLP solve */
+typedef struct SCIP_NlpParam SCIP_NLPPARAM;
+
+/** default values for parameters
+ *
+ * typical use for this define is the initialization of a SCIP_NLPPARAM struct, e.g.,
+ *    SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
+ * or
+ *    SCIP_NLPPARAM nlparam;
+ *    nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip); }
+ */
+#define SCIP_NLPPARAM_DEFAULT(scip)      \
+   .fromscratch = FALSE,                 \
+   .verblevel   = 0,                     \
+   .feastol     = SCIPfeastol(scip),     \
+   .relobjtol   = SCIPdualfeastol(scip), \
+   .lobjlimit   = -SCIP_REAL_MAX,        \
+   .iterlimit   = INT_MAX,               \
+   .timelimit   = SCIP_REAL_MAX,         \
+   .optfile     = NULL,                  \
+   .fastfail    = FALSE
 
 /** NLP solution status */
 enum SCIP_NlpSolStat
@@ -366,11 +386,13 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - scip    : SCIP data structure
  *  - nlpi    : datastructure for solver interface
  *  - problem : datastructure for problem instance
+ *  - param   : parameters (e.g., working limits) to use
  */
 #define SCIP_DECL_NLPISOLVE(x) SCIP_RETCODE x (\
    SCIP*             scip, \
    SCIP_NLPI*        nlpi, \
-   SCIP_NLPIPROBLEM* problem)
+   SCIP_NLPIPROBLEM* problem, \
+   SCIP_NLPPARAM     param)
 
 /** gives solution status
  * 
@@ -437,100 +459,6 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
    SCIP_NLPIPROBLEM*   problem, \
    SCIP_NLPSTATISTICS* statistics)
 
-/**@name Parameter Methods */
-/**@{ */
-
-/** gets integer parameter of NLP
- * 
- *  - scip    : SCIP data structure
- *  - nlpi    : NLP interface structure
- *  - problem : datastructure for problem instance
- *  - type    : parameter number
- *  - ival    : buffer to store the parameter value
- */
-#define SCIP_DECL_NLPIGETINTPAR(x) SCIP_RETCODE x (\
-   SCIP*             scip,    \
-   SCIP_NLPI*        nlpi,    \
-   SCIP_NLPIPROBLEM* problem, \
-   SCIP_NLPPARAM     type,    \
-   int*              ival)
-
-/** sets integer parameter of NLP
- * 
- *  - scip    : SCIP data structure
- *  - nlpi    : NLP interface structure
- *  - problem : datastructure for problem instance
- *  - type    : parameter number
- *  - ival    : parameter value
- */
-#define SCIP_DECL_NLPISETINTPAR(x) SCIP_RETCODE x (\
-   SCIP*             scip, \
-   SCIP_NLPI*        nlpi, \
-   SCIP_NLPIPROBLEM* problem, \
-   SCIP_NLPPARAM     type, \
-   int               ival)
-
-/** gets floating point parameter of NLP
- * 
- *  - scip    : SCIP data structure
- *  - nlpi    : NLP interface structure
- *  - problem : datastructure for problem instance
- *  - type    : parameter number
- *  - dval    : buffer to store the parameter value
- */
-#define SCIP_DECL_NLPIGETREALPAR(x) SCIP_RETCODE x (\
-   SCIP*             scip,    \
-   SCIP_NLPI*        nlpi,    \
-   SCIP_NLPIPROBLEM* problem, \
-   SCIP_NLPPARAM     type,    \
-   SCIP_Real*        dval)
-
-/** sets floating point parameter of NLP
- *
- *  - scip    : SCIP data structure
- *  - nlpi    : NLP interface structure
- *  - problem : datastructure for problem instance
- *  - type    : parameter number
- *  - dval    : parameter value
- */
-#define SCIP_DECL_NLPISETREALPAR(x) SCIP_RETCODE x (\
-   SCIP*             scip,    \
-   SCIP_NLPI*        nlpi,    \
-   SCIP_NLPIPROBLEM* problem, \
-   SCIP_NLPPARAM     type,    \
-   SCIP_Real         dval)
-
-/** gets string parameter of NLP
- * 
- *  - scip    : SCIP data structure
- *  - nlpi    : NLP interface structure
- *  - problem : datastructure for problem instance
- *  - type    : parameter number
- *  - sval    : buffer to store the string value, the user must not modify the string
- */
-#define SCIP_DECL_NLPIGETSTRINGPAR(x) SCIP_RETCODE x (\
-   SCIP*             scip,    \
-   SCIP_NLPI*        nlpi,    \
-   SCIP_NLPIPROBLEM* problem, \
-   SCIP_NLPPARAM     type,    \
-   const char**      sval)
-
-/** sets string parameter of NLP
- * 
- *  - scip    : SCIP data structure
- *  - nlpi    : NLP interface structure
- *  - problem : datastructure for problem instance
- *  - type    : parameter number
- *  - sval    : parameter value
- */
-#define SCIP_DECL_NLPISETSTRINGPAR(x) SCIP_RETCODE x (\
-    SCIP*             scip,    \
-    SCIP_NLPI*        nlpi,    \
-    SCIP_NLPIPROBLEM* problem, \
-    SCIP_NLPPARAM     type,    \
-    const char* sval)
-
-/**@} */
 #ifdef __cplusplus
 }
 #endif
