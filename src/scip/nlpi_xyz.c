@@ -63,9 +63,9 @@ struct SCIP_NlpiProblem
  * Callback methods of NLP solver interface
  */
 
-/* TODO: Implement all necessary NLP interface methods. The methods with an #if 0 ... #else #define ... are optional
- * (currently, all methods are required) */
+/* TODO: Implement all necessary NLP interface methods. The methods with an #ifdef SCIP_DISABLED_CODE ... #else #define ... are optional */
 
+#ifdef SCIP_DISABLED_CODE
 /** copy method of NLP interface (called when SCIP copies plugins) */
 static
 SCIP_DECL_NLPICOPY(nlpiCopyXyz)
@@ -75,6 +75,9 @@ SCIP_DECL_NLPICOPY(nlpiCopyXyz)
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
+#else
+#define nlpiCopyXyz NULL
+#endif
 
 /** destructor of NLP interface to free nlpi data */
 static
@@ -86,6 +89,7 @@ SCIP_DECL_NLPIFREE(nlpiFreeXyz)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
+#ifdef SCIP_DISABLED_CODE
 /** gets pointer for NLP solver */
 static
 SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
@@ -95,6 +99,9 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
 
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
+#else
+#define nlpiGetSolverPointerXyz NULL
+#endif
 
 /** creates a problem instance */
 static
@@ -116,6 +123,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemXyz)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
+#ifdef SCIP_DISABLED_CODE
 /** gets pointer to solver-internal problem instance */
 static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXyz)
@@ -125,6 +133,9 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXyz)
 
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
+#else
+#define nlpiGetProblemPointerXyz NULL
+#endif
 
 /** add variables */
 static 
@@ -227,7 +238,8 @@ SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantXyz)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** sets initial guess for primal variables */
+#ifdef SCIP_DISABLED_CODE
+/** sets initial guess */
 static
 SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessXyz)
 {
@@ -236,6 +248,9 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessXyz)
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
+#else
+#define nlpiSetInitialGuessXyz NULL
+#endif
 
 /** tries to solve NLP */
 static

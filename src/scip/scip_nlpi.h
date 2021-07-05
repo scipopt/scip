@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPincludeNlpi(
    SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs)),     /**< change coefficients in linear part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPR           ((*nlpichgexpr)),            /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant)),     /**< change the constant offset in the objective */
-   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess for primal variables */
+   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve)),              /**< solve NLP */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat)),         /**< get solution status */
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
@@ -165,7 +165,7 @@ SCIP_DECL_NLPICHGEXPR(SCIPchgNlpiExpr);
 SCIP_EXPORT
 SCIP_DECL_NLPICHGOBJCONSTANT(SCIPchgNlpiObjConstant);
 
-/** sets initial guess for primal variables */
+/** sets initial guess */
 SCIP_EXPORT
 SCIP_DECL_NLPISETINITIALGUESS(SCIPsetNlpiInitialGuess);
 

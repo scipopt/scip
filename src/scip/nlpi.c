@@ -44,12 +44,12 @@ SCIP_RETCODE SCIPnlpiCreate(
    const char*                     name,                        /**< name of NLP interface */
    const char*                     description,                 /**< description of NLP interface */
    int                             priority,                    /**< priority of NLP interface */
-   SCIP_DECL_NLPICOPY              ((*nlpicopy)),               /**< copying an NLPI */
+   SCIP_DECL_NLPICOPY              ((*nlpicopy)),               /**< copying of NLPI, can be NULL */
    SCIP_DECL_NLPIFREE              ((*nlpifree)),               /**< free NLPI user data */
-   SCIP_DECL_NLPIGETSOLVERPOINTER  ((*nlpigetsolverpointer)),   /**< get solver pointer */
+   SCIP_DECL_NLPIGETSOLVERPOINTER  ((*nlpigetsolverpointer)),   /**< get solver pointer, can be NULL */
    SCIP_DECL_NLPICREATEPROBLEM     ((*nlpicreateproblem)),      /**< create a new problem instance */
    SCIP_DECL_NLPIFREEPROBLEM       ((*nlpifreeproblem)),        /**< free a problem instance */
-   SCIP_DECL_NLPIGETPROBLEMPOINTER ((*nlpigetproblempointer)),  /**< get problem pointer */
+   SCIP_DECL_NLPIGETPROBLEMPOINTER ((*nlpigetproblempointer)),  /**< get problem pointer, can be NULL */
    SCIP_DECL_NLPIADDVARS           ((*nlpiaddvars)),            /**< add variables */
    SCIP_DECL_NLPIADDCONSTRAINTS    ((*nlpiaddconstraints)),     /**< add constraints */
    SCIP_DECL_NLPISETOBJECTIVE      ((*nlpisetobjective)),       /**< set objective */
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs)),     /**< change coefficients in linear part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPR           ((*nlpichgexpr)),            /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant)),     /**< change the constant offset in the objective */
-   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess for primal variables */
+   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess, can be NULL */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve)),              /**< solve NLP */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat)),         /**< get solution status */
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
@@ -79,12 +79,9 @@ SCIP_RETCODE SCIPnlpiCreate(
 
    assert(name != NULL);
    assert(description != NULL);
-   assert(nlpicopy != NULL);
    assert(nlpifree != NULL);
-   assert(nlpigetsolverpointer != NULL);
    assert(nlpicreateproblem != NULL);
    assert(nlpifreeproblem != NULL);
-   assert(nlpigetproblempointer != NULL);
    assert(nlpiaddvars != NULL);
    assert(nlpiaddconstraints != NULL);
    assert(nlpisetobjective != NULL);
@@ -93,7 +90,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpidelconsset != NULL);
    assert(nlpichglinearcoefs != NULL);
    assert(nlpichgobjconstant != NULL);
-   assert(nlpisetinitialguess != NULL);
    assert(nlpisolve != NULL);
    assert(nlpigetsolstat != NULL);
    assert(nlpigettermstat != NULL);
@@ -150,10 +146,12 @@ SCIP_RETCODE SCIPnlpiCopyInclude(
    )
 {
    assert(sourcenlpi != NULL);
-   assert(sourcenlpi->nlpicopy != NULL);
    assert(targetset != NULL);
 
-   SCIP_CALL( sourcenlpi->nlpicopy(targetset->scip, sourcenlpi) );
+   if( sourcenlpi->nlpicopy != NULL )
+   {
+      SCIP_CALL( sourcenlpi->nlpicopy(targetset->scip, sourcenlpi) );
+   }
 
    return SCIP_OKAY;
 }
@@ -190,9 +188,11 @@ void* SCIPnlpiGetSolverPointer(
 {
    assert(set != NULL);
    assert(nlpi != NULL);
-   assert(nlpi->nlpigetsolverpointer != NULL);
 
-   return nlpi->nlpigetsolverpointer(set->scip, nlpi);
+   if( nlpi->nlpigetsolverpointer != NULL )
+      return nlpi->nlpigetsolverpointer(set->scip, nlpi);
+   else
+      return NULL;
 }
 
 /** creates a problem instance */
@@ -235,10 +235,12 @@ void* SCIPnlpiGetProblemPointer(
 {
    assert(set != NULL);
    assert(nlpi != NULL);
-   assert(nlpi->nlpigetproblempointer != NULL);
    assert(problem != NULL);
 
-   return nlpi->nlpigetproblempointer(set->scip, nlpi, problem);
+   if( nlpi->nlpigetproblempointer != NULL )
+      return nlpi->nlpigetproblempointer(set->scip, nlpi, problem);
+   else
+      return NULL;
 }
 
 /** add variables to nlpi */
@@ -460,10 +462,12 @@ SCIP_RETCODE SCIPnlpiSetInitialGuess(
 {
    assert(set != NULL);
    assert(nlpi != NULL);
-   assert(nlpi->nlpisetinitialguess != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( nlpi->nlpisetinitialguess(set->scip, nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
+   if( nlpi->nlpisetinitialguess != NULL )
+   {
+      SCIP_CALL( nlpi->nlpisetinitialguess(set->scip, nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
+   }
 
    return SCIP_OKAY;
 }

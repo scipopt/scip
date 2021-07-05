@@ -83,6 +83,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
+ * Implementation of this callback is optional.
+ *
  *  - scip       : target SCIP where to include copy of NLPI
  *  - sourcenlpi : the NLP interface to copy
  */
@@ -103,6 +105,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 
 /** gets pointer to solver-internal NLP solver
  * 
+ * Implementation of this callback is optional.
+ *
  *  - scip : SCIP data structure
  *  - nlpi : datastructure for solver interface
  *  
@@ -138,6 +142,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 
 /** gets pointer to solver-internal problem instance
  * 
+ * Implementation of this callback is optional.
+ *
  *  - scip    : SCIP data structure
  *  - nlpi    : datastructure for solver interface
  *  - problem : datastructure for problem instance
@@ -334,7 +340,9 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
    SCIP_NLPIPROBLEM* problem, \
    SCIP_Real         objconstant)
 
-/** sets initial guess for primal variables
+/** sets initial guess
+ *
+ * Implementation of this callback is optional.
  *
  *  - scip            : SCIP data structure
  *  - nlpi            : datastructure for solver interface
