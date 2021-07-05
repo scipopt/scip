@@ -59,9 +59,6 @@ struct SCIP_Nlpi
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat));        /**< get termination status for a problem  */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution));        /**< get solution of a problem  */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics));      /**< get solve statistics for a problem  */
-   SCIP_DECL_NLPIGETWARMSTARTSIZE  ((*nlpigetwarmstartsize));   /**< get size for warmstart object buffer for a problem  */
-   SCIP_DECL_NLPIGETWARMSTARTMEMO  ((*nlpigetwarmstartmemo));   /**< get warmstart object for a problem  */
-   SCIP_DECL_NLPISETWARMSTARTMEMO  ((*nlpisetwarmstartmemo));   /**< set warmstart object for a problem  */
    SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar));          /**< get value of integer parameter in a problem  */
    SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar));          /**< set value of integer parameter in a problem  */
    SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar));         /**< get value of floating point parameter in a problem  */

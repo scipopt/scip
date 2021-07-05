@@ -1355,59 +1355,6 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsIpopt)
    return SCIP_OKAY;
 }
 
-/** gives required size of a buffer to store a warmstart object
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - size pointer to store required size for warmstart buffer
- *
- *  output:
- *  - size required size for warmstart buffer
- */
-static
-SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeIpopt)
-{
-   SCIPerrorMessage("method of Ipopt nonlinear solver is not implemented\n");
-   return SCIP_ERROR;
-}
-
-/** stores warmstart information in buffer
- *
- *  Required size of buffer should have been obtained by SCIPnlpiGetWarmstartSize before.
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - buffer memory to store warmstart information
- *
- *  output:
- *  - buffer warmstart information in solver specific data structure
- */
-static
-SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoIpopt)
-{
-   SCIPerrorMessage("method of Ipopt nonlinear solver is not implemented\n");
-   return SCIP_ERROR;
-}
-
-/** sets warmstart information in solver
- *
- *  Write warmstart to buffer.
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - buffer warmstart information
- */
-static
-SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoIpopt)
-{
-   SCIPerrorMessage("method of Ipopt nonlinear solver is not implemented\n");
-   SCIPABORT();
-   return SCIP_OKAY;
-}
-
 /** gets integer parameter of NLP
  *
  *  input:
@@ -2024,7 +1971,6 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
          nlpiChgLinearCoefsIpopt, nlpiChgExprIpopt,
          nlpiChgObjConstantIpopt, nlpiSetInitialGuessIpopt, nlpiSolveIpopt, nlpiGetSolstatIpopt, nlpiGetTermstatIpopt,
          nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
-         nlpiGetWarmstartSizeIpopt, nlpiGetWarmstartMemoIpopt, nlpiSetWarmstartMemoIpopt,
          nlpiGetIntParIpopt, nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt,
          nlpiGetStringParIpopt, nlpiSetStringParIpopt,
          nlpidata) );

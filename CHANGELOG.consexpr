@@ -115,7 +115,7 @@ Interface changes
 - added SCIP_DECL_NLHDLRCOPYHDLR, SCIP_DECL_NLHDLRFREEHDLRDATA, SCIP_DECL_NLHDLRFREEEXPRDATA, SCIP_DECL_NLHDLRINIT, SCIP_DECL_NLHDLREXIT, SCIP_DECL_NLHDLRDETECT, SCIP_DECL_NLHDLREVALAUX, SCIP_DECL_NLHDLRINTEVAL, SCIP_DECL_NLHDLRREVERSEPROP, SCIP_DECL_NLHDLRINITSEPA, SCIP_DECL_NLHDLREXITSEPA, SCIP_DECL_NLHDLRENFO, SCIP_DECL_NLHDLRESTIMATE
 - replaced BMS_BLKMEM* blkmem argument of SCIP_DECL_NLPICOPY by SCIP* scip, removed targetnlpi argument
 - added SCIP* scip and SCIP_NLPIDATA** nlpidata arguments to SCIP_DECL_NLPIFREE
-- added SCIP* scip to SCIP_DECL_NLPIGETSOLVERPOINTER, SCIP_DECL_NLPICREATEPROBLEM, SCIP_DECL_NLPIFREEPROBLEM, SCIP_DECL_NLPIGETPROBLEMPOINTER, SCIP_DECL_NLPIADDVARS, SCIP_DECL_NLPIADDCONSTRAINTS, SCIP_DECL_NLPISETOBJECTIVE, SCIP_DECL_NLPICHGVARBOUNDS, SCIP_DECL_NLPICHGCONSSIDES, SCIP_DECL_NLPIDELVARSET, SCIP_DECL_NLPIDELCONSSET, SCIP_DECL_NLPICHGLINEARCOEFS, SCIP_DECL_NLPICHGOBJCONSTANT, SCIP_DECL_NLPISETINITIALGUESS, SCIP_DECL_NLPISOLVE, SCIP_DECL_NLPIGETSOLSTAT, SCIP_DECL_NLPIGETTERMSTAT, SCIP_DECL_NLPIGETSOLUTION, SCIP_DECL_NLPIGETSTATISTICS, SCIP_DECL_NLPIGETWARMSTARTSIZE, SCIP_DECL_NLPIGETWARMSTARTMEMO, SCIP_DECL_NLPISETWARMSTARTMEMO, SCIP_DECL_NLPIGETINTPAR, SCIP_DECL_NLPISETINTPAR, SCIP_DECL_NLPIGETREALPAR, SCIP_DECL_NLPISETREALPAR, SCIP_DECL_NLPIGETSTRINGPAR, SCIP_DECL_NLPISETSTRINGPAR
+- added SCIP* scip to SCIP_DECL_NLPIGETSOLVERPOINTER, SCIP_DECL_NLPICREATEPROBLEM, SCIP_DECL_NLPIFREEPROBLEM, SCIP_DECL_NLPIGETPROBLEMPOINTER, SCIP_DECL_NLPIADDVARS, SCIP_DECL_NLPIADDCONSTRAINTS, SCIP_DECL_NLPISETOBJECTIVE, SCIP_DECL_NLPICHGVARBOUNDS, SCIP_DECL_NLPICHGCONSSIDES, SCIP_DECL_NLPIDELVARSET, SCIP_DECL_NLPIDELCONSSET, SCIP_DECL_NLPICHGLINEARCOEFS, SCIP_DECL_NLPICHGOBJCONSTANT, SCIP_DECL_NLPISETINITIALGUESS, SCIP_DECL_NLPISOLVE, SCIP_DECL_NLPIGETSOLSTAT, SCIP_DECL_NLPIGETTERMSTAT, SCIP_DECL_NLPIGETSOLUTION, SCIP_DECL_NLPIGETSTATISTICS, SCIP_DECL_NLPIGETINTPAR, SCIP_DECL_NLPISETINTPAR, SCIP_DECL_NLPIGETREALPAR, SCIP_DECL_NLPISETREALPAR, SCIP_DECL_NLPIGETSTRINGPAR, SCIP_DECL_NLPISETSTRINGPAR
 - replaced SCIP_DECL_NLPICHGEXPRTREE by SCIP_DECL_NLPICHGEXPR
 - removed nquadelems, quadelems, exprvaridxs arguments from SCIP_DECL_NLPIADDCONSTRAINTS, changed exprtrees argument to exprs
 - removed nquadelems, quadelems, exprvaridxs arguments from SCIP_DECL_NLPISETOBJECTIVE, changed exprtree argument to expr
@@ -327,9 +327,9 @@ nlpi:
 - removed SCIPnlpiGetTermstat() from public API, use SCIPgetNlpiTermstat() instead
 - removed SCIPnlpiGetSolution() from public API, use SCIPgetNlpiSolution() instead
 - removed SCIPnlpiGetStatistics() from public API, use SCIPgetNlpiStatistics() instead
-- removed SCIPnlpiGetWarmstartSize() from public API, use SCIPgetNlpiWarmstartSize() instead
-- removed SCIPnlpiGetWarmstartMemo() from public API, use SCIPgetNlpiWarmstartMemo() instead
-- removed SCIPnlpiSetWarmstartMemo() from public API, use SCIPsetNlpiWarmstartMemo() instead
+- removed SCIPnlpiGetWarmstartSize()
+- removed SCIPnlpiGetWarmstartMemo()
+- removed SCIPnlpiSetWarmstartMemo()
 - removed SCIPnlpiGetIntPar() from public API, use SCIPgetNlpiIntPar() instead
 - removed SCIPnlpiSetIntPar() from public API, use SCIPsetNlpiIntPar() instead
 - removed SCIPnlpiGetRealPar() from public API, use SCIPgetNlpiRealPar() instead
@@ -338,7 +338,7 @@ nlpi:
 - removed SCIPnlpiSetStringPar() from public API, use SCIPsetNlpiStringPar() instead
 - removed SCIPnlpiSetPriority() from public API, use SCIPsetNlpiPriority() instead
 - removed argument nlpi from SCIPincludeNlpi() and added name, description, priority,
-  nlpicopy, nlpifree, nlpigetsolverpointer, nlpicreateproblem, nlpifreeproblem, nlpigetproblempointer, nlpiaddvars, nlpiaddconstraints, nlpisetobjective, nlpichgvarbounds, nlpichgconssides, nlpidelvarset, nlpidelconsset, nlpichglinearcoefs, nlpichgexpr, nlpichgobjconstant, nlpisetinitialguess, nlpisolve, nlpigetsolstat, nlpigettermstat, nlpigetsolution, nlpigetstatistics, nlpigetwarmstartsize, nlpigetwarmstartmemo, nlpisetwarmstartmemo, nlpigetintpar, nlpisetintpar, nlpigetrealpar, nlpisetrealpar, nlpigetstringpar, nlpisetstringpar, nlpidata
+  nlpicopy, nlpifree, nlpigetsolverpointer, nlpicreateproblem, nlpifreeproblem, nlpigetproblempointer, nlpiaddvars, nlpiaddconstraints, nlpisetobjective, nlpichgvarbounds, nlpichgconssides, nlpidelvarset, nlpidelconsset, nlpichglinearcoefs, nlpichgexpr, nlpichgobjconstant, nlpisetinitialguess, nlpisolve, nlpigetsolstat, nlpigettermstat, nlpigetsolution, nlpigetstatistics, nlpigetintpar, nlpisetintpar, nlpigetrealpar, nlpisetrealpar, nlpigetstringpar, nlpisetstringpar, nlpidata
 - removed SCIPcreateNlpSolverAll(), use SCIPincludeNlpSolverAll() instead
 - removed SCIPcreateNlpSolverFilterSQP(), use SCIPincludeNlpSolverFilterSQP() instead
 - removed SCIPcreateNlpSolverIpopt(), use SCIPincludeNlpSolverIpopt() instead
@@ -457,7 +457,7 @@ nlhdlr:
 - added SCIPnlhdlrComp()
 
 nlpi:
-- added SCIPgetNlpiSolverPointer(), SCIPcreateNlpiProblem(), SCIPfreeNlpiProblem(), SCIPgetNlpiProblemPointer(), SCIPaddNlpiVars(), SCIPaddNlpiConstraints(), SCIPsetNlpiObjective(), SCIPchgNlpiVarBounds(), SCIPchgNlpiConsSides(), SCIPdelNlpiVarSet(), SCIPdelNlpiConsSet(), SCIPchgNlpiLinearCoefs(), SCIPchgNlpiExpr(), SCIPchgNlpiObjConstant(), SCIPsetNlpiInitialGuess(), SCIPsolveNlpi(), SCIPgetNlpiSolstat(), SCIPgetNlpiTermstat(), SCIPgetNlpiSolution(), SCIPgetNlpiStatistics(), SCIPgetNlpiWarmstartSize(), SCIPgetNlpiWarmstartMemo(), SCIPsetNlpiWarmstartMemo(), SCIPgetNlpiIntPar(), SCIPsetNlpiIntPar(), SCIPgetNlpiRealPar(), SCIPsetNlpiRealPar(), SCIPgetNlpiStringPar(), SCIPsetNlpiStringPar()
+- added SCIPgetNlpiSolverPointer(), SCIPcreateNlpiProblem(), SCIPfreeNlpiProblem(), SCIPgetNlpiProblemPointer(), SCIPaddNlpiVars(), SCIPaddNlpiConstraints(), SCIPsetNlpiObjective(), SCIPchgNlpiVarBounds(), SCIPchgNlpiConsSides(), SCIPdelNlpiVarSet(), SCIPdelNlpiConsSet(), SCIPchgNlpiLinearCoefs(), SCIPchgNlpiExpr(), SCIPchgNlpiObjConstant(), SCIPsetNlpiInitialGuess(), SCIPsolveNlpi(), SCIPgetNlpiSolstat(), SCIPgetNlpiTermstat(), SCIPgetNlpiSolution(), SCIPgetNlpiStatistics(), SCIPgetNlpiIntPar(), SCIPsetNlpiIntPar(), SCIPgetNlpiRealPar(), SCIPsetNlpiRealPar(), SCIPgetNlpiStringPar(), SCIPsetNlpiStringPar()
 - added SCIPincludeNlpSolverAll()
 - added SCIPincludeNlpSolverFilterSQP(), SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP(), SCIPisFilterSQPAvailableFilterSQP()
 - added SCIPincludeNlpSolverIpopt()

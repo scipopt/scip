@@ -429,49 +429,6 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
    SCIP_NLPIPROBLEM*   problem, \
    SCIP_NLPSTATISTICS* statistics)
 
-/** gives required size of a buffer to store a warmstart object
- * 
- *  - scip    : SCIP data structure
- *  - nlpi    : datastructure for solver interface
- *  - problem : datastructure for problem instance
- *  - size    : buffer to store required size for warmstart buffer
- */
-#define SCIP_DECL_NLPIGETWARMSTARTSIZE(x) SCIP_RETCODE x (\
-   SCIP*             scip, \
-   SCIP_NLPI*        nlpi, \
-   SCIP_NLPIPROBLEM* problem, \
-   size_t*           size)
-
-/** stores warmstart information in buffer
- * 
- * required size of buffer should have been obtained by SCIPnlpiGetWarmstartSize before
- * 
- *  - scip    : SCIP data structure
- *  - nlpi    : datastructure for solver interface
- *  - problem : datastructure for problem instance
- *  - buffer  : memory to store warmstart information
- */
-#define SCIP_DECL_NLPIGETWARMSTARTMEMO(x) SCIP_RETCODE x (\
-   SCIP*             scip,    \
-   SCIP_NLPI*        nlpi,    \
-   SCIP_NLPIPROBLEM* problem, \
-   void*             buffer)
-
-/** sets warmstart information in solver
- * 
- * write warmstart to buffer
- * 
- *  - scip    : SCIP data structure
- *  - nlpi    : datastructure for solver interface
- *  - problem : datastructure for problem instance
- *  - buffer  : warmstart information
- */
-#define SCIP_DECL_NLPISETWARMSTARTMEMO(x) SCIP_RETCODE x (\
-   SCIP*             scip,    \
-   SCIP_NLPI*        nlpi,    \
-   SCIP_NLPIPROBLEM* problem, \
-   void*             buffer)
-
 /**@name Parameter Methods */
 /**@{ */
 

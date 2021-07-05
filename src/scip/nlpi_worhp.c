@@ -1552,33 +1552,6 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsWorhp)
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gives required size of a buffer to store a warmstart object */
-static
-SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeWorhp)
-{
-   /* TODO */
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** stores warmstart information in buffer */
-static
-SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoWorhp)
-{
-   /* TODO */
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets warmstart information in solver */
-static
-SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoWorhp)
-{
-   /* TODO */
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
 /** gets integer parameter of NLP */
 static
 SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParWorhp)
@@ -1973,7 +1946,6 @@ SCIP_RETCODE SCIPincludeNlpSolverWorhp(
          nlpiChgLinearCoefsWorhp, nlpiChgExprWorhp,
          nlpiChgObjConstantWorhp, nlpiSetInitialGuessWorhp, nlpiSolveWorhp, nlpiGetSolstatWorhp, nlpiGetTermstatWorhp,
          nlpiGetSolutionWorhp, nlpiGetStatisticsWorhp,
-         nlpiGetWarmstartSizeWorhp, nlpiGetWarmstartMemoWorhp, nlpiSetWarmstartMemoWorhp,
          nlpiGetIntParWorhp, nlpiSetIntParWorhp, nlpiGetRealParWorhp, nlpiSetRealParWorhp, nlpiGetStringParWorhp, nlpiSetStringParWorhp,
          nlpidata) );
 

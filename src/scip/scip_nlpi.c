@@ -121,9 +121,6 @@ SCIP_RETCODE SCIPincludeNlpi(
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution)),        /**< get solution */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics)),      /**< get solve statistics */
-   SCIP_DECL_NLPIGETWARMSTARTSIZE  ((*nlpigetwarmstartsize)),   /**< get size for warmstart object buffer */
-   SCIP_DECL_NLPIGETWARMSTARTMEMO  ((*nlpigetwarmstartmemo)),   /**< get warmstart object */
-   SCIP_DECL_NLPISETWARMSTARTMEMO  ((*nlpisetwarmstartmemo)),   /**< set warmstart object */
    SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar)),          /**< get value of integer parameter */
    SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar)),          /**< set value of integer parameter */
    SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar)),         /**< get value of floating point parameter */
@@ -153,7 +150,6 @@ SCIP_RETCODE SCIPincludeNlpi(
       nlpicreateproblem, nlpifreeproblem, nlpigetproblempointer,
       nlpiaddvars, nlpiaddconstraints, nlpisetobjective, nlpichgvarbounds, nlpichgconssides, nlpidelvarset, nlpidelconsset, nlpichglinearcoefs, nlpichgexpr, nlpichgobjconstant,
       nlpisetinitialguess, nlpisolve, nlpigetsolstat, nlpigettermstat, nlpigetsolution, nlpigetstatistics,
-      nlpigetwarmstartsize, nlpigetwarmstartmemo, nlpisetwarmstartmemo,
       nlpigetintpar, nlpisetintpar, nlpigetrealpar, nlpisetrealpar, nlpigetstringpar, nlpisetstringpar,
       nlpidata) );
    assert(nlpi != NULL);
@@ -416,36 +412,6 @@ SCIP_DECL_NLPIGETSTATISTICS(SCIPgetNlpiStatistics)
    assert(scip != NULL);
 
    SCIP_CALL( SCIPnlpiGetStatistics(scip->set, nlpi, problem, statistics) );
-
-   return SCIP_OKAY;
-}
-
-/** gives required size of a buffer to store a warmstart object */
-SCIP_DECL_NLPIGETWARMSTARTSIZE(SCIPgetNlpiWarmstartSize)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetWarmstartSize(scip->set, nlpi, problem, size) );
-
-   return SCIP_OKAY;
-}
-
-/** stores warmstart information in buffer */
-SCIP_DECL_NLPIGETWARMSTARTMEMO(SCIPgetNlpiWarmstartMemo)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetWarmstartMemo(scip->set, nlpi, problem, buffer) );
-
-   return SCIP_OKAY;
-}
-
-/** sets warmstart information in solver */
-SCIP_DECL_NLPISETWARMSTARTMEMO(SCIPsetNlpiWarmstartMemo)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiSetWarmstartMemo(scip->set, nlpi, problem, buffer) );
 
    return SCIP_OKAY;
 }

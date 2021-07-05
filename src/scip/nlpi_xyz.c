@@ -287,36 +287,6 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsXyz)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** gives required size of a buffer to store a warmstart object */
-static
-SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** stores warmstart information in buffer */
-static
-SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets warmstart information in solver */
-static
-SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
 /** gets integer parameter of NLP */
 static
 SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParXyz)
@@ -403,7 +373,6 @@ SCIP_RETCODE SCIPincludeNlpSolverXyz(
          nlpiChgLinearCoefsXyz, nlpiChgExprXyz,
          nlpiChgObjConstantXyz, nlpiSetInitialGuessXyz, nlpiSolveXyz, nlpiGetSolstatXyz, nlpiGetTermstatXyz,
          nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
-         nlpiGetWarmstartSizeXyz, nlpiGetWarmstartMemoXyz, nlpiSetWarmstartMemoXyz,
          nlpiGetIntParXyz, nlpiSetIntParXyz, nlpiGetRealParXyz, nlpiSetRealParXyz, nlpiGetStringParXyz, nlpiSetStringParXyz,
          nlpidata) );
    assert(nlpi != NULL);

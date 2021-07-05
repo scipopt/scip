@@ -597,30 +597,6 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsAll)
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gives required size of a buffer to store a warmstart object */
-static
-SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeAll)
-{
-   SCIPerrorMessage("method of NLP solver is not implemented\n");
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** stores warmstart information in buffer */
-static
-SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoAll)
-{
-   SCIPerrorMessage("method of NLP solver is not implemented\n");
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** sets warmstart information in solver */
-static
-SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoAll)
-{
-   SCIPerrorMessage("method of NLP solver is not implemented\n");
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
 /** gets integer parameter of NLP */
 static
 SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParAll)
@@ -777,7 +753,6 @@ SCIP_RETCODE SCIPincludeNlpSolverAll(
          nlpiChgLinearCoefsAll, nlpiChgExprAll,
          nlpiChgObjConstantAll, nlpiSetInitialGuessAll, nlpiSolveAll, nlpiGetSolstatAll, nlpiGetTermstatAll,
          nlpiGetSolutionAll, nlpiGetStatisticsAll,
-         nlpiGetWarmstartSizeAll, nlpiGetWarmstartMemoAll, nlpiSetWarmstartMemoAll,
          nlpiGetIntParAll, nlpiSetIntParAll, nlpiGetRealParAll, nlpiSetRealParAll, nlpiGetStringParAll, nlpiSetStringParAll,
          nlpidata) );
 

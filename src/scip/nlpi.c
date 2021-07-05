@@ -66,9 +66,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution)),        /**< get solution */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics)),      /**< get solve statistics */
-   SCIP_DECL_NLPIGETWARMSTARTSIZE  ((*nlpigetwarmstartsize)),   /**< get size for warmstart object buffer */
-   SCIP_DECL_NLPIGETWARMSTARTMEMO  ((*nlpigetwarmstartmemo)),   /**< get warmstart object */
-   SCIP_DECL_NLPISETWARMSTARTMEMO  ((*nlpisetwarmstartmemo)),   /**< set warmstart object */
    SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar)),          /**< get value of integer parameter */
    SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar)),          /**< set value of integer parameter */
    SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar)),         /**< get value of floating point parameter */
@@ -102,9 +99,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpigettermstat != NULL);
    assert(nlpigetsolution != NULL);
    assert(nlpigetstatistics != NULL);
-   assert(nlpigetwarmstartsize != NULL);
-   assert(nlpigetwarmstartmemo != NULL);
-   assert(nlpisetwarmstartmemo != NULL);
    assert(nlpigetintpar != NULL);
    assert(nlpisetintpar != NULL);
    assert(nlpigetrealpar != NULL);
@@ -138,9 +132,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpigettermstat = nlpigettermstat;
    (*nlpi)->nlpigetsolution = nlpigetsolution;
    (*nlpi)->nlpigetstatistics = nlpigetstatistics;
-   (*nlpi)->nlpigetwarmstartsize = nlpigetwarmstartsize;
-   (*nlpi)->nlpigetwarmstartmemo = nlpigetwarmstartmemo;
-   (*nlpi)->nlpisetwarmstartmemo = nlpisetwarmstartmemo;
    (*nlpi)->nlpigetintpar = nlpigetintpar;
    (*nlpi)->nlpisetintpar = nlpisetintpar;
    (*nlpi)->nlpigetrealpar = nlpigetrealpar;
@@ -562,60 +553,6 @@ SCIP_RETCODE SCIPnlpiGetStatistics(
    assert(problem != NULL);
 
    SCIP_CALL( nlpi->nlpigetstatistics(set->scip, nlpi, problem, statistics) );
-
-   return SCIP_OKAY;
-}
-
-/** gives required size of a buffer to store a warmstart object */
-SCIP_RETCODE SCIPnlpiGetWarmstartSize(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   size_t*               size                /**< pointer to store required size for warmstart buffer */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpigetwarmstartsize != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( nlpi->nlpigetwarmstartsize(set->scip, nlpi, problem, size) );
-
-   return SCIP_OKAY;
-}
-
-/** stores warmstart information in buffer */
-SCIP_RETCODE SCIPnlpiGetWarmstartMemo(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   void*                 buffer              /**< memory to store warmstart information */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpigetwarmstartmemo != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( nlpi->nlpigetwarmstartmemo(set->scip, nlpi, problem, buffer) );
-
-   return SCIP_OKAY;
-}
-
-/** sets warmstart information in solver */
-SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   void*                 buffer              /**< warmstart information */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpisetwarmstartmemo != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( nlpi->nlpisetwarmstartmemo(set->scip, nlpi, problem, buffer) );
 
    return SCIP_OKAY;
 }
