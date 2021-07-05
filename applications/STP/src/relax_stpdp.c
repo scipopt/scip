@@ -204,10 +204,10 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
       // ONLY FOR TESTING REMOVE ASAP
       graph = SCIPprobdataGetGraph2(scip);
 
-      if( first && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 828921629760 )
+      if( first && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 876896042400 )
       {
          graph_printInfo(graph);
-         *lowerbound = 30068.0;
+         *lowerbound = 30194.0;
          //exit(1);
 
 //#ifdef _OPENMP
