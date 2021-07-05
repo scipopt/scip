@@ -1844,9 +1844,9 @@ void extreduce_mstCompRemove(
 }
 
 
-/** Adds a full new level at the top.
+/** Adds a full initial new level at the top.
  *  NOTE: for now only the horizontal distances are initialized */
-void extreduce_mstLevelInit(
+void extreduce_mstLevelInitialInit(
    REDDATA*              reddata,            /**< reduction data */
    EXTDATA*              extdata             /**< extension data */
 )
@@ -1856,27 +1856,15 @@ void extreduce_mstLevelInit(
    const SCIP_Bool hasBiasedSd = extReddataHasBiasedSds(reddata);
 
    assert(extIsAtInitialComp(extdata));
-
+   assert(extdata->tree_nleaves == 1);
 
    /* Reserve space for the SDs from each potential vertex of the new level to all leaves
     * of the tree except for the extending vertex.
     * But for the initial component we need to keep the root! */
-   if( extIsAtInitialComp(extdata) )
-   {
-      assert(extdata->tree_nleaves == 1);
-      extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sds_vertical);
+   extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sds_vertical);
 
-      if( hasBiasedSd )
-         extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sdsbias_vertical);
-   }
-   else
-   {
-      int todo; // remove this part and rename method!
-      extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves - 1, sds_vertical);
-
-      if( hasBiasedSd )
-         extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves - 1, sdsbias_vertical);
-   }
+   if( hasBiasedSd )
+      extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sdsbias_vertical);
 
    SCIPdebugMessage("init MST level %d \n", extreduce_mldistsTopLevel(sds_vertical));
 
@@ -2094,6 +2082,21 @@ void extreduce_mstLevelHorizontalAddEmpty(
 
       assert(extreduce_mldistsTopLevel(sds_horizontal) == extreduce_mldistsTopLevel(sdsbias_horizontal));
    }
+}
+
+
+/** Removes top horizontal MST level.
+ *  NOTE: SDs from level vertices to all leafs will be discarded! */
+void extreduce_mstLevelHorizontalRemove(
+   REDDATA*              reddata             /**< reduction data */
+)
+{
+   assert(reddata);
+   SCIPdebugMessage("remove horizontal MST level %d \n", extreduce_mldistsNlevels(reddata->sds_horizontal));
+
+   extreduce_mldistsLevelRemoveTop(reddata->sds_horizontal);
+   if( extReddataHasBiasedSds(reddata) )
+      extreduce_mldistsLevelRemoveTop(reddata->sdsbias_horizontal);
 }
 
 

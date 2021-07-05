@@ -692,6 +692,72 @@ SCIP_Bool extRuleOutEdgeCombinations(
 #endif
 
 
+
+/** Can current singleton extension be ruled out?
+ *  NOTE: Also stores vertical SDs for this singleton if not ruled out! */
+static inline
+SCIP_Bool extTreeRuleOutSingletonFull(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   SCIP_Bool ruledOutFull = FALSE;
+   const int edge = extdata->extstack_data[extdata->extstack_start[extStackGetPosition(extdata)]];
+   const int base = graph->tail[edge];
+   const int leaf = graph->head[edge];
+
+   SCIPdebugMessage("adding SDs for edge %d->%d \n", graph->tail[edge], graph->head[edge]);
+
+   extreduce_mstLevelVerticalReopen(extdata);
+
+   assert(extdata->tree_deg[base] == 2);
+   assert(extdata->tree_deg[leaf] == 1);
+
+   /* NOTE the following is needed to keep invariants */
+   extdata->tree_deg[base] = 1;
+   extdata->tree_deg[leaf] = 0;
+   extLeafRemoveTop(graph, 1, base, extdata);
+   extInnerNodeRemoveTop(graph, base, extdata);
+
+   extreduce_mstLevelVerticalAddLeaf(scip, graph, edge, extdata, &ruledOutFull);
+
+   extLeafRemove(base, extdata);
+   extLeafAdd(leaf, extdata);
+   extInnerNodeAdd(graph, base, extdata);
+   extdata->tree_deg[base] = 2;
+   extdata->tree_deg[leaf] = 1;
+
+   extreduce_mstLevelVerticalClose(extdata->reddata);
+
+   return ruledOutFull;
+}
+
+
+/** Can current singleton extension be ruled out by implication argument? */
+static inline
+SCIP_Bool extTreeRuleOutSingletonImplied(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const int edge = extdata->extstack_data[extdata->extstack_start[extStackGetPosition(extdata)]];
+   const int base = graph->tail[edge];
+   const int *tree_deg = graph_pc_isPc(graph) ? extdata->tree_deg : NULL;
+   const STP_Vectype(int) implications = extdata->reddata->nodes_implications[base];
+
+   if( extensionHasImplicationConflict(graph, implications, tree_deg,
+         extdata->tree_root, &edge, 1) )
+   {
+      SCIPdebugMessage("implication singleton rule-out \n");
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+
 /** Can current tree be peripherally ruled out?
  *  NOTE: If tree cannot be ruled-out, the current component will be put into the MST storage 'reddata->msts' */
 static inline
@@ -712,61 +778,15 @@ SCIP_Bool extTreeRuleOutPeriph(
     * and concomitantly compute the SDs to the current tree leafs */
    if( extStackTopIsSingleton(extdata) && !extIsAtInitialComp(extdata) )
    {
-      SCIP_Bool ruledOutFull = FALSE;
+      /* NOTE SDs will also be computed if not ruled out */
+      SCIP_Bool ruledOutFull = extTreeRuleOutSingletonFull(scip, graph, extdata);
 
-      // todo extra method!
-      {
-         const int edge = extdata->extstack_data[extdata->extstack_start[extStackGetPosition(extdata)]];
-         const int base = graph->tail[edge];
-         const int leaf = graph->head[edge];
-
-         SCIPdebugMessage("adding SDs for edge %d->%d \n", graph->tail[edge], graph->head[edge]);
-
-         extreduce_mstLevelVerticalReopen(extdata);
-
-         assert(extdata->tree_deg[base] == 2);
-         assert(extdata->tree_deg[leaf] == 1);
-
-         /* NOTE the following is needed to keep invariants */
-         extdata->tree_deg[base] = 1;
-         extdata->tree_deg[leaf] = 0;
-         extLeafRemoveTop(graph, 1, base, extdata);
-         extInnerNodeRemoveTop(graph, base, extdata);
-
-         // todo extmst issue...MST should actually be removed, but is still on top...
-
-         extreduce_mstLevelVerticalAddLeaf(scip, graph, edge, extdata, &ruledOutFull);
-
-         extLeafRemove(base, extdata);
-         extLeafAdd(leaf, extdata);
-         extInnerNodeAdd(graph, base, extdata);
-         extdata->tree_deg[base] = 2;
-         extdata->tree_deg[leaf] = 1;
-
-         extreduce_mstLevelVerticalClose(extdata->reddata);
-
-         //printf("ruledOutFull=%d \n", ruledOutFull);
-
-      }
 
       if( ruledOutFull )
          return TRUE;
 
-      // todo extra method
-      {
-         const int edge =
-               extdata->extstack_data[extdata->extstack_start[extStackGetPosition(extdata)]];
-         const int base = graph->tail[edge];
-         const int *tree_deg = graph_pc_isPc(graph) ? extdata->tree_deg : NULL;
-         const STP_Vectype(int) implications = extdata->reddata->nodes_implications[base];
-
-         if( extensionHasImplicationConflict(graph, implications, tree_deg,
-               extdata->tree_root, &edge, 1) )
-         {
-            SCIPdebugMessage("implication singleton rule-out \n");
-            return TRUE;
-         }
-      }
+      if( extTreeRuleOutSingletonImplied(scip, graph, extdata) )
+         return TRUE;
    }
 
    if( extreduce_redcostRuleOutPeriph(graph, extdata) )
@@ -1099,15 +1119,10 @@ void extStackAddCompsExpanded(
       return;
    }
 
-   // todo extra method
-   extreduce_mldistsLevelRemoveTop(extdata->reddata->sds_horizontal);
-   if( extReddataHasBiasedSds(extdata->reddata) )
-      extreduce_mldistsLevelRemoveTop(extdata->reddata->sdsbias_horizontal);
+   /* remove the dummy level */
+   extreduce_mstLevelHorizontalRemove(extdata->reddata);
 
    extreduce_mstLevelHorizontalAdd(scip, graph, nextedges, extedges, extdata);
-
-   // todo probably not necessary to close! MST should be there already!
-  //extreduce_mstLevelClose(scip, graph, extroot, extdata);
 
    /* compute and add components (overwrite previous, non-expanded component) */
    // todo since single extensions are used first, might make sense to also have a special bottleneck test for this case!
@@ -1436,33 +1451,6 @@ void extStackTopProcessInitialEdges(
        {
           SCIPdebugMessage("implication conflict found for initial star component \n");
 
-#if 0
-          {
-            const int nimplications = StpVecGetSize(implications);
-
-            for( int e = graph->outbeg[extdata->tree_starcenter]; e != EAT_LAST;
-                  e = graph->oeat[e] )
-            {
-               graph_edge_printInfo(graph, e);
-
-            }
-
-            for( int i = 0; i < nimplications; i++ )
-            {
-               const int impnode = implications[i];
-               printf("impnode=%d \n", impnode);
-
-            }
-
-            graph_edge_printInfo(graph, extstack_data[0]);
-            for( int i = data_start; i < data_end; i++ )
-            {
-               const int edge = extstack_data[i];
-               graph_edge_printInfo(graph, edge);
-            }
-         }
-#endif
-
           *initialRuleOut = TRUE;
        }
    }
@@ -1618,7 +1606,7 @@ void extStackTopExpandInitial(
    assert(nextedges == 1 || nextedges >= 3);
 #endif
 
-   extreduce_mstLevelInit(reddata, extdata);
+   extreduce_mstLevelInitialInit(reddata, extdata);
    extStackTopProcessInitialEdges(scip, graph, extdata, initialRuleOut);
    extreduce_mstLevelVerticalClose(reddata);
 
