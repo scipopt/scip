@@ -1606,7 +1606,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_NLPSOLSTAT nlpsolstat;
-   SCIP_NLPPARAM nlpparam;
    SCIP_LPSOLSTAT lpsolstat;
    SCIP_SOL* nlpstartsol;
    SCIP_SOL* bestsol;
@@ -1729,8 +1728,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    if( npseudocands == 0 )
       return SCIP_OKAY;
 
-   nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip) };
-
    /* set time limit for NLP solver */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
    if( !SCIPisInfinity(scip, timelim) )
@@ -1738,19 +1735,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    /* possibly exit if time is up (need to check here, since the paramter has to be >= 0) */
    if ( timelim <= 0.0 )
       return SCIP_OKAY;
-   nlpparam.timelimit = timelim;
 
    *result = SCIP_DIDNOTFIND;
-
-#ifdef SCIP_DEBUG
-   /* nlpparam.verblevel = 1; */
-#endif
-
-   /* set iteration limit */
-   nlpparam.iterlimit = maxnnlpiterations - heurdata->nnlpiterations;
-
-   /* set whether NLP solver should fail fast */
-   nlpparam.fastfail = heurdata->nlpfastfail;
 
    /* set starting point to lp solution */
    SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
@@ -1761,7 +1747,11 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       SCIP_NLPSTATISTICS* nlpstatistics;
 
-      SCIP_CALL( SCIPsolveNLP(scip, nlpparam) );
+      SCIP_CALL( SCIPsolveNLP(scip,
+         /* .verblevel = 1, */
+         .timelimit = timelim,
+         .iterlimit = maxnnlpiterations - heurdata->nnlpiterations,
+         .fastfail = heurdata->nlpfastfail) );
       SCIPstatistic( ++heurdata->nnlpsolves );
 
       /* update iteration count */
@@ -2426,15 +2416,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             SCIP_NLPTERMSTAT termstat;
             SCIP_NLPSTATISTICS* nlpstatistics;
 
-            nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip) };
-            /* set iteration limit, allow at least MINNLPITER many iterations */
-            nlpparam.iterlimit = MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER);
-
             /* set time limit for NLP solver */
             SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
             if( !SCIPisInfinity(scip, timelim) )
                timelim = MAX(0.0, timelim-SCIPgetSolvingTime(scip));/*lint !e666*/
-            nlpparam.timelimit = timelim;
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
             if( heurdata->nlpstart != 'n' && backtracked )
@@ -2446,7 +2431,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, nlpstartsol) );
             }
 
-            SCIP_CALL( SCIPsolveNLP(scip, nlpparam) );
+            SCIP_CALL( SCIPsolveNLP(scip,
+               .iterlimit = MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER),  /* allow at least MINNLPITER many iterations */
+               .timelimit = timelim) );
             SCIPstatistic( ++heurdata->nnlpsolves );
 
             termstat = SCIPgetNLPTermstat(scip);

@@ -172,17 +172,14 @@ SCIP_RETCODE computeFixingrate(
    /* try to solve NLP relaxation */
    if( (*startsol) == 'n' )
    {
-      SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
       SCIP_NLPSOLSTAT stat;
+      unsigned short verblevel = 0;
 
       /* only call this function if NLP relaxation is available */
       assert(SCIPisNLPConstructed(scip));
 
       /* activate NLP solver output if we are in SCIP's debug mode */
-      SCIPdebug( nlpparam.verblevel = 1; )
-
-      /* TODO pick something less arbitrary */
-      nlpparam.iterlimit = 3000;
+      SCIPdebug( verblevel = 1; )
 
       SCIPdebugMsg(scip, "try to solve NLP relaxation to obtain fixing values\n");
 
@@ -190,7 +187,9 @@ SCIP_RETCODE computeFixingrate(
       SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
 
       /* solve NLP relaxation */
-      SCIP_CALL( SCIPsolveNLP(scip, nlpparam) );
+      SCIP_CALL( SCIPsolveNLP(scip,
+         .iterlimit = 3000,  /* TODO pick something less arbitrary */
+         .verblevel = verblevel) );
 
       /* get solution status of NLP solver */
       stat = SCIPgetNLPSolstat(scip);

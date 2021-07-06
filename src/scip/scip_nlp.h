@@ -283,7 +283,15 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
    SCIP_SOL*             sol                 /**< solution which values should be taken as initial guess, or NULL for LP solution */
    );
 
-/** solves the current NLP
+/** solves the current NLP with given parameters
+ *
+ *  Typical use is
+ *    SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
+ *    nlpparam.iterlim = 42;
+ *    SCIP_CALL( SCIPsolveNLPParam(scip, nlpparam) );
+ *  or, in one line:
+ *    SCIP_CALL( SCIPsolveNLPParam(scip, (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), .iterlim = 42 }) );
+ *  To get the latter, also \ref SCIPsolveNLP can be used.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -293,10 +301,41 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPsolveNLP(
+SCIP_RETCODE SCIPsolveNLPParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         param               /**< NLP solve parameters */
    );
+
+/** solves the current NLP with non-default parameters given as optional arguments
+ *
+ * Typical use is
+ *    SCIP_CALL( SCIPsolveNLP(scip) );
+ * to solve with default parameters.
+ * Additionally, one or several values of SCIP_NLPPARAM can be set:
+ *    SCIP_CALL( SCIPsolveNLP(scip, .iterlim = 42, .verblevel = 1) );
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+/* the scip argument has been made part of the variadic arguments, since ISO C99 requires at least one argument for the "..." part and we want to allow leaving all parameters at default
+ * for the same reason, we have the .caller argument, so that macro SCIP_PP_RESTARGS will have at least one arg to return
+ */
+#if !defined(_MSC_VER) || _MSC_VER >= 1800
+#define SCIPsolveNLP(...) \
+   SCIPsolveNLPParam(SCIP_PP_FIRSTARG((__VA_ARGS__, ignored)), \
+      (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(SCIP_PP_FIRSTARG((__VA_ARGS__, ignored))), SCIP_PP_RESTARGS(__VA_ARGS__, .caller = __FILE__) })
+#else
+/* very old MSVC doesn't support C99's designated initializers, so have a version of SCIPsolveNLP() that just ignores given parameters
+ * (compilation of scip_nlp.c will print a warning)
+ */
+#define SCIPsolveNLP(...) \
+    SCIPsolveNLPParam(SCIP_PP_FIRSTARG((__VA_ARGS__, ignored)), SCIP_NLPPARAM_DEFAULT_STATIC)
+#endif
+
 
 /** gets solution status of current NLP
  *

@@ -960,7 +960,7 @@ SCIP_RETCODE solveSubNLP(
 
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT " and timelimit %g\n", itercontingent, timelimit);
-   SCIP_CALL( SCIPsolveNLP(heurdata->subscip, nlpparam) );
+   SCIP_CALL( SCIPsolveNLPParam(heurdata->subscip, nlpparam) );
 
    SCIPdebugMsg(scip, "NLP solver returned with termination status %d and solution status %d, objective value is %g\n",
       SCIPgetNLPTermstat(heurdata->subscip), SCIPgetNLPSolstat(heurdata->subscip), SCIPgetNLPObjval(heurdata->subscip));

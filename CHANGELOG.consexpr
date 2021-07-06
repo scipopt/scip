@@ -139,7 +139,8 @@ NLP:
 - SCIPenableNLP() is no longer allowed in stages INITSOLVE and SOLVING
 - removed SCIPaddLinearConsToNlpHeurSubNlp()
 - SCIPhasNLPSolution() now returns true also if a infeasible solution to the NLP exists; SCIPcreateNLPSol() can now also be used when only an infeasible solution to the NLP exists
-- added parameter SCIP_NLPPARAM param to SCIPsolveNLP() and SCIPsolveDiveNLP()
+- renamed SCIPsolveNLP() to SCIPsolveNLPParam() and added parameter SCIP_NLPPARAM param
+- added parameter SCIP_NLPPARAM param SCIPsolveDiveNLP()
 
 exprinterpret:
 - removed functions that operated with SCIPInterval

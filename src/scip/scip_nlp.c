@@ -491,12 +491,12 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPsolveNLP(
+SCIP_RETCODE SCIPsolveNLPParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPPARAM         param               /**< NLP solve parameters */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveNLPParam", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {

@@ -194,7 +194,7 @@ SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam);
       (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), SCIP_PP_RESTARGS(__VA_ARGS__, .caller = __FILE__) })
 #else
 /* very old MSVC doesn't support C99's designated initializers, so have a version of SCIPsolveNlpi() that just ignores given parameters
- * (compiling scip_nlpi.c will print a warning)
+ * (compilation of scip_nlpi.c will print a warning)
  */
 #define SCIPsolveNlpi(scip, nlpi, ...) \
     SCIPsolveNlpiParam(scip, nlpi, SCIP_PP_FIRSTARG((__VA_ARGS__, ignored)), SCIP_NLPPARAM_DEFAULT_STATIC)

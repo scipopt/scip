@@ -171,7 +171,7 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
    nlpparam.feastol *= multiplier;
    nlpparam.relobjtol *= multiplier;
 
-   SCIP_CALL( SCIPsolveNLP(subproblem, nlpparam) );
+   SCIP_CALL( SCIPsolveNLPParam(subproblem, nlpparam) );
 
    nlpsolstat = SCIPgetNLPSolstat(subproblem);
 #ifdef SCIP_DEBUG
