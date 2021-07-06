@@ -27,13 +27,8 @@
 #include "blockmemshell/memory.h"
 #include "scip/nlpi_ipopt.h"
 #include "scip/cons_bounddisjunction.h"
-#include "scip/cons_knapsack.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_varbound.h"
 #include "scip/heur_subnlp.h"
-#include "scip/pub_cons.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
@@ -95,8 +90,6 @@ struct SCIP_HeurData
    SCIP_SOL*             lastsol;            /**< pointer to last found solution (or NULL if none), not captured, thus may be dangling */
 
    SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
-   SCIP_Bool             comblinearconsadded;/**< whether the linear constraint adding method has been called for combinatorial constraints already */
-   SCIP_Bool             contlinearconsadded;/**< whether the linear constraint adding method has been called for continuous constraints already */
 
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
@@ -1796,8 +1789,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
 
    /* reset some flags and counters */
    heurdata->triedsetupsubscip = FALSE;
-   heurdata->comblinearconsadded = FALSE;
-   heurdata->contlinearconsadded = FALSE;
    heurdata->nseriousnlpierror = 0;
    heurdata->iterused = 0;
 
