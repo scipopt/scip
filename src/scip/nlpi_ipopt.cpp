@@ -40,6 +40,7 @@
 #include "scip/scip_message.h"
 #include "scip/scip_general.h"
 #include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
 #include "scip/pub_misc.h"
 
 #include <new>      /* for std::bad_alloc */
@@ -134,10 +135,13 @@ class ScipNLP;
 struct SCIP_NlpiData
 {
 public:
+   char*                       optfile;      /**< Ipopt options file to read */
    std::string                 defoptions;   /**< modified default options for Ipopt */
 
    /** constructor */
-   explicit SCIP_NlpiData() { }
+   explicit SCIP_NlpiData()
+   : optfile(NULL)
+   { }
 };
 
 struct SCIP_NlpiProblem
@@ -148,7 +152,6 @@ public:
 
    SmartPtr<IpoptApplication>  ipopt;        /**< Ipopt application */
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
-   std::string                 optfile;      /**< name of options file */
    bool                        fastfail;     /**< whether to stop Ipopt if convergence seems slow */
 
    bool                        firstrun;     /**< whether the next NLP solve will be the first one */
@@ -593,23 +596,6 @@ SCIP_RETCODE handleNlpParam(
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(param.timelimit, DBL_MIN));
 #endif
 
-   if( (param.optfile == NULL && !nlpiproblem->optfile.empty()) || (param.optfile != NULL && nlpiproblem->optfile != param.optfile) )
-   {
-      // TODO move optfile param into nlpi/ipopt params
-      // reinit Ipopt if optfile changed
-      if( param.optfile != NULL )
-         nlpiproblem->optfile = param.optfile;
-      else
-         nlpiproblem->optfile.clear();
-
-      if( nlpiproblem->ipopt->Initialize(nlpiproblem->optfile) != Solve_Succeeded )
-      {
-         SCIPerrorMessage("Error initializing Ipopt using optionfile \"%s\"\n", nlpiproblem->optfile.c_str());
-         return SCIP_ERROR;
-      }
-      nlpiproblem->firstrun = TRUE;
-   }
-
    return SCIP_OKAY;
 }
 
@@ -760,10 +746,11 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       }
    }
 
-   /* apply user's given options file (this one is NLPI problem specific) */
-   if( (*problem)->ipopt->Initialize((*problem)->optfile) != Solve_Succeeded )
+   /* apply user's given options file */
+   assert(data->optfile != NULL);
+   if( (*problem)->ipopt->Initialize(data->optfile) != Solve_Succeeded )
    {
-      SCIPerrorMessage("Error during initialization of Ipopt using optionfile \"%s\"\n", (*problem)->optfile.c_str());
+      SCIPerrorMessage("Error during initialization of Ipopt using optionfile \"%s\"\n", data->optfile);
       return SCIP_ERROR;
    }
 
@@ -1449,6 +1436,9 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
          nlpidata) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "nlpi/" NLPI_NAME "/optfile", "name of Ipopt options file",
+      &nlpidata->optfile, FALSE, "", NULL, NULL) );
 
    return SCIP_OKAY;
 }  /*lint !e429 */

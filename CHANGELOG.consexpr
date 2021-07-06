@@ -503,6 +503,7 @@ nlpi:
 - changed default of propagating/obbt/onlynonconvexvars from FALSE to TRUE
 - changed default of heuristics/subnlp/resolvetolfactor from 0.001 to 1.0
 - changed default of heuristics/subnlp/nlpiterlimit from 0 (no limit) to 3000
+- removed heuristics/subnlp/nlpoptfile, use nlpi/ipopt/optfile instead
 
 ### New parameters
 
@@ -529,7 +530,7 @@ nlpi:
 - table/nonlinear/active, table/exprhdlrs/active, table/quadratic_nlhdlr_table/active
 - expr/log/minzerodistance, expr/pow/minzerodistance
 - benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
-
+- nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
 
 ### Data structures and types
 
@@ -556,6 +557,7 @@ nlpi:
 - added type SCIP_NLHDLR_METHOD
 - added structs SCIP_NLHDLR, SCIP_NLHDLRDATA, SCIP_NLHDLREXPRDATA
 - enum SCIP_NLPPARAM has been changed to a struct that holds values of parameters for an NLP solve
+- removed SCIP_NLPPAR_OPTFILE/optfile from SCIP_NLPPARAM
 
 
 Deleted files

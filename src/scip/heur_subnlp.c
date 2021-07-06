@@ -96,7 +96,6 @@ struct SCIP_HeurData
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0 for off */
    SCIP_Real             resolvetolfactor;   /**< factor for feasibility tolerance when resolving NLP due to disagreement of feasibility */
    SCIP_Bool             resolvefromscratch; /**< whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution */
-   char*                 nlpoptfile;         /**< name of NLP solver specific option file */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
@@ -938,12 +937,6 @@ SCIP_RETCODE solveSubNLP(
       nlpparam.feastol = 0.1*SCIPfeastol(scip);
    }
    */
-
-   /* set option file to use by NLP solver */
-   if( heurdata->nlpoptfile != NULL && *heurdata->nlpoptfile != '\0' )
-   {
-      nlpparam.optfile = heurdata->nlpoptfile;
-   }
 
    /* set iteration limit for NLP solver */
    if( itercontingent == -1 && heurdata->nlpiterlimit > 0 )
@@ -2044,10 +2037,6 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nlptimelimit",
          "time limit of NLP solver; 0 to use solver default",
          &heurdata->nlptimelimit, FALSE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/nlpoptfile",
-         "name of an NLP solver specific options file",
-         &heurdata->nlpoptfile, TRUE, "", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/resolvetolfactor",
          "if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)",

@@ -751,11 +751,6 @@ SCIP_RETCODE handleNlpParam(
 
    nlpiproblem->maxtime = param.timelimit;
 
-   if( param.optfile != NULL )
-   {
-      SCIPwarningMessage(scip, "Parameter optfile not supported by FilterSQP interface. Ignored.\n");
-   }
-
    return SCIP_OKAY;
 }
 

@@ -915,11 +915,6 @@ SCIP_RETCODE handleNlpParam(
       SCIPdebugMsg(scip, "from scratch parameter not supported by Worhp interface yet. Ignored.\n");
    }
 
-   if( nlpparam.optfile != NULL )
-   {
-      SCIPwarningMessage(scip, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
-   }
-
    if( nlpparam.lobjlimit > -SCIP_REAL_MAX )
    {
       SCIPwarningMessage(scip, "lobjlimit parameter not supported by Worhp interface yet. Ignored.\n");
