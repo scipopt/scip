@@ -67,7 +67,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
    .verblevel   = 0,                     \
    .feastol     = SCIPfeastol(scip),     \
    .relobjtol   = SCIPdualfeastol(scip), \
-   .lobjlimit   = -SCIP_REAL_MAX,        \
+   .lobjlimit   = SCIP_REAL_MIN,         \
    .iterlimit   = INT_MAX,               \
    .timelimit   = SCIP_REAL_MAX,         \
    .optfile     = NULL,                  \

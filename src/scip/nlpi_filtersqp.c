@@ -60,8 +60,6 @@
 #define WORKSPACEGROWTHFACTOR  2             /**< factor by which to increase worksapce */
 #define MINEPS                 1e-14         /**< minimal FilterSQP epsilon */
 #define OPTTOLFACTOR           0.5           /**< factor to apply to optimality tolerance, because FilterSQP do scaling */
-#define DEFAULT_LOBJLIM        (real)(-1e100) /**< default lower objective limit (should mean "unlimited") */
-#define DEFAULT_FEASOPTTOL     1e-6          /**< default feasibility and optimality tolerance */
 
 /*
  * Data structures
@@ -105,15 +103,10 @@ struct SCIP_NlpiProblem
    SCIP_Real                   solvetime;    /**< time spend for last NLP solve */
    int                         niterations;  /**< number of iterations for last NLP solve */
 
-   SCIP_Bool                   fromscratch;  /**< value of fromscratch parameter */
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
    real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
-   real                        feastol;      /**< user-given feasibility tolerance */
-   real                        opttol;       /**< user-given optimality tolerance */
    real                        fmin;         /**< lower bound on objective value */
    SCIP_Real                   maxtime;      /**< time limit */
-   fint                        maxiter;      /**< iteration limit */
-   fint                        iprint;       /**< print verbosity level */
 
    /* cached FilterSQP data */
    real*                       x;            /**< variable values, size varssize */
@@ -314,7 +307,7 @@ SCIP_Bool timelimitreached(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLPI problem */
    )
 {
-   if( nlpiproblem->maxtime == DBL_MAX )  /*lint !e777 */
+   if( nlpiproblem->maxtime == SCIP_REAL_MAX )  /*lint !e777 */
       return FALSE;
 
    return timeelapsed(nlpidata) >= nlpiproblem->maxtime;
@@ -749,20 +742,10 @@ SCIP_RETCODE handleNlpParam(
    assert(scip != NULL);
    assert(nlpiproblem != NULL);
 
-   nlpiproblem->fromscratch = param.fromscratch;
-
-   nlpiproblem->iprint = (fint)param.verblevel;
-
-   nlpiproblem->maxiter = param.iterlimit;
-
    if( param.fastfail )
    {
       SCIPdebugMsg(scip, "fast fail parameter not supported by FilterSQP interface yet. Ignored.\n");
    }
-
-   nlpiproblem->feastol = param.feastol;
-
-   nlpiproblem->opttol = param.relobjtol;
 
    nlpiproblem->fmin = param.lobjlimit;
 
@@ -782,6 +765,8 @@ SCIP_RETCODE processSolveOutcome(
    SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
    SCIP_NLPIPROBLEM*     problem,            /**< NLPI problem */
    fint                  ifail,              /**< fail flag from FilterSQP call */
+   SCIP_Real             feastol,            /**< feasibility tolerance */
+   SCIP_Real             opttol,             /**< optimality tolerance */
    real*                 x,                  /**< primal solution values from FilterSQP call, or NULL if stopped before filtersqp got called */
    real*                 lam                 /**< dual solution values from FilterSQP call, or NULL if stopped before filtersqp got called */
    )
@@ -843,15 +828,15 @@ SCIP_RETCODE processSolveOutcome(
    switch( ifail )
    {
       case 0: /* successful run, solution found */
-         assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
-         problem->solstat = (problem->rstat[0] <= problem->opttol ? SCIP_NLPSOLSTAT_LOCOPT : SCIP_NLPSOLSTAT_FEASIBLE);
+         assert(problem->rstat[4] <= feastol); /* should be feasible */
+         problem->solstat = (problem->rstat[0] <= opttol ? SCIP_NLPSOLSTAT_LOCOPT : SCIP_NLPSOLSTAT_FEASIBLE);
          problem->termstat = SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
          break;
       case 1: /* unbounded, feasible point with f(x) <= fmin */
-         assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
+         assert(problem->rstat[4] <= feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_UNBOUNDED;
-         if( problem->fmin == DEFAULT_LOBJLIM )  /*lint !e777*/
+         if( problem->fmin == SCIP_REAL_MIN )  /*lint !e777*/
             problem->termstat = SCIP_NLPTERMSTAT_OKAY;  /* fmin was not set */
          else
             problem->termstat = SCIP_NLPTERMSTAT_LOBJLIM;
@@ -861,19 +846,19 @@ SCIP_RETCODE processSolveOutcome(
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          break;
       case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
-         /* problem->solstat = (problem->rstat[0] <= problem->opttol ? SCIP_NLPSOLSTAT_LOCINFEASIBLE : SCIP_NLPSOLSTAT_UNKNOWN); */
+         /* problem->solstat = (problem->rstat[0] <= opttol ? SCIP_NLPSOLSTAT_LOCINFEASIBLE : SCIP_NLPSOLSTAT_UNKNOWN); */
          problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO FilterSQP does not set rstat[0] in this case, assuming local infeasibility is valid */
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
         break;
       case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
-         assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
+         assert(problem->rstat[4] <= feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_NUMERR;
          problem->warmstart = TRUE;
          break;
       case 5: /* termination with rho < eps (trust region radius below epsilon) */
-         if( problem->rstat[4] <= problem->feastol )
+         if( problem->rstat[4] <= feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -881,7 +866,7 @@ SCIP_RETCODE processSolveOutcome(
          problem->warmstart = TRUE;
          break;
       case 6: /* termination with iter > max_iter */
-         if( problem->rstat[4] <= problem->feastol )
+         if( problem->rstat[4] <= feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -899,7 +884,7 @@ SCIP_RETCODE processSolveOutcome(
             problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
          break;
       case 8: /* unexpect ifail from QP solver */
-         if( problem->rstat[4] <= problem->feastol )
+         if( problem->rstat[4] <= feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -975,12 +960,8 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
 
-   (*problem)->feastol = DEFAULT_FEASOPTTOL;
-   (*problem)->opttol = DEFAULT_FEASOPTTOL;
-   (*problem)->fmin = DEFAULT_LOBJLIM;
-   (*problem)->maxtime = DBL_MAX;
-   (*problem)->maxiter = INT_MAX;
-   (*problem)->iprint = 0;
+   (*problem)->fmin = SCIP_REAL_MIN;
+   (*problem)->maxtime = SCIP_REAL_MAX;
 
    invalidateSolution(*problem);
 
@@ -1452,6 +1433,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    fint nout;
    fint ifail;
    fint maxiter;
+   fint iprint;
    real rho;
    real f;
    real* user;
@@ -1470,8 +1452,10 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
    SCIP_CALL( handleNlpParam(scip, problem, param) );
 
+   iprint = param.verblevel;
+
    /* if fromscratch parameter is set, then we will not warmstart */
-   if( problem->fromscratch )
+   if( param.fromscratch )
       problem->warmstart = FALSE;
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);
@@ -1559,7 +1543,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    if( !success )
    {
       /* FilterSQP would crash if starting point cannot be evaluated, so give up */
-      SCIP_CALL( processSolveOutcome(data, problem, 7, NULL, NULL) );
+      SCIP_CALL( processSolveOutcome(data, problem, 7, param.feastol, param.relobjtol, NULL, NULL) );
       return SCIP_OKAY;
    }
 
@@ -1593,7 +1577,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
    /* initialize global variables from filtersqp */
    /* FilterSQP eps is tolerance for both feasibility and optimality, and also for trust-region radius, etc. */
-   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(problem->feastol, problem->opttol * OPTTOLFACTOR);
+   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(param.feastol, param.relobjtol * OPTTOLFACTOR);
    F77_FUNC(nlp_eps_inf,NLP_EPS_INF).infty = SCIPinfinity(scip);
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
@@ -1601,12 +1585,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
    for( nruns = 1; ; ++nruns )
    {
-      maxiter = problem->maxiter - problem->niterations;
+      maxiter = param.iterlimit - problem->niterations;
 
       F77_FUNC(filtersqp,FILTERSQP)(
          &n, &m, &kmax, &maxa,
          &maxf, &mlp, &problem->mxwk, &problem->mxiwk,
-         &problem->iprint, &nout, &ifail, &rho,
+         &iprint, &nout, &ifail, &rho,
          problem->x, problem->c, &f, &problem->fmin, problem->bl,
          problem->bu, problem->s, problem->a, problem->la, problem->ws,
          problem->lws, problem->lam, problem->cstype, user,
@@ -1619,18 +1603,18 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       /* if ifail >= 8 (probably the workspace was too small), then retry with larger workspace
        * if ifail == 0 (local optimal), but absolute violation of KKT too large, then retry with small eps
        */
-      if( ifail < 8 && (ifail != 0 || problem->rstat[0] <= problem->opttol) )
+      if( ifail < 8 && (ifail != 0 || problem->rstat[0] <= param.relobjtol) )
          break;
 
-      if( problem->iprint > 0 )
+      if( param.verblevel > 0 )
       {
          SCIPinfoMessage(scip, NULL, "FilterSQP terminated with status %d in run %d, absolute KKT violation is %g\n", ifail, nruns, problem->rstat[0]);
       }
 
       /* if iteration or time limit exceeded, then don't retry */
-      if( problem->niterations >= problem->maxiter || timelimitreached(data, problem) )
+      if( problem->niterations >= param.iterlimit || timelimitreached(data, problem) )
       {
-         if( problem->iprint > 0 )
+         if( param.verblevel > 0 )
          {
             SCIPinfoMessage(scip, NULL, "Time or iteration limit reached, not retrying\n");
          }
@@ -1640,7 +1624,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       /* if maximal number of runs reached, then stop */
       if( nruns >= MAXNRUNS )
       {
-         if( problem->iprint > 0 )
+         if( param.verblevel > 0 )
          {
             SCIPinfoMessage(scip, NULL, "Run limit reached, not retrying\n");
          }
@@ -1653,19 +1637,19 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
          if( F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps <= MINEPS )
          {
-            if( problem->iprint > 0 )
+            if( param.verblevel > 0 )
             {
                SCIPinfoMessage(scip, NULL, "Already reached minimal epsilon, not retrying\n");
             }
             break;
          }
 
-         epsfactor = problem->opttol / problem->rstat[0];
+         epsfactor = param.relobjtol / problem->rstat[0];
          assert(epsfactor < 1.0); /* because of the if's above */
          epsfactor *= OPTTOLFACTOR;
 
          F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MAX(MINEPS, F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps * epsfactor);
-         if( problem->iprint > 0 )
+         if( param.verblevel > 0 )
          {
             SCIPinfoMessage(scip, NULL, "Continue with eps = %g\n", F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps);
          }
@@ -1715,7 +1699,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    (void) pthread_mutex_unlock(&filtersqpmutex);
 #endif
 
-   SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );
+   SCIP_CALL( processSolveOutcome(data, problem, ifail, param.feastol, param.relobjtol, problem->x, problem->lam) );
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
