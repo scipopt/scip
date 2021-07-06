@@ -440,7 +440,7 @@ SCIP_RETCODE SCIPnlpFlush(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
-/** solves the NLP */
+/** solves the NLP or diving NLP */
 SCIP_RETCODE SCIPnlpSolve(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -565,18 +565,6 @@ SCIP_RETCODE SCIPnlpChgVarsBoundsDive(
 /** returns whether the objective function has been changed during diving */
 SCIP_Bool SCIPnlpIsDivingObjChanged(
    SCIP_NLP*             nlp                 /**< current NLP data */
-   );
-
-/** solves diving NLP */
-SCIP_RETCODE SCIPnlpSolveDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_NLPPARAM*        nlpparam            /**< NLP solve parameters */
    );
 
 /** gets array with variables of the NLP */

@@ -739,7 +739,9 @@ SCIP_RETCODE SCIPgetNLPI(
 /**@name NLP Diving Methods */
 /**@{ */
 
-/** initiates NLP diving making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available
+/** initiates NLP diving making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP() and SCIPchgVarsBoundsDiveNLP() available
+ *
+ *  Further, SCIPsolveNLP() can be used to solve the diving NLP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -880,33 +882,6 @@ SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
    }
 
    SCIP_CALL( SCIPnlpChgVarsBoundsDive(scip->nlp, scip->set, nvars, vars, lbs, ubs) );
-
-   return SCIP_OKAY;
-}
-
-/** solves diving NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsolveDiveNLP(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         param               /**< NLP solve parameters */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveDiveNLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   if( scip->nlp == NULL )
-   {
-      SCIPerrorMessage("NLP has not been constructed.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   SCIP_CALL( SCIPnlpSolveDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat, scip->primal, scip->tree, &param) );
 
    return SCIP_OKAY;
 }

@@ -3914,7 +3914,7 @@ SCIP_RETCODE SCIPnlpFlush(
    return SCIP_OKAY;
 }
 
-/** solves the NLP */
+/** solves the NLP or diving NLP */
 SCIP_RETCODE SCIPnlpSolve(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -3931,13 +3931,10 @@ SCIP_RETCODE SCIPnlpSolve(
    assert(set    != NULL);
    assert(stat   != NULL);
 
-   if( nlp->indiving )
+   if( !nlp->indiving )
    {
-      SCIPerrorMessage("cannot solve NLP during NLP diving (use SCIPsolveDiveNLP)\n");
-      return SCIP_ERROR;
+      SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set, stat) );
    }
-
-   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set, stat) );
 
    SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat, primal, tree, nlpparam) );
 
@@ -4628,23 +4625,6 @@ SCIP_Bool SCIPnlpIsDivingObjChanged(
    )
 {
    return nlp->divingobj != NULL;
-}
-
-/** solves diving NLP */
-SCIP_RETCODE SCIPnlpSolveDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_NLPPARAM*        nlpparam            /**< NLP solve parameters */
-   )
-{
-   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat, primal, tree, nlpparam) );
-
-   return SCIP_OKAY;
 }
 
 /** creates an NLP statistics structure */

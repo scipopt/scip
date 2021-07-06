@@ -283,7 +283,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
    SCIP_SOL*             sol                 /**< solution which values should be taken as initial guess, or NULL for LP solution */
    );
 
-/** solves the current NLP with given parameters
+/** solves the current NLP (or diving NLP if in diving mode) with given parameters
  *
  *  Typical use is
  *    SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
@@ -306,7 +306,7 @@ SCIP_RETCODE SCIPsolveNLPParam(
    SCIP_NLPPARAM         param               /**< NLP solve parameters */
    );
 
-/** solves the current NLP with non-default parameters given as optional arguments
+/** solves the current NLP (or diving NLP if in diving mode) with non-default parameters given as optional arguments
  *
  * Typical use is
  *    SCIP_CALL( SCIPsolveNLP(scip) );
@@ -463,7 +463,9 @@ SCIP_RETCODE SCIPgetNLPI(
  *
  * @{ */
 
-/** initiates NLP diving making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available
+/** initiates NLP diving making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP() and SCIPchgVarsBoundsDiveNLP() available
+ *
+ *  Further, SCIPsolveNLP() can be used to solve the diving NLP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -542,21 +544,6 @@ SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
    SCIP_VAR**            vars,               /**< variables which bounds to change */
    SCIP_Real*            lbs,                /**< new lower bounds */
    SCIP_Real*            ubs                 /**< new upper bounds */
-   );
-
-/** solves diving NLP
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsolveDiveNLP(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPPARAM         param               /**< NLP solve parameters */
    );
 
 /**@} */
