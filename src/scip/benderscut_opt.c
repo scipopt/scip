@@ -153,7 +153,7 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
 #ifdef SCIP_DEBUG
    SCIP_NLPTERMSTAT nlptermstat;
 #endif
-   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(subproblem) };  /*lint !e446*/
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(subproblem);  /*lint !e446*/
 #ifdef SCIP_MOREDEBUG
    SCIP_SOL* nlpsol;
 #endif

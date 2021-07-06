@@ -58,12 +58,12 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 /** default values for parameters
  *
  * typical use for this define is the initialization of a SCIP_NLPPARAM struct, e.g.,
- *    SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }   //lint !e446
+ *    SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip); }   //lint !e446
  * or
- *    SCIP_NLPPARAM nlparam;
+ *    SCIP_NLPPARAM nlpparam;
  *    nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip); }  //lint !e446
  */
-#define SCIP_NLPPARAM_DEFAULT(scip)      \
+#define SCIP_NLPPARAM_DEFAULT_INITS(scip) \
    .fromscratch = FALSE,                 \
    .verblevel   = 0,                     \
    .feastol     = SCIPfeastol(scip),     \
@@ -74,12 +74,22 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
    .fastfail    = FALSE,                 \
    .caller      = NULL
 
+/** default values for parameters
+ *
+ * typical use for this define is the initialization of a SCIP_NLPPARAM struct, e.g.,
+ *    SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);   //lint !e446
+ * or
+ *    SCIP_NLPPARAM nlpparam;
+ *    nlpparam = SCIP_NLPPARAM_DEFAULT(scip);  //lint !e446
+ */
+#define SCIP_NLPPARAM_DEFAULT(scip) (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT_INITS(scip) }
+
 #else
-#define SCIP_NLPPARAM_DEFAULT(scip) 0
 /** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
 static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
    FALSE, 0, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MIN, INT_MAX, SCIP_REAL_MAX, FALSE, NULL
 };
+#define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif
 
 /** NLP solution status */

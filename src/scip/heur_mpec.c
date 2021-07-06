@@ -309,7 +309,7 @@ SCIP_RETCODE heurExec(
    )
 {
    SCIP_NLPSTATISTICS* nlpstatistics = NULL;
-   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };  /*lint !e446*/
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);  /*lint !e446*/
    SCIP_VAR** binvars = NULL;
    SCIP_Real* initguess = NULL;
    SCIP_Real* ubs = NULL;

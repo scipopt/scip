@@ -270,7 +270,7 @@ SCIP_RETCODE solveQP(
 {
    SCIP_NLPSTATISTICS* statistics;
    SCIP_NLPIPROBLEM* nlpiprob;
-   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_EXPR** varexprs;
    SCIP_EXPR* sumexpr;

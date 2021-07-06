@@ -468,7 +468,7 @@ SCIP_RETCODE applyNlobbt(
    SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
-   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };  /*lint !e446*/
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);  /*lint !e446*/
    int nlpiterleft;
 
    assert(result != NULL);

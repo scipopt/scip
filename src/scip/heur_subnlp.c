@@ -620,21 +620,19 @@ SCIP_RETCODE solveSubNLP(
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
 {
-   SCIP_HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
    SCIP_RETCODE   retcode;
    SCIP_Real*     startpoint;
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
    int            i;
    SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
-   SCIP_NLPPARAM  nlpparam;
+   SCIP_NLPPARAM  nlpparam = SCIP_NLPPARAM_DEFAULT(heurdata->subscip);  /*lint !e446*/
 
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(result != NULL);
-
-   heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   assert(result != NULL);
 
    /* if NLP timelimit is set to 0.0, then return immediately
     * Previously, we were still running scip presolve, assuming the caller wanted to see if the instance is still feasible after presolve.
@@ -924,8 +922,6 @@ SCIP_RETCODE solveSubNLP(
    *result = SCIP_DIDNOTFIND;
 
    /* setup NLP parameters */
-   nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(heurdata->subscip) };  /*lint !e446*/
-
    if( tighttolerances )
    {
       /* set feasibility tolerance, if tighttolerances is set */

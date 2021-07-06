@@ -76,7 +76,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    SCIP_HASHMAP* var2idx;
    SCIP_NLPI* nlpi;
    SCIP_Real timelimit;
-   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);
    int nnlrows;
 
    *result = SCIP_DIDNOTRUN;
