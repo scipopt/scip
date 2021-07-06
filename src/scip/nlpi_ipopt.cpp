@@ -88,12 +88,6 @@ using namespace Ipopt;
 #define NLPI_DESC          "Ipopt interface" /**< description of solver */
 #define NLPI_PRIORITY      1000              /**< priority */
 
-#ifdef SCIP_DEBUG
-#define DEFAULT_PRINTLEVEL J_ITERSUMMARY     /**< default print level of Ipopt */
-#else
-#define DEFAULT_PRINTLEVEL J_STRONGWARNING  /**< default print level of Ipopt */
-#endif
-
 #define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
 #define FEASTOLFACTOR      0.9               /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
 
@@ -511,42 +505,6 @@ SCIP_RETCODE generateInitGuess(
    return SCIP_OKAY;
 }
 
-/** sets feasibility tolerance parameter in Ipopt */
-static
-void setFeastol(
-   SCIP_NLPIPROBLEM* nlpiproblem,
-   SCIP_Real         feastol
-   )
-{
-   assert(nlpiproblem != NULL);
-
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * feastol);
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", FEASTOLFACTOR * feastol);
-}
-
-/** sets optimality tolerance parameters in Ipopt
- *
- * Sets dual_inf_tol, compl_inf_tol, and tol to opttol.
- * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched for now, which means that if Ipopt has convergence problems, then
- * it can stop with a solution that is still feasible (see setFeastol), but essentially without a proof of local optimality.
- * Note, that in this case we report only feasibility and not optimality of the solution (see ScipNLP::finalize_solution).
- *
- * TODO it makes sense to set tol (maximal errors in scaled problem) depending on user parameters somewhere
- *      NLPI parameter RELOBJTOL seems better suited for this than FEASTOL, but maybe we need another one?
- */
-static
-void setOpttol(
-   SCIP_NLPIPROBLEM* nlpiproblem,
-   SCIP_Real         opttol
-   )
-{
-   assert(nlpiproblem != NULL);
-
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", opttol);
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", opttol);
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", opttol);
-}
-
 /// pass NLP solve parameters to Ipopt
 static
 SCIP_RETCODE handleNlpParam(
@@ -580,8 +538,22 @@ SCIP_RETCODE handleNlpParam(
 
    nlpiproblem->fastfail = param.fastfail;
 
-   setFeastol(nlpiproblem, param.feastol);
-   setOpttol(nlpiproblem, param.relobjtol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * param.feastol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", FEASTOLFACTOR * param.feastol);
+
+   /* set optimality tolerance parameters in Ipopt
+    *
+    * Sets dual_inf_tol, compl_inf_tol, and tol to relobjtol.
+    * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched for now, which means that if Ipopt has convergence problems, then
+    * it can stop with a solution that is still feasible, but essentially without a proof of local optimality.
+    * Note, that in this case we report only feasibility and not optimality of the solution (see ScipNLP::finalize_solution).
+    *
+    * TODO it makes sense to set tol (maximal errors in scaled problem) depending on user parameters somewhere
+    *      NLPI parameter RELOBJTOL seems better suited for this than FEASTOL, but maybe we need another one?
+    */
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", param.relobjtol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", param.relobjtol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", param.relobjtol);
 
    if( param.lobjlimit > -SCIP_REAL_MAX )
    {
@@ -715,7 +687,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 #endif
 
    /* modify Ipopt's default settings to what we believe is appropriate */
-   (void) (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
 #ifdef SCIP_DEBUG
    (void) (*problem)->ipopt->Options()->SetStringValue("print_user_options", "yes");
@@ -731,8 +702,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    // maybe there should be some option to the NLPI to let the user control this
    // (void) (*problem)->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
    /* (void) (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
-   setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
-   setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
 
    /* apply user's given modifications to Ipopt's default settings */
    if( data->defoptions.length() > 0 )
