@@ -118,7 +118,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    nlpparam.verblevel = NLPVERLEVEL;
 
    /* solve NLP */
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, nlpparam) );
+   SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiprob, nlpparam) );
 
    /* forward solution if we solved to optimality; local optimality is enough since the NLP is convex */
    if( SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )

@@ -163,9 +163,34 @@ SCIP_DECL_NLPICHGOBJCONSTANT(SCIPchgNlpiObjConstant);
 SCIP_EXPORT
 SCIP_DECL_NLPISETINITIALGUESS(SCIPsetNlpiInitialGuess);
 
-/** tries to solve NLP */
+/** try to solve NLP with all parameters given as SCIP_NLPPARAM struct
+ *
+ * Typical use is
+ *    SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
+ *    nlpparam.iterlim = 42;
+ *    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem, nlpparam) );
+ * or, in "one" line:
+ *    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem,
+ *       (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), .iterlim = 42 }) );
+ * To get the latter, also \ref SCIPsolveNlpi can be used.
+ */
 SCIP_EXPORT
-SCIP_DECL_NLPISOLVE(SCIPsolveNlpi);
+SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam);
+
+/** try to solve NLP with non-default parameters given as optional arguments
+ *
+ * Typical use is
+ *    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem) );
+ * to solve with default parameters.
+ * Additionally, one or several values of SCIP_NLPPARAM can be set:
+ *    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem, .iterlim = 42, .verblevel = 1) );
+ */
+/* the problem argument has been made part of the variadic arguments, since ISO C99 requires at least one argument for the "..." part and we want to allow leaving all parameters at default
+ * for the same reason, we have the .caller argument, so that macro SCIP_PP_RESTARGS will have at least one arg to return
+ */
+#define SCIPsolveNlpi(scip, nlpi, ...) \
+   SCIPsolveNlpiParam(scip, nlpi, SCIP_PP_FIRSTARG((__VA_ARGS__, ignored)), \
+      (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), SCIP_PP_RESTARGS(__VA_ARGS__, .caller = __FILE__) })
 
 /** gives solution status */
 SCIP_EXPORT

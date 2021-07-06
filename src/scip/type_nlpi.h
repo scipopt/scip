@@ -49,6 +49,7 @@ struct SCIP_NlpParam
    int                   iterlimit;          /**< iteration limit */
    SCIP_Real             timelimit;          /**< time limit in seconds */
    SCIP_Bool             fastfail;           /**< whether the NLP solver should stop early if convergence is slow */
+   const char*           caller;             /**< name of file from which NLP is solved (it's fine to set this to NULL) */
 };
 /** parameters for NLP solve */
 typedef struct SCIP_NlpParam SCIP_NLPPARAM;
@@ -69,7 +70,8 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
    .lobjlimit   = SCIP_REAL_MIN,         \
    .iterlimit   = INT_MAX,               \
    .timelimit   = SCIP_REAL_MAX,         \
-   .fastfail    = FALSE
+   .fastfail    = FALSE,                 \
+   .caller      = NULL
 
 /** NLP solution status */
 enum SCIP_NlpSolStat

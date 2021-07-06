@@ -361,8 +361,8 @@ SCIP_DECL_NLPISETINITIALGUESS(SCIPsetNlpiInitialGuess)
    return SCIP_OKAY;
 }
 
-/** tries to solve NLP */
-SCIP_DECL_NLPISOLVE(SCIPsolveNlpi)
+/** try to solve NLP */
+SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam)
 {
    assert(scip != NULL);
 

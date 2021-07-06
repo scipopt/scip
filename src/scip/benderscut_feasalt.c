@@ -135,7 +135,7 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
 {
    SCIP_Real timelimit;
    SCIP_NLPSOLSTAT nlpsolstat;
-   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
+   unsigned short verblevel = 0;
 
    assert(scip != NULL);
    assert(benderscutdata != NULL);
@@ -153,14 +153,15 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
          return SCIP_OKAY;
       }
    }
-   nlpparam.timelimit = timelimit;
-   nlpparam.iterlimit = 3000; // TODO what could be a meaningful limit?
 
 #ifdef SCIP_MOREDEBUG
-   nlpparam.verblevel = 1;
+   verblevel = 1;
 #endif
 
-   SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, nlpparam) );
+   SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob,
+      .timelimit = timelimit,
+      .iterlimit = 3000,
+      .verblevel = verblevel) );
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob));
 
    nlpsolstat = SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob);

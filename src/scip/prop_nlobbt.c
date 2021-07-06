@@ -386,7 +386,7 @@ SCIP_RETCODE solveNlp(
 
    SCIPdebugMsg(scip, "solve var=%s boundtype=%d nlscore=%g\n", SCIPvarGetName(var), boundtype,
       propdata->nlscore[propdata->currpos]);
-   SCIP_CALL( SCIPsolveNlpi(scip, propdata->nlpi, propdata->nlpiprob, *nlpparam) );
+   SCIP_CALL( SCIPsolveNlpiParam(scip, propdata->nlpi, propdata->nlpiprob, *nlpparam) );
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, propdata->nlpi, propdata->nlpiprob));
 
    /* collect NLP statistics */

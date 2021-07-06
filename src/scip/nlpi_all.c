@@ -467,7 +467,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveAll)
       assert(problem->nlpiproblems[i] != NULL);
 
       /* solve NLP */
-      SCIP_CALL( SCIPsolveNlpi(scip, nlpidata->nlpis[i], problem->nlpiproblems[i], param) );
+      SCIP_CALL( SCIPsolveNlpiParam(scip, nlpidata->nlpis[i], problem->nlpiproblems[i], param) );
 
       termstat = SCIPgetNlpiTermstat(scip, nlpidata->nlpis[i], problem->nlpiproblems[i]);
       solstat = SCIPgetNlpiSolstat(scip, nlpidata->nlpis[i], problem->nlpiproblems[i]);

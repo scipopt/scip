@@ -323,7 +323,7 @@ nlpi:
 - removed SCIPnlpiChgExprtree() from public API, use SCIPchgNlpiExpr() instead
 - removed SCIPnlpiChgObjConstant() from public API, use SCIPchgNlpiObjConstant() instead
 - removed SCIPnlpiSetInitialGuess() from public API, use SCIPsetNlpiInitialGuess() instead
-- removed SCIPnlpiSolve() from public API, use SCIPsolveNlpi() instead
+- removed SCIPnlpiSolve() from public API, use SCIPsolveNlpiParam() instead
 - removed SCIPnlpiGetSolstat() from public API, use SCIPgetNlpiSolstat() instead
 - removed SCIPnlpiGetTermstat() from public API, use SCIPgetNlpiTermstat() instead
 - removed SCIPnlpiGetSolution() from public API, use SCIPgetNlpiSolution() instead
@@ -458,7 +458,7 @@ nlhdlr:
 - added SCIPnlhdlrComp()
 
 nlpi:
-- added SCIPgetNlpiSolverPointer(), SCIPcreateNlpiProblem(), SCIPfreeNlpiProblem(), SCIPgetNlpiProblemPointer(), SCIPaddNlpiVars(), SCIPaddNlpiConstraints(), SCIPsetNlpiObjective(), SCIPchgNlpiVarBounds(), SCIPchgNlpiConsSides(), SCIPdelNlpiVarSet(), SCIPdelNlpiConsSet(), SCIPchgNlpiLinearCoefs(), SCIPchgNlpiExpr(), SCIPchgNlpiObjConstant(), SCIPsetNlpiInitialGuess(), SCIPsolveNlpi(), SCIPgetNlpiSolstat(), SCIPgetNlpiTermstat(), SCIPgetNlpiSolution(), SCIPgetNlpiStatistics()
+- added SCIPgetNlpiSolverPointer(), SCIPcreateNlpiProblem(), SCIPfreeNlpiProblem(), SCIPgetNlpiProblemPointer(), SCIPaddNlpiVars(), SCIPaddNlpiConstraints(), SCIPsetNlpiObjective(), SCIPchgNlpiVarBounds(), SCIPchgNlpiConsSides(), SCIPdelNlpiVarSet(), SCIPdelNlpiConsSet(), SCIPchgNlpiLinearCoefs(), SCIPchgNlpiExpr(), SCIPchgNlpiObjConstant(), SCIPsetNlpiInitialGuess(), SCIPsolveNlpiParam(), SCIPgetNlpiSolstat(), SCIPgetNlpiTermstat(), SCIPgetNlpiSolution(), SCIPgetNlpiStatistics()
 - added SCIPincludeNlpSolverAll()
 - added SCIPincludeNlpSolverFilterSQP(), SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP(), SCIPisFilterSQPAvailableFilterSQP()
 - added SCIPincludeNlpSolverIpopt()

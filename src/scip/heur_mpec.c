@@ -404,7 +404,7 @@ SCIP_RETCODE heurExec(
       nlpparam.iterlimit = heurdata->maxnlpiter;
 
       /* solve NLP */
-      SCIP_CALL( SCIPsolveNlpi(scip, heurdata->nlpi, heurdata->nlpiprob, nlpparam) );
+      SCIP_CALL( SCIPsolveNlpiParam(scip, heurdata->nlpi, heurdata->nlpiprob, nlpparam) );
       solstat = SCIPgetNlpiSolstat(scip, heurdata->nlpi, heurdata->nlpiprob);
 
       /* give up if an error occurred or no primal values are accessible */
