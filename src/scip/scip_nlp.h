@@ -312,7 +312,7 @@ SCIP_RETCODE SCIPsolveNLPParam(
  *    SCIP_CALL( SCIPsolveNLP(scip) );
  * to solve with default parameters.
  * Additionally, one or several values of SCIP_NLPPARAM can be set:
- *    SCIP_CALL( SCIPsolveNLP(scip, .iterlim = 42, .verblevel = 1) );
+ *    SCIP_CALL( SCIPsolveNLP(scip, .iterlim = 42, .verblevel = 1) );    //lint !e666
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

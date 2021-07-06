@@ -180,10 +180,10 @@ SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam);
 /** try to solve NLP with non-default parameters given as optional arguments
  *
  * Typical use is
- *    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem) );
+ *    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiproblem) );
  * to solve with default parameters.
  * Additionally, one or several values of SCIP_NLPPARAM can be set:
- *    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem, .iterlim = 42, .verblevel = 1) );
+ *    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiproblem, .iterlim = 42, .verblevel = 1) );  //lint !e666
  */
 /* the problem argument has been made part of the variadic arguments, since ISO C99 requires at least one argument for the "..." part and we want to allow leaving all parameters at default
  * for the same reason, we have the .caller argument, so that macro SCIP_PP_RESTARGS will have at least one arg to return

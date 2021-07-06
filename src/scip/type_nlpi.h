@@ -58,10 +58,10 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 /** default values for parameters
  *
  * typical use for this define is the initialization of a SCIP_NLPPARAM struct, e.g.,
- *    SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
+ *    SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }   //lint !e446
  * or
  *    SCIP_NLPPARAM nlparam;
- *    nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip); }
+ *    nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip); }  //lint !e446
  */
 #define SCIP_NLPPARAM_DEFAULT(scip)      \
    .fromscratch = FALSE,                 \

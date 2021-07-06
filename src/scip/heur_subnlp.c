@@ -924,7 +924,7 @@ SCIP_RETCODE solveSubNLP(
    *result = SCIP_DIDNOTFIND;
 
    /* setup NLP parameters */
-   nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(heurdata->subscip) };
+   nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(heurdata->subscip) };  /*lint !e446*/
 
    if( tighttolerances )
    {
@@ -952,7 +952,7 @@ SCIP_RETCODE solveSubNLP(
    /* set verbosity of NLP solver
     * NLP interface may take SCIP verblevel into account, too, so temporarily increase this, too
     */
-   nlpparam.verblevel = heurdata->nlpverblevel;
+   nlpparam.verblevel = (unsigned short)heurdata->nlpverblevel;
    if( heurdata->nlpverblevel >= 1 )
    {
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", SCIP_VERBLEVEL_HIGH) );  /*lint !e641*/

@@ -1751,7 +1751,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          /* .verblevel = 1, */
          .timelimit = timelim,
          .iterlimit = maxnnlpiterations - heurdata->nnlpiterations,
-         .fastfail = heurdata->nlpfastfail) );
+         .fastfail = heurdata->nlpfastfail) );  /*lint !e666*/
       SCIPstatistic( ++heurdata->nnlpsolves );
 
       /* update iteration count */
@@ -2433,7 +2433,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
 
             SCIP_CALL( SCIPsolveNLP(scip,
                .iterlimit = MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER),  /* allow at least MINNLPITER many iterations */
-               .timelimit = timelim) );
+               .timelimit = timelim) );  /*lint !e666*/
             SCIPstatistic( ++heurdata->nnlpsolves );
 
             termstat = SCIPgetNLPTermstat(scip);

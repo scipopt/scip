@@ -161,7 +161,7 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
    SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob,
       .timelimit = timelimit,
       .iterlimit = 3000,
-      .verblevel = verblevel) );
+      .verblevel = verblevel) );  /*lint !e666*/
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob));
 
    nlpsolstat = SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob);

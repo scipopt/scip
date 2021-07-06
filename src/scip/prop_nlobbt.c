@@ -468,7 +468,7 @@ SCIP_RETCODE applyNlobbt(
    SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
-   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };
+   SCIP_NLPPARAM nlpparam = { SCIP_NLPPARAM_DEFAULT(scip) };  /*lint !e446*/
    int nlpiterleft;
 
    assert(result != NULL);
@@ -552,7 +552,7 @@ SCIP_RETCODE applyNlobbt(
    /* set parameters of NLP solver */
    nlpparam.feastol *= propdata->feastolfac;
    nlpparam.relobjtol = SCIPfeastol(scip) * propdata->relobjtolfac;
-   nlpparam.verblevel = propdata->nlpverblevel;
+   nlpparam.verblevel = (unsigned short)propdata->nlpverblevel;
 
    /* main propagation loop */
    while( propdata->currpos < propdata->nlpinvars

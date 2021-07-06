@@ -1625,7 +1625,7 @@ SCIP_RETCODE getFixingValue(
          SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
 
          /* solve NLP relaxation */
-         SCIP_CALL( SCIPsolveNLP(scip, .verblevel = verblevel) );
+         SCIP_CALL( SCIPsolveNLP(scip, .verblevel = verblevel) );  /*lint !e666*/
          stat = SCIPgetNLPSolstat(scip);
          *success = stat == SCIP_NLPSOLSTAT_GLOBOPT || stat == SCIP_NLPSOLSTAT_LOCOPT || stat == SCIP_NLPSOLSTAT_FEASIBLE;
 

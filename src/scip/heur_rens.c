@@ -189,7 +189,7 @@ SCIP_RETCODE computeFixingrate(
       /* solve NLP relaxation */
       SCIP_CALL( SCIPsolveNLP(scip,
          .iterlimit = 3000,  /* TODO pick something less arbitrary */
-         .verblevel = verblevel) );
+         .verblevel = verblevel) );  /*lint !e666*/
 
       /* get solution status of NLP solver */
       stat = SCIPgetNLPSolstat(scip);
