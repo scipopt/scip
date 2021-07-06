@@ -509,6 +509,11 @@ SCIP_RETCODE SCIPsolveNLP(
    return SCIP_OKAY;
 }
 
+#if defined(_MSC_VER) && _MSC_VER < 1800
+/* warn that SCIPsolveNLP() macro isn't perfect with ancient MSVC */
+#pragma message ( "Warning: designated initializers not supported by this version of MSVC. Parameters given to NLP solves may be ignored." )
+#endif
+
 /** gets solution status of current NLP
  *
  *  @pre This method can be called if SCIP is in one of the following stages:

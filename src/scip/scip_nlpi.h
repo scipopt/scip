@@ -188,9 +188,17 @@ SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam);
 /* the problem argument has been made part of the variadic arguments, since ISO C99 requires at least one argument for the "..." part and we want to allow leaving all parameters at default
  * for the same reason, we have the .caller argument, so that macro SCIP_PP_RESTARGS will have at least one arg to return
  */
+#if !defined(_MSC_VER) || _MSC_VER >= 1800
 #define SCIPsolveNlpi(scip, nlpi, ...) \
    SCIPsolveNlpiParam(scip, nlpi, SCIP_PP_FIRSTARG((__VA_ARGS__, ignored)), \
       (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), SCIP_PP_RESTARGS(__VA_ARGS__, .caller = __FILE__) })
+#else
+/* very old MSVC doesn't support C99's designated initializers, so have a version of SCIPsolveNlpi() that just ignores given parameters
+ * (compiling scip_nlpi.c will print a warning)
+ */
+#define SCIPsolveNlpi(scip, nlpi, ...) \
+    SCIPsolveNlpiParam(scip, nlpi, SCIP_PP_FIRSTARG((__VA_ARGS__, ignored)), SCIP_NLPPARAM_DEFAULT_STATIC)
+#endif
 
 /** gives solution status */
 SCIP_EXPORT

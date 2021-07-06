@@ -54,6 +54,7 @@ struct SCIP_NlpParam
 /** parameters for NLP solve */
 typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 
+#if !defined(_MSC_VER) || _MSC_VER >= 1800
 /** default values for parameters
  *
  * typical use for this define is the initialization of a SCIP_NLPPARAM struct, e.g.,
@@ -72,6 +73,14 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
    .timelimit   = SCIP_REAL_MAX,         \
    .fastfail    = FALSE,                 \
    .caller      = NULL
+
+#else
+#define SCIP_NLPPARAM_DEFAULT(scip) 0
+/** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
+static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
+   FALSE, 0, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MIN, INT_MAX, SCIP_REAL_MAX, FALSE, NULL
+};
+#endif
 
 /** NLP solution status */
 enum SCIP_NlpSolStat

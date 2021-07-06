@@ -371,6 +371,11 @@ SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam)
    return SCIP_OKAY;
 }
 
+#if defined(_MSC_VER) && _MSC_VER < 1800
+/* warn that SCIPsolveNlpi() macro isn't perfect with ancient MSVC */
+#pragma message ( "Warning: designated initializers not supported by this version of MSVC. Parameters given to NLP solves will be ignored." )
+#endif
+
 /** gives solution status */
 SCIP_DECL_NLPIGETSOLSTAT(SCIPgetNlpiSolstat)
 {
