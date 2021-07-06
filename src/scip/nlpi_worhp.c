@@ -930,32 +930,6 @@ SCIP_RETCODE handleNlpParam(
       SCIPdebugMsg(scip, "fastfail parameter not supported by Worhp interface yet. Ignored.\n");
    }
 
-   if( nlpparam.verblevel < 0 )
-   {
-      SCIPerrorMessage("Value %d for verblevel parameter out of range {0, 1, 2, ...}\n", nlpparam.verblevel);
-      return SCIP_PARAMETERWRONGVAL;
-   }
-   if( nlpparam.iterlimit < 0 )
-   {
-      SCIPerrorMessage("Value %d for parameter iteration limit is negative\n", nlpparam.iterlimit);
-      return SCIP_PARAMETERWRONGVAL;
-   }
-   if( nlpparam.feastol < 0.0 )
-   {
-      SCIPerrorMessage("Value %g for parameter feasibility tolerance is negative\n", nlpparam.feastol);
-      return SCIP_PARAMETERWRONGVAL;
-   }
-   if( nlpparam.relobjtol < 0.0 )
-   {
-      SCIPerrorMessage("Value %g for parameter relative objective tolerance is negative\n", nlpparam.relobjtol);
-      return SCIP_PARAMETERWRONGVAL;
-   }
-   if( nlpparam.timelimit < 0.0 )
-   {
-      SCIPerrorMessage("Value %g for parameter time limit is negative\n", nlpparam.timelimit);
-      return SCIP_PARAMETERWRONGVAL;
-   }
-
    par->TolFeas = nlpparam.feastol;
    par->TolOpti = nlpparam.relobjtol;
    par->TolComp = nlpparam.relobjtol;

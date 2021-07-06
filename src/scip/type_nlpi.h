@@ -42,7 +42,7 @@ typedef struct SCIP_NlpiProblem   SCIP_NLPIPROBLEM;   /**< locally defined NLP s
 struct SCIP_NlpParam
 {
    SCIP_Bool             fromscratch;        /**< whether to start solve from scratch */
-   int                   verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
+   unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
    SCIP_Real             feastol;            /**< feasibility tolerance (maximal allowed absolute violation of constraints and variable bounds) */
    SCIP_Real             relobjtol;          /**< relative objective tolerance */
    SCIP_Real             lobjlimit;          /**< lower objective limit (cutoff) */

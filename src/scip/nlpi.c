@@ -468,6 +468,28 @@ SCIP_RETCODE SCIPnlpiSolve(
    assert(problem != NULL);
    assert(param != NULL);
 
+   // check that parameter values are in accepted range (if type allows more than we would accept)
+   if( param->iterlimit < 0 )
+   {
+      SCIPerrorMessage("Value %d for parameter iteration limit cannot be negative.\n", param->iterlimit);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   if( param->feastol < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter feasibility tolerance cannot be negative\n", param->feastol);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   if( param->relobjtol < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter relative objective tolerance cannot be negative\n", param->relobjtol);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   if( param->timelimit < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter time limit cannot be negative\n", param->timelimit);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    SCIP_CALL( nlpi->nlpisolve(set->scip, nlpi, problem, *param) );
 
    return SCIP_OKAY;

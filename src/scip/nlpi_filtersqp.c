@@ -751,18 +751,8 @@ SCIP_RETCODE handleNlpParam(
 
    nlpiproblem->fromscratch = param.fromscratch;
 
-   if( param.verblevel < 0 )
-   {
-      SCIPerrorMessage("Value %d for verblevel parameter out of range {0, 1, 2, ...}\n", param.verblevel);
-      return SCIP_PARAMETERWRONGVAL;
-   }
-   nlpiproblem->iprint = param.verblevel;
+   nlpiproblem->iprint = (fint)param.verblevel;
 
-   if( param.iterlimit < 0 )
-   {
-      SCIPerrorMessage("Value %d for parameter iteration limit is negative\n", param.iterlimit);
-      return SCIP_PARAMETERWRONGVAL;
-   }
    nlpiproblem->maxiter = param.iterlimit;
 
    if( param.fastfail )
@@ -770,27 +760,12 @@ SCIP_RETCODE handleNlpParam(
       SCIPdebugMsg(scip, "fast fail parameter not supported by FilterSQP interface yet. Ignored.\n");
    }
 
-   if( param.feastol < 0.0 )
-   {
-      SCIPerrorMessage("Value %g for parameter feasibility tolerance is negative\n", param.feastol);
-      return SCIP_PARAMETERWRONGVAL;
-   }
    nlpiproblem->feastol = param.feastol;
 
-   if( param.relobjtol < 0.0 )
-   {
-      SCIPerrorMessage("Value %g for parameter relative objective tolerance is negative\n", param.relobjtol);
-      return SCIP_PARAMETERWRONGVAL;
-   }
    nlpiproblem->opttol = param.relobjtol;
 
    nlpiproblem->fmin = param.lobjlimit;
 
-   if( param.timelimit < 0.0 )
-   {
-      SCIPerrorMessage("Value %g for parameter time limit is negative\n", param.timelimit);
-      return SCIP_PARAMETERWRONGVAL;
-   }
    nlpiproblem->maxtime = param.timelimit;
 
    if( param.optfile != NULL )

@@ -557,11 +557,6 @@ SCIP_RETCODE handleNlpParam(
 
    // TODO handle param.fromscratch
 
-   if( param.verblevel < 0 )
-   {
-      SCIPerrorMessage("Value %d for verblevel parameter out of range {0, 1, 2, ...}\n", param.verblevel);
-      return SCIP_PARAMETERWRONGVAL;
-   }
    switch( param.verblevel )
    {
       case 0:
@@ -578,27 +573,11 @@ SCIP_RETCODE handleNlpParam(
          break;
    }
 
-   if( param.iterlimit < 0 )
-   {
-      SCIPerrorMessage("Value %d for parameter iteration limit is negative\n", param.iterlimit);
-      return SCIP_PARAMETERWRONGVAL;
-   }
    (void) nlpiproblem->ipopt->Options()->SetIntegerValue("max_iter", param.iterlimit);
 
    nlpiproblem->fastfail = param.fastfail;
 
-   if( param.feastol < 0.0 )
-   {
-      SCIPerrorMessage("Value %g for parameter feasibility tolerance is negative\n", param.feastol);
-      return SCIP_PARAMETERWRONGVAL;
-   }
    setFeastol(nlpiproblem, param.feastol);
-
-   if( param.relobjtol < 0.0 )
-   {
-      SCIPerrorMessage("Value %g for parameter relative objective tolerance is negative\n", param.relobjtol);
-      return SCIP_PARAMETERWRONGVAL;
-   }
    setOpttol(nlpiproblem, param.relobjtol);
 
    if( param.lobjlimit > -SCIP_REAL_MAX )
@@ -607,11 +586,6 @@ SCIP_RETCODE handleNlpParam(
       SCIPwarningMessage(scip, "Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
    }
 
-   if( param.timelimit < 0.0 )
-   {
-      SCIPerrorMessage("Value %g for parameter time limit is negative\n", param.timelimit);
-      return SCIP_PARAMETERWRONGVAL;
-   }
    /* Ipopt doesn't like a setting of exactly 0 for the max_*_time, so increase as little as possible in that case */
 #if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("max_wall_time", MAX(param.timelimit, DBL_MIN));
