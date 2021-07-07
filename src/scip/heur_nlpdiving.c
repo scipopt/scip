@@ -1623,7 +1623,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    SCIP_Real oldobjval;
    SCIP_Real fixquot;
    SCIP_Real bestboundval;
-   SCIP_Real timelim;
    SCIP_Bool bestcandmayround;
    SCIP_Bool bestcandroundup;
    SCIP_Bool nlperror;
@@ -1728,14 +1727,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    if( npseudocands == 0 )
       return SCIP_OKAY;
 
-   /* set time limit for NLP solver */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
-   if( !SCIPisInfinity(scip, timelim) )
-      timelim -= SCIPgetSolvingTime(scip);
-   /* possibly exit if time is up (need to check here, since the paramter has to be >= 0) */
-   if ( timelim <= 0.0 )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
 
    /* set starting point to lp solution */
@@ -1748,7 +1739,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       SCIP_NLPSTATISTICS* nlpstatistics;
 
       SCIP_CALL( SCIPsolveNLP(scip,
-         .timelimit = timelim,
          .iterlimit = maxnnlpiterations - heurdata->nnlpiterations,
          .fastfail = heurdata->nlpfastfail) );  /*lint !e666*/
       SCIPstatistic( ++heurdata->nnlpsolves );
@@ -2415,11 +2405,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             SCIP_NLPTERMSTAT termstat;
             SCIP_NLPSTATISTICS* nlpstatistics;
 
-            /* set time limit for NLP solver */
-            SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
-            if( !SCIPisInfinity(scip, timelim) )
-               timelim = MAX(0.0, timelim-SCIPgetSolvingTime(scip));/*lint !e666*/
-
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
             if( heurdata->nlpstart != 'n' && backtracked )
             {
@@ -2430,9 +2415,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, nlpstartsol) );
             }
 
+            /* solve NLP; allow at least MINNLPITER many iterations */
             SCIP_CALL( SCIPsolveNLP(scip,
-               .iterlimit = MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER),  /* allow at least MINNLPITER many iterations */
-               .timelimit = timelim) );  /*lint !e666*/
+               .iterlimit = MAX(maxnnlpiterations - heurdata->nnlpiterations, MINNLPITER)) );  /*lint !e666*/
             SCIPstatistic( ++heurdata->nnlpsolves );
 
             termstat = SCIPgetNLPTermstat(scip);

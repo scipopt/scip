@@ -28,6 +28,7 @@
 #include "scip/type_nlpi.h"
 #include "scip/type_misc.h"
 #include "scip/type_set.h"
+#include "scip/type_stat.h"
 #include "blockmemshell/memory.h"
 
 #ifdef __cplusplus
@@ -236,6 +237,7 @@ SCIP_RETCODE SCIPnlpiSetInitialGuess(
 /** tries to solve NLP */
 SCIP_RETCODE SCIPnlpiSolve(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NLPI*            nlpi,               /**< solver interface */
    SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
    SCIP_NLPPARAM*        param               /**< solve parameters */

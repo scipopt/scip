@@ -366,7 +366,7 @@ SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam)
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPnlpiSolve(scip->set, nlpi, problem, &param) );
+   SCIP_CALL( SCIPnlpiSolve(scip->set, scip->stat, nlpi, problem, &param) );
 
    return SCIP_OKAY;
 }

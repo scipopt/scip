@@ -252,7 +252,10 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessXyz)
 #define nlpiSetInitialGuessXyz NULL
 #endif
 
-/** tries to solve NLP */
+/** try to solve NLP
+ *
+ * Note that SCIP will already have reset a timelimit of SCIP_REAL_MAX to the time remaining for the SCIP solve in SCIPnlpiSolve().
+ */
 static
 SCIP_DECL_NLPISOLVE(nlpiSolveXyz)
 {

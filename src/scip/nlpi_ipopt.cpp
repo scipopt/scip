@@ -1166,6 +1166,17 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    assert(IsValid(problem->ipopt));
    assert(IsValid(problem->nlp));
 
+   if( param.timelimit == 0.0 )
+   {
+      /* there is nothing we can do if we are not given any time */
+      problem->lastniter = 0;
+      problem->lasttime = 0.0;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
+
+      return SCIP_OKAY;
+   }
+
    problem->nlp->setNLPIPROBLEM(problem);
 
    problem->lastniter = -1;

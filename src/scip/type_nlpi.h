@@ -47,7 +47,7 @@ struct SCIP_NlpParam
    SCIP_Real             relobjtol;          /**< relative objective tolerance */
    SCIP_Real             lobjlimit;          /**< lower objective limit (cutoff) */
    int                   iterlimit;          /**< iteration limit */
-   SCIP_Real             timelimit;          /**< time limit in seconds */
+   SCIP_Real             timelimit;          /**< time limit in seconds: use SCIP_REAL_MAX to use remaining time available for SCIP solve (limits/time - currenttime) */
    SCIP_Bool             fastfail;           /**< whether the NLP solver should stop early if convergence is slow */
    const char*           caller;             /**< name of file from which NLP is solved (it's fine to set this to NULL) */
 };

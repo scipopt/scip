@@ -74,7 +74,6 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_HASHMAP* var2idx;
    SCIP_NLPI* nlpi;
-   SCIP_Real timelimit;
    SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);
    int nnlrows;
 
@@ -98,19 +97,6 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
          TRUE, TRUE) );
    SCIP_CALL( SCIPaddNlpiProblemRows(scip, nlpi, nlpiprob, var2idx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 
-   /* set working limits */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-   {
-      timelimit -= SCIPgetSolvingTime(scip);
-      if( timelimit <= 1.0 )
-      {
-         SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
-         return SCIP_OKAY;
-      }
-   }
-
-   nlpparam.timelimit = timelimit;
    nlpparam.iterlimit = NLPITERLIMIT;
    nlpparam.feastol = SCIPfeastol(scip) * FEASTOLFAC;
    nlpparam.relobjtol = SCIPfeastol(scip) * RELOBJTOLFAC;

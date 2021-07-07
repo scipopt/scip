@@ -506,6 +506,8 @@ nlpi:
 - changed default of heuristics/subnlp/resolvetolfactor from 0.001 to 1.0
 - changed default of heuristics/subnlp/nlpiterlimit from 0 (no limit) to 3000
 - removed heuristics/subnlp/nlpoptfile, use nlpi/ipopt/optfile instead
+- removed separating/convexproj/nlptimelimit
+- removed separating/gauge/nlptimelimit
 
 ### New parameters
 

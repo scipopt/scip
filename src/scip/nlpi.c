@@ -29,8 +29,10 @@
 #include "scip/nlpi.h"
 #include "scip/pub_message.h"
 #include "scip/pub_nlpi.h"
+#include "scip/clock.h"
 #include "scip/struct_nlpi.h"
 #include "scip/struct_set.h"
+#include "scip/struct_stat.h"
 
 /** compares two NLPIs w.r.t. their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPnlpiComp)
@@ -457,6 +459,7 @@ SCIP_RETCODE SCIPnlpiSetInitialGuess(
 /** tries to solve NLP */
 SCIP_RETCODE SCIPnlpiSolve(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NLPI*            nlpi,               /**< solver interface */
    SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
    SCIP_NLPPARAM*        param               /**< solve parameters */
@@ -488,6 +491,15 @@ SCIP_RETCODE SCIPnlpiSolve(
    {
       SCIPerrorMessage("Value %g for parameter time limit cannot be negative\n", param->timelimit);
       return SCIP_PARAMETERWRONGVAL;
+   }
+
+   if( param->timelimit == SCIP_REAL_MAX && set->istimelimitfinite )  /*lint !e777*/
+   {
+      /* set timelimit to time remaining if limits/time has been set */
+      param->timelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( param->timelimit < 0.0 )
+         param->timelimit = 0.0;
+      /* still call NLP solver if no time left to ensure proper termination codes */
    }
 
    SCIP_CALL( nlpi->nlpisolve(set->scip, nlpi, problem, *param) );

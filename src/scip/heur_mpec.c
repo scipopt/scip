@@ -376,6 +376,7 @@ SCIP_RETCODE heurExec(
    /* set parameters of NLP solver */
    nlpparam.feastol /= 10.0;
    nlpparam.relobjtol /= 10.0;
+   nlpparam.iterlimit = heurdata->maxnlpiter;
 
    /* main loop */
    for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL && nlpcostleft > 0.0 && !SCIPisStopped(scip); ++i )
@@ -391,17 +392,6 @@ SCIP_RETCODE heurExec(
 
       /* add or update regularization */
       SCIP_CALL( addRegularScholtes(scip, heurdata, binvars, nbinvars, theta, i > 0) );
-
-      /* set working limits */
-      SCIP_CALL( getTimeLeft(scip, &timeleft) );
-      if( timeleft <= 0.0 )
-      {
-         SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
-         break;
-      }
-
-      nlpparam.timelimit = timeleft;
-      nlpparam.iterlimit = heurdata->maxnlpiter;
 
       /* solve NLP */
       SCIP_CALL( SCIPsolveNlpiParam(scip, heurdata->nlpi, heurdata->nlpiprob, nlpparam) );

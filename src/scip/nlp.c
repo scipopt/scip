@@ -3020,8 +3020,6 @@ SCIP_RETCODE nlpSolve(
    SCIP_NLPPARAM*        nlpparam            /**< NLP solve parameters */
    )
 {
-   SCIP_Real sciptimelimit;
-   SCIP_Real timeleft;
    int i;
 
    assert(nlp    != NULL);
@@ -3066,15 +3064,10 @@ SCIP_RETCODE nlpSolve(
       SCIPsetFreeBufferArray(set, &initialguess_solver);
    }
 
-   /* set the NLP timelimit to the remaining time (TODO: do not overwrite callers setting) */
-   SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &sciptimelimit) );
-   timeleft = sciptimelimit - SCIPclockGetTime(stat->solvingtime);
-   nlpparam->timelimit = MAX(0.0, timeleft);
-
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);
 
-   SCIP_CALL( SCIPnlpiSolve(set, nlp->solver, nlp->problem, nlpparam) );
+   SCIP_CALL( SCIPnlpiSolve(set, stat, nlp->solver, nlp->problem, nlpparam) );
 
    SCIPclockStop(stat->nlpsoltime, set);
    ++stat->nnlps;

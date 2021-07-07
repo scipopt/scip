@@ -1442,6 +1442,17 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
+   if( param.timelimit == 0.0 )
+   {
+      /* there is nothing we can do if we are not given any time */
+      problem->niterations = 0;
+      problem->solvetime = 0.0;
+      problem->termstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+
+      return SCIP_OKAY;
+   }
+
    /* start measuring time */
    data->starttime = gettime();
 
