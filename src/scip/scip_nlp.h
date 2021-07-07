@@ -322,7 +322,7 @@ SCIP_RETCODE SCIPsolveNLPParam(
  *       - \ref SCIP_STAGE_SOLVING
  */
 /* the scip argument has been made part of the variadic arguments, since ISO C99 requires at least one argument for the "..." part and we want to allow leaving all parameters at default
- * for the same reason, we have the .caller argument, so that macro SCIP_PP_RESTARGS will have at least one arg to return
+ * for the same reason, we have the .caller argument, so that macro SCIP_VARARGS_REST will have at least one arg to return
  */
 #if !defined(_MSC_VER) || _MSC_VER >= 1800
 #define SCIPsolveNLP(...) \

@@ -78,7 +78,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
    .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL, \
    .fromscratch = FALSE,                           \
    .fastfail    = FALSE,                           \
-   .caller      = NULL
+   .caller      = __FILE__
 
 /** default values for parameters
  *
@@ -93,7 +93,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #else
 /** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
 static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
-   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, FALSE, FALSE, NULL
+   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, FALSE, FALSE, __FILE__
 };
 #define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif
