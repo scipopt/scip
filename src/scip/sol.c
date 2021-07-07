@@ -877,7 +877,7 @@ SCIP_RETCODE SCIPsolLinkNLPSol(
    assert(stat != NULL);
    assert(tree != NULL);
    assert(nlp != NULL);
-   assert(SCIPnlpGetSolstat(nlp) <= SCIP_NLPSOLSTAT_LOCINFEASIBLE);
+   assert(SCIPnlpHasSolution(nlp));
 
    SCIPstatDebugMsg(stat, "linking solution to NLP\n");
 
