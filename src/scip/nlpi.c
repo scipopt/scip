@@ -471,7 +471,7 @@ SCIP_RETCODE SCIPnlpiSolve(
    assert(problem != NULL);
    assert(param != NULL);
 
-   // check that parameter values are in accepted range (if type allows more than we would accept)
+   /* check that parameter values are in accepted range (if type allows more than we would accept) */
    if( param->iterlimit < 0 )
    {
       SCIPerrorMessage("Value %d for parameter iteration limit cannot be negative.\n", param->iterlimit);
