@@ -121,6 +121,7 @@ Interface changes
 - removed nquadelems, quadelems, exprvaridxs arguments from SCIP_DECL_NLPIADDCONSTRAINTS, changed exprtrees argument to exprs
 - removed nquadelems, quadelems, exprvaridxs arguments from SCIP_DECL_NLPISETOBJECTIVE, changed exprtree argument to expr
 - removed SCIP_DECL_NLPICHGQUADCOEFS, SCIP_DECL_NLPICHGNONLINCOEF, SCIP_DECL_NLPISETMESSAGEHDLR
+- added SCIPisSolveInterrupted() to check whether SCIPinterruptSolve() has been called
 
 ### Deleted and changed API methods
 
