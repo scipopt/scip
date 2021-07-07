@@ -421,14 +421,16 @@ SCIP_RETCODE packEdges(
 
       e_new = g_new->edges;
 
-      g_new->ancestors[e_new] = NULL;
-      g_new->ancestors[e_new + 1] = NULL;
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e_new]), g_old->ancestors[e_old], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e_new + 1]), g_old->ancestors[e_old + 1], NULL) );
+      g_new->ancestors[e_new] = g_old->ancestors[e_old];
+      g_new->ancestors[e_new + 1] = g_old->ancestors[e_old + 1];
+      //SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e_new]), g_old->ancestors[e_old], NULL) );
+      //SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e_new + 1]), g_old->ancestors[e_old + 1], NULL) );
 
       assert(old2newNode[g_old->tail[e_old]] < nnodes && old2newNode[g_old->head[e_old]] < nnodes);
 
       graph_edge_addSubgraph(scip, g_old, old2newNode, e_old, g_new);
+
+      g_old->ancestors[e_old] = g_old->ancestors[e_old + 1] = NULL;
    }
 
    assert(nedges == g_new->edges);
