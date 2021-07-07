@@ -10,6 +10,7 @@ Features
 - new separator sepa_minor to compute cuts from 2x2 minors of a violated semidefiniteness constraint that is implied by the extended formulation for bilinear products
 - symmetry handling has been extended to detect also symmetries between variables that also appear in nonlinear constraints
 - improve OBBT by only considering variables that are contained in at least one nonconvex expression that has an auxiliary variable
+- default parameter settings for NLP solves are now defined independently of the NLP solver
 
 expressions:
 - removed support for expression types min and max for now, removed support for expression type sign
