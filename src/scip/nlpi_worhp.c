@@ -1310,6 +1310,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
    int status;
    int i;
 
+   SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
+
    if( param.timelimit == 0.0 )
    {
       /* there is nothing we can do if we are not given any time */

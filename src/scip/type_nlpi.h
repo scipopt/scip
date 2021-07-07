@@ -98,6 +98,24 @@ static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
 #define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif
 
+/** macro to help printing values of SCIP_NLPPARAM struct
+ *
+ * typical use for this define is something like
+ *    SCIPdebugMsg(scip, "calling NLP solver with parameters " SCIP_NLPPARAM_PRINT(param));
+ */
+#define SCIP_NLPPARAM_PRINT(param) \
+  "lobjlimit = %g, " \
+  "feastol = %g, " \
+  "relobjtol = %g, " \
+  "timelimit = %g, " \
+  "iterlimit = %d, " \
+  "verblevel = %hd, " \
+  "fromscratch = %d, " \
+  "fastfail = %d, " \
+  "called by %s\n", \
+  (param).lobjlimit, (param).feastol, (param).relobjtol, (param).timelimit, (param).iterlimit, \
+  (param).verblevel, (param).fromscratch, (param).fastfail, (param).caller != NULL ? (param).caller : "unknown"
+
 /** NLP solution status */
 enum SCIP_NlpSolStat
 {

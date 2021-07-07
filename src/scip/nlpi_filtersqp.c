@@ -1439,6 +1439,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    int nruns;
    int i;
 
+   SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
+
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 

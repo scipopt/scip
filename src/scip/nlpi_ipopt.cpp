@@ -1,4 +1,3 @@
-#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -1166,6 +1165,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 
    assert(IsValid(problem->ipopt));
    assert(IsValid(problem->nlp));
+
+   SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
 
    if( param.timelimit == 0.0 )
    {
