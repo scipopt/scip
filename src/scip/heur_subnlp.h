@@ -99,17 +99,6 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
    SCIP_Real             timelimit           /**< time limit for NLP solver */
    );
 
-/** adds all known linear constraint to the NLP, if initialized and not done already
- * This function is temporary and will hopefully become obsolete in the near future.
- */ 
-SCIP_EXPORT
-SCIP_RETCODE SCIPaddLinearConsToNlpHeurSubNlp(
-   SCIP*                 scip,               /**< original SCIP data structure                                   */
-   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
-   SCIP_Bool             addcombconss,       /**< whether to add combinatorial linear constraints, i.e., linear constraints that involve only discrete variables */
-   SCIP_Bool             addcontconss        /**< whether to add continuous    linear constraints, i.e., linear constraints that involve not only discrete variables */
-   );
-
 /** gets sub-SCIP used by NLP heuristic, or NULL if none */
 SCIP_EXPORT
 SCIP* SCIPgetSubScipHeurSubNlp(

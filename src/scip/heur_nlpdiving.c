@@ -1600,29 +1600,6 @@ SCIP_DECL_HEUREXIT(heurExitNlpdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_HEURINITSOL(heurInitsolNlpdiving)
-{  /*lint --e{715}*/
-   SCIP_HEUR* nlpheur;
-
-   if( !SCIPisNLPConstructed(scip) )
-      return SCIP_OKAY;
-
-   /* find NLP local search heuristic */
-   nlpheur = SCIPfindHeur(scip, "subnlp");
-
-   /* add global linear constraints to NLP relaxation */
-   if( nlpheur != NULL )
-   {
-      SCIP_CALL( SCIPaddLinearConsToNlpHeurSubNlp(scip, nlpheur, TRUE, TRUE) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecNlpdiving)
@@ -2738,7 +2715,6 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeNlpdiving) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitNlpdiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitNlpdiving) );
-   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolNlpdiving) );
 
    /* get event handler for bound change events */
    heurdata->eventhdlr = NULL;

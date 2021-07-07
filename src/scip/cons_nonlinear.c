@@ -3443,7 +3443,7 @@ SCIP_RETCODE initSolve(
          SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
 
          /* add nlrow representation to NLP, if NLP had been constructed */
-         if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
+         if( SCIPisNLPConstructed(scip) && SCIPconsIsActive(conss[c]) )
          {
             if( consdata->nlrow == NULL )
             {
