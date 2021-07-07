@@ -2679,19 +2679,12 @@ SCIP_RETCODE SCIPapplyUndercover(
             *result = SCIP_FOUNDSOL;
             success = TRUE;
 
-            /* update time limit */
-            SCIP_CALL( updateTimelimit(scip, clock, &timelimit) );
-
             /* call NLP local search heuristic unless it has failed too often */
             if( heurdata->postnlp && heurdata->npostnlpfails < MAXPOSTNLPFAILS )
             {
                if( nfixedconts == 0 && validsolved )
                {
                   SCIPdebugMsg(scip, "subproblem solved to optimality while all covering variables are integral, hence skipping NLP local search\n");
-               }
-               else if( timelimit <= MINTIMELEFT )
-               {
-                  SCIPdebugMsg(scip, "time limit hit, skipping NLP local search\n");
                }
                else if( heurdata->nlpheur == NULL )
                {
@@ -2701,7 +2694,7 @@ SCIP_RETCODE SCIPapplyUndercover(
                {
                   SCIP_RESULT nlpresult;
 
-                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, timelimit, heurdata->minimprove, NULL, NULL) );
+                  SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->nlpheur, &nlpresult, sol, -1LL, heurdata->minimprove, NULL, NULL) );
                   SCIPdebugMsg(scip, "NLP local search %s\n", nlpresult == SCIP_FOUNDSOL ? "successful" : "failed");
 
                   if( nlpresult == SCIP_FOUNDSOL )

@@ -278,27 +278,6 @@ int getExprSize(
    return 1 + sum;
 }
 
-/** returns the available time limit that is left */
-static
-SCIP_RETCODE getTimeLeft(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            timeleft            /**< pointer to store the remaining time limit */
-   )
-{
-   SCIP_Real timelim;
-
-   assert(timeleft != NULL);
-
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
-
-   if( SCIPisInfinity(scip, timelim) )
-      *timeleft = timelim - SCIPgetSolvingTime(scip);
-   else
-      *timeleft = SCIPinfinity(scip);
-
-   return SCIP_OKAY;
-}
-
 /** main execution function of the MPEC heuristic */
 static
 SCIP_RETCODE heurExec(
@@ -382,7 +361,6 @@ SCIP_RETCODE heurExec(
    for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL && nlpcostleft > 0.0 && !SCIPisStopped(scip); ++i )
    {
       SCIP_Real* primal = NULL;
-      SCIP_Real timeleft = SCIPinfinity(scip);
       SCIP_Bool binaryfeasible;
       SCIP_Bool regularfeasible;
       SCIP_NLPSOLSTAT solstat;
@@ -446,8 +424,7 @@ SCIP_RETCODE heurExec(
             SCIP_CALL( SCIPsetSolVal(scip, refpoint, var, val) );
          }
 
-         SCIP_CALL( getTimeLeft(scip, &timeleft) );
-         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, -1LL, timeleft,
+         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, -1LL,
                heurdata->minimprove, NULL,
                NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &refpoint) );

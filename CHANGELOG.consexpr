@@ -129,6 +129,7 @@ Interface changes
 - removed refpoint argument from SCIPaddSquareSecant()
 - added argument exprdata to SYMcomputeSymmetryGenerators()
 - removed SCIPconsNonlinearGetRhs(), SCIPconsNonlinearGetLhs(), SCIPconsNonlinearAddLinearCoef()
+- removed parameter timelimit from SCIPapplyHeurSubNlp() and SCIPresolveSolHeurSubNlp()
 
 NLP:
 - SCIPhasNLPContinuousNonlinearity() now returns SCIP_RETCODE and has additional argument result
@@ -508,6 +509,7 @@ nlpi:
 - removed heuristics/subnlp/nlpoptfile, use nlpi/ipopt/optfile instead
 - removed separating/convexproj/nlptimelimit
 - removed separating/gauge/nlptimelimit
+- removed heuristics/subnlp/nlptimelimit
 
 ### New parameters
 
