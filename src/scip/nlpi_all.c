@@ -514,6 +514,10 @@ SCIP_DECL_NLPISOLVE(nlpiSolveAll)
             SCIPnlpStatisticsGetNIterations(&stats), SCIPnlpStatisticsGetTotalTime(&stats));
       }
 #endif
+
+      /* don't try more NLP solvers if allowed time is exceeded or SCIP is asked to interrupt */
+      if( termstat == SCIP_NLPTERMSTAT_TILIM || termstat == SCIP_NLPTERMSTAT_INTERRUPT )
+         break;
    }
 
 #ifdef SCIP_STATISTIC

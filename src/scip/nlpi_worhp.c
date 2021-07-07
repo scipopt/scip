@@ -36,6 +36,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_randnumgen.h"
+#include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
 
 #include <stdio.h>
@@ -1406,7 +1407,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
     * Make sure to reset the requested user action afterwards by calling
     * DoneUserAction, except for 'callWorhp' and 'fidif'.
     */
-   while( cnt->status < TerminateSuccess && cnt->status > TerminateError )
+   while( cnt->status < TerminateSuccess && cnt->status > TerminateError && !SCIPisSolveInterrupted(scip) )
    {
       /*
        * Worhp's main routine.
@@ -1495,7 +1496,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
    }
 
    /* interpret Worhp result */
-   if( cnt->status < TerminateSuccess && cnt->status > TerminateError )
+   if( SCIPisSolveInterrupted(scip) )
+   {
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_INTERRUPT;
+   }
+   else if( cnt->status < TerminateSuccess && cnt->status > TerminateError )
    {
       SCIPwarningMessage(scip, "Worhp failed because of an invalid function evaluation!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;

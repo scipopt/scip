@@ -4827,6 +4827,10 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
       {
          (*solvestatus) = SCIP_STATUS_TIMELIMIT;
       }
+      else if( nlptermstat == SCIP_NLPTERMSTAT_INTERRUPT )
+      {
+         (*solvestatus) = SCIP_STATUS_USERINTERRUPT;
+      }
       else
       {
          SCIPerrorMessage("Invalid solution status: %d. Termination status: %d. Solving the NLP relaxation of Benders' decomposition subproblem %d.\n",

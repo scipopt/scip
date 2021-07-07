@@ -33,7 +33,6 @@
 
 #include "scip/nlpioracle.h"
 #include "scip/exprinterpret.h"
-#include "scip/interrupt.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_nlp.h"
 #include "scip/scip_randnumgen.h"
@@ -41,6 +40,7 @@
 #include "scip/scip_general.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
+#include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
 
 #include <new>      /* for std::bad_alloc */
@@ -1947,6 +1947,9 @@ bool ScipNLP::intermediate_callback(
    IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
    )
 {  /*lint --e{715}*/
+   if( SCIPisSolveInterrupted(scip) )
+      return false;
+
    /* do convergence test if fastfail is enabled */
    if( nlpiproblem->fastfail )
    {
@@ -2018,7 +2021,7 @@ bool ScipNLP::intermediate_callback(
       }
    }
 
-   return (SCIPinterrupted() == FALSE);
+   return true;
 }
 
 /** This method is called when the algorithm is complete so the TNLP can store/write the solution. */  /*lint -e{715}*/
@@ -2095,9 +2098,19 @@ void ScipNLP::finalize_solution(
       break;
 
    case USER_REQUESTED_STOP:
-      check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      if( SCIPisSolveInterrupted(scip) )
+      {
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+         nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_INTERRUPT;
+      }
+      else
+      {
+         /* we stopped due to the fastfail check */
+         assert(nlpiproblem->fastfail);
+         check_feasibility = true;
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+         nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      }
       break;
 
    case TOO_FEW_DEGREES_OF_FREEDOM:

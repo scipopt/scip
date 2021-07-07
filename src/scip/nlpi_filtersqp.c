@@ -48,6 +48,7 @@
 #include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_randnumgen.h"
+#include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
 
 #define NLPI_NAME              "filtersqp"                 /* short concise name of solver */
@@ -329,9 +330,9 @@ void F77_FUNC(objfun,OBJFUN)(
    problem = (SCIP_NLPIPROBLEM*)(void*)iuser;
    assert(problem != NULL);
 
-   if( timelimitreached((SCIP_NLPIDATA*)(void*)user, problem) )
+   if( SCIPisSolveInterrupted(problem->scip) || timelimitreached((SCIP_NLPIDATA*)(void*)user, problem) )
    {
-      SCIPdebugMsg(problem->scip, "timelimit reached, issuing arithmetic exception in objfun\n");
+      SCIPdebugMsg(problem->scip, "interrupted or timelimit reached, issuing arithmetic exception in objfun\n");
       *errflag = 1;
       return;
    }
@@ -868,13 +869,15 @@ SCIP_RETCODE processSolveOutcome(
          problem->termstat =  SCIP_NLPTERMSTAT_ITLIM;
          problem->warmstart = TRUE;
          break;
-      case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached */
+      case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached, or interrupted */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
          if( problem->solvetime >= problem->maxtime )
          {
             problem->termstat =  SCIP_NLPTERMSTAT_TILIM;
             problem->warmstart = TRUE;
          }
+         else if( SCIPisSolveInterrupted(problem->scip) )
+            problem->termstat =  SCIP_NLPTERMSTAT_INTERRUPT;
          else
             problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
          break;
@@ -1620,11 +1623,11 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       }
 
       /* if iteration or time limit exceeded, then don't retry */
-      if( problem->niterations >= param.iterlimit || timelimitreached(data, problem) )
+      if( problem->niterations >= param.iterlimit || SCIPisSolveInterrupted(scip) || timelimitreached(data, problem) )
       {
          if( param.verblevel > 0 )
          {
-            SCIPinfoMessage(scip, NULL, "Time or iteration limit reached, not retrying\n");
+            SCIPinfoMessage(scip, NULL, "Time or iteration limit reached or interrupted, not retrying\n");
          }
          break;
       }

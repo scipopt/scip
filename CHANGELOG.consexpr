@@ -565,6 +565,7 @@ nlpi:
 - added structs SCIP_NLHDLR, SCIP_NLHDLRDATA, SCIP_NLHDLREXPRDATA
 - enum SCIP_NLPPARAM has been changed to a struct that holds values of parameters for an NLP solve
 - removed SCIP_NLPPAR_OPTFILE/optfile from SCIP_NLPPARAM
+- added SCIP_NLPTERMSTAT_INTERRUPT to SCIP_NLPTERMSTAT enum; returned from NLP solver if SCIPinterruptSolve() has been called
 
 
 Deleted files

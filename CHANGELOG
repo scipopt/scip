@@ -1593,7 +1593,7 @@ Interface changes
   - added new abstract selection algorithm `SCIP_BANDIT` together with callbacks
   - added new types for symmetry handling
 
-- LP interface:
+- NLP interface:
   - dropped NLP termination status `SCIP_NLPTERMSTAT_UOBJLIM`
 
 - NLP callbacks:
