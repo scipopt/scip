@@ -2024,7 +2024,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    /* add Nlp primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nlpverblevel",
          "verbosity level of NLP solver",
-         &heurdata->nlpverblevel, FALSE, 0, 0, INT_MAX, NULL, NULL) );
+         &heurdata->nlpverblevel, FALSE, 0, 0, USHRT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nlpiterlimit",
          "iteration limit of NLP solver; 0 for no limit",

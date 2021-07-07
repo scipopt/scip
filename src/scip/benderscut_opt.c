@@ -163,10 +163,6 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
 
    (*success) = FALSE;
 
-#ifdef SCIP_MOREDEBUG
-   nlpparam.verblevel = 1;
-#endif
-
    /* setting the feasibility and optimality tolerance to 0.01x the defaults */
    nlpparam.feastol *= multiplier;
    nlpparam.relobjtol *= multiplier;

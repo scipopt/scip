@@ -1748,7 +1748,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       SCIP_NLPSTATISTICS* nlpstatistics;
 
       SCIP_CALL( SCIPsolveNLP(scip,
-         /* .verblevel = 1, */
          .timelimit = timelim,
          .iterlimit = maxnnlpiterations - heurdata->nnlpiterations,
          .fastfail = heurdata->nlpfastfail) );  /*lint !e666*/

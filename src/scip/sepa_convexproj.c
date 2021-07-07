@@ -70,8 +70,6 @@
 
 #define VIOLATIONFAC                100      /* points regarded violated if max violation > VIOLATIONFAC*SCIPfeastol */
 
-#define NLPVERBOSITY                  0      /**< NLP solver verbosity */
-
 /*
  * Data structures
  */
@@ -397,8 +395,7 @@ SCIP_RETCODE separateCuts(
       .iterlimit = iterlimit,
       .timelimit = timelimit,
       .feastol = SCIPfeastol(scip) / 10.0, /* use tighter tolerances for the NLP solver */
-      .relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip)),
-      .verblevel = NLPVERBOSITY) );  /*lint !e666*/
+      .relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, sepadata->nlpi, sepadata->nlpiprob));
 
    /* if solution is feasible, add cuts */

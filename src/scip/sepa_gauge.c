@@ -70,7 +70,6 @@
 #define DEFAULT_NLPITERLIM         1000 /**< default NLP iteration limit */
 
 #define NLPFEASFAC                  1e-1/**< NLP feasibility tolerance = NLPFEASFAC * SCIP's feasibility tolerance */
-#define NLPVERBOSITY                  0 /**< NLP solver verbosity */
 
 #define INTERIOROBJVARLB           -100 /**< lower bound of the objective variable when computing interior point */
 /*
@@ -282,8 +281,7 @@ SCIP_RETCODE computeInteriorPoint(
       .iterlimit = iterlimit,
       .timelimit = timelimit,
       .feastol = NLPFEASFAC * SCIPfeastol(scip),
-      .relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip)),
-      .verblevel = NLPVERBOSITY) );   /*lint !e666*/
+      .relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );   /*lint !e666*/
    SCIPdebugMsg(scip, "finish interior point computation\n");
 
 #ifdef SCIP_DEBUG

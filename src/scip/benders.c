@@ -4789,14 +4789,11 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
    {
       SCIP_NLPSOLSTAT nlpsolstat;
       SCIP_NLPTERMSTAT nlptermstat;
-      unsigned short verblevel = 0;
 #ifdef SCIP_MOREDEBUG
       SCIP_SOL* nlpsol;
-
-      verblevel = 1;
 #endif
 
-      SCIP_CALL( SCIPsolveNLP(subproblem, .verblevel = verblevel) );  /*lint !e666*/
+      SCIP_CALL( SCIPsolveNLP(subproblem) );  /*lint !e666*/
 
       nlpsolstat = SCIPgetNLPSolstat(subproblem);
       nlptermstat = SCIPgetNLPTermstat(subproblem);
@@ -5180,12 +5177,8 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
       {
          SCIP_NLPSOLSTAT nlpsolstat;
          SCIP_NLPTERMSTAT nlptermstat;
-         unsigned short nlpverblevel = 0;
-#ifdef SCIP_MOREDEBUG
-         nlpverblevel = 1;
-#endif
 
-         SCIP_CALL( SCIPsolveNLP(subproblem, .verblevel = nlpverblevel) );  /*lint !e666*/
+         SCIP_CALL( SCIPsolveNLP(subproblem) );  /*lint !e666*/
 
          nlpsolstat = SCIPgetNLPSolstat(subproblem);
          nlptermstat = SCIPgetNLPTermstat(subproblem);

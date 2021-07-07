@@ -1573,7 +1573,6 @@ SCIP_RETCODE getFixingValue(
       else if( !heurdata->nlpfailed )
       {  /*lint --e{850}*/
          SCIP_NLPSOLSTAT stat;
-         unsigned short verblevel = 0;
          int i;
 
          /* restore bounds at start of probing, since otherwise, if in backtrack mode, NLP solver becomes most likely
@@ -1618,14 +1617,11 @@ SCIP_RETCODE getFixingValue(
             SCIP_CALL( SCIPchgVarBoundsDiveNLP(scip, relaxvar, lb, ub) );
          }
 
-         /* activate NLP solver output if we are in SCIP's debug mode */
-         SCIPdebug( verblevel = 1 );
-
          /* set starting point to lp solution */
          SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
 
          /* solve NLP relaxation */
-         SCIP_CALL( SCIPsolveNLP(scip, .verblevel = verblevel) );  /*lint !e666*/
+         SCIP_CALL( SCIPsolveNLP(scip) );  /*lint !e666*/
          stat = SCIPgetNLPSolstat(scip);
          *success = stat == SCIP_NLPSOLSTAT_GLOBOPT || stat == SCIP_NLPSOLSTAT_LOCOPT || stat == SCIP_NLPSOLSTAT_FEASIBLE;
 

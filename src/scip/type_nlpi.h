@@ -54,6 +54,12 @@ struct SCIP_NlpParam
 /** parameters for NLP solve */
 typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 
+#if defined(SCIP_DEBUG) || defined(SCIP_MOREDEBUG) || defined(SCIP_EVENMOREDEBUG)
+#define SCIP_NLPPARAM_DEFAULT_VERBLEVEL 1
+#else
+#define SCIP_NLPPARAM_DEFAULT_VERBLEVEL 0
+#endif
+
 #if !defined(_MSC_VER) || _MSC_VER >= 1800
 /** default values for parameters
  *
@@ -63,15 +69,15 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
  *    SCIP_NLPPARAM nlpparam;
  *    nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip); }  //lint !e446
  */
-#define SCIP_NLPPARAM_DEFAULT_INITS(scip) \
-   .fromscratch = FALSE,                 \
-   .verblevel   = 0,                     \
-   .feastol     = SCIPfeastol(scip),     \
-   .relobjtol   = SCIPdualfeastol(scip), \
-   .lobjlimit   = SCIP_REAL_MIN,         \
-   .iterlimit   = INT_MAX,               \
-   .timelimit   = SCIP_REAL_MAX,         \
-   .fastfail    = FALSE,                 \
+#define SCIP_NLPPARAM_DEFAULT_INITS(scip)          \
+   .fromscratch = FALSE,                           \
+   .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL, \
+   .feastol     = SCIPfeastol(scip),               \
+   .relobjtol   = SCIPdualfeastol(scip),           \
+   .lobjlimit   = SCIP_REAL_MIN,                   \
+   .iterlimit   = INT_MAX,                         \
+   .timelimit   = SCIP_REAL_MAX,                   \
+   .fastfail    = FALSE,                           \
    .caller      = NULL
 
 /** default values for parameters
@@ -87,7 +93,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #else
 /** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
 static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
-   FALSE, 0, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MIN, INT_MAX, SCIP_REAL_MAX, FALSE, NULL
+   FALSE, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MIN, INT_MAX, SCIP_REAL_MAX, FALSE, NULL
 };
 #define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif

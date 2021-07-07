@@ -32,7 +32,6 @@
 #define RELAX_FREQ             1
 
 #define NLPITERLIMIT           500       /**< iteration limit of NLP solver */
-#define NLPVERLEVEL            0         /**< verbosity level of NLP solver */
 #define FEASTOLFAC             0.01      /**< factor for NLP feasibility tolerance */
 #define RELOBJTOLFAC           0.01      /**< factor for NLP relative objective tolerance */
 
@@ -115,7 +114,6 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    nlpparam.iterlimit = NLPITERLIMIT;
    nlpparam.feastol = SCIPfeastol(scip) * FEASTOLFAC;
    nlpparam.relobjtol = SCIPfeastol(scip) * RELOBJTOLFAC;
-   nlpparam.verblevel = NLPVERLEVEL;
 
    /* solve NLP */
    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiprob, nlpparam) );

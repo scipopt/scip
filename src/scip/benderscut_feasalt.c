@@ -135,7 +135,6 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
 {
    SCIP_Real timelimit;
    SCIP_NLPSOLSTAT nlpsolstat;
-   unsigned short verblevel = 0;
 
    assert(scip != NULL);
    assert(benderscutdata != NULL);
@@ -154,14 +153,9 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
       }
    }
 
-#ifdef SCIP_MOREDEBUG
-   verblevel = 1;
-#endif
-
    SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob,
       .timelimit = timelimit,
-      .iterlimit = 3000,
-      .verblevel = verblevel) );  /*lint !e666*/
+      .iterlimit = 3000) );  /*lint !e666*/
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob));
 
    nlpsolstat = SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob);
