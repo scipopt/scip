@@ -41,13 +41,13 @@ typedef struct SCIP_NlpiProblem   SCIP_NLPIPROBLEM;   /**< locally defined NLP s
 /** parameters for NLP solve */
 struct SCIP_NlpParam
 {
-   SCIP_Bool             fromscratch;        /**< whether to start solve from scratch */
-   unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
+   SCIP_Real             lobjlimit;          /**< lower objective limit (cutoff) */
    SCIP_Real             feastol;            /**< feasibility tolerance (maximal allowed absolute violation of constraints and variable bounds) */
    SCIP_Real             relobjtol;          /**< relative objective tolerance */
-   SCIP_Real             lobjlimit;          /**< lower objective limit (cutoff) */
-   int                   iterlimit;          /**< iteration limit */
    SCIP_Real             timelimit;          /**< time limit in seconds: use SCIP_REAL_MAX to use remaining time available for SCIP solve (limits/time - currenttime) */
+   int                   iterlimit;          /**< iteration limit */
+   unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
+   SCIP_Bool             fromscratch;        /**< whether to start solve from scratch */
    SCIP_Bool             fastfail;           /**< whether the NLP solver should stop early if convergence is slow */
    const char*           caller;             /**< name of file from which NLP is solved (it's fine to set this to NULL) */
 };
@@ -70,13 +70,13 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
  *    nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip); }  //lint !e446
  */
 #define SCIP_NLPPARAM_DEFAULT_INITS(scip)          \
-   .fromscratch = FALSE,                           \
-   .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL, \
+   .lobjlimit   = SCIP_REAL_MIN,                   \
    .feastol     = SCIPfeastol(scip),               \
    .relobjtol   = SCIPdualfeastol(scip),           \
-   .lobjlimit   = SCIP_REAL_MIN,                   \
-   .iterlimit   = INT_MAX,                         \
    .timelimit   = SCIP_REAL_MAX,                   \
+   .iterlimit   = INT_MAX,                         \
+   .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL, \
+   .fromscratch = FALSE,                           \
    .fastfail    = FALSE,                           \
    .caller      = NULL
 
@@ -93,7 +93,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #else
 /** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
 static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
-   FALSE, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MIN, INT_MAX, SCIP_REAL_MAX, FALSE, NULL
+   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, FALSE, FALSE, NULL
 };
 #define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif
