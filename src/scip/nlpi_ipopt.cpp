@@ -479,7 +479,7 @@ SCIP_RETCODE generateInitGuess(
 
    assert(problem != NULL);
 
-   SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+   SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds and adding a random perturbation\n");
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);
 
