@@ -1464,7 +1464,7 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopyArrayToEdge(
    SCIP_Bool*            conflict            /**< conflict? */
 )
 {
-   assert(scip && g && conflict && ancestors);
+   assert(scip && g && conflict);
    assert(nancestors >= 0);
 
    *conflict = FALSE;
@@ -1476,6 +1476,7 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopyArrayToEdge(
       const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
       const SCIP_Bool revertIfConflict = FALSE;
 
+      assert(ancestors);
       assert(pseudoancestors);
 
       SCIP_CALL( blockedAncestors_appendArray(scip, target, ancestors, nancestors, revertIfConflict, hasharr_size, pseudoancestors->ans_halfedges, conflict) );

@@ -274,7 +274,7 @@ SCIP_RETCODE reduce_simple(
                {
                   SCIP_Bool conflict;
                   SCIPdebugMessage("replace degree 2 node: %d \n", i);
-                  SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode, &conflict) );
+                  SCIP_CALL( graph_knot_replaceDeg2(scip, i, g->cost[e1] + g->cost[e2], -1, g, &conflict) );
 
                   if( conflict)
                      replaceConflict = TRUE;

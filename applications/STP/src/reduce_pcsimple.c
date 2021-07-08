@@ -696,7 +696,7 @@ SCIP_RETCODE pcReduceKnotDeg2(
 
    SCIPdebugMessage("replace degree 2 non-terminal %d \n ", i);
 
-   SCIP_CALL( graph_knot_replaceDeg2(scip, i, g, solnode, &conflict) );
+   SCIP_CALL( graph_knot_replaceDeg2(scip, i, g->cost[e1] + g->cost[e2], -1, g, &conflict) );
 
    if( (Is_term(g->term[i2]) && (i2 < i)) || (Is_term(g->term[i1]) && (i1 < i)) )
       *rerun = TRUE;
@@ -975,7 +975,6 @@ SCIP_RETCODE pcReduceTermDeg2(
          const int e1 = edges2[1];
          const int i0 = g->head[e0];
          const int i1 = g->head[e1];
-         int todo; // move!
          SCIP_Bool conflict;
 
          SCIP_CALL( graph_singletonAncestors_init(scip, g, e0, &(ancestors0)) );

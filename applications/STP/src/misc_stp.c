@@ -325,6 +325,22 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
 }
 
 
+/** append list pertaining to node2 to (non-empty!) node1 */
+void SCIPintListNodeAppend(
+   IDX*                  node1,              /**< pointer to the last node of non-empty list to be enlarged */
+   IDX*                  node2               /**< pointer to the last node of source list */
+   )
+{
+   IDX* curr = node1;
+   assert(node1);
+
+   while( curr->parent )
+      curr = curr->parent;
+
+   curr->parent = node2;
+}
+
+
 /** free list */
 void SCIPintListNodeFree(
    SCIP*                 scip,               /**< SCIP data structure */

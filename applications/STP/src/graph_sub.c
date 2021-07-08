@@ -201,8 +201,9 @@ static
 SCIP_RETCODE extractSubgraphAddEdge(
    SCIP*                 scip,                /**< SCIP data structure */
    SCIP_Bool             useNewHistory,
-   const GRAPH*          source_graph,        /**< source graph */
+   SCIP_Bool             moveEdges,
    const EDGETRANS*      edgetrans,
+   GRAPH*                source_graph,        /**< source graph */
    GRAPH*                target_graph         /**< graph to fill */
    )
 {
@@ -239,9 +240,16 @@ SCIP_RETCODE extractSubgraphAddEdge(
       ancestors[target_edge] = NULL;
       ancestors[target_edgeRev] = NULL;
 
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[target_edgeEven]),
+      if( moveEdges )
+      {
+         ancestors[target_edgeEven] = graph_edge_getAncestors(source_graph, source_edge);
+         source_graph->ancestors[source_edge] = source_graph->ancestors[flipedge(source_edge)] = NULL;
+      }
+      else
+      {
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[target_edgeEven]),
                    graph_edge_getAncestors(source_graph, source_edge), &conflict) );
-
+      }
       assert(!conflict);
    }
 
@@ -318,7 +326,7 @@ void reinsertSubgraphAdaptSubToOrgMap(
 static
 SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          orggraph,           /**< original graph */
+   GRAPH*                orggraph,           /**< original graph */
    SUBINOUT*             subinout,
    GRAPH*                subgraph            /**< graph to fill */
    )
@@ -358,7 +366,7 @@ SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
                edgemap_subToOrg[subgraph->edges + 1] = flipedge(e);
             }
 
-            SCIP_CALL( extractSubgraphAddEdge(scip, subinout->useNewHistory, orggraph, &edgetransfer, subgraph) );
+            SCIP_CALL( extractSubgraphAddEdge(scip, subinout->useNewHistory, FALSE, &edgetransfer, orggraph, subgraph) );
          }
       }
    }
@@ -539,7 +547,7 @@ void reinsertSubgraphTransferFixedHistory(
 static
 SCIP_RETCODE reinsertSubgraphTransferEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          subgraph,           /**< graph to be inserted */
+   GRAPH*                subgraph,           /**< graph to be inserted */
    SUBINOUT*             subinsertion,
    GRAPH*                orggraph            /**< original graph */
    )
@@ -568,7 +576,7 @@ SCIP_RETCODE reinsertSubgraphTransferEdges(
          assert(graph_knot_isInRange(orggraph, orghead));
          assert(graph_edge_isDeleted(orggraph, spareedges[sparecount]));
 
-         SCIP_CALL( extractSubgraphAddEdge(scip, FALSE, subgraph, &edgetransfer, orggraph) );
+         SCIP_CALL( extractSubgraphAddEdge(scip, FALSE, TRUE, &edgetransfer, subgraph, orggraph) );
          StpVecPopBack(spareedges);
          sparecount--;
       }

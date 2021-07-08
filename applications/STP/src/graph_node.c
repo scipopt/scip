@@ -130,21 +130,25 @@ void graph_knot_del(
 /** pseudo deletes non-terminal of degree 2 */
 SCIP_RETCODE graph_knot_replaceDeg2(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   vertex,             /**< the vertex */
+   int                   vertex,             /**< the vertex to replace */
+   SCIP_Real             edgecost,           /**< new edge cost */
+   int                   ancestornode,       /**< node to copy ancestors from or -1 */
    GRAPH*                g,                  /**< the graph */
-   int*                  solnode,            /**< marks whether an node is part of a given solution (CONNECT), or is NULL */
    SCIP_Bool*            edgeEliminated      /**< edge eliminated? (due to conflict) */
    )
 {
-   SINGLETONANS ancestors1;
-   SINGLETONANS ancestors2;
+   IDX* ancestors1;
+   IDX* ancestors2;
+   int* pseudoancestors1 = NULL;
+   int* pseudoancestors2 = NULL;
    const int e1 = g->outbeg[vertex];
    const int e2 = g->oeat[e1];
    const int i1 = g->head[e1];
    const int i2 = g->head[e2];
-   int todo; // move into singleton ancestors here!
+   const int npseudoancestors1 = graph_edge_nPseudoAncestors(g, e1);
+   const int npseudoancestors2 = graph_edge_nPseudoAncestors(g, e2);
    int newedge;
-   SCIP_Bool conflict;
+   SCIP_Bool conflict = FALSE;
 
    assert(scip && g);
    assert(vertex >= 0 && vertex < g->knots);
@@ -154,19 +158,67 @@ SCIP_RETCODE graph_knot_replaceDeg2(
    assert(SCIPisEQ(scip, g->cost[e1], g->cost[flipedge(e1)]));
    assert(SCIPisEQ(scip, g->cost[e2], g->cost[flipedge(e2)]));
    assert(graph_valid_pseudoAncestors(scip, g));
+   assert(graph_typeIsUndirected(g));
 
    *edgeEliminated = FALSE;
 
-   SCIP_CALL( graph_singletonAncestors_init(scip, g, e1, &(ancestors1)) );
-   SCIP_CALL( graph_singletonAncestors_init(scip, g, e2, &(ancestors2)) );
+   if( npseudoancestors1 > 0 )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(pseudoancestors1), npseudoancestors1) );
+      BMScopyMemoryArray(pseudoancestors1, graph_edge_getPseudoAncestors(g, e1), npseudoancestors1);
+   }
 
-   SCIP_CALL( graph_edge_reinsert(scip, g, e1, i2, i1, g->cost[e1] + g->cost[e2],
-         -1, &ancestors2, &ancestors1, &newedge, &conflict) );
+   if( npseudoancestors2 > 0 )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(pseudoancestors2), npseudoancestors2) );
+      BMScopyMemoryArray(pseudoancestors2, graph_edge_getPseudoAncestors(g, e2), npseudoancestors2);
+   }
 
-   graph_singletonAncestors_freeMembers(scip, &(ancestors1));
-   graph_singletonAncestors_freeMembers(scip, &(ancestors2));
+   ancestors1 = graph_edge_getAncestors(g, e1);
+   ancestors2 = graph_edge_getAncestors(g, e2);
+
+   g->ancestors[e1] = g->ancestors[flipedge(e1)] = NULL;
+   g->ancestors[e2] = g->ancestors[flipedge(e2)] = NULL;
+
+   newedge = graph_edge_redirect(scip, g, e1, i2, i1, edgecost, FALSE, TRUE);
+
+   assert(ancestornode >= 0 || ancestornode == -1);
+
+   /* is there a new edge? */
+   if( newedge >= 0 )
+   {
+      const int edge_even = Edge_even(newedge);
+
+      graph_edge_delHistory(scip, g, newedge);
+
+      g->ancestors[edge_even] = ancestors1;
+      SCIPintListNodeAppend(g->ancestors[edge_even], ancestors2);
+
+      SCIP_CALL( graph_pseudoAncestors_appendCopyArrayToEdge(scip, newedge, pseudoancestors1, npseudoancestors1, g, &conflict) );
+      assert(!conflict);
+      SCIP_CALL( graph_pseudoAncestors_appendCopyArrayToEdge(scip, newedge, pseudoancestors2, npseudoancestors2, g, &conflict) );
+
+      /* ancestor node given?*/
+      if( ancestornode >= 0 )
+      {
+         assert(graph_pc_isPcMw(g));
+
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[edge_even]), g->pcancestors[ancestornode], NULL) );
+
+         if( !conflict )
+            SCIP_CALL( graph_pseudoAncestors_appendCopyNodeToEdge(scip, newedge, ancestornode, TRUE, g, &conflict) );
+      }
+   }
+   else
+   {
+      SCIPintListNodeFree(scip, &ancestors1);
+      SCIPintListNodeFree(scip, &ancestors2);
+   }
 
    graph_knot_del(scip, g, vertex, TRUE);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &pseudoancestors1, npseudoancestors1);
+   SCIPfreeBlockMemoryArrayNull(scip, &pseudoancestors2, npseudoancestors2);
 
    if( conflict )
    {

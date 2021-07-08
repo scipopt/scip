@@ -123,6 +123,13 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
    SCIP_Bool*            conflict            /**< pointer to store whether a conflict has been detected by the method */
    );
 
+/** append list pertaining to node2 to (non-empty!) node1 */
+SCIP_EXPORT
+void SCIPintListNodeAppend(
+   IDX*                  node1,              /**< pointer to the last node of non-empty list to be enlarged */
+   IDX*                  node2               /**< pointer to the last node of source list */
+   );
+
 /** insert a new node */
 SCIP_EXPORT
 SCIP_RETCODE SCIPintListNodeInsert(

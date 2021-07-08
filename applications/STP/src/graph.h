@@ -241,7 +241,7 @@ extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_
 extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
 extern SCIP_RETCODE   graph_knot_contractFixed(SCIP*, GRAPH*, int*, int, int, int);
 extern SCIP_RETCODE   graph_knot_contractLowdeg2High(SCIP*, GRAPH*, int*, int, int);
-extern SCIP_RETCODE   graph_knot_replaceDeg2(SCIP*, int, GRAPH*, int*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_knot_replaceDeg2(SCIP*, int, SCIP_Real, int, GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, int, SINGLETONANS*, SINGLETONANS*, int*, SCIP_Bool*);
 extern SCIP_Bool graph_knot_isInRange(const GRAPH*, int);
 extern void   graph_knot_add(GRAPH*, int);
