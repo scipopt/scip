@@ -963,10 +963,23 @@ SCIP_RETCODE delPseudoPath(
       if( edgecost_adapt )
          edgecosts_adapt[newedge] = edgecost_adapt;
 
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), g->ancestors[edge_pathtail], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), g->ancestors[edge_pathhead], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(newedge)]), g->ancestors[flipedge(edge_pathtail)], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(newedge)]), g->ancestors[flipedge(edge_pathhead)], NULL) );
+      if( !g->ancestors[newedge] || !g->ancestors[flipedge(newedge)] )
+      {
+         const int edge_even = Edge_even(newedge);
+         assert(graph_typeIsUndirected(g));
+         assert(edge_even == flipedge(newedge) || edge_even == edge);
+
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[edge_even]), graph_edge_getAncestors(g, edge_pathtail), NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[edge_even]), graph_edge_getAncestors(g, edge_pathhead), NULL) );
+      }
+      else
+      {
+         assert(!graph_typeIsUndirected(g));
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), g->ancestors[edge_pathtail], NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), g->ancestors[edge_pathhead], NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(newedge)]), g->ancestors[flipedge(edge_pathtail)], NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(newedge)]), g->ancestors[flipedge(edge_pathhead)], NULL) );
+      }
 
       SCIP_CALL( graph_pseudoAncestors_appendCopyEdge(scip, newedge, edge_pathtail, FALSE, g, &conflict) );
       assert(!conflict);

@@ -42,12 +42,12 @@
  */
 
 /** updates */
-static
+static inline
 void updateorgsol(
    const GRAPH*          graph,              /**< graph data structure */
    IDX*                  curr,               /**< head of solution edge list */
-   STP_Bool*             orgnodes,           /**< array to mark whether a node is part of the original solution */
-   STP_Bool*             orgedges,           /**< array to mark whether an edge is part of the original solution */
+   STP_Bool* RESTRICT    orgnodes,           /**< array to mark whether a node is part of the original solution */
+   STP_Bool* RESTRICT    orgedges,           /**< array to mark whether an edge is part of the original solution */
    int*                  nsolnodes,          /**< pointer to store the number of nodes in the original solution */
    int*                  nsoledges           /**< pointer to store the number of edges in the original solution */
 )
@@ -121,7 +121,6 @@ SCIP_RETCODE computeHistory(
    GRAPH* solgraph = NULL;
    SCIP_QUEUE* queue = NULL;
    SCIP_VAR** edgevars = SCIPprobdataGetVars(scip);
-   IDX** ancestors = graph->ancestors;
    STP_Bool* const orgnodes = solhistory->orgnodes_isInSol;
    STP_Bool* const orgedges = solhistory->orgedges_isInSol;
    int* nodechild = NULL;
@@ -132,7 +131,7 @@ SCIP_RETCODE computeHistory(
    const int norgedges = solhistory->norgedges;
 
    assert(!graph_pc_isPcMw(graph));
-   assert(ancestors || graph->edges == 0);
+   assert(graph->ancestors || graph->edges == 0);
    assert(edgevars || graph->edges == 0);
 
    /* iterate through the list of fixed edges */
@@ -142,7 +141,7 @@ SCIP_RETCODE computeHistory(
    {
       if( !SCIPisZero(scip, SCIPgetSolVal(scip, scipsol, edgevars[e])) )
          /* iterate through the list of ancestors */
-         updateorgsol(graph, ancestors[e], orgnodes, orgedges, &nsolnodes, &nsoledges);
+         updateorgsol(graph, graph_edge_getAncestors(graph, e), orgnodes, orgedges, &nsolnodes, &nsoledges);
    }
 
    if( nsolnodes == 0 )
@@ -286,7 +285,6 @@ SCIP_RETCODE computeHistoryPcMw(
    SOLHISTORY*           solhistory          /**< the solution history */
    )
 {
-   IDX** ancestors = graph->ancestors;
    SCIP_VAR** edgevars = SCIPprobdataGetVars(scip);
    int* solnodequeue;
    STP_Bool* const orgnodes = solhistory->orgnodes_isInSol;
@@ -296,7 +294,7 @@ SCIP_RETCODE computeHistoryPcMw(
    int norgnodes = solhistory->norgnodes;
    const int norgedges = solhistory->norgedges;
 
-   assert(ancestors || graph->edges == 0);
+   assert(graph->ancestors || graph->edges == 0);
    assert(edgevars || graph->edges == 0);
    assert(graph_pc_isPcMw(graph));
    assert(graph->source >= 0);
@@ -319,7 +317,7 @@ SCIP_RETCODE computeHistoryPcMw(
 
          /* iterate through the list of ancestors/fixed edges */
          if( e < graph->edges )
-            curr = ancestors[e];
+            curr = graph_edge_getAncestors(graph, e);
          else
             curr = graph_get_fixedges(graph);
 

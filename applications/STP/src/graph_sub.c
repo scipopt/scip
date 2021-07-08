@@ -206,7 +206,6 @@ SCIP_RETCODE extractSubgraphAddEdge(
    GRAPH*                target_graph         /**< graph to fill */
    )
 {
-   IDX** organcestors = source_graph->ancestors;
    const int source_edge = edgetrans->source_edge;
    const int target_edge = edgetrans->target_edge;
    const int target_tail = edgetrans->target_tail;
@@ -222,6 +221,9 @@ SCIP_RETCODE extractSubgraphAddEdge(
       IDX** ancestors = target_graph->ancestors;
       const int npseudoancestors = graph_edge_nPseudoAncestors(source_graph, source_edge);
       SCIP_Bool conflict = FALSE;
+      const int target_edgeEven = Edge_even(target_edge);
+
+      assert(graph_typeIsUndirected(source_graph));     /* NOTE: otherwise ancestor copy would not be correct */
 
       if( npseudoancestors != 0 )
       {
@@ -236,9 +238,10 @@ SCIP_RETCODE extractSubgraphAddEdge(
 
       ancestors[target_edge] = NULL;
       ancestors[target_edgeRev] = NULL;
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[target_edge]), organcestors[source_edge], &conflict) );
-      assert(!conflict);
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[target_edgeRev]), organcestors[flipedge(source_edge)], &conflict) );
+
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[target_edgeEven]),
+                   graph_edge_getAncestors(source_graph, source_edge), &conflict) );
+
       assert(!conflict);
    }
 
@@ -914,7 +917,6 @@ SCIP_RETCODE graph_subgraphCompleteNewHistory(
    )
 {
    const int nedges = graph_get_nEdges(subgraph);
-   IDX** ancestors;
    const int* tail = subgraph->tail;
    const int* head = subgraph->head;
    int* orgtail;
@@ -933,9 +935,6 @@ SCIP_RETCODE graph_subgraphCompleteNewHistory(
 
    if( orggraph->fixedcomponents )
       graph_free_fixedEdgesOnly(scip, subgraph);
-
-   ancestors = subgraph->ancestors;
-   assert(ancestors);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->orgtail), nedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->orghead), nedges) );
@@ -965,12 +964,7 @@ SCIP_RETCODE graph_subgraphCompleteNewHistory(
       }
    }
 
-   for( int e = 0; e < nedges; e++ )
-   {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &(ancestors[e])) ); /*lint !e866*/
-      ancestors[e]->index = e;
-      ancestors[e]->parent = NULL;
-   }
+   SCIP_CALL( graph_initAncestors(scip, subgraph) );
 
    return SCIP_OKAY;
 }

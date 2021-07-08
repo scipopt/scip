@@ -54,6 +54,7 @@ extern void          graph_fixed_resetMoved(GRAPH*);
 extern SCIP_RETCODE  graph_singletonAncestors_init(SCIP*, const GRAPH*, int, SINGLETONANS*);
 extern void          graph_singletonAncestors_freeMembers(SCIP*, SINGLETONANS*);
 extern SCIP_Bool     graph_valid_ancestors(SCIP*, const GRAPH*);
+extern SCIP_RETCODE   graph_initAncestors(SCIP*, GRAPH*);
 /* Pseudo ancestors */
 extern SCIP_RETCODE   graph_initPseudoAncestors(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_initPseudoAncestorsSized(SCIP*, int, GRAPH*);
@@ -65,6 +66,7 @@ extern void           graph_knot_printPseudoAncestors(const GRAPH*, int);
 extern int            graph_edge_nPseudoAncestors(const GRAPH*, int);
 extern int            graph_knot_nPseudoAncestors(const GRAPH*, int);
 extern const int*     graph_edge_getPseudoAncestors(const GRAPH*, int);
+extern IDX*           graph_edge_getAncestors(const GRAPH*, int);
 extern const int*     graph_knot_getPseudoAncestors(const GRAPH*, int);
 extern int            graph_getNpseudoAncestors(const GRAPH*);
 extern void      graph_addPseudoAncestor(GRAPH*, int*);

@@ -2379,8 +2379,8 @@ SCIP_RETCODE graph_pc_contractNodeAncestors(
    SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->pcancestors[s], NULL) );
    SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[s]), g->pcancestors[t], NULL) );
 
-   SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[s]), g->ancestors[ets], NULL));
-   SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[ets], NULL));
+   SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[s]), graph_edge_getAncestors(g, ets), NULL));
+   SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), graph_edge_getAncestors(g, ets), NULL));
 
 #if 0
    SCIP_Bool conflict;

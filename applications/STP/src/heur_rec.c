@@ -164,20 +164,20 @@ int edgecostmultiplier(
 }
 
 
-static
+static inline
 void marksolverts(
-   GRAPH* g,
+   const GRAPH* g,
    IDX* curr,
-   int* unodemap,
-   STP_Bool* stvertex
+   const int* unodemap,
+   STP_Bool* RESTRICT stvertex
    )
 {
    while( curr != NULL )
    {
-      int i = curr->index;
+      const int i = curr->index;
 
-      stvertex[unodemap[ g->orghead[i] ]] = TRUE;
-      stvertex[unodemap[ g->orgtail[i] ]] = TRUE;
+      stvertex[unodemap[g->orghead[i]]] = TRUE;
+      stvertex[unodemap[g->orgtail[i]]] = TRUE;
 
       curr = curr->parent;
    }
@@ -213,7 +213,6 @@ SCIP_RETCODE retransformReducedProbSolution(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data */
    const GRAPH*          solgraph,           /**< graph data */
-   IDX**                 ancestors,          /**< ancestors */
    const int*            edgeancestor,       /**< ancestor to edge */
    const int*            soledges,           /**< old solution edges */
    int*                  newsoledges,        /**< new solution edges */
@@ -249,7 +248,7 @@ SCIP_RETCODE retransformReducedProbSolution(
             /* iterate through list of ancestors */
             if( graph->stp_type != STP_DCSTP )
             {
-               IDX* curr = ancestors[e];
+               IDX* curr = graph_edge_getAncestors(solgraph, e);
 
                while( curr != NULL )
                {
@@ -272,7 +271,7 @@ SCIP_RETCODE retransformReducedProbSolution(
             }
             else
             {
-               IDX* curr = ancestors[e];
+               IDX* curr = graph_edge_getAncestors(solgraph, e);
                while( curr != NULL )
                {
                   int i = edgeancestor[curr->index];
@@ -369,7 +368,6 @@ SCIP_RETCODE computeReducedProbSolutionBiased(
    const int nsoledges = solgraph->edges;
    const int probtype = graph->stp_type;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
-   IDX** ancestors = solgraph->ancestors;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsoledges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsoledges) );
@@ -382,7 +380,7 @@ SCIP_RETCODE computeReducedProbSolutionBiased(
 
    for( int e = 0; e < nsoledges; e++ )
    {
-      IDX* curr = ancestors[e];
+      IDX* curr = graph_edge_getAncestors(solgraph, e);
       SCIP_Real avg = 0.0;
       int i = 0;
       SCIP_Bool fixed = FALSE;
@@ -1528,7 +1526,6 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       if( success )
       {
          REDSOL* redsol = NULL;
-         IDX** ancestors;
          GRAPH* psolgraph;
          int* soledges = NULL;
          SCIP_Real pobj;
@@ -1555,7 +1552,6 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, redsol, FALSE) );
 
          solgraph = psolgraph;
-         ancestors = solgraph->ancestors;
 
          /* if graph reduction solved the whole problem, solgraph has only one terminal */
          if( solgraph->terms > 1 )
@@ -1571,7 +1567,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
          /*  retransform solution (soledges or single vertex) found above */
          if( success )
-            SCIP_CALL( retransformReducedProbSolution(scip, graph, solgraph, ancestors, edgeancestor, soledges, newsoledges, stnodes) );
+            SCIP_CALL( retransformReducedProbSolution(scip, graph, solgraph, edgeancestor, soledges, newsoledges, stnodes) );
 
          SCIPfreeBufferArrayNull(scip, &soledges);
          SCIPfreeMemoryArray(scip, &edgeancestor);
@@ -1822,7 +1818,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    for( int e = 0; e < nsoledges; e++ )
       if( newresult[e] == CONNECT )
-         marksolverts(newgraph, newgraph->ancestors[e], unodemap, stvertex);
+         marksolverts(newgraph, graph_edge_getAncestors(newgraph, e), unodemap, stvertex);
 
    /* retransform edges fixed during graph reduction */
    marksolverts(newgraph, graph_get_fixedges(newgraph), unodemap, stvertex);

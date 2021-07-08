@@ -420,11 +420,10 @@ SCIP_RETCODE packEdges(
       assert(old2newNode[g_old->head[e_old]] >= 0);
 
       e_new = g_new->edges;
+      assert(e_new % 2 == 0);
 
       g_new->ancestors[e_new] = g_old->ancestors[e_old];
       g_new->ancestors[e_new + 1] = g_old->ancestors[e_old + 1];
-      //SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e_new]), g_old->ancestors[e_old], NULL) );
-      //SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e_new + 1]), g_old->ancestors[e_old + 1], NULL) );
 
       assert(old2newNode[g_old->tail[e_old]] < nnodes && old2newNode[g_old->head[e_old]] < nnodes);
 
@@ -706,7 +705,6 @@ SCIP_RETCODE graph_initHistory(
    GRAPH*                graph               /**< graph */
    )
 {
-   IDX** ancestors;          /* ancestor lists array (over all edges) */
    IDX** pcancestors;        /* ancestor lists array (over all nodes) */
    const int nedges = graph_get_nEdges(graph);
    const int* tail = graph->tail;
@@ -744,15 +742,7 @@ SCIP_RETCODE graph_initHistory(
    }
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->ancestors), nedges) );
-
-   ancestors = graph->ancestors;
-
-   for( int e = 0; e < nedges; e++ )
-   {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &(ancestors[e])) ); /*lint !e866*/
-      (ancestors)[e]->index = e;
-      (ancestors)[e]->parent = NULL;
-   }
+   SCIP_CALL( graph_initAncestors(scip, graph) );
 
    return SCIP_OKAY;
 }

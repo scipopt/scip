@@ -1101,6 +1101,35 @@ SCIP_RETCODE pruneSteinerTreePc_csr(
    return SCIP_OKAY;
 }
 
+
+
+
+/** mark endpoints of edges in given list */
+static inline
+void setNodeList(
+   const GRAPH*          g,              /**< graph data structure */
+   STP_Bool* RESTRICT    solnode,        /**< solution nodes array (TRUE/FALSE) */
+   IDX*                  listnode        /**< edge list */
+   )
+{
+   IDX* curr;
+
+   assert(g != NULL);
+   assert(solnode != NULL);
+
+   curr = listnode;
+
+   while( curr != NULL )
+   {
+      const int i = curr->index;
+
+      solnode[g->head[i]] = TRUE;
+      solnode[g->tail[i]] = TRUE;
+
+      curr = curr->parent;
+   }
+}
+
 /*
  * Interface methods
  */
@@ -1800,32 +1829,6 @@ void solstp_print(
 }
 
 
-/** mark endpoints of edges in given list */
-void solstp_setNodeList(
-   const GRAPH*          g,              /**< graph data structure */
-   STP_Bool*             solnode,        /**< solution nodes array (TRUE/FALSE) */
-   IDX*                  listnode        /**< edge list */
-   )
-{
-   int i;
-   IDX* curr;
-
-   assert(g != NULL);
-   assert(solnode != NULL);
-
-   curr = listnode;
-
-   while( curr != NULL )
-   {
-      i = curr->index;
-
-      solnode[g->head[i]] = TRUE;
-      solnode[g->tail[i]] = TRUE;
-
-      curr = curr->parent;
-   }
-}
-
 /** compute solution value for given edge-solution array (CONNECT/UNKNOWN) and offset */
 SCIP_Real solstp_getObjBounded(
    const GRAPH*          g,                  /**< the graph */
@@ -2151,8 +2154,6 @@ SCIP_RETCODE solstp_getOrg(
 )
 {
    STP_Bool* orgnodearr;
-   IDX** const ancestors = transgraph->ancestors;
-
    const int transnedges = transgraph->edges;
    const int orgnnodes = orggraph->knots;
    const SCIP_Bool pcmw = graph_pc_isPcMw(transgraph);
@@ -2168,10 +2169,10 @@ SCIP_RETCODE solstp_getOrg(
 
    for( int e = 0; e < transnedges; e++ )
       if( transsoledge[e] == CONNECT )
-         solstp_setNodeList(orggraph, orgnodearr, ancestors[e]);
+         setNodeList(orggraph, orgnodearr, graph_edge_getAncestors(transgraph, e));
 
    /* retransform edges fixed during graph reduction */
-   solstp_setNodeList(orggraph, orgnodearr, graph_get_fixedges(transgraph));
+   setNodeList(orggraph, orgnodearr, graph_get_fixedges(transgraph));
 
    if( pcmw )
    {

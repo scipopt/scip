@@ -756,8 +756,9 @@ SCIP_RETCODE reduce_contract0Edges(
             {
                if( graph_pc_isPcMw(g) )
                {
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->head[e]]), g->ancestors[e], NULL) );
-                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->tail[e]]), g->ancestors[e], NULL) );
+                  IDX* ans = graph_edge_getAncestors(g, e);
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->head[e]]), ans, NULL) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[g->tail[e]]), ans, NULL) );
                   assert(0 && "currently not implemented");
                }
                else

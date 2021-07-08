@@ -158,7 +158,6 @@ SCIP_RETCODE mwTraverseChain(
    )
 {
    IDX* ancestors = NULL;
-   IDX* revancestors = NULL;
    SCIP_Real sum;
    int k;
    int e;
@@ -176,8 +175,7 @@ SCIP_RETCODE mwTraverseChain(
    {
       assert(g->mark[k]);
 
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[e], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[flipedge(e)], NULL) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), graph_edge_getAncestors(g, e), NULL) );
 
       if( e != e1 )
          graph_edge_del(scip, g, e, TRUE);
@@ -198,8 +196,7 @@ SCIP_RETCODE mwTraverseChain(
    {
       int ne;
 
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[e], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[flipedge(e)], NULL) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), graph_edge_getAncestors(g, e), NULL) );
 
       graph_edge_del(scip, g, e, TRUE);
 
@@ -212,9 +209,7 @@ SCIP_RETCODE mwTraverseChain(
 
          graph_edge_delHistory(scip, g, e1);
 
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e1]), ancestors, NULL) );
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(e1)]), revancestors, NULL) );
-
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_even(e1)]), ancestors, NULL) );
       }
       else
       {
@@ -225,7 +220,6 @@ SCIP_RETCODE mwTraverseChain(
       }
 
       SCIPintListNodeFree(scip, &(ancestors));
-      SCIPintListNodeFree(scip, &(revancestors));
 
       if( SCIPisGE(scip, g->prize[k], 0.0) )
          g->cost[e1] = 0.0;
@@ -981,6 +975,7 @@ SCIP_RETCODE pcReduceTermDeg2(
          const int e1 = edges2[1];
          const int i0 = g->head[e0];
          const int i1 = g->head[e1];
+         int todo; // move!
          SCIP_Bool conflict;
 
          SCIP_CALL( graph_singletonAncestors_init(scip, g, e0, &(ancestors0)) );

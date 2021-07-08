@@ -710,11 +710,21 @@ SCIP_RETCODE graph_singletonAncestors_init(
       singletonans->pseudoancestors = NULL;
    }
 
-   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(singletonans->ancestors), g->ancestors[edge], &conflict) );
-   assert(!conflict);
+   if( !g->ancestors[edge] || !g->ancestors[flipedge(edge)] )
+   {
+      assert(graph_typeIsUndirected(g));
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(singletonans->ancestors), graph_edge_getAncestors(g, edge), &conflict) );
+      assert(!conflict);
+   }
+   else
+   {
+      assert(!graph_typeIsUndirected(g));
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(singletonans->ancestors), g->ancestors[edge], &conflict) );
+      assert(!conflict);
 
-   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(singletonans->revancestors), g->ancestors[flipedge(edge)], &conflict) );
-   assert(!conflict);
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(singletonans->revancestors), g->ancestors[flipedge(edge)], &conflict) );
+      assert(!conflict);
+   }
 
    return SCIP_OKAY;
 }
@@ -727,7 +737,7 @@ void graph_singletonAncestors_freeMembers(
 )
 {
    assert(scip && singletonans);
-   assert(singletonans->ancestors && singletonans->revancestors);
+   assert(singletonans->ancestors);
    assert(singletonans->pseudoancestors || singletonans->npseudoancestors == 0);
    assert(singletonans->npseudoancestors >= 0);
 
@@ -768,6 +778,18 @@ SCIP_Bool graph_valid_ancestors(
 
       if( pcmw && !SCIPisEQ(scip, g->cost[e], g->cost[e + 1]) )
          continue;
+
+      if( !g->ancestors[e] )
+      {
+         isValid = FALSE;
+         break;
+      }
+
+      if( graph_typeIsUndirected(g) && g->ancestors[e + 1] )
+      {
+         isValid = FALSE;
+         break;
+      }
 
       conflict = ancestorsMarkConflict(g, e, edgemark);
       ancestorsUnmarkConflict(g, e, edgemark);
@@ -946,6 +968,41 @@ SCIP_Bool graph_pseudoAncestors_nodeIsHashed(
    assert(pseudoancestors && hasharr);
 
    return blockedAncestors_hashIsHitBlock(pseudoancestors->ans_nodes, node, hasharr);
+}
+
+
+/** initializes edge ancestors */
+SCIP_RETCODE graph_initAncestors(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   const int nedges = graph_get_nEdges(g);
+   IDX** ancestors = g->ancestors;
+
+   assert(ancestors);
+
+   if( graph_typeIsUndirected(g) )
+   {
+      for( int e = 0; e < nedges; e += 2 )
+      {
+         SCIP_CALL( SCIPallocBlockMemory(scip, &(ancestors[e])) ); /*lint !e866*/
+         ancestors[e + 1] = NULL;
+         ancestors[e]->index = e;
+         ancestors[e]->parent = NULL;
+      }
+   }
+   else
+   {
+   for( int e = 0; e < nedges; e++ )
+   {
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(ancestors[e])) ); /*lint !e866*/
+      ancestors[e]->index = e;
+      ancestors[e]->parent = NULL;
+   }
+   }
+
+   return SCIP_OKAY;
 }
 
 
@@ -1138,6 +1195,30 @@ const int* graph_edge_getPseudoAncestors(
    assert(halfedge >= 0 && halfedge < g->pseudoancestors->halfnedges);
 
    return g->pseudoancestors->ans_halfedges->blocks[halfedge];
+}
+
+
+/** returns pseudo ancestors for given edge */
+IDX* graph_edge_getAncestors(
+   const GRAPH*          g,            /**< the graph */
+   int                   edge          /**< edge for which to return ancestors */
+   )
+{
+   int e = edge;
+
+   assert(g);
+   assert(graph_edge_isInRange(g, edge));
+   assert(!graph_typeIsUndirected(g) || (g->ancestors[edge] == NULL) == (edge % 2 == 1));
+
+   if( !g->ancestors[edge] )
+   {
+      assert(graph_typeIsUndirected(g));
+      e--;
+      assert(e == flipedge(edge));
+   }
+   assert(g->ancestors[e]);
+
+   return g->ancestors[e];
 }
 
 
@@ -1685,7 +1766,7 @@ SCIP_RETCODE graph_fixed_addEdge(
    assert(edge >= 0 && edge < g->edges);
    assert(g->ancestors);
 
-   SCIP_CALL( graph_fixed_add(scip, g->ancestors[edge], graph_edge_getPseudoAncestors(g, edge),
+   SCIP_CALL( graph_fixed_add(scip, graph_edge_getAncestors(g, edge), graph_edge_getPseudoAncestors(g, edge),
          graph_edge_nPseudoAncestors(g, edge), g) );
 
    return SCIP_OKAY;

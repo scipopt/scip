@@ -619,7 +619,7 @@ static inline
 void setEdgestate(
    const GRAPH*          graph,              /**< graph structure */
    IDX*                  curr,               /**< current ancestor */
-   int*                  edgestate           /**< edge state array */
+   int* RESTRICT         edgestate           /**< edge state array */
 )
 {
    while( curr != NULL )
@@ -650,7 +650,7 @@ static inline
 void fixEdgestate(
    const GRAPH*          graph,              /**< graph structure */
    IDX*                  curr,               /**< current ancestor */
-   int*                  edgestate           /**< edge state array */
+   int* RESTRICT         edgestate           /**< edge state array */
 )
 {
    while( curr != NULL )

@@ -90,7 +90,7 @@ SCIP_Bool markAncestorsConflict(
    int count = 0;
    assert(edge >= 0);
 
-   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
+   for( IDX* curr = graph_edge_getAncestors(graph, edge); curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
    {
       const unsigned idx = ((unsigned) curr->index) / 2;
 
@@ -116,7 +116,7 @@ void markAncestors(
    int count = 0;
    assert(edge >= 0);
 
-   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
+   for( IDX* curr = graph_edge_getAncestors(graph, edge); curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
    {
       assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
       assert((ancestormark[((unsigned) curr->index) / 2]) == 0);
@@ -136,7 +136,7 @@ void unmarkAncestorsConflict(
    int count = 0;
    assert(edge >= 0);
 
-   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
+   for( IDX* curr = graph_edge_getAncestors(graph, edge); curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
    {
       assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
       ancestormark[((unsigned) curr->index) / 2] = 0;
@@ -154,7 +154,7 @@ void unmarkAncestors(
    int count = 0;
    assert(edge >= 0);
 
-   for( IDX* curr = graph->ancestors[edge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
+   for( IDX* curr = graph_edge_getAncestors(graph, edge); curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
    {
       const unsigned idx = ((unsigned) curr->index) / 2;
 
@@ -493,7 +493,7 @@ SCIP_Bool ruleOutSubtree(
       if( ancestormark != NULL )
       {
          int count = 0;
-         for( IDX* curr = graph->ancestors[curredge]; curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
+         for( IDX* curr = graph_edge_getAncestors(graph, curredge); curr != NULL && count <= EXT_ANCESTORS_MAX; curr = curr->parent, count++ )
          {
             assert(curr->index >= 0 && curr->index / 2 < (MAX(graph->edges, graph->orgedges) / 2));
             if( ancestormark[((unsigned) curr->index) / 2] )

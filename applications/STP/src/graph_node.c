@@ -142,6 +142,7 @@ SCIP_RETCODE graph_knot_replaceDeg2(
    const int e2 = g->oeat[e1];
    const int i1 = g->head[e1];
    const int i2 = g->head[e2];
+   int todo; // move into singleton ancestors here!
    int newedge;
    SCIP_Bool conflict;
 
@@ -198,6 +199,7 @@ SCIP_RETCODE graph_knot_contract(
    int* knot = NULL;
    int slc = 0;
    int sgrad;
+   const SCIP_Bool isUndirected = graph_typeIsUndirected(g);
 
    assert(g && scip);
    assert(graph_knot_isInRange(g, t));
@@ -293,6 +295,7 @@ SCIP_RETCODE graph_knot_contract(
       }
       else
       {
+         const int anti = flipedge_Uint(et);
          SCIP_Bool copyPseudoancestors = FALSE;
          assert(et != EAT_LAST);
 
@@ -300,31 +303,52 @@ SCIP_RETCODE graph_knot_contract(
           * Need to adjust the out and in costs of the edge
           */
 
-         if( graph_typeIsUndirected(g) && SCIPisGT(scip, g->cost[et], outcost[i]) && SCIPisGT(scip, g->cost[Edge_anti(et)], incost[i]) )
+         if( isUndirected && SCIPisGT(scip, g->cost[et], outcost[i]) && SCIPisGT(scip, g->cost[anti], incost[i]) )
             copyPseudoancestors = TRUE;
 
          if( copyPseudoancestors )
             graph_edge_delPseudoAncestors(scip, et, g);
 
-         if( SCIPisGT(scip, g->cost[et], outcost[i]) )
+         /* NOTE: even in the undirected case there might be different anti-parallel weights for PC/MW */
+         if( isUndirected )
          {
-            SCIPintListNodeFree(scip, &((g->ancestors)[et]));
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((g->ancestors)[et]), ancestors[i].ancestors, NULL) );
+            assert((SCIPisGT(scip, g->cost[et], outcost[i]) && SCIPisGT(scip, g->cost[anti], incost[i]))
+                || (SCIPisLE(scip, g->cost[et], outcost[i]) && SCIPisLE(scip, g->cost[anti], incost[i])));
 
-            assert(graph_edge_nPseudoAncestors(g, et) == 0);
+            if( SCIPisGT(scip, g->cost[et], outcost[i]) )
+            {
+               const int even = Edge_even(et);
 
-            g->cost[et] = outcost[i];
+               assert(!g->ancestors[et] || !g->ancestors[anti]);
+               assert(g->ancestors[even]);
+               assert(SCIPisGT(scip, g->cost[anti], incost[i]));
+
+               SCIPintListNodeFree(scip, &(g->ancestors[even]));
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[even]), ancestors[i].ancestors, NULL) );
+
+               g->cost[et] = outcost[i];
+               g->cost[anti] = incost[i];
+            }
          }
-         if( SCIPisGT(scip, g->cost[Edge_anti(et)], incost[i]) )
+         else
          {
-            const int anti = Edge_anti(et);
+            if( SCIPisGT(scip, g->cost[et], outcost[i]) )
+            {
+               SCIPintListNodeFree(scip, &((g->ancestors)[et]));
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((g->ancestors)[et]), ancestors[i].ancestors, NULL) );
 
-            SCIPintListNodeFree(scip, &(g->ancestors[anti]));
-            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((g->ancestors)[anti]), ancestors[i].revancestors, NULL) );
+               assert(graph_edge_nPseudoAncestors(g, et) == 0);
+               g->cost[et] = outcost[i];
+            }
 
-            assert(graph_edge_nPseudoAncestors(g, anti) == 0);
+            if( SCIPisGT(scip, g->cost[anti], incost[i]) )
+            {
+               SCIPintListNodeFree(scip, &(g->ancestors[anti]));
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &((g->ancestors)[anti]), ancestors[i].revancestors, NULL) );
 
-            g->cost[anti] = incost[i];
+               assert(graph_edge_nPseudoAncestors(g, anti) == 0);
+               g->cost[anti] = incost[i];
+            }
          }
 
          if( copyPseudoancestors )
@@ -351,9 +375,17 @@ SCIP_RETCODE graph_knot_contract(
          assert(es != EAT_LAST);
 
          graph_edge_del(scip, g, es, TRUE);
+         assert(!g->ancestors[es] && !g->ancestors[flipedge(es)]);
 
-         assert(g->ancestors[es] == NULL);
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[es]), ancestors[i].ancestors, NULL) );
+         if( isUndirected )
+         {
+            const int even = Edge_even(es);
+            assert(ancestors[i].ancestors && !ancestors[i].revancestors);
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[even]), ancestors[i].ancestors, NULL) );
+         }
+
+         if( !isUndirected )
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[es]), ancestors[i].ancestors, NULL) );
 
          SCIP_CALL( graph_pseudoAncestors_appendCopySingToEdge(scip, es, &(ancestors[i]), FALSE, g, &conflict) );
          assert(!conflict);
@@ -371,8 +403,8 @@ SCIP_RETCODE graph_knot_contract(
 
          es = Edge_anti(es);
 
-         assert(g->ancestors[es] == NULL);
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[es]), ancestors[i].revancestors, NULL) );
+         if( !isUndirected )
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[es]), ancestors[i].revancestors, NULL) );
 
          g->cost[es]     = incost[i];
          g->tail[es]     = head;

@@ -226,12 +226,28 @@ SCIP_RETCODE graph_edge_reinsert(
       IDX* const ancestorsFor = ancestorsForward->ancestors;
       IDX* const revancestorsFor = ancestorsForward->revancestors;
 
+      assert(ancestorsBack && ancestorsFor);
+      assert((revancestorsBack == NULL) == graph_typeIsUndirected(g));
+      assert((revancestorsFor == NULL) == graph_typeIsUndirected(g));
+
       graph_edge_delHistory(scip, g, newedge);
 
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), revancestorsBack, NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), ancestorsFor, NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), ancestorsBack, NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), revancestorsFor, NULL) );
+      if( !revancestorsBack )
+      {
+         const int edge_even = Edge_even(newedge);
+         assert(graph_typeIsUndirected(g));
+         assert(edge_even == flipedge(newedge) || edge_even == newedge);
+
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[edge_even]), ancestorsBack, NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[edge_even]), ancestorsFor, NULL) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), revancestorsBack, NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), ancestorsFor, NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), ancestorsBack, NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), revancestorsFor, NULL) );
+      }
 
       SCIP_CALL( graph_pseudoAncestors_appendCopySingToEdge(scip, newedge, ancestorsBackward, TRUE, g, conflict) );
       assert(!(*conflict));
@@ -241,12 +257,11 @@ SCIP_RETCODE graph_edge_reinsert(
       /* ancestor node given?*/
       if( ancestornode >= 0 )
       {
-         IDX* const nodeans = g->pcancestors[ancestornode];
+         const int edge_even = Edge_even(newedge);
 
          assert(graph_pc_isPcMw(g));
 
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), nodeans, NULL) );
-         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(newedge)]), nodeans, NULL) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[edge_even]), g->pcancestors[ancestornode], NULL) );
 
          if( !(*conflict) )
             SCIP_CALL( graph_pseudoAncestors_appendCopyNodeToEdge(scip, newedge, ancestornode, TRUE, g, conflict) );
