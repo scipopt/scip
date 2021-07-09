@@ -48,7 +48,7 @@ struct SCIP_NlpParam
    int                   iterlimit;          /**< iteration limit */
    unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
    unsigned short        fastfail;           /**< whether the NLP solver should stop early if convergence is slow: 0 never, 1 conservatively, 2 quickly */
-   SCIP_Bool             fromscratch;        /**< whether to start solve from scratch */
+   SCIP_Bool             warmstart;          /**< whether to try to use solution of previous solve as starting point (if available) */
    const char*           caller;             /**< name of file from which NLP is solved (it's fine to set this to NULL) */
 };
 /** parameters for NLP solve */
@@ -77,7 +77,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
    .iterlimit   = INT_MAX,                         \
    .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL, \
    .fastfail    = 1,                               \
-   .fromscratch = FALSE,                           \
+   .warmstart   = FALSE,                           \
    .caller      = __FILE__
 
 /** default values for parameters
@@ -111,10 +111,10 @@ static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
   "iterlimit = %d, " \
   "verblevel = %hd, " \
   "fastfail = %hd, " \
-  "fromscratch = %d, " \
+  "warmstart = %d, " \
   "called by %s\n", \
   (param).lobjlimit, (param).feastol, (param).relobjtol, (param).timelimit, (param).iterlimit, \
-  (param).verblevel, (param).fastfail, (param).fromscratch, (param).caller != NULL ? (param).caller : "unknown"
+  (param).verblevel, (param).fastfail, (param).warmstart, (param).caller != NULL ? (param).caller : "unknown"
 
 /** NLP solution status */
 enum SCIP_NlpSolStat

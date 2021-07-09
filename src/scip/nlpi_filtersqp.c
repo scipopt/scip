@@ -1465,8 +1465,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
    iprint = param.verblevel;
 
-   /* if fromscratch parameter is set, then we will not warmstart */
-   if( param.fromscratch )
+   /* if warmstart parameter is disabled, then we will not warmstart */
+   if( !param.warmstart )
       problem->warmstart = FALSE;
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);

@@ -520,8 +520,6 @@ SCIP_RETCODE handleNlpParam(
    assert(scip != NULL);
    assert(nlpiproblem != NULL);
 
-   // TODO handle param.fromscratch
-
    switch( param.verblevel )
    {
       case 0:

@@ -911,9 +911,9 @@ SCIP_RETCODE handleNlpParam(
    par->sKKTOnlyAcceptable = DEFAULT_SCALEDKKT;
    par->Infty = SCIPinfinity(scip);
 
-   if( nlpparam.fromscratch )
+   if( nlpparam.warmstart )
    {
-      SCIPdebugMsg(scip, "from scratch parameter not supported by Worhp interface yet. Ignored.\n");
+      SCIPdebugMsg(scip, "warmstart parameter not supported by Worhp interface yet. Ignored.\n");
    }
 
    if( nlpparam.lobjlimit > -SCIP_REAL_MAX )
