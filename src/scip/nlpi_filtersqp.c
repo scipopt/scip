@@ -835,7 +835,7 @@ SCIP_RETCODE processSolveOutcome(
          if( problem->fmin == SCIP_REAL_MIN )  /*lint !e777*/
             problem->termstat = SCIP_NLPTERMSTAT_OKAY;  /* fmin was not set */
          else
-            problem->termstat = SCIP_NLPTERMSTAT_LOBJLIM;
+            problem->termstat = SCIP_NLPTERMSTAT_LOBJLIMIT;
          break;
       case 2: /* linear constraints are inconsistent */
          problem->solstat = SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
@@ -850,7 +850,7 @@ SCIP_RETCODE processSolveOutcome(
       case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
          assert(problem->rstat[4] <= feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
-         problem->termstat =  SCIP_NLPTERMSTAT_NUMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_NUMERICERROR;
          problem->warmstart = TRUE;
          break;
       case 5: /* termination with rho < eps (trust region radius below epsilon) */
@@ -858,7 +858,7 @@ SCIP_RETCODE processSolveOutcome(
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_NUMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_NUMERICERROR;
          problem->warmstart = TRUE;
          break;
       case 6: /* termination with iter > max_iter */
@@ -866,20 +866,20 @@ SCIP_RETCODE processSolveOutcome(
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_ITLIM;
+         problem->termstat =  SCIP_NLPTERMSTAT_ITERLIMIT;
          problem->warmstart = TRUE;
          break;
       case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached, or interrupted */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
          if( problem->solvetime >= problem->maxtime )
          {
-            problem->termstat =  SCIP_NLPTERMSTAT_TILIM;
+            problem->termstat =  SCIP_NLPTERMSTAT_TIMELIMIT;
             problem->warmstart = TRUE;
          }
          else if( SCIPisSolveInterrupted(problem->scip) )
             problem->termstat =  SCIP_NLPTERMSTAT_INTERRUPT;
          else
-            problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
+            problem->termstat =  SCIP_NLPTERMSTAT_EVALERROR;
          break;
       case 8: /* unexpect ifail from QP solver */
          if( problem->rstat[4] <= feastol )
@@ -890,11 +890,11 @@ SCIP_RETCODE processSolveOutcome(
          break;
       case 9: /* not enough REAL workspace */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_MEMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_OUTOFMEMORY;
          break;
       case 10: /* not enough INTEGER workspace */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_MEMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_OUTOFMEMORY;
          break;
       default:
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -1452,7 +1452,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       /* there is nothing we can do if we are not given any time */
       problem->niterations = 0;
       problem->solvetime = 0.0;
-      problem->termstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
 
       return SCIP_OKAY;

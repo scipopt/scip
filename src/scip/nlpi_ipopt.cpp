@@ -1173,7 +1173,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       /* there is nothing we can do if we are not given any time */
       problem->lastniter = 0;
       problem->lasttime = 0.0;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
 
       return SCIP_OKAY;
@@ -1273,7 +1273,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             SCIPdebugMsg(scip, "Ipopt failed because of an invalid number in function or derivative value\n");
             invalidateSolution(problem);
             problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-            problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
+            problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERROR;
             break;
          default:
             // ipopt should, at least, have been properly initialized, so can warmstart next time
@@ -2065,13 +2065,13 @@ void ScipNLP::finalize_solution(
    case MAXITER_EXCEEDED:
       check_feasibility = true;
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_ITERLIMIT;
       break;
 
    case CPUTIME_EXCEEDED:
       check_feasibility = true;
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       break;
 
    case STOP_AT_TINY_STEP:
@@ -2079,7 +2079,7 @@ void ScipNLP::finalize_solution(
    case ERROR_IN_STEP_COMPUTATION:
       check_feasibility = true;
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
 
    case LOCAL_INFEASIBILITY:
@@ -2094,7 +2094,7 @@ void ScipNLP::finalize_solution(
 
    case INVALID_NUMBER_DETECTED:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_EVALERROR;
       break;
 
    case USER_REQUESTED_STOP:
@@ -2122,7 +2122,7 @@ void ScipNLP::finalize_solution(
 
    case OUT_OF_MEMORY:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
       break;
 
    default:
@@ -2151,7 +2151,7 @@ void ScipNLP::finalize_solution(
          nlpiproblem->lastsoldualvarlb == NULL || nlpiproblem->lastsoldualvarub == NULL )
       {
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-         nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
+         nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
          return;
       }
    }

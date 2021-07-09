@@ -964,7 +964,7 @@ SCIP_RETCODE solveSubNLP(
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 0) );
    }
 
-   if( SCIPgetNLPTermstat(heurdata->subscip) >= SCIP_NLPTERMSTAT_MEMERR )
+   if( SCIPgetNLPTermstat(heurdata->subscip) >= SCIP_NLPTERMSTAT_OUTOFMEMORY )
    {
       /* oops, something did not go well at all */
      if( heurdata->nlpverblevel >= 1 )

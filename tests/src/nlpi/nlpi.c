@@ -458,22 +458,22 @@ Test(nlpi, workinglimits, .init = setup, .fini = teardown,
    {
       /* set a small iteration limit */
       SCIP_CALL( solveQP(worhpip, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 5, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_ITLIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
       SCIP_CALL( solveQP(worhpip, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_TILIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 
    if( worhpsqp != NULL )
    {
       /* set a small iteration limit */
       SCIP_CALL( solveQP(worhpsqp, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 5, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_ITLIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
       SCIP_CALL( solveQP(worhpsqp, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_TILIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 }
 

@@ -145,7 +145,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of initialization error!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
       break;
    }
 
@@ -165,7 +165,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPerrorMessage("Worhp failed because of license error!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_LICERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_LICENSEERROR;
       break;
    }
 
@@ -175,7 +175,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of a NaN value in an evaluation!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERROR;
       break;
    }
 
@@ -188,7 +188,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of a numerical error during optimization!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
    }
 
@@ -199,7 +199,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because maximal number of calls or iterations is reached!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_ITERLIMIT;
       break;
    }
 
@@ -209,7 +209,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because time limit is reached!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       break;
    }
 
@@ -220,7 +220,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of diverging iterates!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
    }
 
@@ -251,7 +251,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of regularization of Hessian matrix failed!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
    }
 
@@ -1318,7 +1318,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
       /* there is nothing we can do if we are not given any time */
       problem->lastniter = 0;
       problem->lasttime = 0.0;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
 
       return SCIP_OKAY;
@@ -1505,7 +1505,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
    {
       SCIPwarningMessage(scip, "Worhp failed because of an invalid function evaluation!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
    }
    else
    {
