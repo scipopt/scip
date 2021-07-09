@@ -180,6 +180,7 @@ class ScipNLP : public TNLP
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
    SCIP*                 scip;               /**< SCIP data structure */
+   SCIP_NLPPARAM         param;              /**< NLP solve parameters */
 
    SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
    SCIP_Real             conv_dutarget[convcheck_nchecks]; /**< target dual infeasibility for each convergence check */
@@ -199,7 +200,8 @@ public:
       SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
       SCIP*              scip_ = NULL        /**< SCIP data structure */
       )
-      : nlpiproblem(nlpiproblem_), scip(scip_), conv_lastrestoiter(-1),
+      : nlpiproblem(nlpiproblem_), scip(scip_),
+        conv_lastrestoiter(-1),
         current_x(1), last_f_eval_x(0), last_g_eval_x(0),
         approxhessian(false)
    {
@@ -211,11 +213,15 @@ public:
    { /*lint --e{1540}*/
    }
 
-   /** sets NLPI data structure */
-   void setNLPIPROBLEM(SCIP_NLPIPROBLEM* nlpiproblem_)
+   /** initialize for new solve */
+   void initializeSolve(
+      SCIP_NLPIPROBLEM*    nlpiproblem_,     /**< NLPI problem */
+      const SCIP_NLPPARAM& nlpparam          /**< NLP solve parameters */
+      )
    {
       assert(nlpiproblem_ != NULL);
       nlpiproblem = nlpiproblem_;
+      param = nlpparam;
 
       // it appears we are about to start a new solve
       // use this call as an opportunity to reset the counts on x
@@ -554,12 +560,6 @@ SCIP_RETCODE handleNlpParam(
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", param.relobjtol);
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", param.relobjtol);
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", param.relobjtol);
-
-   if( param.lobjlimit > -SCIP_REAL_MAX )
-   {
-      // TODO remove lobjlimit param ?
-      SCIPwarningMessage(scip, "Parameter lower objective limit not supported by Ipopt interface yet. Ignored.\n");
-   }
 
    /* Ipopt doesn't like a setting of exactly 0 for the max_*_time, so increase as little as possible in that case */
 #if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
@@ -1179,7 +1179,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       return SCIP_OKAY;
    }
 
-   problem->nlp->setNLPIPROBLEM(problem);
+   problem->nlp->initializeSolve(problem, param);
 
    problem->lastniter = -1;
    problem->lasttime  = -1.0;
@@ -1929,7 +1929,8 @@ bool ScipNLP::eval_h(
 
 /** Method called by the solver at each iteration.
  * 
- * Checks whether Ctrl-C was hit.
+ * Checks whether SCIP solve is interrupted, objlimit is reached, or fastfail is triggered.
+ * Sets solution and termination status accordingly.
  */   /*lint -e{715}*/
 bool ScipNLP::intermediate_callback(
    AlgorithmMode      mode,               /**< current mode of algorithm */
@@ -1948,7 +1949,19 @@ bool ScipNLP::intermediate_callback(
    )
 {  /*lint --e{715}*/
    if( SCIPisSolveInterrupted(scip) )
+   {
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_INTERRUPT;
       return false;
+   }
+
+   /* feasible point with objective value below lower objective limit -> stop */
+   if( obj_value <= param.lobjlimit && inf_pr <= param.feastol )
+   {
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_LOBJLIMIT;
+      return false;
+   }
 
    /* do convergence test if fastfail is enabled */
    if( nlpiproblem->fastfail )
@@ -2013,7 +2026,12 @@ bool ScipNLP::intermediate_callback(
                }
                else
                {
-                  SCIPdebugPrintf("abort\n");
+                  SCIPdebugPrintf("abort solve\n");
+                  if( inf_pr <= param.feastol )
+                     nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+                  else
+                     nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+                  nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
                   return false;
                }
             }
@@ -2098,19 +2116,7 @@ void ScipNLP::finalize_solution(
       break;
 
    case USER_REQUESTED_STOP:
-      if( SCIPisSolveInterrupted(scip) )
-      {
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-         nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_INTERRUPT;
-      }
-      else
-      {
-         /* we stopped due to the fastfail check */
-         assert(nlpiproblem->fastfail);
-         check_feasibility = true;
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-         nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-      }
+      // status codes already set in intermediate_callback
       break;
 
    case TOO_FEW_DEGREES_OF_FREEDOM:
@@ -2164,13 +2170,7 @@ void ScipNLP::finalize_solution(
 
    if( check_feasibility && cq != NULL )
    {
-      Number constrviol;
-      Number constrvioltol;
-
-      constrviol = cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX);
-
-      (void) nlpiproblem->ipopt->Options()->GetNumericValue("constr_viol_tol", constrvioltol, "");
-      if( constrviol <= constrvioltol/FEASTOLFACTOR )
+      if( cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX) <= param.feastol )
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       else if( nlpiproblem->lastsolstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
