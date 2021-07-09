@@ -20,8 +20,6 @@
  * @author  Benjamin Müller
  *
  * @todo warm starts
- * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
- * @todo influence output by SCIP verblevel, too, e.g., print strong warnings if SCIP verblevel is full; but currently we have no access to SCIP verblevel
  * @todo if too few degrees of freedom, solve a slack-minimization problem instead?
  *
  * This file can only be compiled if Ipopt is available.
@@ -47,24 +45,14 @@
 #include <new>      /* for std::bad_alloc */
 #include <sstream>
 
-/* fallback to non-thread-safe version if C++ is too old to have mutex */
-#if __cplusplus < 201103L && defined(SCIP_THREADSAFE)
-#undef SCIP_THREADSAFE
-#endif
-
-#ifdef SCIP_THREADSAFE
-#include <mutex>
-static std::mutex solve_mutex;  /*lint !e1756*/
-#endif
-
 /* turn off some lint warnings for file */
 /*lint --e{1540,750,3701}*/
 
-#ifdef __GNUC__
+#include "IpoptConfig.h"
+
+#if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
 #pragma GCC diagnostic ignored "-Wshadow"
 #endif
-#define IPOPT_DEPRECATED  // to avoid warnings about using functions that became deprecated in Ipopt 3.14
-#include "IpoptConfig.h"
 #include "IpIpoptApplication.hpp"
 #include "IpIpoptCalculatedQuantities.hpp"
 #include "IpSolveStatistics.hpp"
@@ -73,12 +61,24 @@ static std::mutex solve_mutex;  /*lint !e1756*/
 #include "IpTNLPAdapter.hpp"
 #include "IpOrigIpoptNLP.hpp"
 #include "IpLapack.hpp"
-#ifdef __GNUC__
+#if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
 
-#if (IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12))
-#error "The Ipopt interface requires at least 3.12."
+#if (IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE < 5))
+#error "The Ipopt interface requires at least 3.12.5"
+#endif
+
+/* MUMPS that can be used by Ipopt is not threadsafe
+ * If we want SCIP to be threadsafe (SCIP_THREADSAFE), have std::mutex (C++11 or higher), and use Ipopt before 3.14,
+ * then we protect the call to Ipopt by a mutex if MUMPS is used as linear solver.
+ * Thus, we allow only one Ipopt run at a time.
+ * Ipopt 3.14 has this build-in to its MUMPS interface, so we won't have to take care of this.
+ */
+#if defined(SCIP_THREADSAFE) && __cplusplus >= 201103L && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
+#define PROTECT_SOLVE_BY_MUTEX
+#include <mutex>
+static std::mutex solve_mutex;  /*lint !e1756*/
 #endif
 
 using namespace Ipopt;
@@ -90,12 +90,11 @@ using namespace Ipopt;
 #ifdef SCIP_DEBUG
 #define DEFAULT_PRINTLEVEL J_ITERSUMMARY     /**< default print level of Ipopt */
 #else
-#define DEFAULT_PRINTLEVEL J_ERROR           /**< default print level of Ipopt */
+#define DEFAULT_PRINTLEVEL J_STRONGWARNING  /**< default print level of Ipopt */
 #endif
-#define DEFAULT_MAXITER    3000              /**< default iteration limit for Ipopt */
 
 #define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
-#define FEASTOLFACTOR      0.05              /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
+#define FEASTOLFACTOR      0.9               /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
 
 #define DEFAULT_RANDSEED   71                /**< initial random seed */
 
@@ -145,14 +144,16 @@ struct SCIP_NlpiProblem
 {
 public:
    SCIP_NLPIORACLE*            oracle;       /**< Oracle-helper to store and evaluate NLP */
+   SCIP_RANDNUMGEN*            randnumgen;   /**< random number generator */
 
    SmartPtr<IpoptApplication>  ipopt;        /**< Ipopt application */
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
    std::string                 optfile;      /**< name of options file */
-   bool                        storeintermediate;/**< whether to store intermediate solutions */
    bool                        fastfail;     /**< whether to stop Ipopt if convergence seems slow */
 
-   SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
+   bool                        firstrun;     /**< whether the next NLP solve will be the first one */
+   bool                        samestructure;/**< whether the NLP solved next will still have the same (Ipopt-internal) structure (same number of variables, constraints, bounds, and nonzero pattern) */
+   bool                        initguessrandom; /**< whether the initial guess should be set to random values for the next solve */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
 
    SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
@@ -161,18 +162,18 @@ public:
    SCIP_Real*                  lastsoldualcons; /**< dual solution values of constraints from last run, if available */
    SCIP_Real*                  lastsoldualvarlb; /**< dual solution values of variable lower bounds from last run, if available */
    SCIP_Real*                  lastsoldualvarub; /**< dual solution values of variable upper bounds from last run, if available */
-   SCIP_Real                   lastsolinfeas;/**< infeasibility (constraint violation) of solution stored in lastsolprimals */
+   SCIP_Real                   lastsolobjval;/**< objective function value in solution from last run */
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
    /** constructor */
    SCIP_NlpiProblem()
-      : oracle(NULL),
-        storeintermediate(false), fastfail(false),
-        firstrun(TRUE), initguess(NULL),
+      : oracle(NULL), randnumgen(NULL),
+        fastfail(false),
+        firstrun(true), samestructure(true), initguessrandom(true), initguess(NULL),
         lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
         lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
-        lastsolinfeas(0.0), lastniter(-1), lasttime(-1.0)
+        lastsolobjval(SCIP_INVALID), lastniter(-1), lasttime(-1.0)
    { }
 };
 
@@ -181,13 +182,16 @@ class ScipNLP : public TNLP
 {
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
-   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP*                 scip;               /**< SCIP data structure */
 
    SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
    SCIP_Real             conv_dutarget[convcheck_nchecks]; /**< target dual infeasibility for each convergence check */
    int                   conv_iterlim[convcheck_nchecks];  /**< iteration number where target primal infeasibility should to be achieved */
    int                   conv_lastrestoiter;               /**< last iteration number in restoration mode, or -1 if none */
+
+   unsigned int          current_x;          /**< unique number that identifies current iterate (x): incremented when Ipopt calls with new_x=true */
+   unsigned int          last_f_eval_x;      /**< the number of the iterate for which the objective was last evaluated (eval_f) */
+   unsigned int          last_g_eval_x;      /**< the number of the iterate for which the constraints were last evaluated (eval_g) */
 
 public:
    bool                  approxhessian;      /**< do we tell Ipopt to approximate the hessian? (may also be false if user set to approx. hessian via option file) */
@@ -198,17 +202,16 @@ public:
       SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
       SCIP*              scip_ = NULL        /**< SCIP data structure */
       )
-      : nlpiproblem(nlpiproblem_), randnumgen(NULL), scip(scip_), conv_lastrestoiter(-1), approxhessian(false)
+      : nlpiproblem(nlpiproblem_), scip(scip_), conv_lastrestoiter(-1),
+        current_x(1), last_f_eval_x(0), last_g_eval_x(0),
+        approxhessian(false)
    {
       assert(scip != NULL);
-      SCIP_CALL_ABORT_QUIET( SCIPcreateRandom(scip, &randnumgen, DEFAULT_RANDSEED, TRUE) );
    }
 
    /** destructor */
    ~ScipNLP()
    { /*lint --e{1540}*/
-      assert(randnumgen != NULL);
-      SCIPfreeRandom(scip, &randnumgen);
    }
 
    /** sets NLPI data structure */
@@ -216,6 +219,12 @@ public:
    {
       assert(nlpiproblem_ != NULL);
       nlpiproblem = nlpiproblem_;
+
+      // it appears we are about to start a new solve
+      // use this call as an opportunity to reset the counts on x
+      current_x = 1;
+      last_f_eval_x = 0;
+      last_g_eval_x = 0;
    }
 
    /** Method to return some info about the nlp */
@@ -248,18 +257,6 @@ public:
       Index              m,                  /**< number of constraints */
       bool               init_lambda,        /**< whether initial values for dual values of constraints are required */
       Number*            lambda              /**< buffer to store dual values of constraints */
-      );
-
-   /** Method to return the variables linearity. */
-   bool get_variables_linearity(
-      Index              n,                  /**< number of variables */ 
-      LinearityType*     var_types           /**< buffer to store linearity types of variables */
-      );
-
-   /** Method to return the constraint linearity. */
-   bool get_constraints_linearity(
-      Index              m,                  /**< number of constraints */
-      LinearityType*     const_types         /**< buffer to store linearity types of constraints */
       );
 
    /** Method to return the number of nonlinear variables. */
@@ -409,11 +406,18 @@ protected:
    {  /*lint --e{715} */
       if( level == J_ERROR )
       {
-         SCIPmessagePrintError("%s", str);
+         SCIPerrorMessage("%s", str);
       }
       else
       {
-         SCIPinfoMessage(scip, NULL, "%s", str);
+         SCIP_VERBLEVEL msgverblevel;
+         if( level <= J_WARNING )
+            msgverblevel = SCIP_VERBLEVEL_DIALOG;
+         else if( level <= J_SUMMARY )
+            msgverblevel = SCIP_VERBLEVEL_MINIMAL;
+         else
+            msgverblevel = SCIP_VERBLEVEL_HIGH;
+         SCIPverbMessage(scip, msgverblevel, NULL, "%s", str);
       }
    }
 
@@ -427,11 +431,19 @@ protected:
    {  /*lint --e{715} */
       if( level == J_ERROR )
       {
+         SCIPmessagePrintErrorHeader(__FILE__, __LINE__);
          SCIPmessageVPrintError(pformat, ap);
       }
       else
       {
-         SCIPmessageVPrintInfo(SCIPgetMessagehdlr(scip), pformat, ap);
+         SCIP_VERBLEVEL msgverblevel;
+         if( level <= J_WARNING )
+            msgverblevel = SCIP_VERBLEVEL_DIALOG;
+         else if( level <= J_SUMMARY )
+            msgverblevel = SCIP_VERBLEVEL_MINIMAL;
+         else
+            msgverblevel = SCIP_VERBLEVEL_HIGH;
+         SCIPmessageVPrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), msgverblevel, pformat, ap);
       }
    }
 
@@ -452,17 +464,51 @@ void invalidateSolution(
    BMSfreeMemoryArrayNull(&problem->lastsoldualvarub);
    problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
-   problem->lastsolinfeas = SCIP_INVALID;
+   problem->lastsolobjval = SCIP_INVALID;
 }
 
-/** sets feasibility tolerance parameters in Ipopt
- *
- * Sets tol and constr_viol_tol to FEASTOLFACTOR*feastol and acceptable_tol and acceptable_viol_tol to feastol.
- * Since the users and Ipopts conception of feasibility may differ, we let Ipopt try to compute solutions
- * that are more accurate (w.r.t. constraint violation) than requested by the user.
- * Only if Ipopt has problems to achieve this accuracy, we also accept solutions that are accurate w.r.t. feastol only.
- * The additional effort for computing a more accurate solution should be small if one can assume fast convergence when close to a local minimizer.
- */
+/** sets randomly generated initial guess */
+static
+SCIP_RETCODE generateInitGuess(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
+   )
+{
+   SCIP_Real lb, ub;
+   int n;
+
+   assert(problem != NULL);
+
+   SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds and adding a random perturbation\n");
+
+   n = SCIPnlpiOracleGetNVars(problem->oracle);
+
+   if( problem->randnumgen == NULL )
+   {
+      SCIP_CALL( SCIPcreateRandom(scip, &problem->randnumgen, DEFAULT_RANDSEED, TRUE) );
+   }
+
+   if( problem->initguess == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->initguess, n) );
+   }
+
+   for( int i = 0; i < n; ++i )
+   {
+      lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
+      ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
+      if( lb > 0.0 )
+         problem->initguess[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+      else if( ub < 0.0 )
+         problem->initguess[i] = SCIPrandomGetReal(problem->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+      else
+         problem->initguess[i] = SCIPrandomGetReal(problem->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sets feasibility tolerance parameter in Ipopt */
 static
 void setFeastol(
    SCIP_NLPIPROBLEM* nlpiproblem,
@@ -471,28 +517,19 @@ void setFeastol(
 {
    assert(nlpiproblem != NULL);
 
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", FEASTOLFACTOR * feastol);
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * feastol);
-
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_tol", feastol);
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", feastol);
-
-   /* It seem to be better to let Ipopt relax bounds a bit to ensure that a relative interior exists.
-    * However, if we relax the bounds too much, then the solutions tend to be slightly infeasible.
-    * If the user wants to set a tight feasibility tolerance, then (s)he has probably difficulties to compute accurate enough solutions.
-    * Thus, we turn off the bound_relax_factor completely if it would be below its default value of 1e-8.
-    */
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("bound_relax_factor", feastol < 1e-8/FEASTOLFACTOR ? 0.0 : FEASTOLFACTOR * feastol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", FEASTOLFACTOR * feastol);
 }
 
 /** sets optimality tolerance parameters in Ipopt
  *
- * Sets dual_inf_tol and compl_inf_tol to opttol.
- * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched, which means that if Ipopt has convergence problems, then
+ * Sets dual_inf_tol, compl_inf_tol, and tol to opttol.
+ * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched for now, which means that if Ipopt has convergence problems, then
  * it can stop with a solution that is still feasible (see setFeastol), but essentially without a proof of local optimality.
- * Note, that we report the solution as feasible only if Ipopt stopped on an "acceptable point" (see ScipNLP::finalize_solution).
+ * Note, that in this case we report only feasibility and not optimality of the solution (see ScipNLP::finalize_solution).
  *
- * Note, that parameters tol and acceptable_tol (set in setFeastol) also apply.
+ * TODO it makes sense to set tol (maximal errors in scaled problem) depending on user parameters somewhere
+ *      NLPI parameter RELOBJTOL seems better suited for this than FEASTOL, but maybe we need another one?
  */
 static
 void setOpttol(
@@ -504,6 +541,7 @@ void setOpttol(
 
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", opttol);
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", opttol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", opttol);
 }
 
 /** copy method of NLP interface (called when SCIP copies plugins)
@@ -596,13 +634,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    {
       /* initialize IPOPT without default journal */
       (*problem)->ipopt = new IpoptApplication(false);
-      if( IsNull((*problem)->ipopt) )
-         throw std::bad_alloc();
 
       /* plugin our journal to get output through SCIP message handler */
       SmartPtr<Journal> jrnl = new ScipJournal("console", J_ITERSUMMARY, scip);
-      if( IsNull(jrnl) )
-         throw std::bad_alloc();
       jrnl->SetPrintLevel(J_DBG, J_NONE);
       if( !(*problem)->ipopt->Jnlst()->AddJournal(jrnl) )
       {
@@ -611,8 +645,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 
       /* initialize Ipopt/SCIP NLP interface */
       (*problem)->nlp = new ScipNLP(*problem, scip);
-      if( IsNull((*problem)->nlp) )
-         throw std::bad_alloc();
    }
    catch( const std::bad_alloc& )
    {
@@ -620,20 +652,30 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       return SCIP_NOMEMORY;
    }
 
+#if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
+   /* Turn off bound relaxation for older Ipopt, as solutions may be out of bounds by more than constr_viol_tol.
+    * For Ipopt 3.14, bounds are relaxed by at most constr_viol_tol, so can leave bound_relax_factor at its default.
+    */
+   (void) (*problem)->ipopt->Options()->SetNumericValue("bound_relax_factor", 0.0);
+#endif
+
    /* modify Ipopt's default settings to what we believe is appropriate */
-   (*problem)->ipopt->RegOptions()->AddStringOption2("store_intermediate", "whether to store the most feasible intermediate solutions", "no", "yes", "", "no", "", "useful when Ipopt looses a once found feasible solution and then terminates with an infeasible point");
    (void) (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
 #ifdef SCIP_DEBUG
    (void) (*problem)->ipopt->Options()->SetStringValue("print_user_options", "yes");
 #endif
+   (void) (*problem)->ipopt->Options()->SetStringValue("sb", "yes");
    (void) (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
-   (void) (*problem)->ipopt->Options()->SetIntegerValue("max_iter", DEFAULT_MAXITER);
+   (void) (*problem)->ipopt->Options()->SetIntegerValue("max_iter", INT_MAX);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
+   // todo disable acceptable-point heuristic?
+   // it seems useful to have Ipopt stop when it obviously doesn't make progress (like one of the NLPs in the bendersqp ctest)
+   // maybe there should be some option to the NLPI to let the user control this
+   // (void) (*problem)->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
    /* (void) (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
-   /* if the expression interpreter does not give hessians, tell Ipopt to approximate hessian */
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
    setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
 
@@ -642,11 +684,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    {
       std::istringstream is(data->defoptions);
 
-#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE >= 5)
       if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is, true) )
-#else
-      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
-#endif
       {
          SCIPerrorMessage("Error when modifying Ipopt options using options string\n%s\n", data->defoptions.c_str());
          return SCIP_ERROR;
@@ -679,6 +717,11 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
    if( (*problem)->oracle != NULL )
    {
       SCIP_CALL( SCIPnlpiOracleFree(scip, &(*problem)->oracle) );
+   }
+
+   if( (*problem)->randnumgen != NULL )
+   {
+      SCIPfreeRandom(scip, &(*problem)->randnumgen);
    }
 
    BMSfreeMemoryArrayNull(&(*problem)->initguess);
@@ -729,7 +772,7 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
 
    SCIP_CALL( SCIPnlpiOracleAddVars(scip, problem->oracle, nvars, lbs, ubs, varnames) );
 
-   problem->firstrun = TRUE;
+   problem->samestructure = false;
    BMSfreeMemoryArrayNull(&problem->initguess);
    invalidateSolution(problem);
 
@@ -774,7 +817,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
 
    SCIP_CALL( SCIPnlpiOracleAddConstraints(scip, problem->oracle, nconss, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
 
-   problem->firstrun = TRUE;
+   problem->samestructure = false;
    invalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -808,12 +851,12 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   /* We pass the objective gradient in dense form to Ipopt, so if the sparsity of that gradient changes, we do not need to reset Ipopt (firstrun=TRUE).
+   /* We pass the objective gradient in dense form to Ipopt, so if the sparsity of that gradient changes, we do not change the structure of the problem inside Ipopt.
     * However, if the sparsity of the Hessian matrix of the objective changes, then the sparsity pattern of the Hessian of the Lagrangian may change.
-    * Thus, reset Ipopt if the objective was and/or becomes nonlinear, but leave firstrun untouched if it was and stays linear.
+    * Thus, set samestructure=false if the objective was and/or becomes nonlinear, but leave samestructure untouched if it was and stays linear.
     */
    if( expr != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
-      problem->firstrun = TRUE;
+      problem->samestructure = false;
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle, constant, nlins, lininds, linvals, expr) );
 
@@ -835,19 +878,27 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 static
 SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 {
-   int i;
-
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   /* If some variable is fixed or unfixed, then better don't reoptimize the NLP in the next solve.
-    * Calling Optimize instead of ReOptimize should remove fixed variables from the problem that is solved by Ipopt.
-    * This way, the variable fixing is satisfied exactly in a solution, see also #1254.
+   /* Check whether the structure of the Ipopt internal NLP changes, if problem->samestructure at the moment.
+    * We need to check whether variables become fixed or unfixed and whether bounds are added or removed.
     */
-   for( i = 0; i < nvars && !problem->firstrun; ++i )
-      if( (SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]] == SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]]) != (lbs[i] == ubs[i]) )  /*lint !e777*/
-         problem->firstrun = TRUE;
+   for( int i = 0; i < nvars && problem->samestructure; ++i )
+   {
+      SCIP_Real oldlb;
+      SCIP_Real oldub;
+      oldlb = SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]];
+      oldub = SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]];
+
+      if( (oldlb == oldub) != (lbs[i] == ubs[i]) )  /*lint !e777*/
+         problem->samestructure = false;
+      else if( SCIPisInfinity(scip, -oldlb) != SCIPisInfinity(scip, -lbs[i]) )
+         problem->samestructure = false;
+      else if( SCIPisInfinity(scip,  oldub) != SCIPisInfinity(scip,  ubs[i]) )
+         problem->samestructure = false;
+   }
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, problem->oracle, nvars, indices, lbs, ubs) );
 
@@ -873,6 +924,24 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesIpopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   /* Check whether the structure of the Ipopt internal NLP changes, if problem->samestructure at the moment.
+    * We need to check whether constraints change from equality to inequality and whether sides are added or removed.
+    */
+   for( int i = 0; i < nconss && problem->samestructure; ++i )
+   {
+      SCIP_Real oldlhs;
+      SCIP_Real oldrhs;
+      oldlhs = SCIPnlpiOracleGetConstraintLhs(problem->oracle, indices[i]);
+      oldrhs = SCIPnlpiOracleGetConstraintRhs(problem->oracle, indices[i]);
+
+      if( (oldlhs == oldrhs) != (lhss[i] == rhss[i]) )  /*lint !e777*/
+         problem->samestructure = false;
+      else if( SCIPisInfinity(scip, -oldlhs) != SCIPisInfinity(scip, -lhss[i]) )
+         problem->samestructure = false;
+      else if( SCIPisInfinity(scip,  oldrhs) != SCIPisInfinity(scip,  rhss[i]) )
+         problem->samestructure = false;
+   }
+
    SCIP_CALL( SCIPnlpiOracleChgConsSides(scip, problem->oracle, nconss, indices, lhss, rhss) );
 
    invalidateSolution(problem);
@@ -897,11 +966,26 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+   assert(SCIPnlpiOracleGetNVars(problem->oracle) == dstatssize);
 
    SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, problem->oracle, dstats) );
 
-   problem->firstrun = TRUE;
-   BMSfreeMemoryArrayNull(&problem->initguess); // @TODO keep initguess for remaining variables 
+   if( problem->initguess != NULL && !problem->initguessrandom )
+   {
+      // update initguess if we won't overwrite with a random one in the next solve
+      int i;
+      for( i = 0; i < dstatssize; ++i )
+      {
+         if( dstats[i] != -1 )
+         {
+            assert(dstats[i] >= 0);
+            assert(dstats[i] < SCIPnlpiOracleGetNVars(problem->oracle));
+            problem->initguess[dstats[i]] = problem->initguess[i];
+         }
+      }
+   }
+
+   problem->samestructure = false;
 
    invalidateSolution(problem);
 
@@ -927,7 +1011,7 @@ SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetIpopt)
 
    SCIP_CALL( SCIPnlpiOracleDelConsSet(scip, problem->oracle, dstats) );
 
-   problem->firstrun = TRUE;
+   problem->samestructure = false;
 
    invalidateSolution(problem);
 
@@ -954,6 +1038,7 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, problem->oracle, idx, nvals, varidxs, vals) );
+
    invalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -975,6 +1060,8 @@ SCIP_DECL_NLPICHGEXPR(nlpiChgExprIpopt)
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgExpr(scip, problem->oracle, idxcons, expr) );
+
+   problem->samestructure = false;  // nonzero patterns may have changed
    invalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -1020,13 +1107,13 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
    {
       if( !problem->initguess )
       {
-         if( BMSduplicateMemoryArray(&problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) == NULL )
-            return SCIP_NOMEMORY;
+         SCIP_ALLOC( BMSduplicateMemoryArray(&problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) );
       }
       else
       {
          BMScopyMemoryArray(problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle));
       }
+      problem->initguessrandom = false;
    }
    else
    {
@@ -1058,13 +1145,19 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 
    problem->lastniter = -1;
    problem->lasttime  = -1.0;
-   problem->lastsolinfeas = SCIP_INVALID;
+   problem->lastsolobjval = SCIP_INVALID;
+
+   // set initial point if not given
+   if( problem->initguess == NULL || problem->initguessrandom )
+   {
+      SCIP_CALL( generateInitGuess(scip, problem) );
+   }
 
    try
    {
       SmartPtr<SolveStatistics> stats;
 
-#ifdef SCIP_THREADSAFE
+#ifdef PROTECT_SOLVE_BY_MUTEX
       /* lock solve_mutex if Ipopt is going to use Mumps as linear solver
        * unlocking will happen in the destructor of guard, which is called when this block is left
        */
@@ -1086,7 +1179,6 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
           */
          if( (cap & (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)) != (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN) )
          {
-            /* @todo could enable Jacobian approximation in Ipopt */
             if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_FUNCVALUE) ||
                 !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_GRADIENT) )
             {
@@ -1107,15 +1199,15 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          }
 
 #ifdef SCIP_DEBUG
-         // enabling the derivative tester leads to calling TNLP::get_starting_point() twice, which has undesired consequences if the starting point is generated randomly
-         // so we don't enable derivative tester if SCIP_DEBUG is defined for now
-         // problem->ipopt->Options()->SetStringValue("derivative_test", problem->nlp->approxhessian ? "first-order" : "second-order");
+         problem->ipopt->Options()->SetStringValue("derivative_test", problem->nlp->approxhessian ? "first-order" : "second-order");
 #endif
 
          status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
       }
       else
       {
+         // TODO to be strict, we should check whether the eval capability has been changed and the Hessian approximation needs to be enabled (in which case we should call OptimizeTNLP instead)
+         problem->ipopt->Options()->SetStringValue("warm_start_same_structure", problem->samestructure ? "yes" : "no");
          status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
       }
 
@@ -1143,14 +1235,18 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
             problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
             break;
-         default: ;
+         default:
+            // ipopt should, at least, have been properly initialized, so can warmstart next time
+            problem->firstrun = false;
+            problem->samestructure = true;
+            break;
       }
 
       stats = problem->ipopt->Statistics();
       if( IsValid(stats) )
       {
          problem->lastniter = stats->IterationCount();
-         problem->lasttime  = stats->TotalCPUTime();
+         problem->lasttime  = stats->TotalWallclockTime();
       }
       else
       {
@@ -1164,8 +1260,6 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       SCIPerrorMessage("Ipopt returned with exception: %s\n", except.Message().c_str());
       return SCIP_ERROR;
    }
-
-   problem->firstrun = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1234,15 +1328,7 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
       *varubdualvalues = problem->lastsoldualvarub;
 
    if( objval != NULL )
-   {
-      if( problem->lastsolprimals != NULL )
-      {
-         /* TODO store last solution value instead of reevaluating the objective function */
-         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(scip, problem->oracle, problem->lastsolprimals, objval) );
-      }
-      else
-         *objval = SCIP_INVALID;
-   }
+      *objval = problem->lastsolobjval;
 
    return SCIP_OKAY;
 }
@@ -1341,7 +1427,6 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
    assert(problem != NULL);
    assert(IsValid(problem->ipopt));
 
-   //@TODO try-catch block for Ipopt exceptions
    switch( type )
    {
    case SCIP_NLPPAR_FROMSCRATCH:
@@ -1523,7 +1608,6 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
       if( ival == 0 || ival == 1 )
       {
          problem->fastfail = (bool)ival;
-         problem->storeintermediate = (bool)ival;
       }
       else
       {
@@ -1578,7 +1662,8 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 
    case SCIP_NLPPAR_FEASTOL:
    {
-      (void) problem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", *dval, "");
+      (void) problem->ipopt->Options()->GetNumericValue("constr_viol_tol", *dval, "");
+      *dval /= FEASTOLFACTOR;
       break;
    }
 
@@ -1602,7 +1687,11 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 
    case SCIP_NLPPAR_TILIM:
    {
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+      (void) problem->ipopt->Options()->GetNumericValue("max_wall_time", *dval, "");
+#else
       (void) problem->ipopt->Options()->GetNumericValue("max_cpu_time", *dval, "");
+#endif
       break;
    }
 
@@ -1702,7 +1791,11 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
       if( dval >= 0.0 )
       {
          /* Ipopt doesn't like a setting of exactly 0 for the max_cpu_time, so increase as little as possible in that case */
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+         (void) problem->ipopt->Options()->SetNumericValue("max_wall_time", MAX(dval, DBL_MIN));
+#else
          (void) problem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(dval, DBL_MIN));
+#endif
       }
       else
       {
@@ -1890,7 +1983,6 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
          SCIPerrorMessage("Error initializing Ipopt using optionfile \"%s\"\n", problem->optfile.c_str());
          return SCIP_ERROR;
       }
-      (void) problem->ipopt->Options()->GetBoolValue("store_intermediate", problem->storeintermediate, "");
       problem->firstrun = TRUE;
 
       return SCIP_OKAY;
@@ -1951,7 +2043,7 @@ const char* SCIPgetSolverNameIpopt(void)
 /** gets string that describes Ipopt */
 const char* SCIPgetSolverDescIpopt(void)
 {
-   return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
+   return "Interior Point Optimizer developed by A. Waechter et.al. (github.com/coin-or/Ipopt)";
 }
 
 /** returns whether Ipopt is available, i.e., whether it has been linked in */
@@ -2073,7 +2165,7 @@ bool ScipNLP::get_bounds_info(
 
    /* Ipopt performs better when unused variables do not appear, which we can achieve by fixing them,
     * since Ipopts TNLPAdapter will hide them from Ipopts NLP. In the dual solution, bound multipliers (z_L, z_U)
-    * for fixed variables have value 0.0.
+    * for these variables should have value 0.0 (they are set to -grad Lagrangian).
     */
    for( int i = 0; i < n; ++i )
    {
@@ -2119,72 +2211,12 @@ bool ScipNLP::get_starting_point(
 
    if( init_x )
    {
-      if( nlpiproblem->initguess )
-      {
-         BMScopyMemoryArray(x, nlpiproblem->initguess, n);
-      }
-      else
-      {
-         SCIP_Real lb, ub;
-
-         SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds\n");
-
-         for( int i = 0; i < n; ++i )
-         {
-            lb = SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle)[i];
-            ub = SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle)[i];
-            if( lb > 0.0 )
-               x[i] = SCIPrandomGetReal(randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
-            else if( ub < 0.0 )
-               x[i] = SCIPrandomGetReal(randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
-            else
-               x[i] = SCIPrandomGetReal(randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
-         }
-      }
+      assert(nlpiproblem->initguess != NULL);
+      BMScopyMemoryArray(x, nlpiproblem->initguess, n);
    }
+
    if( init_z || init_lambda )
       return false;
-
-   return true;
-}
-
-/** Method to return the variables linearity. */
-bool ScipNLP::get_variables_linearity(
-   Index              n,                  /**< number of variables */ 
-   LinearityType*     var_types           /**< buffer to store linearity types of variables */
-   )
-{
-   assert(nlpiproblem != NULL);
-   assert(nlpiproblem->oracle != NULL);
-
-   assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
-
-   for( int i = 0; i < n; ++i )
-   {
-      int vardegree;
-      if( SCIPnlpiOracleGetVarDegree(scip, nlpiproblem->oracle, i, &vardegree) != SCIP_OKAY )
-         return false;
-      var_types[i] = vardegree <= 1 ? LINEAR : NON_LINEAR;
-   }
-
-   return true;
-}
-
-/** Method to return the constraint linearity. */
-bool ScipNLP::get_constraints_linearity(
-   Index              m,                  /**< number of constraints */
-   LinearityType*     const_types         /**< buffer to store linearity types of constraints */
-   )
-{
-   int i;
-
-   assert(nlpiproblem != NULL);
-   assert(nlpiproblem->oracle != NULL);
-
-   assert(m == SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
-
-   for( i = 0; i < m; ++i )
-      const_types[i] = (SCIPnlpiOracleGetConstraintDegree(nlpiproblem->oracle, i) <= 1 ? LINEAR : NON_LINEAR);
 
    return true;
 }
@@ -2204,8 +2236,8 @@ Index ScipNLP::get_number_of_nonlinear_variables()
    for( int i = 0; i < n; ++i )
    {
       int vardegree;
-      if( SCIPnlpiOracleGetVarDegree(scip, nlpiproblem->oracle, i, &vardegree) != FALSE )
-         return -1;  // TODO what is the right way to report an error back to Ipopt here?
+      if( SCIPnlpiOracleGetVarDegree(scip, nlpiproblem->oracle, i, &vardegree) != SCIP_OKAY )
+         return -1;  // this will make Ipopt assume that all variables are nonlinear, which I guess is ok if we got an error here
       if( vardegree > 1 )
          ++count;
    }
@@ -2314,6 +2346,10 @@ bool ScipNLP::eval_f(
 
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
 
+   if( new_x )
+      ++current_x;
+   last_f_eval_x = current_x;
+
    return SCIPnlpiOracleEvalObjectiveValue(scip, nlpiproblem->oracle, x, &obj_value) == SCIP_OKAY;
 }
 
@@ -2332,7 +2368,18 @@ bool ScipNLP::eval_grad_f(
 
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
 
-   return SCIPnlpiOracleEvalObjectiveGradient(scip, nlpiproblem->oracle, x, TRUE, &dummy, grad_f) == SCIP_OKAY;
+   if( new_x )
+      ++current_x;
+   else
+   {
+      // pass new_x = TRUE to objective gradient eval iff we have not evaluated the objective function at this point yet
+      new_x = last_f_eval_x < current_x;
+   }
+   // if we evaluate the objective gradient with new_x = true, then this will also evaluate the objective function
+   // (and if we do with new_x = false, then we already have last_f_eval_x == current_x anyway)
+   last_f_eval_x = current_x;
+
+   return SCIPnlpiOracleEvalObjectiveGradient(scip, nlpiproblem->oracle, x, new_x, &dummy, grad_f) == SCIP_OKAY;
 }
 
 /** Method to return the constraint residuals */  /*lint -e{715}*/
@@ -2348,6 +2395,10 @@ bool ScipNLP::eval_g(
    assert(nlpiproblem->oracle != NULL);
 
    assert(n == SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
+
+   if( new_x )
+      ++current_x;
+   last_g_eval_x = current_x;
 
    return SCIPnlpiOracleEvalConstraintValues(scip, nlpiproblem->oracle, x, g) == SCIP_OKAY;
 }
@@ -2397,7 +2448,18 @@ bool ScipNLP::eval_jac_g(
    }
    else
    {
-      if( SCIPnlpiOracleEvalJacobian(scip, nlpiproblem->oracle, x, TRUE, NULL, values) != SCIP_OKAY )
+      if( new_x )
+         ++current_x;
+      else
+      {
+         // pass new_x = TRUE to Jacobian eval iff we have not evaluated the constraint functions at this point yet
+         new_x = last_g_eval_x < current_x;
+      }
+      // if we evaluate the Jacobian with new_x = true, then this will also evaluate the constraint functions
+      // (and if we do with new_x = false, then we already have last_g_eval_x == current_x anyway)
+      last_f_eval_x = current_x;
+
+      if( SCIPnlpiOracleEvalJacobian(scip, nlpiproblem->oracle, x, new_x, NULL, values) != SCIP_OKAY )
          return false;
    }
 
@@ -2452,7 +2514,22 @@ bool ScipNLP::eval_h(
    }
    else
    {
-      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, TRUE, obj_factor, lambda, values) != SCIP_OKAY )
+      bool new_x_obj = new_x;
+      bool new_x_cons = new_x;
+      if( new_x )
+         ++current_x;
+      else
+      {
+         // pass new_x_obj = TRUE iff we have not evaluated the objective function at this point yet
+         // pass new_x_cons = TRUE iff we have not evaluated the constraint functions at this point yet
+         new_x_obj = last_f_eval_x < current_x;
+         new_x_cons = last_g_eval_x < current_x;
+      }
+      // evaluating Hessians with new_x will also evaluate the functions itself
+      last_f_eval_x = current_x;
+      last_g_eval_x = current_x;
+
+      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, new_x_obj, new_x_cons, obj_factor, lambda, values) != SCIP_OKAY )
          return false;
    }
 
@@ -2479,57 +2556,6 @@ bool ScipNLP::intermediate_callback(
    IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
    )
 {  /*lint --e{715}*/
-   if( nlpiproblem->storeintermediate && mode == RegularMode && inf_pr < nlpiproblem->lastsolinfeas )
-   {
-      Ipopt::TNLPAdapter* tnlp_adapter;
-
-      tnlp_adapter = NULL;
-      if( ip_cq != NULL )
-      {
-         Ipopt::OrigIpoptNLP* orignlp;
-
-         orignlp = dynamic_cast<OrigIpoptNLP*>(GetRawPtr(ip_cq->GetIpoptNLP()));
-         if( orignlp != NULL )
-            tnlp_adapter = dynamic_cast<TNLPAdapter*>(GetRawPtr(orignlp->nlp()));
-      }
-
-      if( tnlp_adapter != NULL && ip_data != NULL && IsValid(ip_data->curr()) )
-      {
-         SCIPdebugMsg(scip, "update lastsol: inf_pr old = %g -> new = %g\n", nlpiproblem->lastsolinfeas, inf_pr);
-
-         if( nlpiproblem->lastsolprimals == NULL )
-         {
-            assert(nlpiproblem->lastsoldualcons == NULL);
-            assert(nlpiproblem->lastsoldualvarlb == NULL);
-            assert(nlpiproblem->lastsoldualvarub == NULL);
-            if( BMSallocMemoryArray(&nlpiproblem->lastsolprimals, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL ||
-               BMSallocMemoryArray(&nlpiproblem->lastsoldualcons, SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle)) == NULL ||
-               BMSallocMemoryArray(&nlpiproblem->lastsoldualvarlb, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL ||
-               BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, SCIPnlpiOracleGetNVars(nlpiproblem->oracle)) == NULL )
-            {
-               SCIPerrorMessage("out-of-memory in ScipNLP::intermediate_callback()\n");
-               return true;
-            }
-         }
-
-         assert(IsValid(ip_data->curr()->x()));
-         tnlp_adapter->ResortX(*ip_data->curr()->x(), nlpiproblem->lastsolprimals);
-         nlpiproblem->lastsolinfeas = inf_pr;
-
-         assert(IsValid(ip_data->curr()->y_c()));
-         assert(IsValid(ip_data->curr()->y_d()));
-         tnlp_adapter->ResortG(*ip_data->curr()->y_c(), *ip_data->curr()->y_d(), nlpiproblem->lastsoldualcons);
-
-         // need to clear arrays first because ResortBnds only sets values for non-fixed variables
-         BMSclearMemoryArray(nlpiproblem->lastsoldualvarlb, SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
-         BMSclearMemoryArray(nlpiproblem->lastsoldualvarub, SCIPnlpiOracleGetNVars(nlpiproblem->oracle));
-         assert(IsValid(ip_data->curr()->z_L()));
-         assert(IsValid(ip_data->curr()->z_U()));
-         tnlp_adapter->ResortBnds(*ip_data->curr()->z_L(), nlpiproblem->lastsoldualvarlb, *ip_data->curr()->z_U(), nlpiproblem->lastsoldualvarub);
-
-      }
-   }
-
    /* do convergence test if fastfail is enabled */
    if( nlpiproblem->fastfail )
    {
@@ -2663,8 +2689,6 @@ void ScipNLP::finalize_solution(
       break;
 
    case LOCAL_INFEASIBILITY:
-      /* still check feasibility, since we let Ipopt solve with higher tolerance than actually required */
-      check_feasibility = true;
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
@@ -2704,70 +2728,48 @@ void ScipNLP::finalize_solution(
       break;
    }
 
-   /* if Ipopt reports its solution as locally infeasible or we don't know feasibility, then report the intermediate point with lowest constraint violation, if available */
-   if( (x == NULL || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE || nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_UNKNOWN) && nlpiproblem->lastsolinfeas != SCIP_INVALID )  /*lint !e777*/
-   {
-      /* if infeasibility of lastsol is not invalid, then lastsol values should exist */
-      assert(nlpiproblem->lastsolprimals != NULL);
-      assert(nlpiproblem->lastsoldualcons != NULL);
-      assert(nlpiproblem->lastsoldualvarlb != NULL);
-      assert(nlpiproblem->lastsoldualvarub != NULL);
+   assert(x != NULL);
+   assert(lambda != NULL);
+   assert(z_L != NULL);
+   assert(z_U != NULL);
 
-      /* check if lastsol is feasible */
-      Number constrvioltol;
-      (void) nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
-      if( nlpiproblem->lastsolinfeas <= constrvioltol )
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-      else
+   if( nlpiproblem->lastsolprimals == NULL )
+   {
+      assert(nlpiproblem->lastsoldualcons == NULL);
+      assert(nlpiproblem->lastsoldualvarlb == NULL);
+      assert(nlpiproblem->lastsoldualvarub == NULL);
+      BMSallocMemoryArray(&nlpiproblem->lastsolprimals,   n);
+      BMSallocMemoryArray(&nlpiproblem->lastsoldualcons,  m);
+      BMSallocMemoryArray(&nlpiproblem->lastsoldualvarlb, n);
+      BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, n);
+
+      if( nlpiproblem->lastsolprimals == NULL || nlpiproblem->lastsoldualcons == NULL ||
+         nlpiproblem->lastsoldualvarlb == NULL || nlpiproblem->lastsoldualvarub == NULL )
+      {
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-
-      SCIPdebugMsg(scip, "drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead (acceptable: %g)\n",
-         nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas, constrvioltol);
+         nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
+         return;
+      }
    }
-   else
+
+   BMScopyMemoryArray(nlpiproblem->lastsolprimals, x, n);
+   BMScopyMemoryArray(nlpiproblem->lastsoldualcons, lambda, m);
+   BMScopyMemoryArray(nlpiproblem->lastsoldualvarlb, z_L, n);
+   BMScopyMemoryArray(nlpiproblem->lastsoldualvarub, z_U, n);
+   nlpiproblem->lastsolobjval = obj_value;
+
+   if( check_feasibility && cq != NULL )
    {
-      assert(x != NULL);
-      assert(lambda != NULL);
-      assert(z_L != NULL);
-      assert(z_U != NULL);
+      Number constrviol;
+      Number constrvioltol;
 
-      if( nlpiproblem->lastsolprimals == NULL )
-      {
-         assert(nlpiproblem->lastsoldualcons == NULL);
-         assert(nlpiproblem->lastsoldualvarlb == NULL);
-         assert(nlpiproblem->lastsoldualvarub == NULL);
-         BMSallocMemoryArray(&nlpiproblem->lastsolprimals,   n);
-         BMSallocMemoryArray(&nlpiproblem->lastsoldualcons,  m);
-         BMSallocMemoryArray(&nlpiproblem->lastsoldualvarlb, n);
-         BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, n);
+      constrviol = cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX);
 
-         if( nlpiproblem->lastsolprimals == NULL || nlpiproblem->lastsoldualcons == NULL ||
-            nlpiproblem->lastsoldualvarlb == NULL || nlpiproblem->lastsoldualvarub == NULL )
-         {
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-            nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
-            return;
-         }
-      }
-
-      BMScopyMemoryArray(nlpiproblem->lastsolprimals, x, n);
-      BMScopyMemoryArray(nlpiproblem->lastsoldualcons, lambda, m);
-      BMScopyMemoryArray(nlpiproblem->lastsoldualvarlb, z_L, n);
-      BMScopyMemoryArray(nlpiproblem->lastsoldualvarub, z_U, n);
-
-      if( check_feasibility && cq != NULL )
-      {
-         Number constrviol;
-         Number constrvioltol;
-
-         constrviol = cq->curr_constraint_violation();
-
-         (void) nlpiproblem->ipopt->Options()->GetNumericValue("acceptable_constr_viol_tol", constrvioltol, "");
-         if( constrviol <= constrvioltol )
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-         else if( nlpiproblem->lastsolstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      }
+      (void) nlpiproblem->ipopt->Options()->GetNumericValue("constr_viol_tol", constrvioltol, "");
+      if( constrviol <= constrvioltol/FEASTOLFACTOR )
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      else if( nlpiproblem->lastsolstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    }
 
    if( nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE )
@@ -2843,7 +2845,11 @@ SCIP_RETCODE LapackDsyev(
 {
    int info;
 
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
    IpLapackDsyev((bool)computeeigenvectors, N, a, N, w, info);
+#else
+   IpLapackSyev((bool)computeeigenvectors, N, a, N, w, info);
+#endif
 
    if( info != 0 )
    {
@@ -2878,7 +2884,11 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    BMScopyMemoryArray(bcopy, b, N);
 
    /* compute the LU factorization */
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
    IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+#else
+   IpLapackGetrf(N, Acopy, pivotcopy, N, info);
+#endif
 
    if( info != 0 )
    {
@@ -2890,7 +2900,11 @@ SCIP_RETCODE SCIPsolveLinearProb3(
       *success = TRUE;
 
       /* solve linear problem */
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
       IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+#else
+      IpLapackGetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+#endif
 
       /* copy the solution */
       BMScopyMemoryArray(x, bcopy, N);
@@ -2940,7 +2954,11 @@ SCIP_RETCODE SCIPsolveLinearProb(
    SCIP_ALLOC( BMSallocMemoryArray(&pivotcopy, N) );
 
    /* compute the LU factorization */
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
    IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+#else
+   IpLapackGetrf(N, Acopy, pivotcopy, N, info);
+#endif
 
    if( info != 0 )
    {
@@ -2952,7 +2970,11 @@ SCIP_RETCODE SCIPsolveLinearProb(
       *success = TRUE;
 
       /* solve linear problem */
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
       IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+#else
+      IpLapackGetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+#endif
 
       /* copy the solution */
       BMScopyMemoryArray(x, bcopy, N);

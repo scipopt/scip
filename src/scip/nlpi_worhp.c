@@ -53,7 +53,6 @@
 
 #define DEFAULT_VERBLEVEL      0                            /**< default verbosity level (0: normal 1: full 2: debug >2: more debug) */
 #define DEFAULT_SCALEDKKT      TRUE                         /**< default whether KKT conditions are allowed to be scaled in the solver */
-#define DEFAULT_MAXITER        3000                         /**< default iteration limit for Worhp */
 #define DEFAULT_RANDSEED       107                          /**< initial random seed */
 
 #define MAXPERTURB             0.01                         /**< maximal perturbation of bounds in starting point heuristic */
@@ -599,7 +598,7 @@ SCIP_RETCODE userHM(
 
    /* evaluate hessian */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hessianvals, problem->wsp->HM.nnz) );
-   retcode = SCIPnlpiOracleEvalHessianLag(scip, problem->oracle, problem->opt->X, TRUE, problem->wsp->ScaleObj,
+   retcode = SCIPnlpiOracleEvalHessianLag(scip, problem->oracle, problem->opt->X, TRUE, TRUE, problem->wsp->ScaleObj,
          problem->opt->Mu, hessianvals);
 
    if( retcode == SCIP_OKAY )
@@ -971,7 +970,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    (*problem)->timelim = SCIP_DEFAULT_INFINITY;
    (*problem)->fromscratch = 0;
    (*problem)->verblevel = DEFAULT_VERBLEVEL;
-   (*problem)->itlim = DEFAULT_MAXITER;
+   (*problem)->itlim = INT_MAX;
    (*problem)->fastfail = 0;
 
    /* create random number generator */

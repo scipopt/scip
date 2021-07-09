@@ -90,6 +90,7 @@ Performance improvements
 - improved under/overestimation of multidimensional vertex-polyhedral (e.g., multilinear or concave) functions by use of scaling and keeping the cut generating LP around
 - products in nonlinear constraints are no longer disaggregated for the extended formulation
 - no longer relax bounds of integral variables when computing bounds on activity in nonlinear constraints
+- revised and improved Ipopt interface
 
 Examples and applications
 -------------------------
@@ -137,6 +138,7 @@ NLP:
 - renamed SCIPsetNlRowExprtree() to SCIPsetNlRowExpr() and changed type of expr(tree) argument to SCIP_EXPR*
 - SCIPenableNLP() is no longer allowed in stages INITSOLVE and SOLVING
 - removed SCIPaddLinearConsToNlpHeurSubNlp()
+- SCIPhasNLPSolution() now returns true also if a infeasible solution to the NLP exists; SCIPcreateNLPSol() can now also be used when only an infeasible solution to the NLP exists
 
 exprinterpret:
 - removed functions that operated with SCIPInterval
@@ -344,7 +346,8 @@ nlpi:
 - replaced argument BMS_BLKMEM* blkmem of SCIPnlpiOracleCreate() by SCIP* scip
 - added argument SCIP* scip to SCIPnlpiOracleFree(), SCIPnlpiOracleSetProblemName(), SCIPnlpiOracleAddVars(), SCIPnlpiOracleAddConstraints(), SCIPnlpiOracleSetObjective(), SCIPnlpiOracleChgVarBounds(), SCIPnlpiOracleChgConsSides(), SCIPnlpiOracleDelVarSet(), SCIPnlpiOracleDelConsSet(), SCIPnlpiOracleChgLinearCoefs(), SCIPnlpiOracleChgObjConstant(), SCIPnlpiOracleGetVarDegree(), SCIPnlpiOracleGetVarDegrees(), SCIPnlpiOracleGetEvalCapability(), SCIPnlpiOracleEvalObjectiveValue(), SCIPnlpiOracleEvalConstraintValue(), SCIPnlpiOracleEvalConstraintValues(), SCIPnlpiOracleEvalObjectiveGradient(), SCIPnlpiOracleEvalConstraintGradient(), SCIPnlpiOracleGetJacobianSparsity(), SCIPnlpiOracleEvalJacobian(), SCIPnlpiOracleGetHessianLagSparsity(), SCIPnlpiOracleEvalHessianLag(), SCIPnlpiOraclePrintProblem(), SCIPnlpiOraclePrintProblemGams()
 - removed arguments nquadelems, quadelems, exprvaridxs, exprtrees from SCIPnlpiOracleAddConstraints(), added argument SCIP_EXPR** exprs
-- removed arugments nquadelems, quadelems, exprvaridxs, exprtree from SCIPnlpiOracleSetObjective(), added argument SCIP_EXPR* expr
+- removed arguments nquadelems, quadelems, exprvaridxs, exprtree from SCIPnlpiOracleSetObjective(), added argument SCIP_EXPR* expr
+- replaced arguments isnewx of SCIPnlpiOracleEvalHessianLag() by two arguments isnewx_obj and isnewx_cons
 - removed SCIPnlpiOracleChgExprtree(), use SCIPnlpiOracleChgExpr() instead
 - removed SCIPnlpiOracleSetInfinity(), SCIPnlpiOracleGetInfinity(), SCIPnlpiOracleChgQuadCoefs(), SCIPnlpiOracleChgExprParam(), SCIPnlpiOracleGetMaxDegree()
 - added argument int* vardegree to SCIPnlpiOracleGetVarDegree() and changed return type to SCIP_RETCODE
@@ -493,6 +496,8 @@ nlpi:
 - removed constraints/soc/generalsocupgrade, use nlhdlr/soc/compeigenvalues instead
 - changed default of presolving/qpkktref/maxrounds from -1 to 0
 - changed default of propagating/obbt/onlynonconvexvars from FALSE to TRUE
+- changed default of heuristics/subnlp/resolvetolfactor from 0.001 to 1.0
+- changed default of heuristics/subnlp/nlpiterlimit from 0 (no limit) to 3000
 
 ### New parameters
 
@@ -518,6 +523,7 @@ nlpi:
 - separating/rlt/priority, separating/rlt/freq, separating/rlt/maxbounddist, separating/rlt/delay, separating/rlt/expbackoff, separating/rlt/maxncuts, separating/rlt/maxunknownterms, separating/rlt/maxusedvars, separating/rlt/maxrounds, separating/rlt/maxroundsroot, separating/rlt/onlyeqrows, separating/rlt/onlycontrows, separating/rlt/onlyoriginal, separating/rlt/useinsubscip, separating/rlt/useprojection, separating/rlt/detecthidden, separating/rlt/hiddenrlt, separating/rlt/addtopool, separating/rlt/goodscore, separating/rlt/badscore, separating/rlt/objparalweight, separating/rlt/efficacyweight, separating/rlt/dircutoffdistweight, separating/rlt/goodmaxparall, separating/rlt/maxparall
 - table/nonlinear/active, table/exprhdlrs/active, table/quadratic_nlhdlr_table/active
 - expr/log/minzerodistance, expr/pow/minzerodistance
+- benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
 
 
 ### Data structures and types
@@ -650,6 +656,7 @@ Fixed bugs
 ----------
 
 - worked around a problem with derivatives of pow at 0 with non-integer exponents in CppAD
+- fixed that setting of feasiblity and optimiality tolerance for NLP relaxation was overwritten with defaults when solving NLP
 
 Miscellaneous
 -------------
