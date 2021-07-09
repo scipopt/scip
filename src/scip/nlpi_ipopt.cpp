@@ -2523,7 +2523,7 @@ bool ScipNLP::eval_h(
          // pass new_x_obj = TRUE iff we have not evaluated the objective function at this point yet
          // pass new_x_cons = TRUE iff we have not evaluated the constraint functions at this point yet
          new_x_obj = last_f_eval_x < current_x;
-         new_x_cons = last_f_eval_x < current_x;
+         new_x_cons = last_g_eval_x < current_x;
       }
       // evaluating Hessians with new_x will also evaluate the functions itself
       last_f_eval_x = current_x;
