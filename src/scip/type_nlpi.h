@@ -47,8 +47,8 @@ struct SCIP_NlpParam
    SCIP_Real             timelimit;          /**< time limit in seconds: use SCIP_REAL_MAX to use remaining time available for SCIP solve (limits/time - currenttime) */
    int                   iterlimit;          /**< iteration limit */
    unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
+   unsigned short        fastfail;           /**< whether the NLP solver should stop early if convergence is slow: 0 never, 1 conservatively, 2 quickly */
    SCIP_Bool             fromscratch;        /**< whether to start solve from scratch */
-   SCIP_Bool             fastfail;           /**< whether the NLP solver should stop early if convergence is slow */
    const char*           caller;             /**< name of file from which NLP is solved (it's fine to set this to NULL) */
 };
 /** parameters for NLP solve */
@@ -76,8 +76,8 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
    .timelimit   = SCIP_REAL_MAX,                   \
    .iterlimit   = INT_MAX,                         \
    .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL, \
+   .fastfail    = 1,                               \
    .fromscratch = FALSE,                           \
-   .fastfail    = FALSE,                           \
    .caller      = __FILE__
 
 /** default values for parameters
@@ -93,7 +93,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #else
 /** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
 static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
-   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, FALSE, FALSE, __FILE__
+   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, 1, FALSE, __FILE__
 };
 #define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif
@@ -110,11 +110,11 @@ static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
   "timelimit = %g, " \
   "iterlimit = %d, " \
   "verblevel = %hd, " \
+  "fastfail = %hd, " \
   "fromscratch = %d, " \
-  "fastfail = %d, " \
   "called by %s\n", \
   (param).lobjlimit, (param).feastol, (param).relobjtol, (param).timelimit, (param).iterlimit, \
-  (param).verblevel, (param).fromscratch, (param).fastfail, (param).caller != NULL ? (param).caller : "unknown"
+  (param).verblevel, (param).fastfail, (param).fromscratch, (param).caller != NULL ? (param).caller : "unknown"
 
 /** NLP solution status */
 enum SCIP_NlpSolStat

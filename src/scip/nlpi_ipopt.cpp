@@ -96,7 +96,7 @@ using namespace Ipopt;
 
 /* Convergence check (see ScipNLP::intermediate_callback)
  *
- * If the fastfail option is enabled, then we stop Ipopt if the reduction in
+ * If the fastfail option is set to 2, then we stop Ipopt if the reduction in
  * primal infeasibility is not sufficient for a consecutive number of iterations.
  * With the parameters as given below, we require Ipopt to
  * - not increase the primal infeasibility after 5 iterations
@@ -146,7 +146,6 @@ public:
 
    SmartPtr<IpoptApplication>  ipopt;        /**< Ipopt application */
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
-   bool                        fastfail;     /**< whether to stop Ipopt if convergence seems slow */
 
    bool                        firstrun;     /**< whether the next NLP solve will be the first one */
    bool                        samestructure;/**< whether the NLP solved next will still have the same (Ipopt-internal) structure (same number of variables, constraints, bounds, and nonzero pattern) */
@@ -166,7 +165,6 @@ public:
    /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL), randnumgen(NULL),
-        fastfail(false),
         firstrun(true), samestructure(true), initguessrandom(true), initguess(NULL),
         lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
         lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
@@ -542,8 +540,6 @@ SCIP_RETCODE handleNlpParam(
 
    (void) nlpiproblem->ipopt->Options()->SetIntegerValue("max_iter", param.iterlimit);
 
-   nlpiproblem->fastfail = param.fastfail;
-
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * param.feastol);
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("acceptable_constr_viol_tol", FEASTOLFACTOR * param.feastol);
 
@@ -566,6 +562,17 @@ SCIP_RETCODE handleNlpParam(
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("max_wall_time", MAX(param.timelimit, DBL_MIN));
 #else
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("max_cpu_time", MAX(param.timelimit, DBL_MIN));
+#endif
+
+   // disable acceptable-point heuristic iff fastfail is completely off
+   // it seems useful to have Ipopt stop when it obviously doesn't make progress (like one of the NLPs in the bendersqp ctest)
+   if( param.fastfail == 0 )
+      (void) nlpiproblem->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
+   else
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR > 14 || (IPOPT_VERSION_MINOR == 14 && IPOPT_VERSION_RELEASE >= 2)
+      (void) nlpiproblem->ipopt->Options()->UnsetValue("acceptable_iter");
+#else
+      (void) nlpiproblem->ipopt->Options()->SetIntegerValue("acceptable_iter", 15);  // 15 is the default
 #endif
 
    return SCIP_OKAY;
@@ -697,11 +704,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
-   // todo disable acceptable-point heuristic?
-   // it seems useful to have Ipopt stop when it obviously doesn't make progress (like one of the NLPs in the bendersqp ctest)
-   // maybe there should be some option to the NLPI to let the user control this
-   // (void) (*problem)->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
-   /* (void) (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
 
    /* apply user's given modifications to Ipopt's default settings */
    if( data->defoptions.length() > 0 )
@@ -1964,7 +1966,7 @@ bool ScipNLP::intermediate_callback(
    }
 
    /* do convergence test if fastfail is enabled */
-   if( nlpiproblem->fastfail )
+   if( param.fastfail >= 2 )
    {
       int i;
 
