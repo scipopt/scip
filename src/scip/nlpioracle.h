@@ -232,6 +232,12 @@ SCIP_RETCODE SCIPnlpiOracleGetVarDegrees(
    int**                 vardegrees          /**< buffer to return pointer to array of variable degrees */
    );
 
+/** gives constant term of objective */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiOracleGetObjectiveConstant(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   );
+
 /** gives left-hand side of a constraint */
 SCIP_EXPORT
 SCIP_Real SCIPnlpiOracleGetConstraintLhs(

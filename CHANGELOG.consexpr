@@ -469,6 +469,7 @@ nlpi:
 - added SCIPincludeNlpSolverWorhp()
 - added SCIPnlpiOracleChgExpr()
 - added SCIPcreateNlpiProblemFromNlRows()
+- added SCIPnlpiOracleGetObjectiveConstant()
 
 ### Command line interface
 

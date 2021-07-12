@@ -19,7 +19,6 @@
  * @author  Stefan Vigerske
  * @author  Benjamin Müller
  *
- * @todo warm starts
  * @todo if too few degrees of freedom, solve a slack-minimization problem instead?
  *
  * This file can only be compiled if Ipopt is available.
@@ -36,6 +35,7 @@
 #include "scip/scip_nlpi.h"
 #include "scip/scip_nlp.h"
 #include "scip/scip_randnumgen.h"
+#include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_general.h"
 #include "scip/scip_numerics.h"
@@ -149,26 +149,29 @@ public:
 
    bool                        firstrun;     /**< whether the next NLP solve will be the first one */
    bool                        samestructure;/**< whether the NLP solved next will still have the same (Ipopt-internal) structure (same number of variables, constraints, bounds, and nonzero pattern) */
-   bool                        initguessrandom; /**< whether the initial guess should be set to random values for the next solve */
-   SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
 
-   SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
-   SCIP_NLPTERMSTAT            lasttermstat; /**< termination status from last run */
-   SCIP_Real*                  lastsolprimals; /**< primal solution values from last run, if available */
-   SCIP_Real*                  lastsoldualcons; /**< dual solution values of constraints from last run, if available */
-   SCIP_Real*                  lastsoldualvarlb; /**< dual solution values of variable lower bounds from last run, if available */
-   SCIP_Real*                  lastsoldualvarub; /**< dual solution values of variable upper bounds from last run, if available */
-   SCIP_Real                   lastsolobjval;/**< objective function value in solution from last run */
+   SCIP_NLPSOLSTAT             solstat;      /**< status of current solution (if any) */
+   SCIP_NLPTERMSTAT            termstat;     /**< termination status of last solve (if any) */
+   bool                        solprimalvalid;/**< whether primal solution values are available (solprimals has meaningful values) */
+   bool                        solprimalgiven;/**< whether primal solution values were set by caller */
+   bool                        soldualvalid; /**< whether dual solution values are available (soldual* have meaningful values) */
+   bool                        soldualgiven; /**< whether dual solution values were set by caller */
+   SCIP_Real*                  solprimals;   /**< primal solution values, if available */
+   SCIP_Real*                  soldualcons;  /**< dual solution values of constraints, if available */
+   SCIP_Real*                  soldualvarlb; /**< dual solution values of variable lower bounds, if available */
+   SCIP_Real*                  soldualvarub; /**< dual solution values of variable upper bounds, if available */
+   SCIP_Real                   solobjval;    /**< objective function value in solution from last run */
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
    /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL), randnumgen(NULL),
-        firstrun(true), samestructure(true), initguessrandom(true), initguess(NULL),
-        lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER),
-        lastsolprimals(NULL), lastsoldualcons(NULL), lastsoldualvarlb(NULL), lastsoldualvarub(NULL),
-        lastsolobjval(SCIP_INVALID), lastniter(-1), lasttime(-1.0)
+        firstrun(true), samestructure(true),
+        solstat(SCIP_NLPSOLSTAT_UNKNOWN), termstat(SCIP_NLPTERMSTAT_OTHER),
+        solprimalvalid(false), solprimalgiven(false), soldualvalid(false), soldualgiven(false),
+        solprimals(NULL), soldualcons(NULL), soldualvarlb(NULL), soldualvarub(NULL),
+        solobjval(SCIP_INVALID), lastniter(-1), lasttime(-1.0)
    { }
 };
 
@@ -451,7 +454,20 @@ protected:
    void FlushBufferImpl() { }
 };
 
-/** clears the last solution arrays and sets the solstat and termstat to unknown and other, resp. */
+/** sets status codes to mark that last NLP solve is no longer valid (usually because the NLP changed) */
+static
+void invalidateSolved(
+   SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
+   )
+{
+   problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+   problem->termstat = SCIP_NLPTERMSTAT_OTHER;
+   problem->solobjval = SCIP_INVALID;
+   problem->lastniter = -1;
+   problem->lasttime  = -1.0;
+}
+
+/** sets solution values to be invalid and calls invalidateSolved() */
 static
 void invalidateSolution(
    SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
@@ -459,20 +475,20 @@ void invalidateSolution(
 {
    assert(problem != NULL);
 
-   BMSfreeMemoryArrayNull(&problem->lastsolprimals);
-   BMSfreeMemoryArrayNull(&problem->lastsoldualcons);
-   BMSfreeMemoryArrayNull(&problem->lastsoldualvarlb);
-   BMSfreeMemoryArrayNull(&problem->lastsoldualvarub);
-   problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-   problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
-   problem->lastsolobjval = SCIP_INVALID;
+   problem->solprimalvalid = false;
+   problem->solprimalgiven = false;
+   problem->soldualvalid = false;
+   problem->soldualgiven = false;
+
+   invalidateSolved(problem);
 }
 
-/** sets randomly generated initial guess */
+/** makes sure a starting point (initial guess) is available */
 static
-SCIP_RETCODE generateInitGuess(
+SCIP_RETCODE ensureStartingPoint(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
+   SCIP_NLPIPROBLEM*     problem,            /**< data structure of problem */
+   SCIP_Bool&            warmstart           /**< whether a warmstart has been request */
    )
 {
    SCIP_Real lb, ub;
@@ -480,7 +496,33 @@ SCIP_RETCODE generateInitGuess(
 
    assert(problem != NULL);
 
-   SCIPdebugMsg(scip, "Ipopt started without initial primal values; make up starting guess by projecting 0 onto variable bounds and adding a random perturbation\n");
+   // disable warmstart if no primal or dual solution values are available
+   if( warmstart && (!problem->solprimalvalid || !problem->soldualvalid ))
+   {
+      SCIPdebugMsg(scip, "Disable warmstart as no primal or dual solution available.\n");
+      warmstart = false;
+   }
+
+   // continue below with making up a random primal starting point if
+   // the user did not set a starting point and warmstart is disabled (so the last solution shouldn't be used)
+   // (if warmstart, then due to the checks above we must now have valid primal and dual solution values)
+   if( problem->solprimalgiven || warmstart )
+   {
+      // so we must have a primal solution to start from
+      // if warmstart, then we also need to have a dual solution to start from
+      assert(problem->solprimalvalid);
+      assert(problem->solprimals != NULL);
+      assert(!warmstart || problem->soldualgiven);
+      assert(!warmstart || problem->soldualcons != NULL);
+      assert(!warmstart || problem->soldualvarlb != NULL);
+      assert(!warmstart || problem->soldualvarub != NULL);
+      SCIPdebugMsg(scip, "Starting solution for %sstart available from %s.\n",
+         warmstart ? "warm" : "cold",
+         problem->solprimalgiven ? "user" : "previous solve");
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "Starting solution for coldstart not available. Making up something by projecting 0 onto variable bounds and adding a random perturbation.\n");
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);
 
@@ -489,9 +531,9 @@ SCIP_RETCODE generateInitGuess(
       SCIP_CALL( SCIPcreateRandom(scip, &problem->randnumgen, DEFAULT_RANDSEED, TRUE) );
    }
 
-   if( problem->initguess == NULL )
+   if( problem->solprimals == NULL )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->initguess, n) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->solprimals, n) );
    }
 
    for( int i = 0; i < n; ++i )
@@ -499,12 +541,13 @@ SCIP_RETCODE generateInitGuess(
       lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
       ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
       if( lb > 0.0 )
-         problem->initguess[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+         problem->solprimals[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
       else if( ub < 0.0 )
-         problem->initguess[i] = SCIPrandomGetReal(problem->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+         problem->solprimals[i] = SCIPrandomGetReal(problem->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
       else
-         problem->initguess[i] = SCIPrandomGetReal(problem->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+         problem->solprimals[i] = SCIPrandomGetReal(problem->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
    }
+   problem->solprimalvalid = true;
 
    return SCIP_OKAY;
 }
@@ -572,6 +615,13 @@ SCIP_RETCODE handleNlpParam(
 #else
       (void) nlpiproblem->ipopt->Options()->SetIntegerValue("acceptable_iter", 15);  // 15 is the default
 #endif
+
+   if( !nlpiproblem->ipopt->Options()->SetStringValue("warm_start_init_point", param.warmstart ? "yes" : "no") && !param.warmstart )
+   {
+      // if we cannot disable warmstarts in Ipopt, then we have a big problem
+      SCIPerrorMessage("Failed to set Ipopt warm_start_init_point option to no.");
+      return SCIP_ERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -735,25 +785,28 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 static
 SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
 {
+   int n;
+   int m;
+
    assert(nlpi     != NULL);
    assert(problem  != NULL);
    assert(*problem != NULL);
+   assert((*problem)->oracle != NULL);
 
-   if( (*problem)->oracle != NULL )
-   {
-      SCIP_CALL( SCIPnlpiOracleFree(scip, &(*problem)->oracle) );
-   }
+   n = SCIPnlpiOracleGetNVars((*problem)->oracle);
+   m = SCIPnlpiOracleGetNConstraints((*problem)->oracle);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &(*problem)->solprimals, n);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*problem)->soldualcons, m);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*problem)->soldualvarlb, n);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*problem)->soldualvarub, n);
+
+   SCIP_CALL( SCIPnlpiOracleFree(scip, &(*problem)->oracle) );
 
    if( (*problem)->randnumgen != NULL )
    {
       SCIPfreeRandom(scip, &(*problem)->randnumgen);
    }
-
-   BMSfreeMemoryArrayNull(&(*problem)->initguess);
-   BMSfreeMemoryArrayNull(&(*problem)->lastsolprimals);
-   BMSfreeMemoryArrayNull(&(*problem)->lastsoldualcons);
-   BMSfreeMemoryArrayNull(&(*problem)->lastsoldualvarlb);
-   BMSfreeMemoryArrayNull(&(*problem)->lastsoldualvarub);
 
    delete *problem;
    *problem = NULL;
@@ -791,15 +844,22 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerIpopt)
 static
 SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
 {
+   int oldnvars;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   oldnvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &problem->solprimals, oldnvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &problem->soldualvarlb, oldnvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &problem->soldualvarub, oldnvars);
+   invalidateSolution(problem);
+
    SCIP_CALL( SCIPnlpiOracleAddVars(scip, problem->oracle, nvars, lbs, ubs, varnames) );
 
    problem->samestructure = false;
-   BMSfreeMemoryArrayNull(&problem->initguess);
-   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -836,14 +896,21 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
 static
 SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
 {
+   int oldncons;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   oldncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &problem->soldualcons, oldncons);
+   problem->soldualvalid = false;
+   problem->soldualgiven = false;
+
    SCIP_CALL( SCIPnlpiOracleAddConstraints(scip, problem->oracle, nconss, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
 
    problem->samestructure = false;
-   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }
@@ -885,7 +952,8 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle, constant, nlins, lininds, linvals, expr) );
 
-   invalidateSolution(problem);
+   /* keep solution as valid, but reset solve status and objective value */
+   invalidateSolved(problem);
 
    return SCIP_OKAY;
 }
@@ -909,25 +977,36 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 
    /* Check whether the structure of the Ipopt internal NLP changes, if problem->samestructure at the moment.
     * We need to check whether variables become fixed or unfixed and whether bounds are added or removed.
+    *
+    * Project primal solution onto new bounds if currently valid.
     */
-   for( int i = 0; i < nvars && problem->samestructure; ++i )
+   if( problem->samestructure || problem->solprimalvalid )
    {
-      SCIP_Real oldlb;
-      SCIP_Real oldub;
-      oldlb = SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]];
-      oldub = SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]];
+      for( int i = 0; i < nvars; ++i )
+      {
+         SCIP_Real oldlb;
+         SCIP_Real oldub;
+         oldlb = SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]];
+         oldub = SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]];
 
-      if( (oldlb == oldub) != (lbs[i] == ubs[i]) )  /*lint !e777*/
-         problem->samestructure = false;
-      else if( SCIPisInfinity(scip, -oldlb) != SCIPisInfinity(scip, -lbs[i]) )
-         problem->samestructure = false;
-      else if( SCIPisInfinity(scip,  oldub) != SCIPisInfinity(scip,  ubs[i]) )
-         problem->samestructure = false;
+         if( (oldlb == oldub) != (lbs[i] == ubs[i]) )  /*lint !e777*/
+            problem->samestructure = false;
+         else if( SCIPisInfinity(scip, -oldlb) != SCIPisInfinity(scip, -lbs[i]) )
+            problem->samestructure = false;
+         else if( SCIPisInfinity(scip,  oldub) != SCIPisInfinity(scip,  ubs[i]) )
+            problem->samestructure = false;
+
+         if( problem->solprimalvalid )
+         {
+            assert(problem->solprimals != NULL);
+            problem->solprimals[i] = MIN(MAX(problem->solprimals[indices[i]], lbs[i]), ubs[i]);
+         }
+      }
    }
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, problem->oracle, nvars, indices, lbs, ubs) );
 
-   invalidateSolution(problem);
+   invalidateSolved(problem);
 
    return SCIP_OKAY;
 }
@@ -969,7 +1048,7 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesIpopt)
 
    SCIP_CALL( SCIPnlpiOracleChgConsSides(scip, problem->oracle, nconss, indices, lhss, rhss) );
 
-   invalidateSolution(problem);
+   invalidateSolved(problem);
 
    return SCIP_OKAY;
 }
@@ -988,6 +1067,8 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesIpopt)
 static
 SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
 {
+   int nvars;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
@@ -995,24 +1076,51 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
 
    SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, problem->oracle, dstats) );
 
-   if( problem->initguess != NULL && !problem->initguessrandom )
+   nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
+   if( problem->solprimalvalid || problem->soldualvalid )
    {
-      // update initguess if we won't overwrite with a random one in the next solve
+      // update existing solution, if valid
+      assert(!problem->solprimalvalid || problem->solprimals != NULL);
+      assert(!problem->soldualvalid || problem->soldualvarlb != NULL);
+      assert(!problem->soldualvalid || problem->soldualvarub != NULL);
+
       int i;
       for( i = 0; i < dstatssize; ++i )
       {
          if( dstats[i] != -1 )
          {
             assert(dstats[i] >= 0);
-            assert(dstats[i] < SCIPnlpiOracleGetNVars(problem->oracle));
-            problem->initguess[dstats[i]] = problem->initguess[i];
+            assert(dstats[i] < nvars);
+            if( problem->solprimals != NULL )
+               problem->solprimals[dstats[i]] = problem->solprimals[i];
+            if( problem->soldualvarlb != NULL )
+            {
+               assert(problem->soldualvarub != NULL);
+               problem->soldualvarlb[dstats[i]] = problem->soldualvarlb[i];
+               problem->soldualvarub[dstats[i]] = problem->soldualvarub[i];
+            }
          }
       }
    }
 
+   /* resize solution point arrays */
+   if( problem->solprimals != NULL )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &problem->solprimals, dstatssize, nvars) );
+   }
+   if( problem->soldualvarlb != NULL )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &problem->soldualvarlb, dstatssize, nvars) );
+   }
+   if( problem->soldualvarub != NULL )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &problem->soldualvarub, dstatssize, nvars) );
+   }
+
    problem->samestructure = false;
 
-   invalidateSolution(problem);
+   invalidateSolved(problem);
 
    return SCIP_OKAY;
 }
@@ -1030,15 +1138,43 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
 static
 SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetIpopt)
 {
+   int ncons;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+   assert(SCIPnlpiOracleGetNConstraints(problem->oracle) == dstatssize);
 
    SCIP_CALL( SCIPnlpiOracleDelConsSet(scip, problem->oracle, dstats) );
 
+   ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
+
+   if( problem->soldualvalid )
+   {
+      // update existing dual solution
+      assert(problem->soldualcons != NULL);
+
+      int i;
+      for( i = 0; i < dstatssize; ++i )
+      {
+         if( dstats[i] != -1 )
+         {
+            assert(dstats[i] >= 0);
+            assert(dstats[i] < ncons);
+            problem->soldualcons[dstats[i]] = problem->soldualcons[i];
+         }
+      }
+   }
+
+   /* resize dual solution point array */
+   if( problem->soldualcons != NULL )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &problem->soldualcons, dstatssize, ncons) );
+   }
+
    problem->samestructure = false;
 
-   invalidateSolution(problem);
+   invalidateSolved(problem);
 
    return SCIP_OKAY;
 }
@@ -1064,7 +1200,7 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
 
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, problem->oracle, idx, nvals, varidxs, vals) );
 
-   invalidateSolution(problem);
+   invalidateSolved(problem);
 
    return SCIP_OKAY;
 }
@@ -1087,7 +1223,7 @@ SCIP_DECL_NLPICHGEXPR(nlpiChgExprIpopt)
    SCIP_CALL( SCIPnlpiOracleChgExpr(scip, problem->oracle, idxcons, expr) );
 
    problem->samestructure = false;  // nonzero patterns may have changed
-   invalidateSolution(problem);
+   invalidateSolved(problem);
 
    return SCIP_OKAY;
 }
@@ -1102,11 +1238,18 @@ SCIP_DECL_NLPICHGEXPR(nlpiChgExprIpopt)
 static
 SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantIpopt)
 {
+   SCIP_Real oldconstant;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   oldconstant = SCIPnlpiOracleGetObjectiveConstant(problem->oracle);
+
    SCIP_CALL( SCIPnlpiOracleChgObjConstant(scip, problem->oracle, objconstant) );
+
+   if( problem->solobjval != SCIP_INVALID )
+      problem->solobjval += objconstant - oldconstant;
 
    return SCIP_OKAY;
 }
@@ -1124,25 +1267,68 @@ SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantIpopt)
 static
 SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
 {
+   int nvars;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
    if( primalvalues != NULL )
    {
-      if( !problem->initguess )
+      // copy primal solution
+      SCIPdebugMsg(scip, "set initial guess primal values to user-given\n");
+      if( problem->solprimals == NULL )
       {
-         SCIP_ALLOC( BMSduplicateMemoryArray(&problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->solprimals, nvars) );
       }
-      else
-      {
-         BMScopyMemoryArray(problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle));
-      }
-      problem->initguessrandom = false;
+      BMScopyMemoryArray(problem->solprimals, primalvalues, nvars);
+      problem->solprimalvalid = true;
+      problem->solprimalgiven = true;
    }
    else
    {
-      BMSfreeMemoryArrayNull(&problem->initguess);
+      // invalid current primal solution (if any)
+      if( problem->solprimalvalid )
+      {
+         SCIPdebugMsg(scip, "invalidate initial guess primal values on user-request\n");
+      }
+      problem->solprimalvalid = false;
+      problem->solprimalgiven = false;
+   }
+
+   if( consdualvalues != NULL && varlbdualvalues != NULL && varubdualvalues != NULL )
+   {
+      // copy dual solution, if completely given
+      SCIPdebugMsg(scip, "set initial guess dual values to user-given\n");
+      int ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
+      if( problem->soldualcons == NULL )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->soldualcons, ncons) );
+      }
+      BMScopyMemoryArray(problem->soldualcons, consdualvalues, ncons);
+
+      assert((problem->soldualvarlb == NULL) == (problem->soldualvarub == NULL));
+      if( problem->soldualvarlb != NULL )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->soldualvarlb, nvars) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->soldualvarub, nvars) );
+      }
+      BMScopyMemoryArray(problem->soldualvarlb, varlbdualvalues, nvars);
+      BMScopyMemoryArray(problem->soldualvarub, varubdualvalues, nvars);
+      problem->soldualvalid = true;
+      problem->soldualgiven = true;
+   }
+   else
+   {
+      // invalid current dual solution (if any)
+      if( problem->soldualvalid )
+      {
+         SCIPdebugMsg(scip, "invalidate initial guess dual values\n");
+      }
+      problem->soldualvalid = false;
+      problem->soldualgiven = false;
    }
 
    return SCIP_OKAY;
@@ -1173,24 +1359,23 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       /* there is nothing we can do if we are not given any time */
       problem->lastniter = 0;
       problem->lasttime = 0.0;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
-      problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
+      problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
 
       return SCIP_OKAY;
    }
 
+   // change status info to unsolved, just in case
+   invalidateSolved(problem);
+
+   // ensure a starting point is available
+   // also disables param.warmstart if no warmstart available
+   SCIP_CALL( ensureStartingPoint(scip, problem, param.warmstart) );
+
+   // tell NLP that we are about to start a new solve
    problem->nlp->initializeSolve(problem, param);
 
-   problem->lastniter = -1;
-   problem->lasttime  = -1.0;
-   problem->lastsolobjval = SCIP_INVALID;
-
-   // set initial point if not given
-   if( problem->initguess == NULL || problem->initguessrandom )
-   {
-      SCIP_CALL( generateInitGuess(scip, problem) );
-   }
-
+   // set Ipopt parameters
    SCIP_CALL( handleNlpParam(scip, problem, param) );
 
    try
@@ -1223,8 +1408,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
                 !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_GRADIENT) )
             {
                SCIPerrorMessage("Do not have expression interpreter that can compute function values and gradients. Cannot solve NLP with Ipopt.\n");
-               problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-               problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
+               problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+               problem->termstat = SCIP_NLPTERMSTAT_OTHER;
                return SCIP_OKAY;
             }
 
@@ -1253,33 +1438,57 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 
       // catch the very bad status codes
       switch( status ) {
+         // everything better than Not_Enough_Degrees_Of_Freedom is a non-serious error
+         case Solve_Succeeded:
+         case Solved_To_Acceptable_Level:
+         case Infeasible_Problem_Detected:
+         case Search_Direction_Becomes_Too_Small:
+         case Diverging_Iterates:
+         case User_Requested_Stop:
+         case Feasible_Point_Found:
+         case Maximum_Iterations_Exceeded:
+         case Restoration_Failed:
+         case Error_In_Step_Computation:
+         case Maximum_CpuTime_Exceeded:
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+         case Maximum_WallTime_Exceeded:   // new in Ipopt 3.14
+            // if Ipopt >= 3.14, finalize_solution should always have been called if we get these status codes
+            // this should have left us with some solution (unless we ran out of memory in finalize_solution)
+            assert(problem->solprimalvalid || problem->termstat == SCIP_NLPTERMSTAT_OUTOFMEMORY);
+            assert(problem->soldualvalid || problem->termstat == SCIP_NLPTERMSTAT_OUTOFMEMORY);
+#endif
+            problem->firstrun = false;
+            problem->samestructure = true;
+            break;
+
+         case Not_Enough_Degrees_Of_Freedom:
+            assert(problem->termstat == SCIP_NLPTERMSTAT_OTHER);
+            assert(problem->solstat == SCIP_NLPSOLSTAT_UNKNOWN);
+            SCIPdebugMsg(scip, "NLP has too few degrees of freedom.\n");
+            break;
+
+         case Invalid_Number_Detected:
+            SCIPdebugMsg(scip, "Ipopt failed because of an invalid number in function or derivative value\n");
+            problem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
+            assert(problem->solstat == SCIP_NLPSOLSTAT_UNKNOWN);
+            break;
+
+         case Insufficient_Memory:
+            assert(problem->termstat == SCIP_NLPTERMSTAT_OTHER);
+            assert(problem->solstat == SCIP_NLPSOLSTAT_UNKNOWN);
+            SCIPerrorMessage("Ipopt returned with status \"Insufficient Memory\"\n");
+            return SCIP_NOMEMORY;
+
+         // the really bad ones that indicate rather a programming error
          case Invalid_Problem_Definition:
          case Invalid_Option:
          case Unrecoverable_Exception:
          case NonIpopt_Exception_Thrown:
+         case Internal_Error:
+            assert(problem->termstat == SCIP_NLPTERMSTAT_OTHER);
+            assert(problem->solstat == SCIP_NLPSOLSTAT_UNKNOWN);
             SCIPerrorMessage("Ipopt returned with application return status %d\n", status);
             return SCIP_ERROR;
-         case Internal_Error:
-            // could be a fail in the linear solver
-            SCIPerrorMessage("Ipopt returned with status \"Internal Error\"\n");
-            invalidateSolution(problem);
-            problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-            problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-            break;
-         case Insufficient_Memory:
-            SCIPerrorMessage("Ipopt returned with status \"Insufficient Memory\"\n");
-            return SCIP_NOMEMORY;
-         case Invalid_Number_Detected:
-            SCIPdebugMsg(scip, "Ipopt failed because of an invalid number in function or derivative value\n");
-            invalidateSolution(problem);
-            problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-            problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERROR;
-            break;
-         default:
-            // ipopt should, at least, have been properly initialized, so can warmstart next time
-            problem->firstrun = false;
-            problem->samestructure = true;
-            break;
       }
 
       stats = problem->ipopt->Statistics();
@@ -1290,7 +1499,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       }
       else
       {
-         /* Ipopt does not provide access to the statistics when all variables have been fixed */
+         /* Ipopt does not provide access to the statistics if there was a serious error */
          problem->lastniter = 0;
          problem->lasttime  = 0.0;
       }
@@ -1318,7 +1527,7 @@ SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatIpopt)
    assert(nlpi != NULL);
    assert(problem != NULL);
 
-   return problem->lastsolstat;
+   return problem->solstat;
 }
 
 /** gives termination reason
@@ -1335,7 +1544,7 @@ SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatIpopt)
    assert(nlpi != NULL);
    assert(problem != NULL);
 
-   return problem->lasttermstat;
+   return problem->termstat;
 }
 
 /** gives primal and dual solution values
@@ -1356,19 +1565,19 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
    assert(problem != NULL);
 
    if( primalvalues != NULL )
-      *primalvalues = problem->lastsolprimals;
+      *primalvalues = problem->solprimals;
 
    if( consdualvalues != NULL )
-      *consdualvalues = problem->lastsoldualcons;
+      *consdualvalues = problem->soldualcons;
 
    if( varlbdualvalues != NULL )
-      *varlbdualvalues = problem->lastsoldualvarlb;
+      *varlbdualvalues = problem->soldualvarlb;
 
    if( varubdualvalues != NULL )
-      *varubdualvalues = problem->lastsoldualvarub;
+      *varubdualvalues = problem->soldualvarub;
 
    if( objval != NULL )
-      *objval = problem->lastsolobjval;
+      *objval = problem->solobjval;
 
    return SCIP_OKAY;
 }
@@ -1602,12 +1811,26 @@ bool ScipNLP::get_starting_point(
 
    if( init_x )
    {
-      assert(nlpiproblem->initguess != NULL);
-      BMScopyMemoryArray(x, nlpiproblem->initguess, n);
+      assert(nlpiproblem->solprimalvalid);
+      assert(nlpiproblem->solprimals != NULL);
+      BMScopyMemoryArray(x, nlpiproblem->solprimals, n);
    }
 
-   if( init_z || init_lambda )
-      return false;
+   if( init_z )
+   {
+      assert(nlpiproblem->soldualvalid);
+      assert(nlpiproblem->soldualvarlb != NULL);
+      assert(nlpiproblem->soldualvarub != NULL);
+      BMScopyMemoryArray(z_L, nlpiproblem->soldualvarlb, n);
+      BMScopyMemoryArray(z_U, nlpiproblem->soldualvarub, n);
+   }
+
+   if( init_lambda )
+   {
+      assert(nlpiproblem->soldualvalid);
+      assert(nlpiproblem->soldualcons != NULL);
+      BMScopyMemoryArray(lambda, nlpiproblem->soldualcons, m);
+   }
 
    return true;
 }
@@ -1950,16 +2173,16 @@ bool ScipNLP::intermediate_callback(
 {  /*lint --e{715}*/
    if( SCIPisSolveInterrupted(scip) )
    {
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_INTERRUPT;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_INTERRUPT;
       return false;
    }
 
    /* feasible point with objective value below lower objective limit -> stop */
    if( obj_value <= param.lobjlimit && inf_pr <= param.feastol )
    {
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_LOBJLIMIT;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_LOBJLIMIT;
       return false;
    }
 
@@ -2028,10 +2251,10 @@ bool ScipNLP::intermediate_callback(
                {
                   SCIPdebugPrintf("abort solve\n");
                   if( inf_pr <= param.feastol )
-                     nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+                     nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
                   else
-                     nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-                  nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+                     nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+                  nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
                   return false;
                }
             }
@@ -2067,52 +2290,52 @@ void ScipNLP::finalize_solution(
    switch( status )
    {
    case SUCCESS:
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCOPT;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_LOCOPT;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
       assert(x != NULL);
       break;
 
    case STOP_AT_ACCEPTABLE_POINT:
       /* if stop at acceptable point, then dual infeasibility can be arbitrary large, so claim only feasibility */
    case FEASIBLE_POINT_FOUND:
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
       assert(x != NULL);
       break;
 
    case MAXITER_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_ITERLIMIT;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_ITERLIMIT;
       break;
 
    case CPUTIME_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       break;
 
    case STOP_AT_TINY_STEP:
    case RESTORATION_FAILURE:
    case ERROR_IN_STEP_COMPUTATION:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
 
    case LOCAL_INFEASIBILITY:
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
       break;
 
    case DIVERGING_ITERATES:
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
       break;
 
    case INVALID_NUMBER_DETECTED:
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_EVALERROR;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
       break;
 
    case USER_REQUESTED_STOP:
@@ -2122,19 +2345,19 @@ void ScipNLP::finalize_solution(
    case TOO_FEW_DEGREES_OF_FREEDOM:
    case INTERNAL_ERROR:
    case INVALID_OPTION:
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_OTHER;
       break;
 
    case OUT_OF_MEMORY:
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
       break;
 
    default:
       SCIPerrorMessage("Ipopt returned with unknown solution status %d\n", status);
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_OTHER;
       break;
    }
 
@@ -2143,40 +2366,46 @@ void ScipNLP::finalize_solution(
    assert(z_L != NULL);
    assert(z_U != NULL);
 
-   if( nlpiproblem->lastsolprimals == NULL )
-   {
-      assert(nlpiproblem->lastsoldualcons == NULL);
-      assert(nlpiproblem->lastsoldualvarlb == NULL);
-      assert(nlpiproblem->lastsoldualvarub == NULL);
-      BMSallocMemoryArray(&nlpiproblem->lastsolprimals,   n);
-      BMSallocMemoryArray(&nlpiproblem->lastsoldualcons,  m);
-      BMSallocMemoryArray(&nlpiproblem->lastsoldualvarlb, n);
-      BMSallocMemoryArray(&nlpiproblem->lastsoldualvarub, n);
+   assert(nlpiproblem->solprimals != NULL);
 
-      if( nlpiproblem->lastsolprimals == NULL || nlpiproblem->lastsoldualcons == NULL ||
-         nlpiproblem->lastsoldualvarlb == NULL || nlpiproblem->lastsoldualvarub == NULL )
-      {
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-         nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
-         return;
-      }
+   if( nlpiproblem->soldualcons == NULL )
+   {
+      (void) SCIPallocBlockMemoryArray(scip, &nlpiproblem->soldualcons, m);
+   }
+   if( nlpiproblem->soldualvarlb == NULL )
+   {
+      (void) SCIPallocBlockMemoryArray(scip, &nlpiproblem->soldualvarlb, n);
+   }
+   if( nlpiproblem->soldualvarub == NULL )
+   {
+      (void) SCIPallocBlockMemoryArray(scip, &nlpiproblem->soldualvarub, n);
+   }
+   if( nlpiproblem->soldualcons == NULL || nlpiproblem->soldualvarlb == NULL || nlpiproblem->soldualvarub == NULL )
+   {
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      nlpiproblem->termstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
+      return;
    }
 
-   BMScopyMemoryArray(nlpiproblem->lastsolprimals, x, n);
-   BMScopyMemoryArray(nlpiproblem->lastsoldualcons, lambda, m);
-   BMScopyMemoryArray(nlpiproblem->lastsoldualvarlb, z_L, n);
-   BMScopyMemoryArray(nlpiproblem->lastsoldualvarub, z_U, n);
-   nlpiproblem->lastsolobjval = obj_value;
+   BMScopyMemoryArray(nlpiproblem->solprimals, x, n);
+   BMScopyMemoryArray(nlpiproblem->soldualcons, lambda, m);
+   BMScopyMemoryArray(nlpiproblem->soldualvarlb, z_L, n);
+   BMScopyMemoryArray(nlpiproblem->soldualvarub, z_U, n);
+   nlpiproblem->solobjval = obj_value;
+   nlpiproblem->solprimalvalid = true;
+   nlpiproblem->solprimalgiven = false;
+   nlpiproblem->soldualvalid = true;
+   nlpiproblem->soldualgiven = false;
 
    if( check_feasibility && cq != NULL )
    {
       if( cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX) <= param.feastol )
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-      else if( nlpiproblem->lastsolstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+         nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      else if( nlpiproblem->solstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+         nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    }
 
-   if( nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+   if( nlpiproblem->solstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
       assert(lambda != NULL);
       SCIP_Real tol;
@@ -2231,7 +2460,7 @@ void ScipNLP::finalize_solution(
       if( !infreasonable )
       {
          // change status to say we don't know
-         nlpiproblem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
+         nlpiproblem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
       }
    }
 }

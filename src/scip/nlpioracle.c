@@ -1812,6 +1812,17 @@ SCIP_RETCODE SCIPnlpiOracleGetVarDegrees(
    return SCIP_OKAY;
 }
 
+/** gives constant term of objective */
+SCIP_Real SCIPnlpiOracleGetObjectiveConstant(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   assert(oracle != NULL);
+   assert(oracle->objective->lhs == oracle->objective->rhs);  /*lint !e777*/
+
+   return oracle->objective->lhs;
+}
+
 /** gives left-hand side of a constraint */
 SCIP_Real SCIPnlpiOracleGetConstraintLhs(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
