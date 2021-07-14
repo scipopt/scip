@@ -42,9 +42,11 @@
 #include "scip/scip_param.h"
 #include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_paramset.h"
 
 #include <new>      /* for std::bad_alloc */
 #include <sstream>
+#include <cstring>
 
 /* turn off some lint warnings for file */
 /*lint --e{1540,750,3701}*/
@@ -124,6 +126,21 @@ static const int convcheck_startiter                       = 10;                
 static const int convcheck_maxiter[convcheck_nchecks]      = { 5,   15,  30 };  /**< maximal number of iterations to achieve each convergence check */
 static const SCIP_Real convcheck_minred[convcheck_nchecks] = { 1.0, 0.5, 0.1 }; /**< minimal required infeasibility reduction in each convergence check */
 
+/// integer parameters of Ipopt to make available via SCIP parameters
+static const char* ipopt_int_params[] =
+   { "print_level" };   // print_level must be first
+
+/// string parameters of Ipopt to make available via SCIP parameters
+static const char* ipopt_string_params[] =
+   { "linear_solver",
+     "hsllib",
+     "pardisolib",
+     "linear_system_scaling",
+     "nlp_scaling_method",
+     "mu_strategy",
+     "hessian_approximation"
+   };
+
 class ScipNLP;
 
 struct SCIP_NlpiData
@@ -147,6 +164,7 @@ public:
    SmartPtr<IpoptApplication>  ipopt;        /**< Ipopt application */
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
 
+   bool                        printlevelset;/**< whether Ipopt print_level was set via nlpi/ipopt/print_level option */
    bool                        firstrun;     /**< whether the next NLP solve will be the first one */
    bool                        samestructure;/**< whether the NLP solved next will still have the same (Ipopt-internal) structure (same number of variables, constraints, bounds, and nonzero pattern) */
 
@@ -167,7 +185,7 @@ public:
    /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL), randnumgen(NULL),
-        firstrun(true), samestructure(true),
+        printlevelset(false), firstrun(true), samestructure(true),
         solstat(SCIP_NLPSOLSTAT_UNKNOWN), termstat(SCIP_NLPTERMSTAT_OTHER),
         solprimalvalid(false), solprimalgiven(false), soldualvalid(false), soldualgiven(false),
         solprimals(NULL), soldualcons(NULL), soldualvarlb(NULL), soldualvarub(NULL),
@@ -563,20 +581,23 @@ SCIP_RETCODE handleNlpParam(
    assert(scip != NULL);
    assert(nlpiproblem != NULL);
 
-   switch( param.verblevel )
+   if( !nlpiproblem->printlevelset )
    {
-      case 0:
-         (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_ERROR);
-         break;
-      case 1:
-         (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
-         break;
-      case 2:
-         (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_DETAILED);
-         break;
-      default:
-         (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", MIN(J_ITERSUMMARY + (param.verblevel-1), J_ALL));
-         break;
+      switch( param.verblevel )
+      {
+         case 0:
+            (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_ERROR);
+            break;
+         case 1:
+            (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
+            break;
+         case 2:
+            (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_DETAILED);
+            break;
+         default:
+            (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", MIN(J_ITERSUMMARY + (param.verblevel-1), J_ALL));
+            break;
+      }
    }
 
    (void) nlpiproblem->ipopt->Options()->SetIntegerValue("max_iter", param.iterlimit);
@@ -734,6 +755,55 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       return SCIP_NOMEMORY;
    }
 
+   for( size_t i = 0; i < sizeof(ipopt_string_params) / sizeof(const char*); ++i )
+   {
+      SCIP_PARAM* param;
+      char paramname[SCIP_MAXSTRLEN];
+      char* paramval;
+
+      strcpy(paramname, "nlpi/" NLPI_NAME "/");
+      strcat(paramname, ipopt_string_params[i]);
+      param = SCIPgetParam(scip, paramname);
+
+      // skip parameters that we didn't add to SCIP because they didn't exist in this build of Ipopt
+      if( param == NULL )
+         continue;
+
+      // if value wasn't left at the default, then pass to Ipopt and forbid overwriting
+      paramval = SCIPparamGetString(param);
+      assert(paramval != NULL);
+      if( *paramval != '\0' )
+         (void) (*problem)->ipopt->Options()->SetStringValue(ipopt_string_params[i], paramval, false);
+   }
+
+   for( size_t i = 0; i < sizeof(ipopt_int_params) / sizeof(const char*); ++i )
+   {
+      SCIP_PARAM* param;
+      char paramname[SCIP_MAXSTRLEN];
+      int paramval;
+
+      strcpy(paramname, "nlpi/" NLPI_NAME "/");
+      strcat(paramname, ipopt_int_params[i]);
+      param = SCIPgetParam(scip, paramname);
+
+      // skip parameters that we didn't add to SCIP because they didn't exist in this build of Ipopt
+      if( param == NULL )
+         continue;
+
+      // if value wasn't left at the default, then pass to Ipopt and forbid overwriting
+      paramval = SCIPparamGetInt(param);
+      if( paramval != SCIPparamGetIntDefault(param) )
+      {
+         (void) (*problem)->ipopt->Options()->SetIntegerValue(ipopt_int_params[i], paramval, false);
+
+         if( i == 0 )
+         {
+            assert(strcmp(ipopt_int_params[0], "print_level") == 0);
+            (*problem)->printlevelset = true;
+         }
+      }
+   }
+
 #if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
    /* Turn off bound relaxation for older Ipopt, as solutions may be out of bounds by more than constr_viol_tol.
     * For Ipopt 3.14, bounds are relaxed by at most constr_viol_tol, so can leave bound_relax_factor at its default.
@@ -747,7 +817,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (void) (*problem)->ipopt->Options()->SetStringValue("print_user_options", "yes");
 #endif
    (void) (*problem)->ipopt->Options()->SetStringValue("sb", "yes");
-   (void) (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
+   (void) (*problem)->ipopt->Options()->SetStringValueIfUnset("mu_strategy", "adaptive");
    (void) (*problem)->ipopt->Options()->SetIntegerValue("max_iter", INT_MAX);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
@@ -1416,7 +1486,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             /* enable Hessian approximation if we are nonquadratic and the expression interpreter or user expression do not support Hessians */
             if( !(cap & SCIP_EXPRINTCAPABILITY_HESSIAN) )
             {
-               (void) problem->ipopt->Options()->SetStringValue("hessian_approximation", "limited-memory");
+               (void) problem->ipopt->Options()->SetStringValueIfUnset("hessian_approximation", "limited-memory");
                problem->nlp->approxhessian = true;
             }
             else
@@ -1610,6 +1680,7 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
    )
 {
    SCIP_NLPIDATA* nlpidata;
+   SCIP_Bool advanced = FALSE;
 
    assert(scip != NULL);
 
@@ -1630,6 +1701,81 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
 
    SCIP_CALL( SCIPaddStringParam(scip, "nlpi/" NLPI_NAME "/optfile", "name of Ipopt options file",
       &nlpidata->optfile, FALSE, "", NULL, NULL) );
+
+   SmartPtr<RegisteredOptions> reg_options = new RegisteredOptions();
+   IpoptApplication::RegisterAllIpoptOptions(reg_options);
+
+   for( size_t i = 0; i < sizeof(ipopt_string_params) / sizeof(const char*); ++i )
+   {
+      SmartPtr<const RegisteredOption> option = reg_options->GetOption(ipopt_string_params[i]);
+
+      // skip options not available with this build of Ipopt
+      if( !IsValid(option) )
+         continue;
+
+      assert(option->Type() == OT_String);
+
+      // prefix parameter name with nlpi/ipopt
+      std::string paramname("nlpi/" NLPI_NAME "/");
+      paramname += option->Name();
+
+      // initialize description with short description from Ipopt
+      std::stringstream descr;
+      descr << option->ShortDescription();
+
+      // add valid values to description, if there are more than one
+      // the only case where there are less than 2 valid strings should be when anything is valid (in which case there is one valid string with value "*")
+      std::vector<RegisteredOption::string_entry> validvals = option->GetValidStrings();
+      if( validvals.size() > 1 )
+      {
+         descr << " Valid values if not empty:";
+         for( std::vector<RegisteredOption::string_entry>::iterator val = validvals.begin(); val != validvals.end(); ++val )
+            descr << ' ' << val->value_;
+      }
+
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+      // since Ipopt 3.14, Ipopt options have an advanced flag
+      advanced = option->Advanced();
+#endif
+
+      // we use the empty string as default to recognize later whether the user set has set the option
+      SCIP_CALL( SCIPaddStringParam(scip, paramname.c_str(), descr.str().c_str(), NULL, advanced, "", NULL, NULL) );
+   }
+
+   for( size_t i = 0; i < sizeof(ipopt_int_params) / sizeof(const char*); ++i )
+   {
+      SmartPtr<const RegisteredOption> option = reg_options->GetOption(ipopt_int_params[i]);
+
+      // skip options not available with this build of Ipopt
+      if( !IsValid(option) )
+         continue;
+
+      assert(option->Type() == OT_Integer);
+
+      // prefix parameter name with nlpi/ipopt
+      std::string paramname("nlpi/" NLPI_NAME "/");
+      paramname += option->Name();
+
+      int lower = option->LowerInteger();
+      int upper = option->UpperInteger();
+
+      // we use value lower-1 as signal that the option was not modified by the user
+      // for that, we require a finite lower bound
+      assert(lower > INT_MIN);
+
+      // initialize description with short description from Ipopt
+      std::stringstream descr;
+      descr << option->ShortDescription();
+      descr << ' ' << (lower-1) << " to use NLPI or Ipopt default.";
+
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
+      // since Ipopt 3.14, Ipopt options have an advanced flag
+      advanced = option->Advanced();
+#endif
+
+      // we use the empty string as default to recognize later whether the user set has set the option
+      SCIP_CALL( SCIPaddIntParam(scip, paramname.c_str(), descr.str().c_str(), NULL, advanced, lower-1, lower-1, upper, NULL, NULL) );
+   }
 
    return SCIP_OKAY;
 }  /*lint !e429 */

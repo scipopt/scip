@@ -539,6 +539,7 @@ nlpi:
 - expr/log/minzerodistance, expr/pow/minzerodistance
 - benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
 - nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
+- nlpi/ipopt/print_level, nlpi/ipopt/hsllib, nlpi/ipopt/pardisolib, nlpi/ipopt/linear_system_scaling, nlpi/ipopt/nlp_scaling_method, nlpi/ipopt/mu_strategy, nlpi/ipopt/hessian_approximation
 
 ### Data structures and types
 
