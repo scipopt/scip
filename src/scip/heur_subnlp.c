@@ -943,14 +943,8 @@ SCIP_RETCODE solveSubNLP(
       nlpparam.iterlimit = (int)MIN(INT_MAX, itercontingent);
    }
 
-   /* set verbosity of NLP solver
-    * NLP interface may take SCIP verblevel into account, too, so temporarily increase this, too
-    */
+   /* set verbosity of NLP solver */
    nlpparam.verblevel = (unsigned short)heurdata->nlpverblevel;
-   if( heurdata->nlpverblevel >= 1 )
-   {
-      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", SCIP_VERBLEVEL_HIGH) );  /*lint !e641*/
-   }
 
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT "\n", itercontingent);
@@ -958,11 +952,6 @@ SCIP_RETCODE solveSubNLP(
 
    SCIPdebugMsg(scip, "NLP solver returned with termination status %d and solution status %d, objective value is %g\n",
       SCIPgetNLPTermstat(heurdata->subscip), SCIPgetNLPSolstat(heurdata->subscip), SCIPgetNLPObjval(heurdata->subscip));
-
-   if( heurdata->nlpverblevel >= 1 )
-   {
-      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 0) );
-   }
 
    if( SCIPgetNLPTermstat(heurdata->subscip) >= SCIP_NLPTERMSTAT_OUTOFMEMORY )
    {

@@ -148,6 +148,7 @@ struct SCIP_NlpiData
 public:
    char*                       optfile;      /**< Ipopt options file to read */
    std::string                 defoptions;   /**< modified default options for Ipopt */
+   int                         print_level;  /**< print_level set via nlpi/ipopt/print_level option */
 
    /** constructor */
    explicit SCIP_NlpiData()
@@ -164,7 +165,6 @@ public:
    SmartPtr<IpoptApplication>  ipopt;        /**< Ipopt application */
    SmartPtr<ScipNLP>           nlp;          /**< NLP in Ipopt form */
 
-   bool                        printlevelset;/**< whether Ipopt print_level was set via nlpi/ipopt/print_level option */
    bool                        firstrun;     /**< whether the next NLP solve will be the first one */
    bool                        samestructure;/**< whether the NLP solved next will still have the same (Ipopt-internal) structure (same number of variables, constraints, bounds, and nonzero pattern) */
 
@@ -185,7 +185,7 @@ public:
    /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL), randnumgen(NULL),
-        printlevelset(false), firstrun(true), samestructure(true),
+        firstrun(true), samestructure(true),
         solstat(SCIP_NLPSOLSTAT_UNKNOWN), termstat(SCIP_NLPTERMSTAT_OTHER),
         solprimalvalid(false), solprimalgiven(false), soldualvalid(false), soldualgiven(false),
         solprimals(NULL), soldualcons(NULL), soldualvarlb(NULL), soldualvarub(NULL),
@@ -432,14 +432,7 @@ protected:
       }
       else
       {
-         SCIP_VERBLEVEL msgverblevel;
-         if( level <= J_WARNING )
-            msgverblevel = SCIP_VERBLEVEL_DIALOG;
-         else if( level <= J_SUMMARY )
-            msgverblevel = SCIP_VERBLEVEL_MINIMAL;
-         else
-            msgverblevel = SCIP_VERBLEVEL_HIGH;
-         SCIPverbMessage(scip, msgverblevel, NULL, "%s", str);
+         SCIPinfoMessage(scip, NULL, "%s", str);
       }
    }
 
@@ -458,14 +451,7 @@ protected:
       }
       else
       {
-         SCIP_VERBLEVEL msgverblevel;
-         if( level <= J_WARNING )
-            msgverblevel = SCIP_VERBLEVEL_DIALOG;
-         else if( level <= J_SUMMARY )
-            msgverblevel = SCIP_VERBLEVEL_MINIMAL;
-         else
-            msgverblevel = SCIP_VERBLEVEL_HIGH;
-         SCIPmessageVPrintVerbInfo(SCIPgetMessagehdlr(scip), SCIPgetVerbLevel(scip), msgverblevel, pformat, ap);
+         SCIPmessageVPrintInfo(SCIPgetMessagehdlr(scip), pformat, ap);
       }
    }
 
@@ -574,6 +560,7 @@ SCIP_RETCODE ensureStartingPoint(
 static
 SCIP_RETCODE handleNlpParam(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
    SCIP_NLPIPROBLEM*     nlpiproblem,        /**< NLP */
    const SCIP_NLPPARAM   param               /**< solve parameters */
    )
@@ -581,7 +568,7 @@ SCIP_RETCODE handleNlpParam(
    assert(scip != NULL);
    assert(nlpiproblem != NULL);
 
-   if( !nlpiproblem->printlevelset )
+   if( nlpidata->print_level < 0 )  // if nlpi/ipopt/print_level param has not been set
    {
       switch( param.verblevel )
       {
@@ -793,15 +780,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       // if value wasn't left at the default, then pass to Ipopt and forbid overwriting
       paramval = SCIPparamGetInt(param);
       if( paramval != SCIPparamGetIntDefault(param) )
-      {
          (void) (*problem)->ipopt->Options()->SetIntegerValue(ipopt_int_params[i], paramval, false);
-
-         if( i == 0 )
-         {
-            assert(strcmp(ipopt_int_params[0], "print_level") == 0);
-            (*problem)->printlevelset = true;
-         }
-      }
    }
 
 #if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
@@ -1413,6 +1392,7 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
 static
 SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 {
+   SCIP_NLPIDATA* nlpidata;
    ApplicationReturnStatus status;
 
    assert(nlpi != NULL);
@@ -1422,7 +1402,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    assert(IsValid(problem->ipopt));
    assert(IsValid(problem->nlp));
 
-   SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
+
+   // print parameters if either nlpi/ipopt/print_level has been set high enough or solve called with verblevel>0
+   if( nlpidata->print_level >= J_SUMMARY || param.verblevel > 0 )
+      SCIPinfoMessage(scip, NULL, "Ipopt solve with parameters " SCIP_NLPPARAM_PRINT(param));
 
    if( param.timelimit == 0.0 )
    {
@@ -1446,7 +1431,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    problem->nlp->initializeSolve(problem, param);
 
    // set Ipopt parameters
-   SCIP_CALL( handleNlpParam(scip, problem, param) );
+   SCIP_CALL( handleNlpParam(scip, nlpidata, problem, param) );
 
    try
    {
@@ -1744,6 +1729,8 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
 
    for( size_t i = 0; i < sizeof(ipopt_int_params) / sizeof(const char*); ++i )
    {
+      assert(i > 0 || strcmp(ipopt_int_params[0], "print_level") == 0);  // we assume print_level at index 0
+
       SmartPtr<const RegisteredOption> option = reg_options->GetOption(ipopt_int_params[i]);
 
       // skip options not available with this build of Ipopt
@@ -1774,7 +1761,9 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
 #endif
 
       // we use the empty string as default to recognize later whether the user set has set the option
-      SCIP_CALL( SCIPaddIntParam(scip, paramname.c_str(), descr.str().c_str(), NULL, advanced, lower-1, lower-1, upper, NULL, NULL) );
+      SCIP_CALL( SCIPaddIntParam(scip, paramname.c_str(), descr.str().c_str(),
+         i == 0 ? &nlpidata->print_level : NULL, advanced,
+         lower-1, lower-1, upper, NULL, NULL) );
    }
 
    return SCIP_OKAY;
