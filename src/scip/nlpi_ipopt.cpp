@@ -68,8 +68,8 @@
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
 
-#if (IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE < 5))
-#error "The Ipopt interface requires at least 3.12.5"
+#if IPOPT_VERSION_MAJOR < 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 12)
+#error "The Ipopt interface requires at least 3.12.0"
 #endif
 
 /* MUMPS that can be used by Ipopt is not threadsafe
@@ -147,12 +147,11 @@ struct SCIP_NlpiData
 {
 public:
    char*                       optfile;      /**< Ipopt options file to read */
-   std::string                 defoptions;   /**< modified default options for Ipopt */
    int                         print_level;  /**< print_level set via nlpi/ipopt/print_level option */
 
    /** constructor */
    explicit SCIP_NlpiData()
-   : optfile(NULL)
+   : optfile(NULL), print_level(-1)
    { }
 };
 
@@ -624,6 +623,8 @@ SCIP_RETCODE handleNlpParam(
       (void) nlpiproblem->ipopt->Options()->SetIntegerValue("acceptable_iter", 15);  // 15 is the default
 #endif
 
+   (void) nlpiproblem->ipopt->Options()->SetStringValue("expect_infeasible_problem", param.expectinfeas ? "yes" : "no");
+
    if( !nlpiproblem->ipopt->Options()->SetStringValue("warm_start_init_point", param.warmstart ? "yes" : "no") && !param.warmstart )
    {
       // if we cannot disable warmstarts in Ipopt, then we have a big problem
@@ -644,24 +645,7 @@ SCIP_RETCODE handleNlpParam(
 static
 SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
 {
-   SCIP_NLPI* targetnlpi;
-   SCIP_NLPIDATA* sourcedata;
-   SCIP_NLPIDATA* targetdata;
-
-   assert(sourcenlpi != NULL);
-
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
-
-   targetnlpi = SCIPfindNlpi(scip, NLPI_NAME);
-   assert(targetnlpi != NULL);
-
-   sourcedata = SCIPnlpiGetData(sourcenlpi);
-   assert(sourcedata != NULL);
-
-   targetdata = SCIPnlpiGetData(targetnlpi);
-   assert(targetdata != NULL);
-
-   targetdata->defoptions = sourcedata->defoptions;
 
    return SCIP_OKAY;
 }
@@ -801,18 +785,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
-
-   /* apply user's given modifications to Ipopt's default settings */
-   if( data->defoptions.length() > 0 )
-   {
-      std::istringstream is(data->defoptions);
-
-      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is, true) )
-      {
-         SCIPerrorMessage("Error when modifying Ipopt options using options string\n%s\n", data->defoptions.c_str());
-         return SCIP_ERROR;
-      }
-   }
 
    /* apply user's given options file */
    assert(data->optfile != NULL);
@@ -1805,29 +1777,6 @@ void* SCIPgetNlpiOracleIpopt(
    assert(nlpiproblem != NULL);
 
    return nlpiproblem->oracle;
-}
-
-/** sets modified default settings that are used when setting up an Ipopt problem
- *
- *  Do not forget to add a newline after the last option in optionsstring.
- */
-void SCIPsetModifiedDefaultSettingsIpopt(
-   SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
-   const char*           optionsstring,      /**< string with options as in Ipopt options file */
-   SCIP_Bool             append              /**< whether to append to modified default settings or to overwrite */
-   )
-{
-   SCIP_NLPIDATA* data;
-
-   assert(nlpi != NULL);
-
-   data = SCIPnlpiGetData(nlpi);
-   assert(data != NULL);
-
-   if( append )
-      data->defoptions += optionsstring;
-   else
-      data->defoptions = optionsstring;
 }
 
 /** Method to return some info about the nlp */

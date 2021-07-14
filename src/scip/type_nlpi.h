@@ -48,6 +48,7 @@ struct SCIP_NlpParam
    int                   iterlimit;          /**< iteration limit */
    unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
    unsigned short        fastfail;           /**< whether the NLP solver should stop early if convergence is slow: 0 never, 1 conservatively, 2 quickly */
+   SCIP_Bool             expectinfeas;       /**< whether to expect an infeasible problem */
    SCIP_Bool             warmstart;          /**< whether to try to use solution of previous solve as starting point (if available) */
    const char*           caller;             /**< name of file from which NLP is solved (it's fine to set this to NULL) */
 };
@@ -77,6 +78,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
    .iterlimit   = INT_MAX,                         \
    .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL, \
    .fastfail    = 1,                               \
+   .expectinfeas= FALSE,                           \
    .warmstart   = FALSE,                           \
    .caller      = __FILE__
 
@@ -93,7 +95,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #else
 /** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
 static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
-   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, 1, FALSE, __FILE__
+   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, 1, FALSE, FALSE, __FILE__
 };
 #define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif

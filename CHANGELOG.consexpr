@@ -361,6 +361,7 @@ nlpi:
 - removed SCIPcreateNlpiProb(), use SCIPcreateNlpiProblemFromNlRows() instead
 - renamed SCIPupdateNlpiProb() to SCIPupdateNlpiProblem() and moved into scip_nlpi.{h,c}
 - renamed SCIPaddNlpiProbRows() to SCIPaddNlpiProblemRows() and moved into scip_nlpi.{h,c}
+- removed SCIPsetModifiedDefaultSettingsIpopt()
 
 ### New API functions
 

@@ -167,7 +167,6 @@ SCIP_RETCODE createSubSCIP(
    static const SCIP_Bool copydisplays = FALSE;
    static const SCIP_Bool copyreader = FALSE;
 #endif
-   SCIP_NLPI* ipopt;
 
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
@@ -349,11 +348,6 @@ SCIP_RETCODE createSubSCIP(
    /* for debugging, enable SCIP output */
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 5) );
 #endif
-
-   /* enable infeasible problem heuristic in Ipopt */
-   ipopt = SCIPfindNlpi(heurdata->subscip, "ipopt");
-   if( ipopt != NULL )
-      SCIPsetModifiedDefaultSettingsIpopt(ipopt, "expect_infeasible_problem yes\n", TRUE);
 
    return SCIP_OKAY;
 }
@@ -945,6 +939,11 @@ SCIP_RETCODE solveSubNLP(
 
    /* set verbosity of NLP solver */
    nlpparam.verblevel = (unsigned short)heurdata->nlpverblevel;
+
+   /* enable infeasible problem heuristic in Ipopt
+    * TODO check whether that is still beneficial and remove this nlpparam if not
+    */
+   nlpparam.expectinfeas = TRUE;
 
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT "\n", itercontingent);
