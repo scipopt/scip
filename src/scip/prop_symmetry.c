@@ -309,7 +309,7 @@ struct SCIP_PropData
    int*                  permvarsevents;     /**< stores events caught for permvars */
    SCIP_Shortbool*       inactiveperms;      /**< array to store whether permutations are inactive */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
-   SCIP_RECOMPUTESYMTYPE recomputerestart;   /**< Recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if OF found reduction) */
+   int                   recomputerestart;   /**< Recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if OF found reduction) */
    int                   ofsymcomptiming;    /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
    int                   nfixedzero;         /**< number of variables fixed to 0 */
