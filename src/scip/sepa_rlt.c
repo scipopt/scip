@@ -1677,7 +1677,7 @@ SCIP_RETCODE createSepaData(
    /* find maxnumber of variables that occur most often and sort them by number of occurrences
     * (same as normal sort, except that entries at positions maxusedvars..nbilinvars may be unsorted at end)
     */
-   SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->varssorted, sepadata->maxusedvars,
+   SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->varssorted, MIN(sepadata->maxusedvars,sepadata->nbilinvars-1),
          sepadata->nbilinvars);
 
    /* capture all variables */
