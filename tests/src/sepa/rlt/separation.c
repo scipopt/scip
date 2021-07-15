@@ -157,6 +157,7 @@ Test(separation, sepadata, .init = setup, .fini = teardown, .description = "test
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
    sepadata->conshdlr = conshdlr;
    cr_assert(sepadata->conshdlr != NULL);
+   sepadata->maxusedvars = DEFAULT_MAXUSEDVARS;
 
    /* create a cons with some bilinear expressions */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[nonlinear] <test>: <t_x1>*<t_x2> + <t_x1>*<t_x3> + <t_x4>*<t_x2> + <t_x4>^2 <= 1",
