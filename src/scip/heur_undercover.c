@@ -356,6 +356,7 @@ SCIP_RETCODE processNlRow(
                SCIPdebugMsg(scip, "inactive variable detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
                return SCIP_OKAY;
             }
+            assert(coveringvars[probidx] != NULL);
 
             /* otherwise variable has to be in the cover */
             SCIP_CALL( SCIPfixVar(coveringscip, coveringvars[probidx], 1.0, &infeas, &fixed) );
@@ -393,6 +394,8 @@ SCIP_RETCODE processNlRow(
                SCIPdebugMsg(scip, "inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
                return SCIP_OKAY;
             }
+            assert(coveringvars[probidx1] != NULL);
+            assert(coveringvars[probidx2] != NULL);
 
             /* create covering constraint */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering%d", SCIPnlrowGetName(nlrow), t);
@@ -437,6 +440,7 @@ SCIP_RETCODE processNlRow(
                   SCIPvarGetName(SCIPgetVarExprVar(expr)), SCIPnlrowGetName(nlrow));
                return SCIP_OKAY;
             }
+            assert(coveringvars[probidx] != NULL);
 
             /* term is constant, nothing to do */
             if( termIsConstant(scip, SCIPgetVarExprVar(expr), 1.0, globalbounds) )
@@ -514,6 +518,13 @@ SCIP_RETCODE createCoveringProblem(
    for( i = 0; i < nvars; i++ )
    {
       SCIP_Real ub = 1.0;
+
+      if( SCIPvarIsRelaxationOnly(vars[i]) )
+      {
+         /* skip relaxation-only variables; they cannot appear in constraints */
+         coveringvars[i] = NULL;
+         continue;
+      }
 
       /* if the variable in the original problem is fixed, then the corresponding cover variable cannot be 1 in any
        * optimal solution of the covering problem (see special termIsConstant treatment below)
@@ -622,6 +633,7 @@ SCIP_RETCODE createCoveringProblem(
                }
             }
             assert(probindex >= 0);
+            assert(coveringvars[probindex] != NULL);
 
             /* add covering variable for unfixed original variable */
             if( negated )
@@ -690,11 +702,10 @@ SCIP_RETCODE createCoveringProblem(
             continue;
          }
          assert(probindex >= 0);
+         assert(coveringvars[probindex] != NULL);
          assert(!termIsConstant(scip, (negated ? SCIPvarGetNegatedVar(vars[probindex]) : vars[probindex]), 1.0, globalbounds));
 
-         /* if less than two variables are unfixed or the resultant variable is fixed, the entire constraint can be
-	  * linearized anyway
-	  */
+         /* if less than two variables are unfixed or the resultant variable is fixed, the entire constraint can be linearized anyway */
          if( ntofix >= 2 )
          {
             assert(ntofix <= SCIPgetNVarsAnd(scip, andcons));
@@ -823,6 +834,7 @@ SCIP_RETCODE createCoveringProblem(
                }
             }
             assert(probindex >= 0);
+            assert(coveringvars[probindex] != NULL);
 
             /* add covering variable for unfixed original variable */
             if( negated )
@@ -928,6 +940,7 @@ SCIP_RETCODE createCoveringProblem(
             }
          }
          assert(probindex >= 0);
+         assert(coveringvars[probindex] != NULL);
 
          /* get covering variable for unfixed binary variable in indicator constraint */
          coveringvar = coveringvars[probindex];
@@ -982,12 +995,16 @@ SCIP_RETCODE createCoveringProblem(
    case 'c': /* number of influenced nonlinear constraints */
       for( i = nvars-1; i >= 0; i-- )
       {
+         if( coveringvars[i] == NULL )
+            continue;
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i], (SCIP_Real) conscounter[i]) );
       }
       break;
    case 'd': /* domain size */
       for( i = nvars-1; i >= 0; i-- )
       {
+         if( coveringvars[i] == NULL )
+            continue;
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i],
                (globalbounds ? SCIPvarGetUbGlobal(vars[i]) - SCIPvarGetLbGlobal(vars[i]) : SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i]))) );
       }
@@ -995,6 +1012,8 @@ SCIP_RETCODE createCoveringProblem(
    case 'l': /* number of locks */
       for( i = nvars-1; i >= 0; i-- )
       {
+         if( coveringvars[i] == NULL )
+            continue;
          nlocksup = SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
          nlocksdown = SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i], (SCIP_Real) (nlocksup+nlocksdown+1)) );
@@ -1003,6 +1022,8 @@ SCIP_RETCODE createCoveringProblem(
    case 'm': /* min(up locks, down locks)+1 */
       for( i = nvars-1; i >= 0; i-- )
       {
+         if( coveringvars[i] == NULL )
+            continue;
          nlocksup = SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL);
          nlocksdown = SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL);
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i], (SCIP_Real) (MIN(nlocksup, nlocksdown)+1)) );
@@ -1011,12 +1032,16 @@ SCIP_RETCODE createCoveringProblem(
    case 't': /* number of influenced nonlinear terms */
       for( i = nvars-1; i >= 0; i-- )
       {
+         if( coveringvars[i] == NULL )
+            continue;
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i], (SCIP_Real) termcounter[i]) );
       }
       break;
    case 'u': /* unit penalties */
       for( i = nvars-1; i >= 0; i-- )
       {
+         if( coveringvars[i] == NULL )
+            continue;
          SCIP_CALL( SCIPchgVarObj(coveringscip, coveringvars[i], 1.0) );
       }
       break;
@@ -1102,7 +1127,7 @@ SCIP_RETCODE forbidCover(
       /* build up constraint */
       for( i = coversize-1; i >= 0; i-- )
       {
-         if( !SCIPisFeasGE(scip, SCIPvarGetLbLocal(vars[cover[i]]), 1.0) )
+         if( vars[cover[i]] != NULL && !SCIPisFeasGE(scip, SCIPvarGetLbLocal(vars[cover[i]]), 1.0) )
          {
             SCIP_CALL( SCIPgetNegatedVar(scip, vars[cover[i]], &consvars[nconsvars]) );
             nconsvars++;
@@ -1133,7 +1158,7 @@ SCIP_RETCODE forbidCover(
       SCIP_CALL( SCIPallocBufferArray(scip, &consvals, coversize) );
       for( i = coversize-1; i >= 0; i-- )
       {
-         if( !SCIPisFeasGE(scip, SCIPvarGetLbLocal(vars[cover[i]]), 1.0) )
+         if( vars[cover[i]] != NULL && !SCIPisFeasGE(scip, SCIPvarGetLbLocal(vars[cover[i]]), 1.0) )
          {
             consvars[nconsvars] = vars[cover[i]];
             consvals[nconsvars] = 1.0;
@@ -1291,7 +1316,6 @@ SCIP_RETCODE solveCoveringProblem(
    SCIP_Bool*            success             /**< feasible cover found? */
    )
 {
-   SCIP_Real* solvals;
    SCIP_Real totalpenalty;
    SCIP_RETCODE retcode;
    int i;
@@ -1360,14 +1384,14 @@ SCIP_RETCODE solveCoveringProblem(
       return SCIP_OKAY;
 
    /* store solution */
-   SCIP_CALL( SCIPallocBufferArray(coveringscip, &solvals, ncoveringvars) );
-   SCIP_CALL( SCIPgetSolVals(coveringscip, SCIPgetBestSol(coveringscip), ncoveringvars, coveringvars, solvals) );
-
    *coversize = 0;
    totalpenalty = 0.0;
    for( i = 0; i < ncoveringvars; i++ )
    {
-      if( solvals[i] > 0.5 )
+      if( coveringvars[i] == NULL )
+         continue;
+
+      if( SCIPgetSolVal(coveringscip, SCIPgetBestSol(coveringscip), coveringvars[i]) > 0.5 )
       {
          cover[*coversize] = i;
          (*coversize)++;
@@ -1383,9 +1407,6 @@ SCIP_RETCODE solveCoveringProblem(
    SCIPdebugMsg(coveringscip, "\r                                                  \n");
 
    *success = TRUE;
-
-   /* free array of solution values */
-   SCIPfreeBufferArray(coveringscip, &solvals);
 
    return SCIP_OKAY;
 }
@@ -2175,7 +2196,11 @@ SCIP_RETCODE fixAndPropagate(
    *bdlen = 0;
    vars = SCIPgetVars(scip);
 
-   /* round-fix-propagate-analyze-backtrack for each variable in the cover */
+   /* round-fix-propagate-analyze-backtrack for each variable in the cover
+    * TODO doing a fix-and-propagate for one variable at a time can be very expensive for large covers
+    *    (try, e.g., junkturn with maxcoversizevars=1)
+    *    consider splitting the cover into at most, say, 100 batches, and fix a complete batch before propagating
+    */
    for( i = 0; i < coversize && !(*infeas); i++ )
    {
       SCIP_Real* boundalts;
@@ -2428,7 +2453,19 @@ SCIP_RETCODE SCIPapplyUndercover(
    }
 
    /* calculate upper bound for cover size */
-   maxcoversize = nvars*heurdata->maxcoversizevars;
+   if( heurdata->maxcoversizevars < 1.0 )
+   {
+      maxcoversize = 0.0;
+      for( i = 0; i < nvars; ++i )
+         if( !SCIPvarIsRelaxationOnly(vars[i]) )
+            maxcoversize += 1.0;
+      maxcoversize *= heurdata->maxcoversizevars;
+   }
+   else
+   {
+      /* if maxcoversizevars == 1.0, then there is no limit derived from number of variables */
+      maxcoversize = (SCIP_Real)nvars;
+   }
    if( heurdata->maxcoversizeconss < SCIP_REAL_MAX )
    {
       SCIP_Real maxcoversizeconss;
@@ -2458,7 +2495,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    nunfixeds = 0;
    for( i = nvars-1; i >= 0; i-- )
    {
-      if( SCIPisFeasEQ(coveringscip, SCIPvarGetLbGlobal(coveringvars[i]), 1.0) )
+      if( coveringvars[i] != NULL && SCIPisFeasEQ(coveringscip, SCIPvarGetLbGlobal(coveringvars[i]), 1.0) )
          nunfixeds++;
    }
 
@@ -2747,6 +2784,8 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* free covering problem */
    for( i = nvars-1; i >= 0; i-- )
    {
+      if( coveringvars[i] == NULL )
+         continue;
       SCIP_CALL( SCIPreleaseVar(coveringscip, &coveringvars[i]) );
    }
    SCIPfreeBufferArray(scip, &coveringvars);
@@ -3263,6 +3302,8 @@ SCIP_RETCODE computeCoverUndercover(
    /* free covering problem */
    for( i = nvars-1; i >= 0; i-- )
    {
+      if( coveringvars[i] == NULL )
+         continue;
       SCIP_CALL( SCIPreleaseVar(coveringscip, &coveringvars[i]) );
    }
    SCIPfreeBufferArray(scip, &coverinds);
