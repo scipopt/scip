@@ -42,7 +42,6 @@
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
-#include "scip/scip_nonlinear.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -143,10 +142,9 @@ SCIP_RETCODE createNLP(
          SCIPgetUpperbound(scip));
    }
 
-   SCIP_CALL( SCIPcreateNlpiProblem(scip, heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPcreateNlpiProb(scip, heurdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-         heurdata->nlpiprob, heurdata->var2idx, NULL, NULL, cutoff, TRUE, FALSE) );
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp", SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+         heurdata->var2idx, NULL, NULL, cutoff, TRUE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -223,7 +221,7 @@ SCIP_RETCODE addRegularScholtes(
          SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
       }
 
-      SCIP_CALL( SCIPaddNlpiProbNlRows(scip, heurdata->nlpi, heurdata->nlpiprob, heurdata->var2idx, nlrows, nbinvars) );
+      SCIP_CALL( SCIPaddNlpiProblemNlRows(scip, heurdata->nlpi, heurdata->nlpiprob, heurdata->var2idx, nlrows, nbinvars) );
 
       for( i = nbinvars-1; i >= 0; --i )
       {

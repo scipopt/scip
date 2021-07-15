@@ -43,7 +43,6 @@
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
-#include "scip/scip_nonlinear.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -202,7 +201,6 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    benderscutdata->nlpi = SCIPgetNlpis(subproblem)[0];
    assert(benderscutdata->nlpi != NULL);
 
-   SCIP_CALL( SCIPcreateNlpiProblem(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob, "benders-feascutalt-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&benderscutdata->var2idx, SCIPblkmem(masterprob), benderscutdata->nlpinvars) );
    SCIP_CALL( SCIPhashmapCreate(&benderscutdata->row2idx, SCIPblkmem(masterprob), benderscutdata->nlpinrows) );
 
@@ -211,8 +209,8 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(masterprob, &benderscutdata->nlpirows, SCIPgetNLPNlRows(subproblem),
          benderscutdata->nlpinrows) ); /*lint !e666*/
 
-   SCIP_CALL( SCIPcreateNlpiProb(subproblem, benderscutdata->nlpi, SCIPgetNLPNlRows(subproblem), benderscutdata->nlpinrows,
-         benderscutdata->nlpiprob, benderscutdata->var2idx, benderscutdata->row2idx, NULL, SCIPinfinity(subproblem), FALSE,
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob, "benders-feascutalt-nlp",
+         SCIPgetNLPNlRows(subproblem), benderscutdata->nlpinrows, benderscutdata->var2idx, benderscutdata->row2idx, NULL, SCIPinfinity(subproblem), FALSE,
          FALSE) );
 
    /* storing the slack variable bounds and indices */
@@ -270,7 +268,7 @@ SCIP_RETCODE updateAuxiliaryNonlinearSubproblem(
    assert(benderscutdata->row2idx != NULL);
 
    /* setting the variable bounds to that from the current subproblem */
-   SCIP_CALL( SCIPupdateNlpiProb(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->var2idx,
+   SCIP_CALL( SCIPupdateNlpiProblem(subproblem, benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->var2idx,
          benderscutdata->nlpivars, benderscutdata->nlpinvars, SCIPinfinity(subproblem)) );
 
    /* unfixing the slack variables */

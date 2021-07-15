@@ -28,6 +28,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc_rowprep.h"
 #include "scip/nlhdlr.h"
+#include "scip/nlhdlr_bilinear.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME         "quotient"

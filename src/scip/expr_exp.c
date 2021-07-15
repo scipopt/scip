@@ -22,7 +22,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_E on Windows */  /*lint !750 */
+
 #include <string.h>
+#include <math.h>
 
 #include "scip/expr_exp.h"
 #include "scip/expr_value.h"
@@ -39,6 +42,108 @@
 /*
  * Local methods
  */
+
+/** computes coefficients of secant of an exponential term */
+static
+void addExpSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lb,                 /**< lower bound on variable */
+   SCIP_Real             ub,                 /**< upper bound on variable */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   )
+{
+   SCIP_Real coef;
+   SCIP_Real constant;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lb));
+   assert(!SCIPisInfinity(scip, -ub));
+   assert(SCIPisLE(scip, lb, ub));
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+   {
+      /* unboundedness */
+      *success = FALSE;
+      return;
+   }
+
+   /* if lb and ub are too close use a safe secant */
+   if( SCIPisEQ(scip, lb, ub) )
+   {
+      coef = 0.0;
+      constant = exp(ub);
+   }
+   else
+   {
+      coef = (exp(ub) - exp(lb)) / (ub - lb);
+      constant = exp(ub) - coef * ub;
+   }
+
+   if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoef     += coef;
+   *linconstant += constant;
+}
+
+/** computes coefficients of linearization of an exponential term in a reference point */
+static
+void addExpLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
+   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   )
+{
+   SCIP_Real constant;
+   SCIP_Real coef;
+
+   assert(scip != NULL);
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( SCIPisInfinity(scip, REALABS(refpoint)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   if( !isint || SCIPisIntegral(scip, refpoint) )
+   {
+      coef = exp(refpoint);
+      constant = exp(refpoint) * (1.0 - refpoint);
+   }
+   else
+   {
+      /* exp(x) -> secant between f=floor(refpoint) and f+1 = ((e-1)*e^f) * x + e^f - f * ((e-1)*e^f) */
+      SCIP_Real f;
+
+      f = SCIPfloor(scip, refpoint);
+
+      coef = (M_E - 1.0) * exp(f);
+      constant = exp(f) - f * coef;
+   }
+
+   if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoef     += coef;
+   *linconstant += constant;
+}
 
 /*
  * Callback methods of expression handler
@@ -203,12 +308,12 @@ SCIP_DECL_EXPRESTIMATE(estimateExp)
 
    if( overestimate )
    {
-      SCIPaddExpSecant(scip, localbounds[0].inf, localbounds[0].sup, coefs, constant, success);
+      addExpSecant(scip, localbounds[0].inf, localbounds[0].sup, coefs, constant, success);
       *islocal = TRUE; /* secants are only valid locally */
    }
    else
    {
-      SCIPaddExpLinearization(scip, refpoint[0], SCIPexprIsIntegral(SCIPexprGetChildren(expr)[0]), coefs, constant, success);
+      addExpLinearization(scip, refpoint[0], SCIPexprIsIntegral(SCIPexprGetChildren(expr)[0]), coefs, constant, success);
       *islocal = FALSE; /* linearization are globally valid */
       *branchcand = FALSE;
    }
@@ -273,10 +378,10 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesExp)
       if( !overest[i] )
       {
          assert(i < 3);
-         SCIPaddExpLinearization(scip, refpointsunder[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
+         addExpLinearization(scip, refpointsunder[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
       }
       else
-         SCIPaddExpSecant(scip, lb, ub, coefs[*nreturned], &constant[*nreturned], &success);
+         addExpSecant(scip, lb, ub, coefs[*nreturned], &constant[*nreturned], &success);
 
       if( success )
          ++*nreturned;

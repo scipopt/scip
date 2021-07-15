@@ -353,6 +353,9 @@ nlpi:
 - added argument int* vardegree to SCIPnlpiOracleGetVarDegree() and changed return type to SCIP_RETCODE
 - added argument int** vardegrees to SCIPnlpiOracleGetVarDegrees() and changed return type to SCIP_RETCODE
 - removed argument messagehdlr from SCIPnlpiOraclePrintProblem() and SCIPnlpiOraclePrintProblemGams()
+- removed SCIPcreateNlpiProb(), use SCIPcreateNlpiProblemFromNlRows() instead
+- renamed SCIPupdateNlpiProb() to SCIPupdateNlpiProblem() and moved into scip_nlpi.{h,c}
+- renamed SCIPaddNlpiProbRows() to SCIPaddNlpiProblemRows() and moved into scip_nlpi.{h,c}
 
 ### New API functions
 
@@ -363,7 +366,7 @@ nlpi:
 - added SCIPintervalPropagateWeightedSum()
 - added SCIPcalcRootNewton()
 - added SCIPvarGetImplicVarBounds()
-- added SCIPaddExpSecant(), SCIPaddExpLinearization(), SCIPaddLogSecant(), SCIPaddLogLinearization(), SCIPaddNlpiProbNlRows()
+- added SCIPaddNlpiProblemNlRows()
 - added SCIPcreateRowprep(), SCIPfreeRowprep(), SCIPcopyRowprep(),
   SCIProwprepGetNVars(), SCIProwprepGetVars(), SCIProwprepGetCoefs(), SCIProwprepGetSide(), SCIProwprepGetSidetype(), SCIProwprepIsLocal(), SCIProwprepGetName(), SCIProwprepGetNModifiedVars(), SCIProwprepGetModifiedVars(),
   SCIProwprepReset(), SCIProwprepAddSide(), SCIProwprepAddConstant(), SCIProwprepSetSidetype(), SCIProwprepSetLocal(), SCIProwprepRecordModifications(),
@@ -460,6 +463,7 @@ nlpi:
 - added SCIPincludeNlpSolverIpopt()
 - added SCIPincludeNlpSolverWorhp()
 - added SCIPnlpiOracleChgExpr()
+- added SCIPcreateNlpiProblemFromNlRows()
 
 ### Command line interface
 
@@ -560,6 +564,7 @@ Deleted files
 - src/scip/cons_bivariate.{c,h}
 - src/scip/pub_misc_nonlinear.h
 - src/scip/misc_nonlinear.c
+- src/scip/scip_nonlinear.{c,h}
 
 
 Unit tests

@@ -44,7 +44,6 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
-#include "scip/scip_nonlinear.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -213,9 +212,8 @@ SCIP_RETCODE computeInteriorPoint(
    assert(nlpi != NULL);
 
    nvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), nvars) );
-   SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, nlpi, &nlpiprob, "gauge-interiorpoint-nlp", SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), var2nlpiidx,
             NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
    /* add objective variable; the problem is \min t, s.t. g(x) <= t, l(x) <= 0, where g are nonlinear and l linear */
@@ -256,7 +254,7 @@ SCIP_RETCODE computeInteriorPoint(
    }
 
    /* add linear rows */
-   SCIP_CALL( SCIPaddNlpiProbRows(scip, nlpi, nlpiprob, var2nlpiidx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
+   SCIP_CALL( SCIPaddNlpiProblemRows(scip, nlpi, nlpiprob, var2nlpiidx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 
    /* set parameters in nlpi; time and iterations limit, tolerance, verbosity; for time limit, get time limit of scip;
     * if scip doesn't have much time left, don't run separator. otherwise, timelimit is the minimum between whats left
