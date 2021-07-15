@@ -507,14 +507,13 @@ SCIP_RETCODE applyNlobbt(
       propdata->nlpi = SCIPgetNlpis(scip)[0];
       assert(propdata->nlpi != NULL);
 
-      SCIP_CALL( SCIPcreateNlpiProblem(scip, propdata->nlpi, &propdata->nlpiprob, "nlobbt-nlp") );
       SCIP_CALL( SCIPhashmapCreate(&propdata->var2nlpiidx, SCIPblkmem(scip), propdata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->nlpivars, SCIPgetVars(scip), propdata->nlpinvars) ); /*lint !e666*/
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
 
-      SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-            propdata->nlpiprob, propdata->var2nlpiidx, NULL, propdata->nlscore, SCIPgetCutoffbound(scip), FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, propdata->nlpi, &propdata->nlpiprob, "nlobbt-nlp", SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+            propdata->var2nlpiidx, NULL, propdata->nlscore, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* initialize bound status; perturb nlscores by a factor which ensures that zero scores remain zero */
       assert(propdata->randnumgen != NULL);

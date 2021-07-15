@@ -789,12 +789,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       sepadata->nlpi = SCIPgetNlpis(scip)[0];
       assert(sepadata->nlpi != NULL);
 
-      SCIP_CALL( SCIPcreateNlpiProblem(scip, sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp") );
       SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) ); /*lint !e666*/
 
-      SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
+      SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp", SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+            sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* add rows of the LP
        * we do not sue the depth argument of the callback because we want to build a globally valid initia lrelaxation

@@ -200,7 +200,6 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    benderscutdata->nlpi = SCIPgetNlpis(subproblem)[0];
    assert(benderscutdata->nlpi != NULL);
 
-   SCIP_CALL( SCIPcreateNlpiProblem(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob, "benders-feascutalt-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&benderscutdata->var2idx, SCIPblkmem(masterprob), benderscutdata->nlpinvars) );
    SCIP_CALL( SCIPhashmapCreate(&benderscutdata->row2idx, SCIPblkmem(masterprob), benderscutdata->nlpinrows) );
 
@@ -209,8 +208,8 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(masterprob, &benderscutdata->nlpirows, SCIPgetNLPNlRows(subproblem),
          benderscutdata->nlpinrows) ); /*lint !e666*/
 
-   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(subproblem, benderscutdata->nlpi, SCIPgetNLPNlRows(subproblem), benderscutdata->nlpinrows,
-         benderscutdata->nlpiprob, benderscutdata->var2idx, benderscutdata->row2idx, NULL, SCIPinfinity(subproblem), FALSE,
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(subproblem, benderscutdata->nlpi, &benderscutdata->nlpiprob, "benders-feascutalt-nlp",
+         SCIPgetNLPNlRows(subproblem), benderscutdata->nlpinrows, benderscutdata->var2idx, benderscutdata->row2idx, NULL, SCIPinfinity(subproblem), FALSE,
          FALSE) );
 
    /* storing the slack variable bounds and indices */

@@ -524,9 +524,10 @@ SCIP_DECL_NLPISETSTRINGPAR(SCIPsetNlpiStringPar)
 SCIP_RETCODE SCIPcreateNlpiProblemFromNlRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM**    nlpiprob,           /**< buffer to store pointer to created nlpi problem */
+   const char*           name,               /**< name to give to problem */
    SCIP_NLROW**          nlrows,             /**< nonlinear rows */
    int                   nnlrows,            /**< number of nonlinear rows */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
    SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpiprob */
    SCIP_HASHMAP*         nlrow2idx,          /**< empty hash map to store mapping between variables and indices in nlpiprob, can be NULL */
    SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not needed) */
@@ -555,12 +556,15 @@ SCIP_RETCODE SCIPcreateNlpiProblemFromNlRows(
    int i;
 
    assert(nlpiprob != NULL);
+   assert(name != NULL);
    assert(var2idx != NULL);
    assert(nlrows != NULL);
    assert(nnlrows > 0);
    assert(nlpi != NULL);
 
    SCIPdebugMsg(scip, "SCIPcreateNlpiProblemFromNlRows() called with cutoffbound %g\n", cutoffbound);
+
+   SCIP_CALL( SCIPnlpiCreateProblem(scip->set, nlpi, nlpiprob, name) );
 
    if( nlscore != NULL )
    {
@@ -612,7 +616,7 @@ SCIP_RETCODE SCIPcreateNlpiProblemFromNlRows(
    }
 
    /* add variables */
-   SCIP_CALL( SCIPaddNlpiVars(scip, nlpi, nlpiprob, nvars, lbs, ubs, varnames) );
+   SCIP_CALL( SCIPaddNlpiVars(scip, nlpi, *nlpiprob, nvars, lbs, ubs, varnames) );
    SCIPfreeBufferArray(scip, &varnames);
    SCIPfreeBufferArray(scip, &ubs);
    SCIPfreeBufferArray(scip, &lbs);
@@ -622,7 +626,7 @@ SCIP_RETCODE SCIPcreateNlpiProblemFromNlRows(
    {
       if( nobjinds > 0 )
       {
-         SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, nobjinds, objinds, objvals, NULL, 0.0) );
+         SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, *nlpiprob, nobjinds, objinds, objvals, NULL, 0.0) );
       }
 
       SCIPfreeBufferArray(scip, &objinds);
@@ -761,7 +765,7 @@ SCIP_RETCODE SCIPcreateNlpiProblemFromNlRows(
    assert(nconss > 0);
 
    /* pass all constraint information to nlpi */
-   SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, nlpiprob, nconss, lhss, rhss, nlininds, lininds, linvals,
+   SCIP_CALL( SCIPaddNlpiConstraints(scip, nlpi, *nlpiprob, nconss, lhss, rhss, nlininds, lininds, linvals,
          exprs, names) );
 
    if( it != NULL )

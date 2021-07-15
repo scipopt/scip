@@ -92,10 +92,9 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    nlpi = SCIPgetNlpis(scip)[0];
    assert(nlpi != NULL);
 
-   SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "relax-NLP") );
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
-   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, NULL, SCIPgetCutoffbound(scip),
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, nlpi, &nlpiprob, "relax-NLP", nlrows, nnlrows, var2idx, NULL, NULL, SCIPgetCutoffbound(scip),
          TRUE, TRUE) );
    SCIP_CALL( SCIPaddNlpiProblemRows(scip, nlpi, nlpiprob, var2idx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 

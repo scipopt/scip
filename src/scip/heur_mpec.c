@@ -142,10 +142,9 @@ SCIP_RETCODE createNLP(
          SCIPgetUpperbound(scip));
    }
 
-   SCIP_CALL( SCIPcreateNlpiProblem(scip, heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, heurdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-         heurdata->nlpiprob, heurdata->var2idx, NULL, NULL, cutoff, TRUE, FALSE) );
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp", SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+         heurdata->var2idx, NULL, NULL, cutoff, TRUE, FALSE) );
 
    return SCIP_OKAY;
 }

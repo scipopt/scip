@@ -237,7 +237,7 @@ SCIP_DECL_NLPISETSTRINGPAR(SCIPsetNlpiStringPar);
 
 /** @} */
 
-/**@name Convenience methods to setup and update a NLPI problem using NLROWS
+/**@name Convenience methods to setup and update an NLPI problem using NLROWS
  *
  * These methods can be used, for example, to create a NLPI problem that contains only the convex rows of the SCIP NLP relaxation.
  * @{
@@ -253,9 +253,10 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNlpiProblemFromNlRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM**    nlpiprob,           /**< buffer to store pointer to created nlpi problem */
+   const char*           name,               /**< name to give to problem */
    SCIP_NLROW**          nlrows,             /**< nonlinear rows */
    int                   nnlrows,            /**< number of nonlinear rows */
-   SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
    SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpiprob */
    SCIP_HASHMAP*         nlrow2idx,          /**< empty hash map to store mapping between variables and indices in nlpiprob, can be NULL */
    SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not needed) */

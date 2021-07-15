@@ -182,8 +182,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseExpr(scip, &expexpr) );
 
    /* create convex NLP relaxation */
-   SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "convex_NLP") );
-   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, nlpi, nlrows, 5, nlpiprob, var2idx, NULL, nlscore, -1.5, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, nlpi, &nlpiprob, "convex_NLP", nlrows, 5, var2idx, NULL, nlscore, -1.5, FALSE, TRUE) );
    cr_assert(nlpiprob != NULL);
 
    oracle = (SCIP_NLPIORACLE*) SCIPgetNlpiOracleIpopt(nlpiprob);

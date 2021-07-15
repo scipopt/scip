@@ -212,9 +212,8 @@ SCIP_RETCODE computeInteriorPoint(
    assert(nlpi != NULL);
 
    nvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), nvars) );
-   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, nlpi, &nlpiprob, "gauge-interiorpoint-nlp", SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), var2nlpiidx,
             NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
    /* add objective variable; the problem is \min t, s.t. g(x) <= t, l(x) <= 0, where g are nonlinear and l linear */
