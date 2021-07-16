@@ -163,7 +163,7 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
 
    (*success) = FALSE;
 
-   /* setting the feasibility and optimality tolerance to 0.01x the defaults */
+   /* reduce the default feasibility and optimality tolerance by given factor (typically 0.01) */
    nlpparam.feastol *= multiplier;
    nlpparam.relobjtol *= multiplier;
 
