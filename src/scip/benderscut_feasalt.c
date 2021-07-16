@@ -133,7 +133,6 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
    SCIP_Bool*            success             /**< returns whether solving the feasibility problem was successful */
    )
 {
-   SCIP_Real timelimit;
    SCIP_NLPSOLSTAT nlpsolstat;
 
    assert(scip != NULL);
@@ -141,25 +140,7 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
 
    (*success) = TRUE;
 
-   /* setting the time limit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-   {
-      timelimit -= SCIPgetSolvingTime(scip);
-      if( timelimit <= 0.0 )
-      {
-         SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
-         return SCIP_OKAY;
-      }
-   }
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_ITLIM, 3000) );  // TODO what could be a meaningful limit?
-
-#ifdef SCIP_MOREDEBUG
-      SCIP_CALL( SCIPsetNlpiIntPar(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
-#endif
-
-   SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, .iterlimit = 3000) );  /*lint !e666*/
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob));
 
    nlpsolstat = SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob);

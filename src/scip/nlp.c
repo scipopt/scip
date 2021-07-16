@@ -3016,11 +3016,10 @@ SCIP_RETCODE nlpSolve(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NLPPARAM*        nlpparam            /**< NLP solve parameters */
    )
 {
-   SCIP_Real sciptimelimit;
-   SCIP_Real timeleft;
    int i;
 
    assert(nlp    != NULL);
@@ -3065,15 +3064,10 @@ SCIP_RETCODE nlpSolve(
       SCIPsetFreeBufferArray(set, &initialguess_solver);
    }
 
-   /* set the NLP timelimit to the remaining time */
-   SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &sciptimelimit) );
-   timeleft = sciptimelimit - SCIPclockGetTime(stat->solvingtime);
-   SCIP_CALL( SCIPnlpiSetRealPar(set, nlp->solver, nlp->problem, SCIP_NLPPAR_TILIM, MAX(0.0, timeleft)) );
-
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);
 
-   SCIP_CALL( SCIPnlpiSolve(set, nlp->solver, nlp->problem) );
+   SCIP_CALL( SCIPnlpiSolve(set, stat, nlp->solver, nlp->problem, nlpparam) );
 
    SCIPclockStop(stat->nlpsoltime, set);
    ++stat->nnlps;
@@ -3452,10 +3446,6 @@ SCIP_RETCODE SCIPnlpCreate(
       }
       assert((*nlp)->solver != NULL);
       SCIP_CALL( SCIPnlpiCreateProblem(set, (*nlp)->solver, &(*nlp)->problem, "scip_nlp") );
-
-      /* set NLP tolerances to current SCIP primal and dual feasibility tolerance */
-      SCIP_CALL( SCIPnlpiSetRealPar(set, (*nlp)->solver, (*nlp)->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
-      SCIP_CALL( SCIPnlpiSetRealPar(set, (*nlp)->solver, (*nlp)->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
    }
    else
    {
@@ -3917,7 +3907,7 @@ SCIP_RETCODE SCIPnlpFlush(
    return SCIP_OKAY;
 }
 
-/** solves the NLP */
+/** solves the NLP or diving NLP */
 SCIP_RETCODE SCIPnlpSolve(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -3925,7 +3915,8 @@ SCIP_RETCODE SCIPnlpSolve(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NLPPARAM*        nlpparam            /**< NLP solve parameters */
    )
 {
    assert(nlp    != NULL);
@@ -3933,15 +3924,12 @@ SCIP_RETCODE SCIPnlpSolve(
    assert(set    != NULL);
    assert(stat   != NULL);
 
-   if( nlp->indiving )
+   if( !nlp->indiving )
    {
-      SCIPerrorMessage("cannot solve NLP during NLP diving (use SCIPsolveDiveNLP)\n");
-      return SCIP_ERROR;
+      SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set, stat) );
    }
 
-   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set, stat) );
-
-   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat, primal, tree) );
+   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat, primal, tree, nlpparam) );
 
    return SCIP_OKAY;
 }
@@ -4397,111 +4385,6 @@ SCIP_Bool SCIPnlpHasSolution(
    return nlp->solstat <= SCIP_NLPSOLSTAT_LOCINFEASIBLE;
 }
 
-/** gets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpGetIntPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int*                  ival                /**< pointer to store the parameter value */
-   )
-{
-   assert(nlp  != NULL);
-   assert(nlp->solver  != NULL);
-   assert(nlp->problem != NULL);
-   assert(ival != NULL);
-
-   SCIP_CALL( SCIPnlpiGetIntPar(set, nlp->solver, nlp->problem, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** sets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpSetIntPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int                   ival                /**< parameter value */
-   )
-{
-   assert(nlp  != NULL);
-   assert(nlp->solver  != NULL);
-   assert(nlp->problem != NULL);
-
-   SCIP_CALL( SCIPnlpiSetIntPar(set, nlp->solver, nlp->problem, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** gets floating point parameter of NLP */
-SCIP_RETCODE SCIPnlpGetRealPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real*            dval                /**< pointer to store the parameter value */
-   )
-{
-   assert(nlp  != NULL);
-   assert(nlp->solver  != NULL);
-   assert(nlp->problem != NULL);
-   assert(dval != NULL);
-
-   SCIP_CALL( SCIPnlpiGetRealPar(set, nlp->solver, nlp->problem, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets floating point parameter of NLP */
-SCIP_RETCODE SCIPnlpSetRealPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real             dval                /**< parameter value */
-   )
-{
-   assert(nlp  != NULL);
-   assert(nlp->solver  != NULL);
-   assert(nlp->problem != NULL);
-
-   SCIP_CALL( SCIPnlpiSetRealPar(set, nlp->solver, nlp->problem, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** gets string parameter of NLP */
-SCIP_RETCODE SCIPnlpGetStringPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char**          sval                /**< pointer to store the parameter value */
-   )
-{
-   assert(nlp  != NULL);
-   assert(nlp->solver  != NULL);
-   assert(nlp->problem != NULL);
-   assert(sval != NULL);
-
-   SCIP_CALL( SCIPnlpiGetStringPar(set, nlp->solver, nlp->problem, type, sval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets string parameter of NLP */
-SCIP_RETCODE SCIPnlpSetStringPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char*           sval                /**< parameter value */
-   )
-{
-   assert(nlp  != NULL);
-   assert(nlp->solver  != NULL);
-   assert(nlp->problem != NULL);
-
-   SCIP_CALL( SCIPnlpiSetStringPar(set, nlp->solver, nlp->problem, type, sval) );
-
-   return SCIP_OKAY;
-}
-
 /*
  * NLP diving methods
  */
@@ -4735,22 +4618,6 @@ SCIP_Bool SCIPnlpIsDivingObjChanged(
    )
 {
    return nlp->divingobj != NULL;
-}
-
-/** solves diving NLP */
-SCIP_RETCODE SCIPnlpSolveDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree                /**< branch and bound tree */
-   )
-{
-   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat, primal, tree) );
-
-   return SCIP_OKAY;
 }
 
 /** creates an NLP statistics structure */

@@ -32,7 +32,6 @@
 #define RELAX_FREQ             1
 
 #define NLPITERLIMIT           500       /**< iteration limit of NLP solver */
-#define NLPVERLEVEL            0         /**< verbosity level of NLP solver */
 #define FEASTOLFAC             0.01      /**< factor for NLP feasibility tolerance */
 #define RELOBJTOLFAC           0.01      /**< factor for NLP relative objective tolerance */
 
@@ -75,7 +74,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_HASHMAP* var2idx;
    SCIP_NLPI* nlpi;
-   SCIP_Real timelimit;
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);
    int nnlrows;
 
    *result = SCIP_DIDNOTRUN;
@@ -98,26 +97,12 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
          TRUE, TRUE) );
    SCIP_CALL( SCIPaddNlpiProblemRows(scip, nlpi, nlpiprob, var2idx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 
-   /* set working limits */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-   {
-      timelimit -= SCIPgetSolvingTime(scip);
-      if( timelimit <= 1.0 )
-      {
-         SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
-         return SCIP_OKAY;
-      }
-   }
-
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, NLPITERLIMIT) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) * FEASTOLFAC) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, SCIPfeastol(scip) * RELOBJTOLFAC) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERLEVEL) );
+   nlpparam.iterlimit = NLPITERLIMIT;
+   nlpparam.feastol = SCIPfeastol(scip) * FEASTOLFAC;
+   nlpparam.relobjtol = SCIPfeastol(scip) * RELOBJTOLFAC;
 
    /* solve NLP */
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiprob, nlpparam) );
 
    /* forward solution if we solved to optimality; local optimality is enough since the NLP is convex */
    if( SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT )

@@ -115,21 +115,12 @@ SCIP_RETCODE SCIPincludeNlpi(
    SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs)),     /**< change coefficients in linear part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPR           ((*nlpichgexpr)),            /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant)),     /**< change the constant offset in the objective */
-   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess for primal variables */
+   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve)),              /**< solve NLP */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat)),         /**< get solution status */
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution)),        /**< get solution */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics)),      /**< get solve statistics */
-   SCIP_DECL_NLPIGETWARMSTARTSIZE  ((*nlpigetwarmstartsize)),   /**< get size for warmstart object buffer */
-   SCIP_DECL_NLPIGETWARMSTARTMEMO  ((*nlpigetwarmstartmemo)),   /**< get warmstart object */
-   SCIP_DECL_NLPISETWARMSTARTMEMO  ((*nlpisetwarmstartmemo)),   /**< set warmstart object */
-   SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar)),          /**< get value of integer parameter */
-   SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar)),          /**< set value of integer parameter */
-   SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar)),         /**< get value of floating point parameter */
-   SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
-   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
-   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    )
 {
@@ -153,8 +144,6 @@ SCIP_RETCODE SCIPincludeNlpi(
       nlpicreateproblem, nlpifreeproblem, nlpigetproblempointer,
       nlpiaddvars, nlpiaddconstraints, nlpisetobjective, nlpichgvarbounds, nlpichgconssides, nlpidelvarset, nlpidelconsset, nlpichglinearcoefs, nlpichgexpr, nlpichgobjconstant,
       nlpisetinitialguess, nlpisolve, nlpigetsolstat, nlpigettermstat, nlpigetsolution, nlpigetstatistics,
-      nlpigetwarmstartsize, nlpigetwarmstartmemo, nlpisetwarmstartmemo,
-      nlpigetintpar, nlpisetintpar, nlpigetrealpar, nlpisetrealpar, nlpigetstringpar, nlpisetstringpar,
       nlpidata) );
    assert(nlpi != NULL);
 
@@ -362,7 +351,7 @@ SCIP_DECL_NLPICHGOBJCONSTANT(SCIPchgNlpiObjConstant)
    return SCIP_OKAY;
 }
 
-/** sets initial guess for primal variables */
+/** sets initial guess */
 SCIP_DECL_NLPISETINITIALGUESS(SCIPsetNlpiInitialGuess)
 {
    assert(scip != NULL);
@@ -372,15 +361,20 @@ SCIP_DECL_NLPISETINITIALGUESS(SCIPsetNlpiInitialGuess)
    return SCIP_OKAY;
 }
 
-/** tries to solve NLP */
-SCIP_DECL_NLPISOLVE(SCIPsolveNlpi)
+/** try to solve NLP */
+SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam)
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPnlpiSolve(scip->set, nlpi, problem) );
+   SCIP_CALL( SCIPnlpiSolve(scip->set, scip->stat, nlpi, problem, &param) );
 
    return SCIP_OKAY;
 }
+
+#if defined(_MSC_VER) && _MSC_VER < 1800
+/* warn that SCIPsolveNlpi() macro isn't perfect with ancient MSVC */
+#pragma message ( "Warning: designated initializers not supported by this version of MSVC. Parameters given to NLP solves will be ignored." )
+#endif
 
 /** gives solution status */
 SCIP_DECL_NLPIGETSOLSTAT(SCIPgetNlpiSolstat)
@@ -416,101 +410,6 @@ SCIP_DECL_NLPIGETSTATISTICS(SCIPgetNlpiStatistics)
    assert(scip != NULL);
 
    SCIP_CALL( SCIPnlpiGetStatistics(scip->set, nlpi, problem, statistics) );
-
-   return SCIP_OKAY;
-}
-
-/** gives required size of a buffer to store a warmstart object */
-SCIP_DECL_NLPIGETWARMSTARTSIZE(SCIPgetNlpiWarmstartSize)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetWarmstartSize(scip->set, nlpi, problem, size) );
-
-   return SCIP_OKAY;
-}
-
-/** stores warmstart information in buffer */
-SCIP_DECL_NLPIGETWARMSTARTMEMO(SCIPgetNlpiWarmstartMemo)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetWarmstartMemo(scip->set, nlpi, problem, buffer) );
-
-   return SCIP_OKAY;
-}
-
-/** sets warmstart information in solver */
-SCIP_DECL_NLPISETWARMSTARTMEMO(SCIPsetNlpiWarmstartMemo)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiSetWarmstartMemo(scip->set, nlpi, problem, buffer) );
-
-   return SCIP_OKAY;
-}
-
-/**@name Parameter Methods */
-/**@{ */
-
-/** gets integer parameter of NLP */
-SCIP_DECL_NLPIGETINTPAR(SCIPgetNlpiIntPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetIntPar(scip->set, nlpi, problem, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** sets integer parameter of NLP */
-SCIP_DECL_NLPISETINTPAR(SCIPsetNlpiIntPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiSetIntPar(scip->set, nlpi, problem, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** gets floating point parameter of NLP
- * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then gets solver-wide value for infinity */
-SCIP_DECL_NLPIGETREALPAR(SCIPgetNlpiRealPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetRealPar(scip->set, nlpi, problem, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets floating point parameter of NLP
- * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then sets solver-wide value for infinity */
-SCIP_DECL_NLPISETREALPAR(SCIPsetNlpiRealPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiSetRealPar(scip->set, nlpi, problem, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** gets string parameter of NLP */
-SCIP_DECL_NLPIGETSTRINGPAR(SCIPgetNlpiStringPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiGetStringPar(scip->set, nlpi, problem, type, sval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets string parameter of NLP */
-SCIP_DECL_NLPISETSTRINGPAR(SCIPsetNlpiStringPar)
-{
-   assert(scip != NULL);
-
-   SCIP_CALL( SCIPnlpiSetStringPar(scip->set, nlpi, problem, type, sval) );
 
    return SCIP_OKAY;
 }

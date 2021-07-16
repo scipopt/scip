@@ -339,6 +339,7 @@ SCIP_RETCODE solveNlp(
    SCIP_VAR*             var,                /**< variable to propagate */
    int                   varidx,             /**< variable index in the propdata->nlpivars array */
    SCIP_BOUNDTYPE        boundtype,          /**< minimize or maximize var? */
+   SCIP_NLPPARAM*        nlpparam,           /**< NLP solve parameters */
    int*                  nlpiter,            /**< buffer to store the total number of nlp iterations */
    SCIP_RESULT*          result              /**< pointer to store result */
    )
@@ -376,8 +377,8 @@ SCIP_RETCODE solveNlp(
    if( propdata->nlptimelimit > 0.0 )
       timelimit = MIN(propdata->nlptimelimit, timelimit);
    iterlimit = propdata->nlpiterlimit > 0 ? propdata->nlpiterlimit : INT_MAX;
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
+   nlpparam->timelimit = timelimit;
+   nlpparam->iterlimit = iterlimit;
 
    /* set corresponding objective coefficient and solve NLP */
    obj = boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : -1.0;
@@ -385,7 +386,7 @@ SCIP_RETCODE solveNlp(
 
    SCIPdebugMsg(scip, "solve var=%s boundtype=%d nlscore=%g\n", SCIPvarGetName(var), boundtype,
       propdata->nlscore[propdata->currpos]);
-   SCIP_CALL( SCIPsolveNlpi(scip, propdata->nlpi, propdata->nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpiParam(scip, propdata->nlpi, propdata->nlpiprob, *nlpparam) );
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, propdata->nlpi, propdata->nlpiprob));
 
    /* collect NLP statistics */
@@ -467,6 +468,7 @@ SCIP_RETCODE applyNlobbt(
    SCIP_RESULT*          result              /**< pointer to store result */
    )
 {
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);  /*lint !e446*/
    int nlpiterleft;
 
    assert(result != NULL);
@@ -548,11 +550,9 @@ SCIP_RETCODE applyNlobbt(
    }
 
    /* set parameters of NLP solver */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
-         SCIPfeastol(scip) * propdata->feastolfac) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
-         SCIPfeastol(scip) * propdata->relobjtolfac) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
+   nlpparam.feastol *= propdata->feastolfac;
+   nlpparam.relobjtol = SCIPfeastol(scip) * propdata->relobjtolfac;
+   nlpparam.verblevel = (unsigned short)propdata->nlpverblevel;
 
    /* main propagation loop */
    while( propdata->currpos < propdata->nlpinvars
@@ -586,14 +586,14 @@ SCIP_RETCODE applyNlobbt(
       /* case: minimize var */
       if( (propdata->status[propdata->currpos] & SOLVEDLB) == 0 ) /*lint !e641*/
       {
-         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_LOWER, &iters, result) );
+         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_LOWER, &nlpparam, &iters, result) );
          nlpiterleft -= iters;
       }
 
       /* case: maximize var */
       if( *result != SCIP_CUTOFF && (propdata->status[propdata->currpos] & SOLVEDUB) == 0 ) /*lint !e641*/
       {
-         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_UPPER, &iters, result) );
+         SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_UPPER, &nlpparam, &iters, result) );
          nlpiterleft -= iters;
       }
 

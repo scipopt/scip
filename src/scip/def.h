@@ -65,6 +65,17 @@
 #define SCIP_HAVE_VARIADIC_MACROS 1
 #endif
 
+/** get the first parameter and all-but-the-first arguments from variadic arguments
+ *
+ * normally, SCIP_VARARGS_FIRST_ should be sufficient
+ * the SCIP_VARARGS_FIRST_/SCIP_VARARGS_FIRST kludge is to work around a bug in MSVC (https://stackoverflow.com/questions/4750688/how-to-single-out-the-first-parameter-sent-to-a-macro-taking-only-a-variadic-par)
+ */
+#define SCIP_VARARGS_FIRST_(firstarg, ...) firstarg
+#define SCIP_VARARGS_FIRST(args) SCIP_VARARGS_FIRST_ args
+
+/** get all but the first parameter from variadic arguments */
+#define SCIP_VARARGS_REST(firstarg, ...) __VA_ARGS__
+
 /*
  * Boolean values
  */

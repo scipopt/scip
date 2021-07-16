@@ -93,10 +93,8 @@ struct SCIP_HeurData
 
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
-   SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0 for off */
    SCIP_Real             resolvetolfactor;   /**< factor for feasibility tolerance when resolving NLP due to disagreement of feasibility */
    SCIP_Bool             resolvefromscratch; /**< whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution */
-   char*                 nlpoptfile;         /**< name of NLP solver specific option file */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
@@ -615,33 +613,34 @@ SCIP_RETCODE solveSubNLP(
    SCIP_RESULT*          result,             /**< buffer to store result, DIDNOTFIND, FOUNDSOL, or CUTOFF        */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
-   SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
    SCIP_Longint*         iterused,           /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
    SCIP_Bool             tighttolerances,    /**< whether to use tight feasibility tolerances and reduce presolve */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
 {
-   SCIP_HEURDATA* heurdata;
+   SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
    SCIP_RETCODE   retcode;
    SCIP_Real*     startpoint;
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
    int            i;
    SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
+   SCIP_NLPPARAM  nlpparam = SCIP_NLPPARAM_DEFAULT(heurdata->subscip);  /*lint !e446*/
+   SCIP_Real      timelimit;
 
    assert(scip != NULL);
    assert(heur != NULL);
+   assert(heurdata != NULL);
    assert(result != NULL);
 
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* if NLP timelimit is set to 0.0, then return immediately
-    * Previously, we were still running scip presolve, assuming the caller wanted to see if the instance is still feasible after presolve.
-    * But now we want to set a timelimit also for the scip presolve, and it is easiest to use timelimit for this.
-    */
-   if( timelimit == 0.0 )
-      goto CLEANUP;
+   /* get remaining SCIP solve time; if no time left, then stop */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+   {
+      timelimit -= SCIPgetSolvingTime(scip);
+      if( timelimit <= 0.0 )
+         goto CLEANUP;
+   }
 
    if( tighttolerances )
    {
@@ -924,48 +923,38 @@ SCIP_RETCODE solveSubNLP(
    *result = SCIP_DIDNOTFIND;
 
    /* setup NLP parameters */
-
    if( tighttolerances )
    {
       /* set feasibility tolerance, if tighttolerances is set */
-      SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
+      nlpparam.feastol = heurdata->resolvetolfactor*SCIPfeastol(scip);
    }
    /* TODO Would it make sense to already start with a tighter feastol than SCIP's?
    else
    {
-      SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_FEASTOL, 0.1*SCIPfeastol(scip)) );
+      nlpparam.feastol = 0.1*SCIPfeastol(scip);
    }
    */
-
-   /* set option file to use by NLP solver */
-   if( heurdata->nlpoptfile != NULL && *heurdata->nlpoptfile != '\0' )
-   {
-      SCIP_CALL( SCIPsetNLPStringPar(heurdata->subscip, SCIP_NLPPAR_OPTFILE, heurdata->nlpoptfile) );
-   }
 
    /* set iteration limit for NLP solver */
    if( itercontingent == -1 && heurdata->nlpiterlimit > 0 )
       itercontingent = heurdata->nlpiterlimit;
    if( itercontingent > 0 )
    {
-      SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_ITLIM, (int)MIN(INT_MAX, itercontingent)) );
+      nlpparam.iterlimit = (int)MIN(INT_MAX, itercontingent);
    }
-
-   /* set time limit for NLP solver */
-   SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_TILIM, timelimit) );
 
    /* set verbosity of NLP solver
     * NLP interface may take SCIP verblevel into account, too, so temporarily increase this, too
     */
-   SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
+   nlpparam.verblevel = (unsigned short)heurdata->nlpverblevel;
    if( heurdata->nlpverblevel >= 1 )
    {
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", SCIP_VERBLEVEL_HIGH) );  /*lint !e641*/
    }
 
    /* let the NLP solver do its magic */
-   SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT " and timelimit %g\n", itercontingent, timelimit);
-   SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
+   SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT "\n", itercontingent);
+   SCIP_CALL( SCIPsolveNLPParam(heurdata->subscip, nlpparam) );
 
    SCIPdebugMsg(scip, "NLP solver returned with termination status %d and solution status %d, objective value is %g\n",
       SCIPgetNLPTermstat(heurdata->subscip), SCIPgetNLPSolstat(heurdata->subscip), SCIPgetNLPObjval(heurdata->subscip));
@@ -1070,7 +1059,7 @@ SCIP_RETCODE solveSubNLP(
             /* free transformed problem */
             SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
 
-            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : sol, itercontingent, timelimit, iterused, TRUE, NULL) );
+            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : sol, itercontingent, iterused, TRUE, NULL) );
          }
          else
          {
@@ -1134,7 +1123,7 @@ SCIP_RETCODE solveSubNLP(
                   heurdata->resolvetolfactor*SCIPfeastol(scip), heurdata->resolvetolfactor*SCIPepsilon(scip));
             }
 
-            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : resultsol, itercontingent, timelimit, iterused, TRUE, resultsol) );
+            SCIP_CALL( solveSubNLP(scip, heur, result, heurdata->resolvefromscratch ? refpoint : resultsol, itercontingent, iterused, TRUE, resultsol) );
          }
          else
          {
@@ -1381,7 +1370,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_RESULT*          result,             /**< pointer to store result of: did not run, solution found, no solution found, or fixing is infeasible (cutoff) */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
-   SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
    SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
    SCIP_Longint*         iterused,           /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
@@ -1510,7 +1498,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       cutoff = SCIPinfinity(scip);
 
    /* solve the subNLP and try to add solution to SCIP */
-   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, timelimit, iterused, FALSE, resultsol) );
+   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, iterused, FALSE, resultsol) );
 
    if( heurdata->subscip == NULL )
    {
@@ -1580,8 +1568,7 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_SOL*             sol,                /**< solution for which to solve NLP, and where to store resolved solution values */
    SCIP_Bool*            success,            /**< buffer where to store whether a feasible solution was found */
-   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
-   SCIP_Real             timelimit           /**< time limit for NLP solver */
+   SCIP_Longint          itercontingent      /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -1683,7 +1670,7 @@ SCIP_RETCODE SCIPresolveSolHeurSubNlp(
    SCIP_CALL( SCIPsetObjlimit(heurdata->subscip, cutoff) );
 
    /* solve the subNLP and try to add solution to SCIP */
-   SCIP_CALL( solveSubNLP(scip, heur, &result, sol, itercontingent, timelimit, NULL, FALSE, sol) );
+   SCIP_CALL( solveSubNLP(scip, heur, &result, sol, itercontingent, NULL, FALSE, sol) );
 
    if( heurdata->subscip == NULL )
    {
@@ -1843,7 +1830,6 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
 {  /*lint --e{666,715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_Longint   itercontingent;
-   SCIP_Real      timelimit;
    SCIP_Longint   iterused;
    SCIP_Bool      runheur;
 
@@ -1950,21 +1936,6 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       itercontingent = -1;
    }
 
-   /* check whether there is enough time left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-   {
-      timelimit -= SCIPgetSolvingTime(scip);
-      if( timelimit <= 0.0 )
-      {
-         SCIPdebugMsg(scip, "skip NLP heuristic; no time left\n");
-         return SCIP_OKAY;
-      }
-   }
-   /* enforce user given time limit, if given */
-   if( heurdata->nlptimelimit > 0 )
-      timelimit = MIN(heurdata->nlptimelimit, timelimit);
-
    /* so far we have not found any solution, but now we are willing to search for one */
    *result = SCIP_DIDNOTFIND;
 
@@ -1973,7 +1944,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       SCIPinfoMessage(scip, NULL, "calling subnlp heuristic\n");
    }
 
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent, timelimit,
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent,
          heurdata->minimprove, &iterused, NULL) );
    heurdata->iterused += iterused;
 
@@ -2033,19 +2004,11 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    /* add Nlp primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nlpverblevel",
          "verbosity level of NLP solver",
-         &heurdata->nlpverblevel, FALSE, 0, 0, INT_MAX, NULL, NULL) );
+         &heurdata->nlpverblevel, FALSE, 0, 0, USHRT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nlpiterlimit",
          "iteration limit of NLP solver; 0 for no limit",
          &heurdata->nlpiterlimit, FALSE, 3000, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nlptimelimit",
-         "time limit of NLP solver; 0 to use solver default",
-         &heurdata->nlptimelimit, FALSE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/nlpoptfile",
-         "name of an NLP solver specific options file",
-         &heurdata->nlpoptfile, TRUE, "", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/resolvetolfactor",
          "if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)",

@@ -66,11 +66,9 @@
 #define VIOLATIONFAC                100 /* constraints regarded as violated when violation > VIOLATIONFAC*SCIPfeastol */
 #define MAX_ITER                     75 /* maximum number of iterations for the line search */
 
-#define DEFAULT_NLPTIMELIMIT        0.0 /**< default time limit of NLP solver; 0.0 for no limit */
 #define DEFAULT_NLPITERLIM         1000 /**< default NLP iteration limit */
 
 #define NLPFEASFAC                  1e-1/**< NLP feasibility tolerance = NLPFEASFAC * SCIP's feasibility tolerance */
-#define NLPVERBOSITY                  0 /**< NLP solver verbosity */
 
 #define INTERIOROBJVARLB           -100 /**< lower bound of the objective variable when computing interior point */
 /*
@@ -111,7 +109,6 @@ struct SCIP_SepaData
    int                   ncuts;              /**< number of cuts generated */
 
    /* parameters */
-   SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for no limit */
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for no limit */
 };
 
@@ -188,12 +185,10 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_NLPI* nlpi;
    SCIP_HASHMAP* var2nlpiidx;
-   SCIP_Real timelimit;
    SCIP_Real objvarlb;
    SCIP_Real minusone;
    SCIP_Real one;
    int nconvexnlrows;
-   int iterlimit;
    int objvaridx;
    int nconss;
    int nvars;
@@ -256,34 +251,12 @@ SCIP_RETCODE computeInteriorPoint(
    /* add linear rows */
    SCIP_CALL( SCIPaddNlpiProblemRows(scip, nlpi, nlpiprob, var2nlpiidx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 
-   /* set parameters in nlpi; time and iterations limit, tolerance, verbosity; for time limit, get time limit of scip;
-    * if scip doesn't have much time left, don't run separator. otherwise, timelimit is the minimum between whats left
-    * for scip and the timelimit setting
-    */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-   {
-      timelimit -= SCIPgetSolvingTime(scip);
-      if( timelimit <= 1.0 )
-      {
-         SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
-         sepadata->skipsepa = TRUE;
-         goto CLEANUP;
-      }
-   }
-   if( sepadata->nlptimelimit > 0.0 )
-      timelimit = MIN(sepadata->nlptimelimit, timelimit);
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelimit) );
-
-   iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, NLPFEASFAC * SCIPfeastol(scip)) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) ); /*lint !e666*/
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
-
    /* compute interior point */
    SCIPdebugMsg(scip, "starting interior point computation\n");
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob,
+      .iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX,
+      .feastol = NLPFEASFAC * SCIPfeastol(scip),
+      .relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );   /*lint !e666*/
    SCIPdebugMsg(scip, "finish interior point computation\n");
 
 #ifdef SCIP_DEBUG
@@ -1023,10 +996,6 @@ SCIP_RETCODE SCIPincludeSepaGauge(
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/nlpiterlimit",
          "iteration limit of NLP solver; 0 for no limit",
          &sepadata->nlpiterlimit, TRUE, DEFAULT_NLPITERLIM, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/nlptimelimit",
-         "time limit of NLP solver; 0.0 for no limit",
-         &sepadata->nlptimelimit, TRUE, DEFAULT_NLPTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
