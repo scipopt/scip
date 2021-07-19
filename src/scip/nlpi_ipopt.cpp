@@ -98,7 +98,7 @@ using namespace Ipopt;
 
 /* Convergence check (see ScipNLP::intermediate_callback)
  *
- * If the fastfail option is set to 2, then we stop Ipopt if the reduction in
+ * If the fastfail option is set to aggressive, then we stop Ipopt if the reduction in
  * primal infeasibility is not sufficient for a consecutive number of iterations.
  * With the parameters as given below, we require Ipopt to
  * - not increase the primal infeasibility after 5 iterations
@@ -614,7 +614,7 @@ SCIP_RETCODE handleNlpParam(
 
    // disable acceptable-point heuristic iff fastfail is completely off
    // it seems useful to have Ipopt stop when it obviously doesn't make progress (like one of the NLPs in the bendersqp ctest)
-   if( param.fastfail == 0 )
+   if( param.fastfail == SCIP_NLPPARAM_FASTFAIL_OFF )
       (void) nlpiproblem->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
    else
 #if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR > 14 || (IPOPT_VERSION_MINOR == 14 && IPOPT_VERSION_RELEASE >= 2)
@@ -2271,7 +2271,7 @@ bool ScipNLP::intermediate_callback(
    }
 
    /* do convergence test if fastfail is enabled */
-   if( param.fastfail >= 2 )
+   if( param.fastfail >= SCIP_NLPPARAM_FASTFAIL_AGGRESSIVE )
    {
       int i;
 

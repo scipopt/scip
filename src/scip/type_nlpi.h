@@ -38,6 +38,14 @@ typedef struct SCIP_Nlpi          SCIP_NLPI;          /**< NLP solver interface 
 typedef struct SCIP_NlpiData      SCIP_NLPIDATA;      /**< locally defined NLP solver interface data */
 typedef struct SCIP_NlpiProblem   SCIP_NLPIPROBLEM;   /**< locally defined NLP solver interface data for a specific problem instance */
 
+enum SCIP_NlpParam_FastFail
+{
+   SCIP_NLPPARAM_FASTFAIL_OFF          = 0,  /**< never stop if progress is still possible */
+   SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE = 1,  /**< stop if it seems unlikely that an improving point can be found */
+   SCIP_NLPPARAM_FASTFAIL_AGGRESSIVE   = 2   /**< stop if convergence rate is low */
+};
+typedef enum SCIP_NlpParam_FastFail SCIP_NLPPARAM_FASTFAIL;
+
 /** parameters for NLP solve */
 struct SCIP_NlpParam
 {
@@ -47,7 +55,7 @@ struct SCIP_NlpParam
    SCIP_Real             timelimit;          /**< time limit in seconds: use SCIP_REAL_MAX to use remaining time available for SCIP solve (limits/time - currenttime) */
    int                   iterlimit;          /**< iteration limit */
    unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
-   unsigned short        fastfail;           /**< whether the NLP solver should stop early if convergence is slow: 0 never, 1 conservatively, 2 quickly */
+   SCIP_NLPPARAM_FASTFAIL fastfail;          /**< whether the NLP solver should stop early if convergence is slow */
    SCIP_Bool             expectinfeas;       /**< whether to expect an infeasible problem */
    SCIP_Bool             warmstart;          /**< whether to try to use solution of previous solve as starting point (if available) */
    const char*           caller;             /**< name of file from which NLP is solved (it's fine to set this to NULL) */
@@ -70,16 +78,16 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
  *    SCIP_NLPPARAM nlpparam;
  *    nlpparam = (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip); }  //lint !e446
  */
-#define SCIP_NLPPARAM_DEFAULT_INITS(scip)          \
-   .lobjlimit   = SCIP_REAL_MIN,                   \
-   .feastol     = SCIPfeastol(scip),               \
-   .relobjtol   = SCIPdualfeastol(scip),           \
-   .timelimit   = SCIP_REAL_MAX,                   \
-   .iterlimit   = INT_MAX,                         \
-   .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL, \
-   .fastfail    = 1,                               \
-   .expectinfeas= FALSE,                           \
-   .warmstart   = FALSE,                           \
+#define SCIP_NLPPARAM_DEFAULT_INITS(scip)              \
+   .lobjlimit   = SCIP_REAL_MIN,                       \
+   .feastol     = SCIPfeastol(scip),                   \
+   .relobjtol   = SCIPdualfeastol(scip),               \
+   .timelimit   = SCIP_REAL_MAX,                       \
+   .iterlimit   = INT_MAX,                             \
+   .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL,     \
+   .fastfail    = SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE, \
+   .expectinfeas= FALSE,                               \
+   .warmstart   = FALSE,                               \
    .caller      = __FILE__
 
 /** default values for parameters
@@ -95,7 +103,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #else
 /** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
 static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
-   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, 1, FALSE, FALSE, __FILE__
+   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE, FALSE, FALSE, __FILE__
 };
 #define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif
@@ -106,15 +114,15 @@ static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
  *    SCIPdebugMsg(scip, "calling NLP solver with parameters " SCIP_NLPPARAM_PRINT(param));
  */
 #define SCIP_NLPPARAM_PRINT(param) \
-  "lobjlimit = %g, " \
-  "feastol = %g, " \
-  "relobjtol = %g, " \
-  "timelimit = %g, " \
-  "iterlimit = %d, " \
+  "lobjlimit = %g, "  \
+  "feastol = %g, "    \
+  "relobjtol = %g, "  \
+  "timelimit = %g, "  \
+  "iterlimit = %d, "  \
   "verblevel = %hd, " \
-  "fastfail = %hd, " \
-  "warmstart = %d, " \
-  "called by %s\n", \
+  "fastfail = %d, "   \
+  "warmstart = %d, "  \
+  "called by %s\n",   \
   (param).lobjlimit, (param).feastol, (param).relobjtol, (param).timelimit, (param).iterlimit, \
   (param).verblevel, (param).fastfail, (param).warmstart, (param).caller != NULL ? (param).caller : "unknown"
 

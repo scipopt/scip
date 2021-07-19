@@ -492,11 +492,6 @@ SCIP_RETCODE SCIPnlpiSolve(
       SCIPerrorMessage("Value %g for parameter time limit cannot be negative\n", param->timelimit);
       return SCIP_PARAMETERWRONGVAL;
    }
-   if( param->fastfail > 2 )
-   {
-      SCIPerrorMessage("Value %hd for parameter fastfail must be 0, 1, or 2\n", param->fastfail);
-      return SCIP_PARAMETERWRONGVAL;
-   }
 
    if( param->timelimit == SCIP_REAL_MAX && set->istimelimitfinite )  /*lint !e777*/
    {
