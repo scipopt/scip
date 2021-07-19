@@ -3741,7 +3741,7 @@ SCIP_RETCODE reduce_sdStar(
       return SCIP_OKAY;
 
    graph_heap_clean(TRUE, dheap);
-   graph_init_dcsr(scip, g);
+   SCIP_CALL( graph_init_dcsr(scip, g) );
 
    dcsr = g->dcsr_storage;
    range_csr = dcsr->range;

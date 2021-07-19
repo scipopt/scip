@@ -1393,7 +1393,6 @@ SCIP_RETCODE testNode3PseudoDeletedBySdBiasedSimple(
 }
 
 
-
 /** tests that node can be pseudo-deleted */
 static
 SCIP_RETCODE testNode3PseudoDeletedBySdBiased(
@@ -2224,6 +2223,123 @@ SCIP_RETCODE testPcNodesPseudoDeletedBySd1(
 #endif
 
 
+
+
+/** tests that path replacement deletes an edge */
+static
+SCIP_RETCODE testPathReplaceDeletesEdge(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 9;
+   const int nedges = 28;
+   int nelims = 0;
+   int testedge = 4;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 0 */
+   graph_knot_add(graph, STP_TERM);  /* node 1 */
+   graph_knot_add(graph, STP_TERM);  /* node 2 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 3 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 4 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 5 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 6 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 7 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 8 */
+
+
+   graph->source = 1;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 2, 1.0);
+   graph_edge_addBi(scip, graph, 0, 3, 1.0);
+   graph_edge_addBi(scip, graph, 1, 5, 1.0);
+   graph_edge_addBi(scip, graph, 2, 7, 1.0);
+   graph_edge_addBi(scip, graph, 3, 4, 1.0);
+   graph_edge_addBi(scip, graph, 3, 5, 1.0);
+   graph_edge_addBi(scip, graph, 3, 7, 1.0);
+   graph_edge_addBi(scip, graph, 4, 6, 1.0);
+   graph_edge_addBi(scip, graph, 4, 8, 1.0);
+   graph_edge_addBi(scip, graph, 5, 6, 1.0);
+   graph_edge_addBi(scip, graph, 7, 8, 0.1);
+
+   stptest_graphSetUp(scip, graph);
+
+   SCIP_CALL( reduce_pathreplace(scip, graph, &nelims) );
+   STPTEST_ASSERT_MSG(graph_edge_isDeleted(graph, testedge), "edge was not deleted! \n");
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** tests that path replacement deletes an edge */
+static
+SCIP_RETCODE testPathReplaceDeletesEdge2(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   const int nnodes = 10;
+   const int nedges = 28;
+   int nelims = 0;
+   int testedge = 4;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 0 */
+   graph_knot_add(graph, STP_TERM);  /* node 1 */
+   graph_knot_add(graph, STP_TERM);  /* node 2 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 3 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 4 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 5 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 6 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 7 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 8 */
+   graph_knot_add(graph, STP_TERM);  /* node 9 */
+
+
+   graph->source = 1;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 2, 1.0);
+   graph_edge_addBi(scip, graph, 0, 3, 2.0);
+   graph_edge_addBi(scip, graph, 1, 5, 1.0);
+   graph_edge_addBi(scip, graph, 2, 7, 1.0);
+   graph_edge_addBi(scip, graph, 3, 4, 1.0);
+   graph_edge_addBi(scip, graph, 3, 5, 1.0);
+   graph_edge_addBi(scip, graph, 3, 7, 1.0);
+   graph_edge_addBi(scip, graph, 4, 6, 1.0);
+   graph_edge_addBi(scip, graph, 4, 8, 1.0);
+   graph_edge_addBi(scip, graph, 5, 6, 1.0);
+   graph_edge_addBi(scip, graph, 7, 8, 0.1);
+
+   graph_edge_addBi(scip, graph, 9, 2, 0.5);
+   graph_edge_addBi(scip, graph, 0, 9, 0.5);
+
+
+   stptest_graphSetUp(scip, graph);
+
+   SCIP_CALL( reduce_pathreplace(scip, graph, &nelims) );
+   STPTEST_ASSERT_MSG(graph_edge_isDeleted(graph, testedge), "edge was not deleted! \n");
+
+   stptest_graphTearDown(scip, graph);
+
+
+   return SCIP_OKAY;
+}
+
+
 /** frees, etc. */
 void stptest_extreduceTearDown(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2246,7 +2362,9 @@ SCIP_RETCODE stptest_extreduce(
 )
 {
    assert(scip);
+   SCIP_CALL( testPathReplaceDeletesEdge2(scip) );
 
+   SCIP_CALL( testPathReplaceDeletesEdge(scip) );
 
 
    SCIP_CALL( testNode3PseudoDeletedBySdBiased(scip) );

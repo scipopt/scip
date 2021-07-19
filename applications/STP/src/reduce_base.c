@@ -629,6 +629,11 @@ SCIP_RETCODE redLoopInnerStp(
             break;
       }
 
+      int xxx = 0;
+      SCIP_CALL( reduce_pathreplace(scip, g, &xxx) );
+      printf("npathrep=%d \n", xxx);
+
+
       if( da )
       {
          const RPDA paramsda = {

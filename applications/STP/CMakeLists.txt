@@ -77,6 +77,7 @@ add_executable(scipstp
     src/reduce_bnd.c
     src/reduce_da.c
     src/reduce_ext.c
+    src/reduce_path.c
     src/reduce_pcsimple.c
     src/reduce_sepa.c
     src/reduce_sd.c
