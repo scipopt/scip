@@ -789,21 +789,6 @@ SCIP_Bool extTreeRuleOutPeriph(
          return TRUE;
    }
 
-   if( extreduce_redcostRuleOutPeriph(graph, extdata) )
-   {
-#ifdef EXT_PRINT_STATS
-      red++;
-      if( red % 10000 == 0 )
-      {
-         printf("rule-out-red=%lld \n", red);
-         printf("rule-out-mst=%lld \n", mst);
-         printf("rule-out-contracts=%lld \n", contracts);
-      }
-#endif
-
-      return TRUE;
-   }
-
    if( extreduce_mstRuleOutPeriph(scip, graph, extdata) )
    {
 #ifdef EXT_PRINT_STATS
@@ -819,6 +804,20 @@ SCIP_Bool extTreeRuleOutPeriph(
       return TRUE;
    }
 
+   if( extreduce_redcostRuleOutPeriph(graph, extdata) )
+   {
+#ifdef EXT_PRINT_STATS
+      red++;
+      if( red % 10000 == 0 )
+      {
+         printf("rule-out-red=%lld \n", red);
+         printf("rule-out-mst=%lld \n", mst);
+         printf("rule-out-contracts=%lld \n", contracts);
+      }
+#endif
+
+      return TRUE;
+   }
 
    if( extreduce_contractionRuleOutPeriph(scip, graph, extdata) )
    {
