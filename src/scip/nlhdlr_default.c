@@ -81,7 +81,10 @@ SCIP_RETCODE evalExprInAux(
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** check whether expression should be handled by the default nlhdlr
+ *
+ * if no nlhdlr so far provides enforcement or boundtightening for expr, then the default nlhdlr takes over
+ */
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectDefault)
 { /*lint --e{715}*/
@@ -180,7 +183,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectDefault)
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** evaluate expression w.r.t. values of auxiliary variables in children */
 static
 SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalAuxDefault)
 { /*lint --e{715}*/
@@ -192,7 +195,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalAuxDefault)
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** initialize LP relaxation by initial estimators */
 static
 SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 { /*lint --e{715}*/
@@ -358,7 +361,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** compute linear estimator */
 static
 SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 { /*lint --e{715}*/
@@ -521,7 +524,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** interval-evaluate expression w.r.t. activity of children */
 static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalDefault)
 { /*lint --e{715}*/
@@ -534,6 +537,7 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalDefault)
    return SCIP_OKAY;
 }
 
+/** tighten bounds on children from bounds on expression and bounds on children */
 static
 SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
 { /*lint --e{715}*/

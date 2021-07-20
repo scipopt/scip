@@ -203,7 +203,7 @@ SCIP_RETCODE nlhdlrExprGrowChildren(
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** evaluate expression at solution w.r.t. auxiliary variables */
 static
 SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalConcave)
 {
@@ -232,7 +232,7 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalConcave)
    return SCIPexprGetEvalValue(evaldata->nlhdlrexprdata->nlexpr);
 }
 
-/** TODO: add documentation */
+/** initialize expression stack */
 static
 SCIP_RETCODE exprstackInit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -251,7 +251,7 @@ SCIP_RETCODE exprstackInit(
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** free expression stack */
 static
 void exprstackFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -264,7 +264,7 @@ void exprstackFree(
    SCIPfreeBufferArray(scip, &exprstack->stack);
 }
 
-/** TODO: add documentation */
+/** add expressions to expression stack */
 static
 SCIP_RETCODE exprstackPush(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -293,7 +293,7 @@ SCIP_RETCODE exprstackPush(
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** gives expression from top of expression stack and removes it from stack */
 static
 SCIP_EXPR* exprstackPop(
    EXPRSTACK*            exprstack           /**< expression stack */
@@ -305,7 +305,7 @@ SCIP_EXPR* exprstackPop(
    return exprstack->stack[exprstack->stackpos--];
 }
 
-/** TODO: add documentation */
+/** indicate whether expression stack is empty */
 static
 SCIP_Bool exprstackIsEmpty(
    EXPRSTACK*            exprstack           /**< expression stack */
@@ -1323,8 +1323,11 @@ SCIP_RETCODE createNlhdlrExprData(
    return SCIP_OKAY;
 }
 
-/** adds an estimator for a vertex-polyhedral (e.g., concave) function to a given rowprep */
-/** TODO: add more documentation */
+/** adds an estimator for a vertex-polyhedral (e.g., concave) function to a given rowprep
+ *
+ * calls \ref SCIPcomputeFacetVertexPolyhedralNonlinear() for given function and
+ * box set to local bounds of auxiliary variables
+ */
 static
 SCIP_RETCODE estimateVertexPolyhedral(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1666,7 +1669,7 @@ SCIP_RETCODE estimateConvexSecant(
  * Callback methods of convex nonlinear handler
  */
 
-/** TODO: add documentation */
+/** free handler data of convex or concave nlhdlr */
 static
 SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrfreeHdlrDataConvexConcave)
 {  /*lint --e{715}*/
@@ -1697,7 +1700,7 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataConvexConcave)
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** deinitialization of problem-specific data */
 static
 SCIP_DECL_NLHDLREXIT(nlhdlrExitConvex)
 {
@@ -1714,7 +1717,7 @@ SCIP_DECL_NLHDLREXIT(nlhdlrExitConvex)
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** checks whether expression (or -expression) is convex, possibly after introducing auxiliary variables */
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConvex)
 { /*lint --e{715}*/
@@ -2002,7 +2005,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** include nlhdlr in another scip instance */
 static
 SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConvex)
 { /*lint --e{715}*/
@@ -2070,7 +2073,7 @@ SCIP_RETCODE SCIPincludeNlhdlrConvex(
  * Callback methods of concave nonlinear handler
  */
 
-/** TODO: add documentation */
+/** deinitialization of problem-specific data */
 static
 SCIP_DECL_NLHDLREXIT(nlhdlrExitConcave)
 {
@@ -2087,7 +2090,7 @@ SCIP_DECL_NLHDLREXIT(nlhdlrExitConcave)
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** checks whether expression (or -expression) is concave, possibly after introducing auxiliary variables */
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectConcave)
 { /*lint --e{715}*/
@@ -2358,7 +2361,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConcave)
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** includes nonlinear handler in another scip instance */
 static
 SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConcave)
 { /*lint --e{715}*/

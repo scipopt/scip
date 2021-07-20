@@ -316,7 +316,7 @@ SCIP_RETCODE SCIPnlhdlrCreate(
    return SCIP_OKAY;
 }
 
-/** TODO: add documentation */
+/** frees a nonlinear handler */
 SCIP_RETCODE SCIPnlhdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR**         nlhdlr              /**< pointer to nonlinear handler to be freed */
