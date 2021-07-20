@@ -103,7 +103,7 @@
 #define TABLE_POSITION_BENDERS           14000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BENDERS     SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_EXPRHDLRS             "exprhdlrs"
+#define TABLE_NAME_EXPRHDLRS             "exprhdlr"
 #define TABLE_DESC_EXPRHDLRS             "expression handlers statistics table"
 #define TABLE_POSITION_EXPRHDLRS         14500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_EXPRHDLRS   SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
