@@ -118,6 +118,13 @@ int SCIPnlpiGetNSolStat(
    SCIP_NLPSOLSTAT       solstatus           /**< the solution status to query for */
    );
 
+/** adds statistics from one NLPI to another */
+SCIP_EXPORT
+void SCIPnlpiMergeStatistics(
+   SCIP_NLPI*            targetnlpi,         /**< NLP interface where to add statistics */
+   SCIP_NLPI*            sourcenlpi          /**< NLP interface from which add statistics */
+   );
+
 /**@} */ /* Statistics */
 
 /**@} */ /* PublicNLPIMethods */

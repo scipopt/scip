@@ -777,4 +777,28 @@ int SCIPnlpiGetNSolStat(
    return nlpi->nsolstat[solstatus];
 }
 
+/** adds statistics from one NLPI to another */
+void SCIPnlpiMergeStatistics(
+   SCIP_NLPI*            targetnlpi,         /**< NLP interface where to add statistics */
+   SCIP_NLPI*            sourcenlpi          /**< NLP interface from which add statistics */
+   )
+{
+   int i;
+
+   assert(targetnlpi != NULL);
+   assert(sourcenlpi != NULL);
+
+   targetnlpi->nproblems += sourcenlpi->nproblems;
+   targetnlpi->nsolves += sourcenlpi->nsolves;
+   SCIPclockSetTime(targetnlpi->problemtime, SCIPclockGetTime(targetnlpi->problemtime) + SCIPclockGetTime(sourcenlpi->problemtime));
+   SCIPclockSetTime(targetnlpi->solvetime, SCIPclockGetTime(targetnlpi->solvetime) + SCIPclockGetTime(sourcenlpi->solvetime));
+   targetnlpi->solvetimesolver += sourcenlpi->solvetimesolver;
+   targetnlpi->niter += sourcenlpi->niter;
+
+   for( i = SCIP_NLPTERMSTAT_OKAY; i <= SCIP_NLPTERMSTAT_OTHER; ++i )
+      targetnlpi->ntermstat[i] += sourcenlpi->ntermstat[i];
+   for( i = SCIP_NLPSOLSTAT_GLOBOPT; i <= SCIP_NLPSOLSTAT_UNKNOWN; ++i )
+      targetnlpi->nsolstat[i] += sourcenlpi->nsolstat[i];
+}
+
 /**@} */ /* Statistics */

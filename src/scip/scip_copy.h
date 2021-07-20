@@ -456,6 +456,19 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    int                   nvars               /**< number of variables in both variable arrays */
    );
 
+/** merges the statistics of NLPIs from a source SCIP into a target SCIP.
+ *
+ * The two SCIP instances should point to different SCIP instances.
+ *
+ *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
+ *        \p targetscip denotes the original instance
+ */
+SCIP_EXPORT
+void SCIPmergeNLPIStatistics(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   );
+
 /** translates a solution from a subscip to the main scip
  *
  * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables

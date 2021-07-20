@@ -1155,6 +1155,9 @@ SCIP_RETCODE solveSubNLP(
  CLEANUP:
    if( heurdata->subscip != NULL )
    {
+      /* add NLP solve statistics from subscip to main SCIP, so they show up in final statistics */
+      SCIPmergeNLPIStatistics(heurdata->subscip, scip);
+
       SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
       if( tighttolerances )
       {
