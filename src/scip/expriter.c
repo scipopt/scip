@@ -124,7 +124,8 @@ void printBacktraces(
    int                   subscipdepth        /**< current subscip depth */
    )
 {  /*lint --e{715}*/
-   SCIPerrorMessage("Rebuild with SCIP_DEBUG_EXPRITER defined in src/scip/expriter.c to see where currently active iterators were initialized.\n");
+   SCIPerrorMessage("Rebuild with SCIP_DEBUG_EXPRITER defined in src/scip/expriter.c to see where currently "
+         "active iterators were initialized.\n");
 }
 #endif
 
@@ -321,6 +322,7 @@ SCIP_EXPR* doBfsNext(
    return expr;
 }
 
+/** moves to the next expression according to the DFS rule */
 static
 SCIP_EXPR* doDfsNext(
    SCIP_EXPRITER*        iterator            /**< expression iterator */
@@ -358,9 +360,13 @@ SCIP_EXPR* doDfsNext(
             }
             ++iterdata->currentchild;
          }
-         assert(iterator->dfsstage == SCIP_EXPRITER_VISITINGCHILD || iterdata->currentchild == iterator->curr->nchildren); /* if leaving expr, then currentchild should be at nchildren */
-         assert(iterator->dfsstage == SCIP_EXPRITER_LEAVEEXPR || iterdata->currentchild < iterator->curr->nchildren); /* if visiting child, then currentchild should be a valid index */
-         assert(iterator->dfsstage == SCIP_EXPRITER_LEAVEEXPR || iterator->visitedtag == 0 || iterator->visitedtag != iterator->curr->children[iterdata->currentchild]->iterdata[iterator->iterindex].visitedtag); /* if visiting child, then either we don't care whether we visited it already or it has not been visited yet */
+         /* if leaving expr, then currentchild should be at nchildren */
+         assert(iterator->dfsstage == SCIP_EXPRITER_VISITINGCHILD || iterdata->currentchild == iterator->curr->nchildren);
+         /* if visiting child, then currentchild should be a valid index */
+         assert(iterator->dfsstage == SCIP_EXPRITER_LEAVEEXPR || iterdata->currentchild < iterator->curr->nchildren);
+         /* if visiting child, then either we don't care whether we visited it already or it has not been visited yet */
+         assert(iterator->dfsstage == SCIP_EXPRITER_LEAVEEXPR || iterator->visitedtag == 0
+         || iterator->visitedtag != iterator->curr->children[iterdata->currentchild]->iterdata[iterator->iterindex].visitedtag);
 
          return iterator->curr;
       }
@@ -568,7 +574,8 @@ SCIP_RETCODE SCIPexpriterInit(
    {
       if( iterator->stat->nactiveexpriter + 1 >= SCIP_EXPRITER_MAXNACTIVE )
       {
-         SCIPerrorMessage("Maximal number of active expression iterators reached at subscip-depth %d.\n", iterator->stat->subscipdepth);
+         SCIPerrorMessage("Maximal number of active expression iterators reached at subscip-depth %d.\n",
+               iterator->stat->subscipdepth);
          printBacktraces(iterator->stat->subscipdepth);
          return SCIP_MAXDEPTHLEVEL;
       }
@@ -753,7 +760,9 @@ SCIP_EXPRITER_STAGE SCIPexpriterGetStageDFS(
    return iterator->dfsstage;
 }
 
-/** gets the child index that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
+/** gets the child index that the expression iterator considers when in DFS mode and stage
+ * visitingchild or visitedchild
+ */
 int SCIPexpriterGetChildIdxDFS(
    SCIP_EXPRITER*        iterator            /**< expression iterator */
    )
@@ -767,7 +776,9 @@ int SCIPexpriterGetChildIdxDFS(
    return iterator->curr->iterdata[iterator->iterindex].currentchild;
 }
 
-/** gets the child expression that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
+/** gets the child expression that the expression iterator considers when in DFS mode and stage
+ * visitingchild or visitedchild
+ */
 SCIP_EXPR* SCIPexpriterGetChildExprDFS(
    SCIP_EXPRITER*        iterator            /**< expression iterator */
    )
