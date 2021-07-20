@@ -5216,7 +5216,7 @@ SCIP_RETCODE SCIPsetInitPlugins(
 
    /* NLP solver interfaces */
    for( i = 0; i < set->nnlpis; ++i )
-      SCIPnlpiInit(set->nlpis[i], set);
+      SCIPnlpiInit(set->nlpis[i]);
 
    return SCIP_OKAY;
 }

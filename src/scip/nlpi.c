@@ -174,8 +174,7 @@ SCIP_RETCODE SCIPnlpiFree(
 
 /** initializes NLPI */
 void SCIPnlpiInit(
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_NLPI*            nlpi                /**< solver interface */
    )
 {
    assert(nlpi != NULL);
@@ -186,8 +185,8 @@ void SCIPnlpiInit(
    SCIPclockReset(nlpi->solvetime);
    nlpi->solvetimesolver = 0.0;
    nlpi->niter = 0L;
-   BMSclearMemoryArray(nlpi->ntermstat, SCIP_NLPTERMSTAT_OTHER+1);
-   BMSclearMemoryArray(nlpi->nsolstat, SCIP_NLPSOLSTAT_UNKNOWN+1);
+   BMSclearMemoryArray(nlpi->ntermstat, (int)SCIP_NLPTERMSTAT_OTHER+1);
+   BMSclearMemoryArray(nlpi->nsolstat, (int)SCIP_NLPSOLSTAT_UNKNOWN+1);
 }
 
 /** gets pointer for NLP solver */
@@ -795,9 +794,9 @@ void SCIPnlpiMergeStatistics(
    targetnlpi->solvetimesolver += sourcenlpi->solvetimesolver;
    targetnlpi->niter += sourcenlpi->niter;
 
-   for( i = SCIP_NLPTERMSTAT_OKAY; i <= SCIP_NLPTERMSTAT_OTHER; ++i )
+   for( i = (int)SCIP_NLPTERMSTAT_OKAY; i <= (int)SCIP_NLPTERMSTAT_OTHER; ++i )
       targetnlpi->ntermstat[i] += sourcenlpi->ntermstat[i];
-   for( i = SCIP_NLPSOLSTAT_GLOBOPT; i <= SCIP_NLPSOLSTAT_UNKNOWN; ++i )
+   for( i = (int)SCIP_NLPSOLSTAT_GLOBOPT; i <= (int)SCIP_NLPSOLSTAT_UNKNOWN; ++i )
       targetnlpi->nsolstat[i] += sourcenlpi->nsolstat[i];
 }
 

@@ -91,8 +91,7 @@ SCIP_RETCODE SCIPnlpiFree(
 
 /** initializes NLPI */
 void SCIPnlpiInit(
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_NLPI*            nlpi                /**< solver interface */
    );
 
 /** gets pointer for NLP solver */

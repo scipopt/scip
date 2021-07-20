@@ -3953,10 +3953,10 @@ void SCIPprintNLPIStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, niter);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", niter > 0 ? solvetimesolver / niter : 0.0);
 
-      for( j = SCIP_NLPTERMSTAT_OKAY; j <= SCIP_NLPTERMSTAT_OTHER; ++j )
+      for( j = (int)SCIP_NLPTERMSTAT_OKAY; j <= (int)SCIP_NLPTERMSTAT_OTHER; ++j )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNTermStat(nlpi, (SCIP_NLPTERMSTAT)j));
 
-      for( j = SCIP_NLPSOLSTAT_GLOBOPT; j <= SCIP_NLPSOLSTAT_UNKNOWN; ++j )
+      for( j = (int)SCIP_NLPSOLSTAT_GLOBOPT; j <= (int)SCIP_NLPSOLSTAT_UNKNOWN; ++j )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNSolStat(nlpi, (SCIP_NLPSOLSTAT)j));
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
