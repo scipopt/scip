@@ -81,6 +81,7 @@ SCIP_RETCODE evalExprInAux(
    return SCIP_OKAY;
 }
 
+/** TODO: add documentation */
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectDefault)
 { /*lint --e{715}*/
@@ -129,7 +130,8 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectDefault)
    /* increment activity usage counter and create auxiliary variables if necessary
     * if separating, first guess whether we will use activities in estimate (distinguish under- and overestimation)
     * we assume that the exprhdlr will use activity on all children iff we are estimating on a nonconvex side
-    * TODO it would be better to request this information directly from the exprhdlr than inferring it from curvature, but with the currently available exprhdlr that wouldn't make a difference
+    * TODO it would be better to request this information directly from the exprhdlr than inferring it from curvature,
+    * but with the currently available exprhdlr that wouldn't make a difference
     */
    if( *participating & SCIP_NLHDLR_METHOD_SEPABOTH )
    {
@@ -178,6 +180,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectDefault)
    return SCIP_OKAY;
 }
 
+/** TODO: add documentation */
 static
 SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalAuxDefault)
 { /*lint --e{715}*/
@@ -189,6 +192,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalAuxDefault)
    return SCIP_OKAY;
 }
 
+/** TODO: add documentation */
 static
 SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 { /*lint --e{715}*/
@@ -328,7 +332,8 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
             /* add the cut */
             SCIP_ROW* row;
 
-            (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "init%sestimate%d_%s", i == 0 ? "under" : "over", j, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
+            (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "init%sestimate%d_%s",
+                  i == 0 ? "under" : "over", j, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
 
             SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
@@ -353,6 +358,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
    return SCIP_OKAY;
 }
 
+/** TODO: add documentation */
 static
 SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 { /*lint --e{715}*/
@@ -427,7 +433,8 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
 
    /* call the estimation callback of the expression handler */
-   SCIP_CALL( SCIPcallExprEstimate(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, SCIProwprepGetCoefs(rowprep), &constant, &local, success, branchcand) );
+   SCIP_CALL( SCIPcallExprEstimate(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue,
+         SCIProwprepGetCoefs(rowprep), &constant, &local, success, branchcand) );
 
    if( *success )
    {
@@ -438,7 +445,8 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       /* add variables to rowprep (coefs were already added by SCIPexprhdlrEstimateExpr) */
       for( i = 0; i < nchildren; ++i )
       {
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]), SCIProwprepGetCoefs(rowprep)[i]) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]),
+               SCIProwprepGetCoefs(rowprep)[i]) );
       }
 
       SCIProwprepAddConstant(rowprep, constant);
@@ -513,6 +521,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** TODO: add documentation */
 static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalDefault)
 { /*lint --e{715}*/
@@ -549,7 +558,8 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
    {
       for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
       {
-         SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[c], childrenbounds[c], infeasible, nreductions) );
+         SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[c], childrenbounds[c],
+               infeasible, nreductions) );
       }
       SCIPexprhdlrIncrementNDomainReductions(SCIPexprGetHdlr(expr), *nreductions);
    }
@@ -592,7 +602,8 @@ SCIP_RETCODE SCIPincludeNlhdlrDefault(
 
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY, NLHDLR_ENFOPRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
+   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+         NLHDLR_ENFOPRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
    assert(nlhdlr != NULL);
 
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrDefault);

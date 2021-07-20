@@ -56,7 +56,7 @@ struct SCIP_NlhdlrExprData
    SCIP_Real             overineqs[6];       /**< inequalities for overestimation */
    int                   noverineqs;         /**< total number of inequalities for overestimation */
    SCIP_Longint          lastnodeid;         /**< id of the last node that has been used for separation */
-   int                   nseparoundslastnode;      /**< number of separation calls of the last node */
+   int                   nseparoundslastnode; /**< number of separation calls of the last node */
 };
 
 /** nonlinear handler data */
@@ -229,7 +229,8 @@ void updateBilinearRelaxation(
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval))
+             || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
@@ -249,11 +250,13 @@ void updateBilinearRelaxation(
       if( update )
       {
          SCIP_Real val = xcoef * refx + ycoef * refy + constant;
-         SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4) / (REALABS(mccormickval - bilincoef * refx * refy) + 1e-4);
+         SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4)
+               / (REALABS(mccormickval - bilincoef * refx * refy) + 1e-4);
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval))
+             || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
@@ -389,7 +392,8 @@ void getFeasiblePointsBilinear(
       boundsy = SCIPgetExprBoundsNonlinear(scip, child2);
 
       /* if children bounds are empty, then returning with *npoints==0 is the way to go */
-      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsx) || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsy) )
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsx)
+          || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsy) )
          return;
    }
    lbx = boundsx.inf;
@@ -628,7 +632,8 @@ SCIP_INTERVAL intevalBilinear(
    }
 
    /* compute all feasible points (since we use levelset == FALSE, the value of interval doesn't matter) */
-   getFeasiblePointsBilinear(scip, NULL, expr, interval, underineqs, nunderineqs, overineqs, noverineqs, FALSE, xs, ys, &npoints);
+   getFeasiblePointsBilinear(scip, NULL, expr, interval, underineqs, nunderineqs, overineqs,
+         noverineqs, FALSE, xs, ys, &npoints);
 
    /* no feasible point left -> return an empty interval */
    if( npoints == 0 )
@@ -696,7 +701,8 @@ void reversePropBilinear(
    SCIPintervalSetEmpty(intervaly);
 
    /* compute feasible points */
-   getFeasiblePointsBilinear(scip, conshdlr, expr, exprbounds, underineqs, nunderineqs, overineqs, noverineqs, TRUE, xs, ys, &npoints);
+   getFeasiblePointsBilinear(scip, conshdlr, expr, exprbounds, underineqs, nunderineqs, overineqs,
+         noverineqs, TRUE, xs, ys, &npoints);
 
    /* no feasible points left -> problem is infeasible */
    if( npoints == 0 )
@@ -725,7 +731,7 @@ void reversePropBilinear(
 
       /* only accept points for which the value of x*y is in the interval of the product expression
        *
-       * NOTE in order to consider all relevant points, we are a bit conservative here and relax the interval of
+       * NOTE: in order to consider all relevant points, we are a bit conservative here and relax the interval of
        *      the expression by SCIPfeastol()
        */
       if( SCIPisRelGE(scip, val, exprinf - SCIPfeastol(scip)) && SCIPisRelLE(scip, val, exprsup + SCIPfeastol(scip)) )
@@ -1023,7 +1029,6 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrBilinear)
    return SCIP_OKAY;
 }
 
-
 /** callback to free data of handler */
 static
 SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataBilinear)
@@ -1042,7 +1047,6 @@ SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataBilinear)
 
    return SCIP_OKAY;
 }
-
 
 /** callback to free expression specific data */
 static
@@ -1087,20 +1091,8 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataBilinear)
    return SCIP_OKAY;
 }
 
-
 /** callback to be called in initialization */
-#if 0
-static
-SCIP_DECL_NLHDLRINIT(nlhdlrInitBilinear)
-{  /*lint --e{715}*/
-   /* TODO */
-
-   return SCIP_OKAY;
-}
-#else
 #define nlhdlrInitBilinear NULL
-#endif
-
 
 /** callback to be called in deinitialization */
 static
@@ -1111,7 +1103,6 @@ SCIP_DECL_NLHDLREXIT(nlhdlrExitBilinear)
 
    return SCIP_OKAY;
 }
-
 
 /** callback to detect structure in expression tree */
 static
@@ -1140,7 +1131,8 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectBilinear)
       children = SCIPexprGetChildren(expr);
       assert(children != NULL);
 
-      /* detection is only successful if both children will have auxiliary variable or are variables that are not binary variables */
+      /* detection is only successful if both children will have auxiliary variable or are variables
+       * that are not binary variables */
       valid = TRUE;
       for( c = 0; c < 2; ++c )
       {
@@ -1191,8 +1183,10 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectBilinear)
          ++nlhdlrdata->nexprs;
 
          /* tell children that we will use their auxvar and use its activity for both estimate and domain propagation */
-         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[0], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE, TRUE) );
-         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[1], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE, TRUE) );
+         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[0], TRUE, nlhdlrdata->useinteval
+               || nlhdlrdata->usereverseprop, TRUE, TRUE) );
+         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[1], TRUE, nlhdlrdata->useinteval
+               || nlhdlrdata->usereverseprop, TRUE, TRUE) );
       }
    }
 
@@ -1216,7 +1210,6 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectBilinear)
    return SCIP_OKAY;
 }
 
-
 /** auxiliary evaluation callback of nonlinear handler */
 static
 SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxBilinear)
@@ -1239,51 +1232,14 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxBilinear)
    return SCIP_OKAY;
 }
 
-
 /** separation initialization method of a nonlinear handler (called during CONSINITLP) */
-#if 0
-static
-SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaBilinear)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of bilinear nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define nlhdlrInitSepaBilinear NULL
-#endif
-
 
 /** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
-#if 0
-static
-SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaBilinear)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of bilinear nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define nlhdlrExitSepaBilinear NULL
-#endif
-
 
 /** nonlinear handler separation callback */
-#if 0
-static
-SCIP_DECL_NLHDLRENFO(nlhdlrEnfoBilinear)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of bilinear nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define nlhdlrEnfoBilinear NULL
-#endif
-
 
 /** nonlinear handler under/overestimation callback */
 static
@@ -1415,7 +1371,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateBilinear)
    return SCIP_OKAY;
 }
 
-
 /** nonlinear handler interval evaluation callback */
 static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalBilinear)
@@ -1438,7 +1393,6 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalBilinear)
 
    return SCIP_OKAY;
 }
-
 
 /** nonlinear handler callback for reverse propagation */
 static
@@ -1475,7 +1429,8 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
          SCIPgetExprBoundsNonlinear(scip, childx).inf, SCIPgetExprBoundsNonlinear(scip, childx).sup,
          intervalx.inf, intervalx.sup);
 
-      SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[0], intervalx, infeasible, nreductions) );
+      SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[0], intervalx, infeasible,
+         nreductions) );
 
       if( !(*infeasible) )
       {
@@ -1483,13 +1438,13 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
          SCIPdebugMsg(scip, "try to tighten bounds of y: [%g,%g] -> [%g,%g]\n",
             SCIPgetExprBoundsNonlinear(scip, childy).inf, SCIPgetExprBoundsNonlinear(scip, childy).sup,
             intervaly.inf, intervaly.sup);
-         SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[1], intervaly, infeasible, nreductions) );
+         SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[1], intervaly,
+            infeasible, nreductions) );
       }
    }
 
    return SCIP_OKAY;
 }
-
 
 /*
  * nonlinear handler specific interface methods
@@ -1527,7 +1482,9 @@ int SCIPgetNlhdlrBilinearNExprs(
    return nlhdlrdata->nexprs;
 }
 
-/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant to a product expression of the form x*y */
+/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant to a product expression
+ * of the form x*y
+ */
 SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
@@ -1565,7 +1522,8 @@ SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
 
    if( nlhdlrexprdata == NULL )
    {
-      SCIPwarningMessage(scip, "nonlinear expression data has not been found. Skip SCIPaddConsExprExprProductBilinearIneq()\n");
+      SCIPwarningMessage(scip, "nonlinear expression data has not been found. "
+            "Skip SCIPaddConsExprExprProductBilinearIneq()\n");
       return SCIP_OKAY;
    }
 
@@ -1737,7 +1695,6 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
 
    return SCIP_OKAY;
 }
-
 
 /** computes coefficients of linearization of a bilinear term in a reference point */
 void SCIPaddBilinLinearization(
@@ -1989,7 +1946,6 @@ void SCIPaddBilinMcCormick(
    *linconstant += constant;
 }
 
-
 /** computes coefficients of linearization of a bilinear term in a reference point when given a linear inequality
  *  involving only the variables of the bilinear term
  *
@@ -2113,7 +2069,8 @@ void SCIPcomputeBilinEnvelope1(
          ++n;
    }
 
-   /* skip if no corner point satisfies the inequality or if no corner point is cut off (that is, all corner points satisfy the inequality almost [1e-9..1e-6]) */
+   /* skip if no corner point satisfies the inequality or if no corner point is cut off
+    * (that is, all corner points satisfy the inequality almost [1e-9..1e-6]) */
    if( n != 1 || vx == SCIP_INVALID || vy == SCIP_INVALID ) /*lint !e777*/
       return;
 
@@ -2194,7 +2151,8 @@ void SCIPcomputeBilinEnvelope1(
 
    /* cut needs to be tight at (vx,vy) and (xj,yj); otherwise we consider the cut to be numerically bad */
    *success = SCIPisFeasEQ(scip, (*lincoefx)*vx + (*lincoefy)*vy + (*linconstant), bilincoef*vx*vy)
-      && SCIPisFeasEQ(scip, (*lincoefx)*QUAD_TO_DBL(xjq) + (*lincoefy)*QUAD_TO_DBL(yjq) + (*linconstant), bilincoef*QUAD_TO_DBL(xjq)*QUAD_TO_DBL(yjq));
+      && SCIPisFeasEQ(scip, (*lincoefx)*QUAD_TO_DBL(xjq) + (*lincoefy)*QUAD_TO_DBL(yjq) + (*linconstant),
+      bilincoef*QUAD_TO_DBL(xjq)*QUAD_TO_DBL(yjq));
 
 #ifndef NDEBUG
    {

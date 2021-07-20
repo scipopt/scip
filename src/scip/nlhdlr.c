@@ -59,7 +59,8 @@ void SCIPnlhdlrSetFreeHdlrData(
 /** set the nonlinear handler callback to free expression specific data of nonlinear handler */
 void SCIPnlhdlrSetFreeExprData(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
-   SCIP_DECL_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
+   SCIP_DECL_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback
+                                                      (can be NULL if data does not need to be freed) */
    )
 {
    assert(nlhdlr != NULL);
@@ -315,6 +316,7 @@ SCIP_RETCODE SCIPnlhdlrCreate(
    return SCIP_OKAY;
 }
 
+/** TODO: add documentation */
 SCIP_RETCODE SCIPnlhdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR**         nlhdlr              /**< pointer to nonlinear handler to be freed */
@@ -554,12 +556,14 @@ SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo)
    {
       SCIP_Real auxvaluetest;
       SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
-      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
+      /* we should get EXACTLY the same value from calling evalaux with the same solution as before */
+      assert(auxvalue == auxvaluetest);  /*lint !e777*/
    }
 #endif
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
-   SCIP_CALL( nlhdlr->enfo(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, allowweakcuts, separated, addbranchscores, result) );
+   SCIP_CALL( nlhdlr->enfo(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue,
+         overestimate, allowweakcuts, separated, addbranchscores, result) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
    /* update statistics */
@@ -605,7 +609,8 @@ SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate)
    {
       SCIP_Real auxvaluetest;
       SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
-      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
+      /* we should get EXACTLY the same value from calling evalaux with the same solution as before */
+      assert(auxvalue == auxvaluetest);  /*lint !e777*/
    }
 #endif
 
