@@ -362,6 +362,8 @@ SCIP_RETCODE createConstraint(
    {
       (*cons)->expr = expr;
       SCIPcaptureExpr(expr);
+
+      SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, (*cons)->expr, &(*cons)->exprintdata) );
    }
 
    if( lhs > rhs )
@@ -1187,10 +1189,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             ) );
 
       if( cons->expr != NULL )
-      {
          addednlcon = TRUE;
-         SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, cons->expr, &cons->exprintdata) );
-      }
 
       oracle->conss[oracle->nconss+c] = cons;
    }
@@ -1230,11 +1229,6 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    /* create new objective */
    SCIP_CALL( createConstraint(scip, oracle, &oracle->objective,
          nlin, lininds, linvals, expr, constant, constant, NULL) );
-
-   if( oracle->objective->expr != NULL )
-   {
-      SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, oracle->objective->expr, &oracle->objective->exprintdata) );
-   }
 
    return SCIP_OKAY;
 }
