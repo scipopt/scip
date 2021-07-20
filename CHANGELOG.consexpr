@@ -11,6 +11,7 @@ Features
 - symmetry handling has been extended to detect also symmetries between variables that also appear in nonlinear constraints
 - improve OBBT by only considering variables that are contained in at least one nonconvex expression that has an auxiliary variable
 - default parameter settings for NLP solves are now defined independently of the NLP solver
+- added table to print statistics on NLP solvers
 
 expressions:
 - removed support for expression types min and max for now, removed support for expression type sign
@@ -472,6 +473,8 @@ nlpi:
 - added SCIPcreateNlpiProblemFromNlRows()
 - added SCIPnlpiOracleGetObjectiveConstant()
 - added SCIPnlpiOracleIsVarNonlinear(), SCIPnlpiOracleGetVarCounts(), SCIPnlpiOracleIsConstraintNonlinear()
+- added SCIPnlpiGetNProblems(), SCIPnlpiGetProblemTime(), SCIPnlpiGetNSolves(), SCIPnlpiGetSolveTime(), SCIPnlpiGetSolveTimeSolver(), SCIPnlpiGetNIterations(), SCIPnlpiGetNTermStat(), SCIPnlpiGetNSolStat(), SCIPnlpiMergeStatistics()
+- added SCIPmergeNLPIStatistics(), SCIPprintNLPIStatistics()
 
 ### Command line interface
 
@@ -537,7 +540,7 @@ nlpi:
 - propagating/symmetry/onlybinarysymmetry
 - separating/minor/priority, separating/minor/freq, separating/minor/maxbounddist, separating/minor/delay, separating/minor/expbackoff, separating/minor/maxminorsconst, separating/minor/maxminorsfac, separating/minor/mincutviol, separating/minor/maxrounds, separating/minor/maxroundsroot, separating/minor/ignorepackingconss
 - separating/rlt/priority, separating/rlt/freq, separating/rlt/maxbounddist, separating/rlt/delay, separating/rlt/expbackoff, separating/rlt/maxncuts, separating/rlt/maxunknownterms, separating/rlt/maxusedvars, separating/rlt/maxrounds, separating/rlt/maxroundsroot, separating/rlt/onlyeqrows, separating/rlt/onlycontrows, separating/rlt/onlyoriginal, separating/rlt/useinsubscip, separating/rlt/useprojection, separating/rlt/detecthidden, separating/rlt/hiddenrlt, separating/rlt/addtopool, separating/rlt/goodscore, separating/rlt/badscore, separating/rlt/objparalweight, separating/rlt/efficacyweight, separating/rlt/dircutoffdistweight, separating/rlt/goodmaxparall, separating/rlt/maxparall
-- table/nonlinear/active, table/exprhdlrs/active, table/quadratic_nlhdlr_table/active
+- table/nonlinear/active, table/exprhdlrs/active, table/quadratic_nlhdlr_table/active, table/nlpi/active
 - expr/log/minzerodistance, expr/pow/minzerodistance
 - benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
 - nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
