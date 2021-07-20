@@ -150,7 +150,7 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_NUMERICERROR  = 5,    /**< stopped on numerical error */
    SCIP_NLPTERMSTAT_EVALERROR     = 6,    /**< stopped on function evaluation error */
    SCIP_NLPTERMSTAT_OUTOFMEMORY   = 7,    /**< memory exceeded */
-   SCIP_NLPTERMSTAT_LICENSEERROR  = 8,    /**< licence error */
+   SCIP_NLPTERMSTAT_LICENSEERROR  = 8,    /**< problems with license of NLP solver */
    SCIP_NLPTERMSTAT_OTHER         = 9     /**< other error (= this should never happen) */
 #ifndef _MSC_VER  /* MS __declspec(deprecated) not allowed within enums */
    ,/* for some backward compatibility */

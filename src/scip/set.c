@@ -5214,6 +5214,10 @@ SCIP_RETCODE SCIPsetInitPlugins(
    for( i = 0; i < set->nexprhdlrs; ++i )
       SCIPexprhdlrInit(set->exprhdlrs[i], set);
 
+   /* NLP solver interfaces */
+   for( i = 0; i < set->nnlpis; ++i )
+      SCIPnlpiInit(set->nlpis[i], set);
+
    return SCIP_OKAY;
 }
 

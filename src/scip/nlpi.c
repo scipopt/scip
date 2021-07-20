@@ -30,6 +30,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_nlpi.h"
 #include "scip/clock.h"
+#include "scip/struct_nlp.h" /* TODO move nlp(i) statistics back into NLPI */
 #include "scip/struct_nlpi.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
@@ -92,7 +93,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpigetsolution != NULL);
    assert(nlpigetstatistics != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(nlpi) );
+   SCIP_ALLOC( BMSallocClearMemory(nlpi) );
 
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->description, description, strlen(description)+1) );
@@ -119,6 +120,9 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpigetsolution = nlpigetsolution;
    (*nlpi)->nlpigetstatistics = nlpigetstatistics;
    (*nlpi)->nlpidata = nlpidata;
+
+   SCIP_CALL( SCIPclockCreate(&(*nlpi)->problemtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*nlpi)->solvetime, SCIP_CLOCKTYPE_DEFAULT) );
 
    return SCIP_OKAY;
 }
@@ -157,11 +161,33 @@ SCIP_RETCODE SCIPnlpiFree(
    }
    BMSfreeMemoryArray(&(*nlpi)->name);
    BMSfreeMemoryArray(&(*nlpi)->description);
+
+   SCIPclockFree(&(*nlpi)->solvetime);
+   SCIPclockFree(&(*nlpi)->problemtime);
+
    BMSfreeMemory(nlpi);
 
    assert(*nlpi == NULL);
 
    return SCIP_OKAY;
+}
+
+/** initializes NLPI */
+void SCIPnlpiInit(
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(nlpi != NULL);
+
+   nlpi->nproblems = 0;
+   nlpi->nsolves = 0;
+   SCIPclockReset(nlpi->problemtime);
+   SCIPclockReset(nlpi->solvetime);
+   nlpi->solvetimestat = 0.0;
+   nlpi->niter = 0L;
+   BMSclearMemoryArray(nlpi->ntermstat, SCIP_NLPTERMSTAT_OTHER+1);
+   BMSclearMemoryArray(nlpi->nsolstat, SCIP_NLPSOLSTAT_UNKNOWN+1);
 }
 
 /** gets pointer for NLP solver */
@@ -192,7 +218,13 @@ SCIP_RETCODE SCIPnlpiCreateProblem(
    assert(nlpi->nlpicreateproblem != NULL);
    assert(problem != NULL);
 
-   return nlpi->nlpicreateproblem(set->scip, nlpi, problem, name);
+   SCIPclockStart(nlpi->problemtime, set);
+   SCIP_CALL( nlpi->nlpicreateproblem(set->scip, nlpi, problem, name) );
+   SCIPclockStop(nlpi->problemtime, set);
+
+   ++nlpi->nproblems;
+
+   return SCIP_OKAY;
 }
 
 /** frees a problem instance */
@@ -207,7 +239,11 @@ SCIP_RETCODE SCIPnlpiFreeProblem(
    assert(nlpi->nlpifreeproblem != NULL);
    assert(problem != NULL);
 
-   return nlpi->nlpifreeproblem(set->scip, nlpi, problem);
+   SCIPclockStart(nlpi->problemtime, set);
+   SCIP_CALL( nlpi->nlpifreeproblem(set->scip, nlpi, problem) );
+   SCIPclockStop(nlpi->problemtime, set);
+
+   return SCIP_OKAY;
 }
 
 /** gets pointer to solver-internal problem instance */
@@ -243,7 +279,9 @@ SCIP_RETCODE SCIPnlpiAddVars(
    assert(nlpi->nlpiaddvars != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpiaddvars(set->scip, nlpi, problem, nvars, lbs, ubs, varnames) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -268,7 +306,9 @@ SCIP_RETCODE SCIPnlpiAddConstraints(
    assert(nlpi->nlpiaddconstraints != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpiaddconstraints(set->scip, nlpi, problem, nconss, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -290,7 +330,9 @@ SCIP_RETCODE SCIPnlpiSetObjective(
    assert(nlpi->nlpisetobjective != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpisetobjective(set->scip, nlpi, problem, nlins, lininds, linvals, expr, constant) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -311,7 +353,9 @@ SCIP_RETCODE SCIPnlpiChgVarBounds(
    assert(nlpi->nlpichgvarbounds != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichgvarbounds(set->scip, nlpi, problem, nvars, indices, lbs, ubs) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -332,7 +376,9 @@ SCIP_RETCODE SCIPnlpiChgConsSides(
    assert(nlpi->nlpichgconssides != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichgconssides(set->scip, nlpi, problem, nconss, indices, lhss, rhss) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -351,7 +397,9 @@ SCIP_RETCODE SCIPnlpiDelVarSet(
    assert(nlpi->nlpidelvarset != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpidelvarset(set->scip, nlpi, problem, dstats, dstatssize) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -370,7 +418,9 @@ SCIP_RETCODE SCIPnlpiDelConsSet(
    assert(nlpi->nlpidelconsset != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpidelconsset(set->scip, nlpi, problem, dstats, dstatssize) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -391,7 +441,9 @@ SCIP_RETCODE SCIPnlpiChgLinearCoefs(
    assert(nlpi->nlpichglinearcoefs != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichglinearcoefs(set->scip, nlpi, problem, idx, nvals, varidxs, vals) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -410,7 +462,9 @@ SCIP_RETCODE SCIPnlpiChgExpr(
    assert(nlpi->nlpichgexpr != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichgexpr(set->scip, nlpi, problem, idxcons, expr) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -428,7 +482,9 @@ SCIP_RETCODE SCIPnlpiChgObjConstant(
    assert(nlpi->nlpichgobjconstant != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichgobjconstant(set->scip, nlpi, problem, objconstant) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -465,6 +521,8 @@ SCIP_RETCODE SCIPnlpiSolve(
    SCIP_NLPPARAM*        param               /**< solve parameters */
    )
 {
+   SCIP_NLPSTATISTICS stats;
+
    assert(set != NULL);
    assert(nlpi != NULL);
    assert(nlpi->nlpisolve != NULL);
@@ -502,7 +560,18 @@ SCIP_RETCODE SCIPnlpiSolve(
       /* still call NLP solver if no time left to ensure proper termination codes */
    }
 
+   ++nlpi->nsolves;
+
+   SCIPclockStart(nlpi->solvetime, set);
    SCIP_CALL( nlpi->nlpisolve(set->scip, nlpi, problem, *param) );
+   SCIPclockStop(nlpi->solvetime, set);
+
+   ++nlpi->ntermstat[nlpi->nlpigettermstat(set->scip, nlpi, problem)];
+   ++nlpi->nsolstat[nlpi->nlpigetsolstat(set->scip, nlpi, problem)];
+
+   SCIP_CALL( nlpi->nlpigetstatistics(set->scip, nlpi, problem, &stats) );
+   nlpi->solvetimestat += stats.totaltime;
+   nlpi->niter += stats.niterations;
 
    return SCIP_OKAY;
 }
