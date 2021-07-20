@@ -65,8 +65,8 @@ struct SCIP_Nlpi
    int                             nproblems;                   /**< number of problems created */
    int                             nsolves;                     /**< number of solves */
    SCIP_CLOCK*                     problemtime;                 /**< time spend in problem setup and modification */
-   SCIP_CLOCK*                     solvetime;                   /**< time spend in solve method */
-   SCIP_Real                       solvetimestat;               /**< time spend in solve as reported by solver in solve statistics */
+   SCIP_CLOCK*                     solvetime;                   /**< time spend in solve callback */
+   SCIP_Real                       solvetimesolver;             /**< time spend in solve as reported by solver */
    SCIP_Longint                    niter;                       /**< total number of iterations */
    int                             ntermstat[SCIP_NLPTERMSTAT_OTHER+1]; /**< number of times a specific termination status occurred */
    int                             nsolstat[SCIP_NLPSOLSTAT_UNKNOWN+1]; /**< number of times a specific solution status occurred */

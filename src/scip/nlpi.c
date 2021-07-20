@@ -184,7 +184,7 @@ void SCIPnlpiInit(
    nlpi->nsolves = 0;
    SCIPclockReset(nlpi->problemtime);
    SCIPclockReset(nlpi->solvetime);
-   nlpi->solvetimestat = 0.0;
+   nlpi->solvetimesolver = 0.0;
    nlpi->niter = 0L;
    BMSclearMemoryArray(nlpi->ntermstat, SCIP_NLPTERMSTAT_OTHER+1);
    BMSclearMemoryArray(nlpi->nsolstat, SCIP_NLPSOLSTAT_UNKNOWN+1);
@@ -570,7 +570,7 @@ SCIP_RETCODE SCIPnlpiSolve(
    ++nlpi->nsolstat[nlpi->nlpigetsolstat(set->scip, nlpi, problem)];
 
    SCIP_CALL( nlpi->nlpigetstatistics(set->scip, nlpi, problem, &stats) );
-   nlpi->solvetimestat += stats.totaltime;
+   nlpi->solvetimesolver += stats.totaltime;
    nlpi->niter += stats.niterations;
 
    return SCIP_OKAY;
@@ -698,3 +698,83 @@ void SCIPnlpiSetPriority(
 
    nlpi->priority = priority;
 }
+
+
+/**@name Statistics */
+/**@{ */
+
+/** gives number of problems created for NLP solver so far */
+int SCIPnlpiGetNProblems(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->nproblems;
+}
+
+/** gives total time spend in problem creation/modification/freeing */
+SCIP_Real SCIPnlpiGetProblemTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return SCIPclockGetTime(nlpi->problemtime);
+}
+
+/** total number of NLP solves so far */
+int SCIPnlpiGetNSolves(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->nsolves;
+}
+
+/** gives total time spend in NLPI solve callback */
+SCIP_Real SCIPnlpiGetSolveTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return SCIPclockGetTime(nlpi->solvetime);
+}
+
+/** gives total time the NLPI reported to have spend for solving */
+SCIP_Real SCIPnlpiGetSolveTimeSolver(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->solvetimesolver;
+}
+
+/** gives total number of iterations spend by NLP solver so far */
+SCIP_Longint SCIPnlpiGetNIterations(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->niter;
+}
+
+/** gives number of times a solve ended with a specific termination status */
+int SCIPnlpiGetNTermStat(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   SCIP_NLPTERMSTAT      termstatus          /**< the termination status to query for */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->ntermstat[termstatus];
+}
+
+/** gives number of times a solve ended with a specific solution status */
+int SCIPnlpiGetNSolStat(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   SCIP_NLPSOLSTAT       solstatus           /**< the solution status to query for */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->nsolstat[solstatus];
+}
+
+/**@} */ /* Statistics */

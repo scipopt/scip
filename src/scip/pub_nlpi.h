@@ -65,6 +65,61 @@ int SCIPnlpiGetPriority(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
+/**@name Statistics */
+/**@{ */
+
+/** gives number of problems created for NLP solver so far */
+SCIP_EXPORT
+int SCIPnlpiGetNProblems(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives total time spend in problem creation/modification/freeing */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiGetProblemTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** total number of NLP solves so far */
+SCIP_EXPORT
+int SCIPnlpiGetNSolves(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives total time spend in NLPI solve callback */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiGetSolveTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives total time the NLPI reported to have spend for solving */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiGetSolveTimeSolver(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives total number of iterations spend by NLP solver so far */
+SCIP_EXPORT
+SCIP_Longint SCIPnlpiGetNIterations(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives number of times a solve ended with a specific termination status */
+SCIP_EXPORT
+int SCIPnlpiGetNTermStat(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   SCIP_NLPTERMSTAT      termstatus          /**< the termination status to query for */
+   );
+
+/** gives number of times a solve ended with a specific solution status */
+SCIP_EXPORT
+int SCIPnlpiGetNSolStat(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   SCIP_NLPSOLSTAT       solstatus           /**< the solution status to query for */
+   );
+
+/**@} */ /* Statistics */
+
 /**@} */ /* PublicNLPIMethods */
 
 #ifdef __cplusplus

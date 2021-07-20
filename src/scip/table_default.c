@@ -118,6 +118,11 @@
 #define TABLE_POSITION_NLP               16000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NLP         SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
+#define TABLE_NAME_NLPIS                 "nlpi"
+#define TABLE_DESC_NLPIS                 "NLP solver interfaces statistics table"
+#define TABLE_POSITION_NLPIS             16500                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_NLPIS       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+
 #define TABLE_NAME_RELAX                 "relaxator"
 #define TABLE_DESC_RELAX                 "relaxator statistics table"
 #define TABLE_POSITION_RELAX             17000                  /**< the position of the statistics table */
@@ -439,6 +444,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputExprhdlrs)
    return SCIP_OKAY;
 }
 
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputNlpis)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIPprintNLPIStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * statistics table specific interface methods
@@ -479,6 +496,7 @@ SCIP_RETCODE SCIPincludeTableDefault(
       assert(SCIPfindTable(scip, TABLE_NAME_CONC) != NULL );
       assert(SCIPfindTable(scip, TABLE_NAME_BENDERS) != NULL );
       assert(SCIPfindTable(scip, TABLE_NAME_EXPRHDLRS) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_NLPIS) != NULL );
 
       return SCIP_OKAY;
    }
@@ -571,6 +589,11 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLP, TABLE_DESC_NLP, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNLP,
          NULL, TABLE_POSITION_NLP, TABLE_EARLIEST_STAGE_NLP) );
+
+   assert(SCIPfindTable(scip, TABLE_NAME_NLPIS) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLPIS, TABLE_DESC_NLPIS, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNlpis,
+         NULL, TABLE_POSITION_NLPIS, TABLE_EARLIEST_STAGE_NLPIS) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_RELAX) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RELAX, TABLE_DESC_RELAX, TRUE,
