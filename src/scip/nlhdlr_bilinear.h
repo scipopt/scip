@@ -85,7 +85,6 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-
 /** computes coefficients of linearization of a bilinear term in a reference point */
 SCIP_EXPORT
 void SCIPaddBilinLinearization(
