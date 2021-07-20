@@ -388,7 +388,8 @@ static
 SCIP_RETCODE freeConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   SCIP_NLPIORACLECONS** cons                /**< pointer to constraint that should be freed */
+   SCIP_NLPIORACLECONS** cons,               /**< pointer to constraint that should be freed */
+   SCIP_Bool             updatevarcount      /**< whether the update variable counts (typically TRUE) */
    )
 {
    assert(oracle != NULL);
@@ -397,10 +398,11 @@ SCIP_RETCODE freeConstraint(
 
    SCIPdebugMessage("free constraint %p\n", (void*)*cons);
 
-   /* remove variable counts
-    * TODO have option to skip this step; useful when problem is destructed
-    */
-   SCIP_CALL( updateVariableCounts(scip, oracle, -1, (*cons)->nlinidxs, (*cons)->linidxs, (*cons)->expr) );
+   /* remove variable counts */
+   if( updatevarcount )
+   {
+      SCIP_CALL( updateVariableCounts(scip, oracle, -1, (*cons)->nlinidxs, (*cons)->linidxs, (*cons)->expr) );
+   }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*cons)->linidxs, (*cons)->linsize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*cons)->lincoefs, (*cons)->linsize);
@@ -422,7 +424,10 @@ SCIP_RETCODE freeConstraint(
    return SCIP_OKAY;
 }
 
-/** frees all constraints */
+/** frees all constraints
+ *
+ * \attention This omits updating the variable counts in the oracle.
+ */
 static
 SCIP_RETCODE freeConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -437,7 +442,7 @@ SCIP_RETCODE freeConstraints(
 
    for( i = 0; i < oracle->nconss; ++i )
    {
-      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[i]) );
+      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[i], FALSE) );
       assert(oracle->conss[i] == NULL);
    }
    oracle->nconss = 0;
@@ -998,7 +1003,7 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    invalidateJacobiSparsity(scip, *oracle);
    invalidateHessianLagSparsity(scip, *oracle);
 
-   SCIP_CALL( freeConstraint(scip, *oracle, &(*oracle)->objective) );
+   SCIP_CALL( freeConstraint(scip, *oracle, &(*oracle)->objective, FALSE) );
    SCIP_CALL( freeConstraints(scip, *oracle) );
    freeVariables(scip, *oracle);
 
@@ -1220,7 +1225,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       invalidateHessianLagSparsity(scip, oracle);
 
    /* clear previous objective */
-   SCIP_CALL( freeConstraint(scip, oracle, &oracle->objective) );
+   SCIP_CALL( freeConstraint(scip, oracle, &oracle->objective, TRUE) );
 
    /* create new objective */
    SCIP_CALL( createConstraint(scip, oracle, &oracle->objective,
@@ -1475,13 +1480,21 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       for( c = 0; c < oracle->nconss; ++c )
          delstats[c] = -1;
       SCIP_CALL( freeConstraints(scip, oracle) );
+
+      /* the previous call did not keep variable counts uptodate
+       * since we only have an objective function left, we reset the counts to the ones of the objective
+       */
+      BMSclearMemoryArray(oracle->varlincount, oracle->nvars);
+      BMSclearMemoryArray(oracle->varnlcount, oracle->nvars);
+      SCIP_CALL( updateVariableCounts(scip, oracle, 1, oracle->objective->nlinidxs, oracle->objective->linidxs, oracle->objective->expr) );
+
       return SCIP_OKAY;
    }
 
    /* delete constraints at the end */
    for( c = oracle->nconss - 1; c > lastgood; --c )
    {
-      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c]) );
+      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c], TRUE) );
       assert(oracle->conss[c] == NULL);
       delstats[c] = -1;
    }
@@ -1499,7 +1512,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       }
       assert(delstats[c] == 1); /* constraint should be deleted */
 
-      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c]) );
+      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c], TRUE) );
       assert(oracle->conss[c] == NULL);
       delstats[c] = -1;
 
@@ -1513,7 +1526,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       /* move lastgood forward, delete constraints on the way */
       while( lastgood > c && delstats[lastgood] == 1)
       {
-         SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[lastgood]) );
+         SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[lastgood], TRUE) );
          assert(oracle->conss[lastgood] == NULL);
          delstats[lastgood] = -1;
          --lastgood;
