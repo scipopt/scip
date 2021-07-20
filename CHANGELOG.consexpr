@@ -349,14 +349,14 @@ nlpi:
 - removed SCIPcreateNlpSolverIpopt(), use SCIPincludeNlpSolverIpopt() instead
 - removed SCIPcreateNlpSolverWorhp(), use SCIPincludeNlpSolverWorhp() instead
 - replaced argument BMS_BLKMEM* blkmem of SCIPnlpiOracleCreate() by SCIP* scip
-- added argument SCIP* scip to SCIPnlpiOracleFree(), SCIPnlpiOracleSetProblemName(), SCIPnlpiOracleAddVars(), SCIPnlpiOracleAddConstraints(), SCIPnlpiOracleSetObjective(), SCIPnlpiOracleChgVarBounds(), SCIPnlpiOracleChgConsSides(), SCIPnlpiOracleDelVarSet(), SCIPnlpiOracleDelConsSet(), SCIPnlpiOracleChgLinearCoefs(), SCIPnlpiOracleChgObjConstant(), SCIPnlpiOracleGetVarDegree(), SCIPnlpiOracleGetVarDegrees(), SCIPnlpiOracleGetEvalCapability(), SCIPnlpiOracleEvalObjectiveValue(), SCIPnlpiOracleEvalConstraintValue(), SCIPnlpiOracleEvalConstraintValues(), SCIPnlpiOracleEvalObjectiveGradient(), SCIPnlpiOracleEvalConstraintGradient(), SCIPnlpiOracleGetJacobianSparsity(), SCIPnlpiOracleEvalJacobian(), SCIPnlpiOracleGetHessianLagSparsity(), SCIPnlpiOracleEvalHessianLag(), SCIPnlpiOraclePrintProblem(), SCIPnlpiOraclePrintProblemGams()
+- added argument SCIP* scip to SCIPnlpiOracleFree(), SCIPnlpiOracleSetProblemName(), SCIPnlpiOracleAddVars(), SCIPnlpiOracleAddConstraints(), SCIPnlpiOracleSetObjective(), SCIPnlpiOracleChgVarBounds(), SCIPnlpiOracleChgConsSides(), SCIPnlpiOracleDelVarSet(), SCIPnlpiOracleDelConsSet(), SCIPnlpiOracleChgLinearCoefs(), SCIPnlpiOracleChgObjConstant(), SCIPnlpiOracleGetEvalCapability(), SCIPnlpiOracleEvalObjectiveValue(), SCIPnlpiOracleEvalConstraintValue(), SCIPnlpiOracleEvalConstraintValues(), SCIPnlpiOracleEvalObjectiveGradient(), SCIPnlpiOracleEvalConstraintGradient(), SCIPnlpiOracleGetJacobianSparsity(), SCIPnlpiOracleEvalJacobian(), SCIPnlpiOracleGetHessianLagSparsity(), SCIPnlpiOracleEvalHessianLag(), SCIPnlpiOraclePrintProblem(), SCIPnlpiOraclePrintProblemGams()
 - removed arguments nquadelems, quadelems, exprvaridxs, exprtrees from SCIPnlpiOracleAddConstraints(), added argument SCIP_EXPR** exprs
 - removed arguments nquadelems, quadelems, exprvaridxs, exprtree from SCIPnlpiOracleSetObjective(), added argument SCIP_EXPR* expr
 - replaced arguments isnewx of SCIPnlpiOracleEvalHessianLag() by two arguments isnewx_obj and isnewx_cons
 - removed SCIPnlpiOracleChgExprtree(), use SCIPnlpiOracleChgExpr() instead
 - removed SCIPnlpiOracleSetInfinity(), SCIPnlpiOracleGetInfinity(), SCIPnlpiOracleChgQuadCoefs(), SCIPnlpiOracleChgExprParam(), SCIPnlpiOracleGetMaxDegree()
-- added argument int* vardegree to SCIPnlpiOracleGetVarDegree() and changed return type to SCIP_RETCODE
-- added argument int** vardegrees to SCIPnlpiOracleGetVarDegrees() and changed return type to SCIP_RETCODE
+- removed SCIPnlpiOracleGetVarDegree() and SCIPnlpiOracleGetVarDegrees(), use SCIPnlpiOracleIsVarNonlinear() and SCIPnlpiOracleGetVarCounts(), respectively, instead
+- removed SCIPnlpiOracleGetConstraintDegree(), use SCIPnlpiOracleIsConstraintNonlinear() instead
 - removed argument messagehdlr from SCIPnlpiOraclePrintProblem() and SCIPnlpiOraclePrintProblemGams()
 - removed SCIPcreateNlpiProb(), use SCIPcreateNlpiProblemFromNlRows() instead
 - renamed SCIPupdateNlpiProb() to SCIPupdateNlpiProblem() and moved into scip_nlpi.{h,c}
@@ -471,6 +471,7 @@ nlpi:
 - added SCIPnlpiOracleChgExpr()
 - added SCIPcreateNlpiProblemFromNlRows()
 - added SCIPnlpiOracleGetObjectiveConstant()
+- added SCIPnlpiOracleIsVarNonlinear(), SCIPnlpiOracleGetVarCounts(), SCIPnlpiOracleIsConstraintNonlinear()
 
 ### Command line interface
 

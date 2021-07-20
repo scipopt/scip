@@ -232,7 +232,7 @@ SCIP_RETCODE computeInteriorPoint(
    nconss = SCIPnlpiOracleGetNConstraints(nlpioracle);
    for( i = 0; i < nconss; i++ )
    {
-      if( SCIPnlpiOracleGetConstraintDegree(nlpioracle, i) > 1 )
+      if( SCIPnlpiOracleIsConstraintNonlinear(nlpioracle, i) )
       {
          SCIP_CALL( SCIPchgNlpiLinearCoefs(scip, nlpi, nlpiprob, i, 1, &objvaridx, &minusone) );
          ++nconvexnlrows;

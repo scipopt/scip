@@ -1176,7 +1176,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsFilterSQP)
       {
          problem->bl[nvars+oldnconss+i] = lhss[i];
          problem->bu[nvars+oldnconss+i] = rhss[i];
-         problem->cstype[oldnconss+i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, oldnconss+i) <= 1 ? 'L' : 'N';
+         problem->cstype[oldnconss+i] = SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, oldnconss+i) ? 'N' : 'L';
       }
    }
 
@@ -1363,7 +1363,7 @@ SCIP_DECL_NLPICHGEXPR(nlpiChgExprFilterSQP)
 
    /* update constraint linearity in FilterSQP data, as we might have changed from linear to nonlinear now */
    if( problem->cstype != NULL && idxcons >= 0 )
-      problem->cstype[idxcons] = (SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons) <= 1 ? 'L' : 'N');
+      problem->cstype[idxcons] = expr != NULL ? 'N' : 'L';
 
    /* gradients information (la,a) may have changed */
    SCIPfreeBlockMemoryArrayNull(scip, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
@@ -1542,7 +1542,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       {
          problem->bl[n+i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
          problem->bu[n+i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
-         problem->cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
+         problem->cstype[i] = SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, i) ? 'N' : 'L';
       }
    }
 

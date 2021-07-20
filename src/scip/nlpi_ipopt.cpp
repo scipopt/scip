@@ -968,7 +968,7 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
     * However, if the sparsity of the Hessian matrix of the objective changes, then the sparsity pattern of the Hessian of the Lagrangian may change.
     * Thus, set samestructure=false if the objective was and/or becomes nonlinear, but leave samestructure untouched if it was and stays linear.
     */
-   if( expr != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+   if( expr != NULL || SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, -1) )
       problem->samestructure = false;
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle, constant, nlins, lininds, linvals, expr) );
@@ -1831,6 +1831,9 @@ bool ScipNLP::get_bounds_info(
    Number*            g_u                 /**< buffer to store lower bounds on constraints */
    )
 {
+   const int* varlincounts;
+   const int* varnlcounts;
+
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
 
@@ -1847,16 +1850,15 @@ bool ScipNLP::get_bounds_info(
       assert(x_l[i] <= x_u[i]);
 #endif
 
+   SCIPnlpiOracleGetVarCounts(scip, nlpiproblem->oracle, &varlincounts, &varnlcounts);
+
    /* Ipopt performs better when unused variables do not appear, which we can achieve by fixing them,
     * since Ipopts TNLPAdapter will hide them from Ipopts NLP. In the dual solution, bound multipliers (z_L, z_U)
     * for these variables should have value 0.0 (they are set to -grad Lagrangian).
     */
    for( int i = 0; i < n; ++i )
    {
-      int vardegree;
-      if( SCIPnlpiOracleGetVarDegree(scip, nlpiproblem->oracle, i, &vardegree) != SCIP_OKAY )
-         return false;
-      if( vardegree == 0 )
+      if( varlincounts[i] == 0 && varnlcounts[i] == 0 )
       {
          SCIPdebugMsg(scip, "fix unused variable x%d [%g,%g] to 0.0 or bound\n", i, x_l[i], x_u[i]);
          assert(x_l[i] <= x_u[i]);
@@ -1932,13 +1934,8 @@ Index ScipNLP::get_number_of_nonlinear_variables()
 
    count = 0;
    for( int i = 0; i < n; ++i )
-   {
-      int vardegree;
-      if( SCIPnlpiOracleGetVarDegree(scip, nlpiproblem->oracle, i, &vardegree) != SCIP_OKAY )
-         return -1;  // this will make Ipopt assume that all variables are nonlinear, which I guess is ok if we got an error here
-      if( vardegree > 1 )
+      if( SCIPnlpiOracleIsVarNonlinear(scip, nlpiproblem->oracle, i) )
          ++count;
-   }
 
    return count;
 }
@@ -1960,10 +1957,7 @@ bool ScipNLP::get_list_of_nonlinear_variables(
    count = 0;
    for( int i = 0; i < n; ++i )
    {
-      int vardegree;
-      if( SCIPnlpiOracleGetVarDegree(scip, nlpiproblem->oracle, i, &vardegree) != SCIP_OKAY )
-         return false;
-      if( vardegree > 1 )
+      if( SCIPnlpiOracleIsVarNonlinear(scip, nlpiproblem->oracle, i) )
       {
          assert(count < num_nonlin_vars);
          pos_nonlin_vars[count++] = i;

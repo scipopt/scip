@@ -1112,7 +1112,7 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveWorhp)
     * sparsity pattern of the Hessian of the Lagrangian may change.  Thus, reset Worhp if the objective was and/or
     * becomes nonlinear, but leave firstrun untouched if it was and stays linear.
     */
-   if( expr != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+   if( expr != NULL || SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, -1) )
       problem->firstrun = TRUE;
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle,

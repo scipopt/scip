@@ -207,29 +207,21 @@ char** SCIPnlpiOracleGetVarNames(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
-/** Gives indicator whether variable appears in NLP and whether that is only linear or nonlinear.
- *
- * Degree is 0 if variable does not appear in objective or any constraint.
- * Degree is 1 if variable appears only linearly.
- * Degree is INT_MAX if variable appears nonlinear.
- */ 
+/** indicates whether variable appear nonlinear in any objective or constraint */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleGetVarDegree(
+SCIP_Bool SCIPnlpiOracleIsVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   varidx,             /**< the variable for which the degree is returned */
-   int*                  vardegree           /**< buffer to store variable degree */
+   int                   varidx              /**< the variable to check */
    );
 
-/** Gives indicator which variables appears in NLP and whether that is only linear or nonlinear.
- *
- * See @ref SCIPnlpiOracleGetVarDegree.
- */ 
+/** returns number of linear and nonlinear appearances of variables objective and constraints */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleGetVarDegrees(
+void SCIPnlpiOracleGetVarCounts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int**                 vardegrees          /**< buffer to return pointer to array of variable degrees */
+   const int**           lincounts,          /**< buffer to return pointer to array of counts of linear appearances */
+   const int**           nlcounts            /**< buffer to return pointer to array of counts of nonlinear appearances */
    );
 
 /** gives constant term of objective */
@@ -259,13 +251,11 @@ char* SCIPnlpiOracleGetConstraintName(
    int                   considx             /**< constraint index */
    );
 
-/** gives maximum degree of a constraint or objective
- *  The degree is the maximal degree of all summands and is infinity for nonpolynomial terms.
- */ 
+/** indicates whether constraint is nonlinear */
 SCIP_EXPORT
-int SCIPnlpiOracleGetConstraintDegree(
+SCIP_Bool SCIPnlpiOracleIsConstraintNonlinear(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   considx             /**< index of constraint for which the degree is requested, or -1 for objective */
+   int                   considx             /**< index of constraint for which nonlinearity status is returned, or -1 for objective */
    );
 
 /** Gives the evaluation capabilities that are shared among all expressions in the problem. */
