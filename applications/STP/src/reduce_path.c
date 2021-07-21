@@ -35,13 +35,14 @@
 #define SP_MAXDEGREE 10
 #define SP_MAXNSTARTS 10000
 #define VNODES_UNSET -1
-#define SP_MAXNPULLS 3
+#define SP_MAXNPULLS 4
 
 
 /** path replacement */
 typedef struct path_replacement
 {
    //DHEAP*                dheap;              /**< heap for shortest path computations */
+   SDPROFIT*             sdprofit;           /**< SD profit */
    STP_Vectype(SCIP_Real) firstneighborcosts; /**< edge costs from tail of path to non-path neighbors */
   // STP_Vectype(SCIP_Real) currneighborcosts;  /**< edge costs from head of path to current neighbors */
    STP_Vectype(int)      currneighbors;      /**< current neighbors */
@@ -51,6 +52,7 @@ typedef struct path_replacement
    int* RESTRICT         sp_starts;          /**< CSR like starts for each node in the path, pointing to sp_dists */
    int* RESTRICT         nodes_index;        /**< maps each node to index in 0,1,2,..., or to VNODES_UNSET, VNODES_INPATH  */
    SCIP_Bool* RESTRICT   nodeindices_isPath; /**< is a node index in the path? */
+   SCIP_Bool* RESTRICT   firstneighbors_isKilled; /**< for each first neighbor index: is ruled-out? */
    SCIP_Real             pathcost;           /**< cost of path */
    int                   nfirstneighbors;    /**< number of neighbors of first path node */
    int                   pathtail;           /**< first node of path */
@@ -59,10 +61,46 @@ typedef struct path_replacement
 } PR;
 
 
-
 /*
  * Local methods
  */
+
+/** gets profit for given node */
+inline static
+SCIP_Real getSdProfit(
+   const SDPROFIT*      sdprofit,           /**< the SD profit */
+   const int*           nodes_index,        /**< index array */
+   int                  node,               /**< node to get profit for */
+   int                  nonsource           /**< node that should not be a source */
+)
+{
+   const int source1 = sdprofit->nodes_biassource[node];
+
+   assert(GE(sdprofit->nodes_bias[node], 0.0));
+   assert(LE(sdprofit->nodes_bias[node], FARAWAY));
+   assert(GE(sdprofit->nodes_bias2[node], 0.0));
+   assert(LE(sdprofit->nodes_bias2[node], FARAWAY));
+   assert(GE(sdprofit->nodes_bias[node], sdprofit->nodes_bias2[node]));
+
+   if( source1 == node )
+      return sdprofit->nodes_bias[node];
+
+   if( source1 != nonsource && nodes_index[source1] < 0 )
+   {
+      return sdprofit->nodes_bias[node];
+   }
+   else
+   {
+      const int source2 = sdprofit->nodes_biassource2[node];
+
+      if( source2 != nonsource && nodes_index[source2] < 0 )
+      {
+         return sdprofit->nodes_bias2[node];
+      }
+   }
+
+   return 0.0;
+}
 
 
 /** gets head of path */
@@ -76,6 +114,7 @@ int pathGetHead(
    return g->head[pr->pathedges[npathedges - 1]];
 }
 
+
 /** tries to rule out neighbors of path head */
 static inline
 void ruleOutFromHead(
@@ -83,54 +122,56 @@ void ruleOutFromHead(
    SCIP_Bool*            needFullRuleOut
    )
 {
-   assert(FALSE == *needFullRuleOut);
+   const SCIP_Real* const sp_dists = pr->sp_dists;
+   const SCIP_Real pathcost = pr->pathcost;
+   const int ncurrneighbors = StpVecGetSize(pr->currneighbors);
+   const int nfirst = pr->nfirstneighbors;
+   int failneighbor = VNODES_UNSET;
 
+   assert(FALSE == *needFullRuleOut);
    SCIPdebugMessage("starting head rule-out with pathcost=%f \n", pr->pathcost);
 
-   if( pr->nfirstneighbors > 2 )
+   for( int i = 0; i < ncurrneighbors; i++ )
    {
-      pr->failneighbor = VNODES_UNSET;
-      *needFullRuleOut = TRUE;
-      return;
-   }
-   else
-   {
-      const SCIP_Real* const sp_dists = pr->sp_dists;
-      const SCIP_Real pathcost = pr->pathcost;
-      const int ncurrneighbors = StpVecGetSize(pr->currneighbors);
-      const int nfirst = pr->nfirstneighbors;
-      int failneighbor = VNODES_UNSET;
+      int j;
+      const int neighbor = pr->currneighbors[i];
+      const int sp_start = pr->sp_starts[pr->nodes_index[neighbor]];
+      int nfails = 0;
 
-      for( int i = 0; i < ncurrneighbors; i++ )
+      /* NOTE: we need to be able to rule out all but one of the path-tail neighbors */
+
+      assert(pr->nodes_index[neighbor] >= 0);
+
+      for( j = 0; j < nfirst; j++ )
       {
-         int j;
-         const int neighbor = pr->currneighbors[i];
-         const int sp_start = pr->sp_starts[pr->nodes_index[neighbor]];
+         if( pr->firstneighbors_isKilled[j] )
+            continue;
 
-         assert(pr->nodes_index[neighbor] >= 0);
-
-         for( j = 0; j < nfirst; j++ )
+         SCIPdebugMessage("dist for neighbor=%d, idx=%d: %f \n", neighbor, j, sp_dists[sp_start + j]);
+         if( GT(sp_dists[sp_start + j], pathcost) )
          {
-            SCIPdebugMessage("dist for neighbor=%d, idx=%d: %f \n", neighbor, j, sp_dists[sp_start + j]);
-            if( LE(sp_dists[sp_start + j], pathcost) )
+            /* second fail? */
+            if( nfails++ > 0 )
                break;
-         }
-
-         if( j == nfirst )
-         {
-            SCIPdebugMessage("neighbor %d not head-ruled-out \n", neighbor);
-            if( failneighbor != VNODES_UNSET )
-            {
-               pr->failneighbor = VNODES_UNSET;
-               *needFullRuleOut = TRUE;
-               return;
-            }
-            failneighbor = neighbor;
          }
       }
 
-      pr->failneighbor = failneighbor;
+      if( nfails > 1 )
+      {
+         SCIPdebugMessage("neighbor %d not head-ruled-out \n", neighbor);
+
+         /* second time that a current neighbor could not be ruled-out? */
+         if( failneighbor != VNODES_UNSET )
+         {
+            pr->failneighbor = VNODES_UNSET;
+            *needFullRuleOut = TRUE;
+            return;
+         }
+         failneighbor = neighbor;
+      }
    }
+
+   pr->failneighbor = failneighbor;
 }
 
 
@@ -153,16 +194,19 @@ void ruleOutFromTailSingle(
 
    for( int i = 0; i < pr->nfirstneighbors; i++ )
    {
-      const SCIP_Real extpathcost = pr->pathcost + pr->firstneighborcosts[i];
-      const SCIP_Real altpathcost = sp_dists[sp_starts[pathhead_idx] + i];
-
-      SCIPdebugMessage("extpathcost for idx=%d: %f \n", i, extpathcost);
-      SCIPdebugMessage("althpathost for idx=%d: %f \n", i, altpathcost);
-
-      if( GT(altpathcost, extpathcost) )
+      if( !pr->firstneighbors_isKilled[i] )
       {
-         SCIPdebugMessage("no rule-out for initial neighbor idx=%d \n", i);
-         return;
+         const SCIP_Real extpathcost = pr->pathcost + pr->firstneighborcosts[i];
+         const SCIP_Real altpathcost = sp_dists[sp_starts[pathhead_idx] + i];
+
+         SCIPdebugMessage("extpathcost for idx=%d: %f \n", i, extpathcost);
+         SCIPdebugMessage("althpathost for idx=%d: %f \n", i, altpathcost);
+
+         if( GT(altpathcost, extpathcost) )
+         {
+            SCIPdebugMessage("no rule-out for initial neighbor idx=%d \n", i);
+            return;
+         }
       }
    }
 
@@ -182,9 +226,8 @@ void ruleOutFromTailCombs(
    const int* const sp_starts = pr->sp_starts;
    const int pathhead = pathGetHead(g, pr);
    const int pathhead_idx = pr->nodes_index[pathhead];
-   SCIP_Bool hasFail = FALSE;
+   int nfails = 0;
 
-   assert(!*isRuledOut);
    SCIPdebugMessage("try full tail rule-out with pathcost=%f \n", pr->pathcost);
 
    for( int i = 0; i < pr->nfirstneighbors; i++ )
@@ -196,18 +239,23 @@ void ruleOutFromTailCombs(
       if( GT(altpathcost, pr->pathcost) )
       {
          SCIPdebugMessage("no full rule-out for initial neighbor idx=%d \n", i);
-
-         if( hasFail )
-         {
-            SCIPdebugMessage("...no full rule-out \n");
-            return;
-         }
-
-         hasFail = TRUE;
+         nfails++;
+      }
+      else
+      {
+         pr->firstneighbors_isKilled[i] = TRUE;
       }
    }
 
-   *isRuledOut = TRUE;
+   if( nfails > 1 )
+   {
+      SCIPdebugMessage("...no full rule-out \n");
+      assert(!*isRuledOut);
+   }
+   else
+   {
+      *isRuledOut = TRUE;
+   }
 }
 
 
@@ -391,6 +439,7 @@ void pathneighborsUpdateDistances(
    )
 {
    STP_Vectype(int) currneighbors;
+   const SDPROFIT* const sdprofit = pr->sdprofit;
    const DCSR* const dcsr = g->dcsr_storage;
    const RANGE* const dcsr_range = dcsr->range;
    const SCIP_Real* const dcsr_costs = dcsr->cost;
@@ -425,15 +474,28 @@ void pathneighborsUpdateDistances(
 
             if( nodes_index[head] != VNODES_UNSET )
             {
+               SCIP_Real head_profit = 0.0;
                const int head_start = sp_starts[nodes_index[head]];
                // todo get prize of head here!
 
                if( head == pathtail && node == pathhead )
                   continue;
 
+               if( nodes_index[head] > nfirstneighbors )
+               {
+                  assert(head != pathtail);
+                  head_profit = getSdProfit(sdprofit, nodes_index, head, node);
+               }
+
                for( int k = 0; k < nfirstneighbors; k++ )
                {
-                  const SCIP_Real newdist = dcsr_costs[i] + sp_dists[head_start + k];
+                  SCIP_Real newdist = dcsr_costs[i] + sp_dists[head_start + k];
+                  SCIP_Real profitBias = MIN(head_profit, dcsr_costs[i]);
+
+                  profitBias = MIN(profitBias, sp_dists[head_start + k]);
+                  //printf("%f \n", profitBias);
+
+                  newdist -= profitBias;
 
                   if( LT(newdist, sp_dists[node_start + k]) )
                   {
@@ -543,6 +605,9 @@ void pathExendPrepare(
       }
    }
 
+   for( int i = 0; i < pr->nfirstneighbors; i++ )
+      pr->firstneighbors_isKilled[i] = FALSE;
+
    addInitialPathNodes(scip, g, basetail, basehead, pr);
 }
 
@@ -643,6 +708,9 @@ SCIP_RETCODE prInit(
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->nodes_index, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->sp_starts, SP_MAXNSTARTS) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->sp_dists, SP_MAXNDISTS) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pr->firstneighbors_isKilled, SP_MAXDEGREE) );
+
+   SCIP_CALL( reduce_sdprofitInit(scip, g, &pr->sdprofit) );
 
    for( int i = 0; i < nnodes; i++ )
       pr->nodes_index[i] = VNODES_UNSET;
@@ -712,10 +780,13 @@ void prFree(
    StpVecFree(scip, pr->visitednodes);
   // StpVecFree(scip, pr->currneighborcosts);
    StpVecFree(scip, pr->firstneighborcosts);
+
+   SCIPfreeMemoryArray(scip, &pr->firstneighbors_isKilled);
    SCIPfreeMemoryArray(scip, &pr->sp_dists);
    SCIPfreeMemoryArray(scip, &pr->sp_starts);
    SCIPfreeMemoryArray(scip, &pr->nodes_index);
    SCIPfreeMemoryArray(scip, &pr->nodeindices_isPath);
+   reduce_sdprofitFree(scip, &pr->sdprofit);
 
    SCIPfreeMemory(scip, pathreplace);
 }
@@ -764,6 +835,7 @@ SCIP_RETCODE processPath(
       if( pathIsRedundant )
       {
          SCIPdebugMessage("deleting edge %d-%d \n", g->tail[startedge], g->head[startedge]);
+
          graph_edge_delFull(scip, g, startedge, TRUE);
          (*nelims)++;
          break;
