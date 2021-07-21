@@ -45,7 +45,6 @@
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
-#include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_solve.h"
@@ -1786,9 +1785,10 @@ static
 SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsFilterSQP)
 {
    assert(problem != NULL);
+   assert(statistics != NULL);
 
-   SCIPnlpStatisticsSetNIterations(statistics, problem->niterations);
-   SCIPnlpStatisticsSetTotalTime(statistics, problem->solvetime);
+   statistics->niterations = problem->niterations;
+   statistics->totaltime = problem->solvetime;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/

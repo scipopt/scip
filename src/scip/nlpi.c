@@ -30,7 +30,6 @@
 #include "scip/pub_message.h"
 #include "scip/pub_nlpi.h"
 #include "scip/clock.h"
-#include "scip/struct_nlp.h" /* TODO move nlp(i) statistics back into NLPI */
 #include "scip/struct_nlpi.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"

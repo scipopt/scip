@@ -363,6 +363,7 @@ nlpi:
 - renamed SCIPupdateNlpiProb() to SCIPupdateNlpiProblem() and moved into scip_nlpi.{h,c}
 - renamed SCIPaddNlpiProbRows() to SCIPaddNlpiProblemRows() and moved into scip_nlpi.{h,c}
 - removed SCIPsetModifiedDefaultSettingsIpopt()
+- removed SCIPnlpStatisticsCreate(), SCIPnlpStatisticsFree(), SCIPnlpStatisticsGetNIterations(), SCIPnlpStatisticsGetTotalTime(), SCIPnlpStatisticsSetNIterations(), SCIPnlpStatisticsSetTotalTime(), the struct is public now
 
 ### New API functions
 

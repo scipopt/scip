@@ -1736,7 +1736,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    nlpsolstat = SCIPgetNLPSolstat(scip);
    if( nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE )
    {
-      SCIP_NLPSTATISTICS* nlpstatistics;
+      SCIP_NLPSTATISTICS nlpstatistics;
 
       SCIP_CALL( SCIPsolveNLP(scip,
          .iterlimit = maxnnlpiterations - heurdata->nnlpiterations,
@@ -1746,10 +1746,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       /* update iteration count */
       if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERICERROR )
       {
-         SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
-         SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
-         heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-         SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
+         SCIP_CALL( SCIPgetNLPStatistics(scip, &nlpstatistics) );
+         heurdata->nnlpiterations += nlpstatistics.niterations;
       }
 
       nlpsolstat = SCIPgetNLPSolstat(scip);
@@ -2403,7 +2401,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          if( !cutoff && solvenlp )
          {
             SCIP_NLPTERMSTAT termstat;
-            SCIP_NLPSTATISTICS* nlpstatistics;
+            SCIP_NLPSTATISTICS nlpstatistics;
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
             if( heurdata->nlpstart != 'n' && backtracked )
@@ -2433,10 +2431,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             }
 
             /* update iteration count */
-            SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
-            SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
-            heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-            SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
+            SCIP_CALL( SCIPgetNLPStatistics(scip, &nlpstatistics) );
+            heurdata->nnlpiterations += nlpstatistics.niterations;
 
             /* get NLP solution status, objective value, and fractional variables, that should be integral */
             nlpsolstat = SCIPgetNLPSolstat(scip);

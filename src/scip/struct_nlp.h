@@ -163,13 +163,6 @@ struct SCIP_Nlp
    char*                 name;               /**< problem name */
 };
 
-/** Statistics from an NLP solve */
-struct SCIP_NlpStatistics
-{
-   int                   niterations;        /**< number of iterations the NLP solver spend in the last solve command */
-   SCIP_Real             totaltime;          /**< total time in CPU sections the NLP solver spend in the last solve command */
-};
-
 #ifdef __cplusplus
 }
 #endif

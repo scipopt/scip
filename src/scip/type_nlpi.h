@@ -165,6 +165,14 @@ enum SCIP_NlpTermStat
 };
 typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination status */
 
+/** Statistics from an NLP solve */
+struct SCIP_NlpStatistics
+{
+   int                   niterations;        /**< number of iterations the NLP solver spend in the last solve command */
+   SCIP_Real             totaltime;          /**< total time in CPU sections the NLP solver spend in the last solve command */
+};
+typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics */
+
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
  * Implementation of this callback is optional.

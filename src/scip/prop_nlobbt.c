@@ -96,7 +96,7 @@ struct SCIP_PropData
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for no limit */
    SCIP_Real             nlptimelimit;       /**< time limit of NLP solver; 0.0 for no limit */
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
-   SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
+   SCIP_NLPSTATISTICS    nlpstatistics;      /**< statistics from NLP solver */
 
    SCIP_Real             feastolfac;         /**< factor for NLP feasibility tolerance */
    SCIP_Real             relobjtolfac;       /**< factor for NLP relative objective tolerance */
@@ -390,10 +390,9 @@ SCIP_RETCODE solveNlp(
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, propdata->nlpi, propdata->nlpiprob));
 
    /* collect NLP statistics */
-   assert(propdata->nlpstatistics != NULL);
-   SCIP_CALL( SCIPgetNlpiStatistics(scip, propdata->nlpi, propdata->nlpiprob, propdata->nlpstatistics) );
-   *nlpiter = SCIPnlpStatisticsGetNIterations(propdata->nlpstatistics);
-   SCIPdebugMsg(scip, "iterations %d time %g\n", *nlpiter, SCIPnlpStatisticsGetTotalTime(propdata->nlpstatistics));
+   SCIP_CALL( SCIPgetNlpiStatistics(scip, propdata->nlpi, propdata->nlpiprob, &propdata->nlpstatistics) );
+   *nlpiter = propdata->nlpstatistics.niterations;
+   SCIPdebugMsg(scip, "iterations %d time %g\n", *nlpiter, propdata->nlpstatistics.totaltime);
 
    /* filter bound candidates first, otherwise we do not have access to the primal solution values */
    if( SCIPgetNlpiSolstat(scip, propdata->nlpi, propdata->nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE )
@@ -641,7 +640,6 @@ SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
 
    SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
          DEFAULT_RANDSEED, TRUE) );
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &propdata->nlpstatistics) );
    propdata->lastnode = -1;
 
    return SCIP_OKAY;
@@ -656,7 +654,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolNlobbt)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIPnlpStatisticsFree(SCIPblkmem(scip), &propdata->nlpstatistics);
    SCIPfreeRandom(scip, &propdata->randnumgen);
 
    SCIP_CALL( propdataClear(scip, propdata) );

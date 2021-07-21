@@ -24,11 +24,7 @@
 #include "scip/nlpi_all.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
-#include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
-#ifdef SCIP_STATISTIC
-#include "scip/struct_nlpi.h"
-#endif
 
 #include <string.h>
 
@@ -511,7 +507,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveAll)
 
          SCIPstatisticMessage("%d solver %s termstat %d solstat %d solval %e iters %d time %g\n",
             _nnlps, SCIPnlpiGetName(nlpidata->nlpis[i]), termstat, solstat, solval,
-            SCIPnlpStatisticsGetNIterations(&stats), SCIPnlpStatisticsGetTotalTime(&stats));
+            stats.niterations, stats.totaltime);
       }
 #endif
 

@@ -89,7 +89,7 @@ struct SCIP_HeurData
    SCIP_Real             startcandviol;      /**< violation of start point candidate w.r.t. constraint that reported this candidate */
    SCIP_SOL*             lastsol;            /**< pointer to last found solution (or NULL if none), not captured, thus may be dangling */
 
-   SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
+   SCIP_NLPSTATISTICS    nlpstatistics;      /**< statistics from NLP solver */
 
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
@@ -310,9 +310,6 @@ SCIP_RETCODE createSubSCIP(
    /* do not need hashmap anymore */
    SCIPhashmapFree(&varsmap);
 
-   /* initialize data structure for NLP solve statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &heurdata->nlpstatistics) );
-
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "misc/catchctrlc", FALSE) );
 
@@ -369,11 +366,6 @@ SCIP_RETCODE freeSubSCIP(
    assert(heurdata != NULL);
 
    assert(heurdata->subscip != NULL);
-
-   /* free NLP statistics */
-   if( heurdata->nlpstatistics != NULL )
-      SCIPnlpStatisticsFree(SCIPblkmem(scip), &heurdata->nlpstatistics);
-   assert(heurdata->nlpstatistics == NULL);
 
    SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, NULL, NULL, NULL, NULL) );
    assert(nsubvars == heurdata->nsubvars);
@@ -975,12 +967,12 @@ SCIP_RETCODE solveSubNLP(
    }
    heurdata->nseriousnlpierror = 0;
 
-   SCIP_CALL( SCIPgetNLPStatistics(heurdata->subscip, heurdata->nlpstatistics) );
+   SCIP_CALL( SCIPgetNLPStatistics(heurdata->subscip, &heurdata->nlpstatistics) );
 
    if( iterused != NULL )
-      *iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
+      *iterused += heurdata->nlpstatistics.niterations;
    SCIPdebugMsg(scip, "NLP solver used %d iterations and %g seconds\n",
-      SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics), SCIPnlpStatisticsGetTotalTime(heurdata->nlpstatistics));
+      heurdata->nlpstatistics.niterations, heurdata->nlpstatistics.totaltime);
 
    /* NLP solver claims it found a feasible (maybe even optimal) solution
     * if the objective value is better than our cutoff, then try to add it

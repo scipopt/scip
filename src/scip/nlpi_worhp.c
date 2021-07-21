@@ -29,7 +29,6 @@
 #include "scip/nlpioracle.h"
 #include "scip/exprinterpret.h"
 #include "scip/interrupt.h"
-#include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
@@ -1580,9 +1579,10 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
+   assert(statistics != NULL);
 
-   SCIPnlpStatisticsSetNIterations(statistics, problem->lastniter);
-   SCIPnlpStatisticsSetTotalTime(statistics, problem->lasttime);
+   statistics->niterations = problem->lastniter;
+   statistics->totaltime = problem->lasttime;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
