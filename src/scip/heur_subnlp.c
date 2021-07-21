@@ -160,15 +160,10 @@ SCIP_RETCODE createSubSCIP(
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
    heurdata->triedsetupsubscip = TRUE;
 
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreate(&heurdata->subscip) );
-
-   /* create variable hash mapping scip -> subscip */
-   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
 
    /* create sub-SCIP copy of CIP */
 
@@ -196,15 +191,14 @@ SCIP_RETCODE createSubSCIP(
          &success) );
    if( !success )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "In heur_subnlp: failed to copy some plugins to sub-SCIP, continue anyway\n");
+      SCIPdebugMsg(scip, "failed to copy some plugins to sub-SCIP, continue anyway\n");
    }
 
    /* check if we still have NLPI's in subscip */
    if( SCIPgetNNlpis(heurdata->subscip) <= 0 )
    {
-      SCIPdebugMsg(scip, "some NLPIs from main SCIP did not copy into sub-SCIP, give up heuristic.\n");
+      SCIPdebugMsg(scip, "none of the NLPIs from main SCIP did not copy into sub-SCIP, give up heuristic.\n");
       SCIP_CALL( SCIPfree(&heurdata->subscip) );
-      SCIPhashmapFree(&varsmap);
 
       return SCIP_OKAY;
    }
@@ -215,19 +209,20 @@ SCIP_RETCODE createSubSCIP(
    /* create problem in sub-SCIP */
    /* get name of the original problem and add "subnlp" */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subnlp", SCIPgetProbName(scip));
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
    SCIP_CALL( SCIPcopyProb(scip, heurdata->subscip, varsmap, conssmap, TRUE, probname) );
 
    /* copy all variables */
-   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
+   SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, conssmap, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
    SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, varsmap, conssmap, TRUE, FALSE, &heurdata->subscipisvalid) );
    SCIPhashmapFree(&conssmap);
    if( !heurdata->subscipisvalid )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "In heur_subnlp: failed to copy some constraints to sub-SCIP, continue anyway\n");
-      SCIPdebugMsg(scip, "In heur_subnlp: failed to copy some constraints to sub-SCIP, continue anyway\n");
+      SCIPdebugMsg(scip, "failed to copy some constraints to sub-SCIP, continue anyway\n");
    }
 
    /* create arrays translating scip transformed vars to subscip original vars, and vice versa
@@ -318,7 +313,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/totalnodes") );
 
    /* disable restarts (not sure they could be triggered on continuous problems anyway)
-    * keep normal presolving, but disable components presolver
+    * keep normal presolving (TODO try fast emphasis), but disable components presolver
     * heuristics and separators were not copied into subscip, so should not need to switch off
     */
    if( !SCIPisParamFixed(heurdata->subscip, "constraints/components/maxprerounds") )
