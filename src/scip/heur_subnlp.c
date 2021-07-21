@@ -627,11 +627,6 @@ SCIP_RETCODE solveSubNLP(
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
    }
    SCIP_CALL( SCIPpresolve(heurdata->subscip) );
-   if( SCIPpressedCtrlC(heurdata->subscip) )
-   {
-      SCIPdebugMsg(scip, "SCIP presolve interrupted by user\n");
-      goto CLEANUP;
-   }
    if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED )
    {
       /* presolve probably found the subproblem infeasible */
