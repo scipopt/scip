@@ -1584,7 +1584,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       *iterused = 0;
 
    /* fix discrete variables in sub-SCIP */
-   if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
+   if( SCIPgetNBinVars(heurdata->subscip) > 0 || SCIPgetNIntVars(heurdata->subscip) > 0 )
    {
       SCIP_Real  fixval;
       SCIP_VAR** subvars;
@@ -1610,29 +1610,26 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
 
          fixval = SCIPgetSolVal(scip, refpoint, var);
 
-         /* only run heuristic on integer feasible points */
+         /* only run heuristic on integer feasible points (unless we are on an unbounded LP) */
          if( !SCIPisFeasIntegral(scip, fixval) )
          {
-            if( refpoint || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+            if( refpoint != NULL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
             {
                SCIPdebugMsg(scip, "skip NLP heuristic because start candidate not integer feasible: var <%s> has value %g\n", SCIPvarGetName(var), fixval);
                goto CLEANUP;
             }
-            /* otherwise we desperately wanna run the NLP heur, so we continue and round what we have */
          }
          /* if we do not really have a startpoint, then we should take care that we do not fix variables to very large values
           *  thus, we set to 0.0 here and project on bounds below
           */
-         if( REALABS(fixval) > 1E+10 && !refpoint && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+         if( REALABS(fixval) > 1E+10 && refpoint == NULL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
             fixval = 0.0;
 
          /* fixing variables to infinity causes problems, we should not have been passed such a solution as refpoint */
          assert(!SCIPisInfinity(scip, REALABS(fixval)));
 
-         /* round fractional variables to the nearest integer,
-          *  use exact integral value, if the variable is only integral within numerical tolerances
-          */
-         fixval = SCIPfloor(scip, fixval+0.5);
+         /* round fractional variables to the nearest integer */
+         fixval = SCIPround(scip, fixval);
 
          /* adjust value to the global bounds of the corresponding SCIP variable */
          fixval = MAX(fixval, SCIPvarGetLbGlobal(var));  /*lint !e666*/
@@ -1691,6 +1688,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          /* if the subNLP is valid and turned out to be globally infeasible (i.e., proven by SCIP), then we forbid this fixation in the main problem */
          if( SCIPisInfinity(scip, cutoff) && heurdata->forbidfixings )
          {
+            /* TODO check whether we can remove this (primal heuristics creating constraints is not a nice sideeffect) */
             SCIP_CALL( forbidFixation(scip, heurdata) );
          }
       }
