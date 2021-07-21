@@ -98,6 +98,15 @@ SCIP_Real SCIPnlpiGetSolveTimeSolver(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
+/** gives total time spend in function evaluation during NLP solves
+ *
+ * If timing/nlpieval is off (the default), depending on the NLP solver, this may just return 0.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiGetEvalTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
 /** gives total number of iterations spend by NLP solver so far */
 SCIP_EXPORT
 SCIP_Longint SCIPnlpiGetNIterations(

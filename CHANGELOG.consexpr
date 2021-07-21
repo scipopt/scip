@@ -475,7 +475,7 @@ nlpi:
 - added SCIPcreateNlpiProblemFromNlRows()
 - added SCIPnlpiOracleGetObjectiveConstant()
 - added SCIPnlpiOracleIsVarNonlinear(), SCIPnlpiOracleGetVarCounts(), SCIPnlpiOracleIsConstraintNonlinear()
-- added SCIPnlpiGetNProblems(), SCIPnlpiGetProblemTime(), SCIPnlpiGetNSolves(), SCIPnlpiGetSolveTime(), SCIPnlpiGetSolveTimeSolver(), SCIPnlpiGetNIterations(), SCIPnlpiGetNTermStat(), SCIPnlpiGetNSolStat(), SCIPnlpiMergeStatistics()
+- added SCIPnlpiGetNProblems(), SCIPnlpiGetProblemTime(), SCIPnlpiGetNSolves(), SCIPnlpiGetSolveTime(), SCIPnlpiGetSolveTimeSolver(), SCIPnlpiGetEvalTime(), SCIPnlpiGetNIterations(), SCIPnlpiGetNTermStat(), SCIPnlpiGetNSolStat(), SCIPnlpiMergeStatistics()
 - added SCIPmergeNLPIStatistics(), SCIPprintNLPIStatistics()
 - added SCIPnlpiOracleResetEvalTime(), SCIPnlpiOracleGetEvalTime()
 
