@@ -156,13 +156,6 @@ SCIP_RETCODE createSubSCIP(
    int i;
    SCIP_HASHMAP* varsmap;
    SCIP_HASHMAP* conssmap;
-#ifdef SCIP_DEBUG
-   static const SCIP_Bool copydisplays = TRUE;
-   static const SCIP_Bool copyreader = TRUE;
-#else
-   static const SCIP_Bool copydisplays = FALSE;
-   static const SCIP_Bool copyreader = FALSE;
-#endif
 
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
@@ -182,7 +175,7 @@ SCIP_RETCODE createSubSCIP(
    /* copy interesting plugins */
    success = TRUE;
    SCIP_CALL( SCIPcopyPlugins(scip, heurdata->subscip,
-         copyreader, /* readers */
+         FALSE, /* readers */
          FALSE, /* pricers */
          TRUE,  /* conshdlrs */
          FALSE, /* conflicthdlrs */
@@ -194,7 +187,7 @@ SCIP_RETCODE createSubSCIP(
          TRUE,  /* eventhandler */
          TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
          FALSE,  /* branchrules */
-         copydisplays, /* displays */
+         TRUE, /* displays */
          FALSE, /* tables */
          FALSE, /* dialogs */
          TRUE,  /* expression handlers */
