@@ -62,18 +62,6 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
   * @{
   */
 
-/** updates the starting point for the NLP heuristic
- * 
- * Is called, for example, by a constraint handler that handles nonlinear constraints when a check on feasibility of a solution fails.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< subNLP heuristic */
-   SCIP_SOL*             solcand,            /**< solution candidate */
-   SCIP_Real             violation           /**< constraint violation of solution candidate */
-   );
-
 /** main procedure of the subNLP heuristic */
 SCIP_EXPORT
 SCIP_RETCODE SCIPapplyHeurSubNlp(
@@ -85,6 +73,18 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
    SCIP_Longint*         iterused,           /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
+   );
+
+/** updates the starting point for the NLP heuristic
+ *
+ * Is called, for example, by a constraint handler that handles nonlinear constraints when a check on feasibility of a solution fails.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< subNLP heuristic */
+   SCIP_SOL*             solcand,            /**< solution candidate */
+   SCIP_Real             violation           /**< constraint violation of solution candidate */
    );
 
 /** gets startpoint candidate to be used in next call to NLP heuristic, or NULL if none */
