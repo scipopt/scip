@@ -594,7 +594,6 @@ SCIP_RETCODE solveSubNLP(
    SCIP_VAR*      subvar;
    int            i;
    SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
-   SCIP_NLPPARAM  nlpparam = SCIP_NLPPARAM_DEFAULT(heurdata->subscip);  /*lint !e446*/
    SCIP_Real      timelimit;
    SCIP_NLPSTATISTICS nlpstatistics;
 
@@ -670,13 +669,11 @@ SCIP_RETCODE solveSubNLP(
       retcode = SCIPsolve(heurdata->subscip);
    }
 
-   /* errors in solving the subproblem should not kill the overall solving process;
-    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
-   if ( retcode != SCIP_OKAY )
+   /* errors in solving the subproblem should not kill the overall solving process
+    * hence, the return code is caught and a warning is printed
+    */
+   if( retcode != SCIP_OKAY )
    {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
       SCIPwarningMessage(scip, "Error while solving subproblem in subnlp heuristic; sub-SCIP terminated with code <%d>\n", retcode);
       goto CLEANUP;
    }
@@ -694,10 +691,9 @@ SCIP_RETCODE solveSubNLP(
    /* if sub-SCIP found solutions already, then pass them to main scip */
    for( i = 0; i < SCIPgetNSols(heurdata->subscip); ++i )
    {
-      SCIP_Bool stored;
-
       if( resultsol == NULL )
       {
+         SCIP_Bool stored;
          SCIP_SOL* sol;
 
          sol = NULL;
@@ -733,11 +729,13 @@ SCIP_RETCODE solveSubNLP(
       }
       else
       {
+         SCIP_Bool feasible;
+
          SCIP_CALL( createSolFromSubScipSol(scip, heur, &resultsol, SCIPgetSols(heurdata->subscip)[i], authorheur) );
 
          heurdata->lastsol = resultsol;
-         SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
-         if( stored )
+         SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, FALSE, TRUE, FALSE, TRUE, &feasible) );
+         if( feasible )
          {
             if( heurdata->nlpverblevel >= 1 )
             {
@@ -873,25 +871,20 @@ SCIP_RETCODE solveSubNLP(
    /* set iteration limit for NLP solver */
    if( itercontingent == -1 && heurdata->nlpiterlimit > 0 )
       itercontingent = heurdata->nlpiterlimit;
-   if( itercontingent > 0 )
-   {
-      nlpparam.iterlimit = (int)MIN(INT_MAX, itercontingent);
-   }
-
-   /* set verbosity of NLP solver */
-   nlpparam.verblevel = (unsigned short)heurdata->nlpverblevel;
-
-   /* enable infeasible problem heuristic in Ipopt
-    * TODO check whether that is still beneficial and remove this nlpparam if not
-    */
-   nlpparam.expectinfeas = TRUE;
 
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT "\n", itercontingent);
-   SCIP_CALL( SCIPsolveNLPParam(heurdata->subscip, nlpparam) );
+   SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
+      .iterlimit = itercontingent > 0 ? (int)MIN(INT_MAX, itercontingent) : 3000,
+      .verblevel = (unsigned short)heurdata->nlpverblevel,
+      .expectinfeas = TRUE  /* TODO check whether that is still beneficial */
+   ) );  /*lint !e666*/
 
    SCIPdebugMsg(scip, "NLP solver returned with termination status %d and solution status %d, objective value is %g\n",
       SCIPgetNLPTermstat(heurdata->subscip), SCIPgetNLPSolstat(heurdata->subscip), SCIPgetNLPObjval(heurdata->subscip));
+
+   /* add NLP solve statistics from subscip to main SCIP, so they show up in final statistics */
+   SCIPmergeNLPIStatistics(heurdata->subscip, scip);
 
    if( SCIPgetNLPTermstat(heurdata->subscip) >= SCIP_NLPTERMSTAT_OUTOFMEMORY )
    {
@@ -903,13 +896,13 @@ SCIP_RETCODE solveSubNLP(
      }
 
      ++(heurdata->nseriousnlpierror);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, 
+     SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
          "NLP solver in subNLP heuristic for problem <%s> returned with bad termination status %d. This was the %d%s successive time.\n",
          SCIPgetProbName(scip), SCIPgetNLPTermstat(heurdata->subscip), heurdata->nseriousnlpierror,
          heurdata->nseriousnlpierror == 1 ? "st" : heurdata->nseriousnlpierror == 2 ? "nd" : heurdata->nseriousnlpierror == 3 ? "rd" : "th");
       if( heurdata->nseriousnlpierror >= 5 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Will not run NLP heuristic again for this run.\n");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Will not run subNLP heuristic again for this run.\n");
          SCIP_CALL( freeSubSCIP(scip, heurdata) );
       }
       goto CLEANUP;
@@ -926,6 +919,7 @@ SCIP_RETCODE solveSubNLP(
    /* NLP solver claims it found a feasible (maybe even optimal) solution
     * if the objective value is better than our cutoff, then try to add it
     * if we do not plan to add the solution (resultsol != NULL), then also check it if objective value is not better than objlimit
+    * TODO compare with main SCIP primal bound to allow also marginal improvement, or don't compare at all
     */
    if( SCIPgetNLPSolstat(heurdata->subscip) <= SCIP_NLPSOLSTAT_FEASIBLE && (resultsol != NULL || SCIPisLE(scip, SCIPgetNLPObjval(heurdata->subscip), SCIPgetObjlimit(heurdata->subscip))) )
    {
@@ -946,7 +940,8 @@ SCIP_RETCODE solveSubNLP(
 #endif
 
          if( stored )
-         {  /* SCIP stored solution (yippi!), so we are done */
+         {
+            /* SCIP stored solution (yippi!), so we are done */
             if( heurdata->nlpverblevel >= 1 )
             {
                SCIPinfoMessage(scip, NULL, "SCIP stored subnlp solution\n");
@@ -988,7 +983,9 @@ SCIP_RETCODE solveSubNLP(
          {
             /* SCIP find solution feasible, so we are done */
             if( heurdata->nlpverblevel >= 1 )
+            {
                SCIPinfoMessage(scip, NULL, "solution reported by NLP solver feasible for SCIP\n");
+            }
             else
             {
                SCIPdebugMsg(scip, "solution reported by NLP solver feasible for SCIP\n");
@@ -1038,9 +1035,6 @@ SCIP_RETCODE solveSubNLP(
  CLEANUP:
    if( heurdata->subscip != NULL )
    {
-      /* add NLP solve statistics from subscip to main SCIP, so they show up in final statistics */
-      SCIPmergeNLPIStatistics(heurdata->subscip, scip);
-
       SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
    }
 
