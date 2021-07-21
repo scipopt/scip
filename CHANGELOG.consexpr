@@ -383,6 +383,7 @@ nlpi:
   SCIPgetRowprepRowConshdlr(), SCIPgetRowprepRowCons(), SCIPgetRowprepRowSepa()
 - added SCIPexprintHessianSparsity(), SCIPexprintHessian()
 - added SCIPexprcurvPowerInv(), SCIPexprcurvMonomialInv()
+- added SCIPsetClockEnabled()
 
 expression handler:
 - added SCIPincludeExprhdlr(), SCIPgetExprhdlrs(), SCIPgetNExprhdlrs(), SCIPfindExprhdlr()
