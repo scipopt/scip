@@ -76,6 +76,7 @@ struct SCIP_NlpiOracle
    int*                  heslagcols;         /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
 
    SCIP_EXPRINT*         exprinterpreter;    /**< interpreter for expressions: evaluation and derivatives */
+   SCIP_CLOCK*           evalclock;          /**< clock measuring evaluation time */
 };
 
 /**@} */
@@ -985,6 +986,8 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    SCIPdebugMessage("Oracle initializes expression interpreter %s\n", SCIPexprintGetName());
    SCIP_CALL( SCIPexprintCreate(scip, &(*oracle)->exprinterpreter) );
 
+   SCIP_CALL( SCIPcreateClock(scip, &(*oracle)->evalclock) );
+
    /* create zero objective function */
    SCIP_CALL( createConstraint(scip, *oracle, &(*oracle)->objective, 0, NULL, NULL, NULL, 0.0, 0.0, NULL) );
 
@@ -1008,6 +1011,8 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    SCIP_CALL( freeConstraint(scip, *oracle, &(*oracle)->objective, FALSE) );
    SCIP_CALL( freeConstraints(scip, *oracle) );
    freeVariables(scip, *oracle);
+
+   SCIP_CALL( SCIPfreeClock(scip, &(*oracle)->evalclock) );
 
    SCIP_CALL( SCIPexprintFree(scip, &(*oracle)->exprinterpreter) );
 
@@ -1871,16 +1876,21 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    SCIP_Real*            objval              /**< pointer to store objective value */  
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p eval obj value\n", (void*)oracle);
 
-   SCIP_CALL_QUIET( evalFunctionValue(scip, oracle, oracle->objective, x, objval) );
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionValue(scip, oracle, oracle->objective, x, objval);
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
    assert(oracle->objective->lhs == oracle->objective->rhs);  /*lint !e777*/
-   *objval += oracle->objective->lhs;
+   if( retcode == SCIP_OKAY )
+      *objval += oracle->objective->lhs;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** evaluates one constraint function in a given point */
@@ -1892,15 +1902,19 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
    SCIP_Real*            conval              /**< pointer to store constraint value */  
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(oracle != NULL);
    assert(x != NULL || oracle->nvars == 0);
    assert(conval != NULL);
 
    SCIPdebugMessage("%p eval cons value\n", (void*)oracle);
 
-   SCIP_CALL_QUIET( evalFunctionValue(scip, oracle, oracle->conss[considx], x, conval) );
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionValue(scip, oracle, oracle->conss[considx], x, conval);
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** evaluates all constraint functions in a given point */
@@ -1911,6 +1925,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    SCIP_Real*            convals             /**< buffer to store constraint values */  
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
    int i;
 
    SCIPdebugMessage("%p eval cons values\n", (void*)oracle);
@@ -1919,12 +1934,16 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    assert(x != NULL || oracle->nvars == 0);
    assert(convals != NULL);
 
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
    for( i = 0; i < oracle->nconss; ++i )
    {
-      SCIP_CALL_QUIET( evalFunctionValue(scip, oracle, oracle->conss[i], x, &convals[i]) );
+      retcode = evalFunctionValue(scip, oracle, oracle->conss[i], x, &convals[i]);
+      if( retcode != SCIP_OKAY )
+         break;
    }
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** computes the objective gradient in a given point
@@ -1940,16 +1959,20 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_Real*            objgrad             /**< pointer to store (dense) objective gradient */  
    )
 {
+   SCIP_RETCODE retcode;
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p eval obj grad\n", (void*)oracle);
 
-   SCIP_CALL_QUIET( evalFunctionGradient(scip, oracle, oracle->objective, x, isnewx, objval, objgrad) );
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionGradient(scip, oracle, oracle->objective, x, isnewx, objval, objgrad);
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
    assert(oracle->objective->lhs == oracle->objective->rhs);  /*lint !e777*/
-   *objval += oracle->objective->lhs;
+   if( retcode == SCIP_OKAY )
+      *objval += oracle->objective->lhs;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** computes a constraints gradient in a given point
@@ -1966,15 +1989,19 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_Real*            congrad             /**< pointer to store (dense) constraint gradient */  
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(oracle != NULL);
    assert(x != NULL || oracle->nvars == 0);
    assert(conval != NULL);
 
    SCIPdebugMessage("%p eval cons grad\n", (void*)oracle);
 
-   SCIP_CALL_QUIET( evalFunctionGradient(scip, oracle, oracle->conss[considx], x, isnewx, conval, congrad) );
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionGradient(scip, oracle, oracle->conss[considx], x, isnewx, conval, congrad);
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** gets sparsity pattern (rowwise) of Jacobian matrix
@@ -2012,6 +2039,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       return SCIP_OKAY;
    }
 
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacoffsets, oracle->nconss + 1) );
 
    maxnnz = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
@@ -2025,6 +2054,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          *offset = oracle->jacoffsets;
       if( col != NULL )
          *col = oracle->jaccols;
+
+      SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
       return SCIP_OKAY;
    }
    nnz = 0;
@@ -2097,6 +2129,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    if( col != NULL )
       *col = oracle->jaccols;
 
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
    return SCIP_OKAY;
 }
 
@@ -2132,6 +2166,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
 
    assert(oracle->jacoffsets != NULL);
    assert(oracle->jaccols    != NULL);
+
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &grad, oracle->nvars) );
 
@@ -2221,6 +2257,8 @@ TERMINATE:
 
    SCIPfreeCleanBufferArray(scip, &grad);
 
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
    return retcode;
 }
 
@@ -2258,6 +2296,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
          *col = oracle->heslagcols;
       return SCIP_OKAY;
    }
+
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->heslagoffsets, oracle->nvars + 1) );
 
@@ -2309,6 +2349,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    if( col != NULL )
       *col = oracle->heslagcols;
 
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
    return SCIP_OKAY;
 }
 
@@ -2331,6 +2373,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_Real*            hessian             /**< pointer to store sparse hessian values */  
    )
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode = SCIP_OKAY;
    int i;
 
    assert(oracle != NULL);
@@ -2343,22 +2386,53 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    SCIPdebugMessage("%p eval hessian lag\n", (void*)oracle);
 
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+
    BMSclearMemoryArray(hessian, oracle->heslagoffsets[oracle->nvars]);
 
    if( objfactor != 0.0 && oracle->objective->expr != NULL )
    {
-      SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, objfactor, x, isnewx_obj, oracle->objective->expr, oracle->objective->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+      retcode = hessLagAddExpr(scip, oracle, objfactor, x, isnewx_obj, oracle->objective->expr, oracle->objective->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian);
    }
 
-   for( i = 0; i < oracle->nconss; ++i )
+   for( i = 0; i < oracle->nconss && retcode == SCIP_OKAY; ++i )
    {
       assert( lambda != NULL ); /* for lint */
       if( lambda[i] == 0.0 || oracle->conss[i]->expr == NULL )
          continue;
-      SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, lambda[i], x, isnewx_cons, oracle->conss[i]->expr, oracle->conss[i]->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+      retcode = hessLagAddExpr(scip, oracle, lambda[i], x, isnewx_cons, oracle->conss[i]->expr, oracle->conss[i]->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian);
    }
 
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
+   return retcode;
+}
+
+/** resets clock that measures evaluation time */
+SCIP_RETCODE SCIPnlpiOracleResetEvalTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   assert(oracle != NULL);
+
+   SCIP_CALL( SCIPresetClock(scip, oracle->evalclock) );
+
    return SCIP_OKAY;
+}
+
+/** gives time spend in evaluation since last reset of clock
+ *
+ * Gives 0 if the eval clock is disabled.
+ */
+SCIP_Real SCIPnlpiOracleGetEvalTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   assert(oracle != NULL);
+
+   return SCIPgetClockTime(scip, oracle->evalclock);
 }
 
 /** prints the problem to a file. */

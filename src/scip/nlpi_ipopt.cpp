@@ -240,8 +240,7 @@ public:
       nlpiproblem = nlpiproblem_;
       param = nlpparam;
 
-      // it appears we are about to start a new solve
-      // use this call as an opportunity to reset the counts on x
+      // since we are about to start a new solve, use this opportunity to reset the counts on x
       current_x = 1;
       last_f_eval_x = 0;
       last_g_eval_x = 0;
@@ -1380,6 +1379,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    if( nlpidata->print_level >= J_SUMMARY || param.verblevel > 0 )
       SCIPinfoMessage(scip, NULL, "Ipopt solve with parameters " SCIP_NLPPARAM_PRINT(param));
 
+   SCIP_CALL( SCIPnlpiOracleResetEvalTime(scip, problem->oracle) );
+
    if( param.timelimit == 0.0 )
    {
       /* there is nothing we can do if we are not given any time */
@@ -1627,6 +1628,7 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsIpopt)
 
    statistics->niterations = problem->lastniter;
    statistics->totaltime = problem->lasttime;
+   statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
 
    return SCIP_OKAY;
 }

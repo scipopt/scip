@@ -1312,6 +1312,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
 
    SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
 
+   SCIP_CALL( SCIPnlpiOracleResetEvalTime(scip, problem->oracle) );
+
    if( param.timelimit == 0.0 )
    {
       /* there is nothing we can do if we are not given any time */
@@ -1583,6 +1585,7 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsWorhp)
 
    statistics->niterations = problem->lastniter;
    statistics->totaltime = problem->lasttime;
+   statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
 
    return SCIP_OKAY;
 }  /*lint !e715*/

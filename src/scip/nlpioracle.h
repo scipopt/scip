@@ -388,6 +388,23 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_Real*            hessian             /**< pointer to store sparse hessian values */  
    );
 
+/** resets clock that measures evaluation time */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpiOracleResetEvalTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   );
+
+/** gives time spend in evaluation since last reset of clock
+ *
+ * Gives 0 if the eval clock is disabled.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiOracleGetEvalTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   );
+
 /** prints the problem to a file. */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOraclePrintProblem(

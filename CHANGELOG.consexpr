@@ -476,6 +476,7 @@ nlpi:
 - added SCIPnlpiOracleIsVarNonlinear(), SCIPnlpiOracleGetVarCounts(), SCIPnlpiOracleIsConstraintNonlinear()
 - added SCIPnlpiGetNProblems(), SCIPnlpiGetProblemTime(), SCIPnlpiGetNSolves(), SCIPnlpiGetSolveTime(), SCIPnlpiGetSolveTimeSolver(), SCIPnlpiGetNIterations(), SCIPnlpiGetNTermStat(), SCIPnlpiGetNSolStat(), SCIPnlpiMergeStatistics()
 - added SCIPmergeNLPIStatistics(), SCIPprintNLPIStatistics()
+- added SCIPnlpiOracleResetEvalTime(), SCIPnlpiOracleGetEvalTime()
 
 ### Command line interface
 
@@ -581,6 +582,7 @@ nlpi:
 - renamed SCIP_NLPTERMSTAT_EVALERR to SCIP_NLPTERMSTAT_EVALERROR
 - renamed SCIP_NLPTERMSTAT_MEMERR to SCIP_NLPTERMSTAT_OUTOFMEMORY
 - renamed SCIP_NLPTERMSTAT_LICERR to SCIP_NLPTERMSTAT_LICENSEERROR
+- added evaltime to SCIP_NLPSTATISTICS
 
 
 Deleted files
