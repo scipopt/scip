@@ -483,6 +483,7 @@
 #define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
 #define SCIP_DEFAULT_TIME_RARECLOCKCHECK  FALSE /**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
 #define SCIP_DEFAULT_TIME_STATISTICTIMING  TRUE /**< should timing for statistic output be enabled? */
+#define SCIP_DEFAULT_TIME_NLPIEVAL        FALSE /**< should time for evaluation in NLP solves be measured? */
 
 
 /* visualization output */
@@ -2623,6 +2624,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should timing for statistic output be performed?",
          &(*set)->time_statistictiming, FALSE, SCIP_DEFAULT_TIME_STATISTICTIMING,
          paramChgdStatistictiming, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "timing/nlpieval",
+         "should time for evaluation in NLP solves be measured?",
+         &(*set)->time_nlpieval, FALSE, SCIP_DEFAULT_TIME_NLPIEVAL,
+         NULL, NULL) );
 
    /* visualization parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,

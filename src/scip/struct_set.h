@@ -581,6 +581,7 @@ struct SCIP_Set
    SCIP_Bool             time_reading;       /**< belongs reading time to solving time? */
    SCIP_Bool             time_rareclockcheck;/**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
    SCIP_Bool             time_statistictiming;  /**< should timing for statistic output be enabled? */
+   SCIP_Bool             time_nlpieval;      /**< should time for evaluation in NLP solves be measured? */
 
    /* tree compression parameters (for reoptimization) */
    SCIP_Bool             compr_enable;       /**< should automatic tree compression after presolving be enabled? (only for reoptimization) */

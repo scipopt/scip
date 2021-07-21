@@ -976,6 +976,8 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    SCIP_NLPIORACLE**     oracle              /**< pointer to store NLPIORACLE data structure */
    )
 {
+   SCIP_Bool nlpieval;
+
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p oracle create\n", (void*)oracle);
@@ -987,6 +989,10 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    SCIP_CALL( SCIPexprintCreate(scip, &(*oracle)->exprinterpreter) );
 
    SCIP_CALL( SCIPcreateClock(scip, &(*oracle)->evalclock) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "timing/nlpieval", &nlpieval) );
+   if( !nlpieval )
+      SCIPsetClockEnabled((*oracle)->evalclock, FALSE);
 
    /* create zero objective function */
    SCIP_CALL( createConstraint(scip, *oracle, &(*oracle)->objective, 0, NULL, NULL, NULL, 0.0, 0.0, NULL) );
