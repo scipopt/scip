@@ -463,6 +463,7 @@ SCIP_RETCODE redLoopInnerStp(
    SCIP_Bool sd = TRUE;
    SCIP_Bool sdbiased = redparameters->usestrongreds;
    SCIP_Bool sdc = FALSE;
+   SCIP_Bool pathrep = usestrongreds && redparameters->dualascent;
    SCIP_Bool sdstar = TRUE;
    SCIP_Bool da = redparameters->dualascent;
    SCIP_Bool bdk = redparameters->nodereplacing;
@@ -486,6 +487,7 @@ SCIP_RETCODE redLoopInnerStp(
       int brednelims = 0;
       int degtnelims = 0;
       int sdbiasnelims = 0;
+      int pathrepnelims = 0;
 
       if( bidecompparams && bidecompparams->newLevelStarted )
       {
@@ -554,6 +556,16 @@ SCIP_RETCODE redLoopInnerStp(
 
       if( (sdc || sdstar) && !skiptests )
          SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &degtnelims, NULL));
+
+      if( pathrep )
+      {
+         SCIP_CALL( reduce_pathreplace(scip, g, &pathrepnelims) );
+         if( pathrepnelims <= reductbound )
+            pathrep = FALSE;
+//printf("pathrep=%d \n", pathrepnelims);
+
+         reduceStatsPrint(fullreduce, "pathrep", pathrepnelims);
+      }
 
       if( bdk && !skiptests )
       {
@@ -629,11 +641,6 @@ SCIP_RETCODE redLoopInnerStp(
             break;
       }
 
-      int xxx = 0;
-      SCIP_CALL( reduce_pathreplace(scip, g, &xxx) );
-      printf("npathrep=%d \n", xxx);
-
-
       if( da )
       {
          const RPDA paramsda = {
@@ -657,7 +664,7 @@ SCIP_RETCODE redLoopInnerStp(
       SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &degtnelims, NULL));
 
       /* too few eliminations? */
-      if( (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims +
+      if( (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims + pathrepnelims +
            brednelims + sdcnelims + sdstarnelims) <= STP_RED_GLBFACTOR * reductbound )
       {
          // at least one successful round and full reduce and no inner_restarts yet?

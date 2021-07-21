@@ -830,6 +830,11 @@ SCIP_RETCODE reduce_pathreplace(
    prFree(scip, &pathreplace);
    graph_free_dcsr(scip, g);
 
+   if( *nelims > 0 )
+   {
+      reduce_nodesDeg1(scip, g);
+   }
+
    assert(graph_valid(scip, g));
 
    return SCIP_OKAY;

@@ -2624,7 +2624,7 @@ SCIP_RETCODE reduce_da(
             // deleteme to trigger DP algo for OGE instance id_331 that cannot be solved yet, remove once
             // ext full backtracking is there
             // remove before release!
-            if( first && graph->terms == 200 && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 851810086400 )
+            if( 0 && first && graph->terms == 200 && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 851810086400 )
             {
                printf("test DP\n");
                havebestsol = FALSE;
