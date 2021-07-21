@@ -601,6 +601,7 @@ SCIP_RETCODE solveSubNLP(
    assert(heur != NULL);
    assert(heurdata != NULL);
    assert(result != NULL);
+   assert(SCIPisTransformed(heurdata->subscip));
 
    /* get remaining SCIP solve time; if no time left, then stop */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -610,9 +611,6 @@ SCIP_RETCODE solveSubNLP(
       if( timelimit <= 0.0 )
          goto CLEANUP;
    }
-
-   /* transform sub-SCIP */
-   SCIP_CALL( SCIPtransformProb(heurdata->subscip) );
 
    /* presolve sub-SCIP
     *  set scip timelimit in case presolve is unexpectedly expensive
@@ -1033,11 +1031,6 @@ SCIP_RETCODE solveSubNLP(
    }
 
  CLEANUP:
-   if( heurdata->subscip != NULL )
-   {
-      SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
-   }
-
    if( iterused != NULL && *iterused == 0 )
       *iterused = 1;
 
@@ -1578,10 +1571,13 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
 
    assert(heurdata->nsubvars > 0);
    assert(heurdata->var_subscip2scip != NULL);
-   assert(!SCIPisTransformed(heurdata->subscip));
 
    if( iterused != NULL )
       *iterused = 0;
+
+   /* transform sub-SCIP, so variable fixing are easily undone by free-transform */
+   assert(!SCIPisTransformed(heurdata->subscip));
+   SCIP_CALL( SCIPtransformProb(heurdata->subscip) );
 
    /* fix discrete variables in sub-SCIP */
    if( SCIPgetNBinVars(heurdata->subscip) > 0 || SCIPgetNIntVars(heurdata->subscip) > 0 )
@@ -1591,6 +1587,8 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       int        nsubvars;
       int        nsubbinvars;
       int        nsubintvars;
+      SCIP_Bool  infeas;
+      SCIP_Bool  tightened;
 
       SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, &nsubbinvars, &nsubintvars, NULL, NULL) );
       assert(nsubvars == heurdata->nsubvars);
@@ -1636,8 +1634,16 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          fixval = MIN(fixval, SCIPvarGetUbGlobal(var));  /*lint !e666*/
 
          /* SCIPdebugMsg(scip, "fix variable <%s> to %g\n", SCIPvarGetName(var), fixval); */
-         SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, fixval) );
-         SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, subvar, fixval) );
+         SCIP_CALL( SCIPtightenVarLb(heurdata->subscip, subvar, fixval, TRUE, &infeas, &tightened) );
+         if( !infeas )
+         {
+            SCIP_CALL( SCIPtightenVarUb(heurdata->subscip, subvar, fixval, TRUE, &infeas, &tightened) );
+         }
+         if( infeas )
+         {
+            SCIPdebugMsg(scip, "skip NLP heuristic because start candidate not feasible: fixing var <%s> to value %g is infeasible\n", SCIPvarGetName(var), fixval);
+            goto CLEANUP;
+         }
       }
    }
 
@@ -1679,7 +1685,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
-   assert(!SCIPisTransformed(heurdata->subscip));
 
    if( *result == SCIP_CUTOFF )
    {
@@ -1700,6 +1705,8 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    }
 
  CLEANUP:
+   SCIP_CALL( SCIPfreeTransform(heurdata->subscip) );
+
    /* if the heuristic was applied before solving has started, then destroy subSCIP, since EXITSOL may not be called
     * also if keepcopy is disabled, then destroy subSCIP
     */
@@ -1707,30 +1714,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    {
       SCIP_CALL( freeSubSCIP(scip, heurdata) );
       heurdata->triedsetupsubscip = FALSE;
-   }
-   else if( SCIPgetNBinVars(heurdata->subscip) || SCIPgetNIntVars(heurdata->subscip) )
-   {
-      /* undo fixing of discrete variables in sub-SCIP */
-      SCIP_VAR** subvars;
-      int        nsubvars;
-      int        nsubbinvars;
-      int        nsubintvars;
-
-      SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, &nsubbinvars, &nsubintvars, NULL, NULL) );
-      assert(nsubvars == heurdata->nsubvars);
-
-      /* set bounds of discrete variables to original values */
-      for( i = nsubbinvars + nsubintvars - 1; i >= 0; --i )
-      {
-         subvar = subvars[i];
-         assert(SCIPvarGetProbindex(subvar) == i);
-
-         var = heurdata->var_subscip2scip[i];
-         assert(var != NULL);
-
-         SCIP_CALL( SCIPchgVarLbGlobal(heurdata->subscip, subvar, SCIPvarGetLbGlobal(var)) );
-         SCIP_CALL( SCIPchgVarUbGlobal(heurdata->subscip, subvar, SCIPvarGetUbGlobal(var)) );
-      }
    }
 
    return SCIP_OKAY;
