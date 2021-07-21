@@ -89,8 +89,6 @@ struct SCIP_HeurData
    SCIP_Real             startcandviol;      /**< violation of start point candidate w.r.t. constraint that reported this candidate */
    SCIP_SOL*             lastsol;            /**< pointer to last found solution (or NULL if none), not captured, thus may be dangling */
 
-   SCIP_NLPSTATISTICS    nlpstatistics;      /**< statistics from NLP solver */
-
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
    int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
@@ -610,6 +608,7 @@ SCIP_RETCODE solveSubNLP(
    SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
    SCIP_NLPPARAM  nlpparam = SCIP_NLPPARAM_DEFAULT(heurdata->subscip);  /*lint !e446*/
    SCIP_Real      timelimit;
+   SCIP_NLPSTATISTICS nlpstatistics;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -934,12 +933,12 @@ SCIP_RETCODE solveSubNLP(
    }
    heurdata->nseriousnlpierror = 0;
 
-   SCIP_CALL( SCIPgetNLPStatistics(heurdata->subscip, &heurdata->nlpstatistics) );
+   SCIP_CALL( SCIPgetNLPStatistics(heurdata->subscip, &nlpstatistics) );
 
    if( iterused != NULL )
-      *iterused += heurdata->nlpstatistics.niterations;
+      *iterused += nlpstatistics.niterations;
    SCIPdebugMsg(scip, "NLP solver used %d iterations and %g seconds\n",
-      heurdata->nlpstatistics.niterations, heurdata->nlpstatistics.totaltime);
+      nlpstatistics.niterations, nlpstatistics.totaltime);
 
    /* NLP solver claims it found a feasible (maybe even optimal) solution
     * if the objective value is better than our cutoff, then try to add it
