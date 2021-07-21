@@ -603,13 +603,16 @@ SCIP_RETCODE solveSubNLP(
    assert(result != NULL);
    assert(SCIPisTransformed(heurdata->subscip));
 
+   if( iterused != NULL && *iterused == 0 )
+      *iterused = 1;
+
    /* get remaining SCIP solve time; if no time left, then stop */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
    {
       timelimit -= SCIPgetSolvingTime(scip);
       if( timelimit <= 0.0 )
-         goto CLEANUP;
+         return SCIP_OKAY;
    }
 
    /* presolve sub-SCIP
@@ -631,7 +634,7 @@ SCIP_RETCODE solveSubNLP(
       /* if presolve found subproblem infeasible, report this to caller by setting *result to cutoff */
       if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
          *result = SCIP_CUTOFF;
-      goto CLEANUP;
+      return SCIP_OKAY;
    }
    if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVING )
    {
@@ -640,7 +643,7 @@ SCIP_RETCODE solveSubNLP(
       /* if presolve found subproblem infeasible, report this to caller by setting *result to cutoff */
       if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
          *result = SCIP_CUTOFF;
-      goto CLEANUP;
+      return SCIP_OKAY;
    }
    assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
 
@@ -673,7 +676,7 @@ SCIP_RETCODE solveSubNLP(
    if( retcode != SCIP_OKAY )
    {
       SCIPwarningMessage(scip, "Error while solving subproblem in subnlp heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-      goto CLEANUP;
+      return SCIP_OKAY;
    }
 
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(heurdata->subscip, NULL) ); )
@@ -778,12 +781,12 @@ SCIP_RETCODE solveSubNLP(
 
       assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED);
       *result = SCIP_CUTOFF;
-      goto CLEANUP;
+      return SCIP_OKAY;
    }
 
    /* if we stopped for some other reason, or there is no NLP, we also stop */
    if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED || !SCIPisNLPConstructed(heurdata->subscip) )
-      goto CLEANUP;
+      return SCIP_OKAY;
 
    /* in most cases, the status should be nodelimit
     * in some cases, if the sub-SCIP is very easy, it may report optimal, so we do not need invoke an NLP solver
@@ -809,7 +812,7 @@ SCIP_RETCODE solveSubNLP(
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_UNBOUNDED:
    case SCIP_STATUS_INFORUNBD:
-      goto CLEANUP;
+      return SCIP_OKAY;
    default:
       SCIPerrorMessage("unexpected status of sub-SCIP: <%d>\n", SCIPgetStatus(heurdata->subscip));
       return SCIP_ERROR;
@@ -903,7 +906,7 @@ SCIP_RETCODE solveSubNLP(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Will not run subNLP heuristic again for this run.\n");
          SCIP_CALL( freeSubSCIP(scip, heurdata) );
       }
-      goto CLEANUP;
+      return SCIP_OKAY;
    }
    heurdata->nseriousnlpierror = 0;
 
@@ -1029,10 +1032,6 @@ SCIP_RETCODE solveSubNLP(
             SCIPgetNLPObjval(heurdata->subscip), SCIPgetObjlimit(heurdata->subscip));
       }
    }
-
- CLEANUP:
-   if( iterused != NULL && *iterused == 0 )
-      *iterused = 1;
 
    return SCIP_OKAY;
 }
