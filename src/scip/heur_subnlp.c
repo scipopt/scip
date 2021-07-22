@@ -93,7 +93,6 @@ struct SCIP_HeurData
    SCIP_SOL*             lastsol;            /**< pointer to last found solution (or NULL if none), not captured, thus may be dangling */
 
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
-   int                   nlpiterlimit;       /**< iteration limit of NLP solver; 0 for off */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
@@ -591,7 +590,7 @@ int calcIterLimit(
    )
 {
    if( heurdata->nnlpsolves < MINSOLVES )
-      return heurdata->nlpiterlimit;
+      return -1;
 
    return 2 * heurdata->iterused / heurdata->nnlpsolves;
 }
@@ -886,7 +885,7 @@ SCIP_RETCODE solveSubNLP(
    *result = SCIP_DIDNOTFIND;
 
    /* let the NLP solver do its magic */
-   SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", heurdata->nlpiterlimit);
+   SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", calcIterLimit(scip, heurdata));
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
       .iterlimit = calcIterLimit(scip, heurdata),
       .verblevel = (unsigned short)heurdata->nlpverblevel,
@@ -1495,10 +1494,6 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nlpverblevel",
          "verbosity level of NLP solver",
          &heurdata->nlpverblevel, FALSE, 0, 0, USHRT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nlpiterlimit",
-         "iteration limit of NLP solver; 0 for no limit",
-         &heurdata->nlpiterlimit, FALSE, 3000, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/iteroffset",
          "number of iterations added to the contingent of the total number of iterations",

@@ -522,7 +522,7 @@ nlpi:
 - removed heuristics/subnlp/nlpoptfile, use nlpi/ipopt/optfile instead
 - removed separating/convexproj/nlptimelimit
 - removed separating/gauge/nlptimelimit
-- removed heuristics/subnlp/nlptimelimit
+- removed heuristics/subnlp/nlptimelimit and heuristics/subnlp/nlpiterlimit
 - removed heuristics/subnlp/resolvetolfactor and heuristics/subnlp/resolvefromscratch
 
 ### New parameters
