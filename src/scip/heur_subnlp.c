@@ -97,6 +97,7 @@ struct SCIP_HeurData
    SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
 
    SCIP_Longint          iterused;           /**< number of iterations used so far */
+   int                   nnlpsolves;         /**< number of NLP solves so far */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
    SCIP_Real             iterquot;           /**< contingent of NLP iterations in relation to the number of nodes in SCIP */
    int                   itermin;            /**< minimal number of iterations required to start local search */
@@ -583,7 +584,6 @@ SCIP_RETCODE solveSubNLP(
    SCIP_RESULT*          result,             /**< buffer to store result, DIDNOTFIND, FOUNDSOL, or CUTOFF        */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
-   SCIP_Longint*         iterused,           /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
 {
@@ -602,9 +602,6 @@ SCIP_RETCODE solveSubNLP(
    assert(heurdata != NULL);
    assert(result != NULL);
    assert(SCIPisTransformed(heurdata->subscip));
-
-   if( iterused != NULL && *iterused == 0 )
-      *iterused = 1;
 
    /* get remaining SCIP solve time; if no time left, then stop */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -912,10 +909,11 @@ SCIP_RETCODE solveSubNLP(
 
    SCIP_CALL( SCIPgetNLPStatistics(heurdata->subscip, &nlpstatistics) );
 
-   if( iterused != NULL )
-      *iterused += nlpstatistics.niterations;
    SCIPdebugMsg(scip, "NLP solver used %d iterations and %g seconds\n",
       nlpstatistics.niterations, nlpstatistics.totaltime);
+
+   heurdata->iterused += nlpstatistics.niterations;
+   ++heurdata->nnlpsolves;
 
    /* NLP solver claims it found a feasible (maybe even optimal) solution
     * if the objective value is better than our cutoff, then try to add it
@@ -1305,6 +1303,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
    heurdata->triedsetupsubscip = FALSE;
    heurdata->nseriousnlpierror = 0;
    heurdata->iterused = 0;
+   heurdata->nnlpsolves = 0;
 
    return SCIP_OKAY;
 }
@@ -1316,7 +1315,6 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
 {  /*lint --e{666,715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_Longint   itercontingent;
-   SCIP_Longint   iterused;
    SCIP_Bool      runheur;
 
    assert(scip != NULL);
@@ -1431,8 +1429,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    }
 
    SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent,
-         heurdata->minimprove, &iterused, NULL) );
-   heurdata->iterused += iterused;
+         heurdata->minimprove, NULL) );
 
    /* SCIP does not like cutoff as return, so we say didnotfind, since we did not find a solution */
    if( *result == SCIP_CUTOFF )
@@ -1539,7 +1536,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
-   SCIP_Longint*         iterused,           /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
 {
@@ -1570,9 +1566,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
 
    assert(heurdata->nsubvars > 0);
    assert(heurdata->var_subscip2scip != NULL);
-
-   if( iterused != NULL )
-      *iterused = 0;
 
    /* transform sub-SCIP, so variable fixing are easily undone by free-transform */
    assert(!SCIPisTransformed(heurdata->subscip));
@@ -1676,7 +1669,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       cutoff = SCIPinfinity(scip);
 
    /* solve the subNLP and try to add solution to SCIP */
-   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, iterused, resultsol) );
+   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, resultsol) );
 
    if( heurdata->subscip == NULL )
    {

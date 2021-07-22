@@ -703,8 +703,7 @@ SCIP_RETCODE solveNLP(
    }
 
    /* call sub-NLP heuristic */
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, minimprove,
-         NULL, NULL) );
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, minimprove, NULL) );
    SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
 
    /* let sub-NLP heuristic decide whether the solution is feasible or not */
