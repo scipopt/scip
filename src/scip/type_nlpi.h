@@ -53,7 +53,7 @@ struct SCIP_NlpParam
    SCIP_Real             feastol;            /**< feasibility tolerance (maximal allowed absolute violation of constraints and variable bounds) */
    SCIP_Real             relobjtol;          /**< relative objective tolerance */
    SCIP_Real             timelimit;          /**< time limit in seconds: use SCIP_REAL_MAX to use remaining time available for SCIP solve (limits/time - currenttime) */
-   int                   iterlimit;          /**< iteration limit */
+   int                   iterlimit;          /**< iteration limit, use -1 to let NLPI choose */
    unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
    SCIP_NLPPARAM_FASTFAIL fastfail;          /**< whether the NLP solver should stop early if convergence is slow */
    SCIP_Bool             expectinfeas;       /**< whether to expect an infeasible problem */

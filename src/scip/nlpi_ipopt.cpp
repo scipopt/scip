@@ -559,7 +559,7 @@ SCIP_RETCODE handleNlpParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
    SCIP_NLPIPROBLEM*     nlpiproblem,        /**< NLP */
-   const SCIP_NLPPARAM   param               /**< solve parameters */
+   SCIP_NLPPARAM         param               /**< solve parameters */
    )
 {
    assert(scip != NULL);
@@ -584,6 +584,15 @@ SCIP_RETCODE handleNlpParam(
       }
    }
 
+   if( param.iterlimit < 0 )
+   {
+      /* make up an iteration limit
+       * TODO use actual degrees-of-freedom (number of unfixed variables + inequalities)
+       * TODO make factor a parameter
+       */
+      param.iterlimit = 3.0 * sqrt(SCIPnlpiOracleGetNVars(nlpiproblem->oracle) + SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
+      SCIPdebugMsg(scip, "Chosen iteration limit to be %d\n", param.iterlimit);
+   }
    (void) nlpiproblem->ipopt->Options()->SetIntegerValue("max_iter", param.iterlimit);
 
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * param.feastol);
