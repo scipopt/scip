@@ -69,7 +69,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
    SCIP_RESULT*          result,             /**< pointer to store result of: solution found, no solution found, or fixing is infeasible (cutoff) */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
-   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver                                 */
    SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    );

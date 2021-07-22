@@ -637,7 +637,6 @@ SCIP_RETCODE solveNLP(
    SCIP_HEUR*            nlpheur,            /**< pointer to NLP local search heuristics */
    SCIP_SOL**            points,             /**< array containing improved points */
    int                   npoints,            /**< total number of points */
-   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver */
    SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
    SCIP_Bool*            success             /**< pointer to store if we could find a solution */
    )
@@ -703,7 +702,7 @@ SCIP_RETCODE solveNLP(
    }
 
    /* call sub-NLP heuristic */
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, minimprove, NULL) );
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, minimprove, NULL) );
    SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
 
    /* let sub-NLP heuristic decide whether the solution is feasible or not */
@@ -861,7 +860,7 @@ SCIP_RETCODE applyHeur(
       assert(end - start > 0);
 
       /* call sub-NLP heuristic */
-      SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start, -1LL,
+      SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start,
             heurdata->nlpminimpr, &success) );
       SCIPdebugMsg(scip, "solveNLP result = %u\n", success);
 

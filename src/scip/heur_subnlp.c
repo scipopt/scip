@@ -583,7 +583,6 @@ SCIP_RETCODE solveSubNLP(
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
    SCIP_RESULT*          result,             /**< buffer to store result, DIDNOTFIND, FOUNDSOL, or CUTOFF        */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
-   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
 {
@@ -866,14 +865,10 @@ SCIP_RETCODE solveSubNLP(
 
    *result = SCIP_DIDNOTFIND;
 
-   /* set iteration limit for NLP solver */
-   if( itercontingent == -1 && heurdata->nlpiterlimit > 0 )
-      itercontingent = heurdata->nlpiterlimit;
-
    /* let the NLP solver do its magic */
-   SCIPdebugMsg(scip, "start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT "\n", itercontingent);
+   SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", heurdata->nlpiterlimit);
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
-      .iterlimit = itercontingent > 0 ? (int)MIN(INT_MAX, itercontingent) : 3000,
+      .iterlimit = heurdata->nlpiterlimit,
       .verblevel = (unsigned short)heurdata->nlpverblevel,
       .expectinfeas = TRUE  /* TODO check whether that is still beneficial */
    ) );  /*lint !e666*/
@@ -1314,7 +1309,6 @@ static
 SCIP_DECL_HEUREXEC(heurExecSubNlp)
 {  /*lint --e{666,715}*/
    SCIP_HEURDATA* heurdata;
-   SCIP_Longint   itercontingent;
    SCIP_Bool      runheur;
 
    assert(scip != NULL);
@@ -1389,6 +1383,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
 
    if( !heurdata->runalways )
    {
+      SCIP_Longint itercontingent;
       /* check if enough nodes have been processed so that we want to run the heuristic again */
 
       /* compute the contingent on number of iterations that the NLP solver is allowed to use
@@ -1410,14 +1405,6 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
             itercontingent, heurdata->itermin, (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
          return SCIP_OKAY;
       }
-
-      /* enforce user given iteration limit, if given */
-      if( heurdata->nlpiterlimit > 0 )
-         itercontingent = MIN(itercontingent, heurdata->nlpiterlimit);
-   }
-   else
-   {
-      itercontingent = -1;
    }
 
    /* so far we have not found any solution, but now we are willing to search for one */
@@ -1428,8 +1415,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       SCIPinfoMessage(scip, NULL, "calling subnlp heuristic\n");
    }
 
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent,
-         heurdata->minimprove, NULL) );
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, heurdata->minimprove, NULL) );
 
    /* SCIP does not like cutoff as return, so we say didnotfind, since we did not find a solution */
    if( *result == SCIP_CUTOFF )
@@ -1534,7 +1520,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
    SCIP_RESULT*          result,             /**< pointer to store result of: did not run, solution found, no solution found, or fixing is infeasible (cutoff) */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
-   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
@@ -1669,7 +1654,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       cutoff = SCIPinfinity(scip);
 
    /* solve the subNLP and try to add solution to SCIP */
-   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, resultsol) );
+   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, resultsol) );
 
    if( heurdata->subscip == NULL )
    {
