@@ -67,6 +67,9 @@
 #define HEUR_TIMING      SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP FALSE               /**< does the heuristic use a secondary SCIP instance? we set this to FALSE because we want this heuristic to also run within other heuristics */
 
+/* minimal number of NLP solves until we use average iterusage for iterlim */
+#define MINSOLVES 5
+
 /*
  * Data structures
  */
@@ -576,6 +579,23 @@ SCIP_RETCODE createSolFromSubScipSol(
    return SCIP_OKAY;
 }
 
+/** finds an iteration limit
+ *
+ * if we had only a few solves, use the (large) limit from the parameter settings
+ * otherwise, take twice the average of previous iterusages, or itermin
+ */
+static
+int calcIterLimit(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   if( heurdata->nnlpsolves < MINSOLVES )
+      return heurdata->nlpiterlimit;
+
+   return 2 * heurdata->iterused / heurdata->nnlpsolves;
+}
+
 /* solves the subNLP specified in subscip */
 static
 SCIP_RETCODE solveSubNLP(
@@ -868,7 +888,7 @@ SCIP_RETCODE solveSubNLP(
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", heurdata->nlpiterlimit);
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
-      .iterlimit = heurdata->nlpiterlimit,
+      .iterlimit = calcIterLimit(scip, heurdata),
       .verblevel = (unsigned short)heurdata->nlpverblevel,
       .expectinfeas = TRUE  /* TODO check whether that is still beneficial */
    ) );  /*lint !e666*/
@@ -1398,7 +1418,8 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       /* subtract the number of iterations used so far */
       itercontingent -= heurdata->iterused;
 
-      if( itercontingent < heurdata->itermin )
+      if( (heurdata->nnlpsolves < MINSOLVES && itercontingent < heurdata->itermin) ||
+          (heurdata->nnlpsolves >= MINSOLVES && itercontingent < calcIterLimit(scip, heurdata)) )
       {
          /* not enough iterations left to start NLP solver */
          SCIPdebugMsg(scip, "skip NLP heuristic; contingent=%" SCIP_LONGINT_FORMAT "; minimal number of iterations=%d; success ratio=%g\n",
