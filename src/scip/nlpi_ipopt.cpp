@@ -95,6 +95,9 @@ using namespace Ipopt;
 
 #define DEFAULT_RANDSEED   71                /**< initial random seed */
 
+// enable this to collect statistics on number of iterations and problem characteristics in csv-form in log
+// note that this overwrites given iterlimit
+// #define COLLECT_SOLVESTATS
 
 /* Convergence check (see ScipNLP::intermediate_callback)
  *
@@ -646,6 +649,128 @@ SCIP_RETCODE handleNlpParam(
 
    return SCIP_OKAY;
 }
+
+#ifdef COLLECT_SOLVESTATS
+/// writes out some solve status, number of iterations, time, and problem properties
+static
+void collectStatistic(
+   SCIP*                     scip,
+   ApplicationReturnStatus   status,
+   SCIP_NLPIPROBLEM*         problem,
+   SmartPtr<SolveStatistics> stats
+   )
+{
+   int nvars    = 0;  // number of variables, including slacks
+   int nslacks  = 0;  // number of slack variables
+   int nnlvars  = 0;  // number of nonlinear variables
+   int nvarlb   = 0;  // number of finite lower bounds, including slacks
+   int nvarub   = 0;  // number of finite upper bounds, including slacks
+   int nlincons = 0;  // number of linear constraints
+   int nnlcons  = 0;  // number of nonlinear constraints
+   int objnl    = 0;  // number of nonlinear objectives
+   int jacnnz   = 0;  // number of nonzeros in Jacobian
+   int hesnnz   = 0;  // number of nonzeros in Hessian of Lagrangian
+   int linsys11nz = 0;  // number of nonzeros in linear system (11) solved by Ipopt
+   int linsys13nz = 0;  // number of nonzeros in linear system (13) solved by Ipopt
+
+   int n = SCIPnlpiOracleGetNVars(problem->oracle);
+   int m = SCIPnlpiOracleGetNConstraints(problem->oracle);
+
+   for( int i = 0; i < n; ++i )
+   {
+      SCIP_Real lb, ub;
+
+      lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
+      ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
+
+      // skip fixed vars
+      if( SCIPisEQ(scip, lb, ub) )
+         continue;
+
+      ++nvars;
+
+      if( SCIPnlpiOracleIsVarNonlinear(scip, problem->oracle, i) )
+         ++nnlvars;
+
+      // every variable lower bound contributes a ln(x-lb) term in the barrier problem
+      if( !SCIPisInfinity(scip, -lb) )
+         ++nvarlb;
+
+      // every variable upper bound contributes a ln(ub-x) term in the barrier problem
+      if( !SCIPisInfinity(scip, ub) )
+         ++nvarub;
+   }
+
+   for( int i = 0; i < m; ++i )
+   {
+      SCIP_Real lhs, rhs;
+
+      if( SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, i) )
+         ++nnlcons;
+      else
+         ++nlincons;
+
+      lhs = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
+      rhs = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+
+      // every inequality contributes a slack variable
+      if( !SCIPisEQ(scip, lhs, rhs) )
+      {
+         ++nvars;
+         ++nslacks;
+      }
+
+      // every constraint lhs contributes a ln(slack-lhs) term in the barrier problem
+      if( !SCIPisInfinity(scip, -lhs) )
+         ++nvarlb;
+      // every constraint rhs contributes a ln(rhs-slack) term in the barrier problem
+      if( !SCIPisInfinity(scip, rhs) )
+         ++nvarub;
+   }
+
+   objnl = SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, -1);
+
+   const int* offset;
+   const int* col;
+   SCIP_CALL_ABORT( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &offset, NULL) );
+   jacnnz = offset[m];
+
+   SCIP_CALL_ABORT( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &col) );
+   hesnnz = offset[n];
+
+   // number of nonzeros of matrix in linear system of barrier problem ((11) in Ipopt paper):
+   //     off-diagonal elements of Hessian of Lagrangian (W_k without diagonal)
+   // +   number of variables (diagonal of W_k + Sigma_k)
+   // + 2*(elements in Jacobian + number of slacks) (A_k)
+   for( int i = 0; i < n; ++i )
+      for( int j = offset[i]; j < offset[i+1]; ++j )
+         if( col[j] != i )
+            linsys11nz += 2;   // off-diagonal element of Lagrangian, once for each triangle of matrix
+   linsys11nz += nvars;        // number of variables
+   linsys11nz += 2 * (jacnnz + nslacks);   // because each slack var contributes one entry to the Jacobian
+
+   // number of nonzeros of matrix in perturbed linear system of barrier problem ((13) in Ipopt paper):
+   // linsys11nz + number of constraints
+   linsys13nz = linsys11nz + m;
+
+   SCIP_Real linsys11density = (SCIP_Real)linsys11nz / SQR((SCIP_Real)(nvars+m));
+   SCIP_Real linsys13density = (SCIP_Real)linsys13nz / SQR((SCIP_Real)(nvars+m));
+
+   bool expectinfeas;
+   problem->ipopt->Options()->GetBoolValue("expect_infeasible_problem", expectinfeas, "");
+
+   static bool firstwrite = true;
+   if( firstwrite )
+   {
+      printf("IPOPTSTAT status,iter,time,nvars,nnlvars,nvarlb,nvarub,nlincons,nnlcons,objnl,jacnnz,hesnnz,linsys11nz,linsys13nz,linsys11density,linsys13density,expectinfeas\n");
+      firstwrite = false;
+   }
+
+   printf("IPOPTSTAT %d,%d,%g,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%f,%f,%d\n",
+      status, stats->IterationCount(), stats->TotalWallclockTime(),
+      nvars, nnlvars, nvarlb, nvarub, nlincons, nnlcons, objnl, jacnnz, hesnnz, linsys11nz, linsys13nz, linsys11density, linsys13density, expectinfeas);
+}
+#endif
 
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
@@ -1409,6 +1534,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       return SCIP_OKAY;
    }
 
+#ifdef COLLECT_SOLVESTATS
+   // if collecting statistics on how many iterations one may need for a certain Ipopt problem,
+   // do not use a tight iteration limit (but use some limit to get finished)
+   param.iterlimit = 1000;
+#endif
+
    // change status info to unsolved, just in case
    invalidateSolved(problem);
 
@@ -1540,6 +1671,10 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       {
          problem->lastniter = stats->IterationCount();
          problem->lasttime  = stats->TotalWallclockTime();
+
+#ifdef COLLECT_SOLVESTATS
+         collectStatistic(scip, status, problem, stats);
+#endif
       }
       else
       {
