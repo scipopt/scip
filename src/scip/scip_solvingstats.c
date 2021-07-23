@@ -3927,7 +3927,7 @@ void SCIPprintNLPIStatistics(
       " %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s"
       " %10s %10s %10s %10s %10s %10s %10s\n",
       "#Problems", "ProblemTi", "#Solves", "SolveTime",
-      scip->set->time_nlpieval ? "  EvalTime " : "",
+      scip->set->time_nlpieval ? "  EvalTime%" : "",
       "#Iter", "Time/Iter",
       "#Okay", "#TimeLimit", "#IterLimit", "#LObjLimit", "#Interrupt", "#NumError", "#EvalError", "#OutOfMem", "#LicenseEr", "#OtherTerm",
       "#GlobOpt", "#LocOpt", "#Feasible", "#LocInfeas", "#GlobInfea", "#Unbounded", "#Unknown"
@@ -3936,6 +3936,7 @@ void SCIPprintNLPIStatistics(
    for( i = 0; i < scip->set->nnlpis; ++i )
    {
       SCIP_Real solvetime;
+      SCIP_Real evaltime = 0.0;
       SCIP_Longint niter;
       SCIP_NLPI* nlpi;
       int j;
@@ -3944,6 +3945,8 @@ void SCIPprintNLPIStatistics(
       assert(nlpi != NULL);
 
       solvetime = SCIPnlpiGetSolveTime(nlpi);
+      if( scip->set->time_nlpieval )
+         evaltime = SCIPnlpiGetEvalTime(nlpi);
       niter = SCIPnlpiGetNIterations(nlpi);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:", SCIPnlpiGetName(nlpi));
@@ -3952,7 +3955,7 @@ void SCIPprintNLPIStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNSolves(nlpi));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", solvetime);
       if( scip->set->time_nlpieval )
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPnlpiGetEvalTime(nlpi));
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", solvetime > 0.0 ? 100.0 * evaltime / solvetime : 0.0);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, niter);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", niter > 0 ? solvetime / niter : 0.0);
 
