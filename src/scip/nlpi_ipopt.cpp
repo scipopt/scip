@@ -40,6 +40,7 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_solve.h"
+#include "scip/scip_copy.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_paramset.h"
 
@@ -573,9 +574,12 @@ SCIP_RETCODE handleNlpParam(
             (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_ERROR);
             break;
          case 1:
-            (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
+            (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_SUMMARY);
             break;
          case 2:
+            (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
+            break;
+         case 3:
             (void) nlpiproblem->ipopt->Options()->SetIntegerValue("print_level", J_DETAILED);
             break;
          default:
@@ -590,8 +594,9 @@ SCIP_RETCODE handleNlpParam(
        * TODO use actual degrees-of-freedom (number of unfixed variables + inequalities)
        * TODO make factor a parameter
        */
-      param.iterlimit = 3.0 * sqrt(SCIPnlpiOracleGetNVars(nlpiproblem->oracle) + SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
-      SCIPdebugMsg(scip, "Chosen iteration limit to be %d\n", param.iterlimit);
+      param.iterlimit = 10.0 * sqrt(SCIPnlpiOracleGetNVars(nlpiproblem->oracle) + SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
+      if( nlpidata->print_level >= J_SUMMARY || param.verblevel > 0 )
+         SCIPinfoMessage(scip, NULL, "Chosen iteration limit to be %d\n", param.iterlimit);
    }
    (void) nlpiproblem->ipopt->Options()->SetIntegerValue("max_iter", param.iterlimit);
 
@@ -1386,7 +1391,10 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 
    // print parameters if either nlpi/ipopt/print_level has been set high enough or solve called with verblevel>0
    if( nlpidata->print_level >= J_SUMMARY || param.verblevel > 0 )
-      SCIPinfoMessage(scip, NULL, "Ipopt solve with parameters " SCIP_NLPPARAM_PRINT(param));
+   {
+      SCIPinfoMessage(scip, NULL, "Ipopt solve for problem %s at subSCIP depth %d", SCIPnlpiOracleGetProblemName(problem->oracle), SCIPgetSubscipDepth(scip));
+      SCIPinfoMessage(scip, NULL, " with parameters " SCIP_NLPPARAM_PRINT(param));
+   }
 
    SCIP_CALL( SCIPnlpiOracleResetEvalTime(scip, problem->oracle) );
 
