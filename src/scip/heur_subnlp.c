@@ -469,6 +469,7 @@ SCIP_RETCODE createSolFromNLP(
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   assert(SCIPhasNLPSolution(heurdata->subscip));
 
    if( *sol == NULL )
    {
@@ -1019,7 +1020,7 @@ SCIP_RETCODE solveSubNLP(
          }
       }
    }
-   else if( heurdata->nlpverblevel >= 1 )
+   else if( heurdata->nlpverblevel >= 1 && SCIPhasNLPSolution(heurdata->subscip) )
    {
       /* print the violation of the NLP solution candidate */
       if( SCIPgetNLPSolstat(heurdata->subscip) > SCIP_NLPSOLSTAT_FEASIBLE )
