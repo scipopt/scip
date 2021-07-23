@@ -3923,10 +3923,10 @@ void SCIPprintNLPIStatistics(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintNLPIStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file,
-      "NLP Solvers        : %10s %10s %10s %10s %10s %s%10s %10s"
+      "NLP Solvers        : %10s %10s %10s %10s %s%10s %10s"
       " %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s"
       " %10s %10s %10s %10s %10s %10s %10s\n",
-      "#Problems", "ProblemTi", "#Solves", "SolveTime", "SolveTimeS",
+      "#Problems", "ProblemTi", "#Solves", "SolveTime",
       scip->set->time_nlpieval ? "  EvalTime " : "",
       "#Iter", "Time/Iter",
       "#Okay", "#TimeLimit", "#IterLimit", "#LObjLimit", "#Interrupt", "#NumError", "#EvalError", "#OutOfMem", "#LicenseEr", "#OtherTerm",
@@ -3935,7 +3935,7 @@ void SCIPprintNLPIStatistics(
 
    for( i = 0; i < scip->set->nnlpis; ++i )
    {
-      double solvetimesolver;
+      SCIP_Real solvetime;
       SCIP_Longint niter;
       SCIP_NLPI* nlpi;
       int j;
@@ -3943,19 +3943,18 @@ void SCIPprintNLPIStatistics(
       nlpi = scip->set->nlpis[i];
       assert(nlpi != NULL);
 
-      solvetimesolver = SCIPnlpiGetSolveTimeSolver(nlpi);
+      solvetime = SCIPnlpiGetSolveTime(nlpi);
       niter = SCIPnlpiGetNIterations(nlpi);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:", SCIPnlpiGetName(nlpi));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNProblems(nlpi));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPnlpiGetProblemTime(nlpi));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNSolves(nlpi));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPnlpiGetSolveTime(nlpi));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", solvetimesolver);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", solvetime);
       if( scip->set->time_nlpieval )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPnlpiGetEvalTime(nlpi));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, niter);
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", niter > 0 ? solvetimesolver / niter : 0.0);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", niter > 0 ? solvetime / niter : 0.0);
 
       for( j = (int)SCIP_NLPTERMSTAT_OKAY; j <= (int)SCIP_NLPTERMSTAT_OTHER; ++j )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNTermStat(nlpi, (SCIP_NLPTERMSTAT)j));

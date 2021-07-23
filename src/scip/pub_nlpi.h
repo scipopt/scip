@@ -86,15 +86,9 @@ int SCIPnlpiGetNSolves(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
-/** gives total time spend in NLPI solve callback */
+/** gives total time spend in NLP solves (as reported by solver) */
 SCIP_EXPORT
 SCIP_Real SCIPnlpiGetSolveTime(
-   SCIP_NLPI*            nlpi                /**< NLP interface structure */
-   );
-
-/** gives total time the NLPI reported to have spend for solving */
-SCIP_EXPORT
-SCIP_Real SCIPnlpiGetSolveTimeSolver(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
