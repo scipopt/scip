@@ -22,13 +22,14 @@
  * depth-first-search in the tree.
  *
  * Indicatordiving:
- * Iterates over every indicator constraints and checks if this indicatorvariable models a semicontinuous variable by
- * setting an upperbound for the constant.
- * (Unfortunately this is data needs to be checked and is not contained in the Vbound structure.)
- * Now the heuristic checks if the indicator constraint is already fulfilled (lp solution is greater than lowerbound).
- * If not, it calculates a score within the percentage difference and the rounding direction according to mode.
- * Otherwise, the indicator constraint is fulfilled and therefore the rounding direction is chosen correspondingly with
- * random (low) score.
+ * Implements a diving heuristic for indicator variables. (Unfortunately the SC is not contained in the v-bound data structure)
+ * - for indicator variables calculates a score depending of the bound see explaination of the modes
+ * - for non-indicator variables:
+ *          - returns invalid value if unfixed constraints exists
+ *          - otherwise uses another heuristic
+ *
+ * Modes:
+ *
  * */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -140,9 +141,9 @@ struct SCIP_HeurData
 /** releases all data from given hashmap filled with SCVarData and the hashmap itself */
 static
 SCIP_RETCODE releaseSCHashmap(
-  SCIP*                  scip,               /**< SCIP data structure */
-  SCIP_HASHMAP*          hashmap             /**< hashmap to be freed */
-  )
+      SCIP*                  scip,               /**< SCIP data structure */
+      SCIP_HASHMAP*          hashmap             /**< hashmap to be freed */
+)
 {
    SCIP_HASHMAPENTRY* entry;
    SCVARDATA* data;
@@ -173,11 +174,13 @@ SCIP_RETCODE releaseSCHashmap(
 /** checks if variable is indicator variable and stores corresponding indicator constraint */
 static
 SCIP_RETCODE checkAndGetIndicator(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             cand,               /**< candidate variable */
-   SCIP_CONS**           cons,               /**< pointer to store indicator constraint */
-   SCIP_Bool*            isindicator         /**< pointer to store whether candidate variable is indicator variable */
-   )
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_VAR*             cand,               /**< candidate variable */
+      SCIP_CONS**           cons,               /**< pointer to store indicator constraint */
+      SCIP_Bool*            isindicator,        /**< pointer to store whether candidate variable is indicator variable */
+      SCIP_Bool*            containsViolatedIndicator,        /**< pointer to store information */
+      SCIP_SOL*             sol                 /**< pointer to solution*/
+)
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** indicatorconss;
@@ -187,46 +190,46 @@ SCIP_RETCODE checkAndGetIndicator(
    assert(cand != NULL);
    assert(cons != NULL);
    assert(isindicator != NULL);
-
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
-   {
-      *cons = NULL;
-      *isindicator = FALSE;
-      return SCIP_OKAY;
-   }
+   assert(sol != NULL);
 
    conshdlr = SCIPfindConshdlr(scip, "indicator");
    indicatorconss = SCIPconshdlrGetConss(conshdlr);
+   *cons = NULL;
+   *isindicator = FALSE;
 
    *isindicator = FALSE;
+   *containsViolatedIndicator = FALSE;
    for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
    {
       SCIP_VAR* indicatorvar;
       indicatorvar = SCIPgetBinaryVarIndicator(indicatorconss[c]);
 
+      *containsViolatedIndicator = *containsViolatedIndicator ||
+                                   SCIPisViolatedIndicator(scip, indicatorconss[ c ], sol);
+
       if( cand == indicatorvar )
       {
+         assert(*containsViolatedIndicator);
          *cons = indicatorconss[c];
          *isindicator = TRUE;
          return SCIP_OKAY;
       }
+      if( *containsViolatedIndicator && SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
+         return SCIP_OKAY;
    }
-
-   *cons = NULL;
-   *isindicator = FALSE;
    return SCIP_OKAY;
 }
 
 /** adds an indicator to the data of a semicontinuous variable */
 static
 SCIP_RETCODE addSCVarIndicator(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCVARDATA*            scvdata,            /**< semicontinuous variable data */
-   SCIP_VAR*             indicator,          /**< indicator to be added */
-   SCIP_Real             val0,               /**< value of the variable when indicator == 0 */
-   SCIP_Real             lb1,                /**< lower bound of the variable when indicator == 1 */
-   SCIP_Real             ub1                 /**< upper bound of the variable when indicator == 1 */
-   )
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCVARDATA*            scvdata,            /**< semicontinuous variable data */
+      SCIP_VAR*             indicator,          /**< indicator to be added */
+      SCIP_Real             val0,               /**< value of the variable when indicator == 0 */
+      SCIP_Real             lb1,                /**< lower bound of the variable when indicator == 1 */
+      SCIP_Real             ub1                 /**< upper bound of the variable when indicator == 1 */
+)
 {
    int newsize;
    int i;
@@ -289,11 +292,11 @@ SCIP_RETCODE addSCVarIndicator(
  */
 static
 SCIP_RETCODE varIsSemicontinuous(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< the variable to check */
-   SCIP_HASHMAP*         scvars,             /**< semicontinuous variable information */
-   SCIP_Bool*            result              /**< buffer to store whether var is semicontinuous */
-   )
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_VAR*             var,                /**< the variable to check */
+      SCIP_HASHMAP*         scvars,             /**< semicontinuous variable information */
+      SCIP_Bool*            result              /**< buffer to store whether var is semicontinuous */
+)
 {
    SCIP_Real lb0;
    SCIP_Real ub0;
@@ -377,7 +380,6 @@ SCIP_RETCODE varIsSemicontinuous(
 
       /* the 'off' domain of a semicontinuous var should reduce to a single point and be different from the 'on' domain */
       //TODO: this doesn't work because the ub0 is not detected. -> therefore ignore this and check it outside
-//      if( SCIPisEQ(scip, lb0, ub0) && (!SCIPisEQ(scip, lb0, lb1) || !SCIPisEQ(scip, ub0, ub1)) )
       if( (!SCIPisEQ(scip, lb0, lb1) || !SCIPisEQ(scip, ub0, ub1)) )
       {
          if( scvdata == NULL )
@@ -436,6 +438,86 @@ SCIP_RETCODE varIsSemicontinuous(
    return SCIP_OKAY;
 }
 
+
+#define MIN_RAND 1e-06
+#define MAX_RAND 1e-05
+
+/** calculate score and preferred rounding direction for the candidate variable */
+static
+SCIP_RETCODE getScoreOfFarkasDiving(
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_DIVESET*         diveset,
+      SCIP_VAR*             cand,
+      SCIP_Real             candsfrac,
+      SCIP_Bool*            roundup,
+      SCIP_Real*            score
+){  /*lint --e{715}*/
+   SCIP_HEUR* heur;
+   SCIP_HEURDATA* heurdata;
+   SCIP_RANDNUMGEN* randnumgen;
+   SCIP_Real obj;
+
+   heur = SCIPdivesetGetHeur(diveset);
+   assert(heur != NULL);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   randnumgen = SCIPdivesetGetRandnumgen(diveset);
+   assert(randnumgen != NULL);
+
+   obj = SCIPvarGetObj(cand);
+
+   /* dive towards the pseudosolution, at the same time approximate the contribution to
+    * a potentially Farkas-proof (infeasibility proof) by y^TA_i = c_i.
+    */
+   if( SCIPisNegative(scip, obj) )
+   {
+      *roundup = TRUE;
+   }
+   else if( SCIPisPositive(scip, obj) )
+   {
+      *roundup = FALSE;
+   }
+   else
+   {
+      if( SCIPisEQ(scip, candsfrac, 0.5) )
+         *roundup = !SCIPrandomGetInt(randnumgen, 0, 1);
+      else
+         *roundup = (candsfrac > 0.5);
+   }
+
+   /* larger score is better */
+   *score = REALABS(obj) + SCIPrandomGetReal(randnumgen, MIN_RAND, MAX_RAND);
+
+   //TODO: implement scalescoring of farkasdiving if desired
+   //   if( heurdata->scalescore )
+   //   {
+   //      if( heurdata->scaletype == 'f' )
+   //      {
+   //         if( *roundup )
+   //            *score *= (1.0 - candsfrac);
+   //         else
+   //            *score *= candsfrac;
+   //      }
+   //      else
+   //      {
+   //         assert(heurdata->scaletype == 'i');
+   //         if( *roundup )
+   //            *score *= (SCIPceil(scip, candsol) - SCIPvarGetLbLocal(cand));
+   //         else
+   //            *score *= (SCIPvarGetUbLocal(cand) - SCIPfloor(scip, candsol));
+   //      }
+   //   }
+
+   /* prefer decisions on binary variables */
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
+      *score = -1.0 / *score;
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods
  */
@@ -492,11 +574,7 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving) /*lint --e{715}*/
 
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-
-   //TODO is the hashmap creation correct?
-
    SCIP_CALL( SCIPhashmapCreate( &heurdata->scvars, SCIPblkmem( scip ), SCIPgetNVars(scip) ));
-
 
    return SCIP_OKAY;
 }
@@ -578,20 +656,29 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIP_Real rhs;
    int nconsvars;
    SCIP_Bool isindicatorvar;
+   SCIP_Bool containsactiveIndicatorconstraints;
    SCIP_Bool success;
    int v;
 
    semicontinuousvar = NULL;
    lpsolsemicontinuous = 0.0;
 
+   heur = SCIPdivesetGetHeur(diveset);
+   assert(heur != NULL);
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   SCIP_SOL* sol = heurdata->sol;
+
    /* check if cand variable is indicator variable */
-   SCIP_CALL( checkAndGetIndicator(scip, cand, &indicatorcons, &isindicatorvar) );
+   SCIP_CALL(
+         checkAndGetIndicator(scip, cand, &indicatorcons, &isindicatorvar, &containsactiveIndicatorconstraints, sol));
 
    if( !isindicatorvar )
    {
-      /* todo: set useful score for non-indicator variables */
-      *score = -1;
+      *score = SCIP_REAL_MIN;
       *roundup = (candsfrac > 0.5);
+      if(! containsactiveIndicatorconstraints)
+         *score = getScoreOfFarkasDiving(scip, diveset, cand, candsfrac, roundup, score);
       return SCIP_OKAY;
    }
 
@@ -603,10 +690,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
 
    /* get heuristic data */
-   heur = SCIPdivesetGetHeur(diveset);
-   assert(heur != NULL);
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
+
    randnumgen = SCIPdivesetGetRandnumgen(diveset);
    assert(randnumgen != NULL);
 
@@ -646,7 +730,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
    //TODO: only allow sc variables and do the check if ub is equal to lowerbound of the sc
    if( scdata == NULL || !SCIPisEQ(scip, rhs, scdata->vals0[0]) ||
-      !(scdata->bvars[0] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand))) )
+       !(scdata->bvars[0] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand))) )
    {
       //TODO: only continue if semicontinuous variable.
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
@@ -662,13 +746,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = FALSE;
    }
-   //Case: Variable is equal to constant
+      //Case: Variable is equal to constant
    else if( SCIPisEQ(scip, lpsolsemicontinuous, scdata->vals0[0]) )
    {
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = TRUE;
    }
-   //Case: Variable is between constant and lb1
+      //Case: Variable is between constant and lb1
    else
    {
       *score = 100 * (scdata->lbs1[0] - lpsolsemicontinuous) / scdata->lbs1[0];
@@ -676,17 +760,17 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
       switch( (INDICATORDIVINGMODE)heurdata->mode )
       {
-      case ROUNDING_DOWN:
-         *roundup = FALSE;
-         break;
-      case ROUNDING_UP:
-         *roundup = TRUE;
-         break;
-      case ROUNDING_FRAC_AGGRESSIVE:
-         *roundup = (*score <= heurdata->roundingfrac * 100);
-         break;
-      case ROUNDING_FRAC_CONSERVATIVE:
-         *roundup = (*score > heurdata->roundingfrac * 100);
+         case ROUNDING_DOWN:
+            *roundup = FALSE;
+            break;
+         case ROUNDING_UP:
+            *roundup = TRUE;
+            break;
+         case ROUNDING_FRAC_AGGRESSIVE:
+            *roundup = (*score <= heurdata->roundingfrac * 100);
+            break;
+         case ROUNDING_FRAC_CONSERVATIVE:
+            *roundup = (*score > heurdata->roundingfrac * 100);
          break;
       }
 
@@ -699,7 +783,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
             *score = 100 * (lpsolsemicontinuous / (heurdata->roundingfrac * scdata->lbs1[0]));
          else
             *score = 100 * (-lpsolsemicontinuous / ((1 - heurdata->roundingfrac) * scdata->lbs1[0]) + (1 / (1 - heurdata->roundingfrac)) );
-         break;
+            break;
       case 2:
          *score = 100 - *score;
          break;
@@ -724,8 +808,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
 /** creates the indicatordiving heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurIndicatordiving(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
+      SCIP*                 scip                /**< SCIP data structure */
+)
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
@@ -738,8 +822,8 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
-         HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIndicatordiving, heurdata) );
+                                   HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+                                   HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIndicatordiving, heurdata) );
 
    assert(heur != NULL);
 
@@ -751,9 +835,9 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
 
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
-         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetAvailableIndicatordiving) );
+                                DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
+                                DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
+                                DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetAvailableIndicatordiving) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/roundingfrac",
          "in fractional case all fractional below this value are rounded up",
