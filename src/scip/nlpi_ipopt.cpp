@@ -149,6 +149,7 @@ class ScipNLP;
 struct SCIP_NlpiData
 {
 public:
+   int                         autoiterlim;  /**< iteration limit to use if caller requests NLPI to choose one */
    char*                       optfile;      /**< Ipopt options file to read */
    int                         print_level;  /**< print_level set via nlpi/ipopt/print_level option */
 
@@ -593,11 +594,96 @@ SCIP_RETCODE handleNlpParam(
 
    if( param.iterlimit < 0 )
    {
-      /* make up an iteration limit
-       * TODO use actual degrees-of-freedom (number of unfixed variables + inequalities)
-       * TODO make factor a parameter
-       */
-      param.iterlimit = 10.0 * sqrt(SCIPnlpiOracleGetNVars(nlpiproblem->oracle) + SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
+      if( nlpidata->autoiterlim > 0 )
+      {
+         param.iterlimit = nlpidata->autoiterlim;
+      }
+      else
+      {
+         int nvars    = 0;  // number of variables, including slacks
+         int nnlvars  = 0;  // number of nonlinear variables
+         int nvarbnd  = 0;  // number of finite lower and upper bounds, including slacks
+         int nlincons = 0;  // number of linear constraints
+         int nnlcons  = 0;  // number of nonlinear constraints
+         int jacnnz   = 0;  // number of nonzeros in Jacobian
+
+         int n = SCIPnlpiOracleGetNVars(nlpiproblem->oracle);
+         int m = SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle);
+         const SCIP_Real* lbs = SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle);
+         const SCIP_Real* ubs = SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle);
+
+         for( int i = 0; i < n; ++i )
+         {
+            // skip fixed vars
+            if( SCIPisEQ(scip, lbs[i], ubs[i]) )
+               continue;
+
+            ++nvars;
+
+            if( SCIPnlpiOracleIsVarNonlinear(scip, nlpiproblem->oracle, i) )
+               ++nnlvars;
+
+            // every variable lower bound contributes a ln(x-lb) term in the barrier problem
+            if( !SCIPisInfinity(scip, -lbs[i]) )
+               ++nvarbnd;
+
+            // every variable upper bound contributes a ln(ub-x) term in the barrier problem
+            if( !SCIPisInfinity(scip, ubs[i]) )
+               ++nvarbnd;
+         }
+
+         for( int i = 0; i < m; ++i )
+         {
+            if( SCIPnlpiOracleIsConstraintNonlinear(nlpiproblem->oracle, i) )
+               ++nnlcons;
+            else
+               ++nlincons;
+
+            SCIP_Real lhs = SCIPnlpiOracleGetConstraintLhs(nlpiproblem->oracle, i);
+            SCIP_Real rhs = SCIPnlpiOracleGetConstraintRhs(nlpiproblem->oracle, i);
+
+            // every inequality contributes a slack variable
+            if( !SCIPisEQ(scip, lhs, rhs) )
+               ++nvars;
+
+            // every constraint lhs contributes a ln(slack-lhs) term in the barrier problem
+            if( !SCIPisInfinity(scip, -lhs) )
+               ++nvarbnd;
+            // every constraint rhs contributes a ln(rhs-slack) term in the barrier problem
+            if( !SCIPisInfinity(scip, rhs) )
+               ++nvarbnd;
+         }
+
+         const int* offset;
+         SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, nlpiproblem->oracle, &offset, NULL) );
+         jacnnz = offset[m];
+
+         /* fitting data from NLP runs gave the following coefficients (see also !2634):
+          * intercept            +40.2756726751
+          * jacnnz               -0.0021259769
+          * jacnnz_sqrt          +2.0121042012
+          * nlincons             -0.0374801925
+          * nlincons_sqrt        +2.9562232443
+          * nnlcons              -0.0133039200
+          * nnlcons_sqrt         -0.0412118434
+          * nnlvars              -0.0702890379
+          * nnlvars_sqrt         +7.0920920430
+          * nvarbnd              +0.0183592749
+          * nvarbnd_sqrt         -4.7218258847
+          * nvars                +0.0112944627
+          * nvars_sqrt           -0.8365873360
+          */
+         param.iterlimit = SCIPfloor(scip, 40.2756726751
+            -0.0021259769 * jacnnz   +2.0121042012 * sqrt(jacnnz)
+            -0.0374801925 * nlincons +2.9562232443 * sqrt(nlincons)
+            -0.0133039200 * nnlcons  -0.0412118434 * sqrt(nnlcons)
+            -0.0702890379 * nnlvars  +7.0920920430 * sqrt(nnlvars)
+            +0.0183592749 * nvarbnd  -4.7218258847 * sqrt(nvarbnd)
+            +0.0112944627 * nvars    -0.8365873360 * sqrt(nvars));
+         /* but with all the negative coefficients, let's also ensure some minimal number of iterations */
+         if( param.iterlimit < 50 )
+            param.iterlimit = 50;
+      }
       if( nlpidata->print_level >= J_SUMMARY || param.verblevel > 0 )
          SCIPinfoMessage(scip, NULL, "Chosen iteration limit to be %d\n", param.iterlimit);
    }
@@ -1809,6 +1895,9 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
          nlpidata) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "nlpi/" NLPI_NAME "/autoiterlim", "iteration limit to use if NLPI is requested to choose (0: guess from NLP size)",
+      &nlpidata->autoiterlim, FALSE, 0, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip, "nlpi/" NLPI_NAME "/optfile", "name of Ipopt options file",
       &nlpidata->optfile, FALSE, "", NULL, NULL) );
