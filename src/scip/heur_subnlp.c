@@ -67,7 +67,7 @@
 #define HEUR_TIMING      SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP FALSE               /**< does the heuristic use a secondary SCIP instance? we set this to FALSE because we want this heuristic to also run within other heuristics */
 
-/* minimal number of NLP solves until we use average iterusage for iterlim */
+/* minimal number of successful NLP solves until we use average iterusage for iterlim */
 #define MINSOLVES 5
 
 /*
@@ -99,7 +99,9 @@ struct SCIP_HeurData
    SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
 
    SCIP_Longint          iterused;           /**< number of iterations used so far */
+   SCIP_Longint          iterusedfeas;       /**< number of iterations used so far when NLP found a feasible solution */
    int                   nnlpsolves;         /**< number of NLP solves so far */
+   int                   nnlpsolvesfeas;     /**< number of NLP solves with feasible solution found so far */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
    SCIP_Real             iterquot;           /**< contingent of NLP iterations in relation to the number of nodes in SCIP */
    int                   itermin;            /**< minimal number of iterations required to start local search */
@@ -581,8 +583,8 @@ SCIP_RETCODE createSolFromSubScipSol(
 
 /** finds an iteration limit
  *
- * if we had only a few solves, use the (large) limit from the parameter settings
- * otherwise, take twice the average of previous iterusages, or itermin
+ * if we had only a few successful solves, let the NLPI choose a limit
+ * otherwise, take twice the average of previous iterusages on successful solves
  */
 static
 int calcIterLimit(
@@ -590,10 +592,10 @@ int calcIterLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   if( heurdata->nnlpsolves < MINSOLVES )
+   if( heurdata->nnlpsolvesfeas < MINSOLVES )
       return -1;
 
-   return 2 * heurdata->iterused / heurdata->nnlpsolves;
+   return 2 * heurdata->iterusedfeas / heurdata->nnlpsolvesfeas;
 }
 
 /* solves the subNLP specified in subscip */
@@ -929,6 +931,11 @@ SCIP_RETCODE solveSubNLP(
 
    heurdata->iterused += nlpstatistics.niterations;
    ++heurdata->nnlpsolves;
+   if( SCIPgetNLPSolstat(heurdata->subscip) <= SCIP_NLPSOLSTAT_FEASIBLE )
+   {
+      ++heurdata->nnlpsolvesfeas;
+      heurdata->iterusedfeas += nlpstatistics.niterations;
+   }
 
    /* NLP solver claims it found a feasible (maybe even optimal) solution
     * if the objective value is better than our cutoff, then try to add it
@@ -1318,7 +1325,9 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
    heurdata->triedsetupsubscip = FALSE;
    heurdata->nseriousnlpierror = 0;
    heurdata->iterused = 0;
+   heurdata->iterusedfeas = 0;
    heurdata->nnlpsolves = 0;
+   heurdata->nnlpsolvesfeas = 0;
 
    return SCIP_OKAY;
 }
@@ -1404,6 +1413,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    if( !heurdata->runalways )
    {
       SCIP_Real itercontingent;
+      int iterlim;
       /* check if enough nodes have been processed so that we want to run the heuristic again */
 
       /* compute the contingent on number of iterations that the NLP solver is allowed to use
@@ -1411,20 +1421,26 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
        */
       itercontingent = heurdata->iterquot * SCIPgetNNodes(scip);
 
-      /* weight by previous success of heuristic, if we solved a number of NLPs already */
+      /* weight by previous success of heuristic, if we solved a number of NLPs already (could have failed or not, so use nnlpsolves) */
       if( heurdata->nnlpsolves >= MINSOLVES )
          itercontingent *= (heurdata->nsolfound + 1.0) / (SCIPheurGetNCalls(heur) + 1.0);
       /* add the fixed offset */
       itercontingent += heurdata->iteroffset;
-      /* subtract the number of iterations used so far */
+      /* subtract the number of iterations used for all NLP solves so far */
       itercontingent -= heurdata->iterused;
 
-      if( (heurdata->nnlpsolves < MINSOLVES && itercontingent < heurdata->itermin) ||
-          (heurdata->nnlpsolves >= MINSOLVES && itercontingent < calcIterLimit(scip, heurdata)) )
+      /* check whether the itercontingent is sufficient for the iteration limit we would use
+       * if not many NLPs have been solved successfully so far, then we ask the NLPI to choose the limit (calcIterLimit() returns -1)
+       * in this case, we use the itermin parameter as a proxy for the iteration limit here
+       */
+      iterlim = calcIterLimit(scip, heurdata);
+      if( iterlim < 0 )
+         iterlim = heurdata->itermin;
+      if( itercontingent < iterlim )
       {
          /* not enough iterations left to start NLP solver */
-         SCIPdebugMsg(scip, "skip NLP heuristic; contingent=%f; minimal number of iterations=%d; success ratio=%g\n",
-            itercontingent, heurdata->itermin, (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+         SCIPdebugMsg(scip, "skip NLP heuristic; contingent=%f; iterlimit=%d; success ratio=%g\n",
+            itercontingent, iterlim, (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
          return SCIP_OKAY;
       }
    }
