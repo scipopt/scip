@@ -249,6 +249,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
 }
 
 #define divesetAvailablePscostdiving NULL
+#define divesetSolveLpPscostdiving NULL
 
 /*
  * heuristic specific interface methods
@@ -282,7 +283,7 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScorePscostdiving, divesetAvailablePscostdiving) );
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScorePscostdiving, divesetSolveLpPscostdiving, divesetAvailablePscostdiving) );
 
    return SCIP_OKAY;
 }

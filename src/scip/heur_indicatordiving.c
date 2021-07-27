@@ -135,6 +135,8 @@ struct SCIP_HeurData
  * Local methods
  */
 
+static SCIP_Bool isViolatedAndNotFixed(SCIP *scip, SCIP_SOL *sol, SCIP_CONS *cons);
+
 /** releases all data from given hashmap filled with SCVarData and the hashmap itself */
 static
 SCIP_RETCODE releaseSCHashmap(
@@ -214,6 +216,19 @@ SCIP_RETCODE checkAndGetIndicator(
    *isindicator = FALSE;
    return SCIP_OKAY;
 }
+
+static
+SCIP_Bool isViolatedAndNotFixed(SCIP *scip, SCIP_SOL *sol, SCIP_CONS * cons) {
+   SCIP_VAR* binvar;
+   SCIP_Real solval;
+   if (!SCIPisViolatedIndicator(scip, cons, sol))
+      return FALSE;
+   binvar = SCIPgetBinaryVarIndicator(cons);
+   solval = SCIPgetSolVal(scip, sol, binvar);
+   return SCIPisFeasIntegral(scip, solval)
+          && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5;
+}
+
 
 /** adds an indicator to the data of a semicontinuous variable */
 static
@@ -698,6 +713,34 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
 #define divesetAvailableIndicatordiving NULL
 
+static
+SCIP_DECL_DIVESETSOLVELP(divesetSolveLpIndicatordiving)
+{
+   /*input:
+    * - scip : SCIP main data structure
+    * -  SCIP_DIVESET* diveset
+    * - solveLp : bool
+    */
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** indicatorconss;
+   int forCounter;
+
+   assert(scip != NULL);
+
+   *solveLp = FALSE;
+   conshdlr = SCIPfindConshdlr(scip, "indicator");
+   indicatorconss = SCIPconshdlrGetConss(conshdlr);
+   for( forCounter = 0; forCounter < SCIPconshdlrGetNActiveConss(conshdlr); forCounter++ )
+   {
+      if( isViolatedAndNotFixed(scip, diveset->heur->heurdata->sol, indicatorconss[ forCounter ]))
+      {
+         *solveLp = FALSE;
+         return SCIP_OKAY;
+      }
+   }
+   return SCIP_OKAY;
+}
+
 /*
  * heuristic specific interface methods
  */
@@ -733,7 +776,7 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetAvailableIndicatordiving) );
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetSolveLpIndicatordiving, divesetAvailableIndicatordiving) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/roundingfrac",
          "in fractional case all fractional below this value are rounded up",

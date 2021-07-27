@@ -269,6 +269,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
+   SCIP_DECL_DIVESETSOLVELP((*divesetsolvelp)),
    SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    )
 {
@@ -302,6 +303,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    /* scoring callbacks */
    diveset->divesetgetscore = divesetgetscore;
    diveset->divesetavailable = divesetavailable;
+   diveset->divesetsolvelp = divesetsolvelp;
 
    SCIP_CALL( heurAddDiveset(heur, diveset) );
    diveset->sol = NULL;
@@ -851,6 +853,24 @@ SCIP_RETCODE SCIPdivesetIsAvailable(
       *available = FALSE;
       SCIP_CALL( diveset->divesetavailable(set->scip, diveset, available) );
    }
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPisSolveLp(
+      SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
+      SCIP*                 scip,               /**< SCIP settings */
+      SCIP_Bool*            solveLp             /**< pointer to store if the diving can run at the current solving stage */
+)
+{
+   assert(scip != NULL);
+   assert(diveset != NULL);
+   assert(solveLp != NULL);
+//   assert(strcmp(diveset->heur->name, "indicatordiving") !=0 );
+
+   *solveLp = TRUE;
+   if( diveset->divesetsolvelp != NULL )
+      SCIP_CALL( diveset->divesetsolvelp(scip, diveset, solveLp) );
 
    return SCIP_OKAY;
 }

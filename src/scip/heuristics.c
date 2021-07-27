@@ -22,6 +22,7 @@
 #include "scip/heuristics.h"
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
+#include "heur.h"
 
 #include "scip/pub_heur.h"
 
@@ -686,6 +687,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   || (domreds + localdomreds > SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip))
                   || (onlylpbranchcands && nviollpcands > (int)(SCIPdivesetGetLPResolveDomChgQuot(diveset) * nlpcands))) )
             {
+               SCIP_Bool solveLp = TRUE;
+               //TODO:
+               SCIP_CALL(SCIPisSolveLp(diveset, scip, &solveLp));
                SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, divecontext, &lperror, &cutoff) );
 
                /* lp errors lead to early termination */
@@ -753,6 +757,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                /* in case of an unsuccesful candidate search, we solve the node LP */
                if( !enfosuccess )
                {
+                  SCIP_Bool solveLp = TRUE;
+                  //TODO:
+                  SCIP_CALL(SCIPisSolveLp(diveset, scip, &solveLp));
                   SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, divecontext, &lperror, &cutoff) );
 
                   /* check for an LP error and terminate in this case, cutoffs lead to termination anyway */
