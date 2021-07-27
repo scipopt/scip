@@ -731,25 +731,29 @@ void invalidateSolution(
    problem->termstat = SCIP_NLPTERMSTAT_OTHER;
 }
 
-/** store NLP solve parameters in nlpiproblem */
+/** store NLP solve parameters in nlpiproblem, update iterlim if -1 */
 static
 SCIP_RETCODE handleNlpParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIPROBLEM*     nlpiproblem,        /**< NLP */
-   const SCIP_NLPPARAM   param               /**< solve parameters */
+   SCIP_NLPPARAM*        param               /**< solve parameters */
    )
 {
    assert(scip != NULL);
    assert(nlpiproblem != NULL);
 
-   if( param.fastfail )
+   if( param->fastfail )
    {
       SCIPdebugMsg(scip, "fast fail parameter not supported by FilterSQP interface yet. Ignored.\n");
    }
 
-   nlpiproblem->fmin = param.lobjlimit;
+   nlpiproblem->fmin = param->lobjlimit;
 
-   nlpiproblem->maxtime = param.timelimit;
+   nlpiproblem->maxtime = param->timelimit;
+
+   /* TODO have a parameter for the 1000 */
+   if( param->iterlimit < 0 )
+      param->iterlimit = 1000;
 
    return SCIP_OKAY;
 }
@@ -1462,7 +1466,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    /* start measuring time */
    data->starttime = gettime();
 
-   SCIP_CALL( handleNlpParam(scip, problem, param) );
+   SCIP_CALL( handleNlpParam(scip, problem, &param) );
 
    iprint = param.verblevel;
 

@@ -894,7 +894,7 @@ SCIP_RETCODE handleNlpParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< Worhp interface */
    Params*               par,                /**< Worhp parameters */
-   const SCIP_NLPPARAM   nlpparam            /**< NLP solve parameters */
+   SCIP_NLPPARAM         nlpparam            /**< NLP solve parameters */
    )
 {
    SCIP_NLPIDATA* nlpidata;
@@ -924,6 +924,10 @@ SCIP_RETCODE handleNlpParam(
    {
       SCIPdebugMsg(scip, "fastfail parameter not supported by Worhp interface yet. Ignored.\n");
    }
+
+   /* TODO have a parameter for the 300/1000 */
+   if( nlpparam.iterlimit < 0 )
+      nlpparam.iterlimit = nlpidata->useip ? 300 : 1000;
 
    par->TolFeas = nlpparam.feastol;
    par->TolOpti = nlpparam.relobjtol;
