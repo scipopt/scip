@@ -609,6 +609,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
+   SCIP_CONS** indicatorconss;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -617,6 +618,10 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    assert(SCIPheurGetDivesets(heur) != NULL);
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
+
+   // scip if problem doesn't contain indicator constraints
+   if( SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "indicator")) == 0 )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
 
