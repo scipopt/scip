@@ -901,7 +901,7 @@ SCIP_RETCODE printFunction(
    for( i = 0; i < cons->nlinidxs; ++i )
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->linidxs[i]] : NULL, cons->linidxs[i], 'x', NULL, longvarnames);
-      SCIPinfoMessage(scip, file, "%+.20g*%s", cons->lincoefs[i], namebuf);
+      SCIPinfoMessage(scip, file, "%+.15g*%s", cons->lincoefs[i], namebuf);
       if( i % 10 == 9 )
          SCIPinfoMessage(scip, file, "\n");
    }
@@ -2473,7 +2473,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIPinfoMessage(scip, file, "objective: ");
    SCIP_CALL( printFunction(scip, oracle, file, oracle->objective, FALSE) );
    if( oracle->objective->lhs != 0.0 )
-      SCIPinfoMessage(scip, file, "%+.20g", oracle->objective->lhs);
+      SCIPinfoMessage(scip, file, "%+.15g", oracle->objective->lhs);
    SCIPinfoMessage(scip, file, "\n");
 
    for( i = 0; i < oracle->nconss; ++i )
@@ -2487,16 +2487,16 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
       rhs = oracle->conss[i]->rhs;
       SCIPinfoMessage(scip, file, ": ");
       if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && lhs != rhs )
-         SCIPinfoMessage(scip, file, "%.20g <= ", lhs);
+         SCIPinfoMessage(scip, file, "%.15g <= ", lhs);
 
       SCIP_CALL( printFunction(scip, oracle, file, oracle->conss[i], FALSE) );
 
       if( lhs == rhs )
-         SCIPinfoMessage(scip, file, " = %.20g", rhs);
+         SCIPinfoMessage(scip, file, " = %.15g", rhs);
       else if( !SCIPisInfinity(scip, rhs) )
-         SCIPinfoMessage(scip, file, " <= %.20g", rhs);
+         SCIPinfoMessage(scip, file, " <= %.15g", rhs);
       else if( !SCIPisInfinity(scip, -lhs) )
-         SCIPinfoMessage(scip, file, " >= %.20g", lhs);
+         SCIPinfoMessage(scip, file, " >= %.15g", lhs);
 
       SCIPinfoMessage(scip, file, "\n");
    }
@@ -2568,25 +2568,25 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       if( oracle->varlbs[i] == oracle->varubs[i] )
       {
          printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-         SCIPinfoMessage(scip, file, "%s.fx = %.20g;\t", namebuf, oracle->varlbs[i]);
+         SCIPinfoMessage(scip, file, "%s.fx = %.15g;\t", namebuf, oracle->varlbs[i]);
       }
       else
       {
          if( !SCIPisInfinity(scip, -oracle->varlbs[i]) )
          {
             printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-            SCIPinfoMessage(scip, file, "%s.lo = %.20g;\t", namebuf, oracle->varlbs[i]);
+            SCIPinfoMessage(scip, file, "%s.lo = %.15g;\t", namebuf, oracle->varlbs[i]);
          }
          if( !SCIPisInfinity(scip, oracle->varubs[i]) )
          {
             printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-            SCIPinfoMessage(scip, file, "%s.up = %.20g;\t", namebuf, oracle->varubs[i]);
+            SCIPinfoMessage(scip, file, "%s.up = %.15g;\t", namebuf, oracle->varubs[i]);
          }
       }
       if( initval != NULL )
       {
          printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-         SCIPinfoMessage(scip, file, "%s.l = %.20g;\t", namebuf, initval[i]);
+         SCIPinfoMessage(scip, file, "%s.l = %.15g;\t", namebuf, initval[i]);
       }
       SCIPinfoMessage(scip, file, "\n");
    }
@@ -2612,7 +2612,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIPinfoMessage(scip, file, "NLPIORACLEOBJ.. NLPIORACLEOBJVAR =E= ");
    SCIP_CALL( printFunction(scip, oracle, file, oracle->objective, havelongvarnames) );
    if( oracle->objective->lhs != 0.0 )
-      SCIPinfoMessage(scip, file, "%+.20g", oracle->objective->lhs);
+      SCIPinfoMessage(scip, file, "%+.15g", oracle->objective->lhs);
    SCIPinfoMessage(scip, file, ";\n");
 
    for( i = 0; i < oracle->nconss; ++i )
@@ -2629,11 +2629,11 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       rhs = oracle->conss[i]->rhs;
 
       if( lhs == rhs )
-         SCIPinfoMessage(scip, file, " =E= %.20g", rhs);
+         SCIPinfoMessage(scip, file, " =E= %.15g", rhs);
       else if( !SCIPisInfinity(scip, rhs) )
-         SCIPinfoMessage(scip, file, " =L= %.20g", rhs);
+         SCIPinfoMessage(scip, file, " =L= %.15g", rhs);
       else if( !SCIPisInfinity(scip, -lhs) )
-         SCIPinfoMessage(scip, file, " =G= %.20g", lhs);
+         SCIPinfoMessage(scip, file, " =G= %.15g", lhs);
       else
          SCIPinfoMessage(scip, file, " =N= 0");
       SCIPinfoMessage(scip, file, ";\n");
@@ -2645,7 +2645,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
 
          SCIP_CALL( printFunction(scip, oracle, file, oracle->conss[i], havelongvarnames) );
 
-         SCIPinfoMessage(scip, file, " =G= %.20g;\n", lhs);
+         SCIPinfoMessage(scip, file, " =G= %.15g;\n", lhs);
       }
 
       if( nllevel <= 1 && oracle->conss[i]->expr != NULL )
