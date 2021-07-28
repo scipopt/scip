@@ -68,7 +68,7 @@
 #define HEUR_USESSUBSCIP FALSE               /**< does the heuristic use a secondary SCIP instance? we set this to FALSE because we want this heuristic to also run within other heuristics */
 
 /* minimal number of successful NLP solves until we use average iterusage for iterlim */
-#define MINSOLVES 5
+#define MINSOLVES 2
 
 /*
  * Data structures
@@ -99,9 +99,11 @@ struct SCIP_HeurData
    SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
 
    SCIP_Longint          iterused;           /**< number of iterations used so far */
-   SCIP_Longint          iterusedfeas;       /**< number of iterations used so far when NLP found a feasible solution */
-   int                   nnlpsolves;         /**< number of NLP solves so far */
-   int                   nnlpsolvesfeas;     /**< number of NLP solves with feasible solution found so far */
+   SCIP_Longint          iterusedokay;       /**< number of iterations used so far when NLP stopped with status okay */
+   SCIP_Longint          iterusediterlim;    /**< maximal number of iterations used when NLP stopped due to iteration limit */
+   int                   nnlpsolves;         /**< number of NLP solves */
+   int                   nnlpsolvesokay;     /**< number of NLP solves with status okay */
+   int                   nnlpsolvesiterlim;  /**< number of NLP solves that hit an iteration limit */
    int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
    SCIP_Real             iterquot;           /**< contingent of NLP iterations in relation to the number of nodes in SCIP */
    int                   itermin;            /**< minimal number of iterations required to start local search */
@@ -583,8 +585,13 @@ SCIP_RETCODE createSolFromSubScipSol(
 
 /** finds an iteration limit
  *
- * if we had only a few successful solves, let the NLPI choose a limit
+ * if we had only a few solves that were successful or hit an iterlimit, let the NLPI choose a limit
+ * if we hit more often an iterlimit than we were successful, then allow for more iterations:
+ *   take twice the maximal iterusage on solves that hit the iterlimit
  * otherwise, take twice the average of previous iterusages on successful solves
+ *
+ * the iterlim rule is to make sure that we try higher iterlimits if the guess from the NLPI is so bad
+ * that we never got to successful NLP solves
  */
 static
 int calcIterLimit(
@@ -592,10 +599,13 @@ int calcIterLimit(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   if( heurdata->nnlpsolvesfeas < MINSOLVES )
+   if( heurdata->nnlpsolvesokay < MINSOLVES && heurdata->nnlpsolvesiterlim < MINSOLVES )
       return -1;
 
-   return 2 * heurdata->iterusedfeas / heurdata->nnlpsolvesfeas;
+   if( heurdata->nnlpsolvesiterlim > heurdata->nnlpsolvesokay )
+      return 2 * heurdata->iterusediterlim;
+
+   return 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay;
 }
 
 /* solves the subNLP specified in subscip */
@@ -931,10 +941,15 @@ SCIP_RETCODE solveSubNLP(
 
    heurdata->iterused += nlpstatistics.niterations;
    ++heurdata->nnlpsolves;
-   if( SCIPgetNLPSolstat(heurdata->subscip) <= SCIP_NLPSOLSTAT_FEASIBLE )
+   if( SCIPgetNLPTermstat(heurdata->subscip) == SCIP_NLPTERMSTAT_OKAY )
    {
-      ++heurdata->nnlpsolvesfeas;
-      heurdata->iterusedfeas += nlpstatistics.niterations;
+      ++heurdata->nnlpsolvesokay;
+      heurdata->iterusedokay += nlpstatistics.niterations;
+   }
+   else if( SCIPgetNLPTermstat(heurdata->subscip) == SCIP_NLPTERMSTAT_ITERLIMIT )
+   {
+      ++heurdata->nnlpsolvesiterlim;
+      heurdata->iterusediterlim = MAX(heurdata->iterusediterlim, nlpstatistics.niterations);
    }
 
    /* NLP solver claims it found a feasible (maybe even optimal) solution
@@ -1325,9 +1340,11 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
    heurdata->triedsetupsubscip = FALSE;
    heurdata->nseriousnlpierror = 0;
    heurdata->iterused = 0;
-   heurdata->iterusedfeas = 0;
+   heurdata->iterusedokay = 0;
+   heurdata->iterusediterlim = 0;
    heurdata->nnlpsolves = 0;
-   heurdata->nnlpsolvesfeas = 0;
+   heurdata->nnlpsolvesokay = 0;
+   heurdata->nnlpsolvesiterlim = 0;
 
    return SCIP_OKAY;
 }

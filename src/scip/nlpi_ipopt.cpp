@@ -680,6 +680,7 @@ SCIP_RETCODE handleNlpParam(
             -0.0702890379 * nnlvars  +7.0920920430 * sqrt(nnlvars)
             +0.0183592749 * nvarbnd  -4.7218258847 * sqrt(nvarbnd)
             +0.0112944627 * nvars    -0.8365873360 * sqrt(nvars));
+         SCIPdebugMsg(scip, "Iteration limit guess: %d\n", param.iterlimit);
          /* but with all the negative coefficients, let's also ensure some minimal number of iterations */
          if( param.iterlimit < 50 )
             param.iterlimit = 50;
