@@ -3445,7 +3445,7 @@ SCIP_RETCODE SCIPnlpCreate(
          }
       }
       assert((*nlp)->solver != NULL);
-      SCIP_CALL( SCIPnlpiCreateProblem(set, (*nlp)->solver, &(*nlp)->problem, "scip_nlp") );
+      SCIP_CALL( SCIPnlpiCreateProblem(set, (*nlp)->solver, &(*nlp)->problem, name) );
    }
    else
    {
