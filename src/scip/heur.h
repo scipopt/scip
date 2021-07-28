@@ -41,7 +41,7 @@ extern "C" {
 
 /** create a set of diving heuristic settings */
 SCIP_RETCODE SCIPdivesetCreate(
-   SCIP_DIVESET**        divesetptr,         /**< pointer to the freshly created diveset */
+      SCIP_DIVESET**        divesetptr,         /**< pointer to the freshly created diveset */
    SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
    const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -66,8 +66,8 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             ispublic,           /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
    SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
-   SCIP_DECL_DIVESETSOLVELP((*divesetsolvelp)),
-   SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
+   SCIP_DECL_DIVESETSOLVEMIP((*divesetsolvelp)),
+      SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    );
 
 /** resets diving settings counters */
@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPdivesetIsAvailable(
    SCIP_Bool*            available           /**< pointer to store if the diving can run at the current solving stage */
    );
 
-SCIP_RETCODE SCIPisSolveLp(
+SCIP_RETCODE SCIPsolveMIP(
       SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
       SCIP*                 scip,                /**< SCIP settings */
       SCIP_Bool*            solveLp

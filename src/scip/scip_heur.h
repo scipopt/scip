@@ -206,7 +206,7 @@ SCIP_RETCODE SCIPsetHeurPriority(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateDiveset(
-   SCIP*                 scip,               /**< SCIP data structure */
+      SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET**        diveset,            /**< pointer to created diving heuristic settings, or NULL if not needed */
    SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs */
    const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
@@ -230,8 +230,8 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
                                               *   otherwise use the score function of the SOS1 constraint handler */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore)), /**< method for candidate score and rounding direction */
-   SCIP_DECL_DIVESETSOLVELP((*divesetsolvelp)),
-   SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
+   SCIP_DECL_DIVESETSOLVEMIP((*divesetsolvelp)),
+      SCIP_DECL_DIVESETAVAILABLE((*divesetavailable)) /**< callback to check availability of dive set at the current stage, or NULL if always available */
    );
 
 /** check specific preconditions for diving, e.g., if an incumbent solution is available */

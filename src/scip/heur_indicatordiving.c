@@ -714,7 +714,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 #define divesetAvailableIndicatordiving NULL
 
 static
-SCIP_DECL_DIVESETSOLVELP(divesetSolveLpIndicatordiving)
+SCIP_DECL_DIVESETSOLVEMIP(divesetSolveMipIndicatordiving)
 {
    /*input:
     * - scip : SCIP main data structure
@@ -724,20 +724,27 @@ SCIP_DECL_DIVESETSOLVELP(divesetSolveLpIndicatordiving)
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** indicatorconss;
    int forCounter;
+   SCIP_Bool existsOneIndicatorConstraint;
 
    assert(scip != NULL);
 
-   *solveLp = FALSE;
+   existsOneIndicatorConstraint = FALSE;
+   *solveMip = FALSE;
    conshdlr = SCIPfindConshdlr(scip, "indicator");
    indicatorconss = SCIPconshdlrGetConss(conshdlr);
    for( forCounter = 0; forCounter < SCIPconshdlrGetNActiveConss(conshdlr); forCounter++ )
    {
       if( isViolatedAndNotFixed(scip, diveset->heur->heurdata->sol, indicatorconss[ forCounter ]))
       {
-         *solveLp = FALSE;
-         return SCIP_OKAY;
+         if(existsOneIndicatorConstraint){
+            assert(!*solveMip);
+            return SCIP_OKAY;
+         }
+         existsOneIndicatorConstraint = TRUE;
       }
    }
+   if(existsOneIndicatorConstraint)
+      *solveMip = TRUE;
    return SCIP_OKAY;
 }
 
@@ -776,7 +783,7 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetSolveLpIndicatordiving, divesetAvailableIndicatordiving) );
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreIndicatordiving, divesetSolveMipIndicatordiving, divesetAvailableIndicatordiving) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/roundingfrac",
          "in fractional case all fractional below this value are rounded up",

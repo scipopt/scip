@@ -222,6 +222,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_CONSHDLR* sos1conshdlr;              /* constraint handler for SOS1 constraints */
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
+   SCIP_Bool solveMip;
 
    SCIP_VAR** previouscands;
    SCIP_Real* lpcandsscores;
@@ -522,11 +523,19 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       }
 
       enfosuccess = FALSE;
+
+
+      solveMip = TRUE;
+      SCIP_CALL(SCIPsolveMIP(diveset, scip, &solveMip));;
+
       /* select the next diving action by selecting appropriate dive bound changes for the preferred and alternative child */
       SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
              lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
              &enfosuccess, &infeasible) );
+      if(solveMip)
+      {
 
+      }
       /* if we did not succeed finding an enforcement, the solution is potentially feasible and we break immediately */
       if( ! enfosuccess )
          break;
@@ -687,9 +696,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   || (domreds + localdomreds > SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip))
                   || (onlylpbranchcands && nviollpcands > (int)(SCIPdivesetGetLPResolveDomChgQuot(diveset) * nlpcands))) )
             {
-               SCIP_Bool solveLp = TRUE;
-               //TODO:
-               SCIP_CALL(SCIPisSolveLp(diveset, scip, &solveLp));
                SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, divecontext, &lperror, &cutoff) );
 
                /* lp errors lead to early termination */
@@ -749,18 +755,24 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                assert(SCIPgetProbingDepth(scip) > lastlpdepth);
                enfosuccess = FALSE;
 
+               solveMip = TRUE;
+               SCIP_CALL(SCIPsolveMIP(diveset, scip, &solveMip));
+
                /* select the next diving action */
                SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
                       lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
                       &enfosuccess, &infeasible) );
+               if(solveMip)
+               {
+                  SCIP_CALL(solveLP(scip, diveset, maxnlpiterations, divecontext, &lperror, &cutoff));
+                  //TODO:
+                  goto TERMINATE;
+               }
 
                /* in case of an unsuccesful candidate search, we solve the node LP */
                if( !enfosuccess )
                {
-                  SCIP_Bool solveLp = TRUE;
-                  //TODO:
-                  SCIP_CALL(SCIPisSolveLp(diveset, scip, &solveLp));
-                  SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, divecontext, &lperror, &cutoff) );
+                  SCIP_CALL(solveLP(scip, diveset, maxnlpiterations, divecontext, &lperror, &cutoff));
 
                   /* check for an LP error and terminate in this case, cutoffs lead to termination anyway */
                   if( lperror )
