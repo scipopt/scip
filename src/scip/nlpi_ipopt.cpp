@@ -1751,7 +1751,11 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          case Invalid_Number_Detected:
             SCIPdebugMsg(scip, "Ipopt failed because of an invalid number in function or derivative value\n");
             problem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
-            assert(problem->solstat == SCIP_NLPSOLSTAT_UNKNOWN);
+            /* Ipopt may or may not have called finalize solution
+             * if it didn't, then we should still have SCIP_NLPSOLSTAT_UNKNOWN as set in the invalidateSolved() call above
+             * if it did, then finalize_solution will have set SCIP_NLPSOLSTAT_UNKNOWN or SCIP_NLPSOLSTAT_FEASIBLE
+             */
+            assert(problem->solstat == SCIP_NLPSOLSTAT_UNKNOWN || problem->solstat == SCIP_NLPSOLSTAT_FEASIBLE);
             break;
 
          case Insufficient_Memory:
@@ -2671,18 +2675,26 @@ void ScipNLP::finalize_solution(
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
       break;
 
+   case USER_REQUESTED_STOP:
+      // status codes already set in intermediate_callback
+      break;
+
    case DIVERGING_ITERATES:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
       break;
 
+   // for the following status codes, if we get called here at all,
+   // then Ipopt passes zeros for duals and activities!
+   // (see https://github.com/coin-or/Ipopt/blob/stable/3.14/src/Interfaces/IpIpoptApplication.cpp#L885-L934)
+
    case INVALID_NUMBER_DETECTED:
+      // we can get this, if functions can still be evaluated, but are not differentiable
+      // (so Ipopt couldn't check local optimality)
+      // so we enable the check below for whether the point is feasible
+      check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
-      break;
-
-   case USER_REQUESTED_STOP:
-      // status codes already set in intermediate_callback
       break;
 
    case TOO_FEW_DEGREES_OF_FREEDOM:
@@ -2754,9 +2766,10 @@ void ScipNLP::finalize_solution(
 
    if( check_feasibility && cq != NULL )
    {
+      assert(nlpiproblem->solstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE);  /* we assume that check_feasibility has not been enabled if Ipopt claimed infeasibility */
       if( nlpiproblem->solconsviol <= param.feastol )
          nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-      else if( nlpiproblem->solstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+      else
          nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    }
 
