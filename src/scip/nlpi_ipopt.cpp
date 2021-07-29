@@ -2752,25 +2752,30 @@ void ScipNLP::finalize_solution(
    nlpiproblem->soldualvalid = true;
    nlpiproblem->soldualgiven = false;
 
-   /* get violations if we did not stop because there was an evaluation error */
-   if( nlpiproblem->termstat != SCIP_NLPTERMSTAT_EVALERROR )
+   // get violations, there could be an evaluation error when doing so
+   try
    {
+      assert(cq != NULL);
       nlpiproblem->solconsviol = cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX);
       nlpiproblem->solboundviol = cq->unscaled_curr_orig_bounds_violation(Ipopt::NORM_MAX);
+
+      if( check_feasibility )
+      {
+         // we assume that check_feasibility has not been enabled if Ipopt claimed infeasibility, since we should not change solstatus to unknown then
+         assert(nlpiproblem->solstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE);
+         if( nlpiproblem->solconsviol <= param.feastol )
+            nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+         else
+            nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      }
    }
-   else
+   catch( const IpoptNLP::Eval_Error& exc )
    {
+      SCIPdebugMsg(scip, "Eval error when checking constraint viol: %s\n", exc.Message().c_str());
+      assert(status == INVALID_NUMBER_DETECTED);
+      nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->solconsviol = SCIP_INVALID;
       nlpiproblem->solboundviol = SCIP_INVALID;
-   }
-
-   if( check_feasibility && cq != NULL )
-   {
-      assert(nlpiproblem->solstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE);  /* we assume that check_feasibility has not been enabled if Ipopt claimed infeasibility */
-      if( nlpiproblem->solconsviol <= param.feastol )
-         nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-      else
-         nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    }
 
    if( nlpiproblem->solstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE )
