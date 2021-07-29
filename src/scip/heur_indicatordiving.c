@@ -91,8 +91,9 @@
 /*
  * Heuristic specific parameters
  */
-#define DEFAULT_ROUNDINGFRAC       50.0 /**< default parameter setting for parameter roundingfrac */
+#define DEFAULT_ROUNDINGFRAC        0.5 /**< default parameter setting for parameter roundingfrac */
 #define DEFAULT_MODE                  3 /**< default parameter setting for parameter mode */
+#define DEFAULT_SEMICONTSCOREMODE     0 /**< default parameter setting for parameter semicontscoremode */
 
 enum IndicatorDivingMode
 {
@@ -126,9 +127,10 @@ typedef struct SCVarData SCVARDATA;
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_HASHMAP*         scvars;             /**< stores hashmap with semicontinuous variables */
    SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded up*/
    int                   mode;               /**< decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default)) */
-   SCIP_HASHMAP*         scvars;             /**< stores hashmap with semicontinuous variables */
+   int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
 };
 
 /*
@@ -681,12 +683,30 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          *roundup = TRUE;
          break;
       case ROUNDING_FRAC_AGGRESSIVE:
-         *roundup = (*score <= heurdata->roundingfrac);
+         *roundup = (*score <= heurdata->roundingfrac * 100);
          break;
       case ROUNDING_FRAC_CONSERVATIVE:
-         *roundup = (*score > heurdata->roundingfrac);
+         *roundup = (*score > heurdata->roundingfrac * 100);
          break;
       }
+
+      switch( heurdata->semicontscoremode )
+      {
+      case 0:
+         break;
+      case 1:
+         if( lpsolsemicontinuous < scdata->lbs1[0] * heurdata->roundingfrac )
+            *score = 100 * (lpsolsemicontinuous / (heurdata->roundingfrac * scdata->lbs1[0]));
+         else
+            *score = 100 * (-lpsolsemicontinuous / ((1 - heurdata->roundingfrac) * scdata->lbs1[0]) + (1 / (1 - heurdata->roundingfrac)) );
+         break;
+      case 2:
+         *score = 100 - *score;
+         break;
+      default:
+         return SCIP_INVALIDDATA;
+      }
+      assert(*score>0);
    }
 
    /* free memory */
@@ -742,6 +762,10 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/mode",
          "decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default))",
          &heurdata->mode, FALSE, DEFAULT_MODE, 0, 3, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/semicontscoremode",
+         "which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high)",
+         &heurdata->semicontscoremode, FALSE, DEFAULT_SEMICONTSCOREMODE, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;
 }
