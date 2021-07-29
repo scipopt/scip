@@ -179,6 +179,115 @@ SCIP_Longint getDivesetIterLimit(
    return iterlimit;
 }
 
+/** sets up and solves the sub SCIP for the Trust Region heuristic */
+static
+SCIP_RETCODE setupAndSolveSubscipHeuristics(
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP*                 subscip,            /**< the subproblem created by trustregion */
+      SCIP_HEUR*            heur,               /**< trustregion heuristic */
+      SCIP_Longint          nsubnodes,          /**< nodelimit for subscip */
+      SCIP_RESULT*          result              /**< result pointer */
+)
+{
+   SCIP_VAR** subvars;
+   SCIP_HEURDATA* heurdata;
+   SCIP_HASHMAP* varmapfw;
+   SCIP_VAR** vars;
+
+   int nvars;
+   int i;
+
+   SCIP_Bool success;
+   SCIP_Bool copycuts; //TODO: heurdata->copycuts;
+   SCIP_Bool uselprows; //TODO: heurdata->uselprows;
+   SCIP_Real bestsollimit; //TODO: heurdata->bestsollimit;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(heur != NULL);
+
+   copycuts = TRUE; //TODO: heurdata->copycuts;
+   uselprows = FALSE; //TODO: heurdata->uselprows;
+   bestsollimit = -1; //TODO: heurdata->bestsollimit;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* get the data of the variables and the best solution */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* create the variable mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
+   success = FALSE;
+
+   /* create a problem copy as sub SCIP */
+   SCIP_CALL(SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "trustregion", NULL, NULL, 0, uselprows,
+                                              copycuts, &success, NULL) );
+
+
+   SCIPdebugMsg(scip, "Copying SCIP was %s successful.\n", success ? "" : "not ");
+
+   /* if the subproblem could not be created, free memory and return */
+   if( !success )
+   {
+      *result = SCIP_DIDNOTRUN;
+      goto TERMINATE;
+   }
+
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+   for (i = 0; i < nvars; ++i)
+      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
+
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
+
+//   heurdata->nodelimit = nsubnodes;
+   SCIP_CALL( SCIPsetCommonSubscipParams(scip, subscip, nsubnodes, MAX(10, nsubnodes/10), bestsollimit) );
+
+   //TODO: presolve is missing
+
+   /* solve the subproblem */
+
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/trysol/priority", 100000) );
+
+   SCIP_CALL_ABORT( SCIPpresolve(subscip) );
+
+   /* Errors in solving the subproblem should not kill the overall solving process
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
+   //TODO:
+   //   heurdata->usednodes += SCIPgetNNodes(subscip);
+   SCIPdebugMsg(scip, "trust region used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
+                SCIPgetNNodes(subscip), nsubnodes);
+
+   /* checks the solutions of the sub SCIP and adds them to the main SCIP if feasible */
+   SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
+
+   if( success )
+      *result = SCIP_FOUNDSOL;
+
+   /* checking the status of the subscip */
+//   heurdata->callstatus = WAITFORNEWSOL;
+//   if( SCIPgetStatus(subscip) == SCIP_STATUS_NODELIMIT || SCIPgetStatus(subscip) == SCIP_STATUS_STALLNODELIMIT
+//       || SCIPgetStatus(subscip) == SCIP_STATUS_TOTALNODELIMIT )
+//   {
+//      heurdata->callstatus = EXECUTE;
+//      heurdata->curminnodes *= 2;
+//   }
+
+   TERMINATE:
+   /* free subproblem */
+   SCIPfreeBufferArray(scip, &subvars);
+
+   return SCIP_OKAY;
+}
+
 /** performs a diving within the limits of the @p diveset parameters
  *
  *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
@@ -261,6 +370,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    int nlpcands;
    int lpsolvefreq;
+   SCIP* subscip;
+
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -534,7 +645,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
              &enfosuccess, &infeasible) );
       if(solveMip)
       {
-
+         SCIP_CALL( SCIPcreate(&subscip) );
+         //TODO: copy from other heur.
+         SCIP_CALL(setupAndSolveSubscipHeuristics(scip, subscip, heur, 1000, result));
+         break;
       }
       /* if we did not succeed finding an enforcement, the solution is potentially feasible and we break immediately */
       if( ! enfosuccess )
@@ -764,8 +878,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                       &enfosuccess, &infeasible) );
                if(solveMip)
                {
-                  SCIP_CALL(solveLP(scip, diveset, maxnlpiterations, divecontext, &lperror, &cutoff));
-                  //TODO:
+                  SCIP_CALL( SCIPcreate(&subscip) );
+                  //TODO: replace the value of 1000
+                  SCIP_CALL(setupAndSolveSubscipHeuristics(scip, subscip, heur, 1000, result));
                   goto TERMINATE;
                }
 
