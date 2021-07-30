@@ -740,7 +740,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
    //TODO: only allow sc variables and do the check if ub is equal to lowerbound of the sc
    if( scdata == NULL || !SCIPisEQ(scip, rhs, scdata->vals0[0]) ||
-       !(scdata->bvars[0] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand))) )
+      !(scdata->bvars[0] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand))) )
    {
       //TODO: only continue if semicontinuous variable.
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
@@ -756,13 +756,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = FALSE;
    }
-      //Case: Variable is equal to constant
+   //Case: Variable is equal to constant
    else if( SCIPisEQ(scip, lpsolsemicontinuous, scdata->vals0[0]) )
    {
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = TRUE;
    }
-      //Case: Variable is between constant and lb1
+   //Case: Variable is between constant and lb1
    else
    {
       *score = 100 * (scdata->lbs1[0] - lpsolsemicontinuous) / scdata->lbs1[0];
@@ -770,17 +770,17 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
       switch( (INDICATORDIVINGMODE)heurdata->mode )
       {
-         case ROUNDING_DOWN:
-            *roundup = FALSE;
-            break;
-         case ROUNDING_UP:
-            *roundup = TRUE;
-            break;
-         case ROUNDING_FRAC_AGGRESSIVE:
-            *roundup = (*score <= heurdata->roundingfrac * 100);
-            break;
-         case ROUNDING_FRAC_CONSERVATIVE:
-            *roundup = (*score > heurdata->roundingfrac * 100);
+      case ROUNDING_DOWN:
+         *roundup = FALSE;
+         break;
+      case ROUNDING_UP:
+         *roundup = TRUE;
+         break;
+      case ROUNDING_FRAC_AGGRESSIVE:
+         *roundup = (*score <= heurdata->roundingfrac * 100);
+         break;
+      case ROUNDING_FRAC_CONSERVATIVE:
+         *roundup = (*score > heurdata->roundingfrac * 100);
          break;
       }
 
@@ -793,7 +793,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
             *score = 100 * (lpsolsemicontinuous / (heurdata->roundingfrac * scdata->lbs1[0]));
          else
             *score = 100 * (-lpsolsemicontinuous / ((1 - heurdata->roundingfrac) * scdata->lbs1[0]) + (1 / (1 - heurdata->roundingfrac)) );
-            break;
+         break;
       case 2:
          *score = 100 - *score;
          break;
