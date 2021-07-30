@@ -54,12 +54,13 @@ Note: Here is a list of apt package requirements for ubuntu or debian users that
 ```
 apt-get install wget cmake g++ m4 xz-utils libgmp-dev unzip zlib1g-dev libboost-program-options-dev libboost-serialization-dev libboost-regex-dev libboost-iostreams-dev libtbb-dev libreadline-dev pkg-config git liblapack-dev libgsl-dev flex bison libcliquer-dev gfortran file dpkg-dev libopenblas-dev rpm
 ```
-Additionally the following packages need to be downloaded and compiled:
+Additionally the following dependencies need to be downloaded, compiled and installed:
  - [Bliss](https://github.com/ds4dm/Bliss)
  - [Hmetis](http://glaros.dtc.umn.edu/gkhome/metis/hmetis/download)
  - [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/download)
  - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
  - [Gmp](https://gmplib.org/#DOWNLOAD)
+During the cmake configuration of the SCIP Optimization Suite the can be specified, see [CMake](@ref CMAKE).
 
 Modifying a CMake configuration
 -------------------------------
