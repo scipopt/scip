@@ -104,10 +104,10 @@ struct SCIP_HeurData
    int                   nnlpsolves;         /**< number of NLP solves */
    int                   nnlpsolvesokay;     /**< number of NLP solves with status okay */
    int                   nnlpsolvesiterlim;  /**< number of NLP solves that hit an iteration limit */
-   int                   iteroffset;         /**< number of iterations added to the contingent of the total number of iterations */
-   SCIP_Real             iterquot;           /**< contingent of NLP iterations in relation to the number of nodes in SCIP */
+   int                   nodesoffset;        /**< number of nodes added to the actual number of nodes when computing itercontingent */
+   SCIP_Real             nodesfactor;        /**< factor to apply to number of nodes in SCIP to compute initial itercontingent */
+   SCIP_Bool             runalways;          /**< whether to run NLP heuristic always (independent of nodesoffset,nodesfactor) */
    int                   iterinit;           /**< number of iterations used for initial NLP solves */
-   SCIP_Bool             runalways;          /**< whether to run NLP heuristic always (independent of iteroffset,iterquot) */
    int                   nsolfound;          /**< number of solutions found in this run (because we give authorship of solutions we found to the heuristic that proposed the starting point) */
 };
 
@@ -1437,13 +1437,11 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       /* compute the contingent on number of iterations that the NLP solver is allowed to use
        * we make it depending on the current number of processed nodes
        */
-      itercontingent = heurdata->iterquot * SCIPgetNNodes(scip);
+      itercontingent = heurdata->nodesfactor * (SCIPgetNNodes(scip) + heurdata->nodesoffset);
       /* weight by previous success of heuristic
        * the less solutions were found, the more likely we want to run the heuristic again (?)
        */
       itercontingent *= (heurdata->nsolfound + 1.0) / (SCIPheurGetNCalls(heur) + 1.0);
-      /* add the fixed offset */
-      itercontingent += heurdata->iteroffset;
       /* subtract the number of iterations used for all NLP solves so far */
       itercontingent -= heurdata->iterused;
 
@@ -1526,21 +1524,21 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          "verbosity level of NLP solver",
          &heurdata->nlpverblevel, FALSE, 0, 0, USHRT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/iteroffset",
-         "number of iterations added to the contingent of the total number of iterations",
-         &heurdata->iteroffset, FALSE, 500, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nodesoffset",
+         "number of nodes added to the current number of nodes when computing itercontingent",
+         &heurdata->nodesoffset, FALSE, 1600, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/iterquotient",
-         "contingent of NLP iterations in relation to the number of nodes in SCIP",
-         &heurdata->iterquot,  FALSE, 0.3, 0.0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesfactor",
+         "factor on number of nodes in SCIP (plus nodesoffset) to compute itercontingent",
+         &heurdata->nodesfactor, FALSE, 0.3, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/runalways",
+         "whether to run NLP heuristic always if starting point available (does not use nodesoffset,nodesfactor)",
+         &heurdata->runalways, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/iterinit",
          "number of iterations used for initial NLP solves",
          &heurdata->iterinit,  FALSE, 300, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/runalways",
-         "whether to run NLP heuristic always if starting point available (does not use iteroffset,iterquot)",
-         &heurdata->runalways, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
          "factor by which NLP heuristic should at least improve the incumbent",

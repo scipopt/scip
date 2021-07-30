@@ -524,6 +524,8 @@ nlpi:
 - removed heuristics/subnlp/nlptimelimit and heuristics/subnlp/nlpiterlimit
 - removed heuristics/subnlp/resolvetolfactor and heuristics/subnlp/resolvefromscratch
 - removed heuristics/subnlp/itermin
+- renamed heuristics/subnlp/iteroffset to heuristics/subnlp/nodesoffset
+- renamed heuristics/subnlp/iterquotient to heuristics/subnlp/nodesfactor
 
 ### New parameters
 
