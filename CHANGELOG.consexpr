@@ -518,12 +518,12 @@ nlpi:
 - changed default of presolving/qpkktref/maxrounds from -1 to 0
 - changed default of propagating/obbt/onlynonconvexvars from FALSE to TRUE
 - changed default of heuristics/subnlp/resolvetolfactor from 0.001 to 1.0
-- changed default of heuristics/subnlp/nlpiterlimit from 0 (no limit) to 3000
 - removed heuristics/subnlp/nlpoptfile, use nlpi/ipopt/optfile instead
 - removed separating/convexproj/nlptimelimit
 - removed separating/gauge/nlptimelimit
 - removed heuristics/subnlp/nlptimelimit and heuristics/subnlp/nlpiterlimit
 - removed heuristics/subnlp/resolvetolfactor and heuristics/subnlp/resolvefromscratch
+- removed heuristics/subnlp/itermin
 
 ### New parameters
 
@@ -554,6 +554,7 @@ nlpi:
 - nlpi/ipopt/print_level, nlpi/ipopt/hsllib, nlpi/ipopt/pardisolib, nlpi/ipopt/linear_system_scaling, nlpi/ipopt/nlp_scaling_method, nlpi/ipopt/mu_strategy, nlpi/ipopt/hessian_approximation
 - timing/nlpieval
 - nlpi/ipopt/autoiterlim
+- heuristics/subnlp/iterinit
 
 ### Data structures and types
 
