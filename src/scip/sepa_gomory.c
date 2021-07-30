@@ -49,6 +49,7 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/cuts.h"
+#include "scip/certificate.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -57,6 +58,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cut.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -361,7 +363,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &cutinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisperm, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
@@ -452,8 +454,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       ninds = -1;
       SCIP_CALL( SCIPgetLPBInvRow(scip, j, binvrow, inds, &ninds) );
 
-      SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
-         sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
+      if( SCIPisExactSolve(scip) )
+      {
+         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
+            sepadata->sidetypebasis, allowlocal, 0, (int) MAXAGGRLEN(nvars), &success) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
+            sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
+      }
 
       if( !success )
          continue;
@@ -499,6 +509,44 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
             /* set cut rank */
             SCIProwChgRank(cut, cutrank);
+
+            /* add aggregation information to certificate for later use */
+            if( SCIPisCertificateActive(scip) )
+            {
+               SCIP_ROW** aggrrows;
+               SCIP_Real* aggweights;
+               SCIP_MIRINFO* splitinfo;
+
+               SCIP_CALL( SCIPallocBufferArray(scip, &aggrrows, nrows) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &aggweights, nrows) );
+               if( ninds != -1 )
+               {
+                  for( i = 0; i < ninds; i++ )
+                  {
+                     aggweights[i] = binvrow[inds[i]];
+                     aggrrows[i] = rows[inds[i]];
+                  }
+               }
+               else
+               {
+                  int c = 0;
+
+                  for( i = 0; i < nrows; i++ )
+                  {
+                     if( !SCIPisFeasZero(scip, binvrow[i]) )
+                     {
+                        aggweights[c] = binvrow[i];
+                        aggrrows[c] = rows[i];
+                        c++;
+                     }
+                  }
+               }
+               SCIP_CALL( SCIPaddCertificateAggregation(scip, cut, aggrrow, aggrrows, aggweights, aggrrow->nrows) );
+               SCIPfreeBufferArray(scip, &aggweights);
+               SCIPfreeBufferArray(scip, &aggrrows);
+
+               SCIPstoreCertificateActiveMirInfo(scip, cut);
+            }
 
             /* cache the row extension and only flush them if the cut gets added */
             SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
@@ -573,6 +621,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             SCIP_CALL( SCIPreleaseRow(scip, &cut) );
          }
       }
+      if( SCIPisCertificateActive(scip) )
+      {
+         SCIP_CALL( SCIPfreeCertificateActiveMirInfo(scip) );
+      }
    }
 
    /* free temporary memory */
@@ -622,6 +674,9 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaExeclpGomory, NULL,
          sepadata) );
+
+   /* gomory is safe to use in exact solving mode */
+   SCIPsepaSetExact(sepa);
 
    assert(sepa != NULL);
 

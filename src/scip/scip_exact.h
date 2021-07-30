@@ -33,6 +33,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_cuts.h"
 #include "scip/type_cons.h"
 #include "scip/type_heur.h"
 #include "scip/type_retcode.h"
@@ -104,6 +105,34 @@ SCIP_Bool SCIPisCertificateActive(
  */
 SCIP_EXPORT
 SCIP_CERTIFICATE* SCIPgetCertificate(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** add aggregation information to certificate for one row */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddCertificateAggregation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< new row, that info should be stored for */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows           /**< length of the arrays */
+   );
+
+/** agg aggregation information to certificate for one row */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddCertificateMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+SCIP_EXPORT
+SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row that mirinfo is stored for */
+   );
+
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

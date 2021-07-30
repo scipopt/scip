@@ -7419,6 +7419,8 @@ SCIP_RETCODE createRows(
    SCIP_VAR* var;
    SCIP_Rational* ub;
    SCIP_Rational* lb;
+   SCIP_Real lbreal;
+   SCIP_Real ubreal;
    SCIP_ROUNDMODE roundmode;
    int i;
    int* sideindexpostprocess;
@@ -7447,6 +7449,8 @@ SCIP_RETCODE createRows(
       var = consdata->vars[i];
       ub = SCIPvarGetUbGlobalExact(var);
       lb = SCIPvarGetLbGlobalExact(var);
+      lbreal = SCIPvarGetLbGlobal(var);
+      ubreal = SCIPvarGetUbGlobal(var);
 
       /* coefficient is exactly representable as fp number */
       if( consdata->valsreal[i].inf == consdata->valsreal[i].sup )
@@ -7464,21 +7468,21 @@ SCIP_RETCODE createRows(
       else if( !RatIsInfinity(ub) && RatIsNegative(ub) )
       {
          consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].sup;
-         valsrhsrelax[i] = consdata->valsreal[i].inf;
+         valslhsrelax[i] = consdata->valsreal[i].inf;
+         valsrhsrelax[i] = consdata->valsreal[i].sup;
       }
       /* negative upper or positive lower bounds are good */
       else if( !RatIsNegInfinity(lb) && RatIsPositive(lb) )
       {
          consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-         valsrhsrelax[i] = consdata->valsreal[i].sup;
+         valslhsrelax[i] = consdata->valsreal[i].sup;
+         valsrhsrelax[i] = consdata->valsreal[i].inf;
       }
       else if( !RatIsInfinity(ub) )
       {
          consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].sup;
-         valsrhsrelax[i] = consdata->valsreal[i].inf;
+         valslhsrelax[i] = consdata->valsreal[i].inf;
+         valsrhsrelax[i] = consdata->valsreal[i].sup;
          sideindexpostprocess[npostprocess] = i;
          npostprocess++;
       }
@@ -7486,8 +7490,8 @@ SCIP_RETCODE createRows(
       {
          assert(!RatIsInfinity(lb));
          consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-         valsrhsrelax[i] = consdata->valsreal[i].sup;
+         valslhsrelax[i] = consdata->valsreal[i].sup;
+         valsrhsrelax[i] = consdata->valsreal[i].inf;
          sideindexpostprocess[npostprocess] = i;
          npostprocess++;
       }
@@ -7501,10 +7505,10 @@ SCIP_RETCODE createRows(
       int idx;
       idx = sideindexpostprocess[i];
 
-      if( valslhsrelax[idx] == consdata->valsreal[idx].sup ) //  upper bound was used
-         rhsrelax += consdata->valsreal[idx].sup - consdata->valsreal[idx].inf;
+      if( valslhsrelax[idx] == consdata->valsreal[idx].inf ) //  upper bound was used
+         rhsrelax += (consdata->valsreal[idx].sup - consdata->valsreal[idx].inf) * ubreal;
       else
-         rhsrelax -= consdata->valsreal[idx].sup - consdata->valsreal[idx].inf;
+         rhsrelax -= (consdata->valsreal[idx].sup - consdata->valsreal[idx].inf) * lbreal;
    }
 
    SCIPintervalSetRoundingModeDownwards();
@@ -7514,9 +7518,9 @@ SCIP_RETCODE createRows(
       idx = sideindexpostprocess[i];
 
       if( valslhsrelax[idx] == consdata->valsreal[idx].sup ) //  upper bound was used
-         lhsrelax -= consdata->valsreal[i].sup - consdata->valsreal[i].inf;
+         lhsrelax -= (consdata->valsreal[i].sup - consdata->valsreal[i].inf) * ubreal;
       else
-         lhsrelax += consdata->valsreal[i].sup - consdata->valsreal[i].inf;
+         lhsrelax += (consdata->valsreal[i].sup - consdata->valsreal[i].inf) * lbreal;
    }
 
    SCIPintervalSetRoundingMode(roundmode);

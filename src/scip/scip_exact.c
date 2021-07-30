@@ -51,6 +51,7 @@
 #include "scip/branchexact.h"
 #include "scip/bounding_exact.h"
 #include "scip/branch_nodereopt.h"
+#include "scip/certificate.h"
 #include "scip/clock.h"
 #include "scip/compr.h"
 #include "scip/concsolver.h"
@@ -194,6 +195,37 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    assert(scip->stat != NULL);
 
    return scip->stat->certificate;
+}
+
+/** agg aggregation information to certificate for one row */
+SCIP_RETCODE SCIPaddCertificateAggregation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< new row, that info should be stored for */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows           /**< length of the arrays */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, row, aggrrow, aggrrows, weights, naggrrows) );
+
+   return SCIP_OKAY;
+}
+
+/** agg aggregation information to certificate for one row */
+SCIP_RETCODE SCIPaddCertificateMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   SCIP_CALL( SCIPcertificateNewMirInfo(scip) );
+
+   return SCIP_OKAY;
 }
 
 /** compute a safe bound for the current lp solution */

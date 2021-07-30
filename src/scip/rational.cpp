@@ -262,9 +262,7 @@ SCIP_RETCODE RatReallocBlockArray(
    BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
 
    for( i = oldlen; i < newlen; ++i )
-   {
-      SCIP_CALL( RatCreateBlock(mem, &(*result)[i]) );
-   }
+      RatCreateBlock(mem, &((*result)[i]));
 
    return SCIP_OKAY;
 }
