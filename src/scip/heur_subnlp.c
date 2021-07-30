@@ -107,7 +107,6 @@ struct SCIP_HeurData
    int                   nodesoffset;        /**< number of nodes added to the actual number of nodes when computing itercontingent */
    SCIP_Real             nodesfactor;        /**< factor to apply to number of nodes in SCIP to compute initial itercontingent */
    SCIP_Bool             usesuccessrate;     /**< whether to multiply itercontingent by success rate (run heuristic more often if less successful) */
-   SCIP_Bool             runalways;          /**< whether to run NLP heuristic always (independent of nodesoffset,nodesfactor) */
    int                   iterinit;           /**< number of iterations used for initial NLP solves */
    int                   nsolfound;          /**< number of solutions found in this run (because we give authorship of solutions we found to the heuristic that proposed the starting point) */
 };
@@ -1358,6 +1357,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
 {  /*lint --e{666,715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_Bool      runheur;
+   SCIP_Real      itercontingent;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1429,35 +1429,29 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       SCIPdebugMsg(scip, "have startcand from heur %s\n", SCIPsolGetHeur(heurdata->startcand) ? SCIPheurGetName(SCIPsolGetHeur(heurdata->startcand)) : "NULL");
    }
 
-   if( !heurdata->runalways )
+   /* check if enough nodes have been processed so that we want to run the heuristic again */
+
+   /* compute the contingent on number of iterations that the NLP solver is allowed to use
+    * we make it depending on the current number of processed nodes
+    */
+   itercontingent = heurdata->nodesfactor * (SCIPgetNNodes(scip) + heurdata->nodesoffset);
+   if( heurdata->usesuccessrate )
    {
-      SCIP_Real itercontingent;
-      int iterlim;
-      /* check if enough nodes have been processed so that we want to run the heuristic again */
-
-      /* compute the contingent on number of iterations that the NLP solver is allowed to use
-       * we make it depending on the current number of processed nodes
+      /* weight by previous success of heuristic
+       * the less solutions were found, the more likely we want to run the heuristic again (?)
        */
-      itercontingent = heurdata->nodesfactor * (SCIPgetNNodes(scip) + heurdata->nodesoffset);
-      if( heurdata->usesuccessrate )
-      {
-         /* weight by previous success of heuristic
-          * the less solutions were found, the more likely we want to run the heuristic again (?)
-          */
-         itercontingent *= (heurdata->nsolfound + 1.0) / (SCIPheurGetNCalls(heur) + 1.0);
-      }
-      /* subtract the number of iterations used for all NLP solves so far */
-      itercontingent -= heurdata->iterused;
+      itercontingent *= (heurdata->nsolfound + 1.0) / (SCIPheurGetNCalls(heur) + 1.0);
+   }
+   /* subtract the number of iterations used for all NLP solves so far */
+   itercontingent -= heurdata->iterused;
 
-      /* check whether the itercontingent is sufficient for the iteration limit we would use */
-      iterlim = calcIterLimit(scip, heurdata);
-      if( itercontingent < iterlim )
-      {
-         /* not enough iterations left to start NLP solver */
-         SCIPdebugMsg(scip, "skip NLP heuristic; contingent=%f; iterlimit=%d; success ratio=%g\n",
-            itercontingent, iterlim, (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-         return SCIP_OKAY;
-      }
+   /* check whether the itercontingent is sufficient for the iteration limit we would use */
+   if( itercontingent < calcIterLimit(scip, heurdata) )
+   {
+      /* not enough iterations left to start NLP solver */
+      SCIPdebugMsg(scip, "skip NLP heuristic; contingent=%f; iterlimit=%d; success ratio=%g\n",
+         itercontingent, calcIterLimit(scip, heurdata), (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+      return SCIP_OKAY;
    }
 
    /* so far we have not found any solution, but now we are willing to search for one */
@@ -1539,10 +1533,6 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/usesuccessrate",
          "whether to multiply itercontingent by success rate (run heuristic more often if less successful)",
          &heurdata->usesuccessrate, FALSE, TRUE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/runalways",
-         "whether to run NLP heuristic always if starting point available (does not use nodesoffset,nodesfactor,usesuccessrate)",
-         &heurdata->runalways, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/iterinit",
          "number of iterations used for initial NLP solves",

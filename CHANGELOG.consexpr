@@ -526,6 +526,7 @@ nlpi:
 - removed heuristics/subnlp/itermin
 - renamed heuristics/subnlp/iteroffset to heuristics/subnlp/nodesoffset
 - renamed heuristics/subnlp/iterquotient to heuristics/subnlp/nodesfactor
+- removed heuristics/subnlp/runalways, use heuristics/subnlp/nodesfactor=0 instead
 
 ### New parameters
 
