@@ -556,7 +556,7 @@ nlpi:
 - nlpi/ipopt/print_level, nlpi/ipopt/hsllib, nlpi/ipopt/pardisolib, nlpi/ipopt/linear_system_scaling, nlpi/ipopt/nlp_scaling_method, nlpi/ipopt/mu_strategy, nlpi/ipopt/hessian_approximation
 - timing/nlpieval
 - nlpi/ipopt/autoiterlim
-- heuristics/subnlp/iterinit
+- heuristics/subnlp/iterinit, heuristics/subnlp/usesuccessrate
 
 ### Data structures and types
 
