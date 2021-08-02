@@ -712,6 +712,9 @@ SCIP_RETCODE solveSubNLP(
 
    /* if the refpoint comes from a heuristic, then make it the author of a found solution,
     * otherwise let the subNLP heuristic claim authorship
+    * TODO: I doubt that this has much effect; for the statistics, the number of solutions found by a heuristic
+    *       seems to be computed as the increase in number of solutions before and after a heuristic is run
+    *       check this and maybe change
     */
    if( refpoint == NULL || SCIPsolGetHeur(refpoint) == NULL )
       authorheur = heur;
