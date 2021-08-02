@@ -1532,7 +1532,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          &heurdata->nodesoffset, FALSE, 1600, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesfactor",
-         "factor on number of nodes in SCIP (plus nodesoffset) to compute itercontingent (lower value runs heuristics more frequently)",
+         "factor on number of nodes in SCIP (plus nodesoffset) to compute itercontingent (higher value runs heuristics more frequently)",
          &heurdata->nodesfactor, FALSE, 0.3, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/usesuccessrate",
