@@ -1438,11 +1438,15 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
     * we make it depending on the current number of processed nodes
     */
    itercontingent = heurdata->nodesfactor * (SCIPgetNNodes(scip) + heurdata->nodesoffset);
-   if( heurdata->usesuccessrate )
-   {
-      /* weight by previous success of heuristic */
+   /* weight by previous success of heuristic if we had some nlp solves already
+    * require at least MINSOLVES many NLP solves that either went okay or stopped due to some difficulties in the ipopt solver
+    * MINSOLVES many okay solves are required to get an iterlimit that could be much smaller than iterinit, so if we are still
+    *   in the phase of finding a good iterlimit, do not consider success rate so far
+    * if the NLP solver seems to have numerical problems (not iterlimit) from the beginning on, then we also do not want to
+    *   run so soon again, so consider the success rate
+    */
+   if( heurdata->usesuccessrate && heurdata->nnlpsolves - heurdata->nnlpsolvesiterlim >= MINSOLVES )
       itercontingent *= (heurdata->nsolfound + 1.0) / (SCIPheurGetNCalls(heur) + 1.0);
-   }
    /* subtract the number of iterations used for all NLP solves so far */
    itercontingent -= heurdata->iterused;
 
