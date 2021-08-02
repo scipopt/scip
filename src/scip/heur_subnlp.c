@@ -106,7 +106,7 @@ struct SCIP_HeurData
    int                   nnlpsolvesiterlim;  /**< number of NLP solves that hit an iteration limit */
    int                   nodesoffset;        /**< number of nodes added to the actual number of nodes when computing itercontingent */
    SCIP_Real             nodesfactor;        /**< factor to apply to number of nodes in SCIP to compute initial itercontingent */
-   SCIP_Bool             usesuccessrate;     /**< whether to multiply itercontingent by success rate (run heuristic more often if less successful) */
+   SCIP_Bool             usesuccessrate;     /**< whether to multiply itercontingent by success rate (run heuristic more often if successful) */
    int                   iterinit;           /**< number of iterations used for initial NLP solves */
    int                   nsolfound;          /**< number of solutions found in this run (because we give authorship of solutions we found to the heuristic that proposed the starting point) */
 };
@@ -1440,9 +1440,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    itercontingent = heurdata->nodesfactor * (SCIPgetNNodes(scip) + heurdata->nodesoffset);
    if( heurdata->usesuccessrate )
    {
-      /* weight by previous success of heuristic
-       * the less solutions were found, the more likely we want to run the heuristic again (?)
-       */
+      /* weight by previous success of heuristic */
       itercontingent *= (heurdata->nsolfound + 1.0) / (SCIPheurGetNCalls(heur) + 1.0);
    }
    /* subtract the number of iterations used for all NLP solves so far */
@@ -1534,7 +1532,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          &heurdata->nodesfactor, FALSE, 0.3, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/usesuccessrate",
-         "whether to multiply itercontingent by success rate (run heuristic more often if less successful)",
+         "whether to multiply itercontingent by success rate (run heuristic more often if successful)",
          &heurdata->usesuccessrate, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/iterinit",
