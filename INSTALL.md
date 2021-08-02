@@ -13,7 +13,7 @@ Building SCIP using CMake {#CMAKE}
 
 [CMake](https://cmake.org/) is a build system generator that can create, e.g., Makefiles for UNIX and Mac or Visual Studio project files for Windows.
 
-CMake provides an [extensive documentation](https://cmake.org/cmake/help/latest/manual/cmake.1.html) explaining available features and use cases as well as an [FAQ section](https://cmake.org/Wiki/CMake_FAQ).
+CMake provides an [extensive documentation](https://cmake.org/cmake/help/latest/manual/cmake.1.html) explaining available features and use cases as well as an [FAQ section](https://gitlab.kitware.com/cmake/community/-/wikis/FAQ).
 It's recommended to use the latest stable CMake version available.  `cmake --help` is also a good first step to see available options and usage information.
 
 Windows and platform independent build instructions
@@ -49,6 +49,18 @@ make install                                                                  # 
 Note: For a full ctest run `ctest` instead of `make check` after compilation.
 
 CMake checks for available third-party libraries like GMP or ZLIB and sets up the configuration accordingly.
+
+Note: Here is a list of apt package requirements for ubuntu or debian users that want to build the entire SCIP Optimization Suite from source tarball:
+```
+apt-get install wget cmake g++ m4 xz-utils libgmp-dev unzip zlib1g-dev libboost-program-options-dev libboost-serialization-dev libboost-regex-dev libboost-iostreams-dev libtbb-dev libreadline-dev pkg-config git liblapack-dev libgsl-dev flex bison libcliquer-dev gfortran file dpkg-dev libopenblas-dev rpm
+```
+Additionally the following dependencies need to be downloaded, compiled and installed:
+ - [Bliss](https://github.com/ds4dm/Bliss)
+ - [Hmetis](http://glaros.dtc.umn.edu/gkhome/metis/hmetis/download)
+ - [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/download)
+ - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
+ - [Gmp](https://gmplib.org/#DOWNLOAD)
+During the cmake configuration of the SCIP Optimization Suite the can be specified, see [CMake](@ref CMAKE).
 
 Modifying a CMake configuration
 -------------------------------
