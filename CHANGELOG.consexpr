@@ -523,7 +523,7 @@ nlpi:
 - removed separating/gauge/nlptimelimit
 - removed heuristics/subnlp/nlptimelimit and heuristics/subnlp/nlpiterlimit
 - removed heuristics/subnlp/resolvetolfactor and heuristics/subnlp/resolvefromscratch
-- removed heuristics/subnlp/itermin
+- changed default of heuristics/subnlp/itermin to 20
 - renamed heuristics/subnlp/iteroffset to heuristics/subnlp/nodesoffset
 - renamed heuristics/subnlp/iterquotient to heuristics/subnlp/nodesfactor
 - removed heuristics/subnlp/runalways, use heuristics/subnlp/nodesfactor=0 instead

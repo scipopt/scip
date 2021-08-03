@@ -107,6 +107,7 @@ struct SCIP_HeurData
    SCIP_Real             successrateexp;     /**< exponent for power of success rate to be multiplied with itercontingent */
    int                   iterinit;           /**< number of iterations used for initial NLP solves */
    int                   ninitsolves;        /**< number of NLP solves until switching to iterlimit guess and using success rate */
+   int                   itermin;            /**< minimal number of iterations for NLP solves */
 };
 
 
@@ -588,6 +589,7 @@ SCIP_RETCODE createSolFromSubScipSol(
  * if we had a successful solve, then take twice the average of previous iterusages on successful solves,
  *   but if we had only very few solves, then also make sure it is at least heurdata->iterinit
  * otherwise (no successful solves and none that hit an iterlimit), then use fixed value from parameters
+ * always ensure at least itermin iter
  */
 static
 int calcIterLimit(
@@ -596,15 +598,15 @@ int calcIterLimit(
    )
 {
    if( heurdata->nnlpsolvesiterlim > heurdata->nnlpsolvesokay )
-      return 2 * heurdata->iterusediterlim;
+      return MAX(heurdata->itermin, 2 * heurdata->iterusediterlim);
 
    if( heurdata->nnlpsolvesokay >= heurdata->ninitsolves )
-      return 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay;
+      return MAX(heurdata->itermin, 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay);
 
    if( heurdata->nnlpsolvesokay > 0 )
-      return MAX(heurdata->iterinit, 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay);
+      return MAX3(heurdata->itermin, heurdata->iterinit, 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay);
 
-   return heurdata->iterinit;
+   return MAX(heurdata->itermin, heurdata->iterinit);
 }
 
 /* solves the subNLP specified in subscip */
@@ -1542,6 +1544,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/ninitsolves",
          "number of NLP solves until switching to iterlimit guess and using success rate",
          &heurdata->ninitsolves, FALSE, 2, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/itermin",
+         "minimal number of iterations for NLP solves",
+         &heurdata->itermin, FALSE, 20, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
          "factor by which NLP heuristic should at least improve the incumbent",
