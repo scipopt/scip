@@ -67,9 +67,6 @@
 #define HEUR_TIMING      SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP FALSE               /**< does the heuristic use a secondary SCIP instance? we set this to FALSE because we want this heuristic to also run within other heuristics */
 
-/* minimal number of successful NLP solves until we use average iterusage for iterlim */
-#define MINSOLVES 2
-
 /*
  * Data structures
  */
@@ -109,6 +106,7 @@ struct SCIP_HeurData
    SCIP_Real             nodesfactor;        /**< factor to apply to number of nodes in SCIP to compute initial itercontingent */
    SCIP_Bool             usesuccessrate;     /**< whether to multiply itercontingent by success rate (run heuristic more often if successful) */
    int                   iterinit;           /**< number of iterations used for initial NLP solves */
+   int                   ninitsolves;        /**< number of NLP solves until switching to iterlimit guess and using success rate */
 };
 
 
@@ -600,7 +598,7 @@ int calcIterLimit(
    if( heurdata->nnlpsolvesiterlim > heurdata->nnlpsolvesokay )
       return 2 * heurdata->iterusediterlim;
 
-   if( heurdata->nnlpsolvesokay >= MINSOLVES )
+   if( heurdata->nnlpsolvesokay >= heurdata->ninitsolves )
       return 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay;
 
    if( heurdata->nnlpsolvesokay > 0 )
@@ -1437,13 +1435,13 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
     */
    itercontingent = heurdata->nodesfactor * (SCIPgetNNodes(scip) + heurdata->nodesoffset);
    /* weight by previous success of heuristic if we had some nlp solves already
-    * require at least MINSOLVES many NLP solves that either went okay or stopped due to some difficulties in the ipopt solver
-    * MINSOLVES many okay solves are required to get an iterlimit that could be much smaller than iterinit, so if we are still
+    * require at least ninitsolves many NLP solves that either went okay or stopped due to some difficulties in the NLP solver
+    * ninitsolves many okay solves are required to get an iterlimit that could be much smaller than iterinit, so if we are still
     *   in the phase of finding a good iterlimit, do not consider success rate so far
     * if the NLP solver seems to have numerical problems (not iterlimit) from the beginning on, then we also do not want to
     *   run so soon again, so consider the success rate
     */
-   if( heurdata->usesuccessrate && heurdata->nnlpsolves - heurdata->nnlpsolvesiterlim >= MINSOLVES )
+   if( heurdata->usesuccessrate && heurdata->nnlpsolves - heurdata->nnlpsolvesiterlim >= heurdata->ninitsolves )
       itercontingent *= (heurdata->nnlpsolfound + 1.0) / (heurdata->nnlpsolves + 1.0);
    /* subtract the number of iterations used for all NLP solves so far */
    itercontingent -= heurdata->iterused;
@@ -1539,7 +1537,11 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/iterinit",
          "number of iterations used for initial NLP solves",
-         &heurdata->iterinit,  FALSE, 300, 0, INT_MAX, NULL, NULL) );
+         &heurdata->iterinit, FALSE, 300, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/ninitsolves",
+         "number of NLP solves until switching to iterlimit guess and using success rate",
+         &heurdata->ninitsolves, FALSE, 2, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
          "factor by which NLP heuristic should at least improve the incumbent",
