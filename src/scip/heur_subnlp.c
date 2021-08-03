@@ -104,11 +104,11 @@ struct SCIP_HeurData
    int                   nnlpsolves;         /**< number of NLP solves */
    int                   nnlpsolvesokay;     /**< number of NLP solves with status okay */
    int                   nnlpsolvesiterlim;  /**< number of NLP solves that hit an iteration limit */
+   int                   nnlpsolfound;       /**< number of solutions found by NLP solve in this run */
    int                   nodesoffset;        /**< number of nodes added to the actual number of nodes when computing itercontingent */
    SCIP_Real             nodesfactor;        /**< factor to apply to number of nodes in SCIP to compute initial itercontingent */
    SCIP_Bool             usesuccessrate;     /**< whether to multiply itercontingent by success rate (run heuristic more often if successful) */
    int                   iterinit;           /**< number of iterations used for initial NLP solves */
-   int                   nsolfound;          /**< number of solutions found in this run (because we give authorship of solutions we found to the heuristic that proposed the starting point) */
 };
 
 
@@ -745,7 +745,6 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP stored solution from sub-SCIP root node\n");
             }
             *result = SCIP_FOUNDSOL;
-            ++heurdata->nsolfound;
             break;
          }
          else
@@ -779,7 +778,6 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP solution from sub-SCIP root node is feasible\n");
             }
             *result = SCIP_FOUNDSOL;
-            ++heurdata->nsolfound;
             break;
          }
          else
@@ -984,15 +982,15 @@ SCIP_RETCODE solveSubNLP(
             /* SCIP stored solution (yippi!), so we are done */
             if( heurdata->nlpverblevel >= 1 )
             {
-               SCIPinfoMessage(scip, NULL, "SCIP stored subnlp solution\n");
+               SCIPinfoMessage(scip, NULL, "SCIP stored solution from NLP solve\n");
             }
             else
             {
-               SCIPdebugMsg(scip, "SCIP stored subnlp solution\n");
+               SCIPdebugMsg(scip, "SCIP stored solution from NLP solve\n");
             }
 
             *result = SCIP_FOUNDSOL;
-            ++heurdata->nsolfound;
+            ++heurdata->nnlpsolfound;
          }
          else
          {
@@ -1031,7 +1029,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "solution reported by NLP solver feasible for SCIP\n");
             }
             *result = SCIP_FOUNDSOL;
-            ++heurdata->nsolfound;
+            ++heurdata->nnlpsolfound;
          }
          else
          {
@@ -1306,7 +1304,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    assert(heurdata->subscip == NULL);
 
    /* reset solution found counter */
-   heurdata->nsolfound = 0;
+   heurdata->nnlpsolfound = 0;
 
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
    if( SCIPheurGetFreqofs(heur) == 0 )
@@ -1446,7 +1444,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
     *   run so soon again, so consider the success rate
     */
    if( heurdata->usesuccessrate && heurdata->nnlpsolves - heurdata->nnlpsolvesiterlim >= MINSOLVES )
-      itercontingent *= (heurdata->nsolfound + 1.0) / (SCIPheurGetNCalls(heur) + 1.0);
+      itercontingent *= (heurdata->nnlpsolfound + 1.0) / (heurdata->nnlpsolves + 1.0);
    /* subtract the number of iterations used for all NLP solves so far */
    itercontingent -= heurdata->iterused;
 
@@ -1455,7 +1453,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    {
       /* not enough iterations left to start NLP solver */
       SCIPdebugMsg(scip, "skip NLP heuristic; contingent=%f; iterlimit=%d; success ratio=%g\n",
-         itercontingent, calcIterLimit(scip, heurdata), (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+         itercontingent, calcIterLimit(scip, heurdata), (heurdata->nnlpsolfound+1.0)/(heurdata->nnlpsolves+1.0));
       return SCIP_OKAY;
    }
 
