@@ -1546,7 +1546,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          &heurdata->nodesfactor, FALSE, 0.3, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/successrateexp",
-         "exponent for power of success rate to be multiplied with itercontingent (lower value decreass impact use of success rate)",
+         "exponent for power of success rate to be multiplied with itercontingent (lower value decreases impact use of success rate)",
          &heurdata->successrateexp, FALSE, 1.0, 0.0, DBL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/iterinit",

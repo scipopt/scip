@@ -526,7 +526,7 @@ nlpi:
 - changed default of heuristics/subnlp/itermin to 20
 - renamed heuristics/subnlp/iteroffset to heuristics/subnlp/nodesoffset
 - renamed heuristics/subnlp/iterquotient to heuristics/subnlp/nodesfactor
-- removed heuristics/subnlp/runalways, use heuristics/subnlp/nodesfactor=0 instead
+- removed heuristics/subnlp/runalways, use heuristics/subnlp/nodesoffset=INT_MAX and heuristics/subnlp/successrateexp = 0.0 instead
 
 ### New parameters
 
