@@ -91,6 +91,7 @@ struct SCIP_HeurData
 
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
+   SCIP_Real             relobjtol;          /**< relative objective tolerance to use for NLP solves (0: use a tolerance that depends on current gap) */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
    SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
@@ -628,6 +629,7 @@ SCIP_RETCODE solveSubNLP(
    int            i;
    SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
    SCIP_Real      timelimit;
+   SCIP_Real      relobjtol;
    SCIP_NLPSTATISTICS nlpstatistics;
 
    assert(scip != NULL);
@@ -900,10 +902,19 @@ SCIP_RETCODE solveSubNLP(
 
    *result = SCIP_DIDNOTFIND;
 
+   /* optimality tolerance for NLP:
+    * since this is a primal heuristic, we mainly need feasible solutions, especially early in the search
+    * when it is about closing the last bit of the gap, we should also require "more optimal" solutions
+    */
+   relobjtol = heurdata->relobjtol;
+   if( relobjtol == 0.0 )  /*lint !e777*/
+      relobjtol = MAX(SCIPdualfeastol(scip), MIN(SCIPgetTransGap(scip), 0.1));
+
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", calcIterLimit(scip, heurdata));
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
       .iterlimit = calcIterLimit(scip, heurdata),
+      .relobjtol = relobjtol,
       .verblevel = (unsigned short)heurdata->nlpverblevel,
       .expectinfeas = heurdata->expectinfeas
    ) );  /*lint !e666*/
@@ -1553,6 +1564,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
          "factor by which NLP heuristic should at least improve the incumbent",
          &heurdata->minimprove, TRUE, 0.01, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/relobjtol",
+         "relative objective tolerance to use for NLP solves (0: use a tolerance that depends on current gap)",
+         &heurdata->relobjtol, FALSE, SCIPdualfeastol(scip), 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxpresolverounds",
          "limit on number of presolve rounds in sub-SCIP (-1 for unlimited, 0 for no presolve)",
