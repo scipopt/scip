@@ -18,7 +18,6 @@
  * @brief   NLP local search primal heuristic using sub-SCIPs
  * @author  Stefan Vigerske
  * 
- * @todo set cutoff or similar in NLP? or are the tighter bounds rather hurting (see todo below)?
  * @todo reconstruct sub-SCIP if problem has changed
  */
 
