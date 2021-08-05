@@ -659,53 +659,54 @@ SCIP_RETCODE solveSubNLP(
    if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED )
    {
       /* presolve probably found the subproblem infeasible */
-      SCIPdebugMsg(scip, "SCIP returned from presolve in stage solved with status %d\n", SCIPgetStatus(heurdata->subscip));
+      SCIPdebugMsg(scip, "SCIP returned from presolve in stage solved with status %d and %d sols\n", SCIPgetStatus(heurdata->subscip), SCIPgetNSols(heurdata->subscip));
       /* if presolve found subproblem infeasible, report this to caller by setting *result to cutoff */
       if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
          *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
    }
-   if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVING )
+   else if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVING )
    {
       /* presolve was stopped because some still existing limit was hit (e.g., memory) */
-      SCIPdebugMsg(scip, "SCIP returned from presolve in stage presolving with status %d\n", SCIPgetStatus(heurdata->subscip));
+      SCIPdebugMsg(scip, "SCIP returned from presolve in stage presolving with status %d and %d sols\n", SCIPgetStatus(heurdata->subscip), SCIPgetNSols(heurdata->subscip));
       /* if presolve found subproblem infeasible, report this to caller by setting *result to cutoff */
       if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
          *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-   assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
-
-   if( SCIPgetNVars(heurdata->subscip) > 0 )
-   {
-      /* do initial solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
-      SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0LL) );
-      retcode = SCIPsolve(heurdata->subscip);
-
-      /* If no NLP was constructed, then there were no nonlinearities after presolve.
-       * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
-       */
-      if( retcode == SCIP_OKAY && SCIPgetStage(heurdata->subscip) != SCIP_STAGE_SOLVED && !SCIPisNLPConstructed(heurdata->subscip) )
-      {
-         SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
-         retcode = SCIPsolve(heurdata->subscip);
-      }
    }
    else
    {
-      /* If all variables were removed by presolve, but presolve did not end with status SOLVED,
-       * then we run solve, still with nodelimit=1, and hope to find some (maybe trivial) solution.
-       */
-      retcode = SCIPsolve(heurdata->subscip);
-   }
+      assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
 
-   /* errors in solving the subproblem should not kill the overall solving process
-    * hence, the return code is caught and a warning is printed
-    */
-   if( retcode != SCIP_OKAY )
-   {
-      SCIPwarningMessage(scip, "Error while solving subproblem in subnlp heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-      return SCIP_OKAY;
+      if( SCIPgetNVars(heurdata->subscip) > 0 )
+      {
+         /* do initial solve, i.e., "solve" root node with node limit 0 (should do scip.c::initSolve and then stop immediately in solve.c::SCIPsolveCIP) */
+         SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 0LL) );
+         retcode = SCIPsolve(heurdata->subscip);
+
+         /* If no NLP was constructed, then there were no nonlinearities after presolve.
+          * So we increase the nodelimit to 1 and hope that SCIP will find some solution to this probably linear subproblem.
+          */
+         if( retcode == SCIP_OKAY && SCIPgetStage(heurdata->subscip) != SCIP_STAGE_SOLVED && !SCIPisNLPConstructed(heurdata->subscip) )
+         {
+            SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
+            retcode = SCIPsolve(heurdata->subscip);
+         }
+      }
+      else
+      {
+         /* If all variables were removed by presolve, but presolve did not end with status SOLVED,
+          * then we run solve, still with nodelimit=1, and hope to find some (maybe trivial) solution.
+          */
+         retcode = SCIPsolve(heurdata->subscip);
+      }
+
+      /* errors in solving the subproblem should not kill the overall solving process
+       * hence, the return code is caught and a warning is printed
+       */
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPwarningMessage(scip, "Error while solving subproblem in subnlp heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+         return SCIP_OKAY;
+      }
    }
 
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(heurdata->subscip, NULL) ); )
@@ -794,8 +795,8 @@ SCIP_RETCODE solveSubNLP(
       }
    }
 
-   /* we should either have variables, or the problem was trivial, in which case it should have been solved */
-   assert(SCIPgetNVars(heurdata->subscip) > 0 || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED);
+   /* we should either have variables, or the problem was trivial, in which case it should have been presolved or solved */
+   assert(SCIPgetNVars(heurdata->subscip) > 0 || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED);
 
    /* if subscip is infeasible here, we signal this to the caller */
    if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
@@ -815,7 +816,7 @@ SCIP_RETCODE solveSubNLP(
    }
 
    /* if we stopped for some other reason, or there is no NLP, we also stop */
-   if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED || !SCIPisNLPConstructed(heurdata->subscip) )
+   if( SCIPgetStage(heurdata->subscip) <= SCIP_STAGE_PRESOLVED || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED || !SCIPisNLPConstructed(heurdata->subscip) )
       return SCIP_OKAY;
 
    /* in most cases, the status should be nodelimit
