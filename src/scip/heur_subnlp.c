@@ -94,6 +94,7 @@ struct SCIP_HeurData
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
    SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
+   SCIP_Bool             expectinfeas;       /**< whether to tell NLP solver that an infeasible NLP is not unexpected */
 
    SCIP_Longint          iterused;           /**< number of iterations used so far */
    SCIP_Longint          iterusedokay;       /**< number of iterations used so far when NLP stopped with status okay */
@@ -904,7 +905,7 @@ SCIP_RETCODE solveSubNLP(
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
       .iterlimit = calcIterLimit(scip, heurdata),
       .verblevel = (unsigned short)heurdata->nlpverblevel,
-      .expectinfeas = TRUE  /* TODO check whether that is still beneficial */
+      .expectinfeas = heurdata->expectinfeas
    ) );  /*lint !e666*/
 
    SCIPdebugMsg(scip, "NLP solver returned with termination status %d and solution status %d, objective value is %g\n",
@@ -1564,6 +1565,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/keepcopy",
          "whether to keep SCIP copy or to create new copy each time heuristic is applied",
          &heurdata->keepcopy, TRUE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/expectinfeas",
+         "whether to tell NLP solver that an infeasible NLP is not unexpected",
+         &heurdata->expectinfeas, FALSE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
