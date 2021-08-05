@@ -92,6 +92,7 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
    SCIP_Real             relobjtol;          /**< relative objective tolerance to use for NLP solves (0: use a tolerance that depends on current gap) */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
+   int                   presolveemphasis;   /**< presolve emphasis in sub-SCIP */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
    SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
    SCIP_Bool             expectinfeas;       /**< whether to tell NLP solver that an infeasible NLP is not unexpected */
@@ -188,8 +189,8 @@ SCIP_RETCODE createSubSCIP(
          FALSE, /* heuristics */
          TRUE,  /* eventhandler */
          TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
-         FALSE,  /* branchrules */
-         TRUE, /* displays */
+         FALSE, /* branchrules */
+         TRUE,  /* displays */
          FALSE, /* tables */
          FALSE, /* dialogs */
          TRUE,  /* expression handlers */
@@ -319,17 +320,17 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/time") );
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/totalnodes") );
 
-   /* disable restarts (not sure they could be triggered on continuous problems anyway)
-    * keep normal presolving (TODO try fast emphasis), but disable components presolver
+   /* set presolve maxrounds and emphasis; always disable components presolver
     * heuristics and separators were not copied into subscip, so should not need to switch off
     */
+   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
+   }
+   SCIP_CALL( SCIPsetPresolving(heurdata->subscip, (SCIP_PARAMSETTING)heurdata->presolveemphasis, TRUE) );
    if( !SCIPisParamFixed(heurdata->subscip, "constraints/components/maxprerounds") )
    {
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "constraints/components/maxprerounds", 0) );
-   }
-   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrestarts") )
-   {
-      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrestarts", 0) );
    }
 
 #ifdef SCIP_DEBUG
@@ -649,14 +650,9 @@ SCIP_RETCODE solveSubNLP(
    /* presolve sub-SCIP
     *  set scip timelimit in case presolve is unexpectedly expensive
     *  set node limit to 1 so that presolve can go
-    *  reset maxpresolverounds, in case user changed or we reset presolving settings
     */
    SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
-   if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
-   {
-      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
-   }
    SCIP_CALL( SCIPpresolve(heurdata->subscip) );
    if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED )
    {
@@ -1570,7 +1566,11 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxpresolverounds",
          "limit on number of presolve rounds in sub-SCIP (-1 for unlimited, 0 for no presolve)",
-         &heurdata->maxpresolverounds, TRUE, -1, -1, INT_MAX, NULL, NULL) );
+         &heurdata->maxpresolverounds, FALSE, -1, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/presolveemphasis",
+         "presolve emphasis in sub-SCIP (0: default, 1: aggressive, 2: fast, 3: off)",
+         &heurdata->presolveemphasis, FALSE, SCIP_PARAMSETTING_DEFAULT, SCIP_PARAMSETTING_DEFAULT, SCIP_PARAMSETTING_OFF, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/forbidfixings",
          "whether to add constraints that forbid specific fixings that turned out to be infeasible",
