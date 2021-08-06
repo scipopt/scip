@@ -849,7 +849,7 @@ SCIP_RETCODE solveSubNLP(
    /* set starting values (=refpoint, if not NULL; otherwise LP solution (or pseudo solution)) */
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, SCIPgetNNLPVars(heurdata->subscip)) );
 
-   if( heurdata->nlpverblevel >= 2 )
+   if( heurdata->nlpverblevel >= 3 )
    {
       SCIPinfoMessage(scip, NULL, "set NLP starting point\n");
    }
@@ -869,7 +869,7 @@ SCIP_RETCODE solveSubNLP(
       {
          startpoint[i] = constant;
 
-         if( heurdata->nlpverblevel >= 2 && !SCIPisZero(heurdata->subscip, startpoint[i]) )
+         if( heurdata->nlpverblevel >= 3 && !SCIPisZero(heurdata->subscip, startpoint[i]) )
          {
             SCIPinfoMessage(scip, NULL, "%s = %e\n", SCIPvarGetName(SCIPgetNLPVars(heurdata->subscip)[i]), startpoint[i]);
          }
@@ -886,7 +886,7 @@ SCIP_RETCODE solveSubNLP(
          /* scalar*subvar+constant corresponds to nlpvar[i], so nlpvar[i] gets value scalar*varval+constant */
          startpoint[i] = scalar * SCIPgetSolVal(scip, refpoint, var) + constant;
 
-      if( heurdata->nlpverblevel >= 2  && !SCIPisZero(heurdata->subscip, startpoint[i]) )
+      if( heurdata->nlpverblevel >= 3 && !SCIPisZero(heurdata->subscip, startpoint[i]) )
       {
          SCIPinfoMessage(scip, NULL, "%s = %e\n", SCIPvarGetName(SCIPgetNLPVars(heurdata->subscip)[i]), startpoint[i]);
       }
@@ -925,7 +925,7 @@ SCIP_RETCODE solveSubNLP(
       /* oops, something did not go well at all */
      if( heurdata->nlpverblevel >= 1 )
      {
-        SCIPinfoMessage(scip, NULL, "NLP solver in subNLP heuristic for problem <%s> returned with bad termination status %d.",
+        SCIPinfoMessage(scip, NULL, "NLP solver in subNLP heuristic for problem <%s> returned with bad termination status %d.\n",
            SCIPgetProbName(scip), SCIPgetNLPTermstat(heurdata->subscip));
      }
 
