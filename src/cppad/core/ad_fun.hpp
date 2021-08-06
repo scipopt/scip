@@ -258,6 +258,7 @@ private:
 		      VectorBase&           jac             ,
 		      sparse_jacobian_work& work
 	);
+public:
 	// ------------------------------------------------------------
 	// combined sparse_list and sparse_pack version of
 	// SparseHessian (see doxygen in sparse_hessian.hpp)

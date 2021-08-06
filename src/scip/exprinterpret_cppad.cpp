@@ -210,12 +210,18 @@ public:
    vector<atomic_userexpr*> userexprs;       /**< vector of atomic_userexpr that are created during eval() and need to be kept as long as the tape exists */
    SCIP_EXPRINTCAPABILITY userevalcapability;/**< (intersection of) capabilities of evaluation routines of user expressions */
 
-   vector<bool>          hessparsity;        /**< sparsity pattern of Hessian as given by CppAD */
    int*                  hesrowidxs;         /**< row indices of Hessian sparsity */
    int*                  hescolidxs;         /**< column indices of Hessian sparsity */
    SCIP_Real*            hesvalues;          /**< values of Hessian */
    int                   hesnnz;             /**< number of nonzeros in Hessian */
    SCIP_Bool             hesconstant;        /**< whether Hessian is constant (because expr is at most quadratic) */
+
+   // Hessian data in CppAD style
+   vector<bool>          hessparsity;        /**< dense sparsity pattern of Hessian as given by CppAD */
+   CppAD::local::internal_sparsity<bool>::pattern_type hessparsity_pattern;  /**< sparse sparsity pattern of Hessian in CppAD-internal form */
+   CppAD::vector<size_t> hessparsity_row;   /**< row indices of sparsity pattern of Hessian in CppAD-internal form */
+   CppAD::vector<size_t> hessparsity_col;   /**< column indices of sparsity pattern of Hessian in CppAD-internal form */
+   CppAD::sparse_hessian_work heswork;       /**< work memory of CppAD for sparse Hessians */
 };
 
 #ifndef NO_CPPAD_USER_ATOMIC
@@ -1895,8 +1901,7 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
 
-      int j = 0;
-      for( size_t i = 0; i < nn; ++i )
+      for( size_t i = 0, j = 0; i < nn; ++i )
          if( exprintdata->hessparsity[i] )
          {
             size_t row = i / n;
@@ -1907,6 +1912,21 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
             exprintdata->hescolidxs[j] = exprintdata->varidxs[col];
             ++j;
          }
+
+      // prepare data for sparse-hessian-eval calls in SCIPexprintHessian()
+      // TODO can we have a simple mapping between hessparsity_row/col and hesrow/colidxs ?
+      CppAD::local::sparsity_user2internal(exprintdata->hessparsity_pattern, exprintdata->hessparsity, n, n, false, "SparseHessian: sparsity pattern does not have proper row or column dimension");
+      exprintdata->hessparsity_row.clear();
+      exprintdata->hessparsity_col.clear();
+      for( size_t i = 0; i < n; ++i )
+      {
+         typename CppAD::local::internal_sparsity<bool>::pattern_type::const_iterator itr(exprintdata->hessparsity_pattern, i);
+         for( size_t j = *itr; j != exprintdata->hessparsity_pattern.end(); j = *(++itr) )
+         {
+            exprintdata->hessparsity_row.push_back(i);
+            exprintdata->hessparsity_col.push_back(j);
+         }
+      }
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "HessianSparsity for ");
@@ -1990,7 +2010,16 @@ SCIP_RETCODE SCIPexprintHessian(
       if( (size_t)exprintdata->hesnnz > nn/4 )
          hess = exprintdata->f.Hessian(exprintdata->x, 0);
       else
-         hess = exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity);
+      {
+         //hess = exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity);
+         vector<double> H(exprintdata->hessparsity_row.size());
+
+         // TODO avoid dense hess
+         hess.resize(nn);
+         exprintdata->f.SparseHessianCompute(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity_pattern, exprintdata->hessparsity_row, exprintdata->hessparsity_col, H, exprintdata->heswork);
+         for(size_t i = 0; i < H.size(); ++i)
+            hess[exprintdata->hessparsity_row[i] * n + exprintdata->hessparsity_col[i]] = H[i];
+      }
 
       // going through all n*n entries to fill hesvalues takes about about n*n time
       // using the sparsity in hesrowidx/hescolidx takes nnz*2*log2(n) time, because getVarPos() takes about log2(n) time
