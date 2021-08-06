@@ -423,7 +423,7 @@ SCIP_RETCODE heurExec(
             SCIP_CALL( SCIPsetSolVal(scip, refpoint, var, val) );
          }
 
-         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, heurdata->minimprove, NULL) );
+         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
          SCIPdebugMsg(scip, "result of sub-NLP call: %d\n", subnlpresult);
 

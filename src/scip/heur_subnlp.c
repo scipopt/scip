@@ -89,10 +89,10 @@ struct SCIP_HeurData
    SCIP_SOL*             lastsol;            /**< pointer to last found solution (or NULL if none), not captured, thus may be dangling */
 
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
-   SCIP_Real             minimprove;         /**< desired minimal improvement in objective function value when running heuristic */
    SCIP_Real             relobjtol;          /**< relative objective tolerance to use for NLP solves (0: use a tolerance that depends on current gap) */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
    int                   presolveemphasis;   /**< presolve emphasis in sub-SCIP */
+   SCIP_Bool             setcutoff;          /**< whether to set cutoff in sub-SCIP to current primal bound */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
    SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
    SCIP_Bool             expectinfeas;       /**< whether to tell NLP solver that an infeasible NLP is not unexpected */
@@ -961,15 +961,16 @@ SCIP_RETCODE solveSubNLP(
       heurdata->iterusediterlim = MAX(heurdata->iterusediterlim, nlpstatistics.niterations);
    }
 
-   /* NLP solver claims it found a feasible (maybe even optimal) solution
-    * if the objective value is better than our cutoff, then try to add it
-    * if we do not plan to add the solution (resultsol != NULL), then also check it if objective value is not better than objlimit
-    * TODO compare with main SCIP primal bound to allow also marginal improvement, or don't compare at all
-    */
-   if( SCIPgetNLPSolstat(heurdata->subscip) <= SCIP_NLPSOLSTAT_FEASIBLE && (resultsol != NULL || SCIPisLE(scip, SCIPgetNLPObjval(heurdata->subscip), SCIPgetObjlimit(heurdata->subscip))) )
+   if( SCIPgetNLPSolstat(heurdata->subscip) > SCIP_NLPSOLSTAT_FEASIBLE )
+      return SCIP_OKAY;
+   assert(SCIPhasNLPSolution(heurdata->subscip));
+
+   if( resultsol == NULL )
    {
-      if( resultsol == NULL )
+      /* resultsol NULL means we should try adding the sol to SCIP */
+      if( SCIPisLE(scip, SCIPgetNLPObjval(heurdata->subscip), SCIPgetUpperbound(scip)) )
       {
+         /* solution is feasible and should improve upper bound, so try adding it to SCIP */
          SCIP_SOL*  sol;
          SCIP_Bool  stored;
 
@@ -1011,69 +1012,50 @@ SCIP_RETCODE solveSubNLP(
             }
          }
       }
-      else
+      else if( heurdata->nlpverblevel >= 1 )
       {
-         SCIP_Bool feasible;
+         SCIPinfoMessage(scip, NULL, "subnlp solution objval %e is above the primal bound %e\n",
+            SCIPgetNLPObjval(heurdata->subscip), SCIPgetUpperbound(heurdata->subscip));
+      }
+   }
+   else
+   {
+      /* only create a solution and pass it back in resultsol, do not add to SCIP */
+      SCIP_Bool feasible;
 
-         SCIP_CALL( createSolFromNLP(scip, heur, &resultsol, authorheur) );
+      SCIP_CALL( createSolFromNLP(scip, heur, &resultsol, authorheur) );
 
-         heurdata->lastsol = resultsol;
+      heurdata->lastsol = resultsol;
 #ifdef SCIP_DEBUG
-         /* print the infeasibilities to stdout */
-         SCIP_CALL( SCIPcheckSol(scip, resultsol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
+      /* print the infeasibilities to stdout */
+      SCIP_CALL( SCIPcheckSol(scip, resultsol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
 #else
-         SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, FALSE, TRUE, FALSE, TRUE, &feasible) );
+      SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, FALSE, TRUE, FALSE, TRUE, &feasible) );
 #endif
-         if( feasible )
+      if( feasible )
+      {
+         /* SCIP find solution feasible, so we are done */
+         if( heurdata->nlpverblevel >= 1 )
          {
-            /* SCIP find solution feasible, so we are done */
-            if( heurdata->nlpverblevel >= 1 )
-            {
-               SCIPinfoMessage(scip, NULL, "solution reported by NLP solver feasible for SCIP\n");
-            }
-            else
-            {
-               SCIPdebugMsg(scip, "solution reported by NLP solver feasible for SCIP\n");
-            }
-            *result = SCIP_FOUNDSOL;
-            ++heurdata->nnlpsolfound;
+            SCIPinfoMessage(scip, NULL, "solution reported by NLP solver feasible for SCIP\n");
          }
          else
          {
-            if( heurdata->nlpverblevel >= 1 )
-            {
-               SCIPinfoMessage(scip, NULL, "solution reported by NLP solver not feasible for SCIP\n");
-            }
-            else
-            {
-               SCIPdebugMsg(scip, "solution reported by NLP solver not feasible for SCIP\n");
-            }
+            SCIPdebugMsg(scip, "solution reported by NLP solver feasible for SCIP\n");
          }
+         *result = SCIP_FOUNDSOL;
+         ++heurdata->nnlpsolfound;
       }
-   }
-   else if( heurdata->nlpverblevel >= 1 && SCIPhasNLPSolution(heurdata->subscip) )
-   {
-      /* print the violation of the NLP solution candidate */
-      if( SCIPgetNLPSolstat(heurdata->subscip) > SCIP_NLPSOLSTAT_FEASIBLE )
+      else
       {
-         SCIP_SOL* sol;
-         SCIP_Bool feasible;
-
-         sol = NULL;
-         SCIP_CALL( createSolFromNLP(scip, heur, &sol, authorheur) );
-
-         SCIPinfoMessage(scip, NULL, "subnlp solution is infeasible\n");
-
-         /* print the infeasibilities to stdout */
-         SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
-
-         SCIP_CALL( SCIPfreeSol(scip, &sol) );
-      }
-      else if( heurdata->nlpverblevel >= 1
-         && !SCIPisLE(scip, SCIPgetNLPObjval(heurdata->subscip), SCIPgetObjlimit(heurdata->subscip)) )
-      {
-         SCIPinfoMessage(scip, NULL, "subnlp solution objval %e is above the objlimit %e\n",
-            SCIPgetNLPObjval(heurdata->subscip), SCIPgetObjlimit(heurdata->subscip));
+         if( heurdata->nlpverblevel >= 1 )
+         {
+            SCIPinfoMessage(scip, NULL, "solution reported by NLP solver not feasible for SCIP\n");
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "solution reported by NLP solver not feasible for SCIP\n");
+         }
       }
    }
 
@@ -1472,7 +1454,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       SCIPinfoMessage(scip, NULL, "calling subnlp heuristic\n");
    }
 
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, heurdata->minimprove, NULL) );
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, NULL) );
 
    /* SCIP does not like cutoff as return, so we say didnotfind, since we did not find a solution */
    if( *result == SCIP_CUTOFF )
@@ -1556,10 +1538,6 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          "minimal number of iterations for NLP solves",
          &heurdata->itermin, FALSE, 20, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
-         "factor by which NLP heuristic should at least improve the incumbent",
-         &heurdata->minimprove, TRUE, 0.01, 0.0, 1.0, NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/relobjtol",
          "relative objective tolerance to use for NLP solves (0: use a tolerance that depends on current gap)",
          &heurdata->relobjtol, FALSE, SCIPdualfeastol(scip), 0.0, 1.0, NULL, NULL) );
@@ -1571,6 +1549,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/presolveemphasis",
          "presolve emphasis in sub-SCIP (0: default, 1: aggressive, 2: fast, 3: off)",
          &heurdata->presolveemphasis, FALSE, SCIP_PARAMSETTING_DEFAULT, SCIP_PARAMSETTING_DEFAULT, SCIP_PARAMSETTING_OFF, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/setcutoff",
+         "whether to set cutoff in sub-SCIP to current primal bound",
+         &heurdata->setcutoff, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/forbidfixings",
          "whether to add constraints that forbid specific fixings that turned out to be infeasible",
@@ -1593,7 +1575,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
    SCIP_RESULT*          result,             /**< pointer to store result of: did not run, solution found, no solution found, or fixing is infeasible (cutoff) */
    SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
-   SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
 {
@@ -1697,29 +1678,12 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       }
    }
 
-   /* if there is already a solution, add an objective cutoff in sub-SCIP
-    * TODO this can also influence the NLP in some way, which seems to be a disadvantage for emfl100_3_3
-    */
-   if( SCIPgetNSols(scip) > 0 )
+   /* if there is already a solution, possibly add an objective cutoff in sub-SCIP */
+   if( SCIPgetNSols(scip) > 0 && heurdata->setcutoff )
    {
-      SCIP_Real upperbound;
+      cutoff = SCIPgetUpperbound(scip);
+      assert( !SCIPisInfinity(scip, cutoff) );
 
-      assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
-
-      upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-
-      if( !SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) )
-      {
-         cutoff = (1-minimprove)*SCIPgetUpperbound(scip) + minimprove*SCIPgetLowerbound(scip);
-      }
-      else
-      {
-         if( SCIPgetUpperbound(scip) >= 0 )
-            cutoff = ( 1.0 - minimprove ) * SCIPgetUpperbound(scip);
-         else
-            cutoff = ( 1.0 + minimprove ) * SCIPgetUpperbound(scip);
-      }
-      cutoff = MIN(upperbound, cutoff);
       SCIP_CALL( SCIPsetObjlimit(heurdata->subscip, cutoff) );
       SCIPdebugMsg(scip, "set objective limit %g\n", cutoff);
    }

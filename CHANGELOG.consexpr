@@ -131,10 +131,9 @@ Interface changes
 - removed refpoint argument from SCIPaddSquareSecant()
 - added argument exprdata to SYMcomputeSymmetryGenerators()
 - removed SCIPconsNonlinearGetRhs(), SCIPconsNonlinearGetLhs(), SCIPconsNonlinearAddLinearCoef()
-- removed parameter timelimit from SCIPapplyHeurSubNlp()
+- removed arguments timelimit, minimprove, itercontingent, and iterused from SCIPapplyHeurSubNlp()
 - removed SCIPresolveSolHeurSubNlp(), SCIPgetSubScipHeurSubNlp(), SCIPgetVarMappingScip2SubScipHeurSubNlp(), SCIPgetVarMappingSubScip2ScipHeurSubNlp()
 - SCIPlockVarCons() and SCIPunlockVarCons() are now allowed in stage TRANSFORMED as well
-- removed arguments itercontingent and iterused from SCIPapplyHeurSubNlp()
 
 NLP:
 - SCIPhasNLPContinuousNonlinearity() now returns SCIP_RETCODE and has additional argument result
@@ -527,6 +526,7 @@ nlpi:
 - renamed heuristics/subnlp/iteroffset to heuristics/subnlp/nodesoffset
 - renamed heuristics/subnlp/iterquotient to heuristics/subnlp/nodesfactor
 - removed heuristics/subnlp/runalways, use heuristics/subnlp/nodesoffset=INT_MAX and heuristics/subnlp/successrateexp = 0.0 instead
+- removed heuristics/subnlp/minimprove, heuristics/multistart/nlpminimpr
 
 ### New parameters
 
@@ -559,6 +559,7 @@ nlpi:
 - nlpi/ipopt/autoiterlim
 - heuristics/subnlp/iterinit, heuristics/subnlp/ninitsolves, heuristics/subnlp/successrateexp
 - heuristics/subnlp/expectinfeas, heuristics/subnlp/relobjtol, heuristics/subnlp/presolveemphasis
+- heuristics/subnlp/setcutoff
 
 ### Data structures and types
 

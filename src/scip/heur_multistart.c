@@ -64,7 +64,6 @@
 #define DEFAULT_MINIMPRFAC    0.05           /**< default minimum required improving factor to proceed in improvement of a point */
 #define DEFAULT_MINIMPRITER   10             /**< default number of iteration when checking the minimum improvement */
 #define DEFAULT_MAXRELDIST    0.15           /**< default maximum distance between two points in the same cluster */
-#define DEFAULT_NLPMINIMPR    0.00           /**< default factor by which heuristic should at least improve the incumbent */
 #define DEFAULT_GRADLIMIT     5e+6           /**< default limit for gradient computations for all improvePoint() calls */
 #define DEFAULT_MAXNCLUSTER   3              /**< default maximum number of considered clusters per heuristic call */
 #define DEFAULT_ONLYNLPS      TRUE           /**< should the heuristic run only on continuous problems? */
@@ -93,7 +92,6 @@ struct SCIP_HeurData
    int                   minimpriter;        /**< number of iteration when checking the minimum improvement */
 
    SCIP_Real             maxreldist;         /**< maximum distance between two points in the same cluster */
-   SCIP_Real             nlpminimpr;         /**< factor by which heuristic should at least improve the incumbent */
    SCIP_Real             gradlimit;          /**< limit for gradient computations for all improvePoint() calls (0 for no limit) */
    int                   maxncluster;        /**< maximum number of considered clusters per heuristic call */
    SCIP_Bool             onlynlps;           /**< should the heuristic run only on continuous problems? */
@@ -637,7 +635,6 @@ SCIP_RETCODE solveNLP(
    SCIP_HEUR*            nlpheur,            /**< pointer to NLP local search heuristics */
    SCIP_SOL**            points,             /**< array containing improved points */
    int                   npoints,            /**< total number of points */
-   SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
    SCIP_Bool*            success             /**< pointer to store if we could find a solution */
    )
 {
@@ -702,7 +699,7 @@ SCIP_RETCODE solveNLP(
    }
 
    /* call sub-NLP heuristic */
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, minimprove, NULL) );
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, NULL) );
    SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
 
    /* let sub-NLP heuristic decide whether the solution is feasible or not */
@@ -860,8 +857,7 @@ SCIP_RETCODE applyHeur(
       assert(end - start > 0);
 
       /* call sub-NLP heuristic */
-      SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start,
-            heurdata->nlpminimpr, &success) );
+      SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start, &success) );
       SCIPdebugMsg(scip, "solveNLP result = %u\n", success);
 
       if( success )
@@ -1037,10 +1033,6 @@ SCIP_RETCODE SCIPincludeHeurMultistart(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxreldist",
          "maximum distance between two points in the same cluster",
          &heurdata->maxreldist, FALSE, DEFAULT_MAXRELDIST, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nlpminimpr",
-         "factor by which heuristic should at least improve the incumbent",
-         &heurdata->nlpminimpr, FALSE, DEFAULT_NLPMINIMPR, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gradlimit",
          "limit for gradient computations for all improvePoint() calls (0 for no limit)",
