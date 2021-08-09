@@ -95,7 +95,7 @@ struct SCIP_HeurData
    SCIP_Bool             setcutoff;          /**< whether to set cutoff in sub-SCIP to current primal bound */
    SCIP_Bool             forbidfixings;      /**< whether to add constraints that forbid specific fixations that turned out to be infeasible */
    SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
-   SCIP_Bool             expectinfeas;       /**< whether to tell NLP solver that an infeasible NLP is not unexpected */
+   SCIP_Real             expectinfeas;       /**< when to tell NLP solver that an infeasible NLP is not unexpected */
 
    SCIP_Longint          iterused;           /**< number of iterations used so far */
    SCIP_Longint          iterusedokay;       /**< number of iterations used so far when NLP stopped with status okay */
@@ -103,6 +103,7 @@ struct SCIP_HeurData
    int                   nnlpsolves;         /**< number of NLP solves */
    int                   nnlpsolvesokay;     /**< number of NLP solves with status okay */
    int                   nnlpsolvesiterlim;  /**< number of NLP solves that hit an iteration limit */
+   int                   nnlpsolvesinfeas;   /**< number of NLP solves with status okay and infeasible */
    int                   nnlpsolfound;       /**< number of solutions found by NLP solve in this run */
    int                   nodesoffset;        /**< number of nodes added to the actual number of nodes when computing itercontingent */
    SCIP_Real             nodesfactor;        /**< factor to apply to number of nodes in SCIP to compute initial itercontingent */
@@ -630,6 +631,7 @@ SCIP_RETCODE solveSubNLP(
    SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
    SCIP_Real      timelimit;
    SCIP_Real      opttol;
+   SCIP_Bool      expectinfeas;
    SCIP_NLPSTATISTICS nlpstatistics;
 
    assert(scip != NULL);
@@ -909,13 +911,20 @@ SCIP_RETCODE solveSubNLP(
    if( opttol == 0.0 )  /*lint !e777*/
       opttol = MAX(SCIPdualfeastol(scip), MIN(SCIPgetTransGap(scip), 0.1));
 
+   /* if we had many (fraction > expectinfeas) infeasible NLPs, then tell NLP solver to expect an infeasible problem */
+   expectinfeas = FALSE;
+   if( heurdata->expectinfeas == 0.0 )  /* to keep original behavior on default settings */
+      expectinfeas = TRUE;
+   else if( heurdata->nnlpsolvesokay > heurdata->ninitsolves && heurdata->nnlpsolvesinfeas > heurdata->expectinfeas * heurdata->nnlpsolvesokay )
+      expectinfeas = TRUE;
+
    /* let the NLP solver do its magic */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", calcIterLimit(scip, heurdata));
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
       .iterlimit = calcIterLimit(scip, heurdata),
       .opttol = opttol,
       .verblevel = (unsigned short)heurdata->nlpverblevel,
-      .expectinfeas = heurdata->expectinfeas
+      .expectinfeas = expectinfeas
    ) );  /*lint !e666*/
 
    SCIPdebugMsg(scip, "NLP solver returned with termination status %d and solution status %d, objective value is %g\n",
@@ -958,6 +967,9 @@ SCIP_RETCODE solveSubNLP(
    {
       ++heurdata->nnlpsolvesokay;
       heurdata->iterusedokay += nlpstatistics.niterations;
+
+      if( (SCIPgetNLPSolstat(heurdata->subscip) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE) || (SCIPgetNLPSolstat(heurdata->subscip) == SCIP_NLPSOLSTAT_LOCINFEASIBLE) )
+         ++heurdata->nnlpsolvesinfeas;
    }
    else if( SCIPgetNLPTermstat(heurdata->subscip) == SCIP_NLPTERMSTAT_ITERLIMIT )
    {
@@ -1340,6 +1352,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
    heurdata->nnlpsolves = 0;
    heurdata->nnlpsolvesokay = 0;
    heurdata->nnlpsolvesiterlim = 0;
+   heurdata->nnlpsolvesinfeas = 0;
 
    return SCIP_OKAY;
 }
@@ -1566,9 +1579,9 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          "whether to keep SCIP copy or to create new copy each time heuristic is applied",
          &heurdata->keepcopy, TRUE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/expectinfeas",
-         "whether to tell NLP solver that an infeasible NLP is not unexpected",
-         &heurdata->expectinfeas, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/expectinfeas",
+         "percentage of NLP solves with infeasible status required to tell NLP solver to expect and infeasible NLP",
+         &heurdata->expectinfeas, FALSE, 0.0, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
