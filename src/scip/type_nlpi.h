@@ -124,10 +124,11 @@ static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
   "iterlimit = %d, "  \
   "verblevel = %hd, " \
   "fastfail = %d, "   \
+  "expectinfeas = %d,"\
   "warmstart = %d, "  \
   "called by %s\n",   \
   (param).lobjlimit, (param).feastol, (param).opttol, (param).solvertol, (param).timelimit, (param).iterlimit, \
-  (param).verblevel, (param).fastfail, (param).warmstart, (param).caller != NULL ? (param).caller : "unknown"
+  (param).verblevel, (param).fastfail, (param).expectinfeas, (param).warmstart, (param).caller != NULL ? (param).caller : "unknown"
 
 /** NLP solution status */
 enum SCIP_NlpSolStat
