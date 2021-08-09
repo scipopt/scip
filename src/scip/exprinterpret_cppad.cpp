@@ -1925,7 +1925,11 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
             size_t row = i / n;
             size_t col = i % n;
 
-            exprintdata->hessparsity_pattern.add_element(row, col);
+            if( (size_t)exprintdata->hesnnz <= nn/4 )
+            {
+               // we need hessparsity_pattern only if SCIPexprintHessian is doing a sparse hessian eval; nn/4 is the threshold for that
+               exprintdata->hessparsity_pattern.add_element(row, col);
+            }
 
             if( col > row )
             {
@@ -2023,11 +2027,11 @@ SCIP_RETCODE SCIPexprintHessian(
          exprintdata->hesvalues.resize(exprintdata->hessparsity_row.size());
       }
 
-      // use dense Hessian if there are many nonzero elements (approx more than half (recall only lower (or upper)-triangular is considered))
-      // because it seems faster than the sparse Hessian if there isn't actually much sparsity
       // these use reverse mode
       if( (size_t)exprintdata->hesnnz > nn/4 )
       {
+         // use dense Hessian if there are many nonzero elements (approx more than half (recall only lower (or upper)-triangular is considered))
+         // because it seems faster than the sparse Hessian if there isn't actually much sparsity
          vector<double> hess = exprintdata->f.Hessian(exprintdata->x, 0);
          for( int i = 0; i < exprintdata->hesnnz; ++i )
             exprintdata->hesvalues[i] = hess[exprintdata->hessparsity_row[i] * n + exprintdata->hessparsity_col[i]];
@@ -2039,7 +2043,12 @@ SCIP_RETCODE SCIPexprintHessian(
          // to reuse the coloring of the sparsity pattern and use also a sparse matrix for the Hessian values, we now call SparseHessianCompute directly
          exprintdata->f.SparseHessianCompute(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity_pattern, exprintdata->hessparsity_row, exprintdata->hessparsity_col, exprintdata->hesvalues, exprintdata->heswork);
 
-         // TODO hessparsity_row, hessparsity_col, hessparsity_pattern are no longer used by SparseHessianCompute after coloring has been computed, except for some asserts
+#ifndef NDEBUG
+         // hessparsity_row, hessparsity_col, hessparsity_pattern are no longer used by SparseHessianCompute after coloring has been computed in first call, except for some asserts, so we free some mem
+         exprintdata->hessparsity_row.clear();
+         exprintdata->hessparsity_col.clear();
+         exprintdata->hessparsity_pattern.resize(0,0);
+#endif
       }
    }
 
