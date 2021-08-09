@@ -1893,45 +1893,54 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
       exprintdata->hessparsity.clear();
       exprintdata->f.RevSparseHesCase(true, false, n, vector<bool>(1, true), exprintdata->hessparsity);
 
+      // count number of hessian elements and setup hessparsity_pattern
+      //   originally we were calling CppAD::local::sparsity_user2internal(exprintdata->hessparsity_pattern, exprintdata->hessparsity, n, n, false, ""),
+      //   which was again looping over hessparsity, so this is included into one loop here
+      exprintdata->hessparsity_pattern.resize(0, 0);  // clear old data, if any
+      exprintdata->hessparsity_pattern.resize(n, n);
+      size_t hesnnz_full = 0;   // number of nonzeros in full matrix, that is, not only lower-diagonal
       for( size_t i = 0; i < nn; ++i )
          if( exprintdata->hessparsity[i] )
          {
             size_t row = i / n;
             size_t col = i % n;
+
+            ++hesnnz_full;
+            exprintdata->hessparsity_pattern.add_element(i / n, i % n);
+
             if( col > row )
                continue;
             ++exprintdata->hesnnz;
          }
 
+      // hessian sparsity in sparse form
+      // hesrowidxs,hescolidxs are nonzero entries in the lower-diagonal of the Hessian and are returned to the caller; indices are actual variable indices
+      // hessparsity_row,hessparsity_col are nonzero entries in the full Hessian and are used in SCIPexprintHessian(); indices are w.r.t. dimension of f
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
 
-      for( size_t i = 0, j = 0; i < nn; ++i )
+      exprintdata->hessparsity_row.resize(hesnnz_full);
+      exprintdata->hessparsity_col.resize(hesnnz_full);
+
+      for( size_t i = 0, j = 0, k = 0; i < nn; ++i )
          if( exprintdata->hessparsity[i] )
          {
             size_t row = i / n;
             size_t col = i % n;
+
+            assert(k < hesnnz_full);
+            exprintdata->hessparsity_row[k] = row;
+            exprintdata->hessparsity_col[k] = col;
+            ++k;
+
             if( col > row )
                continue;
+
+            assert(j < (size_t)exprintdata->hesnnz);
             exprintdata->hesrowidxs[j] = exprintdata->varidxs[row];
             exprintdata->hescolidxs[j] = exprintdata->varidxs[col];
             ++j;
          }
-
-      // prepare data for sparse-hessian-eval calls in SCIPexprintHessian()
-      // TODO can we have a simple mapping between hessparsity_row/col and hesrow/colidxs ?
-      CppAD::local::sparsity_user2internal(exprintdata->hessparsity_pattern, exprintdata->hessparsity, n, n, false, "SparseHessian: sparsity pattern does not have proper row or column dimension");
-      exprintdata->hessparsity_row.clear();
-      exprintdata->hessparsity_col.clear();
-      for( size_t i = 0; i < n; ++i )
-      {
-         typename CppAD::local::internal_sparsity<bool>::pattern_type::const_iterator itr(exprintdata->hessparsity_pattern, i);
-         for( size_t j = *itr; j != exprintdata->hessparsity_pattern.end(); j = *(++itr) )
-         {
-            exprintdata->hessparsity_row.push_back(i);
-            exprintdata->hessparsity_col.push_back(j);
-         }
-      }
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "HessianSparsity for ");
