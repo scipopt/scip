@@ -53,6 +53,7 @@
 #include "scip/scip_tree.h"
 #include "scip_prob.h"
 #include "struct_heur.h"
+#include "scip_message.h"
 #include <string.h>
 
 #define HEUR_NAME             "indicatordiving"
@@ -95,6 +96,7 @@
 #define DEFAULT_ROUNDINGFRAC        0.5 /**< default parameter setting for parameter roundingfrac */
 #define DEFAULT_MODE                  3 /**< default parameter setting for parameter mode */
 #define DEFAULT_SEMICONTSCOREMODE     0 /**< default parameter setting for parameter semicontscoremode */
+#define DEFAULT_SOLVE_MIP          TRUE /**< default parameter setting for parameter solveMip */
 
 enum IndicatorDivingMode
 {
@@ -132,6 +134,9 @@ struct SCIP_HeurData
    SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded up*/
    int                   mode;               /**< decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default)) */
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
+   SCIP_Bool             solveMip;
+   int                   remaingNIndicatorconstraints;
+   SCIP_CONSHDLR*        conshdlr;
 };
 
 /*
@@ -181,10 +186,10 @@ SCIP_RETCODE checkAndGetIndicator(
    SCIP_CONS**           cons,               /**< pointer to store indicator constraint */
    SCIP_Bool*            isindicator,        /**< pointer to store whether candidate variable is indicator variable */
    SCIP_Bool*            containsViolatedIndicator,        /**< pointer to store information */
-   SCIP_SOL*             sol                 /**< pointer to solution*/
+   SCIP_SOL*             sol,                 /**< pointer to solution*/
+   SCIP_CONSHDLR*        conshdlr
 )
 {
-   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** indicatorconss;
    int c;
 
@@ -194,7 +199,6 @@ SCIP_RETCODE checkAndGetIndicator(
    assert(isindicator != NULL);
    assert(sol != NULL);
 
-   conshdlr = SCIPfindConshdlr(scip, "indicator");
    indicatorconss = SCIPconshdlrGetConss(conshdlr);
    *cons = NULL;
    *isindicator = FALSE;
@@ -221,6 +225,31 @@ SCIP_RETCODE checkAndGetIndicator(
          return SCIP_OKAY;
    }
    return SCIP_OKAY;
+}
+
+
+/** checks if variable is indicator variable and stores corresponding indicator constraint */
+static
+int getRemainingNIndicatorCons(
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_SOL*             sol,                /**< pointer to solution*/
+      SCIP_CONSHDLR*        conshdlr
+)
+{
+   SCIP_CONS** indicatorconss;
+   int c;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+
+   indicatorconss = SCIPconshdlrGetConss(conshdlr);
+
+   int result = 0;
+   for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
+      if( isViolatedAndNotFixed(scip, sol, indicatorconss[c]))
+         result = result +1;
+
+   return result;
 }
 
 static
@@ -615,6 +644,9 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
+   SCIP_CONS** indicatorconss;
+   int forCounter;
+   SCIP_Bool isAtLeastOneIndicatorConstraint;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -626,7 +658,23 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 
    //TODO maybe improve this if a Indicator exists it doesn't mean we branch on
    // skip if problem doesn't contain indicator constraints
-   if( SCIPconshdlrGetNActiveConss(SCIPfindConshdlr(scip, "indicator")) == 0 )
+
+   isAtLeastOneIndicatorConstraint = FALSE;
+   indicatorconss = SCIPconshdlrGetConss( heurdata->conshdlr );
+
+   for (forCounter = 0; forCounter < SCIPconshdlrGetNConss(heurdata->conshdlr); forCounter++)
+   {
+      SCIP_VAR *binvar;
+      binvar = SCIPgetBinaryVarIndicator(indicatorconss[forCounter]);
+      if( SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
+      {
+         SCIPdebugMessage("unfixed binary indicator variable: %s\n",
+                         SCIPvarGetName(binvar));
+         isAtLeastOneIndicatorConstraint = TRUE;
+         break;
+      }
+   }
+   if( isAtLeastOneIndicatorConstraint == FALSE )
       return SCIP_OKAY;
 
    SCIPdebugMessage("call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
@@ -637,6 +685,8 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 
    return SCIP_OKAY;
 }
+
+
 
 /** calculate score and preferred rounding direction for the candidate variable */
 static
@@ -681,19 +731,23 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
    /* check if cand variable is indicator variable */
    SCIP_CALL(checkAndGetIndicator(scip, cand, &indicatorcons, &isindicatorvar,
-                                  &containsactiveIndicatorconstraints, heurdata->sol));
+                                  &containsactiveIndicatorconstraints, heurdata->sol, heurdata->conshdlr));
 
    if( !isindicatorvar )
    {
       *score = SCIP_REAL_MIN;
       *roundup = (candsfrac > 0.5);
       if(! containsactiveIndicatorconstraints)
+      {
          getScoreOfFarkasDiving(scip, diveset, cand, candsfrac, roundup, score);
+         heurdata->remaingNIndicatorconstraints = 0;
+      }
       return SCIP_OKAY;
    }
 
    SCIPdebugMessage("cand: %s, candsol: %.2f, candobjcoeff: %f\n", SCIPvarGetName(cand), candsol, SCIPvarGetObj(cand));
 
+   heurdata->remaingNIndicatorconstraints = getRemainingNIndicatorCons(scip, heurdata->sol, heurdata->conshdlr);
    lincons = SCIPgetLinearConsIndicator(indicatorcons);
    slackvar = SCIPgetSlackVarIndicator(indicatorcons);
    rhs = SCIPconsGetRhs(scip, lincons, &success);
@@ -825,35 +879,40 @@ SCIP_DECL_DIVESETAVAILABLE(divesetAvailableIndicatordiving)
 static
 SCIP_DECL_DIVESETSOLVEMIP(divesetSolveMipIndicatordiving)
 {
-   /*input:
+   /* input:
     * - scip : SCIP main data structure
-    * -  SCIP_DIVESET* diveset
-    * - solveLp : bool
+    * - SCIP_DIVESET* diveset
+    * - solvemip : bool
     */
-   SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** indicatorconss;
    int forCounter;
+   int n;
    SCIP_Bool existsOneIndicatorConstraint;
 
    assert(scip != NULL);
 
+   if(!diveset->heur->heurdata->solveMip || SCIPgetNIntVars(scip) == 0)
+   {
+      *solvemip = FALSE;
+      return SCIP_OKAY;
+   }
    existsOneIndicatorConstraint = FALSE;
-   *solveMip = FALSE;
-   conshdlr = SCIPfindConshdlr(scip, "indicator");
-   indicatorconss = SCIPconshdlrGetConss(conshdlr);
-   for( forCounter = 0; forCounter < SCIPconshdlrGetNActiveConss(conshdlr); forCounter++ )
+   *solvemip = FALSE;
+   indicatorconss = SCIPconshdlrGetConss(diveset->heur->heurdata->conshdlr);
+   n = SCIPconshdlrGetNConss(diveset->heur->heurdata->conshdlr);
+   for( forCounter = 0; forCounter < n; forCounter++ )
    {
       if( isViolatedAndNotFixed(scip, diveset->heur->heurdata->sol, indicatorconss[ forCounter ]))
       {
          if(existsOneIndicatorConstraint){
-            assert(!*solveMip);
+            assert(!*solvemip);
             return SCIP_OKAY;
          }
          existsOneIndicatorConstraint = TRUE;
       }
    }
    if(existsOneIndicatorConstraint)
-      *solveMip = TRUE;
+      *solvemip = TRUE;
    return SCIP_OKAY;
 }
 
@@ -905,6 +964,13 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/semicontscoremode",
          "which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high)",
          &heurdata->semicontscoremode, FALSE, DEFAULT_SEMICONTSCOREMODE, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/solveMIP",
+         "which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high)",
+         &heurdata->solveMip, FALSE, DEFAULT_SOLVE_MIP, NULL, NULL) );
+
+   heurdata->conshdlr = SCIPfindConshdlr(scip, "indicator");
+
 
    return SCIP_OKAY;
 }
