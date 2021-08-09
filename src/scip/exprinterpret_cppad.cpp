@@ -1894,8 +1894,6 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
       exprintdata->f.RevSparseHesCase(true, false, n, vector<bool>(1, true), exprintdata->hessparsity);
 
       // count number of hessian elements and setup hessparsity_pattern
-      //   originally we were calling CppAD::local::sparsity_user2internal(exprintdata->hessparsity_pattern, exprintdata->hessparsity, n, n, false, ""),
-      //   which was again looping over hessparsity, so this is included into one loop here
       exprintdata->hessparsity_pattern.resize(0, 0);  // clear old data, if any
       exprintdata->hessparsity_pattern.resize(n, n);
       size_t hesnnz_full = 0;   // number of nonzeros in full matrix, that is, not only lower-diagonal
@@ -1906,7 +1904,6 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
             size_t col = i % n;
 
             ++hesnnz_full;
-            exprintdata->hessparsity_pattern.add_element(i / n, i % n);
 
             if( col > row )
                continue;
@@ -1914,9 +1911,11 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
          }
 
       // hessian sparsity in sparse form
-      // hesrowidxs,hescolidxs are nonzero entries in the lower-diagonal of the Hessian and are returned to the caller; indices are variable indices as in expression
-      // hessparsity_row,hessparsity_col are nonzero entries in the full Hessian and are used in SCIPexprintHessian(); indices are 0..n-1 (n=dimension of f)
-      // TODO can we move the above-diagonal elements to the end of hessparsity_row/col, so we don't have to skip over them in exprintHessian?
+      // - hesrowidxs,hescolidxs are nonzero entries in the lower-diagonal of the Hessian and are returned to the caller; indices are variable indices as in expression
+      // - hessparsity_row,hessparsity_col are nonzero entries in the full Hessian and are used in SCIPexprintHessian(); indices are 0..n-1 (n=dimension of f)
+      // - hessparsity_pattern is the same information as hessparsity_row,hessparsity_col, but stored in different form
+      //   originally we were calling CppAD::local::sparsity_user2internal(exprintdata->hessparsity_pattern, exprintdata->hessparsity, n, n, false, ""),
+      //   which was again looping over hessparsity, so this is included into one loop here
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
 
@@ -1929,13 +1928,21 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
             size_t row = i / n;
             size_t col = i % n;
 
-            assert(k < hesnnz_full);
-            exprintdata->hessparsity_row[k] = row;
-            exprintdata->hessparsity_col[k] = col;
-            ++k;
+            exprintdata->hessparsity_pattern.add_element(row, col);
 
             if( col > row )
+            {
+               // add above-diagonal elements into end part of hessparsity_row/col, so we have a 1:1 correspondence
+               // between hessparsity_row/col and hesrowidxs/hescolidxs
+               assert(exprintdata->hesnnz + k < hesnnz_full);
+               exprintdata->hessparsity_row[exprintdata->hesnnz + k] = row;
+               exprintdata->hessparsity_col[exprintdata->hesnnz + k] = col;
+               ++k;
                continue;
+            }
+
+            exprintdata->hessparsity_row[j] = row;
+            exprintdata->hessparsity_col[j] = col;
 
             assert(j < (size_t)exprintdata->hesnnz);
             exprintdata->hesrowidxs[j] = exprintdata->varidxs[row];
@@ -2055,16 +2062,8 @@ SCIP_RETCODE SCIPexprintHessian(
 
          exprintdata->f.SparseHessianCompute(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity_pattern, exprintdata->hessparsity_row, exprintdata->hessparsity_col, hess, exprintdata->heswork);
 
-         for(size_t i = 0, j = 0; i < hess.size(); ++i)
-         {
-            // skip elements on upper-half part of matrix
-            if( exprintdata->hessparsity_col[i] > exprintdata->hessparsity_row[i] )
-               continue;
-            assert(exprintdata->hessparsity_col[i] == (size_t)exprintdata->getVarPos(exprintdata->hescolidxs[j]));
-            assert(exprintdata->hessparsity_row[i] == (size_t)exprintdata->getVarPos(exprintdata->hesrowidxs[j]));
-            exprintdata->hesvalues[j] = hess[i];
-            ++j;
-         }
+         // TODO change exprintdata->hesvalues into vector, so we can avoid the extra vector
+         BMScopyMemoryArray(exprintdata->hesvalues, hess.data(), exprintdata->hesnnz);
 
          // TODO hessparsity_row, hessparsity_col, hessparsity_pattern are no longer used by SparseHessianCompute after coloring has been computed, except for some asserts
          // TODO hessparsity is not used in this case
