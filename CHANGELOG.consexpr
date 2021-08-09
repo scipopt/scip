@@ -558,7 +558,7 @@ nlpi:
 - timing/nlpieval
 - nlpi/ipopt/autoiterlim
 - heuristics/subnlp/iterinit, heuristics/subnlp/ninitsolves, heuristics/subnlp/successrateexp
-- heuristics/subnlp/expectinfeas, heuristics/subnlp/relobjtol, heuristics/subnlp/presolveemphasis
+- heuristics/subnlp/expectinfeas, heuristics/subnlp/opttol, heuristics/subnlp/presolveemphasis
 - heuristics/subnlp/setcutoff
 
 ### Data structures and types
