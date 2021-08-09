@@ -1885,8 +1885,13 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
 
       SCIPdebugMessage("calling RevSparseHes\n");
 
-      vector<bool> s(1, true);
-      exprintdata->hessparsity = exprintdata->f.RevSparseHes(n, s);
+      // this was originally
+      //   vector<bool> s(1, true);
+      //   exprintdata->hessparsity = exprintdata->f.RevSparseHes(n, s);
+      // RevSparseHes is just calling RevSparseHesCase
+      // to avoid copying hessparsity, call RevSparseHesCase directly
+      exprintdata->hessparsity.clear();
+      exprintdata->f.RevSparseHesCase(true, false, n, vector<bool>(1, true), exprintdata->hessparsity);
 
       for( size_t i = 0; i < nn; ++i )
          if( exprintdata->hessparsity[i] )
