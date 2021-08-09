@@ -216,7 +216,6 @@ public:
    SCIP_Bool             hesconstant;        /**< whether Hessian is constant (because expr is at most quadratic) */
 
    // Hessian data in CppAD style: indices are 0..n-1 and elements on both lower and upper diagonal of matrix are considered
-   vector<bool>          hessparsity;        /**< dense sparsity pattern of Hessian as given by CppAD: n x n matrix with true iff nonzero */
    CppAD::local::internal_sparsity<bool>::pattern_type hessparsity_pattern;  /**< packed sparsity pattern of Hessian in CppAD-internal form */
    CppAD::vector<size_t> hessparsity_row;    /**< row indices of sparsity pattern of Hessian in CppAD-internal form */
    CppAD::vector<size_t> hessparsity_col;    /**< column indices of sparsity pattern of Hessian in CppAD-internal form */
@@ -1885,18 +1884,18 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
 
       // this was originally
       //   vector<bool> s(1, true);
-      //   exprintdata->hessparsity = exprintdata->f.RevSparseHes(n, s);
+      //   hessparsity = exprintdata->f.RevSparseHes(n, s);
       // RevSparseHes is just calling RevSparseHesCase
       // to avoid copying hessparsity, call RevSparseHesCase directly
-      exprintdata->hessparsity.clear();
-      exprintdata->f.RevSparseHesCase(true, false, n, vector<bool>(1, true), exprintdata->hessparsity);
+      vector<bool> hessparsity;
+      exprintdata->f.RevSparseHesCase(true, false, n, vector<bool>(1, true), hessparsity);
 
       // count number of hessian elements and setup hessparsity_pattern
       exprintdata->hessparsity_pattern.resize(0, 0);  // clear old data, if any
       exprintdata->hessparsity_pattern.resize(n, n);
       size_t hesnnz_full = 0;   // number of nonzeros in full matrix, that is, not only lower-diagonal
       for( size_t i = 0; i < nn; ++i )
-         if( exprintdata->hessparsity[i] )
+         if( hessparsity[i] )
          {
             size_t row = i / n;
             size_t col = i % n;
@@ -1921,7 +1920,7 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
       exprintdata->hessparsity_col.resize(hesnnz_full);
 
       for( size_t i = 0, j = 0, k = 0; i < nn; ++i )
-         if( exprintdata->hessparsity[i] )
+         if( hessparsity[i] )
          {
             size_t row = i / n;
             size_t col = i % n;
@@ -2041,7 +2040,6 @@ SCIP_RETCODE SCIPexprintHessian(
          exprintdata->f.SparseHessianCompute(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity_pattern, exprintdata->hessparsity_row, exprintdata->hessparsity_col, exprintdata->hesvalues, exprintdata->heswork);
 
          // TODO hessparsity_row, hessparsity_col, hessparsity_pattern are no longer used by SparseHessianCompute after coloring has been computed, except for some asserts
-         // TODO hessparsity is not used in this case
       }
    }
 
