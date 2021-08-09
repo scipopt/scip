@@ -51,7 +51,8 @@ struct SCIP_NlpParam
 {
    SCIP_Real             lobjlimit;          /**< lower objective limit (cutoff) */
    SCIP_Real             feastol;            /**< feasibility tolerance (maximal allowed absolute violation of constraints and variable bounds) */
-   SCIP_Real             relobjtol;          /**< relative objective tolerance */
+   SCIP_Real             opttol;             /**< optimality tolerance (maximal allowed absolute violation of optimality conditions) */
+   SCIP_Real             solvertol;          /**< solver-specific tolerance on accuracy, e.g., maximal violation of feasibility and optimiality in scaled problem */
    SCIP_Real             timelimit;          /**< time limit in seconds: use SCIP_REAL_MAX to use remaining time available for SCIP solve (limits/time - currenttime) */
    int                   iterlimit;          /**< iteration limit, use -1 to let NLPI choose */
    unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
@@ -81,7 +82,8 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #define SCIP_NLPPARAM_DEFAULT_INITS(scip)              \
    .lobjlimit   = SCIP_REAL_MIN,                       \
    .feastol     = SCIPfeastol(scip),                   \
-   .relobjtol   = SCIPdualfeastol(scip),               \
+   .opttol      = SCIPdualfeastol(scip),               \
+   .solvertol   = SCIPdualfeastol(scip),               \
    .timelimit   = SCIP_REAL_MAX,                       \
    .iterlimit   = INT_MAX,                             \
    .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL,     \
@@ -103,7 +105,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #else
 /** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
 static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
-   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE, FALSE, FALSE, __FILE__
+   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE, FALSE, FALSE, __FILE__
 };
 #define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif
@@ -116,14 +118,15 @@ static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
 #define SCIP_NLPPARAM_PRINT(param) \
   "lobjlimit = %g, "  \
   "feastol = %g, "    \
-  "relobjtol = %g, "  \
+  "opttol = %g, "     \
+  "solvertol = %g, "  \
   "timelimit = %g, "  \
   "iterlimit = %d, "  \
   "verblevel = %hd, " \
   "fastfail = %d, "   \
   "warmstart = %d, "  \
   "called by %s\n",   \
-  (param).lobjlimit, (param).feastol, (param).relobjtol, (param).timelimit, (param).iterlimit, \
+  (param).lobjlimit, (param).feastol, (param).opttol, (param).solvertol, (param).timelimit, (param).iterlimit, \
   (param).verblevel, (param).fastfail, (param).warmstart, (param).caller != NULL ? (param).caller : "unknown"
 
 /** NLP solution status */

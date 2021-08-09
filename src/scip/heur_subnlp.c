@@ -909,7 +909,8 @@ SCIP_RETCODE solveSubNLP(
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", calcIterLimit(scip, heurdata));
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
       .iterlimit = calcIterLimit(scip, heurdata),
-      .relobjtol = relobjtol,
+      .opttol = relobjtol,
+      .solvertol = relobjtol,
       .verblevel = (unsigned short)heurdata->nlpverblevel,
       .expectinfeas = heurdata->expectinfeas
    ) );  /*lint !e666*/

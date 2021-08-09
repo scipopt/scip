@@ -539,9 +539,14 @@ SCIP_RETCODE SCIPnlpiSolve(
       SCIPerrorMessage("Value %g for parameter feasibility tolerance cannot be negative\n", param->feastol);
       return SCIP_PARAMETERWRONGVAL;
    }
-   if( param->relobjtol < 0.0 )
+   if( param->opttol < 0.0 )
    {
-      SCIPerrorMessage("Value %g for parameter relative objective tolerance cannot be negative\n", param->relobjtol);
+      SCIPerrorMessage("Value %g for parameter optimality tolerance cannot be negative\n", param->opttol);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   if( param->solvertol < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter solver tolerance cannot be negative\n", param->solvertol);
       return SCIP_PARAMETERWRONGVAL;
    }
    if( param->timelimit < 0.0 )

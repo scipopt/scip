@@ -695,17 +695,14 @@ SCIP_RETCODE handleNlpParam(
 
    /* set optimality tolerance parameters in Ipopt
     *
-    * Sets dual_inf_tol, compl_inf_tol, and tol to relobjtol.
+    * Sets dual_inf_tol and compl_inf_tol to opttol and tol to solvertol.
     * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched for now, which means that if Ipopt has convergence problems, then
     * it can stop with a solution that is still feasible, but essentially without a proof of local optimality.
     * Note, that in this case we report only feasibility and not optimality of the solution (see ScipNLP::finalize_solution).
-    *
-    * TODO it makes sense to set tol (maximal errors in scaled problem) depending on user parameters somewhere
-    *      NLPI parameter RELOBJTOL seems better suited for this than FEASTOL, but maybe we need another one?
     */
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", param.relobjtol);
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", param.relobjtol);
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", param.relobjtol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", param.opttol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", param.opttol);
+   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", param.solvertol);
 
    /* Ipopt doesn't like a setting of exactly 0 for the max_*_time, so increase as little as possible in that case */
 #if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14

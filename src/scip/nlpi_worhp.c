@@ -930,8 +930,8 @@ SCIP_RETCODE handleNlpParam(
       nlpparam.iterlimit = nlpidata->useip ? 300 : 1000;
 
    par->TolFeas = nlpparam.feastol;
-   par->TolOpti = nlpparam.relobjtol;
-   par->TolComp = nlpparam.relobjtol;
+   par->TolOpti = nlpparam.opttol;
+   par->TolComp = nlpparam.opttol;
    par->Timeout = nlpparam.timelimit;
    par->MaxIter = nlpparam.iterlimit;
    par->NLPprint = nlpparam.verblevel - 1; /* Worhp verbosity levels: -1 = off, 0 = normal, 1 = debug, >1 = more debug */

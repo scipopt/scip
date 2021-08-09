@@ -1559,7 +1559,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    if( !success )
    {
       /* FilterSQP would crash if starting point cannot be evaluated, so give up */
-      SCIP_CALL( processSolveOutcome(data, problem, 7, param.feastol, param.relobjtol, NULL, NULL) );
+      SCIP_CALL( processSolveOutcome(data, problem, 7, param.feastol, param.opttol, NULL, NULL) );
       return SCIP_OKAY;
    }
 
@@ -1593,7 +1593,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
    /* initialize global variables from filtersqp */
    /* FilterSQP eps is tolerance for both feasibility and optimality, and also for trust-region radius, etc. */
-   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(param.feastol, param.relobjtol * OPTTOLFACTOR);
+   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(param.feastol, param.opttol * OPTTOLFACTOR);
    F77_FUNC(nlp_eps_inf,NLP_EPS_INF).infty = SCIPinfinity(scip);
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
@@ -1619,7 +1619,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       /* if ifail >= 8 (probably the workspace was too small), then retry with larger workspace
        * if ifail == 0 (local optimal), but absolute violation of KKT too large, then retry with small eps
        */
-      if( ifail < 8 && (ifail != 0 || problem->rstat[0] <= param.relobjtol) )
+      if( ifail < 8 && (ifail != 0 || problem->rstat[0] <= param.opttol) )
          break;
 
       if( param.verblevel > 0 )
@@ -1660,7 +1660,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
             break;
          }
 
-         epsfactor = param.relobjtol / problem->rstat[0];
+         epsfactor = param.opttol / problem->rstat[0];
          assert(epsfactor < 1.0); /* because of the if's above */
          epsfactor *= OPTTOLFACTOR;
 
@@ -1715,7 +1715,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    (void) pthread_mutex_unlock(&filtersqpmutex);
 #endif
 
-   SCIP_CALL( processSolveOutcome(data, problem, ifail, param.feastol, param.relobjtol, problem->x, problem->lam) );
+   SCIP_CALL( processSolveOutcome(data, problem, ifail, param.feastol, param.opttol, problem->x, problem->lam) );
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
