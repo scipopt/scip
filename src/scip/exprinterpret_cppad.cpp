@@ -2030,34 +2030,14 @@ SCIP_RETCODE SCIPexprintHessian(
       if( (size_t)exprintdata->hesnnz > nn/4 )
       {
          vector<double> hess = exprintdata->f.Hessian(exprintdata->x, 0);
-
-         // going through all n*n entries to fill hesvalues takes about about n*n time
-         // using the sparsity in hesrowidx/hescolidx takes nnz*2*log2(n) time, because getVarPos() takes about log2(n) time
-         // so we go through all n*n entries for denser matrices
-         if( nn < exprintdata->hesnnz*2*log2(n) )
-         {
-            int j = 0;
-            for( size_t i = 0; i < hess.size(); ++i )
-               if( exprintdata->hessparsity[i] )
-               {
-                  size_t row = i / n;
-                  size_t col = i % n;
-                  if( col > row )
-                     continue;
-                  exprintdata->hesvalues[j++] = hess[i];
-               }
-         }
-         else
-            for( int i = 0; i < exprintdata->hesnnz; ++i )
-               exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
-
+         for( int i = 0; i < exprintdata->hesnnz; ++i )
+            exprintdata->hesvalues[i] = hess[exprintdata->hessparsity_row[i] * n + exprintdata->hessparsity_col[i]];
       }
       else
       {
          // originally, this was hess = exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity),
          //    where hess was a dense nxn matrix as in the case above
          // to reuse the coloring of the sparsity pattern and use also a sparse matrix for the Hessian values, we now call SparseHessianCompute directly
-
          exprintdata->f.SparseHessianCompute(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity_pattern, exprintdata->hessparsity_row, exprintdata->hessparsity_col, exprintdata->hesvalues, exprintdata->heswork);
 
          // TODO hessparsity_row, hessparsity_col, hessparsity_pattern are no longer used by SparseHessianCompute after coloring has been computed, except for some asserts
