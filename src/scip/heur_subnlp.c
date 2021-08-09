@@ -47,6 +47,7 @@
 #include "scip/scip_nlpi.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
+#include "scip/scip_presol.h"
 #include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
@@ -97,7 +98,7 @@ struct SCIP_HeurData
    SCIP_Bool             keepcopy;           /**< whether to keep SCIP copy or to create new copy each time heuristic is applied */
    SCIP_Real             expectinfeas;       /**< when to tell NLP solver that an infeasible NLP is not unexpected */
 
-   SCIP_Longint          iterused;           /**< number of iterations used so far */
+   SCIP_Longint          iterused;           /**< number of iterations used so far (+ number of heuristic runs + number of presolve runs in subscip) */
    SCIP_Longint          iterusedokay;       /**< number of iterations used so far when NLP stopped with status okay */
    SCIP_Longint          iterusediterlim;    /**< maximal number of iterations used when NLP stopped due to iteration limit */
    int                   nnlpsolves;         /**< number of NLP solves */
@@ -656,6 +657,13 @@ SCIP_RETCODE solveSubNLP(
    SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
    SCIP_CALL( SCIPpresolve(heurdata->subscip) );
+
+   /* count one presolve round as on NLP iteration for now
+    * plus one extra for all the setup cost
+    * this is mainly to avoid that the primal heuristics runs all the time on instances that are solved in the subscip-presolve
+    */
+   heurdata->iterused += 1 + SCIPgetNPresolRounds(scip);
+
    if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED )
    {
       /* presolve probably found the subproblem infeasible */
