@@ -210,17 +210,17 @@ public:
    vector<atomic_userexpr*> userexprs;       /**< vector of atomic_userexpr that are created during eval() and need to be kept as long as the tape exists */
    SCIP_EXPRINTCAPABILITY userevalcapability;/**< (intersection of) capabilities of evaluation routines of user expressions */
 
-   int*                  hesrowidxs;         /**< row indices of Hessian sparsity */
-   int*                  hescolidxs;         /**< column indices of Hessian sparsity */
+   int*                  hesrowidxs;         /**< row indices of Hessian sparsity: indices are the variables used in expression */
+   int*                  hescolidxs;         /**< column indices of Hessian sparsity: indices are the variables used in expression */
    SCIP_Real*            hesvalues;          /**< values of Hessian */
    int                   hesnnz;             /**< number of nonzeros in Hessian */
    SCIP_Bool             hesconstant;        /**< whether Hessian is constant (because expr is at most quadratic) */
 
-   // Hessian data in CppAD style
-   vector<bool>          hessparsity;        /**< dense sparsity pattern of Hessian as given by CppAD */
-   CppAD::local::internal_sparsity<bool>::pattern_type hessparsity_pattern;  /**< sparse sparsity pattern of Hessian in CppAD-internal form */
-   CppAD::vector<size_t> hessparsity_row;   /**< row indices of sparsity pattern of Hessian in CppAD-internal form */
-   CppAD::vector<size_t> hessparsity_col;   /**< column indices of sparsity pattern of Hessian in CppAD-internal form */
+   // Hessian data in CppAD style: indices are 0..n-1 and elements on both lower and upper diagonal of matrix are considered
+   vector<bool>          hessparsity;        /**< dense sparsity pattern of Hessian as given by CppAD: n x n matrix with true iff nonzero */
+   CppAD::local::internal_sparsity<bool>::pattern_type hessparsity_pattern;  /**< packed sparsity pattern of Hessian in CppAD-internal form */
+   CppAD::vector<size_t> hessparsity_row;    /**< row indices of sparsity pattern of Hessian in CppAD-internal form */
+   CppAD::vector<size_t> hessparsity_col;    /**< column indices of sparsity pattern of Hessian in CppAD-internal form */
    CppAD::sparse_hessian_work heswork;       /**< work memory of CppAD for sparse Hessians */
 };
 
@@ -1914,8 +1914,9 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
          }
 
       // hessian sparsity in sparse form
-      // hesrowidxs,hescolidxs are nonzero entries in the lower-diagonal of the Hessian and are returned to the caller; indices are actual variable indices
-      // hessparsity_row,hessparsity_col are nonzero entries in the full Hessian and are used in SCIPexprintHessian(); indices are w.r.t. dimension of f
+      // hesrowidxs,hescolidxs are nonzero entries in the lower-diagonal of the Hessian and are returned to the caller; indices are variable indices as in expression
+      // hessparsity_row,hessparsity_col are nonzero entries in the full Hessian and are used in SCIPexprintHessian(); indices are 0..n-1 (n=dimension of f)
+      // TODO can we move the above-diagonal elements to the end of hessparsity_row/col, so we don't have to skip over them in exprintHessian?
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
 
@@ -2007,10 +2008,9 @@ SCIP_RETCODE SCIPexprintHessian(
 
    size_t n = exprintdata->varidxs.size();
 
-   // eval hessian; if constant, then only if not evaluated yet (hesvalues is NULL
+   // eval hessian; if constant, then only if not evaluated yet (hesvalues is NULL)
    if( n > 0 && (!exprintdata->hesconstant || exprintdata->hesvalues == NULL) )
    {
-      vector<double> hess;
       size_t nn = n*n;
 
       if( exprintdata->hesvalues == NULL )
@@ -2022,38 +2022,53 @@ SCIP_RETCODE SCIPexprintHessian(
       // because it seems faster than the sparse Hessian if there isn't actually much sparsity
       // these use reverse mode
       if( (size_t)exprintdata->hesnnz > nn/4 )
-         hess = exprintdata->f.Hessian(exprintdata->x, 0);
-      else
       {
-         //hess = exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity);
-         vector<double> H(exprintdata->hessparsity_row.size());
+         vector<double> hess = exprintdata->f.Hessian(exprintdata->x, 0);
 
-         // TODO avoid dense hess
-         hess.resize(nn);
-         exprintdata->f.SparseHessianCompute(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity_pattern, exprintdata->hessparsity_row, exprintdata->hessparsity_col, H, exprintdata->heswork);
-         for(size_t i = 0; i < H.size(); ++i)
-            hess[exprintdata->hessparsity_row[i] * n + exprintdata->hessparsity_col[i]] = H[i];
-      }
+         // going through all n*n entries to fill hesvalues takes about about n*n time
+         // using the sparsity in hesrowidx/hescolidx takes nnz*2*log2(n) time, because getVarPos() takes about log2(n) time
+         // so we go through all n*n entries for denser matrices
+         if( nn < exprintdata->hesnnz*2*log2(n) )
+         {
+            int j = 0;
+            for( size_t i = 0; i < hess.size(); ++i )
+               if( exprintdata->hessparsity[i] )
+               {
+                  size_t row = i / n;
+                  size_t col = i % n;
+                  if( col > row )
+                     continue;
+                  exprintdata->hesvalues[j++] = hess[i];
+               }
+         }
+         else
+            for( int i = 0; i < exprintdata->hesnnz; ++i )
+               exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
 
-      // going through all n*n entries to fill hesvalues takes about about n*n time
-      // using the sparsity in hesrowidx/hescolidx takes nnz*2*log2(n) time, because getVarPos() takes about log2(n) time
-      // so we go through all n*n entries for denser matrices
-      if( nn < exprintdata->hesnnz*2*log2(n) )
-      {
-         int j = 0;
-         for( size_t i = 0; i < hess.size(); ++i )
-            if( exprintdata->hessparsity[i] )
-            {
-               size_t row = i / n;
-               size_t col = i % n;
-               if( col > row )
-                  continue;
-               exprintdata->hesvalues[j++] = hess[i];
-            }
       }
       else
-         for( int i = 0; i < exprintdata->hesnnz; ++i )
-            exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
+      {
+         // originally, this was hess = exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity),
+         //    where hess was a dense nxn matrix as in the case above
+         // to reuse the coloring of the sparsity pattern and use also a sparse matrix for the Hessian values, we now call SparseHessianCompute directly
+         vector<double> hess(exprintdata->hessparsity_row.size());
+
+         exprintdata->f.SparseHessianCompute(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity_pattern, exprintdata->hessparsity_row, exprintdata->hessparsity_col, hess, exprintdata->heswork);
+
+         for(size_t i = 0, j = 0; i < hess.size(); ++i)
+         {
+            // skip elements on upper-half part of matrix
+            if( exprintdata->hessparsity_col[i] > exprintdata->hessparsity_row[i] )
+               continue;
+            assert(exprintdata->hessparsity_col[i] == (size_t)exprintdata->getVarPos(exprintdata->hescolidxs[j]));
+            assert(exprintdata->hessparsity_row[i] == (size_t)exprintdata->getVarPos(exprintdata->hesrowidxs[j]));
+            exprintdata->hesvalues[j] = hess[i];
+            ++j;
+         }
+
+         // TODO hessparsity_row, hessparsity_col, hessparsity_pattern are no longer used by SparseHessianCompute after coloring has been computed, except for some asserts
+         // TODO hessparsity is not used in this case
+      }
    }
    else if( exprintdata->hesvalues == NULL )
    {
