@@ -260,7 +260,7 @@ private: // SV
 		      VectorBase&           jac             ,
 		      sparse_jacobian_work& work
 	);
-public:
+public: // SV made SparseHessianCompute public to allow reuse of work
 	// ------------------------------------------------------------
 	// combined sparse_list and sparse_pack version of
 	// SparseHessian (see doxygen in sparse_hessian.hpp)
