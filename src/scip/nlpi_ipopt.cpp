@@ -489,7 +489,7 @@ static
 SCIP_RETCODE ensureStartingPoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIPROBLEM*     problem,            /**< data structure of problem */
-   SCIP_Bool&            warmstart           /**< whether a warmstart has been request */
+   SCIP_Bool&            warmstart           /**< whether a warmstart has been requested */
    )
 {
    SCIP_Real lb, ub;
@@ -511,9 +511,10 @@ SCIP_RETCODE ensureStartingPoint(
    {
       // so we must have a primal solution to start from
       // if warmstart, then we also need to have a dual solution to start from
+      // if warmstart and primal solution is given by user, then also dual solution should have been given by user
       assert(problem->solprimalvalid);
       assert(problem->solprimals != NULL);
-      assert(!warmstart || problem->soldualgiven);
+      assert(!warmstart || !problem->solprimalgiven || problem->soldualgiven);
       assert(!warmstart || problem->soldualcons != NULL);
       assert(!warmstart || problem->soldualvarlb != NULL);
       assert(!warmstart || problem->soldualvarub != NULL);
