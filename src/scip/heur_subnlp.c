@@ -1617,7 +1617,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
    int            i;
-   SCIP_Real      cutoff;
+   SCIP_Real      cutoff = SCIPinfinity(scip);
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1634,7 +1634,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
 
    *result = SCIP_DIDNOTRUN;
 
-   /* not initialized */
+   /* if subSCIP could not be created, then do not run */
    if( heurdata->subscip == NULL )
       return SCIP_OKAY;
 
@@ -1711,19 +1711,20 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
             goto CLEANUP;
          }
       }
-   }
 
-   /* if there is already a solution, possibly add an objective cutoff in sub-SCIP */
-   if( SCIPgetNSols(scip) > 0 && heurdata->setcutoff )
-   {
-      cutoff = SCIPgetUpperbound(scip);
-      assert( !SCIPisInfinity(scip, cutoff) );
+      /* if there is already a solution, possibly add an objective cutoff in sub-SCIP
+       * we do this here only for problems with discrete variables, since the cutoff may be useful when presolving the subscip
+       * for the NLP solver, a cutoff is useless at best
+       */
+      if( SCIPgetNSols(scip) > 0 && heurdata->setcutoff )
+      {
+         cutoff = SCIPgetUpperbound(scip);
+         assert( !SCIPisInfinity(scip, cutoff) );
 
-      SCIP_CALL( SCIPsetObjlimit(heurdata->subscip, cutoff) );
-      SCIPdebugMsg(scip, "set objective limit %g\n", cutoff);
+         SCIP_CALL( SCIPsetObjlimit(heurdata->subscip, cutoff) );
+         SCIPdebugMsg(scip, "set objective limit %g\n", cutoff);
+      }
    }
-   else
-      cutoff = SCIPinfinity(scip);
 
    /* solve the subNLP and try to add solution to SCIP */
    SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, resultsol) );
