@@ -7999,7 +7999,7 @@
  */
 
 /**@defgroup PricerIncludes Inclusion methods
-* @ingroup PUBLICPLUGINAPI
+* @ingroup PRICERS
 * @brief methods to include specific pricers into \SCIP
 *
 * This module contains methods to include specific pricers into \SCIP.
