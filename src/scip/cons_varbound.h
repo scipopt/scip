@@ -44,7 +44,7 @@ extern "C" {
 /** creates the handler for variable bound constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
- * */
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */

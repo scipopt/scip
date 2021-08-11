@@ -311,10 +311,6 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
 
 /**@} */
 
-/**@name Interface methods
- *
- * @{
- */
 
 /** creates the dual fixing propagator and includes it in SCIP */
 SCIP_RETCODE SCIPincludePropDualfix(
@@ -332,5 +328,3 @@ SCIP_RETCODE SCIPincludePropDualfix(
 
    return SCIP_OKAY;
 }
-
-/**@} */
