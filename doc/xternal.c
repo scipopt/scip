@@ -7459,19 +7459,9 @@
  * @brief methods to initiate and conduct LP diving
  */
 
-/**@defgroup PublicConflictMethods Conflict Analysis
- * @ingroup PublicSolveMethods
- * @brief public methods for conflict analysis
- */
-
 /**@defgroup PublicNLPMethods NLP Relaxation
  * @ingroup PublicSolveMethods
  * @brief methods for the nonlinear relaxation
- */
-
-/**@defgroup PublicExpressionTreeMethods Expression (Tree)
- * @ingroup PublicNLPMethods
- * @brief methods for expressions and expression trees
  */
 
 /**@defgroup PublicNLRowMethods Nonlinear Rows
@@ -7482,6 +7472,11 @@
 /**@defgroup PublicNLPDiveMethods NLP Diving
  * @ingroup PublicNLPMethods
  * @brief methods to initiate and conduct NLP Diving
+ */
+
+/**@defgroup PublicConflictMethods Conflict Analysis
+ * @ingroup PublicSolveMethods
+ * @brief public methods for conflict analysis
  */
 
 /**@defgroup PublicBranchingMethods Branching
