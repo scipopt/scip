@@ -197,6 +197,12 @@ SCIP_RETCODE freeSubSCIP(
    heurdata->nsubvars = 0;
    heurdata->nvars = 0;
 
+   /* add NLP solve statistics from subscip to main SCIP, so they show up in final statistics
+    * for non-continuous problems, we did this after each solve
+    */
+   if( heurdata->continuous )
+      SCIPmergeNLPIStatistics(heurdata->subscip, scip);
+
    /* free sub-SCIP */
    SCIP_CALL( SCIPfree(&heurdata->subscip) );
 
@@ -1409,14 +1415,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
 
    if( heurdata->subscip != NULL )
    {
-      if( heurdata->continuous )
-      {
-         /* add NLP solve statistics from subscip to main SCIP, so they show up in final statistics
-          * for non-continuous problems, we did this after each solve
-          */
-         SCIPmergeNLPIStatistics(heurdata->subscip, scip);
-      }
-
       SCIP_CALL( freeSubSCIP(scip, heurdata) );
    }
 
