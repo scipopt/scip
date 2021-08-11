@@ -7689,11 +7689,6 @@
  * @brief methods for concurrent solver type plugins
  */
 
-/**@defgroup PublicNLPInterfaceMethods NLP relaxation
- * @ingroup PluginManagementMethods
- * @brief  methods for the management of NLP relaxation
- */
-
 /**@defgroup PublicNLPIInterfaceMethods NLP solver interface
  * @ingroup PluginManagementMethods
  * @brief  methods for the management of NLP solver interfaces
