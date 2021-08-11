@@ -7413,28 +7413,6 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    return SCIP_OKAY;
 }
 
-/**@addtogroup CONSHDLRS
- *
- * @{
- *
- * @name Indicator Constraints
- *
- * @{
- *
- * An indicator constraint is given by a binary variable \f$z\f$ and an inequality \f$a^T x \leq
- * b\f$. It states that if \f$z = 1\f$ then \f$a^T x \leq b\f$ holds.
- *
- * This constraint is handled by adding a slack variable \f$s:\; a^T x - s \leq b\f$ with \f$s \geq
- * 0\f$. The constraint is enforced by fixing \f$s\f$ to 0 if \f$z = 1\f$.
- *
- * @note The constraint only implements an implication not an equivalence, i.e., it does not ensure
- * that \f$z = 1\f$ if \f$a^T x \leq b\f$ or equivalently if \f$s = 0\f$ holds.
- *
- * This constraint is equivalent to a linear constraint \f$a^T x - s \leq b\f$ and an SOS1 constraint on
- * \f$z\f$ and \f$s\f$ (at most one should be nonzero). In the indicator context we can, however,
- * separate more inequalities.
- */
-
 /** creates and captures an indicator constraint
  *
  *  @note @a binvar is checked to be binary only later. This enables a change of the type in
