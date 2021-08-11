@@ -92,6 +92,7 @@ struct SCIP_HeurData
 
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
    SCIP_Real             opttol;             /**< optimality tolerance to use for NLP solves (0: use a tolerance that depends on current gap) */
+   SCIP_Real             feastolfactor;      /**< factor on SCIP feasibility tolerance for NLP solves if discrete vars are present */
    int                   maxpresolverounds;  /**< limit on number of presolve rounds in sub-SCIP */
    int                   presolveemphasis;   /**< presolve emphasis in sub-SCIP */
    SCIP_Bool             setcutoff;          /**< whether to set cutoff in sub-SCIP to current primal bound */
@@ -996,11 +997,14 @@ SCIP_RETCODE solveSubNLP(
    else if( heurdata->nnlpsolvesokay > heurdata->ninitsolves && heurdata->nnlpsolvesinfeas > heurdata->expectinfeas * heurdata->nnlpsolvesokay )
       expectinfeas = TRUE;
 
-   /* let the NLP solver do its magic */
+   /* let the NLP solver do its magic
+    * we use a possibly tighter feastol if the NLP is a (presolved) subproblem of a MINLP/CIP to reduce the risk that aggregated variable will be out of bounds
+    */
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", calcIterLimit(scip, heurdata));
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
       .iterlimit = calcIterLimit(scip, heurdata),
       .opttol = opttol,
+      .feastol = (heurdata->continuous ? 1.0 : heurdata->feastolfactor) * SCIPfeastol(scip),
       .verblevel = (unsigned short)heurdata->nlpverblevel,
       .expectinfeas = expectinfeas
    ) );  /*lint !e666*/
@@ -1650,6 +1654,10 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/opttol",
          "absolute optimality tolerance to use for NLP solves (0: use a tolerance that depends on current gap)",
          &heurdata->opttol, FALSE, SCIPdualfeastol(scip), 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/feastolfactor",
+         "factor on SCIP feasibility tolerance for NLP solves if discrete variables are present",
+         &heurdata->feastolfactor, FALSE, 1.0, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxpresolverounds",
          "limit on number of presolve rounds in sub-SCIP (-1 for unlimited, 0 for no presolve)",
