@@ -2472,7 +2472,7 @@ SCIP_RETCODE reversePropQueue(
  *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
  *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
  *
- *  @TODO should we distinguish between expressions where activity information is used for separation and those where not,
+ *  TODO should we distinguish between expressions where activity information is used for separation and those where not,
  *    e.g., try less to propagate on convex constraints?
  */
 static

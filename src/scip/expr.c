@@ -168,8 +168,6 @@ SCIP_RETCODE quadDetectGetQuadexprterm(
    return SCIP_OKAY;
 }
 
-/** @} */
-
 
 /** evaluate and forward-differentiate expression
  *

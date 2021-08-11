@@ -743,7 +743,7 @@ SCIP_EXPR* SCIPexpriterRestartDFS(
 
 /** specifies in which stages to stop a DFS iterator
  *
- * @param stopstages should be a bitwise OR of different SCIP_EXPRITER_STAGE values
+ * Parameter stopstages should be a bitwise OR of different SCIP_EXPRITER_STAGE values
  *
  * If the current stage is not one of the stopstages, then the iterator will be moved on.
  */
