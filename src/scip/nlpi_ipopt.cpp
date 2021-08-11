@@ -1330,7 +1330,7 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
       BMScopyMemoryArray(problem->soldualcons, consdualvalues, ncons);
 
       assert((problem->soldualvarlb == NULL) == (problem->soldualvarub == NULL));
-      if( problem->soldualvarlb != NULL )
+      if( problem->soldualvarlb == NULL )
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->soldualvarlb, nvars) );
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->soldualvarub, nvars) );
