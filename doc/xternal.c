@@ -7561,11 +7561,6 @@
  * @see \ref MEMORY  "Using the memory functions of SCIP" for more information
  */
 
-/**@defgroup PublicNonlinearMethods Nonlinear Data
- * @ingroup MiscellaneousMethods
- * @brief methods for nonlinear data
- */
-
 /**@defgroup PublicTimingMethods Timing
  * @ingroup MiscellaneousMethods
  * @brief  methods for timing
