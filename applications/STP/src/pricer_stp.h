@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer_stp.h
- * @ingroup PRICERS
  * @brief  stp variable pricer
  * @author Daniel Rehfeldt
  */
