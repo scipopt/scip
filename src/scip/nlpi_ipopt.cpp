@@ -612,7 +612,7 @@ SCIP_RETCODE handleNlpParam(
 #endif
 
    // disable acceptable-point heuristic iff fastfail is completely off
-   // it seems useful to have Ipopt stop when it obviously doesn't make progress (like one of the NLPs in the bendersqp ctest)
+   // by default (fastfail=conservative), it seems useful to have Ipopt stop when it obviously doesn't make progress (like one of the NLPs in the bendersqp ctest)
    if( param.fastfail == SCIP_NLPPARAM_FASTFAIL_OFF )
       (void) nlpiproblem->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
    else
