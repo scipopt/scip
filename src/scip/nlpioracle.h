@@ -207,7 +207,7 @@ char** SCIPnlpiOracleGetVarNames(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
-/** indicates whether variable appear nonlinear in any objective or constraint */
+/** indicates whether variable appears nonlinear in any objective or constraint */
 SCIP_EXPORT
 SCIP_Bool SCIPnlpiOracleIsVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
