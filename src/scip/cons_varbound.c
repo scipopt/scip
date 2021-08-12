@@ -5082,11 +5082,6 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
 /**@} */
 
 
-/**@name Interface methods
- *
- * @{
- */
-
 /** creates the handler for variable bound constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -5483,5 +5478,3 @@ SCIP_RETCODE SCIPcleanupConssVarbound(
 
    return SCIP_OKAY;
 }
-
-/**@} */

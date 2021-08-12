@@ -1989,7 +1989,7 @@ SCIP_RETCODE SCIPeventfilterDel(
       filterpos = eventfilterSearch(eventfilter, eventtype, eventhdlr, eventdata);
    if( filterpos == -1 )
    {
-      SCIPerrorMessage("no event for event handler %p with data %p and event mask 0x%lx found in event filter %p\n",
+      SCIPerrorMessage("no event for event handler %p with data %p and event mask %" SCIP_EVENTTYPE_FORMAT " found in event filter %p\n",
          (void*)eventhdlr, (void*)eventdata, eventtype, (void*)eventfilter);
       return SCIP_INVALIDDATA;
    }

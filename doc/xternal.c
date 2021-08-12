@@ -7933,16 +7933,6 @@
  * \ref EXPRINT "here".
  */
 
-/**@defgroup ExprintIncludes Inclusion methods
- * @ingroup EXPRINTS
- * @brief methods to include specific expression interpreters into \SCIP
- *
- * This module contains methods to include specific expression interpreters into \SCIP.
- *
- * @note All default plugins can be included at once (including all default expression interpreters) using SCIPincludeDefaultPlugins()
- *
- */
-
 /**@defgroup FileReaderIncludes Inclusion methods
  * @ingroup FILEREADERS
  * @brief methods to include specific file readers into \SCIP
@@ -8045,7 +8035,7 @@
  */
 
 /**@defgroup PricerIncludes Inclusion methods
-* @ingroup PUBLICPLUGINAPI
+* @ingroup PRICERS
 * @brief methods to include specific pricers into \SCIP
 *
 * This module contains methods to include specific pricers into \SCIP.

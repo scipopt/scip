@@ -3095,11 +3095,6 @@ SCIP_DECL_CONFLICTFREE(conflictFreeBounddisjunction)
 
 /**@} */
 
-/**@name Interface methods
- *
- * @{
- */
-
 /** creates the handler for bound disjunction constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP*                 scip                /**< SCIP data structure */
@@ -3435,5 +3430,3 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
 
    return consdata->bounds;
 }
-
-/**@} */

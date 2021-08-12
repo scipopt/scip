@@ -2162,7 +2162,7 @@ SCIP_RETCODE doSeparation(
    SCIP_SOL*             sol,
    SCIP_RESULT*          result,
    SCIP_Bool             allowlocal,
-   int                   depth               /**< current depth */
+   int                   depth               /* current depth */
    )
 {
    int i;
