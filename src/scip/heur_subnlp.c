@@ -1529,7 +1529,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
     * we make it depending on the current number of processed nodes
     */
    itercontingent = heurdata->nodesfactor * (SCIPgetNNodes(scip) + heurdata->nodesoffset);
-#ifndef SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
    /* weight by previous success of heuristic if we had some nlp solves already
     * require at least ninitsolves many NLP solves that either went okay or stopped due to some difficulties in the NLP solver
     * ninitsolves many okay solves are required to get an iterlimit that could be much smaller than iterinit, so if we are still
