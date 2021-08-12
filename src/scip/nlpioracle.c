@@ -234,7 +234,7 @@ static
 SCIP_RETCODE updateVariableCounts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< oracle data structure */
-   int                   factor,             /**< whether to add (factor=1) or remove (factor=1) variable counts */
+   int                   factor,             /**< whether to add (factor=1) or remove (factor=-1) variable counts */
    int                   nlinidxs,           /**< number of linear indices */
    const int*            linidxs,            /**< indices of variables in linear part */
    SCIP_EXPR*            expr                /**< expression */
