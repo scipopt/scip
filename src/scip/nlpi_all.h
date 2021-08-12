@@ -14,9 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_all.h
- * @brief   ALL NLP interface
  * @brief   NLP interface that uses all available NLP interfaces
  * @author  Benjamin Mueller
+ * @ingroup NLPIS
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -30,21 +30,16 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLPIS
- *
- * @{
- */
-
 /** create solver interface for the solver "All" and includes it into SCIP, if at least 2 NLPIs have already been included
  *
  * This method should be called after all other NLP solver interfaces have been included.
+ *
+ * @ingroup NLPIIncludes
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlpSolverAll(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
-/**@} */
 
 #ifdef __cplusplus
 }

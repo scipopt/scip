@@ -34,15 +34,18 @@
 extern "C" {
 #endif
 
+/** create solver interface for Xyz solver and includes it into SCIP
+ *
+ * @ingroup NLPIIncludes
+ */
+SCIP_RETCODE SCIPincludeNlpSolverXyz(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@addtogroup NLPIS
  *
  * @{
  */
-
-/** create solver interface for Xyz solver and includes it into SCIP */
-SCIP_RETCODE SCIPincludeNlpSolverXyz(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** @} */
 

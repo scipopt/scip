@@ -31,17 +31,20 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLPIS
+/** create solver interface for Worhp solver and includes it into SCIP, if Worhp is available
  *
- * @{
+ * @ingroup NLPIIncludes
  */
-
-/** create solver interface for Worhp solver and includes it into SCIP, if Worhp is available */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlpSolverWorhp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    );
+
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
 
 /** gets string that identifies Worhp (version number) */
 SCIP_EXPORT

@@ -7689,7 +7689,7 @@
  * @brief methods for concurrent solver type plugins
  */
 
-/**@defgroup PublicNLPIInterfaceMethods NLP solver interface
+/**@defgroup PublicNLPIInterfaceMethods NLP solver interfaces
  * @ingroup PluginManagementMethods
  * @brief  methods for the management of NLP solver interfaces
  */
