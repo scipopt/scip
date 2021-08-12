@@ -456,7 +456,7 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    int                   nvars               /**< number of variables in both variable arrays */
    );
 
-/** merges the statistics of NLPIs from a source SCIP into a target SCIP.
+/** merges the statistics of NLPIs from a source SCIP into a target SCIP
  *
  * The two SCIP instances should point to different SCIP instances.
  *
@@ -466,7 +466,8 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
 SCIP_EXPORT
 void SCIPmergeNLPIStatistics(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip          /**< target SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_Bool             reset               /**< whether to reset statistics in sourcescip */
    );
 
 /** translates a solution from a subscip to the main scip

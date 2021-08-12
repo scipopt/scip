@@ -1310,7 +1310,7 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    return SCIP_OKAY;
 }
 
-/** merges the statistics of NLPIs from a source SCIP into a target SCIP.
+/** merges the statistics of NLPIs from a source SCIP into a target SCIP
  *
  * The two SCIP instances should point to different SCIP instances.
  *
@@ -1319,7 +1319,8 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
  */
 void SCIPmergeNLPIStatistics(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 targetscip          /**< target SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_Bool             reset               /**< whether to reset statistics in sourcescip */
    )
 {
    int i;
@@ -1339,7 +1340,7 @@ void SCIPmergeNLPIStatistics(
          targetnlpi = SCIPsetFindNlpi(targetscip->set, SCIPnlpiGetName(sourcenlpi));
 
       if( targetnlpi != NULL )
-         SCIPnlpiMergeStatistics(targetnlpi, sourcenlpi);
+         SCIPnlpiMergeStatistics(targetnlpi, sourcenlpi, reset);
       else
       {
          SCIPdebugMsg(targetscip, "NLPI <%s> from source SCIP not available in target SCIP\n", SCIPnlpiGetName(sourcenlpi));

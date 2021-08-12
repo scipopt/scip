@@ -198,12 +198,6 @@ SCIP_RETCODE freeSubSCIP(
    heurdata->nsubvars = 0;
    heurdata->nvars = 0;
 
-   /* add NLP solve statistics from subscip to main SCIP, so they show up in final statistics
-    * for non-continuous problems, we did this after each solve
-    */
-   if( heurdata->continuous )
-      SCIPmergeNLPIStatistics(heurdata->subscip, scip);
-
    /* free sub-SCIP */
    SCIP_CALL( SCIPfree(&heurdata->subscip) );
 
@@ -1013,12 +1007,10 @@ SCIP_RETCODE solveSubNLP(
       SCIPgetNLPTermstat(heurdata->subscip), SCIPgetNLPSolstat(heurdata->subscip), SCIPgetNLPObjval(heurdata->subscip));
 
    /* add NLP solve statistics from subscip to main SCIP, so they show up in final statistics
-    * for continuous problem, where statistics are not reset between calls, we do the merge in EXITSOL once
+    * for continuous problem, we also ask to reset statistics, since we do not retransform subSCIP in the next run (which would reset all stats)
+    * (merging statistics once in exitsol is too late, since they may be printed before)
     */
-   if( !heurdata->continuous )
-   {
-      SCIPmergeNLPIStatistics(heurdata->subscip, scip);
-   }
+   SCIPmergeNLPIStatistics(heurdata->subscip, scip, heurdata->continuous);
 
    if( SCIPgetNLPTermstat(heurdata->subscip) >= SCIP_NLPTERMSTAT_OUTOFMEMORY )
    {
