@@ -1110,7 +1110,7 @@ SCIP_RETCODE solveSubNLP(
       else if( heurdata->nlpverblevel >= 1 )
       {
          SCIPinfoMessage(scip, NULL, "subnlp solution objval %e is above the primal bound %e\n",
-            SCIPgetNLPObjval(heurdata->subscip), SCIPgetUpperbound(heurdata->subscip));
+            SCIPgetNLPObjval(heurdata->subscip), SCIPgetUpperbound(scip));
       }
    }
    else
