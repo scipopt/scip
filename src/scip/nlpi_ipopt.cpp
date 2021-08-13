@@ -1008,6 +1008,15 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
 
+   /* when warmstarting, then reduce how much Ipopt modified the starting point
+    * TODO make these options available as SCIP parameters
+    */
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_bound_push", 1e-9);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_bound_frac", 1e-9);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_slack_bound_push", 1e-9);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_slack_bound_frac", 1e-9);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_mult_bound_push", 1e-9);
+
    /* apply user's given options file */
    assert(data->optfile != NULL);
    if( (*problem)->ipopt->Initialize(data->optfile) != Solve_Succeeded )
