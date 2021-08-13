@@ -1846,7 +1846,7 @@ SCIP_RETCODE SCIPincludeHeurPADM(
       "should linking constraints be assigned?", &heurdata->assignlinking, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/original",
-      "should the original problem be used?", &heurdata->original, FALSE, FALSE, NULL, NULL) );
+      "should the original problem be used?", &heurdata->original, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/timing",
       "should the heuristic run before or after the processing of the node? (0: before, 1: after, 2: both)",
