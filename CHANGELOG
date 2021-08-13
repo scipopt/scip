@@ -79,6 +79,7 @@ Interface changes
   add an activeone argument to specify whether the indicator constraint should be activated on 0 or 1.
 - added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
 - added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
+- added SCIPdecompGetNBorderVars() and SCIPdecompGetNBorderConss()
 
 ### Command line interface
 ### Interfaces to external software
