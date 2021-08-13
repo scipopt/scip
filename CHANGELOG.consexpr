@@ -12,6 +12,7 @@ Features
 - improve OBBT by only considering variables that are contained in at least one nonconvex expression that has an auxiliary variable
 - default parameter settings for NLP solves are now defined independently of the NLP solver
 - added table to print statistics on NLP solvers
+- Ipopt interfaces now supports warmstarts from a full primal/dual solution pair
 
 expressions:
 - removed support for expression types min and max for now, removed support for expression type sign
