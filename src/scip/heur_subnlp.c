@@ -1364,31 +1364,40 @@ SCIP_DECL_HEURFREE(heurFreeSubNlp)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+/** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
-{
+SCIP_DECL_HEURINIT(heurInitSubNlp)
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
-   SCIP_Bool runheur;
 
    assert(scip != NULL);
    assert(heur != NULL);
-
-   /* skip setting up sub-SCIP if heuristic is disabled */
-   if( SCIPheurGetFreq(heur) < 0 )
-      return SCIP_OKAY;
-
-   /* skip setting up sub-SCIP if we do not want to run the heuristic */
-   SCIP_CALL( runHeuristic(scip, &runheur) );
-   if( !runheur )
-      return SCIP_OKAY;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
 
-   /* reset solution found counter */
+   /* reset or initialize some flags and counters */
+   heurdata->triedsetupsubscip = FALSE;
+   heurdata->nseriousnlpierror = 0;
+   heurdata->iterused = 0;
+   heurdata->iterusedokay = 0;
+   heurdata->iterusediterlim = 0;
+   heurdata->nnlpsolves = 0;
+   heurdata->nnlpsolvesokay = 0;
+   heurdata->nnlpsolvesiterlim = 0;
+   heurdata->nnlpsolvesinfeas = 0;
    heurdata->nnlpsolfound = 0;
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
+{
+   assert(scip != NULL);
+   assert(heur != NULL);
 
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
    if( SCIPheurGetFreqofs(heur) == 0 )
@@ -1421,17 +1430,6 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
    }
 
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
-
-   /* reset some flags and counters */
-   heurdata->triedsetupsubscip = FALSE;
-   heurdata->nseriousnlpierror = 0;
-   heurdata->iterused = 0;
-   heurdata->iterusedokay = 0;
-   heurdata->iterusediterlim = 0;
-   heurdata->nnlpsolves = 0;
-   heurdata->nnlpsolvesokay = 0;
-   heurdata->nnlpsolvesiterlim = 0;
-   heurdata->nnlpsolvesinfeas = 0;
 
    return SCIP_OKAY;
 }
@@ -1547,7 +1545,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    {
       /* not enough iterations left to start NLP solver */
       SCIPdebugMsg(scip, "skip NLP heuristic; contingent=%f; iterlimit=%d; success ratio=%g\n",
-         itercontingent, calcIterLimit(scip, heurdata), pow((heurdata->nnlpsolfound + 1.0)/(heurdata->nnlpsolves + 1.0), heurdata->successrateexp));
+         itercontingent, calcIterLimit(scip, heurdata), pow((SCIPheurGetNSolsFound(heur) + 1.0) / (SCIPheurGetNCalls(heur) + 1.0), heurdata->successrateexp));
       return SCIP_OKAY;
    }
 
@@ -1611,6 +1609,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySubNlp) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSubNlp) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSubNlp) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolSubNlp) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSubNlp) );
 
