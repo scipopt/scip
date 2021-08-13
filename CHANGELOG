@@ -47,6 +47,8 @@ Build system
 
 ### Cmake
 
+- add -D_XOPEN_SOURCE=600 cflag for compilation on systems other than windows
+
 ### Makefile
 
 Fixed bugs
