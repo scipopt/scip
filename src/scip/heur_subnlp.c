@@ -1155,8 +1155,8 @@ SCIP_RETCODE solveSubNLP(
 
    SCIP_CALL( SCIPgetNLPStatistics(heurdata->subscip, &nlpstatistics) );
 
-   SCIPdebugMsg(scip, "NLP solver used %d iterations and %g seconds\n",
-      nlpstatistics.niterations, nlpstatistics.totaltime);
+   SCIPdebugMsg(scip, "NLP solver used %d iterations and %g seconds; violation cons %g, bounds %g\n",
+      nlpstatistics.niterations, nlpstatistics.totaltime, nlpstatistics.consviol, nlpstatistics.boundviol);
 
    heurdata->iterused += nlpstatistics.niterations;
    ++heurdata->nnlpsolves;
@@ -1209,7 +1209,9 @@ SCIP_RETCODE solveSubNLP(
    if( heurdata->continuous )
       return SCIP_OKAY;
 
-   /* TODO skip if current NLP solution violates by less than heurdata->feastolfactor * heurdata->feastol */
+   /* if solution is NLP-feasible for a tightened tolerance already, then there is no use in resolving with that tighter feastol */
+   if( MAX(nlpstatistics.consviol, nlpstatistics.boundviol) <= heurdata->feastolfactor * heurdata->feastol )
+      return SCIP_OKAY;
 
    /* let the NLP solver redo its magic
     * as iterlimit, we use the number of iterations it took for the first solve, or itermin
@@ -1234,8 +1236,8 @@ SCIP_RETCODE solveSubNLP(
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetNLPStatistics(heurdata->subscip, &nlpstatistics) );
-   SCIPdebugMsg(scip, "NLP solver used %d iterations and %g seconds\n",
-      nlpstatistics.niterations, nlpstatistics.totaltime);
+   SCIPdebugMsg(scip, "NLP solver used %d iterations and %g seconds; violation cons %g, bounds %g\n",
+      nlpstatistics.niterations, nlpstatistics.totaltime, nlpstatistics.consviol, nlpstatistics.boundviol);
 
    /* we account only the extra iterations for this unusual NLP solve, but don't add anything else to our statistics (nnlpsolved, etc) */
    heurdata->iterused += nlpstatistics.niterations;

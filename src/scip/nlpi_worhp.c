@@ -1590,6 +1590,8 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsWorhp)
    statistics->niterations = problem->lastniter;
    statistics->totaltime = problem->lasttime;
    statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
+   statistics->consviol = problem->wsp->FeasOrigMax;
+   statistics->boundviol = 0.0;
 
    return SCIP_OKAY;
 }  /*lint !e715*/

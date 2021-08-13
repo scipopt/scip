@@ -182,6 +182,8 @@ public:
    SCIP_Real*                  soldualvarlb; /**< dual solution values of variable lower bounds, if available */
    SCIP_Real*                  soldualvarub; /**< dual solution values of variable upper bounds, if available */
    SCIP_Real                   solobjval;    /**< objective function value in solution from last run */
+   SCIP_Real                   solconsviol;  /**< constraint violation of primal solution, if available */
+   SCIP_Real                   solboundviol; /**< variable bound violation of primal solution, if available */
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
@@ -192,7 +194,8 @@ public:
         solstat(SCIP_NLPSOLSTAT_UNKNOWN), termstat(SCIP_NLPTERMSTAT_OTHER),
         solprimalvalid(false), solprimalgiven(false), soldualvalid(false), soldualgiven(false),
         solprimals(NULL), soldualcons(NULL), soldualvarlb(NULL), soldualvarub(NULL),
-        solobjval(SCIP_INVALID), lastniter(-1), lasttime(-1.0)
+        solobjval(SCIP_INVALID), solconsviol(SCIP_INVALID), solboundviol(SCIP_INVALID),
+        lastniter(-1), lasttime(-1.0)
    { }
 };
 
@@ -469,6 +472,8 @@ void invalidateSolved(
    problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->termstat = SCIP_NLPTERMSTAT_OTHER;
    problem->solobjval = SCIP_INVALID;
+   problem->solconsviol = SCIP_INVALID;
+   problem->solboundviol = SCIP_INVALID;
    problem->lastniter = -1;
    problem->lasttime  = -1.0;
 }
@@ -1875,6 +1880,8 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsIpopt)
    statistics->niterations = problem->lastniter;
    statistics->totaltime = problem->lasttime;
    statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
+   statistics->consviol = problem->solconsviol;
+   statistics->boundviol = problem->solboundviol;
 
    return SCIP_OKAY;
 }
@@ -2726,9 +2733,12 @@ void ScipNLP::finalize_solution(
    nlpiproblem->soldualvalid = true;
    nlpiproblem->soldualgiven = false;
 
+   nlpiproblem->solconsviol = cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX);
+   nlpiproblem->solboundviol = cq->unscaled_curr_orig_bounds_violation(Ipopt::NORM_MAX);
+
    if( check_feasibility && cq != NULL )
    {
-      if( cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX) <= param.feastol )
+      if( nlpiproblem->solconsviol <= param.feastol )
          nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       else if( nlpiproblem->solstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
          nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;

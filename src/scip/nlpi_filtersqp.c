@@ -1796,6 +1796,8 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsFilterSQP)
    statistics->niterations = problem->niterations;
    statistics->totaltime = problem->solvetime;
    statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
+   statistics->consviol = problem->rstat[4];
+   statistics->boundviol = 0.0;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
