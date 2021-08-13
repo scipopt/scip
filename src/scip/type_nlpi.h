@@ -116,17 +116,17 @@ static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
  *    SCIPdebugMsg(scip, "calling NLP solver with parameters " SCIP_NLPPARAM_PRINT(param));
  */
 #define SCIP_NLPPARAM_PRINT(param) \
-  "lobjlimit = %g, "  \
-  "feastol = %g, "    \
-  "opttol = %g, "     \
-  "solvertol = %g, "  \
-  "timelimit = %g, "  \
-  "iterlimit = %d, "  \
-  "verblevel = %hd, " \
-  "fastfail = %d, "   \
-  "expectinfeas = %d,"\
-  "warmstart = %d, "  \
-  "called by %s\n",   \
+  "lobjlimit = %g, "    \
+  "feastol = %g, "      \
+  "opttol = %g, "       \
+  "solvertol = %g, "    \
+  "timelimit = %g, "    \
+  "iterlimit = %d, "    \
+  "verblevel = %hd, "   \
+  "fastfail = %d, "     \
+  "expectinfeas = %d, " \
+  "warmstart = %d, "    \
+  "called by %s\n",     \
   (param).lobjlimit, (param).feastol, (param).opttol, (param).solvertol, (param).timelimit, (param).iterlimit, \
   (param).verblevel, (param).fastfail, (param).expectinfeas, (param).warmstart, (param).caller != NULL ? (param).caller : "unknown"
 
