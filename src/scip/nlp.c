@@ -3040,8 +3040,11 @@ SCIP_RETCODE nlpSolve(
    assert(nlp->solver != NULL);
    assert(nlp->problem != NULL);
 
-   /* set initial guess, if available */
-   if( nlp->haveinitguess )
+   /* set initial guess, if available and warmstart hasn't been enabled
+    * when using the NLP, passing a dual solution with the initguess is not available at the moment (TODO),
+    * so a warmstart has to start from the last solution stored in the NLPI
+    */
+   if( nlp->haveinitguess && !nlpparam->warmstart )
    {
       /* @todo should we not set it if we had set it already? (initguessflushed...) */
       SCIP_Real* initialguess_solver;
