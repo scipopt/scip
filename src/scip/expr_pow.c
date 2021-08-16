@@ -1710,7 +1710,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       baseexponent = SCIPgetExponentExprPow(base);
       newexponent = baseexponent * exponent;
 
-      /* some checks (see POW8 definition in cons_expr.c) to make sure we don't loose an
+      /* some checks (see POW8 definition in scip_expr.h) to make sure we don't loose an
        * implicit SCIPexprGetChildren(base)[0] >= 0 constraint
        *
        * if newexponent is fractional, then we will still need expr >= 0

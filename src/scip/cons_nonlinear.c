@@ -11046,7 +11046,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
 
          /* if estimate didn't report branchscores explicitly, then consider branching on those children for
-          * which the following cleanup changes coefficients (we had/have this in cons_expr_sum this way)
+          * which the following cleanup changes coefficients (we had/have this in expr_sum this way)
           */
          if( !branchscoresuccess )
             SCIProwprepRecordModifications(rowprep);

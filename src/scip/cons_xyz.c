@@ -54,7 +54,7 @@
 /* TODO: (optional) enable linear or nonlinear constraint upgrading */
 #if 0
 #include "scip/cons_linear.h"
-#include "scip/cons_expr.h"
+#include "scip/cons_nonlinear.h"
 #define LINCONSUPGD_PRIORITY          0 /**< priority of the constraint handler for upgrading of linear constraints */
 #define NONLINCONSUPGD_PRIORITY       0 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 #endif

@@ -293,10 +293,10 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * Note, that the NLHDLR may also choose to separate for a relaxation of the mentioned sets,
  * e.g., expr <= upperbound(auxvar)  or  expr >= lowerbound(auxvar).
  * This is especially useful in situations where expr is the root expression of a constraint
- * and it is sufficient to satisfy lhs <= expr <= rhs. The cons_expr core ensures that
+ * and it is sufficient to satisfy lhs <= expr <= rhs. cons_nonlinear ensures that
  * lhs <= lowerbound(auxvar) and upperbound(auxvar) <= rhs.
  *
- * cons_expr core may call this callback first with allowweakcuts=FALSE and repeat later with
+ * cons_nonlinear may call this callback first with allowweakcuts=FALSE and repeat later with
  * allowweakcuts=TRUE, if it didn't succeed to enforce a solution without using weak cuts.
  * If in enforcement and the NLHDLR cannot enforce by separation or bound tightening, it should register
  * branching scores for those expressions where branching may help to compute tighter cuts in children.

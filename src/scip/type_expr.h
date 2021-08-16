@@ -455,7 +455,7 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *    \text{expr}^{\prime \prime}}(\text{SCIPexprGetEvalValue}(c))  D_u c.
  * \f]
  *
- * See Differentiation methods in cons_expr.h for more details.
+ * See Differentiation methods in scip_expr.h for more details.
  *
  *  - scip      : SCIP main data structure
  *  - expr      : expression to be evaluated
