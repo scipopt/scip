@@ -20,6 +20,8 @@ Interface changes
 ### Deleted and changed API methods
 
 - add missing SCIP_EXPORT to SCIPexprCreateQuadratic(), thanks to Liding Xu
+- When calling SCIPdelVar() in the SCIP_STAGE_PROBLEM stage, it is now documented as the user's responsibility to ensure
+  the variable is not present in any constraints. Otherwise, SCIPsolve() now returns SCIP_INVALIDDATA.
 
 ### New API functions
 
