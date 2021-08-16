@@ -14,11 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpioracle.h
- * @brief  methods to store an NLP and request function, gradient, and hessian values
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods to store an NLP and request function, gradient, and Hessian values
  * @author Stefan Vigerske
  *
- * Not a full NLPI, but implements a common part of many NLPIs that takes care
- * of the problem storage and function, gradient, and hessian evaluation.
+ * A common part of many NLPIs that takes care of the problem storage and function, gradient, and Hessian evaluation.
  */
 
 #ifndef __SCIP_NLPIORACLE_H__
@@ -26,6 +26,13 @@
 
 #include "scip/type_message.h"
 #include "scip/type_exprinterpret.h"
+
+/**@defgroup NLPIOracle NLPI Oracle
+ * @ingroup DataStructures
+ * @brief NLP representation used by various NLP solver interface implementations
+ *
+ *@{
+ */
 
 
 #ifdef __cplusplus
@@ -412,6 +419,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_Real*            initval,            /**< starting point values for variables or NULL */
    FILE*                 file                /**< file to print to, or NULL for standard output */
    );
+
+/** @} */
 
 #ifdef __cplusplus
 }
