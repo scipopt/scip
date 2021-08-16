@@ -58,7 +58,7 @@
 #define NLHDLR_ENFOPRIORITY            100
 
 /* properties of the quadratic nlhdlr statistics table */
-#define TABLE_NAME_QUADRATIC           "quadratic_nlhdlr_table"
+#define TABLE_NAME_QUADRATIC           "nlhdlr_quadratic"
 #define TABLE_DESC_QUADRATIC           "quadratic nlhdlr statistics table"
 #define TABLE_POSITION_QUADRATIC       14700                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_QUADRATIC SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -4038,7 +4038,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, TRUE,
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputQuadratic,
          NULL, TABLE_POSITION_QUADRATIC, TABLE_EARLIEST_STAGE_QUADRATIC) );
    return SCIP_OKAY;
