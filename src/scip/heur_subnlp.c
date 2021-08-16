@@ -1526,6 +1526,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolSubNlp)
    if( heurdata->subscip != NULL )
    {
       SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      heurdata->triedsetupsubscip = FALSE;
    }
 
    /* free start candidate */
