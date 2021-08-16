@@ -516,15 +516,14 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/event_globalbnd.o \
 			scip/event_estim.o \
 			scip/expr_abs.o \
-			scip/expr_cos.o \
 			scip/expr_entropy.o \
 			scip/expr_erf.o \
 			scip/expr_exp.o \
 			scip/expr_log.o \
 			scip/expr_pow.o \
 			scip/expr_product.o \
-			scip/expr_sin.o \
 			scip/expr_sum.o \
+			scip/expr_trig.o \
 			scip/expr_value.o \
 			scip/expr_var.o \
 			scip/expr_varidx.o \
