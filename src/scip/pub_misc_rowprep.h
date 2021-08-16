@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc_rowprep.h
- * @brief  preparation of a linear inequalities to become a SCIP_ROW
+ * @brief  preparation of a linear inequality to become a SCIP_ROW
+ * @ingroup PUBLICCOREAPI
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  * @author Felipe Serrano
@@ -30,6 +31,17 @@
 #include "scip/type_lp.h"
 #include "scip/type_sepa.h"
 #include "scip/type_var.h"
+
+/**@defgroup RowPrep Linear Inequality
+ * @ingroup DataStructures
+ * @brief a linear inequality that is prepared to become a SCIP_ROW
+ *
+ * This data structure helps to work around some limitations of SCIP_ROW's, in particular,
+ * that it rounds coefficients or sides close to integral values without the appropriate care.
+ * On the other hand, a SCIP_ROWPREP is limited to inequalities.
+ *
+ *@{
+ */
 
 /** creates a SCIP_ROWPREP datastructure
  *
@@ -360,5 +372,7 @@ SCIP_RETCODE SCIPgetRowprepRowSepa(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
    SCIP_SEPA*            sepa                /**< separator */
    );
+
+/** @} */
 
 #endif /* __SCIP_PUB_MISC_ROWPREP_H__ */
