@@ -95,9 +95,6 @@ Interface changes
 - deleted parameter "constraints/orbitope/usedynamicprop"
 - changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
 - deleted parameter "propagating/symmetry/disableofrestart"
-- Removed parameters for strongcg separator: separating/strongcg/..., i.e.,
-  maxrounds, maxroundsroot, maxsepacutsroot, maxsepacuts, dynamiccuts. One can control the
-  strongcg behavior throught the parameters of sepa_gomory.
 
 ### New parameters
 
