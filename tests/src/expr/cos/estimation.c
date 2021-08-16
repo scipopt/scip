@@ -19,10 +19,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/expr_cos.h"
+#include "scip/expr_trig.c"
 #include "../estimation.h"
 
-/* note: for the tests, SCIPcomputeInitialCutsTrig() does:
+/* note: for the tests, computeInitialCutsTrig() does:
  * 1. secant -> done if success
  * 2. left mid tangent (left secant) -> if fails tries left tangent
  * 3. right mid tangent (right secant) -> if fails tries right tangent
@@ -95,7 +95,7 @@ Test(separation, cosine_x,
    /*
     * test initial overestimation
     */
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
+   SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right secant */
@@ -111,7 +111,7 @@ Test(separation, cosine_x,
     * test initial underestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
+   SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left secant */
@@ -128,7 +128,7 @@ Test(separation, cosine_x,
     * test overestimation
     */
 
-   success = SCIPcomputeEstimatorsTrig(scip, expr, &lincoef, &linconst, -0.5, childlb, childub, FALSE);
+   success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -0.5, childlb, childub, FALSE);
    cr_expect(success);
    cr_expect_float_eq(linconst, -0.5 * sin(-0.5) + cos(-0.5), 1e-12);
    cr_expect_float_eq(lincoef, -sin(-0.5), 1e-12);
@@ -136,7 +136,7 @@ Test(separation, cosine_x,
    /*
     * test underestimation
     */
-   success = SCIPcomputeEstimatorsTrig(scip, expr, &lincoef, &linconst, 4.0, childlb, childub, TRUE);
+   success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 4.0, childlb, childub, TRUE);
    cr_expect(success);
    cr_expect_float_eq(linconst, 4.0 * sin(4.0) + cos(4.0), 1e-12);
    cr_expect_float_eq(lincoef, -sin(4.0), 1e-12);
@@ -144,7 +144,7 @@ Test(separation, cosine_x,
    /*
     * test point where solution tangent is not overestimating
     */
-   success = SCIPcomputeEstimatorsTrig(scip, expr, &lincoef, &linconst, 1.7, childlb, childub, TRUE);
+   success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 1.7, childlb, childub, TRUE);
    cr_expect(success);
 
    /* check lmidtangent */
@@ -206,7 +206,7 @@ Test(separation, cosine_y,
     * test initial overestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
+   SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right secant */
@@ -222,7 +222,7 @@ Test(separation, cosine_y,
     * test initial underestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
+   SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left secant */
@@ -239,7 +239,7 @@ Test(separation, cosine_y,
     * test overestimation
     */
 
-   success = SCIPcomputeEstimatorsTrig(scip, expr, &lincoef, &linconst, -5.7, childlb, childub, FALSE);
+   success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -5.7, childlb, childub, FALSE);
    cr_expect(success);
    cr_expect_float_eq(linconst, -5.7 * sin(-5.7) + cos(-5.7), 1e-12);
    cr_expect_float_eq(lincoef, -sin(-5.7), 1e-12);
@@ -248,7 +248,7 @@ Test(separation, cosine_y,
     * test underestimation
     */
 
-   success = SCIPcomputeEstimatorsTrig(scip, expr, &lincoef, &linconst, -3.5, childlb, childub, TRUE);
+   success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -3.5, childlb, childub, TRUE);
    cr_expect(success);
    cr_expect_float_eq(linconst, -3.5 * sin(-3.5) + cos(-3.5), 1e-12);
    cr_expect_float_eq(lincoef, -sin(-3.5), 1e-12);
@@ -257,7 +257,7 @@ Test(separation, cosine_y,
     * test point where solution tangent in not overestimating
     */
 
-   success = SCIPcomputeEstimatorsTrig(scip, expr, &lincoef, &linconst, -4.8, childlb, childub, FALSE);
+   success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -4.8, childlb, childub, FALSE);
    cr_expect(success);
    newtonpoint = -5.535897406992;
    cr_expect_float_eq(linconst, -3 * sin(newtonpoint) + cos(-3), 1e-11);
@@ -315,7 +315,7 @@ Test(separation, cosine_w,
     * test initial overestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
+   SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 1, "expected %d, got %d\n", 1, nreturned);
 
    /* check secant */
@@ -326,7 +326,7 @@ Test(separation, cosine_w,
     * test initial underestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
+   SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left tangent */
@@ -342,7 +342,7 @@ Test(separation, cosine_w,
     * test underestimation
     */
 
-   success = SCIPcomputeEstimatorsTrig(scip, expr, &lincoef, &linconst, 3.0, childlb, childub, TRUE);
+   success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 3.0, childlb, childub, TRUE);
    cr_expect(success);
    cr_expect_float_eq(linconst, 3 * sin(3) + cos(3), 1e-12);
    cr_expect_float_eq(lincoef, -sin(3), 1e-12);
@@ -351,7 +351,7 @@ Test(separation, cosine_w,
     * test point where solution tangent is not overestimating
     */
 
-   success = SCIPcomputeEstimatorsTrig(scip, expr, &lincoef, &linconst, 3.0, childlb, childub, FALSE);
+   success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 3.0, childlb, childub, FALSE);
    cr_expect(success);
    cr_expect_float_eq(linconst, -cos(4) + 2 * cos(2), 1e-12);
    cr_expect_float_eq(lincoef, 0.5 * (cos(4) - cos(2)), 1e-12);
