@@ -91,6 +91,8 @@ Interface changes
 
 - Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 7
 - deleted parameter "constraints/orbitope/usedynamicprop"
+- changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
+- deleted parameter "propagating/symmetry/disableofrestart"
 
 ### New parameters
 
@@ -212,6 +214,8 @@ Build system
 ------------
 
 ### Cmake
+
+- add -D_XOPEN_SOURCE=600 cflag for compilation on systems other than windows
 
 ### Makefile
 
