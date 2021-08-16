@@ -89,7 +89,7 @@ then
             MOUNTED=1
         else
             ((FAILED++))
-            echo "/optimi is not mounted yet, waiting 1 second"
+            echo "/optimi is not mounted yet, waiting 1 second" >> "${ERRFILE}"
             sleep 1
         fi
     done
@@ -119,6 +119,7 @@ echo "@05 ${TIMELIMIT}"                     >> "${OUTFILE}"
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
 EXECNAME="${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}"
 EXECNAME="${SRUN}${EXECNAME/RRTRACEFOLDER_PLACEHOLDER/${ERRFILE}}"
+echo "${EXECNAME}"            >> "${ERRFILE}"
 if test -e "${TMPFILE}"
 then
     eval "${EXECNAME}"            < "${TMPFILE}" 2>>"${ERRFILE}"  | tee -a "${OUTFILE}"

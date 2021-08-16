@@ -525,6 +525,11 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
+/** returns whether variable is not allowed to be aggregated */
+SCIP_Bool SCIPvarDoNotAggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
@@ -579,6 +584,11 @@ SCIP_RETCODE SCIPvarRemove(
 
 /** marks the variable to be deleted from the problem */
 void SCIPvarMarkDeleted(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** marks the variable to not to be maggregated */
+SCIP_RETCODE SCIPvarMarkDoNotAggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

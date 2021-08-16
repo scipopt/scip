@@ -1868,7 +1868,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       success = fclose(probdata->logfile);
       if( success != 0 )
       {
-         SCIPerrorMessage("An error occurred while closing file <%s>\n", probdata->logfile);
+         SCIPerrorMessage("An error occurred while closing logfile\n");
          return SCIP_FILECREATEERROR;
       }
 
@@ -1881,7 +1881,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
       int success = fclose(probdata->intlogfile);
       if( success != 0 )
       {
-         SCIPerrorMessage("An error occurred while closing file <%s>\n", probdata->intlogfile);
+         SCIPerrorMessage("An error occurred while closing intlogfile\n");
          return SCIP_FILECREATEERROR;
       }
 
@@ -3560,7 +3560,7 @@ SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
       success = fclose(probdata->logfile);
       if( success != 0 )
       {
-         SCIPerrorMessage("An error occurred while closing file <%s>\n", probdata->logfile);
+         SCIPerrorMessage("An error occurred while closing logfile\n");
          return SCIP_FILECREATEERROR;
       }
 

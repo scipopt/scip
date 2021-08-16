@@ -9,6 +9,11 @@ endfunction(setLibProperties)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
+set(CMAKE_C_EXTENSIONS OFF)
+
+if(NOT WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=600")
+endif()
 
 #configure the scipbuildflags.c source file for the build tree
 configure_file(${PROJECT_SOURCE_DIR}/src/scipbuildflags.c.in

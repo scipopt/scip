@@ -1673,7 +1673,7 @@ void computeBoundsX(
 
    /* apply signedpow(x+offset, n) >= lhs - (zcoef * zbnds).sup */
    z = (consdata->zcoef > 0.0 ? zbnds.sup : zbnds.inf);
-   if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, REALABS(z)) )
+   if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, REALABS(z)) )
    {
       bnd = consdata->lhs - PROPSIDETOL - consdata->zcoef * z - REALABS(consdata->zcoef) * PROPVARTOL;
       if( consdata->exponent == 2.0 )

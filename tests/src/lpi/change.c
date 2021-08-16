@@ -940,6 +940,8 @@ Test(change, testlpiwritestatemethods)
    /* Ideally we want to check in the same matter as in testlpiwritereadlpmethods, but this is
     * not possible at the moment because we have no names for columns and rows. */
    SCIP_CALL( SCIPlpiClear(lpi) );
+
+   remove("testlpiwriteandreadstate.bas");
 }
 
 /** test SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear */
@@ -985,4 +987,10 @@ Test(change, testlpiwritereadlpmethods)
    file = fopen("lpi_change_test_problem.lp", "r");
    file2 = fopen("lpi_change_test_problem2.lp", "r");
    cr_assert_file_contents_eq(file, file2);
+
+   fclose(file);
+   fclose(file2);
+
+   remove("lpi_change_test_problem.lp");
+   remove("lpi_change_test_problem2.lp");
 }

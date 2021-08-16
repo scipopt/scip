@@ -692,6 +692,7 @@ SCIP_RETCODE consdataCreate(
          }
       }
       assert(k >= 0);
+      assert(constant >= 0);
 
       (*consdata)->nvars = k;
 
@@ -706,10 +707,6 @@ SCIP_RETCODE consdataCreate(
       SCIPfreeBufferArray(scip, &weightsbuffer);
       SCIPfreeBufferArray(scip, &varsbuffer);
    }
-
-   /* capacity has to be greater or equal to zero */
-   assert(capacity >= 0);
-   assert(constant >= 0);
 
    (*consdata)->varssize = (*consdata)->nvars;
    (*consdata)->capacity = capacity - constant;
@@ -1122,19 +1119,19 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       if( weights[j] > capacity )
       {
          if( solitems != NULL )
-            nonsolitems[(*nnonsolitems)++] = items[j];
+            nonsolitems[(*nnonsolitems)++] = items[j]; /*lint !e413*/
       }
       /* item is not profitable */
       else if( profits[j] <= 0.0 )
       {
          if( solitems != NULL )
-            nonsolitems[(*nnonsolitems)++] = items[j];
+            nonsolitems[(*nnonsolitems)++] = items[j]; /*lint !e413*/
       }
       /* item always fits */
       else if( weights[j] == 0 )
       {
          if( solitems != NULL )
-            solitems[(*nsolitems)++] = items[j];
+            solitems[(*nsolitems)++] = items[j]; /*lint !e413*/
 
          if( solval != NULL )
             *solval += profits[j];
@@ -1180,7 +1177,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       for( j = nmyitems - 1; j >= 0; --j )
       {
          if( solitems != NULL )
-            solitems[(*nsolitems)++] = myitems[j];
+            solitems[(*nsolitems)++] = myitems[j]; /*lint !e413*/
 
          if( solval != NULL )
             *solval += myprofits[j];
@@ -1238,6 +1235,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       /* update solution information */
       if( solitems != NULL )
       {
+         assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
+
          solitems[(*nsolitems)++] = myitems[p];
          for( j = nmyitems - 1; j >= 0; --j )
          {
@@ -1268,6 +1267,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
          /* if all items would fit we had handled this case before */
          assert((SCIP_Longint) nmyitems > capacity);
+         assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
 
          /* take the first best items into the solution */
          for( i = capacity - 1; i >= 0; --i )
@@ -1345,6 +1345,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       if( solitems != NULL )
       {
          int l;
+
+         assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
 
          /* collect items */
          for( l = 0; l < j; ++l )
@@ -1463,6 +1465,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    /* update optimal solution by following the table */
    if( solitems != NULL )
    {
+      assert(nsolitems != NULL && nonsolitems != NULL && nnonsolitems != NULL);
       d = intcap - 1;
 
       SCIPdebugMsg(scip, "Fill the solution vector after solving exactly.\n");
@@ -11921,6 +11924,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
     * - all variables must be binary
     * - all coefficients must be integral
     * - exactly one of the sides must be infinite
+    * note that this includes the case of negative capacity, which has been
+    * observed to occur, e.g., when upgrading a conflict constraint
     */
    upgrade = (nposbin + nnegbin + nposimplbin + nnegimplbin == nvars)
       && (ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars)
@@ -13260,7 +13265,7 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
       consdata->varsdeleted = TRUE;
       break;
    default:
-      SCIPerrorMessage("invalid event type %x\n", SCIPeventGetType(event));
+      SCIPerrorMessage("invalid event type %" SCIP_EVENTTYPE_FORMAT "\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;
    }
 

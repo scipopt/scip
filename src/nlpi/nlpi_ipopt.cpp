@@ -47,6 +47,7 @@
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
 #endif
+#define IPOPT_DEPRECATED  // to avoid warnings about using functions that became deprecated in Ipopt 3.14
 #include "IpoptConfig.h"
 #include "IpIpoptApplication.hpp"
 #include "IpIpoptCalculatedQuantities.hpp"
@@ -71,7 +72,7 @@ using namespace Ipopt;
 #define NLPI_PRIORITY      1000              /**< priority */
 
 #ifdef SCIP_DEBUG
-#define DEFAULT_PRINTLEVEL J_WARNING         /**< default print level of Ipopt */
+#define DEFAULT_PRINTLEVEL J_ITERSUMMARY     /**< default print level of Ipopt */
 #else
 #define DEFAULT_PRINTLEVEL J_ERROR           /**< default print level of Ipopt */
 #endif
@@ -400,11 +401,11 @@ protected:
    {
       if( level == J_ERROR )
       {
-         SCIPmessagePrintError(str);
+         SCIPmessagePrintError("%s", str);
       }
       else
       {
-         SCIPmessagePrintInfo(messagehdlr, str);
+         SCIPmessagePrintInfo(messagehdlr, "%s", str);
       }
    }
 
@@ -622,6 +623,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->RegOptions()->AddStringOption2("store_intermediate", "whether to store the most feasible intermediate solutions", "no", "yes", "", "no", "", "useful when Ipopt looses a once found feasible solution and then terminates with an infeasible point");
    (*problem)->ipopt->Options()->SetIntegerValue("print_level", DEFAULT_PRINTLEVEL);
    /* (*problem)->ipopt->Options()->SetStringValue("print_timing_statistics", "yes"); */
+#ifdef SCIP_DEBUG
+   (*problem)->ipopt->Options()->SetStringValue("print_user_options", "yes");
+#endif
    (*problem)->ipopt->Options()->SetStringValue("mu_strategy", "adaptive");
    (*problem)->ipopt->Options()->SetIntegerValue("max_iter", DEFAULT_MAXITER);
    (*problem)->ipopt->Options()->SetNumericValue("nlp_lower_bound_inf", -data->infinity, false);
@@ -1148,7 +1152,9 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          }
 
 #ifdef SCIP_DEBUG
-         problem->ipopt->Options()->SetStringValue("derivative_test", problem->nlp->approxhessian ? "first-order" : "second-order");
+         // enabling the derivative tester leads to calling TNLP::get_starting_point() twice, which has undesired consequences if the starting point is generated randomly
+         // so we don't enable derivative tester if SCIP_DEBUG is defined for now
+         // problem->ipopt->Options()->SetStringValue("derivative_test", problem->nlp->approxhessian ? "first-order" : "second-order");
 #endif
 
          status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
@@ -2864,6 +2870,65 @@ void ScipNLP::finalize_solution(
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
          else if( nlpiproblem->lastsolstat != SCIP_NLPSOLSTAT_LOCINFEASIBLE )
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      }
+   }
+
+   if( nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE )
+   {
+      assert(lambda != NULL);
+      SCIP_Real tol;
+      nlpiproblem->ipopt->Options()->GetNumericValue("tol", tol, "");
+
+      // Jakobs paper ZR_20-20 says we should have lambda*g(x) + mu*h(x) > 0
+      //   if the NLP is min f(x) s.t. g(x) <= 0, h(x) = 0
+      // we check this here and change solution status to unknown if the test fails
+      bool infreasonable = true;
+      SCIP_Real infproof = 0.0;
+      for( int i = 0; i < m && infreasonable; ++i )
+      {
+         if( fabs(lambda[i]) < tol )
+            continue;
+         SCIP_Real side;
+         if( lambda[i] < 0.0 )
+         {
+            // lhs <= g(x) should be active
+            // in the NLP above, this should be lhs - g(x) <= 0 with negated dual
+            // so this contributes -lambda*(lhs-g(x)) = lambda*(g(x)-side)
+            side = SCIPnlpiOracleGetConstraintLhs(nlpiproblem->oracle, i);
+            if( side <= -SCIPnlpiOracleGetInfinity(nlpiproblem->oracle) )
+            {
+               SCIPdebugMessage("inconsistent dual, lambda = %g, but lhs = %g\n", lambda[i], side);
+               infreasonable = false;
+            }
+         }
+         else
+         {
+            // g(x) <= rhs should be active
+            // in the NLP above, this should be g(x) - rhs <= 0
+            // so this contributes lambda*(g(x)-rhs)
+            side = SCIPnlpiOracleGetConstraintRhs(nlpiproblem->oracle, i);
+            if( side >= SCIPnlpiOracleGetInfinity(nlpiproblem->oracle) )
+            {
+               SCIPdebugMessage("inconsistent dual, lambda = %g, but rhs = %g\n", lambda[i], side);
+               infreasonable = false;
+            }
+         }
+
+         // g(x) <= 0
+         infproof += lambda[i] * (g[i] - side);
+         // SCIPdebugMessage("cons %d lambda %g, slack %g\n", i, lambda[i], g[i] - side);
+      }
+      if( infreasonable )
+      {
+         SCIPdebugMessage("infproof = %g should be positive to be valid\n", infproof);
+         if( infproof <= 0.0 )
+            infreasonable = false;
+      }
+
+      if( !infreasonable )
+      {
+         // change status to say we don't know
+         nlpiproblem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
       }
    }
 }

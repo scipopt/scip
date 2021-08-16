@@ -519,7 +519,7 @@ SCIP_RETCODE findBoundaryPoint(
 
       /* find poisition of point: boundary, interior, exterior */
       SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, position) );
-      SCIPdebugMsg(scip, "Position: %d, lambda: %g\n", position, (ub + lb)/2.0);
+      SCIPdebugMsg(scip, "Position: %d, lambda: %g\n", *position, (ub + lb)/2.0);
 
       switch( *position )
       {

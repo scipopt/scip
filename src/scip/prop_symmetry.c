@@ -1183,7 +1183,7 @@ SCIP_RETCODE collectCoefficients(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matrhsidx), matrixdata->nmaxmatcoef, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matvaridx), matrixdata->nmaxmatcoef, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matcoef), matrixdata->nmaxmatcoef, newsize) );
-      SCIPdebugMsg(scip, "Resized matrix coefficients from %u to %d.\n", matrixdata->nmaxmatcoef, newsize);
+      SCIPdebugMsg(scip, "Resized matrix coefficients from %d to %d.\n", matrixdata->nmaxmatcoef, newsize);
       matrixdata->nmaxmatcoef = newsize;
    }
 
@@ -1346,7 +1346,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    int j;
    int p;
 
-   SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %u).\n", nperms);
+   SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %d).\n", nperms);
 
    /* set up dense row for permuted row */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &permrow, matrixdata->npermvars) );
@@ -2612,7 +2612,7 @@ SCIP_RETCODE determineSymmetry(
    if ( maxgenerators == 0 )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "-");
    else
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%u", maxgenerators);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%d", maxgenerators);
 
    /* display statistics: log10 group size, number of affected vars*/
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.1f", propdata->log10groupsize);
@@ -2741,8 +2741,8 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-   /* set up data for Schreier Sims constraints */
-   if ( propdata->sstenabled && ! propdata->ofenabled )
+   /* set up data for Schreier Sims constraints or subgroup detection */
+   if ( (propdata->sstenabled || propdata->detectsubgroups) && ! propdata->ofenabled )
    {
       int v;
 
@@ -4134,7 +4134,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int nusedperms;
       int ntrivialcolors = 0;
       int j;
-      SCIP_Bool useorbitope;
       int* lexorder = NULL;
       int nvarslexorder = 0;
       int maxnvarslexorder = 0;
@@ -4295,6 +4294,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          int k;
          SCIP_Bool isorbitope = TRUE;
          SCIP_Bool orbitopeadded = FALSE;
+         SCIP_Bool useorbitope;
 #ifdef SCIP_DEBUG
          SCIP_Bool binaffected = FALSE;
          SCIP_Bool intaffected = FALSE;

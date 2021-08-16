@@ -2072,7 +2072,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          SCIPfreeBufferArray(scip, &buffer);
       }
 
-      SCIPdialogMessage(scip, NULL, " (%d non-trivial feasible subtrees)\n", SCIPgetNCountedFeasSubtrees(scip));
+      SCIPdialogMessage(scip, NULL, " (%" SCIP_LONGINT_FORMAT " non-trivial feasible subtrees)\n", SCIPgetNCountedFeasSubtrees(scip));
 
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
