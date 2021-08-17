@@ -33,8 +33,10 @@ extern "C" {
 #include "scip/type_scip.h"
 #include "scip/type_nlhdlr.h"
 
-/**@name Nonlinear Handler Methods */
-/**@{ */
+/**@addtogroup PublicNlhdlrInterfaceMethods
+ *
+ * @{
+ */
 
 /** sets the copy handler callback of a nonlinear handler */
 SCIP_EXPORT

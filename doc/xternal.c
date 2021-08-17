@@ -7649,6 +7649,11 @@
  * @brief  methods for node selector plugin management
  */
 
+/**@defgroup PublicNlhdlrInterfaceMethods Nonlinear Handlers
+ * @ingroup PluginManagementMethods
+ * @brief  methods for the management of nonlinear handlers
+ */
+
 /**@defgroup PublicPresolverMethods Presolver
  * @ingroup PluginManagementMethods
  * @brief methods for presolver plugins
