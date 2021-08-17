@@ -2733,8 +2733,17 @@ void ScipNLP::finalize_solution(
    nlpiproblem->soldualvalid = true;
    nlpiproblem->soldualgiven = false;
 
-   nlpiproblem->solconsviol = cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX);
-   nlpiproblem->solboundviol = cq->unscaled_curr_orig_bounds_violation(Ipopt::NORM_MAX);
+   /* get violations if we did not stop because there was an evaluation error */
+   if( nlpiproblem->termstat != SCIP_NLPTERMSTAT_EVALERROR )
+   {
+      nlpiproblem->solconsviol = cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX);
+      nlpiproblem->solboundviol = cq->unscaled_curr_orig_bounds_violation(Ipopt::NORM_MAX);
+   }
+   else
+   {
+      nlpiproblem->solconsviol = SCIP_INVALID;
+      nlpiproblem->solboundviol = SCIP_INVALID;
+   }
 
    if( check_feasibility && cq != NULL )
    {
