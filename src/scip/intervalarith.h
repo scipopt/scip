@@ -33,6 +33,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicIntervalArithMethods Interval Arithmetics
+ * @ingroup MiscellaneousMethods
+ * @brief methods for interval arithmetics
+ *
+ * @{
+ */
+
 /** interval given by infimum and supremum */
 struct SCIP_Interval
 {
@@ -760,6 +767,8 @@ int SCIPintervalPropagateWeightedSum(
    SCIP_INTERVAL*        resultants,         /**< array to store propagated intervals, if any reduction is found at all (check return code and *infeasible) */
    SCIP_Bool*            infeasible          /**< buffer to store if propagation produced empty interval */
    );
+
+/** @} */
 
 #ifdef __cplusplus
 }
