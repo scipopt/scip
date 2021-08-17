@@ -7842,6 +7842,7 @@
  * formats.
  *
  * <table>
+ * <tr><td>\ref reader_bnd.h "BND format"</td> <td>for variable bounds</td></tr>
  * <tr><td>\ref reader_cip.h "CIP format"</td> <td>for SCIP's constraint integer programming format</td></tr>
  * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
  * <tr><td>\ref reader_diff.h "DIFF format"</td> <td>for reading a new objective function for mixed-integer programs</td></tr>
