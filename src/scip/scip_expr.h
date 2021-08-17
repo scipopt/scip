@@ -33,6 +33,11 @@ extern "C" {
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
 
+/**@addtogroup PublicExprMethods
+ *
+ * @{
+ */
+
 /**@name Expression Handler Methods */
 /**@{ */
 
@@ -392,6 +397,8 @@ SCIP_Longint SCIPgetExprNewSoltag(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/**@} */
+
 /** @name Differentiation methods
  * Gradients (Automatic differentiation Backward mode)
  * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
@@ -512,6 +519,10 @@ SCIP_RETCODE SCIPevalExprHessianDir(
    );
 
 /**@} */  /* end of differentiation methods */
+
+/**@name Expression Methods
+ * @{
+ */
 
 /** possibly reevaluates and then returns the activity of the expression
  *
@@ -768,6 +779,8 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    int*                  nvarexprs           /**< buffer to store the total number of variable expressions */
    );
 
+/** @} */
+
 /**@name Direct calls to exprhdlr callbacks
  * @{
  */
@@ -874,8 +887,6 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
 
 /** @} */
 
-/** @} */
-
 
 /**@name Expression Iterator Methods */
 /**@{ */
@@ -960,6 +971,8 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
    SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    SCIP_Bool             storeeigeninfo      /**< whether the eigenvalues and eigenvectors should be stored */
    );
+
+/** @} */
 
 /** @} */
 

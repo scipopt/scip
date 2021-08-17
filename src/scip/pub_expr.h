@@ -33,6 +33,13 @@ extern "C" {
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
 
+/**@defgroup PublicExprMethods Expressions
+ * @ingroup DataStructures
+ * @brief an algebraic expression used for nonlinear constraints and NLPs
+ *
+ *@{
+ */
+
 /**@name Expression Handler Methods */
 /**@{ */
 
@@ -955,6 +962,8 @@ SCIP_EXPORT
 const char* SCIPexprcurvGetName(
    SCIP_EXPRCURV         curv                /**< curvature */
    );
+
+/**@} */
 
 /**@} */
 
