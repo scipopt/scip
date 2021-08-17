@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_exprinterpret.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for expression interpreter
  * @author Stefan Vigerske
  * @author Thorsten Gellermann

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_nlpi.h
+ * @ingroup INTERNALAPI
  * @brief  data definitions for an NLP solver interface
  * @author Stefan Vigerske
  * @author Thorsten Gellermann

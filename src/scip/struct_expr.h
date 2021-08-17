@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_expr.h
+ * @ingroup INTERNALAPI
  * @brief  structure definitions related to algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller

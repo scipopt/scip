@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   expr_sin.h
+/**@file   expr_trig.h
  * @ingroup EXPRHDLRS
  * @brief  handler for sin expressions
  * @author Fabian Wegscheider

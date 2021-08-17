@@ -15,6 +15,7 @@
 
 /**@file   exprinterpret.h
  * @brief  methods to interpret (evaluate) an expression "fast"
+ * @ingroup EXPRINTS
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
  * Realized similar to LPI: one implementation of an interpreter is linked in.

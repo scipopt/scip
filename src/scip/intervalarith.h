@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   intervalarith.h
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief  interval arithmetics for provable bounds
  * @author Tobias Achterberg
  * @author Stefan Vigerske

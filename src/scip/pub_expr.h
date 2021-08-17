@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_expr.h
+ * @ingroup PUBLICCOREAPI
  * @brief  public functions to work with algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller

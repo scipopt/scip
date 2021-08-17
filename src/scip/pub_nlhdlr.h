@@ -15,6 +15,7 @@
 
 /**@file   pub_nlhdlr.h
  * @brief  public functions of nonlinear handlers of nonlinear constraints
+ * @ingroup PUBLICCOREAPI
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
  * @author Felipe Serrano

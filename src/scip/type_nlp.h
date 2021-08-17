@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_nlp.h
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for NLP management
  * @author Thorsten Gellermann
  * @author Stefan Vigerske

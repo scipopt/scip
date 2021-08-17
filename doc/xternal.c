@@ -7856,6 +7856,14 @@
  *
  */
 
+/**@defgroup EXPRINTS Expression Interpreter
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default expression interpreters of \SCIP
+ *
+ * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
+ * \ref EXPRINT "here".
+ */
+
 /**@defgroup FILEREADERS File Readers
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all file readers which are currently available.
@@ -7908,14 +7916,6 @@
 /**@defgroup PublicSymmetryMethods Symmetry
  * @ingroup INTERNALAPI
  * @brief methods for symmetry handling
- */
-
-/**@defgroup EXPRINTS Expression Interpreter
- * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default expression interpreters of \SCIP
- *
- * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
- * \ref EXPRINT "here".
  */
 
 /**@defgroup FileReaderIncludes Inclusion methods
