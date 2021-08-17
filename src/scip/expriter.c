@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expriter.c
+ * @ingroup OTHER_CFILES
  * @brief  functions for iterating over algebraic expressions
  * @author Benjamin Mueller
  * @author Stefan Vigerske

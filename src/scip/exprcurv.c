@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   exprcurv.c
+ * @ingroup OTHER_CFILES
  * @brief  functions to work with curvature (convex, concave, etc)
  * @author Stefan Vigerske
  *

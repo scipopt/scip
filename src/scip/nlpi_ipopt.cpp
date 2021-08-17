@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_ipopt.cpp
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   Ipopt NLP interface
  * @author  Stefan Vigerske
  * @author  Benjamin Müller

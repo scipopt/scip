@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_bilinear.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  bilinear nonlinear handler
  * @author Benjamin Mueller
  */

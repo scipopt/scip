@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr.c
+ * @ingroup OTHER_CFILES
  * @brief  functions for algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller

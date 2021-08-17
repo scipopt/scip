@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_pow.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  power expression handler
  * @author Benjamin Mueller
  * @author Ksenia Bestuzheva

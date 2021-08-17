@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_exp.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  exponential expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller

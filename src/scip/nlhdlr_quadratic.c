@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_quadratic.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  nonlinear handler to handle quadratic expressions
  * @author Felipe Serrano
  * @author Antonia Chmiela

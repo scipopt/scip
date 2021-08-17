@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_abs.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  absolute expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller

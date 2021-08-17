@@ -15,7 +15,7 @@
 
 /**@file    exprinterpret_cppad.cpp
  * @brief   methods to interpret (evaluate) an expression "fast" using CppAD
- * @ingroup EXPRINTS
+ * @ingroup DEFPLUGINS_EXPRINT
  * @author  Stefan Vigerske
  */
 

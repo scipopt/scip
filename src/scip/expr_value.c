@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_value.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  constant value expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller

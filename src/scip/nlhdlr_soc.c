@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_soc.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  nonlinear handler for second order cone constraints
 
  * @author Benjamin Mueller

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_entropy.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  handler for -x*log(x) expressions
  * @author Benjamin Mueller
  * @author Fabian Wegscheider

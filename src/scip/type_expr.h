@@ -26,6 +26,11 @@
  *  - \ref EXPRHDLRS "List of available expression handlers"
  */
 
+/** @defgroup DEFPLUGINS_EXPR Default expression handlers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default expression handlers of SCIP
+ */
+
 #ifndef SCIP_TYPE_EXPR_H_
 #define SCIP_TYPE_EXPR_H_
 

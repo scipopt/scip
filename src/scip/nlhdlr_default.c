@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_default.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  default nonlinear handler that calls expression handler methods
  * @author Stefan Vigerske
  */

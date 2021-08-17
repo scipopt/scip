@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_convex.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  nonlinear handlers for convex and concave expressions
  * @author Benjamin Mueller
  * @author Stefan Vigerske

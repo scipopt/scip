@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_quotient.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  quotient nonlinear handler
  * @author Benjamin Mueller
  * @author Fabian Wegscheider

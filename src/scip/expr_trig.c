@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_trig.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  handler for sine and cosine expressions
  * @author Fabian Wegscheider
  *

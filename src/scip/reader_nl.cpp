@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_nl.cpp
+ * @ingroup DEFPLUGINS_READER
  * @brief  AMPL .nl file reader
  * @author Stefan Vigerske
  *
