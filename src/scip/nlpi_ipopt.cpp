@@ -708,7 +708,14 @@ SCIP_RETCODE handleNlpParam(
     */
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", param.opttol);
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", param.opttol);
-   (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", param.solvertol);
+   if( param.solvertol > 0.0 )
+      (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", param.solvertol);
+   else
+#if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR > 14 || (IPOPT_VERSION_MINOR == 14 && IPOPT_VERSION_RELEASE >= 2)
+      (void) nlpiproblem->ipopt->Options()->UnsetValue("tol");
+#else
+      (void) nlpiproblem->ipopt->Options()->SetNumericValue("tol", 1e-8);  // 1e-8 is the default
+#endif
 
    /* Ipopt doesn't like a setting of exactly 0 for the max_*_time, so increase as little as possible in that case */
 #if IPOPT_VERSION_MAJOR > 3 || IPOPT_VERSION_MINOR >= 14
