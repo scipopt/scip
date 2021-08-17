@@ -1754,7 +1754,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/feastolfactor",
          "factor on SCIP feasibility tolerance for NLP solves if resolving when NLP solution not feasible in CIP",
-         &heurdata->feastolfactor, FALSE, 1.0, 0.0, 1.0, NULL, NULL) );
+         &heurdata->feastolfactor, FALSE, 0.1, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxpresolverounds",
          "limit on number of presolve rounds in sub-SCIP (-1 for unlimited, 0 for no presolve)",
