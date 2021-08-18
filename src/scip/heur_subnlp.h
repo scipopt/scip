@@ -62,18 +62,6 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
   * @{
   */
 
-/** updates the starting point for the NLP heuristic
- * 
- * Is called, for example, by a constraint handler that handles nonlinear constraints when a check on feasibility of a solution fails.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< subNLP heuristic */
-   SCIP_SOL*             solcand,            /**< solution candidate */
-   SCIP_Real             violation           /**< constraint violation of solution candidate */
-   );
-
 /** main procedure of the subNLP heuristic */
 SCIP_EXPORT
 SCIP_RETCODE SCIPapplyHeurSubNlp(
@@ -87,35 +75,16 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    );
 
-/** for a given solution, resolves the corresponding subNLP and updates solution values for continuous variables, if NLP solution is feasible in original problem */
+/** updates the starting point for the NLP heuristic
+ *
+ * Is called, for example, by a constraint handler that handles nonlinear constraints when a check on feasibility of a solution fails.
+ */
 SCIP_EXPORT
-SCIP_RETCODE SCIPresolveSolHeurSubNlp(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP_HEUR*            heur,               /**< heuristic data structure */
-   SCIP_SOL*             sol,                /**< solution for which to solve NLP, and where to store resolved solution values */
-   SCIP_Bool*            success,            /**< buffer where to store whether a feasible solution was found */
-   SCIP_Longint          itercontingent      /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
-   );
-
-/** gets sub-SCIP used by NLP heuristic, or NULL if none */
-SCIP_EXPORT
-SCIP* SCIPgetSubScipHeurSubNlp(
-   SCIP*                 scip,               /**< original SCIP data structure                                   */
-   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
-   );
-
-/** gets mapping of SCIP variables to sub-SCIP variables */
-SCIP_EXPORT
-SCIP_VAR** SCIPgetVarMappingScip2SubScipHeurSubNlp(
-   SCIP*                 scip,               /**< original SCIP data structure                                   */
-   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
-   );
-
-/** gets mapping of sub-SCIP variables to SCIP variables */
-SCIP_EXPORT
-SCIP_VAR** SCIPgetVarMappingSubScip2ScipHeurSubNlp(
-   SCIP*                 scip,               /**< original SCIP data structure                                   */
-   SCIP_HEUR*            heur                /**< heuristic data structure                                       */
+SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< subNLP heuristic */
+   SCIP_SOL*             solcand,            /**< solution candidate */
+   SCIP_Real             violation           /**< constraint violation of solution candidate */
    );
 
 /** gets startpoint candidate to be used in next call to NLP heuristic, or NULL if none */

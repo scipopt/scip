@@ -132,7 +132,9 @@ Interface changes
 - removed refpoint argument from SCIPaddSquareSecant()
 - added argument exprdata to SYMcomputeSymmetryGenerators()
 - removed SCIPconsNonlinearGetRhs(), SCIPconsNonlinearGetLhs(), SCIPconsNonlinearAddLinearCoef()
-- removed parameter timelimit from SCIPapplyHeurSubNlp() and SCIPresolveSolHeurSubNlp()
+- removed parameter timelimit from SCIPapplyHeurSubNlp()
+- removed SCIPresolveSolHeurSubNlp(), SCIPgetSubScipHeurSubNlp(), SCIPgetVarMappingScip2SubScipHeurSubNlp(), SCIPgetVarMappingSubScip2ScipHeurSubNlp()
+- SCIPlockVarCons() and SCIPunlockVarCons() are now allowed in stage TRANSFORMED as well
 
 NLP:
 - SCIPhasNLPContinuousNonlinearity() now returns SCIP_RETCODE and has additional argument result
@@ -520,6 +522,7 @@ nlpi:
 - removed separating/convexproj/nlptimelimit
 - removed separating/gauge/nlptimelimit
 - removed heuristics/subnlp/nlptimelimit
+- removed heuristics/subnlp/resolvetolfactor and heuristics/subnlp/resolvefromscratch
 
 ### New parameters
 
