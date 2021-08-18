@@ -31,7 +31,6 @@ extern "C" {
 
 typedef struct SCIP_NlRow SCIP_NLROW;        /**< nonlinear row of an NLP */
 typedef struct SCIP_Nlp   SCIP_NLP;          /**< current NLP data */
-typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics */
 
 #ifdef __cplusplus
 }

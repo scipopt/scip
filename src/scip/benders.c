@@ -4823,9 +4823,13 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
             probnumber);
          SCIPABORT();
       }
-      else if( nlptermstat == SCIP_NLPTERMSTAT_TILIM )
+      else if( nlptermstat == SCIP_NLPTERMSTAT_TIMELIMIT )
       {
          (*solvestatus) = SCIP_STATUS_TIMELIMIT;
+      }
+      else if( nlptermstat == SCIP_NLPTERMSTAT_INTERRUPT )
+      {
+         (*solvestatus) = SCIP_STATUS_USERINTERRUPT;
       }
       else
       {

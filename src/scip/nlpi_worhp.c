@@ -29,13 +29,13 @@
 #include "scip/nlpioracle.h"
 #include "scip/exprinterpret.h"
 #include "scip/interrupt.h"
-#include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_randnumgen.h"
+#include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
 
 #include <stdio.h>
@@ -144,7 +144,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of initialization error!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
       break;
    }
 
@@ -164,7 +164,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPerrorMessage("Worhp failed because of license error!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_LICERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_LICENSEERROR;
       break;
    }
 
@@ -174,7 +174,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of a NaN value in an evaluation!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERROR;
       break;
    }
 
@@ -187,7 +187,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of a numerical error during optimization!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
    }
 
@@ -198,7 +198,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because maximal number of calls or iterations is reached!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_ITERLIMIT;
       break;
    }
 
@@ -208,7 +208,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because time limit is reached!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       break;
    }
 
@@ -219,7 +219,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of diverging iterates!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
    }
 
@@ -250,7 +250,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of regularization of Hessian matrix failed!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
    }
 
@@ -910,9 +910,9 @@ SCIP_RETCODE handleNlpParam(
    par->sKKTOnlyAcceptable = DEFAULT_SCALEDKKT;
    par->Infty = SCIPinfinity(scip);
 
-   if( nlpparam.fromscratch )
+   if( nlpparam.warmstart )
    {
-      SCIPdebugMsg(scip, "from scratch parameter not supported by Worhp interface yet. Ignored.\n");
+      SCIPdebugMsg(scip, "warmstart parameter not supported by Worhp interface yet. Ignored.\n");
    }
 
    if( nlpparam.lobjlimit > -SCIP_REAL_MAX )
@@ -1111,7 +1111,7 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveWorhp)
     * sparsity pattern of the Hessian of the Lagrangian may change.  Thus, reset Worhp if the objective was and/or
     * becomes nonlinear, but leave firstrun untouched if it was and stays linear.
     */
-   if( expr != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+   if( expr != NULL || SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, -1) )
       problem->firstrun = TRUE;
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle,
@@ -1312,12 +1312,14 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
 
    SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
 
+   SCIP_CALL( SCIPnlpiOracleResetEvalTime(scip, problem->oracle) );
+
    if( param.timelimit == 0.0 )
    {
       /* there is nothing we can do if we are not given any time */
       problem->lastniter = 0;
       problem->lasttime = 0.0;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
 
       return SCIP_OKAY;
@@ -1406,7 +1408,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
     * Make sure to reset the requested user action afterwards by calling
     * DoneUserAction, except for 'callWorhp' and 'fidif'.
     */
-   while( cnt->status < TerminateSuccess && cnt->status > TerminateError )
+   while( cnt->status < TerminateSuccess && cnt->status > TerminateError && !SCIPisSolveInterrupted(scip) )
    {
       /*
        * Worhp's main routine.
@@ -1495,11 +1497,16 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
    }
 
    /* interpret Worhp result */
-   if( cnt->status < TerminateSuccess && cnt->status > TerminateError )
+   if( SCIPisSolveInterrupted(scip) )
+   {
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_INTERRUPT;
+   }
+   else if( cnt->status < TerminateSuccess && cnt->status > TerminateError )
    {
       SCIPwarningMessage(scip, "Worhp failed because of an invalid function evaluation!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
    }
    else
    {
@@ -1574,9 +1581,11 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
+   assert(statistics != NULL);
 
-   SCIPnlpStatisticsSetNIterations(statistics, problem->lastniter);
-   SCIPnlpStatisticsSetTotalTime(statistics, problem->lasttime);
+   statistics->niterations = problem->lastniter;
+   statistics->totaltime = problem->lasttime;
+   statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
 
    return SCIP_OKAY;
 }  /*lint !e715*/

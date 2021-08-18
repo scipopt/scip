@@ -45,9 +45,9 @@
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
-#include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_randnumgen.h"
+#include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
 
 #define NLPI_NAME              "filtersqp"                 /* short concise name of solver */
@@ -329,9 +329,9 @@ void F77_FUNC(objfun,OBJFUN)(
    problem = (SCIP_NLPIPROBLEM*)(void*)iuser;
    assert(problem != NULL);
 
-   if( timelimitreached((SCIP_NLPIDATA*)(void*)user, problem) )
+   if( SCIPisSolveInterrupted(problem->scip) || timelimitreached((SCIP_NLPIDATA*)(void*)user, problem) )
    {
-      SCIPdebugMsg(problem->scip, "timelimit reached, issuing arithmetic exception in objfun\n");
+      SCIPdebugMsg(problem->scip, "interrupted or timelimit reached, issuing arithmetic exception in objfun\n");
       *errflag = 1;
       return;
    }
@@ -834,7 +834,7 @@ SCIP_RETCODE processSolveOutcome(
          if( problem->fmin == SCIP_REAL_MIN )  /*lint !e777*/
             problem->termstat = SCIP_NLPTERMSTAT_OKAY;  /* fmin was not set */
          else
-            problem->termstat = SCIP_NLPTERMSTAT_LOBJLIM;
+            problem->termstat = SCIP_NLPTERMSTAT_LOBJLIMIT;
          break;
       case 2: /* linear constraints are inconsistent */
          problem->solstat = SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
@@ -849,7 +849,7 @@ SCIP_RETCODE processSolveOutcome(
       case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
          assert(problem->rstat[4] <= feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
-         problem->termstat =  SCIP_NLPTERMSTAT_NUMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_NUMERICERROR;
          problem->warmstart = TRUE;
          break;
       case 5: /* termination with rho < eps (trust region radius below epsilon) */
@@ -857,7 +857,7 @@ SCIP_RETCODE processSolveOutcome(
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_NUMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_NUMERICERROR;
          problem->warmstart = TRUE;
          break;
       case 6: /* termination with iter > max_iter */
@@ -865,18 +865,20 @@ SCIP_RETCODE processSolveOutcome(
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_ITLIM;
+         problem->termstat =  SCIP_NLPTERMSTAT_ITERLIMIT;
          problem->warmstart = TRUE;
          break;
-      case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached */
+      case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached, or interrupted */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
          if( problem->solvetime >= problem->maxtime )
          {
-            problem->termstat =  SCIP_NLPTERMSTAT_TILIM;
+            problem->termstat =  SCIP_NLPTERMSTAT_TIMELIMIT;
             problem->warmstart = TRUE;
          }
+         else if( SCIPisSolveInterrupted(problem->scip) )
+            problem->termstat =  SCIP_NLPTERMSTAT_INTERRUPT;
          else
-            problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
+            problem->termstat =  SCIP_NLPTERMSTAT_EVALERROR;
          break;
       case 8: /* unexpect ifail from QP solver */
          if( problem->rstat[4] <= feastol )
@@ -887,11 +889,11 @@ SCIP_RETCODE processSolveOutcome(
          break;
       case 9: /* not enough REAL workspace */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_MEMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_OUTOFMEMORY;
          break;
       case 10: /* not enough INTEGER workspace */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_MEMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_OUTOFMEMORY;
          break;
       default:
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -1173,7 +1175,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsFilterSQP)
       {
          problem->bl[nvars+oldnconss+i] = lhss[i];
          problem->bu[nvars+oldnconss+i] = rhss[i];
-         problem->cstype[oldnconss+i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, oldnconss+i) <= 1 ? 'L' : 'N';
+         problem->cstype[oldnconss+i] = SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, oldnconss+i) ? 'N' : 'L';
       }
    }
 
@@ -1360,7 +1362,7 @@ SCIP_DECL_NLPICHGEXPR(nlpiChgExprFilterSQP)
 
    /* update constraint linearity in FilterSQP data, as we might have changed from linear to nonlinear now */
    if( problem->cstype != NULL && idxcons >= 0 )
-      problem->cstype[idxcons] = (SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons) <= 1 ? 'L' : 'N');
+      problem->cstype[idxcons] = expr != NULL ? 'N' : 'L';
 
    /* gradients information (la,a) may have changed */
    SCIPfreeBlockMemoryArrayNull(scip, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
@@ -1444,12 +1446,14 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
+   SCIP_CALL( SCIPnlpiOracleResetEvalTime(scip, problem->oracle) );
+
    if( param.timelimit == 0.0 )
    {
       /* there is nothing we can do if we are not given any time */
       problem->niterations = 0;
       problem->solvetime = 0.0;
-      problem->termstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
 
       return SCIP_OKAY;
@@ -1462,8 +1466,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
    iprint = param.verblevel;
 
-   /* if fromscratch parameter is set, then we will not warmstart */
-   if( param.fromscratch )
+   /* if warmstart parameter is disabled, then we will not warmstart */
+   if( !param.warmstart )
       problem->warmstart = FALSE;
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);
@@ -1539,7 +1543,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       {
          problem->bl[n+i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
          problem->bu[n+i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
-         problem->cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
+         problem->cstype[i] = SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, i) ? 'N' : 'L';
       }
    }
 
@@ -1619,12 +1623,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
          SCIPinfoMessage(scip, NULL, "FilterSQP terminated with status %d in run %d, absolute KKT violation is %g\n", ifail, nruns, problem->rstat[0]);
       }
 
-      /* if iteration or time limit exceeded, then don't retry */
-      if( problem->niterations >= param.iterlimit || timelimitreached(data, problem) )
+      /* if iteration or time limit exceeded or solve is interrupted, then don't retry */
+      if( problem->niterations >= param.iterlimit || SCIPisSolveInterrupted(scip) || timelimitreached(data, problem) )
       {
          if( param.verblevel > 0 )
          {
-            SCIPinfoMessage(scip, NULL, "Time or iteration limit reached, not retrying\n");
+            SCIPinfoMessage(scip, NULL, "Time or iteration limit reached or interrupted, not retrying\n");
          }
          break;
       }
@@ -1783,9 +1787,11 @@ static
 SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsFilterSQP)
 {
    assert(problem != NULL);
+   assert(statistics != NULL);
 
-   SCIPnlpStatisticsSetNIterations(statistics, problem->niterations);
-   SCIPnlpStatisticsSetTotalTime(statistics, problem->solvetime);
+   statistics->niterations = problem->niterations;
+   statistics->totaltime = problem->solvetime;
+   statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/

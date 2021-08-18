@@ -178,6 +178,15 @@ SCIP_RETCODE SCIPstopClock(
    return SCIP_OKAY;
 }
 
+/** enables or disables \p clck */
+void SCIPsetClockEnabled(
+   SCIP_CLOCK*           clck,               /**< the clock to be disabled/enabled */
+   SCIP_Bool             enable              /**< should the clock be enabled or disabled? */
+   )
+{
+   SCIPclockEnableOrDisable(clck, enable);
+}
+
 /** enables or disables all statistic clocks of SCIP concerning plugin statistics,
  *  LP execution time, strong branching time, etc.
  *

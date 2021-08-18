@@ -287,7 +287,7 @@ SCIP_RETCODE heurExec(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   SCIP_NLPSTATISTICS* nlpstatistics = NULL;
+   SCIP_NLPSTATISTICS nlpstatistics;
    SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);  /*lint !e446*/
    SCIP_VAR** binvars = NULL;
    SCIP_Real* initguess = NULL;
@@ -309,7 +309,6 @@ SCIP_RETCODE heurExec(
    assert(result != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, SCIPgetNBinVars(scip)) );
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
 
    /* collect all non-fixed binary variables */
    for( i = 0; i < SCIPgetNBinVars(scip); ++i )
@@ -383,8 +382,8 @@ SCIP_RETCODE heurExec(
       }
 
       /* update nlpcostleft */
-      SCIP_CALL( SCIPgetNlpiStatistics(scip, heurdata->nlpi, heurdata->nlpiprob, nlpstatistics) );
-      nlpcostleft -= SCIPnlpStatisticsGetNIterations(nlpstatistics) * nlpcostperiter * nbinvars;
+      SCIP_CALL( SCIPgetNlpiStatistics(scip, heurdata->nlpi, heurdata->nlpiprob, &nlpstatistics) );
+      nlpcostleft -= nlpstatistics.niterations * nlpcostperiter * nbinvars;
       SCIPdebugMsg(scip, "nlpcostleft = %e\n", nlpcostleft);
 
       SCIP_CALL( SCIPgetNlpiSolution(scip, heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
@@ -568,7 +567,6 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &ubs);
    SCIPfreeBufferArrayNull(scip, &lbs);
    SCIPfreeBufferArrayNull(scip, &initguess);
-   SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
    SCIPfreeBufferArray(scip, &binvars);
 
    return SCIP_OKAY;

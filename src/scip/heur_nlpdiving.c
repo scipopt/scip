@@ -1736,20 +1736,18 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    nlpsolstat = SCIPgetNLPSolstat(scip);
    if( nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE )
    {
-      SCIP_NLPSTATISTICS* nlpstatistics;
+      SCIP_NLPSTATISTICS nlpstatistics;
 
       SCIP_CALL( SCIPsolveNLP(scip,
          .iterlimit = maxnnlpiterations - heurdata->nnlpiterations,
-         .fastfail = heurdata->nlpfastfail) );  /*lint !e666*/
+         .fastfail = heurdata->nlpfastfail ? SCIP_NLPPARAM_FASTFAIL_AGGRESSIVE : SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE) );  /*lint !e666*/
       SCIPstatistic( ++heurdata->nnlpsolves );
 
       /* update iteration count */
-      if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
+      if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERICERROR )
       {
-         SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
-         SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
-         heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-         SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
+         SCIP_CALL( SCIPgetNLPStatistics(scip, &nlpstatistics) );
+         heurdata->nnlpiterations += nlpstatistics.niterations;
       }
 
       nlpsolstat = SCIPgetNLPSolstat(scip);
@@ -1760,7 +1758,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          SCIPdebugMsg(scip, "initial NLP infeasible or not solvable --> stop\n");
 
          SCIPstatistic(
-            if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERR )
+            if( SCIPgetNLPTermstat(scip) < SCIP_NLPTERMSTAT_NUMERICERROR )
                heurdata->nfailcutoff++;
             else
                heurdata->nfailnlperror++;
@@ -2403,7 +2401,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          if( !cutoff && solvenlp )
          {
             SCIP_NLPTERMSTAT termstat;
-            SCIP_NLPSTATISTICS* nlpstatistics;
+            SCIP_NLPSTATISTICS nlpstatistics;
 
             /* set start solution, if we are in backtracking (previous NLP solve was infeasible) */
             if( heurdata->nlpstart != 'n' && backtracked )
@@ -2421,9 +2419,9 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             SCIPstatistic( ++heurdata->nnlpsolves );
 
             termstat = SCIPgetNLPTermstat(scip);
-            if( termstat >= SCIP_NLPTERMSTAT_NUMERR )
+            if( termstat >= SCIP_NLPTERMSTAT_NUMERICERROR )
             {
-               if( termstat >= SCIP_NLPTERMSTAT_LICERR )
+               if( termstat >= SCIP_NLPTERMSTAT_LICENSEERROR )
                {
                   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
                      "Error while solving NLP in nlpdiving heuristic; NLP solve terminated with code <%d>\n", termstat);
@@ -2433,10 +2431,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             }
 
             /* update iteration count */
-            SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
-            SCIP_CALL( SCIPgetNLPStatistics(scip, nlpstatistics) );
-            heurdata->nnlpiterations += SCIPnlpStatisticsGetNIterations(nlpstatistics);
-            SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
+            SCIP_CALL( SCIPgetNLPStatistics(scip, &nlpstatistics) );
+            heurdata->nnlpiterations += nlpstatistics.niterations;
 
             /* get NLP solution status, objective value, and fractional variables, that should be integral */
             nlpsolstat = SCIPgetNLPSolstat(scip);

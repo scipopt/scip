@@ -59,6 +59,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
+#include "scip/pub_nlpi.h"
 #include "scip/pub_presol.h"
 #include "scip/pub_pricer.h"
 #include "scip/pub_prop.h"
@@ -3893,6 +3894,77 @@ void SCIPprintExpressionHandlerStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNSimplifyCalls(exprhdlr));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetSimplifyTime(exprhdlr));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNSimplifications(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+   }
+}
+
+/** outputs NLPI statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintNLPIStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintNLPIStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file,
+      "NLP Solvers        : %10s %10s %10s %10s %s%10s %10s"
+      " %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s"
+      " %10s %10s %10s %10s %10s %10s %10s\n",
+      "#Problems", "ProblemTi", "#Solves", "SolveTime",
+      scip->set->time_nlpieval ? "  EvalTime%" : "",
+      "#Iter", "Time/Iter",
+      "#Okay", "#TimeLimit", "#IterLimit", "#LObjLimit", "#Interrupt", "#NumError", "#EvalError", "#OutOfMem", "#LicenseEr", "#OtherTerm",
+      "#GlobOpt", "#LocOpt", "#Feasible", "#LocInfeas", "#GlobInfea", "#Unbounded", "#Unknown"
+   );
+
+   for( i = 0; i < scip->set->nnlpis; ++i )
+   {
+      SCIP_Real solvetime;
+      SCIP_Real evaltime = 0.0;
+      SCIP_Longint niter;
+      SCIP_NLPI* nlpi;
+      int j;
+
+      nlpi = scip->set->nlpis[i];
+      assert(nlpi != NULL);
+
+      solvetime = SCIPnlpiGetSolveTime(nlpi);
+      if( scip->set->time_nlpieval )
+         evaltime = SCIPnlpiGetEvalTime(nlpi);
+      niter = SCIPnlpiGetNIterations(nlpi);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:", SCIPnlpiGetName(nlpi));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNProblems(nlpi));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPnlpiGetProblemTime(nlpi));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNSolves(nlpi));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", solvetime);
+      if( scip->set->time_nlpieval )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", solvetime > 0.0 ? 100.0 * evaltime / solvetime : 0.0);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, niter);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", niter > 0 ? solvetime / niter : 0.0);
+
+      for( j = (int)SCIP_NLPTERMSTAT_OKAY; j <= (int)SCIP_NLPTERMSTAT_OTHER; ++j )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNTermStat(nlpi, (SCIP_NLPTERMSTAT)j));
+
+      for( j = (int)SCIP_NLPSOLSTAT_GLOBOPT; j <= (int)SCIP_NLPSOLSTAT_UNKNOWN; ++j )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNSolStat(nlpi, (SCIP_NLPSOLSTAT)j));
+
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
    }
 }

@@ -49,6 +49,7 @@
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_nlpi.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
@@ -1307,6 +1308,43 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    }
 
    return SCIP_OKAY;
+}
+
+/** merges the statistics of NLPIs from a source SCIP into a target SCIP.
+ *
+ * The two SCIP instances should point to different SCIP instances.
+ *
+ *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
+ *        \p targetscip denotes the original instance
+ */
+void SCIPmergeNLPIStatistics(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   )
+{
+   int i;
+
+   assert(sourcescip != targetscip);
+
+   for( i = 0; i < sourcescip->set->nnlpis; ++i )
+   {
+      SCIP_NLPI* sourcenlpi;
+      SCIP_NLPI* targetnlpi;
+
+      sourcenlpi = sourcescip->set->nlpis[i];
+      /* probably NLPI is on same position in target and source, otherwise do search */
+      if( strcmp(SCIPnlpiGetName(targetscip->set->nlpis[i]), SCIPnlpiGetName(sourcenlpi)) == 0 )
+         targetnlpi = targetscip->set->nlpis[i];
+      else
+         targetnlpi = SCIPsetFindNlpi(targetscip->set, SCIPnlpiGetName(sourcenlpi));
+
+      if( targetnlpi != NULL )
+         SCIPnlpiMergeStatistics(targetnlpi, sourcenlpi);
+      else
+      {
+         SCIPdebugMsg(targetscip, "NLPI <%s> from source SCIP not available in target SCIP\n", SCIPnlpiGetName(sourcenlpi));
+      }
+   }
 }
 
 /** provides values of a solution from a subscip according to the variable in the main scip
