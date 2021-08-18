@@ -127,6 +127,43 @@ SCIP_RETCODE SCIPcreateConsBasicIndicator(
    SCIP_Real             rhs                 /**< rhs of the inequality */
    );
 
+/** creates and captures a indicator constraint in a more generic version.
+ *
+ *  The key difference from SCIPcreateConsIndicator() is the activeone Boolean.
+ *  if \f$z = o\f$, with \f$o\f$ the activeone flag, then \f$a^T x \leq b\f$ holds.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint (indicator or quadratic) */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   int                   nvars,              /**< number of variables in the inequality */
+   SCIP_VAR**            vars,               /**< array with variables of inequality (or NULL) */
+   SCIP_Real*            vals,               /**< values of variables in inequality (or NULL) */
+   SCIP_Real             rhs,                /**< rhs of the inequality */
+   SCIP_Bool             activeone,          /**< is the constraint active when the binary is 1? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
 /** creates and captures an indicator constraint with given linear constraint and slack variable
  *
  *  @note @a binvar is checked to be binary only later. This enables a change of the type in
@@ -145,6 +182,50 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
    SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
    SCIP_CONS*            lincons,            /**< linear constraint */
    SCIP_VAR*             slackvar,           /**< slack variable */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** creates and captures an indicator constraint with given linear constraint and slack variable
+ *  in a generic version, i. e., with a flag activeone indicating whether the constraint is active on
+ *  value 1 or 0 of the binary variable.
+
+ *  @note @a binvar is checked to be binary only later. This enables a change of the type in
+ *  procedures reading an instance.
+ *
+ *  @note we assume that @a slackvar actually appears in @a lincons and we also assume that it takes
+ *  the role of a slack variable!
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *
+ *  @see SCIPcreateConsIndicatorLinCons() for information about the basic constraint flag configuration
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_VAR*             binvar,             /**< binary indicator variable (or NULL) */
+   SCIP_CONS*            lincons,            /**< linear constraint */
+   SCIP_VAR*             slackvar,           /**< slack variable */
+   SCIP_Bool             activeone,          /**< is the constraint active when the binary is 1? */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
                                               *   Usually set to TRUE. */
@@ -223,9 +304,21 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
    SCIP_VAR*             binvar              /**< binary variable to add to the inequality */
    );
 
-/** gets binary variable corresponding to indicator constraint */
+/** gets activation value of an indicator constraint, TRUE for active on 1, FALSE for active on 0 */
+SCIP_EXPORT
+SCIP_Bool SCIPgetActiveOnIndicator(
+   SCIP_CONS*            cons                /**< indicator constraint */
+   );
+
+/** gets binary variable corresponding to indicator constraint. Returns the negative of the original binary variable if activeone was set to false */
 SCIP_EXPORT
 SCIP_VAR* SCIPgetBinaryVarIndicator(
+   SCIP_CONS*            cons                /**< indicator constraint */
+   );
+
+/** similar to SCIPgetBinaryVarIndicator but returns the original binary variable passed by the user. */
+SCIP_EXPORT
+SCIP_VAR* SCIPgetBinaryVarIndicatorGeneric(
    SCIP_CONS*            cons                /**< indicator constraint */
    );
 

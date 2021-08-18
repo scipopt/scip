@@ -8,7 +8,7 @@ solution process and the access of detailed information down to the guts of the
 solver.
 
 The original instance of this repository is hosted at
-[git.zib.de/integer/scip](https://git.zib.de/integer/scip) and a read-only
+[git.zib.de](https://git.zib.de) and a read-only
 mirror is available at
 [github.com/scipopt/scip](https://github.com/scipopt/scip).
 

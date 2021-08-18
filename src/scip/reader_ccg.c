@@ -514,7 +514,7 @@ SCIP_RETCODE SCIPwriteCcg(
 
    /* output graph */
    SCIPinfoMessage(scip, file, "c graph generated from %s\n", name);
-   SCIPinfoMessage(scip, file, "p edge %d %d\n", nvars, G.m);
+   SCIPinfoMessage(scip, file, "p edge %d %u\n", nvars, G.m);
 
    for( i = 0; i < nvars; ++i )
    {

@@ -42,8 +42,10 @@ instances/SOS/findRoot.lp
 instances/SOS/pcu_0.01.lp
 instances/SOS/pcu_0.1.lp
 instances/SOS/sparse2.lp
-instances/Orbitope/packorb_1-FullIns_3.cip
-instances/Orbitope/partorb_1-FullIns_3.cip
+instances/Symmetry/packorb_1-FullIns_3.cip
+instances/Symmetry/partorb_1-FullIns_3.cip
+instances/Symmetry/packorbisack_1-FullIns_3.cip
+instances/Symmetry/symresack_1-FullIns_3.cip
 instances/CP/disj_conj_rail.cip
 IP/Indicator/Zimpl/mcf64-4-1.zpl
 IP/miplib2010-contrib/joerg_rambau/rocI_2_11.zpl

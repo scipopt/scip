@@ -184,7 +184,7 @@ SCIP_RETCODE addBranchingDecisionConss(
       }
       else
       {
-         SCIPerrorMessage("unknow constraint type <%d>\n, type");
+         SCIPerrorMessage("unknow constraint type <%d>\n", type);
          return SCIP_INVALIDDATA;
       }
 
@@ -592,7 +592,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
 
       if( !feasible )
       {
-         SCIPwarningMessage(scip, "solution in pricing problem (capacity <%d>) is infeasible\n", capacity);
+         SCIPwarningMessage(scip, "solution in pricing problem (capacity <%" SCIP_LONGINT_FORMAT ">) is infeasible\n", capacity);
          continue;
       }
 

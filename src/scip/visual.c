@@ -312,14 +312,14 @@ SCIP_RETCODE SCIPvisualNewChild(
       if( branchvar != NULL )
       {
          SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\n",
-            (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+            nodenum, nodenum, (void*)node, SCIPnodeGetDepth(node),
             SCIPvarGetName(branchvar), SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
             branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, lowerbound);
       }
       else
       {
          SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\n",
-            (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), lowerbound);
+            nodenum, nodenum, (void*)node, SCIPnodeGetDepth(node), lowerbound);
       }
    }
 
@@ -373,14 +373,14 @@ SCIP_RETCODE SCIPvisualUpdateChild(
       if( branchvar != NULL )
       {
          SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\n",
-            (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+            nodenum, nodenum, (void*)node, SCIPnodeGetDepth(node),
             SCIPvarGetName(branchvar), SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
             branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, lowerbound);
       }
       else
       {
          SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\n",
-            (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), lowerbound);
+            nodenum, nodenum, (void*)node, SCIPnodeGetDepth(node), lowerbound);
       }
    }
 
@@ -505,14 +505,14 @@ void SCIPvisualSolvedNode(
       if( branchvar != NULL )
       {
          SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%" SCIP_LONGINT_FORMAT "\n",
-            (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+            nodenum, nodenum, (void*)node, SCIPnodeGetDepth(node),
             SCIPvarGetName(branchvar),  SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
             branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, lowerbound, stat->nnodes);
       }
       else
       {
          SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%" SCIP_LONGINT_FORMAT "\n",
-            (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), lowerbound, stat->nnodes);
+            nodenum, nodenum, (void*)node, SCIPnodeGetDepth(node), lowerbound, stat->nnodes);
       }
       vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_SOLVED);
    }
@@ -566,14 +566,14 @@ void SCIPvisualCutoffNode(
       if( branchvar != NULL )
       {
          SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%" SCIP_LONGINT_FORMAT "\n",
-            (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
+            nodenum, nodenum, (void*)node, SCIPnodeGetDepth(node),
             SCIPvarGetName(branchvar),  SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
             branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, lowerbound, stat->nnodes);
       }
       else
       {
          SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%" SCIP_LONGINT_FORMAT "\n",
-            (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), lowerbound, stat->nnodes);
+            nodenum, nodenum, (void*)node, SCIPnodeGetDepth(node), lowerbound, stat->nnodes);
       }
       vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_CUTOFF);
    }

@@ -596,7 +596,7 @@ SCIP_Bool conshdlrdataHasUpgrade(
       if( conshdlrdata->linconsupgrades[i]->linconsupgd == linconsupgd )
       {
 #ifdef SCIP_DEBUG
-         SCIPwarningMessage(scip, "Try to add already known upgrade message %p for constraint handler %s.\n", linconsupgd, conshdlrname);
+         SCIPwarningMessage(scip, "Try to add already known upgrade message for constraint handler %s.\n", conshdlrname);
 #endif
          return TRUE;
       }
@@ -4519,7 +4519,7 @@ SCIP_RETCODE normalizeCons(
             {
                *infeasible = TRUE;
 
-               SCIPdebugMsg(scip, "detected infeasibility of constraint after scaling with gcd=%g:\n", gcd);
+               SCIPdebugMsg(scip, "detected infeasibility of constraint after scaling with gcd=%" SCIP_LONGINT_FORMAT ":\n", gcd);
                SCIPdebugPrintCons(scip, cons, NULL);
 
                return SCIP_OKAY;
@@ -17182,7 +17182,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
                   consdata->boundstightened = 0;
                break;
             default:
-               SCIPerrorMessage("invalid event type %d\n", eventtype);
+               SCIPerrorMessage("invalid event type %" SCIP_EVENTTYPE_FORMAT "\n", eventtype);
                return SCIP_INVALIDDATA;
             }
          }

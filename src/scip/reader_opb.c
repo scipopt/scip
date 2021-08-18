@@ -1456,9 +1456,14 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(scip, opbinput) || !isSense(opbinput, &sense) )
+   if( !getNextToken(scip, opbinput) )
    {
-      syntaxError(scip, opbinput, "expected constraint sense '=' or '>='");
+      syntaxError(scip, opbinput, "expected constraint sense.");
+      goto TERMINATE;
+   }
+   if( !isSense(opbinput, &sense) )
+   {
+      syntaxError(scip, opbinput, "expected constraint sense '=' or '>='.");
       goto TERMINATE;
    }
 

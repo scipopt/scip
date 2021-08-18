@@ -121,9 +121,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                702 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
-#define SCIP_APIVERSION              76 /**< SCIP API version number */
+#define SCIP_VERSION                703 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               5 /**< SCIP sub version number */
+#define SCIP_APIVERSION              77 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -355,7 +355,7 @@ extern "C" {
                        {                                                                                      \
                           if( NULL == (x) )                                                                   \
                           {                                                                                   \
-                             SCIPerrorMessage("No memory in function call\n", __FILE__, __LINE__);            \
+                             SCIPerrorMessage("No memory in function call\n");                                \
                              SCIPABORT();                                                                     \
                           }                                                                                   \
                        }                                                                                      \

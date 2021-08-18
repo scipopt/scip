@@ -434,7 +434,7 @@ struct SCIP_Set
    SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for
                                                *   an additional restart */
    SCIP_Bool             presol_donotmultaggr;/**< should multi-aggregation of variables be forbidden? */
-   SCIP_Bool             presol_donotaggr;   /**< shouldaggregation of variables be forbidden? */
+   SCIP_Bool             presol_donotaggr;    /**< should aggregation of variables be forbidden? */
 
    /* pricing settings */
    SCIP_Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
