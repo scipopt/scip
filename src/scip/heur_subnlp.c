@@ -1762,7 +1762,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/presolveemphasis",
          "presolve emphasis in sub-SCIP (0: default, 1: aggressive, 2: fast, 3: off)",
-         &heurdata->presolveemphasis, FALSE, SCIP_PARAMSETTING_DEFAULT, SCIP_PARAMSETTING_DEFAULT, SCIP_PARAMSETTING_OFF, NULL, NULL) );
+         &heurdata->presolveemphasis, FALSE, SCIP_PARAMSETTING_FAST, SCIP_PARAMSETTING_DEFAULT, SCIP_PARAMSETTING_OFF, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/setcutoff",
          "whether to set cutoff in sub-SCIP to current primal bound",
