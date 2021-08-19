@@ -20,6 +20,7 @@
  * @author  Benjamin Müller
  *
  * @todo if too few degrees of freedom, solve a slack-minimization problem instead?
+ * @todo automatically switch to Hessian approximation if Hessian is dense or slow? (only do so if opttol/solvertol is large?)
  *
  * This file can only be compiled if Ipopt is available.
  * Otherwise, to resolve public functions, use nlpi_ipopt_dummy.c.
