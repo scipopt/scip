@@ -359,6 +359,7 @@ void selectBestCands(
    assert(cands[0] != NULL);
 
    bestval = candsols[0];
+   bestcands[0] = cands[0];
    *nbestcands = 1;
 
    /* get aggregated score for the first candidate */
@@ -432,7 +433,7 @@ SCIP_RETCODE performBranchingSol(
    }
 
    /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &bestcands, ncands) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bestcands, ncands) );
    nbestcands = 0;
 
    if( conflictprio > cutoffprio )
@@ -473,6 +474,8 @@ SCIP_RETCODE performBranchingSol(
       }
    }
 
+   assert(nbestcands == 0 || bestcands[0] != NULL);
+
    /* final tie breaking */
    if( nbestcands > 1 )
    {
@@ -481,6 +484,7 @@ SCIP_RETCODE performBranchingSol(
    }
 
    assert(nbestcands == 1);
+
    bestaggrcand = bestcands[0];
    bestval = candsols[0];
 
