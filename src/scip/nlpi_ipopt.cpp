@@ -150,12 +150,13 @@ class ScipNLP;
 struct SCIP_NlpiData
 {
 public:
-   char*                       optfile;      /**< Ipopt options file to read */
-   int                         print_level;  /**< print_level set via nlpi/ipopt/print_level option */
+   char*                 optfile;            /**< Ipopt options file to read */
+   int                   print_level;        /**< print_level set via nlpi/ipopt/print_level option */
+   SCIP_Real             warm_start_push;    /**< value to use for Ipopt's warm_start_bound_push/frac options */
 
    /** constructor */
    explicit SCIP_NlpiData()
-   : optfile(NULL), print_level(-1)
+   : optfile(NULL), print_level(-1), warm_start_push(1e-9)
    { }
 };
 
@@ -1022,14 +1023,12 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (void) (*problem)->ipopt->Options()->SetNumericValue("nlp_upper_bound_inf",  SCIPinfinity(scip), false);
    (void) (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", SCIPinfinity(scip), false);
 
-   /* when warmstarting, then reduce how much Ipopt modified the starting point
-    * TODO make these options available as SCIP parameters
-    */
-   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_bound_push", 1e-9);
-   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_bound_frac", 1e-9);
-   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_slack_bound_push", 1e-9);
-   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_slack_bound_frac", 1e-9);
-   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_mult_bound_push", 1e-9);
+   /* when warmstarting, then reduce how much Ipopt modified the starting point */
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_bound_push", data->warm_start_push);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_bound_frac", data->warm_start_push);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_slack_bound_push", data->warm_start_push);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_slack_bound_frac", data->warm_start_push);
+   (void) (*problem)->ipopt->Options()->SetNumericValue("warm_start_mult_bound_push", data->warm_start_push);
 
    /* apply user's given options file */
    assert(data->optfile != NULL);
@@ -1926,6 +1925,9 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
 
    SCIP_CALL( SCIPaddStringParam(scip, "nlpi/" NLPI_NAME "/optfile", "name of Ipopt options file",
       &nlpidata->optfile, FALSE, "", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "nlpi/" NLPI_NAME "/warm_start_push", "amount (relative and absolute) by which starting point is moved away from bounds in warmstarts",
+      &nlpidata->warm_start_push, FALSE, 1e-9, 0.0, 1.0, NULL, NULL) );
 
    SmartPtr<RegisteredOptions> reg_options = new RegisteredOptions();
    IpoptApplication::RegisterAllIpoptOptions(reg_options);
