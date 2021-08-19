@@ -99,7 +99,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
 
    nlpparam.iterlimit = NLPITERLIMIT;
    nlpparam.feastol = SCIPfeastol(scip) * FEASTOLFAC;
-   nlpparam.relobjtol = SCIPfeastol(scip) * RELOBJTOLFAC;
+   nlpparam.opttol = SCIPfeastol(scip) * RELOBJTOLFAC;
 
    /* solve NLP */
    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiprob, nlpparam) );
