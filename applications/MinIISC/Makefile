@@ -133,19 +133,42 @@ $(BINDIR):
 
 .PHONY: test
 test:           $(MAINFILE)
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evaluate.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_solufile.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
+		cd check; \
+		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) \
+		$(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON);
+
+OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
+
+-include $(SCIPDIR)/make/local/make.$(OPTHOST)
+
+.PHONY: testcluster
+testcluster:	$(MAINFILE)
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evaluate.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_solufile.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/allcmpres.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/cmpres.awk);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-			$(CONTINUE) "example" $(LOCK) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-			$(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON);
+		$(SHELL) ./check_cluster.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) \
+		$(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
+		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) \
+		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
 
 .PHONY: clean
 clean:		$(OBJDIR)

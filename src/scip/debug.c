@@ -647,7 +647,7 @@ SCIP_RETCODE isSolutionInNode(
                if( !(*solcontained) && SCIPboundchgGetBoundchgtype(&boundchgs[i]) != SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%.15g] %s %.15g\n",
-                     node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
+                     (void*) node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
                      SCIPboundchgGetBoundtype(&boundchgs[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
                   SCIPABORT();
                }
@@ -706,7 +706,7 @@ SCIP_RETCODE SCIPdebugReset(
    return SCIP_OKAY;
 }
 
-/** frees all debugging solution data */
+/** frees debugging data for the particular instance */
 SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -735,6 +735,22 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    /* free the debug solution */
    SCIP_CALL( SCIPdebugFreeSol(set) );
 
+   return SCIP_OKAY;
+}
+
+/** frees all debugging data */
+SCIP_RETCODE SCIPdebugFree(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+
+   assert(set != NULL);
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   SCIP_CALL( SCIPdebugFreeDebugData(set) );
    BMSfreeMemoryNull(&debugsoldata);
 
    set->debugsoldata = NULL;
@@ -1109,7 +1125,7 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       if( solisinnode )
       {
          SCIPerrorMessage("debugging solution was cut off in local node #%" SCIP_LONGINT_FORMAT " (%p) at depth %d\n",
-            node->number, node, SCIPnodeGetDepth(node));
+            node->number, (void*) node, SCIPnodeGetDepth(node));
          SCIPABORT();
       }
    }
