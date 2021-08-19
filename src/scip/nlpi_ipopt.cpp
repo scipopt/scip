@@ -1005,7 +1005,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
          (void) (*problem)->ipopt->Options()->SetIntegerValue(ipopt_int_params[i], paramval, false);
    }
 
-#if defined(__GNUC__) && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
    /* Turn off bound relaxation for older Ipopt, as solutions may be out of bounds by more than constr_viol_tol.
     * For Ipopt 3.14, bounds are relaxed by at most constr_viol_tol, so can leave bound_relax_factor at its default.
     */
@@ -2764,7 +2764,11 @@ void ScipNLP::finalize_solution(
 
    // get violations, there could be an evaluation error when doing so
    assert(cq != NULL);
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
+   nlpiproblem->solboundviol = 0.0;  // old Ipopt does not calculate bound violations, but for what it's worth, we have set bound_relax_factor=0 then
+#else
    nlpiproblem->solboundviol = cq->unscaled_curr_orig_bounds_violation(Ipopt::NORM_MAX);
+#endif
    try
    {
       nlpiproblem->solconsviol = cq->unscaled_curr_nlp_constraint_violation(Ipopt::NORM_MAX);
