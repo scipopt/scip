@@ -1015,7 +1015,7 @@ SCIP_RETCODE solveSubNLP(
          case SCIP_STATUS_GAPLIMIT:
          case SCIP_STATUS_SOLLIMIT:
          case SCIP_STATUS_BESTSOLLIMIT:
-            /* these should not happen, but if one does, it's safe to go to CLEANUP */
+            /* these should not happen, but if one does, it's safe to return */
             SCIPABORT();    /*lint -fallthrough*/
          case SCIP_STATUS_OPTIMAL:
          case SCIP_STATUS_INFEASIBLE:
@@ -1754,7 +1754,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
 
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/forbidfixings",
          "whether to add constraints that forbid specific fixings that turned out to be infeasible",
-         &heurdata->forbidfixings, FALSE, TRUE, NULL, NULL) );
+         &heurdata->forbidfixings, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/keepcopy",
          "whether to keep SCIP copy or to create new copy each time heuristic is applied",
@@ -1911,7 +1911,6 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
          /* if the subNLP is valid and turned out to be globally infeasible (i.e., proven by SCIP), then we forbid this fixation in the main problem */
          if( SCIPisInfinity(scip, cutoff) && heurdata->forbidfixings )
          {
-            /* TODO check whether we can remove this (primal heuristics creating constraints is not a nice sideeffect) */
             SCIP_CALL( forbidFixation(scip, heurdata) );
          }
       }
