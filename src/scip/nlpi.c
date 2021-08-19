@@ -529,9 +529,9 @@ SCIP_RETCODE SCIPnlpiSolve(
    assert(param != NULL);
 
    /* check that parameter values are in accepted range (if type allows more than we would accept) */
-   if( param->iterlimit < -1 )
+   if( param->iterlimit < 0 )
    {
-      SCIPerrorMessage("Value %d for parameter iteration limit must be -1 or non-negative.\n", param->iterlimit);
+      SCIPerrorMessage("Value %d for parameter iteration limit must be non-negative.\n", param->iterlimit);
       return SCIP_PARAMETERWRONGVAL;
    }
    if( param->feastol < 0.0 )

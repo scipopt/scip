@@ -149,7 +149,6 @@ class ScipNLP;
 struct SCIP_NlpiData
 {
 public:
-   int                         autoiterlim;  /**< iteration limit to use if caller requests NLPI to choose one */
    char*                       optfile;      /**< Ipopt options file to read */
    int                         print_level;  /**< print_level set via nlpi/ipopt/print_level option */
 
@@ -570,7 +569,7 @@ SCIP_RETCODE handleNlpParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
    SCIP_NLPIPROBLEM*     nlpiproblem,        /**< NLP */
-   SCIP_NLPPARAM         param               /**< solve parameters */
+   const SCIP_NLPPARAM   param               /**< solve parameters */
    )
 {
    assert(scip != NULL);
@@ -598,6 +597,7 @@ SCIP_RETCODE handleNlpParam(
       }
    }
 
+#ifdef SCIP_DISABLED_CODE
    if( param.iterlimit < 0 )
    {
       if( nlpidata->autoiterlim > 0 )
@@ -694,6 +694,7 @@ SCIP_RETCODE handleNlpParam(
       if( nlpidata->print_level >= J_SUMMARY || param.verblevel > 0 )
          SCIPinfoMessage(scip, NULL, "Chosen iteration limit to be %d\n", param.iterlimit);
    }
+#endif
    (void) nlpiproblem->ipopt->Options()->SetIntegerValue("max_iter", param.iterlimit);
 
    (void) nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * param.feastol);
@@ -1921,9 +1922,6 @@ SCIP_RETCODE SCIPincludeNlpSolverIpopt(
          nlpidata) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "nlpi/" NLPI_NAME "/autoiterlim", "iteration limit to use if NLPI is requested to choose (0: guess from NLP size)",
-      &nlpidata->autoiterlim, FALSE, 0, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip, "nlpi/" NLPI_NAME "/optfile", "name of Ipopt options file",
       &nlpidata->optfile, FALSE, "", NULL, NULL) );

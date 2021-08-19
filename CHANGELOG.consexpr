@@ -557,7 +557,6 @@ nlpi:
 - nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
 - nlpi/ipopt/print_level, nlpi/ipopt/hsllib, nlpi/ipopt/pardisolib, nlpi/ipopt/linear_system_scaling, nlpi/ipopt/nlp_scaling_method, nlpi/ipopt/mu_strategy, nlpi/ipopt/hessian_approximation
 - timing/nlpieval
-- nlpi/ipopt/autoiterlim
 - heuristics/subnlp/iterinit, heuristics/subnlp/ninitsolves, heuristics/subnlp/successrateexp
 - heuristics/subnlp/expectinfeas, heuristics/subnlp/opttol, heuristics/subnlp/feastolfactor
 - heuristics/subnlp/presolveemphasis, heuristics/subnlp/setcutoff

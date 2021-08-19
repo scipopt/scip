@@ -54,7 +54,7 @@ struct SCIP_NlpParam
    SCIP_Real             opttol;             /**< optimality tolerance (maximal allowed absolute violation of optimality conditions) */
    SCIP_Real             solvertol;          /**< solver-specific tolerance on accuracy, e.g., maximal violation of feasibility and optimality in scaled problem (0.0: use solver default) */
    SCIP_Real             timelimit;          /**< time limit in seconds: use SCIP_REAL_MAX to use remaining time available for SCIP solve (limits/time - currenttime) */
-   int                   iterlimit;          /**< iteration limit, use -1 to let NLPI choose */
+   int                   iterlimit;          /**< iteration limit */
    unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
    SCIP_NLPPARAM_FASTFAIL fastfail;          /**< whether the NLP solver should stop early if convergence is slow */
    SCIP_Bool             expectinfeas;       /**< whether to expect an infeasible problem */
