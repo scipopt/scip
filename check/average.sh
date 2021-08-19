@@ -39,6 +39,7 @@ export LC_NUMERIC=C
 
 if test -n "${FILES}"
 then
-    awk -f average.awk "${AWKARGS}" "${FILES}"
+    # the variables AWKARGS and FILES need to be without quotation marks here
+    awk -f average.awk ${AWKARGS} ${FILES}
 fi
 

@@ -2531,11 +2531,6 @@ SCIP_DECL_CONSINITSOL(consInitsolComponents)
 #define consEnfopsComponents NULL
 #define consCheckComponents NULL
 
-/**@name Interface methods
- *
- * @{
- */
-
 /** creates the components constraint handler and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2599,5 +2594,3 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
 
    return SCIP_OKAY;
 }
-
-/**@} */

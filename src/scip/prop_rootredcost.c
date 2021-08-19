@@ -683,10 +683,6 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
 /**@} */
 
-/**@name Interface methods
- *
- * @{
- */
 
 /** creates the root node reduced cost strengthening propagator and includes it in SCIP */
 SCIP_RETCODE SCIPincludePropRootredcost(
@@ -721,5 +717,3 @@ SCIP_RETCODE SCIPincludePropRootredcost(
 
    return SCIP_OKAY;
 }
-
-/**@} */

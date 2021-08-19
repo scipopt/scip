@@ -71,14 +71,17 @@ extern "C" {
 
 /** creates the optimality Benders' decomposition cut and includes it in SCIP
  *
- *  @addtogroup BenderscutIncludes
- *  @{
+ *  @ingroup BenderscutIncludes
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBenderscutOpt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
+
+/** @addtogroup BENDERSCUTS
+ * @{
+ */
 
 /** Generates a classical Benders' optimality cut using the dual solutions from the subproblem or the input arrays. If
  *  the dual solutions are input as arrays, then a mapping between the array indices and the rows/variables is required.

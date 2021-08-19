@@ -455,6 +455,8 @@ SCIP_RETCODE copyProb(
 
    SCIP_CALL( SCIPdecompstoreCreate(&targetscip->decompstore, SCIPblkmem(targetscip), SCIP_DECOMPSTORE_CAPA) );
 
+   SCIP_CALL( SCIPdebugSolDataCreate(&targetscip->set->debugsoldata) );
+
    if( uselocalvarmap )
    {
       /* free hash map */
