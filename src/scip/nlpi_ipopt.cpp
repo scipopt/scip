@@ -2763,10 +2763,16 @@ void ScipNLP::finalize_solution(
    nlpiproblem->soldualgiven = false;
 
    // get violations, there could be an evaluation error when doing so
-   assert(cq != NULL);
 #if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
    nlpiproblem->solboundviol = 0.0;  // old Ipopt does not calculate bound violations, but for what it's worth, we have set bound_relax_factor=0 then
+   if( cq == NULL )
+   {
+      // with old Ipopt, finalize_solution may be called with cq == NULL if all variables are fixed; we just skip the rest then
+      nlpiproblem->solconsviol = 0.0;
+      return;
+   }
 #else
+   assert(cq != NULL);
    nlpiproblem->solboundviol = cq->unscaled_curr_orig_bounds_violation(Ipopt::NORM_MAX);
 #endif
    try
