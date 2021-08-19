@@ -415,6 +415,7 @@ SCIP_RETCODE performBranchingSol(
    SCIP_VAR** bestcands;
    int nbestcands;
    int c;
+   SCIP_Bool found;
 
    assert(ncands > 0);
    assert(result != NULL);
@@ -489,7 +490,7 @@ SCIP_RETCODE performBranchingSol(
    bestval = candsols[0];
 
    /* loop over cands, find bestcands[0], and store corresponding candsols value in bestval */
-   SCIP_Bool found = FALSE;
+   found = FALSE;
    for( c = 1; c < ncands; ++c )
    {
       if( bestaggrcand == cands[c] )
