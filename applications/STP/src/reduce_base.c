@@ -920,6 +920,7 @@ SCIP_RETCODE redLoopInnerPc(
    SCIP_Bool sdstar = TRUE;
    SCIP_Bool bd3 = nodereplacing;
    SCIP_Bool nvsl = TRUE;
+   SCIP_Bool pathrep = usestrongreds;
    SCIP_Bool rerun = TRUE;
    const SCIP_Bool verbose = FALSE && dualascent && userec && nodereplacing;
    const STP_Bool extensive = STP_RED_EXTENSIVE;
@@ -942,6 +943,8 @@ SCIP_RETCODE redLoopInnerPc(
       int brednelims = 0;
       int degnelims = 0;
       int nelims = 0;
+      int pathrepnelims = 0;
+
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1064,7 +1067,17 @@ SCIP_RETCODE redLoopInnerPc(
 
       SCIP_CALL( reduce_simple_pc(scip, NULL, g, fixed, &nelims, &degnelims, solnode) );
 
-      nelims = degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims + sdstarnelims + dapathelims;
+      if( pathrep )
+      {
+         SCIP_CALL( reduce_pathreplace(scip, g, &pathrepnelims) );
+
+         if( pathrepnelims <= reductbound )
+            pathrep = FALSE;
+         if( verbose ) printf("pathrep: %d\n", pathrepnelims);
+      }
+
+      nelims = degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims
+            + sdwnelims + sdstarnelims + dapathelims + pathrepnelims;
       *ninnerelims += nelims;
 
       if( nelims <= reductbound_global )

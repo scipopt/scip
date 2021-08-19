@@ -33,6 +33,7 @@
 #define SP_MAXNDISTS 10000
 #define SP_MAXLENGTH 10
 #define SP_MAXDEGREE 10
+#define SP_MAXDEGREE_PC 11
 #define SP_MAXNSTARTS 10000
 #define VNODES_UNSET -1
 #define SP_MAXNPULLS 4
@@ -41,16 +42,15 @@
 /** path replacement */
 typedef struct path_replacement
 {
-   //DHEAP*                dheap;              /**< heap for shortest path computations */
    SDPROFIT*             sdprofit;           /**< SD profit */
    STP_Vectype(SCIP_Real) firstneighborcosts; /**< edge costs from tail of path to non-path neighbors */
-  // STP_Vectype(SCIP_Real) currneighborcosts;  /**< edge costs from head of path to current neighbors */
    STP_Vectype(int)      currneighbors;      /**< current neighbors */
    STP_Vectype(int)      pathedges;          /**< edges of path */
    STP_Vectype(int)      visitednodes;       /**< visited nodes */
    SCIP_Real* RESTRICT   sp_dists;           /**< distances to neighbors of path start node */
    int* RESTRICT         sp_starts;          /**< CSR like starts for each node in the path, pointing to sp_dists */
    int* RESTRICT         nodes_index;        /**< maps each node to index in 0,1,2,..., or to VNODES_UNSET, VNODES_INPATH  */
+   SCIP_Bool* RESTRICT   nodes_isTerm;       /**< terminal node? */
    SCIP_Bool* RESTRICT   nodeindices_isPath; /**< is a node index in the path? */
    SCIP_Bool* RESTRICT   firstneighbors_isKilled; /**< for each first neighbor index: is ruled-out? */
    SCIP_Real             pathcost;           /**< cost of path */
@@ -58,6 +58,8 @@ typedef struct path_replacement
    int                   pathtail;           /**< first node of path */
    int                   failneighbor;       /**< temporary */
    int                   nnodes;             /**< number of nodes */
+   int                   maxdegree;
+   SCIP_Bool             probIsPc;           /**< prize-collecting problem? */
 } PR;
 
 
@@ -323,6 +325,12 @@ void addPathHeadEdge(
    pr->pathcost += dcsr->cost[j];
    pr->nodeindices_isPath[pr->nodes_index[extnode]] = TRUE;
 
+   if( pr->probIsPc )
+   {
+      assert(LE(g->prize[pathhead], dcsr->cost[j]));
+      pr->pathcost -= g->prize[pathhead];
+   }
+
    assert(pathGetHead(g, pr) == extnode);
 }
 
@@ -396,7 +404,6 @@ void pathneighborsCollect(
    SCIPdebugMessage("extending path to node %d \n", basenode);
 
    StpVecClear(pr->currneighbors);
-   //StpVecClear(pr->currneighborcosts);
 
    for( int i = dcsr_range[basenode].start; i != dcsr_range[basenode].end; i++ )
    {
@@ -410,7 +417,6 @@ void pathneighborsCollect(
       SCIPdebugMessage("adding neighbor %d  head_index=%d\n", head, head_index);
 
       StpVecPushBack(scip, pr->currneighbors, head);
-      //StpVecPushBack(scip, pr->currneighborcosts, dcsr_costs[i]);
 
       if( head_index == VNODES_UNSET )
       {
@@ -476,7 +482,6 @@ void pathneighborsUpdateDistances(
             {
                SCIP_Real head_profit = 0.0;
                const int head_start = sp_starts[nodes_index[head]];
-               // todo get prize of head here!
 
                if( head == pathtail && node == pathhead )
                   continue;
@@ -534,6 +539,7 @@ void pathExendPrepare(
    const SCIP_Real* const dcsr_costs = dcsr->cost;
    SCIP_Real* RESTRICT sp_dists = pr->sp_dists;
    int* RESTRICT sp_starts = pr->sp_starts;
+   const SCIP_Bool isPc = pr->probIsPc;
 
    assert(0 == StpVecGetSize(pr->pathedges));
    assert(0 == StpVecGetSize(pr->visitednodes));
@@ -550,6 +556,7 @@ void pathExendPrepare(
    {
       const int head = dcsr_heads[i];
       assert(pr->nodes_index[head] == VNODES_UNSET);
+      assert(!isPc || !graph_pc_knotIsDummyTerm(g, head));
 
       if( head == basehead )
          continue;
@@ -572,15 +579,29 @@ void pathExendPrepare(
       sp_starts[i + 1] = sp_starts[i] + pr->nfirstneighbors;
 
       /* set 2-edge distances via path tail */
-      for( int j = sp_starts[i], k = 0; j != sp_starts[i + 1]; j++, k++ )
-         sp_dists[j] = basecost + pr->firstneighborcosts[k];
+      if( isPc )
+      {
+         for( int j = sp_starts[i], k = 0; j != sp_starts[i + 1]; j++, k++ )
+         {
+            assert(LE(g->prize[basetail], MIN(basecost, pr->firstneighborcosts[k])));
+            sp_dists[j] = basecost + pr->firstneighborcosts[k] - g->prize[basetail];
+         }
+
+         assert(EQ(sp_dists[sp_starts[i] + i], 2.0 * basecost - g->prize[basetail]));
+      }
+      else
+      {
+         for( int j = sp_starts[i], k = 0; j != sp_starts[i + 1]; j++, k++ )
+            sp_dists[j] = basecost + pr->firstneighborcosts[k];
+
+         assert(EQ(sp_dists[sp_starts[i] + i], 2.0 * basecost));
+      }
 
 #ifdef SCIP_DEBUG
       for( int j = sp_starts[i]; j != sp_starts[i + 1]; j++ )
          printf("%d->%d dist=%f \n", i, j - sp_starts[i], sp_dists[j]);
 #endif
 
-      assert(EQ(sp_dists[sp_starts[i] + i], 2.0 * basecost));
       /* set self-distance */
       sp_dists[sp_starts[i] + i] = 0.0;
 
@@ -609,6 +630,16 @@ void pathExendPrepare(
       pr->firstneighbors_isKilled[i] = FALSE;
 
    addInitialPathNodes(scip, g, basetail, basehead, pr);
+
+   /* NOTE: firstneighborcosts are only used for a subpath, thus we can already subtract the prize here */
+   if( isPc )
+   {
+      for( int i = 0; i < pr->nfirstneighbors; i++ )
+      {
+         pr->firstneighborcosts[i] -= g->prize[basetail];
+         assert(GE(pr->firstneighborcosts[i], 0.0));
+      }
+   }
 }
 
 
@@ -631,7 +662,7 @@ void pathExend(
    assert(*isExendible);
    assert(!(*isRedundant));
 
-   if( npathedges >= SP_MAXLENGTH || g->grad[pathhead] >= SP_MAXDEGREE || Is_term(g->term[pathhead]) )
+   if( npathedges >= SP_MAXLENGTH || g->grad[pathhead] >= pr->maxdegree || pr->nodes_isTerm[pathhead] )
    {
       *isExendible = FALSE;
       return;
@@ -704,31 +735,32 @@ SCIP_RETCODE prInit(
    SCIP_CALL( SCIPallocMemory(scip, pathreplace) );
    pr = *pathreplace;
 
+   pr->probIsPc = graph_pc_isPc(g);
+   pr->maxdegree = pr->probIsPc ? SP_MAXDEGREE_PC : SP_MAXDEGREE;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pr->nodes_isTerm, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->nodeindices_isPath, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->nodes_index, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->sp_starts, SP_MAXNSTARTS) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->sp_dists, SP_MAXNDISTS) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pr->firstneighbors_isKilled, SP_MAXDEGREE) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pr->firstneighbors_isKilled, pr->maxdegree) );
 
    SCIP_CALL( reduce_sdprofitInit(scip, g, &pr->sdprofit) );
 
    for( int i = 0; i < nnodes; i++ )
       pr->nodes_index[i] = VNODES_UNSET;
 
+   graph_getIsTermArray(g, pr->nodes_isTerm);
+
    pr->currneighbors = NULL;
-   //pr->currneighborcosts = NULL;
    pr->firstneighborcosts = NULL;
    pr->pathedges = NULL;
    pr->visitednodes = NULL;
    pr->nfirstneighbors = -1;
    pr->nnodes = nnodes;
-   StpVecReserve(scip, pr->currneighbors, SP_MAXDEGREE);
-   StpVecReserve(scip, pr->firstneighborcosts, SP_MAXDEGREE);
-  // StpVecReserve(scip, pr->currneighborcosts, SP_MAXDEGREE);
+   StpVecReserve(scip, pr->currneighbors, pr->maxdegree);
+   StpVecReserve(scip, pr->firstneighborcosts, pr->maxdegree);
    StpVecReserve(scip, pr->pathedges, SP_MAXLENGTH);
    StpVecReserve(scip, pr->visitednodes, SP_MAXLENGTH);
-
- //  SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &pr->dheap) );
 
    return SCIP_OKAY;
 }
@@ -750,7 +782,6 @@ void prClean(
    }
 
    StpVecClear(pr->firstneighborcosts);
-   //StpVecClear(pr->currneighborcosts);
    StpVecClear(pr->currneighbors);
    StpVecClear(pr->pathedges);
    StpVecClear(pr->visitednodes);
@@ -774,11 +805,9 @@ void prFree(
 {
    PR* pr = *pathreplace;
 
-   //graph_heap_free(scip, FALSE, FALSE, &pr->dheap);
    StpVecFree(scip, pr->pathedges);
    StpVecFree(scip, pr->currneighbors);
    StpVecFree(scip, pr->visitednodes);
-  // StpVecFree(scip, pr->currneighborcosts);
    StpVecFree(scip, pr->firstneighborcosts);
 
    SCIPfreeMemoryArray(scip, &pr->firstneighbors_isKilled);
@@ -786,6 +815,7 @@ void prFree(
    SCIPfreeMemoryArray(scip, &pr->sp_starts);
    SCIPfreeMemoryArray(scip, &pr->nodes_index);
    SCIPfreeMemoryArray(scip, &pr->nodeindices_isPath);
+   SCIPfreeMemoryArray(scip, &pr->nodes_isTerm);
    reduce_sdprofitFree(scip, &pr->sdprofit);
 
    SCIPfreeMemory(scip, pathreplace);
@@ -808,7 +838,7 @@ static inline
 SCIP_RETCODE processPath(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   startedge,          /**< edge to start from (head) */
-   PR*                   pathreplace,        /**< path replacement data structure */
+   PR*                   pr,                 /**< path replacement data structure */
    GRAPH*                g,                  /**< graph data structure */
    int*                  nelims              /**< pointer to number of reductions */
    )
@@ -817,20 +847,21 @@ SCIP_RETCODE processPath(
    SCIP_Bool pathIsRedundant = FALSE;
    const int tail = g->tail[startedge];
    const int head = g->head[startedge];
-   assert(StpVecGetSize(pathreplace->pathedges) == 0);
+   const int maxdeg = pr->maxdegree;
+   assert(StpVecGetSize(pr->pathedges) == 0);
 
-   if( g->grad[tail] >= SP_MAXDEGREE || g->grad[head] >= SP_MAXDEGREE || Is_term(g->term[tail]) || Is_term(g->term[head]) )
+   if( g->grad[tail] >= maxdeg || g->grad[head] >= maxdeg || pr->nodes_isTerm[tail] || pr->nodes_isTerm[head] )
       return SCIP_OKAY;
 
    if( g->grad[tail] <= 1 )
       return SCIP_OKAY;
 
-   pathExendPrepare(scip, g, startedge, pathreplace);
+   pathExendPrepare(scip, g, startedge, pr);
 
    while( pathIsExtendable )
    {
       assert(!pathIsRedundant);
-      pathExend(scip, g, pathreplace, &pathIsExtendable, &pathIsRedundant);
+      pathExend(scip, g, pr, &pathIsExtendable, &pathIsRedundant);
 
       if( pathIsRedundant )
       {
@@ -842,7 +873,7 @@ SCIP_RETCODE processPath(
       }
    }
 
-   prClean(pathreplace);
+   prClean(pr);
 
    return SCIP_OKAY;
 }
@@ -858,11 +889,17 @@ SCIP_RETCODE pathreplaceExec(
    )
 {
    const int nedges = graph_get_nEdges(g);
+   const SCIP_Bool isPc = pathreplace->probIsPc;
    // todo have edge stack?
 
    for( int e = 0; e < nedges; e++ )
    {
+      /* deleted edge? */
       if( g->oeat[e] == EAT_FREE )
+         continue;
+
+      /* dummy edge? */
+      if( isPc && graph_pc_edgeIsExtended(g, e) )
          continue;
 
       SCIP_CALL( processPath(scip, e, pathreplace, g, nelims) );
