@@ -93,6 +93,7 @@ Performance improvements
 - products in nonlinear constraints are no longer disaggregated for the extended formulation
 - no longer relax bounds of integral variables when computing bounds on activity in nonlinear constraints
 - revised and improved Ipopt interface
+- revised and improved subNLP primal heuristic, in particular choice of iteration limit and starting condition and reuse of subSCIP
 
 Examples and applications
 -------------------------
