@@ -773,13 +773,13 @@ int calcIterLimit(
    )
 {
    if( heurdata->nnlpsolvesiterlim > heurdata->nnlpsolvesokay )
-      return MAX(heurdata->itermin, 2 * heurdata->iterusediterlim);
+      return MAX(heurdata->itermin, 2 * heurdata->iterusediterlim);  /*lint !e712*/
 
    if( heurdata->nnlpsolvesokay >= heurdata->ninitsolves )
-      return MAX(heurdata->itermin, 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay);
+      return MAX(heurdata->itermin, 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay);  /*lint !e712*/
 
    if( heurdata->nnlpsolvesokay > 0 )
-      return MAX3(heurdata->itermin, heurdata->iterinit, 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay);
+      return MAX3(heurdata->itermin, heurdata->iterinit, 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay);  /*lint !e712*/
 
    return MAX(heurdata->itermin, heurdata->iterinit);
 }
@@ -846,7 +846,7 @@ SCIP_RETCODE solveSubNLP(
        * plus one extra for all the setup cost
        * this is mainly to avoid that the primal heuristics runs all the time on instances that are solved in the subscip-presolve
        */
-      heurdata->iterused += 1 + SCIPgetNPresolRounds(scip);
+      heurdata->iterused += 1 + SCIPgetNPresolRounds(scip);  /*lint !e776*/
 
       if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED )
       {
@@ -1099,7 +1099,7 @@ SCIP_RETCODE solveSubNLP(
     */
    opttol = heurdata->opttol;
    if( opttol == 0.0 )  /*lint !e777*/
-      opttol = MAX(SCIPdualfeastol(scip), MIN(SCIPgetTransGap(scip), 0.1));
+      opttol = MAX(SCIPdualfeastol(scip), MIN(SCIPgetTransGap(scip), 0.1));  /*lint !e666*/
 
    /* if we had many (fraction > expectinfeas) infeasible NLPs, then tell NLP solver to expect an infeasible problem */
    expectinfeas = FALSE;
@@ -1746,7 +1746,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/presolveemphasis",
          "presolve emphasis in sub-SCIP (0: default, 1: aggressive, 2: fast, 3: off)",
-         &heurdata->presolveemphasis, FALSE, SCIP_PARAMSETTING_FAST, SCIP_PARAMSETTING_DEFAULT, SCIP_PARAMSETTING_OFF, NULL, NULL) );
+         &heurdata->presolveemphasis, FALSE, (int)SCIP_PARAMSETTING_FAST, (int)SCIP_PARAMSETTING_DEFAULT, (int)SCIP_PARAMSETTING_OFF, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/setcutoff",
          "whether to set cutoff in sub-SCIP to current primal bound",
