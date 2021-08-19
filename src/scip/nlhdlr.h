@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr.h
+ * @ingroup INTERNALAPI
  * @brief  private functions of nonlinear handlers of nonlinear constraints
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller

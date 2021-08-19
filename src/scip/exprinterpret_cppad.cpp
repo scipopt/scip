@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    exprinterpret_cppad.cpp
- * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
- * @ingroup EXPRINTS
+ * @brief   methods to interpret (evaluate) an expression "fast" using CppAD
+ * @ingroup DEFPLUGINS_EXPRINT
  * @author  Stefan Vigerske
  */
 

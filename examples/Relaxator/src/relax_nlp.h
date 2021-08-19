@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   relax_nlp.h
- * @ingroup RELAXATORS
  * @brief  nlp relaxator
  * @author Benjamin Mueller
  */

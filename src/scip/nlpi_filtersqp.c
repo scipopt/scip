@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_filtersqp.c
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   filterSQP NLP interface
  * @author  Stefan Vigerske
  *
@@ -1623,7 +1623,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
          SCIPinfoMessage(scip, NULL, "FilterSQP terminated with status %d in run %d, absolute KKT violation is %g\n", ifail, nruns, problem->rstat[0]);
       }
 
-      /* if iteration or time limit exceeded, then don't retry */
+      /* if iteration or time limit exceeded or solve is interrupted, then don't retry */
       if( problem->niterations >= param.iterlimit || SCIPisSolveInterrupted(scip) || timelimitreached(data, problem) )
       {
          if( param.verblevel > 0 )

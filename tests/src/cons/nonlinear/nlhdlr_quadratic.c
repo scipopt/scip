@@ -35,9 +35,8 @@
 #include "scip/expr_pow.h"
 #include "scip/expr_product.h"
 #include "scip/expr_sum.h"
-#include "scip/expr_sin.h"
+#include "scip/expr_trig.h"
 #include "scip/expr_var.h"
-#include "scip/expr_cos.h"
 #include "scip/expr_value.h"
 #include "scip/nlpi_ipopt.h"
 

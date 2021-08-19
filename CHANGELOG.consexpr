@@ -12,6 +12,7 @@ Features
 - improve OBBT by only considering variables that are contained in at least one nonconvex expression that has an auxiliary variable
 - default parameter settings for NLP solves are now defined independently of the NLP solver
 - added table to print statistics on NLP solvers
+- Ipopt interface now supports warmstarts from a full primal/dual solution pair
 
 expressions:
 - removed support for expression types min and max for now, removed support for expression type sign
@@ -419,15 +420,14 @@ expression:
 - added SCIPgetExprNVars(), SCIPgetExprVarExprs()
 - added SCIPcallExprCurvature(), SCIPcallExprMonotonicity(), SCIPcallExprEval(), SCIPcallExprEvalFwdiff(), SCIPcallExprInteval(), SCIPcallExprEstimate(), SCIPcallExprInitestimates(), SCIPcallExprSimplify(), SCIPcallExprReverseprop()
 - added SCIPcreateExprAbs(), SCIPincludeExprhdlrAbs()
-- added SCIPincludeExprhdlrCos(), SCIPcreateExprCos()
 - added SCIPincludeExprhdlrEntropy(), SCIPcreateExprEntropy()
 - added SCIPincludeExprhdlrErf(), SCIPcreateExprErf()
 - added SCIPcreateExprExp(), SCIPincludeExprhdlrExp(), SCIPisExprExp()
 - added SCIPcreateExprLog(), SCIPincludeExprhdlrLog(), SCIPisExprLog()
 - added SCIPcreateExprPow(), SCIPcreateExprSignpower(), SCIPincludeExprhdlrPow(), SCIPincludeExprhdlrSignpower(), SCIPisExprSignpower(), SCIPgetExponentExprPow(), SCIPisExprPower()
 - added SCIPincludeExprhdlrProduct(), SCIPcreateExprProduct(), SCIPgetCoefExprProduct(), SCIPisExprProduct()
-- added SCIPincludeExprhdlrSin(), SCIPcreateExprSin(), SCIPcomputeRevPropIntervalSin(), SCIPcomputeEstimatorsTrig(), SCIPcomputeInitialCutsTrig(), SCIPcomputeCurvatureSin()
 - added SCIPincludeExprhdlrSum(), SCIPcreateExprSum(), SCIPsetConstantExprSum(), SCIPappendExprSumExpr(), SCIPmultiplyByConstantExprSum(), SCIPgetCoefsExprSum(), SCIPgetConstantExprSum(), SCIPisExprSum()
+- added SCIPincludeExprhdlrSin(), SCIPcreateExprSin(), SCIPincludeExprhdlrCos(), SCIPcreateExprCos()
 - added SCIPincludeExprhdlrValue(), SCIPcreateExprValue(), SCIPgetValueExprValue(), SCIPisExprValue()
 - added SCIPincludeExprhdlrVar(), SCIPcreateExprVar(), SCIPgetVarExprVar(), SCIPisExprVar()
 - added SCIPincludeExprhdlrVaridx(), SCIPcreateExprVaridx(), SCIPisExprVaridx(), SCIPgetIndexExprVaridx(), SCIPsetIndexExprVaridx()
@@ -479,7 +479,7 @@ nlpi:
 - added SCIPcreateNlpiProblemFromNlRows()
 - added SCIPnlpiOracleGetObjectiveConstant()
 - added SCIPnlpiOracleIsVarNonlinear(), SCIPnlpiOracleGetVarCounts(), SCIPnlpiOracleIsConstraintNonlinear()
-- added SCIPnlpiGetNProblems(), SCIPnlpiGetProblemTime(), SCIPnlpiGetNSolves(), SCIPnlpiGetSolveTime(), SCIPnlpiGetSolveTimeSolver(), SCIPnlpiGetEvalTime(), SCIPnlpiGetNIterations(), SCIPnlpiGetNTermStat(), SCIPnlpiGetNSolStat(), SCIPnlpiMergeStatistics()
+- added SCIPnlpiGetNProblems(), SCIPnlpiGetProblemTime(), SCIPnlpiGetNSolves(), SCIPnlpiGetSolveTime(), SCIPnlpiGetEvalTime(), SCIPnlpiGetNIterations(), SCIPnlpiGetNTermStat(), SCIPnlpiGetNSolStat(), SCIPnlpiMergeStatistics()
 - added SCIPmergeNLPIStatistics(), SCIPprintNLPIStatistics()
 - added SCIPnlpiOracleResetEvalTime(), SCIPnlpiOracleGetEvalTime()
 

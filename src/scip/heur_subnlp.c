@@ -263,7 +263,7 @@ SCIP_RETCODE createSubSCIP(
    /* check if we still have NLPI's in subscip */
    if( SCIPgetNNlpis(heurdata->subscip) <= 0 )
    {
-      SCIPdebugMsg(scip, "none of the NLPIs from main SCIP did not copy into sub-SCIP, give up heuristic.\n");
+      SCIPdebugMsg(scip, "none of the NLPIs from main SCIP copied into sub-SCIP, give up heuristic.\n");
       SCIP_CALL( SCIPfree(&heurdata->subscip) );
 
       return SCIP_OKAY;

@@ -26,6 +26,11 @@
  *  - \ref EXPRHDLRS "List of available expression handlers"
  */
 
+/** @defgroup DEFPLUGINS_EXPR Default expression handlers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default expression handlers of SCIP
+ */
+
 #ifndef SCIP_TYPE_EXPR_H_
 #define SCIP_TYPE_EXPR_H_
 
@@ -455,7 +460,7 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *    \text{expr}^{\prime \prime}}(\text{SCIPexprGetEvalValue}(c))  D_u c.
  * \f]
  *
- * See Differentiation methods in cons_expr.h for more details.
+ * See Differentiation methods in scip_expr.h for more details.
  *
  *  - scip      : SCIP main data structure
  *  - expr      : expression to be evaluated

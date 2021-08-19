@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_quotient.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  quotient nonlinear handler
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
@@ -128,7 +129,7 @@ SCIP_RETCODE exprdataFree(
 /** helper method to transform an expression g(x) as a * f(x) + b */
 static
 void transformExpr(
-   SCIP*                 scip,               /* SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_EXPR**           target,             /**< pointer to store the expression f(x) */
    SCIP_Real*            coef,               /**< pointer to store the coefficient */

@@ -125,6 +125,9 @@ typedef struct SCIP_ConsNonlinear_BilinTerm SCIP_CONSNONLINEAR_BILINTERM; /**< b
 #define SCIP_DECL_NONLINCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, int nvarexprs, \
       int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
 
+/** @} */
+/** @} */
+
 /** creates the handler for nonlinear constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
@@ -133,6 +136,15 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Nonlinear Constraints
+ *
+ * @{
+ */
 
 /**@name Nonlinear Constraint Handler Methods */
 /**@{ */

@@ -15,7 +15,7 @@
 
 /**@file    exprinterpret_none.c
  * @brief   function definitions for nonexisting expression interpreter to resolve linking references
- * @ingroup EXPRINTS
+ * @ingroup DEFPLUGINS_EXPRINT
  * @author  Stefan Vigerske
  */
 

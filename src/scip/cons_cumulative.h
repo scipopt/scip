@@ -47,7 +47,7 @@ extern "C" {
 /** creates the constraint handler for cumulative constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
- * */
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP*                 scip                /**< SCIP data structure */

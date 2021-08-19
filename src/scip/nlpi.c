@@ -121,7 +121,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpidata = nlpidata;
 
    SCIP_CALL( SCIPclockCreate(&(*nlpi)->problemtime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*nlpi)->solvetime, SCIP_CLOCKTYPE_DEFAULT) );
 
    return SCIP_OKAY;
 }
@@ -161,7 +160,6 @@ SCIP_RETCODE SCIPnlpiFree(
    BMSfreeMemoryArray(&(*nlpi)->name);
    BMSfreeMemoryArray(&(*nlpi)->description);
 
-   SCIPclockFree(&(*nlpi)->solvetime);
    SCIPclockFree(&(*nlpi)->problemtime);
 
    BMSfreeMemory(nlpi);
@@ -181,8 +179,7 @@ void SCIPnlpiInit(
    nlpi->nproblems = 0;
    nlpi->nsolves = 0;
    SCIPclockReset(nlpi->problemtime);
-   SCIPclockReset(nlpi->solvetime);
-   nlpi->solvetimesolver = 0.0;
+   nlpi->solvetime = 0.0;
    nlpi->evaltime = 0.0;
    nlpi->niter = 0L;
    BMSclearMemoryArray(nlpi->ntermstat, (int)SCIP_NLPTERMSTAT_OTHER+1);
@@ -566,15 +563,13 @@ SCIP_RETCODE SCIPnlpiSolve(
 
    ++nlpi->nsolves;
 
-   SCIPclockStart(nlpi->solvetime, set);
    SCIP_CALL( nlpi->nlpisolve(set->scip, nlpi, problem, *param) );
-   SCIPclockStop(nlpi->solvetime, set);
 
    ++nlpi->ntermstat[nlpi->nlpigettermstat(set->scip, nlpi, problem)];
    ++nlpi->nsolstat[nlpi->nlpigetsolstat(set->scip, nlpi, problem)];
 
    SCIP_CALL( nlpi->nlpigetstatistics(set->scip, nlpi, problem, &stats) );
-   nlpi->solvetimesolver += stats.totaltime;
+   nlpi->solvetime += stats.totaltime;
    nlpi->evaltime += stats.evaltime;
    nlpi->niter += stats.niterations;
 
@@ -735,22 +730,13 @@ int SCIPnlpiGetNSolves(
    return nlpi->nsolves;
 }
 
-/** gives total time spend in NLPI solve callback */
+/** gives total time spend in NLP solves (as reported by solver) */
 SCIP_Real SCIPnlpiGetSolveTime(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    )
 {
    assert(nlpi != NULL);
-   return SCIPclockGetTime(nlpi->solvetime);
-}
-
-/** gives total time the NLPI reported to have spend for solving */
-SCIP_Real SCIPnlpiGetSolveTimeSolver(
-   SCIP_NLPI*            nlpi                /**< NLP interface structure */
-   )
-{
-   assert(nlpi != NULL);
-   return nlpi->solvetimesolver;
+   return nlpi->solvetime;
 }
 
 /** gives total time spend in function evaluation during NLP solves
@@ -809,8 +795,7 @@ void SCIPnlpiMergeStatistics(
    targetnlpi->nproblems += sourcenlpi->nproblems;
    targetnlpi->nsolves += sourcenlpi->nsolves;
    SCIPclockSetTime(targetnlpi->problemtime, SCIPclockGetTime(targetnlpi->problemtime) + SCIPclockGetTime(sourcenlpi->problemtime));
-   SCIPclockSetTime(targetnlpi->solvetime, SCIPclockGetTime(targetnlpi->solvetime) + SCIPclockGetTime(sourcenlpi->solvetime));
-   targetnlpi->solvetimesolver += sourcenlpi->solvetimesolver;
+   targetnlpi->solvetime += sourcenlpi->solvetime;
    targetnlpi->evaltime += sourcenlpi->evaltime;
    targetnlpi->niter += sourcenlpi->niter;
 
@@ -824,8 +809,7 @@ void SCIPnlpiMergeStatistics(
       sourcenlpi->nproblems = 0;
       sourcenlpi->nsolves = 0;
       SCIPclockReset(sourcenlpi->problemtime);
-      SCIPclockReset(sourcenlpi->solvetime);
-      sourcenlpi->solvetimesolver = 0.0;
+      sourcenlpi->solvetime = 0.0;
       sourcenlpi->evaltime = 0.0;
       sourcenlpi->niter = 0;
 

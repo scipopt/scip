@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_ipopt_dummy.c
- * @ingroup OTHER_CFILES
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   dummy Ipopt NLP interface for the case that Ipopt is not available
  * @author  Stefan Vigerske
  * @author  Benjamin Müller

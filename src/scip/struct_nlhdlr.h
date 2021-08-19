@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_nlhdlr.h
+ * @ingroup INTERNALAPI
  * @brief  structure definitions related to nonlinear handlers of nonlinear constraints
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller

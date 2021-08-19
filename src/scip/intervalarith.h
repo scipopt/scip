@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   intervalarith.h
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief  interval arithmetics for provable bounds
  * @author Tobias Achterberg
  * @author Stefan Vigerske
@@ -32,6 +32,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicIntervalArithMethods Interval Arithmetics
+ * @ingroup MiscellaneousMethods
+ * @brief methods for interval arithmetics
+ *
+ * @{
+ */
 
 /** interval given by infimum and supremum */
 struct SCIP_Interval
@@ -742,7 +749,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
 /** propagates a weighted sum of intervals in a given interval
  *
- * Given constant + sum weights_i operands_i \in rhs,
+ * Given constant + sum weights_i operands_i \f$\in\f$ rhs,
  * computes possibly tighter interval for each term.
  *
  * @attention valid values are returned in resultants only if any tightening has been found and no empty interval, that is, function returns with non-zero and *infeasible == FALSE
@@ -760,6 +767,8 @@ int SCIPintervalPropagateWeightedSum(
    SCIP_INTERVAL*        resultants,         /**< array to store propagated intervals, if any reduction is found at all (check return code and *infeasible) */
    SCIP_Bool*            infeasible          /**< buffer to store if propagation produced empty interval */
    );
+
+/** @} */
 
 #ifdef __cplusplus
 }

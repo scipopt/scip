@@ -260,10 +260,13 @@ TAB_SIZE               = 8
 # commands \{ and \} for these it is advised to use the version @{ and @} or use
 # a double escape (\\{ and \\})
 
+# refsnippet was originally defined as    @snippet \1 \2\n\(Source: \1\)
+# but this doesn't work with neither doxygen 1.8.18 nor 1.9.1
+
 ALIASES                = SCIP=<b>SCIP</b> \
                          FILEEXT=.html \
                          "PUBLICAPIDESCRIPTION=The public API of \SCIP is separated into a Core API and a Plugin API. The first contains all methods that can be accessed by including the header scip.h. The Plugin API is a collection of methods that are provided by the default plugins of \SCIP. The Plugin API is provided by scipdefplugins.h." \
-                         "refsnippet{2}=@snippet \1 \2 \n\(Source: \1\)"
+                         "refsnippet{2}=@snippet \1 \2"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -864,7 +867,6 @@ INPUT                  = . \
                          ../INSTALL_APPLICATIONS_EXAMPLES.md \
                          ../src \
                          ../src/scip \
-                         ../src/nlpi \
                          ../src/lpi \
                          ../src/objscip \
                          ../src/tclique \
@@ -1969,7 +1971,7 @@ COMPACT_LATEX          = NO
 # The default value is: a4.
 # This tag requires that the tag GENERATE_LATEX is set to YES.
 
-PAPER_TYPE             = a4wide
+PAPER_TYPE             = a4
 
 # The EXTRA_PACKAGES tag can be used to specify one or more LaTeX package names
 # that should be included in the LaTeX output. The package can be specified just

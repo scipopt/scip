@@ -15,6 +15,7 @@
 
 /**@file   pub_nlhdlr.h
  * @brief  public functions of nonlinear handlers of nonlinear constraints
+ * @ingroup PUBLICCOREAPI
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
  * @author Felipe Serrano
@@ -32,8 +33,10 @@ extern "C" {
 #include "scip/type_scip.h"
 #include "scip/type_nlhdlr.h"
 
-/**@name Nonlinear Handler Methods */
-/**@{ */
+/**@addtogroup PublicNlhdlrInterfaceMethods
+ *
+ * @{
+ */
 
 /** sets the copy handler callback of a nonlinear handler */
 SCIP_EXPORT

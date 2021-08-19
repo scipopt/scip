@@ -35,11 +35,6 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLPIS
- *
- * @{
- */
-
 /** creates an NLP solver interface */
 SCIP_RETCODE SCIPnlpiCreate(
    SCIP_NLPI**                     nlpi,                        /**< pointer to NLP interface data structure */
@@ -307,8 +302,6 @@ SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
    SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
    void*                 buffer              /**< warmstart information */
    );
-
-/** @} */
 
 #ifdef __cplusplus
 }

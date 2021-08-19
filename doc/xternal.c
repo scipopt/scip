@@ -7459,19 +7459,9 @@
  * @brief methods to initiate and conduct LP diving
  */
 
-/**@defgroup PublicConflictMethods Conflict Analysis
- * @ingroup PublicSolveMethods
- * @brief public methods for conflict analysis
- */
-
 /**@defgroup PublicNLPMethods NLP Relaxation
  * @ingroup PublicSolveMethods
  * @brief methods for the nonlinear relaxation
- */
-
-/**@defgroup PublicExpressionTreeMethods Expression (Tree)
- * @ingroup PublicNLPMethods
- * @brief methods for expressions and expression trees
  */
 
 /**@defgroup PublicNLRowMethods Nonlinear Rows
@@ -7482,6 +7472,11 @@
 /**@defgroup PublicNLPDiveMethods NLP Diving
  * @ingroup PublicNLPMethods
  * @brief methods to initiate and conduct NLP Diving
+ */
+
+/**@defgroup PublicConflictMethods Conflict Analysis
+ * @ingroup PublicSolveMethods
+ * @brief public methods for conflict analysis
  */
 
 /**@defgroup PublicBranchingMethods Branching
@@ -7564,11 +7559,6 @@
  * @brief  methods and macros to use the \SCIP memory management
  *
  * @see \ref MEMORY  "Using the memory functions of SCIP" for more information
- */
-
-/**@defgroup PublicNonlinearMethods Nonlinear Data
- * @ingroup MiscellaneousMethods
- * @brief methods for nonlinear data
  */
 
 /**@defgroup PublicTimingMethods Timing
@@ -7659,6 +7649,11 @@
  * @brief  methods for node selector plugin management
  */
 
+/**@defgroup PublicNlhdlrInterfaceMethods Nonlinear Handlers
+ * @ingroup PluginManagementMethods
+ * @brief  methods for the management of nonlinear handlers
+ */
+
 /**@defgroup PublicPresolverMethods Presolver
  * @ingroup PluginManagementMethods
  * @brief methods for presolver plugins
@@ -7699,12 +7694,7 @@
  * @brief methods for concurrent solver type plugins
  */
 
-/**@defgroup PublicNLPInterfaceMethods NLP relaxation
- * @ingroup PluginManagementMethods
- * @brief  methods for the management of NLP relaxation
- */
-
-/**@defgroup PublicNLPIInterfaceMethods NLP solver interface
+/**@defgroup PublicNLPIInterfaceMethods NLP solver interfaces
  * @ingroup PluginManagementMethods
  * @brief  methods for the management of NLP solver interfaces
  */
@@ -7871,6 +7861,14 @@
  *
  */
 
+/**@defgroup EXPRINTS Expression Interpreter
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default expression interpreters of \SCIP
+ *
+ * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
+ * \ref EXPRINT "here".
+ */
+
 /**@defgroup FILEREADERS File Readers
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all file readers which are currently available.
@@ -7923,24 +7921,6 @@
 /**@defgroup PublicSymmetryMethods Symmetry
  * @ingroup INTERNALAPI
  * @brief methods for symmetry handling
- */
-
-/**@defgroup EXPRINTS Expression Interpreter
- * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default expression interpreters of \SCIP
- *
- * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
- * \ref EXPRINT "here".
- */
-
-/**@defgroup ExprintIncludes Inclusion methods
- * @ingroup EXPRINTS
- * @brief methods to include specific expression interpreters into \SCIP
- *
- * This module contains methods to include specific expression interpreters into \SCIP.
- *
- * @note All default plugins can be included at once (including all default expression interpreters) using SCIPincludeDefaultPlugins()
- *
  */
 
 /**@defgroup FileReaderIncludes Inclusion methods
@@ -8045,7 +8025,7 @@
  */
 
 /**@defgroup PricerIncludes Inclusion methods
-* @ingroup PUBLICPLUGINAPI
+* @ingroup PRICERS
 * @brief methods to include specific pricers into \SCIP
 *
 * This module contains methods to include specific pricers into \SCIP.

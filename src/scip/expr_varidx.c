@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_varidx.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  handler for variable index expressions
  * @author Benjamin Mueller
  */

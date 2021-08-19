@@ -22,7 +22,7 @@
 
 #include "scip/scip.h"
 #include "scip/expr.h"
-#include "scip/expr_cos.h"
+#include "scip/expr_trig.h"
 #include "scip/expr_var.h"
 #include "scip/expr_value.h"
 #include "scip/scipdefplugins.h"

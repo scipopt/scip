@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_expr.c
+ * @ingroup OTHER_CFILES
  * @brief  public functions to work with algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_xyz.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  handler for xyz expressions
  * @author Jane Doe
  */

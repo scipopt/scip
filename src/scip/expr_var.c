@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_var.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  variable expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller

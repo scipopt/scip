@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_expr.h
+ * @ingroup PUBLICCOREAPI
  * @brief  public functions to work with algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
@@ -31,6 +32,13 @@ extern "C" {
 #include "scip/def.h"
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
+
+/**@defgroup PublicExprMethods Expressions
+ * @ingroup DataStructures
+ * @brief an algebraic expression used for nonlinear constraints and NLPs
+ *
+ *@{
+ */
 
 /**@name Expression Handler Methods */
 /**@{ */
@@ -743,7 +751,7 @@ SCIP_EXPR* SCIPexpriterRestartDFS(
 
 /** specifies in which stages to stop a DFS iterator
  *
- * @param stopstages should be a bitwise OR of different SCIP_EXPRITER_STAGE values
+ * Parameter stopstages should be a bitwise OR of different SCIP_EXPRITER_STAGE values
  *
  * If the current stage is not one of the stopstages, then the iterator will be moved on.
  */
@@ -954,6 +962,8 @@ SCIP_EXPORT
 const char* SCIPexprcurvGetName(
    SCIP_EXPRCURV         curv                /**< curvature */
    );
+
+/**@} */
 
 /**@} */
 

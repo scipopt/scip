@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_all.c
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   NLP interface that uses all available NLP interfaces
  * @author  Benjamin Mueller
  */

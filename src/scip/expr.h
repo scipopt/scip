@@ -15,6 +15,7 @@
 
 /**@file   expr.h
  * @brief  private functions to work with algebraic expressions
+ * @ingroup INTERNALAPI
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
  * @author Felipe Serrano

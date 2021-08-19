@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_log.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  logarithm expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller

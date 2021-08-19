@@ -18,7 +18,7 @@
  */
 
 /**@file    nlpi_xyz.c
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   XYZ NLP interface
  * @author  you
  */

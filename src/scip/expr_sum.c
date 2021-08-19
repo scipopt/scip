@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_sum.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  sum expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller

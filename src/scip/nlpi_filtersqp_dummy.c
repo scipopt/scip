@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_filtersqp_dummy.c
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   dummy filterSQP NLP interface for the case that FilterSQP is not available
  * @author  Stefan Vigerske
  */

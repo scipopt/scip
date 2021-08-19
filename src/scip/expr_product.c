@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_product.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  product expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller

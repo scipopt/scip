@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_ipopt.cpp
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   Ipopt NLP interface
  * @author  Stefan Vigerske
  * @author  Benjamin Müller
@@ -729,7 +729,7 @@ SCIP_RETCODE handleNlpParam(
 #endif
 
    // disable acceptable-point heuristic iff fastfail is completely off
-   // it seems useful to have Ipopt stop when it obviously doesn't make progress (like one of the NLPs in the bendersqp ctest)
+   // by default (fastfail=conservative), it seems useful to have Ipopt stop when it obviously doesn't make progress (like one of the NLPs in the bendersqp ctest)
    if( param.fastfail == SCIP_NLPPARAM_FASTFAIL_OFF )
       (void) nlpiproblem->ipopt->Options()->SetIntegerValue("acceptable_iter", 0);
    else
@@ -1576,7 +1576,7 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
       BMScopyMemoryArray(problem->soldualcons, consdualvalues, ncons);
 
       assert((problem->soldualvarlb == NULL) == (problem->soldualvarub == NULL));
-      if( problem->soldualvarlb != NULL )
+      if( problem->soldualvarlb == NULL )
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->soldualvarlb, nvars) );
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->soldualvarub, nvars) );
@@ -1663,8 +1663,6 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 
    try
    {
-      SmartPtr<SolveStatistics> stats;
-
 #ifdef PROTECT_SOLVE_BY_MUTEX
       /* lock solve_mutex if Ipopt is going to use Mumps as linear solver
        * unlocking will happen in the destructor of guard, which is called when this block is left
@@ -1778,7 +1776,9 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             return SCIP_ERROR;
       }
 
-      stats = problem->ipopt->Statistics();
+#if IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
+      SmartPtr<SolveStatistics> stats = problem->ipopt->Statistics();
+      /* Ipopt does not provide access to the statistics if there was a serious error */
       if( IsValid(stats) )
       {
          problem->lastniter = stats->IterationCount();
@@ -1788,9 +1788,17 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          collectStatistic(scip, status, problem, stats);
 #endif
       }
+#else
+      SmartPtr<IpoptData> ip_data = problem->ipopt->IpoptDataObject();
+      /* I don't think that there is a situation where ip_data is NULL, but check here anyway */
+      if( IsValid(ip_data) )
+      {
+         problem->lastniter = ip_data->iter_count();
+         problem->lasttime =  ip_data->TimingStats().OverallAlgorithm().TotalWallclockTime();
+      }
+#endif
       else
       {
-         /* Ipopt does not provide access to the statistics if there was a serious error */
          problem->lastniter = 0;
          problem->lasttime  = 0.0;
       }

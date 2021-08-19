@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_nlpi.h
+ * @ingroup INTERNALAPI
  * @brief  data definitions for an NLP solver interface
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
@@ -65,8 +66,7 @@ struct SCIP_Nlpi
    int                             nproblems;                   /**< number of problems created */
    int                             nsolves;                     /**< number of solves */
    SCIP_CLOCK*                     problemtime;                 /**< time spend in problem setup and modification */
-   SCIP_CLOCK*                     solvetime;                   /**< time spend in solve callback */
-   SCIP_Real                       solvetimesolver;             /**< time spend in solve as reported by solver */
+   SCIP_Real                       solvetime;                   /**< time spend in solve as reported by solver */
    SCIP_Real                       evaltime;                    /**< time spend in function evaluation during solve */
    SCIP_Longint                    niter;                       /**< total number of iterations */
    int                             ntermstat[SCIP_NLPTERMSTAT_OTHER+1]; /**< number of times a specific termination status occurred */

@@ -31,16 +31,19 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLPIS
+/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available
  *
- * @{
+ * @ingroup NLPIIncludes
  */
-
-/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlpSolverIpopt(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
 
 /** gets string that identifies Ipopt (version number) */
 SCIP_EXPORT

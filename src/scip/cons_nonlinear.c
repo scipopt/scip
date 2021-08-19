@@ -84,7 +84,7 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
 /* properties of the nonlinear constraint handler statistics table */
-#define TABLE_NAME_NONLINEAR           "nonlinear"
+#define TABLE_NAME_NONLINEAR           "cons_nonlinear"
 #define TABLE_DESC_NONLINEAR           "nonlinear constraint handler statistics"
 #define TABLE_POSITION_NONLINEAR       14600                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NONLINEAR SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -2472,7 +2472,7 @@ SCIP_RETCODE reversePropQueue(
  *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
  *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
  *
- *  @TODO should we distinguish between expressions where activity information is used for separation and those where not,
+ *  TODO should we distinguish between expressions where activity information is used for separation and those where not,
  *    e.g., try less to propagate on convex constraints?
  */
 static
@@ -10551,7 +10551,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 
    /* include table for statistics */
    assert(SCIPfindTable(scip, TABLE_NAME_NONLINEAR) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NONLINEAR, TABLE_DESC_NONLINEAR, TRUE,
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NONLINEAR, TABLE_DESC_NONLINEAR, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNonlinear,
          NULL, TABLE_POSITION_NONLINEAR, TABLE_EARLIEST_STAGE_NONLINEAR) );
 
@@ -11046,7 +11046,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
 
          /* if estimate didn't report branchscores explicitly, then consider branching on those children for
-          * which the following cleanup changes coefficients (we had/have this in cons_expr_sum this way)
+          * which the following cleanup changes coefficients (we had/have this in expr_sum this way)
           */
          if( !branchscoresuccess )
             SCIProwprepRecordModifications(rowprep);

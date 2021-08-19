@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr.c
+ * @ingroup OTHER_CFILES
  * @brief  functions for algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
@@ -79,7 +80,6 @@ SCIP_RETCODE freeExpr(
 
    return SCIP_OKAY;
 }
-
 
 /*
  * quadratic representation of expression
@@ -168,8 +168,6 @@ SCIP_RETCODE quadDetectGetQuadexprterm(
 
    return SCIP_OKAY;
 }
-
-/** @} */
 
 
 /** evaluate and forward-differentiate expression
@@ -325,8 +323,10 @@ void SCIPexprhdlrSetCopyFreeHdlr(
 /** set the expression handler callbacks to copy and free expression data */
 void SCIPexprhdlrSetCopyFreeData(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
-   SCIP_DECL_EXPRCOPYDATA((*copydata)),      /**< expression data copy callback (can be NULL for expressions without data) */
-   SCIP_DECL_EXPRFREEDATA((*freedata))       /**< expression data free callback (can be NULL if data does not need to be freed) */
+   SCIP_DECL_EXPRCOPYDATA((*copydata)),      /**< expression data copy callback (can be NULL for expressions
+                                                  without data) */
+   SCIP_DECL_EXPRFREEDATA((*freedata))       /**< expression data free callback (can be NULL if data does not
+                                                  need to be freed) */
    )
 {  /*lint --e{715}*/
    assert(exprhdlr != NULL);
@@ -711,7 +711,8 @@ SCIP_Real SCIPexprhdlrGetEstimateTime(
    return SCIPclockGetTime(exprhdlr->estimatetime);
 }
 
-/** gets number of times, branching candidates reported by of this expression handler were used to assemble branching candidates
+/** gets number of times, branching candidates reported by of this expression handler were used to
+ * assemble branching candidates
  *
  * that is, how often did we consider branching on a children of this expression
  */
@@ -776,12 +777,14 @@ SCIP_RETCODE SCIPexprhdlrCopyInclude(
 
    if( exprhdlr->copyhdlr != NULL )
    {
-      SCIPsetDebugMsg(targetset, "including expression handler <%s> in subscip %p\n", SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
+      SCIPsetDebugMsg(targetset, "including expression handler <%s> in subscip %p\n",
+            SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
       SCIP_CALL( exprhdlr->copyhdlr(targetset->scip, exprhdlr) );
    }
    else
    {
-      SCIPsetDebugMsg(targetset, "expression handler <%s> cannot be copied to subscip %p due to missing copyhdlr callback\n", SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
+      SCIPsetDebugMsg(targetset, "expression handler <%s> cannot be copied to subscip %p due "
+            "to missing copyhdlr callback\n", SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
    }
 
    return SCIP_OKAY;
@@ -1268,11 +1271,14 @@ SCIP_RETCODE SCIPexprhdlrFwDiffExpr(
 /** calls the evaluation and forward-differentiation callback of an expression handler
  *
  * The method evaluates an expression by taking the values of its children into account.
- * The method differentiates an expression by taking the values and directional derivatives of its children into account.
+ * The method differentiates an expression by taking the values and directional derivatives of
+ * its children into account.
  *
- * Further, allows to evaluate and differentiate w.r.t. given values for children instead of those stored in children expressions.
+ * Further, allows to evaluate and differentiate w.r.t. given values for children instead of those
+ * stored in children expressions.
  *
- * It probably doesn't make sense to call this function for a variable-expression if sol and/or direction are not given.
+ * It probably doesn't make sense to call this function for a variable-expression if sol and/or
+ * direction are not given.
  */
 SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1281,10 +1287,13 @@ SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
    SCIP_EXPR*            expr,               /**< expression to be evaluated */
    SCIP_Real*            val,                /**< buffer to store value of expression */
    SCIP_Real*            dot,                /**< buffer to store derivative value */
-   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
+   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should
+                                                  be used */
    SCIP_SOL*             sol,                /**< solution that is evaluated (can be NULL) */
-   SCIP_Real*            childrendirs,       /**< directional derivatives for children, or NULL if dot-values stored in children should be used */
-   SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions, can be NULL if childrendirs is given) */
+   SCIP_Real*            childrendirs,       /**< directional derivatives for children, or NULL if dot-values stored
+                                                  in children should be used */
+   SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions, can
+                                                  be NULL if childrendirs is given) */
    )
 {
    SCIP_Real origval;
@@ -1470,7 +1479,8 @@ SCIP_RETCODE SCIPexprhdlrEstimateExpr(
    if( exprhdlr->estimate != NULL )
    {
       SCIPclockStart(exprhdlr->estimatetime, set);
-      SCIP_CALL( exprhdlr->estimate(set->scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
+      SCIP_CALL( exprhdlr->estimate(set->scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue,
+            coefs, constant, islocal, success, branchcand) );
       SCIPclockStop(exprhdlr->estimatetime, set);
 
       /* update statistics */
@@ -1567,8 +1577,10 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to propagate */
    SCIP_INTERVAL         bounds,             /**< the bounds on the expression that should be propagated */
-   SCIP_INTERVAL*        childrenbounds,     /**< array to store computed bounds for children, initialized with current activity */
-   SCIP_Bool*            infeasible          /**< buffer to store whether a children bounds were propagated to an empty interval */
+   SCIP_INTERVAL*        childrenbounds,     /**< array to store computed bounds for children, initialized with
+                                                  current activity */
+   SCIP_Bool*            infeasible          /**< buffer to store whether a children bounds were propagated to
+                                                  an empty interval */
    )
 {
    assert(exprhdlr != NULL);
@@ -1650,7 +1662,8 @@ SCIP_RETCODE SCIPexprCreate(
    /* initializes the ownerdata */
    if( ownercreate != NULL )
    {
-      SCIP_CALL( ownercreate(set->scip, *expr, &(*expr)->ownerdata, &(*expr)->ownerfree, &(*expr)->ownerprint, &(*expr)->ownerevalactivity, ownercreatedata) );
+      SCIP_CALL( ownercreate(set->scip, *expr, &(*expr)->ownerdata, &(*expr)->ownerfree, &(*expr)->ownerprint,
+            &(*expr)->ownerevalactivity, ownercreatedata) );
    }
 
    return SCIP_OKAY;
@@ -1747,7 +1760,8 @@ SCIP_RETCODE SCIPexprRemoveChildren(
 
 /** copies an expression including subexpressions
  *
- * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will be set to NULL.
+ * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will
+ * be set to NULL.
  *
  * For all or some expressions, a mapping to an existing expression can be specified via the mapexpr callback.
  * The mapped expression (including its children) will not be copied in this case and its ownerdata will not be touched.
@@ -1848,7 +1862,8 @@ SCIP_RETCODE SCIPexprCopy(
             }
 
             /* create in targetexpr an expression of the same type as expr, but without children for now */
-            SCIP_CALL( SCIPexprCreate(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownercreate, ownercreatedata) );
+            SCIP_CALL( SCIPexprCreate(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL,
+                  ownercreate, ownercreatedata) );
 
             /* store targetexpr */
             expriteruserdata.ptrval = exprcopy;
@@ -1931,7 +1946,8 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
    }
 
    /* create expression with same handler and copied data, but without children */
-   SCIP_CALL( SCIPexprCreate(set, blkmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPexprCreate(set, blkmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL, ownercreate,
+         ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -2176,7 +2192,8 @@ SCIP_RETCODE SCIPexprPrint(
       else
          parentprecedence = 0;
 
-      SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, stage, currentchild, parentprecedence, file) );
+      SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, stage, currentchild,
+            parentprecedence, file) );
 
       expr = SCIPexpriterGetNext(it);
    }
@@ -2290,14 +2307,18 @@ SCIP_RETCODE SCIPexprPrintDot(
 
       if( printdata->whattoprint & SCIP_EXPRPRINT_EXPRSTRING )
       {
-         SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_ENTEREXPR, -1, 0, printdata->file) );
+         SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_ENTEREXPR, -1, 0,
+               printdata->file) );
          for( c = 0; c < expr->nchildren; ++c )
          {
-            SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_VISITINGCHILD, c, 0, printdata->file) );
+            SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_VISITINGCHILD,
+                  c, 0, printdata->file) );
             fprintf(printdata->file, "c%d", c);
-            SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_VISITEDCHILD, c, 0, printdata->file) );
+            SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_VISITEDCHILD,
+                  c, 0, printdata->file) );
          }
-         SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_LEAVEEXPR, -1, 0, printdata->file) );
+         SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_LEAVEEXPR, -1, 0,
+               printdata->file) );
 
          fputs("\\n", printdata->file);
       }
@@ -2679,7 +2700,8 @@ SCIP_RETCODE SCIPexprEvalGradient(
       else
       {
          derivative = SCIP_INVALID;
-         SCIP_CALL( SCIPexprhdlrBwDiffExpr(expr->exprhdlr, set, NULL, expr, SCIPexpriterGetChildIdxDFS(it), &derivative, NULL, 0.0) );
+         SCIP_CALL( SCIPexprhdlrBwDiffExpr(expr->exprhdlr, set, NULL, expr, SCIPexpriterGetChildIdxDFS(it),
+               &derivative, NULL, 0.0) );
 
          if( derivative == SCIP_INVALID )
          {
@@ -2772,8 +2794,10 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
       {
          derivative = SCIP_INVALID;
          hessiandir = SCIP_INVALID;
-         SCIP_CALL( SCIPexprhdlrBwDiffExpr(expr->exprhdlr, set, NULL, expr, SCIPexpriterGetChildIdxDFS(it), &derivative, NULL, SCIP_INVALID) );
-         SCIP_CALL( SCIPexprhdlrBwFwDiffExpr(expr->exprhdlr, set, expr, SCIPexpriterGetChildIdxDFS(it), &hessiandir, NULL) );
+         SCIP_CALL( SCIPexprhdlrBwDiffExpr(expr->exprhdlr, set, NULL, expr, SCIPexpriterGetChildIdxDFS(it),
+               &derivative, NULL, SCIP_INVALID) );
+         SCIP_CALL( SCIPexprhdlrBwFwDiffExpr(expr->exprhdlr, set, expr, SCIPexpriterGetChildIdxDFS(it),
+               &hessiandir, NULL) );
 
          if( derivative == SCIP_INVALID || hessiandir == SCIP_INVALID )
          {
@@ -2891,14 +2915,15 @@ SCIP_RETCODE SCIPexprEvalActivity(
             /* call the inteval callback of the exprhdlr */
             SCIP_CALL( SCIPexprhdlrIntEvalExpr(expr->exprhdlr, set, expr, &expr->activity, NULL, NULL) );
 #ifdef DEBUG_PROP
-            SCIPsetDebugMsg(set, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
+            SCIPsetDebugMsg(set, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, expr->activity.inf,
+                  expr->activity.sup);
 #endif
 
             /* if expression is integral, then we try to tighten the interval bounds a bit
-             * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
-             * it would be ok to use ceil() and floor(), but for safety we use SCIPceil and SCIPfloor for now
-             * the default intevalVar does not relax variables, so can omit expressions without children
-             * (constants should be ok, too)
+             * this should undo the addition of some unnecessary safety added by use of nextafter() in interval
+             * arithmetics, e.g., when doing pow() it would be ok to use ceil() and floor(), but for safety we
+             * use SCIPceil and SCIPfloor for now the default intevalVar does not relax variables, so can omit
+             * expressions without children (constants should be ok, too)
              */
             if( expr->isintegral && expr->nchildren > 0 )
             {
@@ -2983,7 +3008,8 @@ int SCIPexprCompare(
       if( compareresult != 0 )
          return compareresult;
 
-      /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that expr2 is larger */
+      /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that
+       * expr2 is larger */
       if( SCIPgetCoefsExprSum(expr1)[nchildren-1] < 1.0 )
          return -1;
 
@@ -3220,7 +3246,8 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       expr->quaddata->bilinexprterms[0].expr2 = SCIPexprGetChildren(expr)[0];
       expr->quaddata->bilinexprterms[0].coef = 1.0;
 
-      expr->quaddata->allexprsarevars = SCIPexprIsVar(set, expr->quaddata->quadexprterms[0].expr) && SCIPexprIsVar(set, expr->quaddata->quadexprterms[1].expr);
+      expr->quaddata->allexprsarevars = SCIPexprIsVar(set, expr->quaddata->quadexprterms[0].expr)
+            && SCIPexprIsVar(set, expr->quaddata->quadexprterms[1].expr);
 
       *isquadratic = TRUE;
       return SCIP_OKAY;
@@ -3499,7 +3526,8 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
       if( assumevarfixed == NULL || quaddata->curvature != SCIP_EXPRCURV_UNKNOWN )
          return SCIP_OKAY;
    }
-   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN || assumevarfixed != NULL || (storeeigeninfo && !quaddata->eigeninfostored));
+   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN || assumevarfixed != NULL
+         || (storeeigeninfo && !quaddata->eigeninfostored));
 
    *curv = SCIP_EXPRCURV_UNKNOWN;
 
@@ -3511,7 +3539,8 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
     */
    if( n > 7000 )
    {
-      SCIPmessageFPrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL, NULL, "number of quadratic variables is too large (%d) to check the curvature\n", n);
+      SCIPmessageFPrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL, NULL,
+            "number of quadratic variables is too large (%d) to check the curvature\n", n);
       return SCIP_OKAY;
    }
 
@@ -3551,13 +3580,15 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
       assert(!SCIPhashmapExists(expr2matrix, (void*)quadexprterm.expr));
 
       /* skip expr if it is a variable mentioned in assumevarfixed */
-      if( assumevarfixed != NULL && SCIPexprIsVar(set, quadexprterm.expr) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetVarExprVar(quadexprterm.expr)) )
+      if( assumevarfixed != NULL && SCIPexprIsVar(set, quadexprterm.expr)
+          && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetVarExprVar(quadexprterm.expr)) )
          continue;
 
       if( quadexprterm.sqrcoef == 0.0 && ! storeeigeninfo )
       {
          assert(quadexprterm.nadjbilin > 0);
-         /* SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadexprterm.var)); */
+         /* SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared
+          * --> indefinite quadratic\n", SCIPvarGetName(quadexprterm.var)); */
          goto CLEANUP;
       }
 
@@ -3578,11 +3609,17 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
       bilinexprterm = quaddata->bilinexprterms[i];
 
       /* each factor should have been added to expr2matrix unless it corresponds to a variable mentioned in assumevarfixed */
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr1) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetVarExprVar(bilinexprterm.expr1))));
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr2) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetVarExprVar(bilinexprterm.expr2))));
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1)
+            || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr1)
+            && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetVarExprVar(bilinexprterm.expr1))));
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2)
+            || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr2)
+            && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetVarExprVar(bilinexprterm.expr2))));
 
-      /* skip bilinear terms where at least one of the factors should be assumed to be fixed (i.e., not present in expr2matrix map) */
-      if( !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) )
+      /* skip bilinear terms where at least one of the factors should be assumed to be fixed
+       * (i.e., not present in expr2matrix map) */
+      if( !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1)
+          || !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) )
          continue;
 
       row = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr1);
@@ -3599,7 +3636,8 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    /* compute eigenvalues */
    if( LapackDsyev(storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
    {
-      SCIPmessagePrintWarning(messagehdlr, "Failed to compute eigenvalues of quadratic coefficient matrix --> don't know curvature\n");
+      SCIPmessagePrintWarning(messagehdlr, "Failed to compute eigenvalues of quadratic coefficient "
+            "matrix --> don't know curvature\n");
       goto CLEANUP;
    }
 
@@ -3762,7 +3800,9 @@ SCIP_Real SCIPexprGetDerivative(
    return expr->derivative;
 }
 
-/** gives the value of directional derivative from the last evaluation of a directional derivative of expression (or SCIP_INVALID if there was an error) */
+/** gives the value of directional derivative from the last evaluation of a directional derivative of
+ * expression (or SCIP_INVALID if there was an error)
+ */
 SCIP_Real SCIPexprGetDot(
    SCIP_EXPR*            expr                /**< expression */
    )
@@ -3772,7 +3812,9 @@ SCIP_Real SCIPexprGetDot(
    return expr->dot;
 }
 
-/** gives the value of directional derivative from the last evaluation of a directional derivative of derivative of root (or SCIP_INVALID if there was an error) */
+/** gives the value of directional derivative from the last evaluation of a directional derivative of
+ * derivative of root (or SCIP_INVALID if there was an error)
+ */
 SCIP_Real SCIPexprGetBardot(
    SCIP_EXPR*            expr                /**< expression */
    )
@@ -3903,8 +3945,10 @@ void SCIPexprGetQuadraticData(
    SCIP_EXPR*            expr,               /**< quadratic expression */
    SCIP_Real*            constant,           /**< buffer to store constant term, or NULL */
    int*                  nlinexprs,          /**< buffer to store number of expressions that appear linearly, or NULL */
-   SCIP_EXPR***          linexprs,           /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
-   SCIP_Real**           lincoefs,           /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
+   SCIP_EXPR***          linexprs,           /**< buffer to store pointer to array of expressions that appear linearly,
+                                                  or NULL */
+   SCIP_Real**           lincoefs,           /**< buffer to store pointer to array of coefficients of expressions that
+                                                  appear linearly, or NULL */
    int*                  nquadexprs,         /**< buffer to store number of expressions in quadratic terms, or NULL */
    int*                  nbilinexprs,        /**< buffer to store number of bilinear expressions terms, or NULL */
    SCIP_Real**           eigenvalues,        /**< buffer to store pointer to array of eigenvalues of Q, or NULL */
@@ -3947,12 +3991,15 @@ void SCIPexprGetQuadraticData(
 void SCIPexprGetQuadraticQuadTerm(
    SCIP_EXPR*            quadexpr,           /**< quadratic expression */
    int                   termidx,            /**< index of quadratic term */
-   SCIP_EXPR**           expr,               /**< buffer to store pointer to argument expression (the 'x') of this term, or NULL */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to argument expression (the 'x') of this term,
+                                                  or NULL */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of variable, or NULL */
    SCIP_Real*            sqrcoef,            /**< buffer to store square coefficient of variable, or NULL */
-   int*                  nadjbilin,          /**< buffer to store number of bilinear terms this variable is involved in, or NULL */
+   int*                  nadjbilin,          /**< buffer to store number of bilinear terms this variable is involved in,
+                                                  or NULL */
    int**                 adjbilin,           /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
-   SCIP_EXPR**           sqrexpr             /**< buffer to store pointer to square expression (the 'x^2') of this term or NULL if no square expression, or NULL */
+   SCIP_EXPR**           sqrexpr             /**< buffer to store pointer to square expression (the 'x^2') of this term
+                                                  or NULL if no square expression, or NULL */
    )
 {
    SCIP_QUADEXPR_QUADTERM* quadexprterm;
@@ -3982,7 +4029,8 @@ void SCIPexprGetQuadraticQuadTerm(
 /** gives the data of a bilinear expression term
  *
  * For a term a*expr1*expr2, returns
- * expr1, expr2, a, and the position of the quadratic expression term that uses expr2 in the quadratic expressions quadexprterms.
+ * expr1, expr2, a, and the position of the quadratic expression term that uses expr2 in the quadratic expressions
+ * quadexprterms.
  */
 void SCIPexprGetQuadraticBilinTerm(
    SCIP_EXPR*            expr,               /**< quadratic expression */
@@ -3990,8 +4038,10 @@ void SCIPexprGetQuadraticBilinTerm(
    SCIP_EXPR**           expr1,              /**< buffer to store first factor, or NULL */
    SCIP_EXPR**           expr2,              /**< buffer to store second factor, or NULL */
    SCIP_Real*            coef,               /**< buffer to coefficient, or NULL */
-   int*                  pos2,               /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
-   SCIP_EXPR**           prodexpr            /**< buffer to store pointer to expression that is product if first and second factor, or NULL */
+   int*                  pos2,               /**< buffer to position of expr2 in quadexprterms array of quadratic
+                                                  expression, or NULL */
+   SCIP_EXPR**           prodexpr            /**< buffer to store pointer to expression that is product if first
+                                                  and second factor, or NULL */
    )
 {
    SCIP_QUADEXPR_BILINTERM* bilinexprterm;
