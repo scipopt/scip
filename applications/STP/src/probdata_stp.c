@@ -413,73 +413,6 @@ SCIP_RETCODE presolveStp(
    probdata->stp_type = graph->stp_type;
    probdata->graph = graph;
 
-#if 0
-   int c = 0;
-     for( int e = 0; e < graph->edges; e+=2)
-     {
-        const int tail = graph->tail[e];
-        const int head = graph->head[e];
-
-        if( graph->grad[tail] + graph->grad[head] <= 7 && !Is_term(graph->term[tail]) && !Is_term(graph->term[head]) )
-        {
-           double coste = -graph->cost[e];
-           c++;
-
-           for( int e2 = graph->outbeg[tail]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
-              coste += graph->cost[e2];
-
-           for( int e2 = graph->outbeg[head]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
-              coste += graph->cost[e2];
-
-           printf("coste=%f \n", coste);
-
-        }
-     }
-
-     printf("count=%d \n\n\n\n", c);
-
-   for( int i = 0 ; i < graph->knots; i++)
-   {
-      if( Is_term(graph->term[i]) )
-      {
-         SCIP_Real m1 = FARAWAY;
-         int mine = -1;
-
-         for( int e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-         {
-
-            if( graph->cost[e] < m1 )
-            {
-               m1 = graph->cost[e];
-
-               mine = e;
-            }
-         }
-         SCIP_Real m2 = FARAWAY;
-         if( mine == -1 )
-         {
-            return SCIP_ERROR;
-         }
-
-         for( int e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-         {
-
-            if( e != mine && graph->cost[e] < m2 )
-            {
-               m2 = graph->cost[e];
-
-            }
-         }
-
-         graph_knot_printInfo(graph, i);
-
-         printf("...%f %f \n\n", m1, m2);
-
-      }
-   }
-   exit(1);
-#endif
-
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
 
    return SCIP_OKAY;
@@ -511,10 +444,6 @@ SCIP_RETCODE freeConstraintsCutModel(
    /* PC variant STP? */
    if( probdata->stp_type == STP_PCSPG || probdata->stp_type == STP_RPCSPG || probdata->stp_type == STP_MWCSP )
    {
-
-
-
-
 #if FLOWB
       for( int e = 0; e < probdata->nnonterms; e++ )
          SCIP_CALL( SCIPreleaseCons(scip, &(probdata->flowbcons[e])) );
