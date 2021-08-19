@@ -53,6 +53,8 @@ Build system
 
 ### Makefile
 
+- prefix PKG_CONFIG_PATH with Ipopt's pkgconfig dir instead of postfixing
+
 Fixed bugs
 ----------
 
