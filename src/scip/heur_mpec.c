@@ -354,7 +354,6 @@ SCIP_RETCODE heurExec(
    /* set parameters of NLP solver */
    nlpparam.feastol /= 10.0;
    nlpparam.opttol /= 10.0;
-   nlpparam.solvertol /= 10.0;
    nlpparam.iterlimit = heurdata->maxnlpiter;
 
    /* main loop */

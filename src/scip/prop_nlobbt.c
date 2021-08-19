@@ -551,7 +551,6 @@ SCIP_RETCODE applyNlobbt(
    /* set parameters of NLP solver */
    nlpparam.feastol *= propdata->feastolfac;
    nlpparam.opttol = SCIPfeastol(scip) * propdata->relobjtolfac;
-   nlpparam.solvertol = SCIPfeastol(scip) * propdata->relobjtolfac;
    nlpparam.verblevel = (unsigned short)propdata->nlpverblevel;
 
    /* main propagation loop */
