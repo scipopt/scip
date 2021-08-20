@@ -60,14 +60,14 @@ struct SCIP_Exprhdlr
    SCIP_DECL_EXPRINTEGRALITY((*integrality));/**< integrality detection callback (can be NULL) */
 
    /* statistics */
-   SCIP_Longint          nestimatecalls;     /**< number of times, the estimation callback was called */
-   SCIP_Longint          nintevalcalls;      /**< number of times, the interval evaluation callback was called */
-   SCIP_Longint          npropcalls;         /**< number of times, the propagation callback was called */
+   SCIP_Longint          nestimatecalls;     /**< number of times the estimation callback was called */
+   SCIP_Longint          nintevalcalls;      /**< number of times the interval evaluation callback was called */
+   SCIP_Longint          npropcalls;         /**< number of times the propagation callback was called */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this expression handler */
    SCIP_Longint          ndomreds;           /**< number of domain reductions found so far by this expression handler */
-   SCIP_Longint          nsimplifycalls;     /**< number of times, the simplification callback was called */
-   SCIP_Longint          nsimplified;        /**< number of times the simplification callback was succesful */
-   SCIP_Longint          nbranchscores;      /**< number of times, branching scores were added by (or for) this expression handler */
+   SCIP_Longint          nsimplifycalls;     /**< number of times the simplification callback was called */
+   SCIP_Longint          nsimplified;        /**< number of times the simplification callback simplified */
+   SCIP_Longint          nbranchscores;      /**< number of times branching scores were added by (or for) this expression handler */
 
    SCIP_CLOCK*           estimatetime;       /**< time used for estimation */
    SCIP_CLOCK*           intevaltime;        /**< time used for interval evaluation */
@@ -110,10 +110,9 @@ struct SCIP_Expr
 
    /* point-evaluation and differentiation*/
    SCIP_Real             evalvalue;          /**< value of expression from last evaluation (corresponding to evaltag) */
-   SCIP_Real             derivative;         /**< partial derivative of a "root path" w.r.t. this expression
-                                               *  (see documentation of Differentiation methods) */
-   SCIP_Real             dot;                /**< directional derivative of this expr */
-   SCIP_Real             bardot;             /**< directional derivative of derivative of root (strictly speaking, a path) w.r.t this expr */
+   SCIP_Real             derivative;         /**< partial derivative of a "root path" w.r.t. this expression (see \ref SCIP_EXPR_DIFF "Differentiation methods") */
+   SCIP_Real             dot;                /**< directional derivative of this expr (see \ref SCIP_EXPR_DIFF "Differentiation methods") */
+   SCIP_Real             bardot;             /**< directional derivative of derivative of root (strictly speaking, a path) w.r.t this expr (see \ref SCIP_EXPR_DIFF "Differentiation methods") */
    SCIP_Longint          evaltag;            /**< tag of point for which the expression has been evaluated last, or 0 */
    SCIP_Longint          difftag;            /**< when computing partial derivatives of an expression w.r.t. a variable,
                                                *  the tag allows us to decide whether the expression depends on the variable;
@@ -127,21 +126,21 @@ struct SCIP_Expr
    SCIP_EXPRCURV         curvature;           /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
 
    /* integrality information */
-   SCIP_Bool             isintegral;          /**< flag to store whether an expression is integral */
+   SCIP_Bool             isintegral;          /**< whether expression value is integral in feasible solutions */
 
    /* view expression as quadratic */
    SCIP_QUADEXPR*        quaddata;            /**< representation of expression as a quadratic, if checked and being quadratic */
-   SCIP_Bool             quadchecked;         /**< whether we checked whether the expression is quadratic */
+   SCIP_Bool             quadchecked;         /**< whether it has been checked whether the expression is quadratic */
 };
 
-/** data for representation of an expression as quadratic */
+/** representation of an expression as quadratic */
 struct SCIP_QuadExpr
 {
    SCIP_Real             constant;           /**< a constant term */
 
-   int                   nlinexprs;          /**< number of expressions that appear linearly */
-   SCIP_EXPR**           linexprs;           /**< expressions that appear linearly */
-   SCIP_Real*            lincoefs;           /**< coefficients of expressions that appear linearly */
+   int                   nlinexprs;          /**< number of linear terms */
+   SCIP_EXPR**           linexprs;           /**< expressions of linear terms */
+   SCIP_Real*            lincoefs;           /**< coefficients of linear terms */
 
    int                   nquadexprs;         /**< number of expressions in quadratic terms */
    SCIP_QUADEXPR_QUADTERM* quadexprterms;    /**< array with quadratic expression terms */
@@ -153,28 +152,29 @@ struct SCIP_QuadExpr
 
    SCIP_EXPRCURV         curvature;          /**< curvature of the quadratic representation of the expression */
    SCIP_Bool             curvaturechecked;   /**< whether curvature has been checked */
-   SCIP_Bool             eigeninfostored;    /**< whether the eigen information is stored */
 
    /* eigen decomposition information */
+   SCIP_Bool             eigeninfostored;    /**< whether the eigen information is stored */
    SCIP_Real*            eigenvalues;        /**< eigenvalues of the Q matrix: size of nquadexprs */
-   SCIP_Real*            eigenvectors;       /**< eigenvalues of the Q matrix; size of nquadexprs^2 */
+   SCIP_Real*            eigenvectors;       /**< eigenvalues of the Q matrix: size of nquadexprs^2 */
 };
 
-/** data structure to store a single term associated to a quadratic variable */
+/** a quadratic term associated to an expression */
 struct SCIP_QuadExpr_QuadTerm
 {
-   SCIP_EXPR*            expr;               /**< quadratic expression */
-   SCIP_Real             lincoef;            /**< linear coefficient of variable */
-   SCIP_Real             sqrcoef;            /**< square coefficient of variable */
+   SCIP_EXPR*            expr;               /**< expression of quadratic term */
+   SCIP_Real             lincoef;            /**< linear coefficient of expression */
+   SCIP_Real             sqrcoef;            /**< square coefficient of expression */
 
-   int                   nadjbilin;          /**< number of bilinear terms this variable is involved in */
+   int                   nadjbilin;          /**< number of bilinear terms this expression is involved in */
    int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
    int*                  adjbilin;           /**< indices of associated bilinear terms */
 
    SCIP_EXPR*            sqrexpr;            /**< expression that was found to be the square of expr, or NULL if no square term (sqrcoef==0) */
 };
 
-/** data structure to store a single bilinear term coef * expr1 * expr2  (similar to SCIP_QUADELEM)
+/** a single bilinear term coef * expr1 * expr2
+ *
  * except for temporary reasons, we assume that the index of var1 is smaller than the index of var2
  */
 struct SCIP_QuadExpr_BilinTerm
@@ -203,7 +203,7 @@ struct SCIP_ExprIter
    SCIP_EXPR**           dfsexprs;           /**< DFS stack */
    int*                  dfsnvisited;        /**< number of visited children for each expression in the stack */
    int                   dfsnexprs;          /**< total number of expression in stack */
-   int                   dfssize;            /**< size DFS stack */
+   int                   dfssize;            /**< size of DFS stack */
 
    /* data for BFS mode */
    SCIP_QUEUE*           queue;              /**< BFS queue */

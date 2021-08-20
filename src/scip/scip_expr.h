@@ -400,6 +400,7 @@ SCIP_Longint SCIPgetExprNewSoltag(
 /**@} */
 
 /** @name Differentiation methods
+ * @anchor SCIP_EXPR_DIFF
  * Gradients (Automatic differentiation Backward mode)
  * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
  * using a tree diagram. Suppose we want to compute the partial derivative of f w.r.t x. Write the function as a tree:

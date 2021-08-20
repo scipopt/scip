@@ -790,7 +790,7 @@ SCIP_RETCODE SCIPexprhdlrCopyInclude(
    return SCIP_OKAY;
 }
 
-/** initialization of expression handler (reset statistics) */
+/** initialization of expression handler (resets statistics) */
 void SCIPexprhdlrInit(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -818,8 +818,10 @@ void SCIPexprhdlrInit(
 
 /** calls the print callback of an expression handler
  *
- * the method prints an expression
- * it is called while iterating over the expression graph at different stages
+ * The method prints an expression.
+ * It is called while iterating over the expression graph at different stages.
+ *
+ * @see SCIP_DECL_EXPRPRINT
  */
 SCIP_RETCODE SCIPexprhdlrPrintExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -887,6 +889,8 @@ SCIP_RETCODE SCIPexprhdlrPrintExpr(
  *
  * The method parses an expression.
  * It should be called when parsing an expression and an operator with the expr handler name is found.
+ *
+ * @see SCIP_DECL_EXPRPARSE
  */
 SCIP_RETCODE SCIPexprhdlrParseExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -925,7 +929,7 @@ SCIP_RETCODE SCIPexprhdlrParseExpr(
 
 /** calls the curvature check callback of an expression handler
  *
- * See @ref SCIP_DECL_EXPRCURVATURE for details.
+ * @see SCIP_DECL_EXPRCURVATURE
  */
 SCIP_RETCODE SCIPexprhdlrCurvatureExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -954,7 +958,7 @@ SCIP_RETCODE SCIPexprhdlrCurvatureExpr(
 
 /** calls the monotonicity check callback of an expression handler
  *
- * See @ref SCIP_DECL_EXPRMONOTONICITY for details.
+ * @see SCIP_DECL_EXPRMONOTONICITY
  */
 SCIP_RETCODE SCIPexprhdlrMonotonicityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -983,7 +987,7 @@ SCIP_RETCODE SCIPexprhdlrMonotonicityExpr(
 
 /** calls the integrality check callback of an expression handler
  *
- * See @ref SCIP_DECL_EXPRINTEGRALITY for details.
+ * @see SCIP_DECL_EXPRINTEGRALITY
  */
 SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1012,6 +1016,8 @@ SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
 /** calls the hash callback of an expression handler
  *
  * The method hashes an expression by taking the hashes of its children into account.
+ *
+ * @see SCIP_DECL_EXPRHASH
  */
 SCIP_RETCODE SCIPexprhdlrHashExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1056,9 +1062,11 @@ SCIP_RETCODE SCIPexprhdlrHashExpr(
 /** calls the compare callback of an expression handler
  *
  * The method receives two expressions, expr1 and expr2, and returns
- * - -1 if expr1 < expr2
- * - 0  if expr1 = expr2
- * - 1  if expr1 > expr2
+ * - -1 if expr1 < expr2,
+ * - 0  if expr1 = expr2,
+ * - 1  if expr1 > expr2.
+ *
+ * @see SCIP_DECL_EXPRCOMPARE
  */
 int SCIPexprhdlrCompareExpr(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1100,6 +1108,8 @@ int SCIPexprhdlrCompareExpr(
  * The method evaluates an expression by taking the values of its children into account.
  *
  * Further, allows to evaluate w.r.t. given expression and children values instead of those stored in children expressions.
+ *
+ * @see SCIP_DECL_EXPREVAL
  */
 SCIP_RETCODE SCIPexprhdlrEvalExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1165,6 +1175,8 @@ SCIP_RETCODE SCIPexprhdlrEvalExpr(
  * \f]
  *
  * Further, allows to differentiate w.r.t. given expression and children values instead of those stored in children expressions.
+ *
+ * @see SCIP_DECL_EXPRBWDIFF
  */
 SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1237,7 +1249,7 @@ SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
 
 /** calls the forward differentiation callback of an expression handler
  *
- * See @ref SCIP_DECL_EXPRFWDIFF for details.
+ * @see SCIP_DECL_EXPRFWDIFF
  */
 SCIP_RETCODE SCIPexprhdlrFwDiffExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1271,14 +1283,14 @@ SCIP_RETCODE SCIPexprhdlrFwDiffExpr(
 /** calls the evaluation and forward-differentiation callback of an expression handler
  *
  * The method evaluates an expression by taking the values of its children into account.
- * The method differentiates an expression by taking the values and directional derivatives of
- * its children into account.
+ * The method differentiates an expression by taking the values and directional derivatives of its children into account.
  *
- * Further, allows to evaluate and differentiate w.r.t. given values for children instead of those
- * stored in children expressions.
+ * Further, allows to evaluate and differentiate w.r.t. given values for children instead of those stored in children expressions.
  *
- * It probably doesn't make sense to call this function for a variable-expression if sol and/or
- * direction are not given.
+ * It probably doesn't make sense to call this function for a variable-expression if sol and/or direction are not given.
+ *
+ * @see SCIP_DECL_EXPREVAL
+ * @see SCIP_DECL_EXPRFWDIFF
  */
 SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1384,7 +1396,7 @@ SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
 
 /** calls the evaluation callback for Hessian directions (backward over forward) of an expression handler
  *
- * See @ref SCIP_DECL_EXPRBWFWDIFF for details.
+ * @see SCIP_DECL_EXPRBWFWDIFF
  */
 SCIP_RETCODE SCIPexprhdlrBwFwDiffExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1418,7 +1430,10 @@ SCIP_RETCODE SCIPexprhdlrBwFwDiffExpr(
    return SCIP_OKAY;
 }
 
-/** calls the interval evaluation callback of an expression handler */
+/** calls the interval evaluation callback of an expression handler
+ *
+ * @see SCIP_DECL_EXPRINTEVAL
+ */
 SCIP_RETCODE SCIPexprhdlrIntEvalExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1448,7 +1463,7 @@ SCIP_RETCODE SCIPexprhdlrIntEvalExpr(
 
 /** calls the estimator callback of an expression handler
  *
- * See @ref SCIP_DECL_EXPRESTIMATE for details.
+ * @see SCIP_DECL_EXPRESTIMATE
  */
 SCIP_RETCODE SCIPexprhdlrEstimateExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1492,7 +1507,7 @@ SCIP_RETCODE SCIPexprhdlrEstimateExpr(
 
 /** calls the intitial estimators callback of an expression handler
  *
- * See @ref SCIP_DECL_EXPRINITESTIMATES for details.
+ * @see SCIP_DECL_EXPRINITESTIMATES
  */
 SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1527,7 +1542,7 @@ SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
 
 /** calls the simplification callback of an expression handler
  *
- * The function receives the expression to be simplified and a pointer to store the simplified expression.
+ * @see SCIP_DECL_EXPRSIMPLIFY
  */
 SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1571,6 +1586,8 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
 /** calls the reverse propagation callback of an expression handler
  *
  * The method propagates given bounds over the children of an expression.
+ *
+ * @see SCIP_DECL_EXPRREVERSEPROP
  */
 SCIP_RETCODE SCIPexprhdlrReversePropExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -1730,10 +1747,7 @@ SCIP_RETCODE SCIPexprReplaceChild(
    return SCIP_OKAY;
 }
 
-/** remove all children of expr
- *
- * @attention only use if you really know what you are doing
- */
+/** remove all children of expr */
 SCIP_RETCODE SCIPexprRemoveChildren(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -1760,8 +1774,7 @@ SCIP_RETCODE SCIPexprRemoveChildren(
 
 /** copies an expression including subexpressions
  *
- * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will
- * be set to NULL.
+ * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will be set to NULL.
  *
  * For all or some expressions, a mapping to an existing expression can be specified via the mapexpr callback.
  * The mapped expression (including its children) will not be copied in this case and its ownerdata will not be touched.
@@ -2626,7 +2639,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** computes the gradient for a given point
+/** evaluates gradient of an expression for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
  * Value can be received via SCIPgetExprPartialDiffNonlinear().
@@ -2725,7 +2738,7 @@ SCIP_RETCODE SCIPexprEvalGradient(
    return SCIP_OKAY;
 }
 
-/** computes the Hessian * v at a given point
+/** evaluates Hessian-vector product of an expression for a given point and direction
  *
  * Evaluates children, if necessary.
  * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear()
@@ -2966,8 +2979,9 @@ SCIP_RETCODE SCIPexprEvalActivity(
 }
 
 /** compare expressions
+ *
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
- * @note: The given expressions are assumed to be simplified.
+ * @note The given expressions are assumed to be simplified.
  */
 int SCIPexprCompare(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3168,8 +3182,8 @@ SCIP_RETCODE SCIPexprSimplify(
 
 /** checks whether an expression is quadratic
  *
- * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
- * or a sum of terms where at least one is a square or a product.
+ * An expression is quadratic if it is either a power expression with exponent 2.0, a product of two expressions,
+ * or a sum of terms where at least one is a square or a product of two.
  *
  * Use \ref SCIPexprGetQuadraticData to get data about the representation as quadratic.
  */
@@ -3475,14 +3489,15 @@ void SCIPexprFreeQuadratic(
    BMSfreeBlockMemory(blkmem, &expr->quaddata);
 }
 
-/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+/** Checks the curvature of the quadratic function stored in quaddata
  *
- * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
- * - semidefinite positive -> provided is set to sepaunder
- * - semidefinite negative -> provided is set to sepaover
- * - otherwise -> provided is set to none
+ * For this, it builds the matrix Q of quadratic coefficients and computes its eigenvalues using LAPACK.
+ * If Q is
+ * - semidefinite positive -> curv is set to convex,
+ * - semidefinite negative -> curv is set to concave,
+ * - otherwise -> curv is set to unknown.
  *
- * If assumevarfixed is given and some entries of x correspond to variables present in
+ * If assumevarfixed is given and some expressions in quadratic terms correspond to variables present in
  * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
  */
 SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
