@@ -757,30 +757,28 @@ SCIP_RETCODE createSolFromSubScipSol(
    return SCIP_OKAY;
 }
 
-/** finds an iteration limit
- *
- * if we hit more often an iterlimit than we were successful, then allow for more iterations:
- *   take twice the maximal iterusage on solves that hit the iterlimit
- * if we had a successful solve, then take twice the average of previous iterusages on successful solves,
- *   but if we had only very few solves, then also make sure it is at least heurdata->iterinit
- * otherwise (no successful solves and none that hit an iterlimit), then use fixed value from parameters
- * always ensure at least itermin iter
- */
+/** finds an iteration limit */
 static
 int calcIterLimit(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
+   /* if we hit more often an iterlimit than we were successful (termstatus=okay), then allow for more iterations:
+    * take twice the maximal iterusage on solves that hit the iterlimit
+    */
    if( heurdata->nnlpsolvesiterlim > heurdata->nnlpsolvesokay )
       return MAX(heurdata->itermin, 2 * heurdata->iterusediterlim);  /*lint !e712*/
 
+   /* if we had sufficiently many successful solves, then take twice the average of previous iterusages on successful solves */
    if( heurdata->nnlpsolvesokay >= heurdata->ninitsolves )
       return MAX(heurdata->itermin, 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay);  /*lint !e712*/
 
+   /* if we had too few successful solves, then still ensure that we allow for at least iterinit iterations */
    if( heurdata->nnlpsolvesokay > 0 )
       return MAX3(heurdata->itermin, heurdata->iterinit, 2 * heurdata->iterusedokay / heurdata->nnlpsolvesokay);  /*lint !e712*/
 
+   /* if we had no successful solve so far and none that hit an iterlimit, e.g., we are at the first NLP solve, then use iterinit */
    return MAX(heurdata->itermin, heurdata->iterinit);
 }
 
