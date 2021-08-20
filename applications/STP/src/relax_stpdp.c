@@ -197,6 +197,7 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
    SCIP_RELAXDATA* const relaxdata = SCIPrelaxGetData(relax);
    SCIP_Bool success;
 
+#ifdef SCIP_DISABLED
    {
       static int first = 1;
       // deleteme
@@ -220,6 +221,7 @@ SCIP_DECL_RELAXEXEC(relaxExecStpdp)
       }
       first = 0;
    }
+#endif
 
 
    *lowerbound = -SCIPinfinity(scip);

@@ -1589,7 +1589,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    DISTDATA* const distdata = extperma->distdata_default;
    SD* const sddata = distdata->sdistdata;
    const int* result = extperma->result;
-   SCIP_Bool withSol = extperma->solIsValid;
+   SCIP_Bool withSol;
 
    assert(scip && redcostdata);
    assert(!graph_pc_isMw(graph) && "not supported yet");
@@ -1610,6 +1610,18 @@ SCIP_RETCODE extreduce_deleteEdges(
       assert(sddata);
       SCIP_CALL( reduce_sdRepairSetUp(scip, graph, sddata) );
    }
+
+   if( useSd )
+   {
+      int npathelims = 0;
+      SCIP_CALL( reduce_pathreplaceExt(scip, graph, extperma, &npathelims) );
+
+      //printf("XXnpathelims=%d \n", npathelims);
+
+      (*nelims) += npathelims;
+   }
+
+   withSol = extperma->solIsValid;
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )

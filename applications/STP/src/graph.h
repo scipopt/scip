@@ -247,6 +247,7 @@ extern SCIP_Bool graph_knot_isInRange(const GRAPH*, int);
 extern void   graph_knot_add(GRAPH*, int);
 extern void   graph_knot_chg(GRAPH*, int, int);
 extern void   graph_knot_del(SCIP*, GRAPH*, int, SCIP_Bool);
+extern void   graph_knot_delFull(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_knot_contract_dir(GRAPH*, int, int);
 
 /* graph_delpseudo.c

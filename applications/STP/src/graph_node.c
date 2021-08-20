@@ -107,7 +107,7 @@ void graph_knot_chg(
 }
 
 
-/** delete node */
+/** deletes node */
 void graph_knot_del(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
@@ -116,14 +116,41 @@ void graph_knot_del(
    )
 {
    assert(scip && g);
-   assert(k >= 0 && k < g->knots);
+   assert(graph_knot_isInRange(g, k));
 
    while( g->outbeg[k] != EAT_LAST )
       graph_edge_del(scip, g, g->outbeg[k], freeancestors);
 
    assert(g->grad[k] == 0);
-   assert(g->outbeg[k] == EAT_LAST);
-   assert(g->inpbeg[k] == EAT_LAST);
+   assert(g->outbeg[k] == EAT_LAST && g->inpbeg[k] == EAT_LAST);
+}
+
+
+
+/** deletes node, and also adapts DCSR storage */
+void graph_knot_delFull(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int                   k,                  /**< the node */
+   SCIP_Bool             freeancestors       /**< free edge ancestors? */
+   )
+{
+   assert(scip && g);
+   assert(graph_knot_isInRange(g, k));
+
+   if( g->dcsr_storage )
+   {
+      while( g->outbeg[k] != EAT_LAST )
+         graph_edge_delFull(scip, g, g->outbeg[k], freeancestors);
+   }
+   else
+   {
+      while( g->outbeg[k] != EAT_LAST )
+         graph_edge_del(scip, g, g->outbeg[k], freeancestors);
+   }
+
+   assert(g->grad[k] == 0);
+   assert(g->outbeg[k] == EAT_LAST && g->inpbeg[k] == EAT_LAST);
 }
 
 

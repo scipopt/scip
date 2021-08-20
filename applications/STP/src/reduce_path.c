@@ -29,11 +29,13 @@
 
 #include <assert.h>
 #include "reduce.h"
+#include "extreduce.h"
 
 #define SP_MAXNDISTS 10000
-#define SP_MAXLENGTH 10
-#define SP_MAXDEGREE 10
-#define SP_MAXDEGREE_PC 11
+#define SP_MAXLENGTH 11
+#define SP_MAXDEGREE 8
+#define SP_MAXDEGREE_FAST 5
+#define SP_MAXDEGREE_PC 10
 #define SP_MAXNSTARTS 10000
 #define VNODES_UNSET -1
 #define SP_MAXNPULLS 4
@@ -42,8 +44,10 @@
 /** path replacement */
 typedef struct path_replacement
 {
+   EXTPERMA*             extperma;           /**< extension data or NULL */
    SDPROFIT*             sdprofit;           /**< SD profit */
    STP_Vectype(SCIP_Real) firstneighborcosts; /**< edge costs from tail of path to non-path neighbors */
+   STP_Vectype(int)      firstneighbors;     /**< first neighbors (only used in case SDs are being used) */
    STP_Vectype(int)      currneighbors;      /**< current neighbors */
    STP_Vectype(int)      pathedges;          /**< edges of path */
    STP_Vectype(int)      visitednodes;       /**< visited nodes */
@@ -60,6 +64,7 @@ typedef struct path_replacement
    int                   nnodes;             /**< number of nodes */
    int                   maxdegree;
    SCIP_Bool             probIsPc;           /**< prize-collecting problem? */
+   SCIP_Bool             useSd;              /**< use special distances? */
 } PR;
 
 
@@ -117,9 +122,78 @@ int pathGetHead(
 }
 
 
+/** deletes given edge */
+static inline
+void deleteEdge(
+   SCIP*                 scip,               /**< SCIP */
+   int                   edge,               /**< edge to delete */
+   GRAPH*                g,                  /**< graph data structure */
+   PR*                   pr                  /**< path replacement data structure */
+   )
+{
+   if( pr->useSd )
+   {
+      EXTPERMA* const extperma = pr->extperma;
+      assert(extperma && extperma->distdata_default);
+
+      if( extperma->solIsValid )
+      {
+         const int* const result = extperma->result;
+         if( result[edge] == CONNECT || result[flipedge(edge)] == CONNECT )
+            extperma->solIsValid = FALSE;
+      }
+
+      extreduce_edgeRemove(scip, edge, g, extperma->distdata_default, extperma);
+   }
+   else
+   {
+      graph_edge_delFull(scip, g, edge, TRUE);
+   }
+}
+
+
+/** removes nodes of degree one and unmarks */
+static
+void deletenodesDeg1(
+   SCIP*                 scip,               /**< SCIP */
+   EXTPERMA*             extperma,           /**< extension data */
+   GRAPH*                g                   /**< graph data structure (in/out) */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   SCIP_Bool rerun = TRUE;
+
+   while( rerun )
+   {
+      rerun = FALSE;
+      for( int i = 0; i < nnodes; ++i )
+      {
+         if( g->grad[i] == 1 && !Is_term(g->term[i]) )
+         {
+            const int sibling = g->head[g->outbeg[i]];
+
+            extreduce_edgeRemove(scip, g->outbeg[i], g, extperma->distdata_default, extperma);
+            assert(g->grad[i] == 0);
+
+            g->mark[i] = FALSE;
+
+            if( Is_term(g->term[sibling]) )
+               continue;
+
+            if( g->grad[sibling] == 0 )
+               g->mark[sibling] = FALSE;
+            else if( g->grad[sibling] == 1 )
+               rerun = TRUE;
+         }
+      }
+   }
+}
+
 /** tries to rule out neighbors of path head */
 static inline
 void ruleOutFromHead(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
    PR*                   pr,                 /**< path replacement data structure */
    SCIP_Bool*            needFullRuleOut
    )
@@ -129,6 +203,7 @@ void ruleOutFromHead(
    const int ncurrneighbors = StpVecGetSize(pr->currneighbors);
    const int nfirst = pr->nfirstneighbors;
    int failneighbor = VNODES_UNSET;
+   const SCIP_Bool useSd = pr->useSd;
 
    assert(FALSE == *needFullRuleOut);
    SCIPdebugMessage("starting head rule-out with pathcost=%f \n", pr->pathcost);
@@ -152,6 +227,15 @@ void ruleOutFromHead(
          SCIPdebugMessage("dist for neighbor=%d, idx=%d: %f \n", neighbor, j, sp_dists[sp_start + j]);
          if( GT(sp_dists[sp_start + j], pathcost) )
          {
+            if( useSd )
+            {
+               const int fneighbor = pr->firstneighbors[j];
+               const SCIP_Real sd = extreduce_distDataGetSd(scip, g, neighbor, fneighbor, pr->extperma->distdata_default);
+
+               if( LT(sd, pathcost) )
+                  continue;
+            }
+
             /* second fail? */
             if( nfails++ > 0 )
                break;
@@ -180,6 +264,7 @@ void ruleOutFromHead(
 /** tries to rule out neighbors of path tail */
 static inline
 void ruleOutFromTailSingle(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    PR*                   pr,                 /**< path replacement data structure */
    SCIP_Bool*            isRuledOut
@@ -189,6 +274,7 @@ void ruleOutFromTailSingle(
    const int* const sp_starts = pr->sp_starts;
    const int pathhead = pathGetHead(g, pr);
    const int pathhead_idx = pr->nodes_index[pathhead];
+   const SCIP_Bool useSd = pr->useSd;
 
    assert(!*isRuledOut);
 
@@ -206,6 +292,15 @@ void ruleOutFromTailSingle(
 
          if( GT(altpathcost, extpathcost) )
          {
+            if( useSd )
+            {
+               const int fneighbor = pr->firstneighbors[i];
+               const SCIP_Real sd = extreduce_distDataGetSd(scip, g, pathhead, fneighbor, pr->extperma->distdata_default);
+
+               if( LT(sd, extpathcost) )
+                  continue;
+            }
+
             SCIPdebugMessage("no rule-out for initial neighbor idx=%d \n", i);
             return;
          }
@@ -219,6 +314,7 @@ void ruleOutFromTailSingle(
 /** tries to rule out neighbors of path tail */
 static inline
 void ruleOutFromTailCombs(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    PR*                   pr,                 /**< path replacement data structure */
    SCIP_Bool*            isRuledOut
@@ -229,6 +325,7 @@ void ruleOutFromTailCombs(
    const int pathhead = pathGetHead(g, pr);
    const int pathhead_idx = pr->nodes_index[pathhead];
    int nfails = 0;
+   const SCIP_Bool useSd = pr->useSd;
 
    SCIPdebugMessage("try full tail rule-out with pathcost=%f \n", pr->pathcost);
 
@@ -240,6 +337,18 @@ void ruleOutFromTailCombs(
 
       if( GT(altpathcost, pr->pathcost) )
       {
+         if( useSd )
+         {
+            const int fneighbor = pr->firstneighbors[i];
+            const SCIP_Real sd = extreduce_distDataGetSd(scip, g, pathhead, fneighbor, pr->extperma->distdata_default);
+
+            if( LT(sd, pr->pathcost) )
+            {
+               pr->firstneighbors_isKilled[i] = TRUE;
+               continue;
+            }
+         }
+
          SCIPdebugMessage("no full rule-out for initial neighbor idx=%d \n", i);
          nfails++;
       }
@@ -545,6 +654,7 @@ void pathExendPrepare(
    assert(0 == StpVecGetSize(pr->visitednodes));
    assert(0 == StpVecGetSize(pr->currneighbors));
    assert(0 == StpVecGetSize(pr->firstneighborcosts));
+   assert(0 == StpVecGetSize(pr->firstneighbors));
 
    SCIPdebugMessage("---Checking edge %d->%d \n\n", basetail, basehead);
 
@@ -566,6 +676,9 @@ void pathExendPrepare(
       addNonPathNode(scip, head, pr);
       StpVecPushBack(scip, pr->currneighbors, head);
       StpVecPushBack(scip, pr->firstneighborcosts, dcsr_costs[i]);
+
+      if( pr->useSd )
+         StpVecPushBack(scip, pr->firstneighbors, head);
    }
 
    pr->nfirstneighbors = StpVecGetSize(pr->currneighbors);
@@ -662,7 +775,7 @@ void pathExend(
    assert(*isExendible);
    assert(!(*isRedundant));
 
-   if( npathedges >= SP_MAXLENGTH || g->grad[pathhead] >= pr->maxdegree || pr->nodes_isTerm[pathhead] )
+   if( npathedges > SP_MAXLENGTH || g->grad[pathhead] > pr->maxdegree || pr->nodes_isTerm[pathhead] )
    {
       *isExendible = FALSE;
       return;
@@ -678,7 +791,7 @@ void pathExend(
       return;
    }
 
-   ruleOutFromHead(pr, &needCombRuleOut);
+   ruleOutFromHead(scip, g, pr, &needCombRuleOut);
 
    /* NOTE: if we have exactly one neighbor, and a failed neighbor, they are the same and we have to extend */
    if( StpVecGetSize(pr->currneighbors) == 1 && pr->failneighbor != VNODES_UNSET )
@@ -688,7 +801,7 @@ void pathExend(
    }
 
    /* we try combination rule-out anyway! */
-   ruleOutFromTailCombs(g, pr, &isCombRuledOut);
+   ruleOutFromTailCombs(scip, g, pr, &isCombRuledOut);
 
    if( needCombRuleOut && !isCombRuledOut )
    {
@@ -696,7 +809,7 @@ void pathExend(
       return;
    }
 
-   ruleOutFromTailSingle(g, pr, &isSingleRuledOut);
+   ruleOutFromTailSingle(scip, g, pr, &isSingleRuledOut);
 
    if( !isSingleRuledOut )
    {
@@ -726,6 +839,7 @@ static
 SCIP_RETCODE prInit(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
+   EXTPERMA*             extperma,           /**< extension data or NULL */
    PR**                  pathreplace         /**< to initialize */
    )
 {
@@ -735,14 +849,18 @@ SCIP_RETCODE prInit(
    SCIP_CALL( SCIPallocMemory(scip, pathreplace) );
    pr = *pathreplace;
 
+   pr->useSd = (extperma != NULL);
    pr->probIsPc = graph_pc_isPc(g);
    pr->maxdegree = pr->probIsPc ? SP_MAXDEGREE_PC : SP_MAXDEGREE;
+   if( extperma && extperma->mode == extred_fast )
+      pr->maxdegree = SP_MAXDEGREE_FAST;
+
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->nodes_isTerm, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->nodeindices_isPath, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->nodes_index, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->sp_starts, SP_MAXNSTARTS) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &pr->sp_dists, SP_MAXNDISTS) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pr->firstneighbors_isKilled, pr->maxdegree) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &pr->firstneighbors_isKilled, pr->maxdegree + 1) );
 
    SCIP_CALL( reduce_sdprofitInit(scip, g, &pr->sdprofit) );
 
@@ -751,14 +869,17 @@ SCIP_RETCODE prInit(
 
    graph_getIsTermArray(g, pr->nodes_isTerm);
 
+   pr->extperma = extperma;
    pr->currneighbors = NULL;
    pr->firstneighborcosts = NULL;
    pr->pathedges = NULL;
+   pr->firstneighbors = NULL;
    pr->visitednodes = NULL;
    pr->nfirstneighbors = -1;
    pr->nnodes = nnodes;
-   StpVecReserve(scip, pr->currneighbors, pr->maxdegree);
-   StpVecReserve(scip, pr->firstneighborcosts, pr->maxdegree);
+   StpVecReserve(scip, pr->currneighbors, pr->maxdegree + 1);
+   StpVecReserve(scip, pr->firstneighborcosts, pr->maxdegree + 1);
+   StpVecReserve(scip, pr->firstneighbors, pr->maxdegree + 1);
    StpVecReserve(scip, pr->pathedges, SP_MAXLENGTH);
    StpVecReserve(scip, pr->visitednodes, SP_MAXLENGTH);
 
@@ -781,6 +902,7 @@ void prClean(
       pr->nodes_index[node] = VNODES_UNSET;
    }
 
+   StpVecClear(pr->firstneighbors);
    StpVecClear(pr->firstneighborcosts);
    StpVecClear(pr->currneighbors);
    StpVecClear(pr->pathedges);
@@ -809,6 +931,7 @@ void prFree(
    StpVecFree(scip, pr->currneighbors);
    StpVecFree(scip, pr->visitednodes);
    StpVecFree(scip, pr->firstneighborcosts);
+   StpVecFree(scip, pr->firstneighbors);
 
    SCIPfreeMemoryArray(scip, &pr->firstneighbors_isKilled);
    SCIPfreeMemoryArray(scip, &pr->sp_dists);
@@ -850,7 +973,7 @@ SCIP_RETCODE processPath(
    const int maxdeg = pr->maxdegree;
    assert(StpVecGetSize(pr->pathedges) == 0);
 
-   if( g->grad[tail] >= maxdeg || g->grad[head] >= maxdeg || pr->nodes_isTerm[tail] || pr->nodes_isTerm[head] )
+   if( g->grad[tail] > maxdeg || g->grad[head] > maxdeg || pr->nodes_isTerm[tail] || pr->nodes_isTerm[head] )
       return SCIP_OKAY;
 
    if( g->grad[tail] <= 1 )
@@ -867,7 +990,8 @@ SCIP_RETCODE processPath(
       {
          SCIPdebugMessage("deleting edge %d-%d \n", g->tail[startedge], g->head[startedge]);
 
-         graph_edge_delFull(scip, g, startedge, TRUE);
+         deleteEdge(scip, startedge, g, pr);
+
          (*nelims)++;
          break;
       }
@@ -883,13 +1007,14 @@ SCIP_RETCODE processPath(
 static
 SCIP_RETCODE pathreplaceExec(
    SCIP*                 scip,               /**< SCIP data structure */
-   PR*                   pathreplace,        /**< path replacement data structure */
+   PR*                   pr,                 /**< path replacement data structure */
    GRAPH*                g,                  /**< graph data structure */
    int*                  nelims              /**< pointer to number of reductions */
    )
 {
    const int nedges = graph_get_nEdges(g);
-   const SCIP_Bool isPc = pathreplace->probIsPc;
+   const SCIP_Bool isPc = pr->probIsPc;
+   SD* const sddata = pr->useSd ? pr->extperma->distdata_default->sdistdata : NULL;
    // todo have edge stack?
 
    for( int e = 0; e < nedges; e++ )
@@ -902,7 +1027,10 @@ SCIP_RETCODE pathreplaceExec(
       if( isPc && graph_pc_edgeIsExtended(g, e) )
          continue;
 
-      SCIP_CALL( processPath(scip, e, pathreplace, g, nelims) );
+      if( sddata && reduce_sdgraphEdgeIsInMst(sddata->sdgraph, e) )
+         continue;
+
+      SCIP_CALL( processPath(scip, e, pr, g, nelims) );
 
       // todo if edgestack: check whether edge was killed, otherwise go different!
       // afterwards deactivate edge!
@@ -915,6 +1043,46 @@ SCIP_RETCODE pathreplaceExec(
 /*
  * Interface methods
  */
+
+
+/** paths elimination while using special distances
+ * NOTE: SD-repair needs to be set-up! */
+SCIP_RETCODE reduce_pathreplaceExt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   EXTPERMA*             extperma,           /**< extension data */
+   int*                  nelims              /**< pointer to number of reductions */
+   )
+{
+   PR* pathreplace;
+   SCIP_Bool hasDcsr = (g->dcsr_storage != NULL);
+
+   assert(scip && g && extperma);
+
+   if( !prIsPromising(g) )
+   {
+      return SCIP_OKAY;
+   }
+
+   if( !hasDcsr )
+      SCIP_CALL( graph_init_dcsr(scip, g) );
+
+   SCIP_CALL( prInit(scip, g, extperma, &pathreplace) );
+   SCIP_CALL( pathreplaceExec(scip, pathreplace, g, nelims) );
+   prFree(scip, &pathreplace);
+
+   if( !hasDcsr )
+      graph_free_dcsr(scip, g);
+
+   if( *nelims > 0 )
+   {
+      deletenodesDeg1(scip, extperma, g);
+   }
+
+   assert(graph_valid(scip, g));
+
+   return SCIP_OKAY;
+}
 
 
 /** paths elimination */
@@ -932,7 +1100,7 @@ SCIP_RETCODE reduce_pathreplace(
    }
 
    SCIP_CALL( graph_init_dcsr(scip, g) );
-   SCIP_CALL( prInit(scip, g, &pathreplace) );
+   SCIP_CALL( prInit(scip, g, NULL, &pathreplace) );
 
    SCIP_CALL( pathreplaceExec(scip, pathreplace, g, nelims) );
 

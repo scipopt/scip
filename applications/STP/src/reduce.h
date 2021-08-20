@@ -146,12 +146,11 @@ extern SCIP_RETCODE    reduce_bdkBiased(SCIP*, int, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_bdkWithSd(SCIP*, int, SD*, GRAPH*, int*);
 
 
-
 /*
  * reduce_path.c
  */
 extern SCIP_RETCODE    reduce_pathreplace(SCIP*, GRAPH*, int*);
-
+extern SCIP_RETCODE    reduce_pathreplaceExt(SCIP*, GRAPH*, EXTPERMA*, int*);
 
 
 /* reduce_sdcomp.c
