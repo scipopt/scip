@@ -1192,7 +1192,6 @@ void daRpcmwDeleteTermIncidents(
 #ifndef NDEBUG
    const int termedge = graph->term2edge[term];
    assert(termedge >= 0 && Is_pseudoTerm(graph->term[twinterm]) && graph->cost[termedge] == 0.0);
- //  assert(vnoi[twinterm].dist == 0.0); // todo does not hold with da paths...
    assert(graph_pc_isRootedPcMw(graph));
 #endif
 
@@ -3277,13 +3276,7 @@ SCIP_RETCODE reduce_daPcMw(
    /* the required reduced path cost to be surpassed */
    minpathcost = upperbound - lpobjval;
 
-   // todo delete
-   if( SCIPisLT(scip, minpathcost, 0.0) )
-   {
-      printf("havenewsol=%d upperbound=%f lpobjval=%f \n", havenewsol, upperbound, lpobjval);
-      return SCIP_ERROR;
-   }
-
+   assert(GE(minpathcost, 0.0));
    SCIPdebugMessage("havenewsol=%d upperbound=%f lpobjval=%f \n", havenewsol, upperbound, lpobjval);
 
    if( userec)
@@ -3413,7 +3406,6 @@ SCIP_RETCODE reduce_daPcMw(
       if( graph->terms <= 2 )
          break;
 
-      // todo can that happen?
       assert(!graph_pc_knotIsNonLeafTerm(graph, tmproot));
 
       SCIP_CALL( graph_transPcGetRsap(scip, graph, &transgraph, roots, nroots, tmproot) );
@@ -3427,8 +3419,6 @@ SCIP_RETCODE reduce_daPcMw(
 
       /* init data structures for shortest paths and history */
       SCIP_CALL( graph_path_init(scip, transgraph) );
-      // todo should not nenecessary, delete
-    //  SCIP_CALL( graph_initHistory(scip, transgraph ) );
 
       if( havenewsol && run > 1 )
       {
