@@ -55,37 +55,36 @@ typedef struct close_nodes_run
  * @{
  */
 
-
-/** returns entry of element within sorted array of size arraysize, or -1 if element could not be found */
+/** returns entry of element within sorted array of size arraysize, or -1 if element could not be found
+ *  NOTE: optimized binary search */
 static inline
 int findEntryFromSorted(
    const int*            array,              /**< array */
-   int                   arraysize,          /**< size */
+   unsigned int          arraysize,          /**< size */
    int                   element             /**< element to look for */
    )
 {
-   int l = 0;
-   int u = arraysize - 1;
+   unsigned int lower = 0;
+   unsigned int shift = arraysize;
 
 #ifndef NDEBUG
-   assert(u >= 0);
-
+   assert(arraysize > 0);
    for( int i = 1; i < arraysize; i++ )
       assert(array[i - 1] < array[i] );
 #endif
 
-   while( l <= u )
+   while( shift > 1 )
    {
-      const int m = (u - l) / 2 + l;
+      const unsigned int middle = shift / 2;
 
-      if( array[m] < element )
-         l = m + 1;
-      else if( array[m] == element )
-         return m;
-      else
-         u = m - 1;
+      if( element >= array[lower + middle] )
+         lower += middle;
+
+      shift -= middle;
    }
-   // try http://eigenjoy.com/2011/09/09/binary-search-revisited/ ?
+
+   if( element == array[lower] )
+      return lower;
 
    return -1;
 }
