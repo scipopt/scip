@@ -69,7 +69,7 @@ int findEntryFromSorted(
 
 #ifndef NDEBUG
    assert(arraysize > 0);
-   for( int i = 1; i < arraysize; i++ )
+   for( unsigned int i = 1; i < arraysize; i++ )
       assert(array[i - 1] < array[i] );
 #endif
 
