@@ -3214,23 +3214,6 @@ SCIP_Bool SCIPisExprSignpower(
    return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME) == 0;
 }
 
-/* from pub_expr.h */
-
-/** gets the exponent of a power or signed power expression */  /*lint -e{715}*/
-SCIP_Real SCIPgetExponentExprPow(
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   SCIP_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-
-   exprdata = SCIPexprGetData(expr);
-   assert(exprdata != NULL);
-
-   return exprdata->exponent;
-}
-
 /** computes coefficients of linearization of a square term in a reference point */
 void SCIPaddSquareLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3344,4 +3327,21 @@ void SCIPaddSquareSecant(
 
    *lincoef     += coef;
    *linconstant += constant;
+}
+
+/* from pub_expr.h */
+
+/** gets the exponent of a power or signed power expression */  /*lint -e{715}*/
+SCIP_Real SCIPgetExponentExprPow(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   SCIP_EXPRDATA* exprdata;
+
+   assert(expr != NULL);
+
+   exprdata = SCIPexprGetData(expr);
+   assert(exprdata != NULL);
+
+   return exprdata->exponent;
 }

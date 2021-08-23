@@ -666,7 +666,7 @@ void SCIPexprFreeQuadratic(
  * - semidefinite negative -> curv is set to concave,
  * - otherwise -> curv is set to unknown.
  *
- * If assumevarfixed is given and some expressions in quadratic terms correspond to variables present in
+ * If `assumevarfixed` is given and some expressions in quadratic terms correspond to variables present in
  * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
  */
 SCIP_RETCODE SCIPexprComputeQuadraticCurvature(

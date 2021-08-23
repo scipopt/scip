@@ -255,7 +255,7 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * It is called while DFS-iterating over the expression at different stages, that is,
  * when the expression is visited the first time, before each child of the expression is visited,
  * after each child of the expression has been visited, and when the iterator leaves the expression
- * for its parent.
+ * for its parent. See also \ref SCIP_EXPRITER_DFS "expression iteration docu".
  *
  *  \param[in] scip             SCIP main data structure
  *  \param[in] expr             expression which data is to be printed
@@ -373,7 +373,7 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  1 if expr1 > expr2.
  *
  *  \param[in] scip  SCIP main data structure
- *  \param[in]expr1  first expression in comparison
+ *  \param[in] expr1 first expression in comparison
  *  \param[in] expr2 second expression in comparison
  */
 #define SCIP_DECL_EXPRCOMPARE(x) int x (\
