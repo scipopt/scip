@@ -76,8 +76,8 @@ struct SCIP_BranchruleData
    SCIP_Real             reliablescore;      /**< score which is seen to be reliable for a branching decision */
    SCIP_Bool             fractionals;        /**< should branching on LP solution be restricted to the fractional variables? */
    SCIP_Bool             useweightedsum;     /**< should a weighted sum of inference, conflict and cutoff weights be used? */
-   int                   conflictprio;       /**< priority value for using conflict weights in lex. order */
-   int                   cutoffprio;         /**< priority value for using cutoff weights in lex. order */
+   int                   conflictprio;       /**< priority value for using conflict weights in lexicographic order */
+   int                   cutoffprio;         /**< priority value for using cutoff weights in lexicographic order */
 };
 
 /** evaluate the given candidate with the given score against the currently best know candidate, tiebreaking included */
