@@ -834,6 +834,30 @@ SCIP_RETCODE SCIPsumLPRows(
    return SCIP_OKAY;
 }
 
+/** interrupts or disables the interrupt of the currently ongoing lp solve; if the lp is not currently constructed just returns with no effect
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called in any SCIP stage
+ */
+SCIP_RETCODE SCIPinterruptLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPinterruptLP", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( scip->lp == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPlpInterrupt(scip->lp, interrupt) );
+   if( interrupt )
+      scip->stat->userinterrupt = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** writes current LP to a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
