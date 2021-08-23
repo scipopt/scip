@@ -17,7 +17,7 @@
  * @brief  Path deletion reduction test for Steiner problems
  * @author Daniel Rehfeldt
  *
- * This file implements a slightly improved version of the so called "path substitution test" by Polzin and Vahdati Daneshmand
+ * This file implements an improved version of the so called "path substitution test" by Polzin and Vahdati Daneshmand.
  *
  * A list of all interface methods can be found in reduce.h.
  *
@@ -204,6 +204,7 @@ void ruleOutFromHead(
    const int nfirst = pr->nfirstneighbors;
    int failneighbor = VNODES_UNSET;
    const SCIP_Bool useSd = pr->useSd;
+   DISTDATA* const distdata = useSd ? pr->extperma->distdata_default : NULL;
 
    assert(FALSE == *needFullRuleOut);
    SCIPdebugMessage("starting head rule-out with pathcost=%f \n", pr->pathcost);
@@ -230,10 +231,18 @@ void ruleOutFromHead(
             if( useSd )
             {
                const int fneighbor = pr->firstneighbors[j];
-               const SCIP_Real sd = extreduce_distDataGetSd(scip, g, neighbor, fneighbor, pr->extperma->distdata_default);
+               SCIP_Real sd = extreduce_distDataGetSdDoubleEq(scip, g, pathcost, fneighbor, neighbor, distdata);
 
                if( LT(sd, pathcost) )
                   continue;
+
+               if( EQ(sd, pathcost) )
+               {
+                  const int startedge = pr->pathedges[0];
+                  sd = extreduce_distDataGetSdDoubleForbiddenSingle(scip, g, startedge, neighbor, fneighbor, distdata);
+                  if( LE(sd, pathcost) )
+                     continue;
+               }
             }
 
             /* second fail? */
@@ -275,6 +284,7 @@ void ruleOutFromTailSingle(
    const int pathhead = pathGetHead(g, pr);
    const int pathhead_idx = pr->nodes_index[pathhead];
    const SCIP_Bool useSd = pr->useSd;
+   DISTDATA* const distdata = useSd ? pr->extperma->distdata_default : NULL;
 
    assert(!*isRuledOut);
 
@@ -295,10 +305,18 @@ void ruleOutFromTailSingle(
             if( useSd )
             {
                const int fneighbor = pr->firstneighbors[i];
-               const SCIP_Real sd = extreduce_distDataGetSd(scip, g, pathhead, fneighbor, pr->extperma->distdata_default);
+               SCIP_Real sd = extreduce_distDataGetSdDoubleEq(scip, g, extpathcost, fneighbor, pathhead, distdata);
 
                if( LT(sd, extpathcost) )
                   continue;
+
+               if( EQ(sd, extpathcost) )
+               {
+                  const int startedge = pr->pathedges[0];
+                  sd = extreduce_distDataGetSdDoubleForbiddenSingle(scip, g, startedge, pathhead, fneighbor, distdata);
+                  if( LE(sd, extpathcost) )
+                     continue;
+               }
             }
 
             SCIPdebugMessage("no rule-out for initial neighbor idx=%d \n", i);
@@ -326,6 +344,7 @@ void ruleOutFromTailCombs(
    const int pathhead_idx = pr->nodes_index[pathhead];
    int nfails = 0;
    const SCIP_Bool useSd = pr->useSd;
+   DISTDATA* const distdata = useSd ? pr->extperma->distdata_default : NULL;
 
    SCIPdebugMessage("try full tail rule-out with pathcost=%f \n", pr->pathcost);
 
@@ -340,12 +359,23 @@ void ruleOutFromTailCombs(
          if( useSd )
          {
             const int fneighbor = pr->firstneighbors[i];
-            const SCIP_Real sd = extreduce_distDataGetSd(scip, g, pathhead, fneighbor, pr->extperma->distdata_default);
+            SCIP_Real sd = extreduce_distDataGetSdDoubleEq(scip, g, pr->pathcost, fneighbor, pathhead, distdata);
 
             if( LT(sd, pr->pathcost) )
             {
                pr->firstneighbors_isKilled[i] = TRUE;
                continue;
+            }
+
+            if( EQ(sd, pr->pathcost) )
+            {
+               const int startedge = pr->pathedges[0];
+               sd = extreduce_distDataGetSdDoubleForbiddenSingle(scip, g, startedge, pathhead, fneighbor, distdata);
+               if( LE(sd, pr->pathcost) )
+               {
+                  pr->firstneighbors_isKilled[i] = TRUE;
+                  continue;
+               }
             }
          }
 

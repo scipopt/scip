@@ -1468,11 +1468,7 @@ SCIP_Real extreduce_distDataGetSdDouble(
    DISTDATA*             distdata            /**< distance data */
 )
 {
-   SCIP_Real dist;
-
-   assert(distdata);
-
-   dist = distDataGetNormalDist(scip, g, vertex1, vertex2, distdata);
+   SCIP_Real dist = distDataGetNormalDist(scip, g, vertex1, vertex2, distdata);
 
    /* no distance found? */
    if( dist < -0.5 )
@@ -1495,11 +1491,57 @@ SCIP_Real extreduce_distDataGetSdDouble(
       const SCIP_Real dist_sd = distDataGetSpecialDist(g, vertex1, vertex2, distdata);
 
       if( EQ(dist, -1.0) || dist_sd < dist )
-      {
-       //  printf("%f->%f \n", dist, dist_sd);
-
          dist = dist_sd;
-      }
+
+      assert(GE(dist, 0.0));
+   }
+
+   assert(EQ(dist, -1.0) || dist >= 0.0);
+
+   return dist;
+}
+
+
+/** As 'extreduce_distDataGetSdDouble', but with critial value for early abort  */
+SCIP_Real extreduce_distDataGetSdDoubleEq(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Real             dist_eq,            /**< critical distance */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Real dist = distDataGetNormalDist(scip, g, vertex1, vertex2, distdata);
+
+   /* no distance found? */
+   if( dist < -0.5 )
+   {
+      assert(EQ(dist, -1.0));
+      dist = distDataGetNormalDist(scip, g, vertex2, vertex1, distdata);
+
+      if( dist > -0.5 && LT(dist, dist_eq) )
+         return dist;
+   }
+   else
+   {
+      const SCIP_Real distrev = distDataGetNormalDist(scip, g, vertex2, vertex1, distdata);
+
+      if( distrev > -0.5 && distrev < dist  )
+         dist = distrev;
+
+      if( dist > -0.5 && LT(dist, dist_eq) )
+         return dist;
+
+      assert(GE(dist, 0.0));
+   }
+
+   if( distdata->sdistdata )
+   {
+      const SCIP_Real dist_sd = distDataGetSpecialDist(g, vertex1, vertex2, distdata);
+
+      if( EQ(dist, -1.0) || dist_sd < dist )
+         dist = dist_sd;
 
       assert(GE(dist, 0.0));
    }
