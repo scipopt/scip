@@ -10103,6 +10103,22 @@ SCIP_RETCODE SCIPlpFreeState(
    return SCIP_OKAY;
 }
 
+/** interrupts the currently ongoing lp solve, or disables the interrupt */
+SCIP_RETCODE SCIPlpInterrupt(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{
+   assert(lp != NULL);
+
+   if( lp->lpi == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPlpiInterrupt(lp->lpi, interrupt) );
+
+   return SCIP_OKAY;
+}
+
 /** stores pricing norms into LP norms object */
 SCIP_RETCODE SCIPlpGetNorms(
    SCIP_LP*              lp,                 /**< LP data */
@@ -13018,7 +13034,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          /* make sure that we evaluate the time limit exactly in order to avoid erroneous warning */
          stat->nclockskipsleft = 0;
-         if( !SCIPsolveIsStopped(set, stat, FALSE) )
+         if( !stat->userinterrupt && !SCIPsolveIsStopped(set, stat, FALSE) )
          {
             SCIPmessagePrintWarning(messagehdlr, "LP solver reached time limit, but SCIP time limit is not exceeded yet; "
                "you might consider switching the clock type of SCIP\n");
