@@ -91,7 +91,7 @@ struct SCIP_HeurData
    SCIP_SOL*             lastsol;            /**< pointer to last found solution (or NULL if none), not captured, thus may be dangling */
 
    int                   nlpverblevel;       /**< verbosity level of NLP solver */
-   SCIP_Real             opttol;             /**< optimality tolerance to use for NLP solves (0: use a tolerance that depends on current gap) */
+   SCIP_Real             opttol;             /**< optimality tolerance to use for NLP solves */
    SCIP_Real             feastolfactor;      /**< factor on SCIP feasibility tolerance for NLP solves if resolving when NLP solution not feasible in CIP */
    SCIP_Real             feastol;            /**< feasibility tolerance for NLP solves */
    SCIP_Bool             tighterfeastolfailed;/**< whether we tried to use a tighter feasibility tolerance but the NLP solution was still not accepted */
@@ -800,7 +800,6 @@ SCIP_RETCODE solveSubNLP(
    int            i;
    SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
    SCIP_Real      timelimit;
-   SCIP_Real      opttol;
    SCIP_Bool      expectinfeas;
    SCIP_NLPSTATISTICS nlpstatistics;
 
@@ -1087,18 +1086,6 @@ SCIP_RETCODE solveSubNLP(
 
    *result = SCIP_DIDNOTFIND;
 
-   /* optimality tolerances for NLP:
-    * since this is a primal heuristic, we mainly need feasible solutions, especially early in the search,
-    * but if possible then prefer local optimal solutions
-    * so we set opttol, the absolute tolerance on the unscaled NLP, to a large value and
-    * leave solvertol, the tolerance on the possibly scaled NLP, on its default value
-    * when it is about closing the last bit of the gap, we should also require solutions that satisfy
-    * the possibly more stricter absolute optimality tolerance on the unscaled problem
-    */
-   opttol = heurdata->opttol;
-   if( opttol == 0.0 )  /*lint !e777*/
-      opttol = MAX(SCIPdualfeastol(scip), MIN(SCIPgetTransGap(scip), 0.1));  /*lint !e666*/
-
    /* if we had many (fraction > expectinfeas) infeasible NLPs, then tell NLP solver to expect an infeasible problem */
    expectinfeas = FALSE;
    if( heurdata->expectinfeas == 0.0 )  /* to keep original behavior on default settings */
@@ -1110,7 +1097,7 @@ SCIP_RETCODE solveSubNLP(
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", calcIterLimit(scip, heurdata));
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
       .iterlimit = calcIterLimit(scip, heurdata),
-      .opttol = opttol,
+      .opttol = heurdata->opttol,
       .feastol = heurdata->feastol,
       .verblevel = (unsigned short)heurdata->nlpverblevel,
       .expectinfeas = expectinfeas
@@ -1214,7 +1201,7 @@ SCIP_RETCODE solveSubNLP(
    SCIPdebugMsg(scip, "start NLP solve with iteration limit %d\n", calcIterLimit(scip, heurdata));
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip,
       .iterlimit = MAX(heurdata->itermin, nlpstatistics.niterations),
-      .opttol = opttol,
+      .opttol = heurdata->opttol,
       .feastol = heurdata->feastolfactor * heurdata->feastol,
       .verblevel = (unsigned short)heurdata->nlpverblevel,
       .warmstart = TRUE
@@ -1731,8 +1718,8 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          &heurdata->itermin, FALSE, 20, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/opttol",
-         "absolute optimality tolerance to use for NLP solves (0: use a tolerance that depends on current gap)",
-         &heurdata->opttol, FALSE, SCIPdualfeastol(scip), 0.0, 1.0, NULL, NULL) );
+         "absolute optimality tolerance to use for NLP solves",
+         &heurdata->opttol, TRUE, SCIPdualfeastol(scip), 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/feastolfactor",
          "factor on SCIP feasibility tolerance for NLP solves if resolving when NLP solution not feasible in CIP",
