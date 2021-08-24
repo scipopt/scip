@@ -32,7 +32,7 @@
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "entropy"
 #define EXPRHDLR_DESC         "entropy expression (-x*log(x))"
-#define EXPRHDLR_PRECEDENCE   0
+#define EXPRHDLR_PRECEDENCE   81000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(7477.0)
 
 /*
