@@ -1080,7 +1080,11 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
    return SCIP_OKAY;
 }
 
-/** creates and captures an expression representing a monomial */
+/** creates and captures an expression representing a monomial
+ *
+ * @note In deviation from the actual definition of monomials, we also allow for negative and rational exponents.
+ * So this function actually creates an expression for a signomial that has exactly one term.
+ */
 SCIP_RETCODE SCIPcreateExprMonomial(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */

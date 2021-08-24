@@ -311,6 +311,8 @@ SCIP_EXPRCURV SCIPexprcurvPowerInv(
  *
  *  See Maranas and Floudas, Finding All Solutions of Nonlinearly Constrained Systems of Equations, JOGO 7, 1995
  *  for the categorization in the case that all factors are linear.
+ *
+ *  Exponents can also be negative or rational.
  */
 SCIP_EXPRCURV SCIPexprcurvMonomial(
    int                   nfactors,           /**< number of factors in monomial */
