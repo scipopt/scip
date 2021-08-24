@@ -51,6 +51,10 @@
 #define DEFAULT_DARUNS_FAST     4             /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  8                  /**< max number of roots to use for new graph in dual ascent heuristic */
 #define SOLPOOL_SIZE 20                       /**< size of presolving solution pool */
+#define DARUNS_TERMRATIO_LOW   0.05
+#define DARUNS_TERMRATIO_MED   0.075
+#define DARUNS_TERMRATIO_HIGH   0.1
+#define DARUNS_TERMRATIO_HUGE   0.2
 #define STP_RED_MINBNDTERMS   750
 #define STP_DABD_MAXDEGREE 5
 #define STP_DABD_MAXDNEDGES 10
@@ -1686,9 +1690,30 @@ int daGetNruns(
    int nruns;
 
    if( paramsda->damode == STP_DAMODE_FAST )
+   {
 	   nruns = MIN(nterms, DEFAULT_DARUNS_FAST);
+   }
    else
+   {
 	   nruns = MIN(nterms, DEFAULT_DARUNS);
+
+	   if( graph_typeIsSpgLike(graph) )
+	   {
+	      SCIP_Real ratio;
+	      int nnodes;
+	      graph_get_nVET(graph, &nnodes, NULL, NULL);
+	      ratio = (SCIP_Real) graph->terms / (SCIP_Real) nnodes;
+
+         if( ratio >= DARUNS_TERMRATIO_LOW )
+            nruns--;
+         if( ratio >= DARUNS_TERMRATIO_MED )
+            nruns--;
+         if( ratio >= DARUNS_TERMRATIO_HIGH )
+            nruns--;
+         if( ratio >= DARUNS_TERMRATIO_HUGE )
+            nruns--;
+	   }
+   }
 
    if( !graph_typeIsUndirected(graph) )
    {
@@ -1700,6 +1725,8 @@ int daGetNruns(
       assert(graph->stp_type == STP_DHCSTP);
       nruns = MIN(nruns, 2);
    }
+
+   nruns = MAX(nruns, 1);
 
    return nruns;
 }
@@ -2299,9 +2326,7 @@ SCIP_RETCODE dapathsReplaceNodes(
    SCIPfreeBufferArray(scip, &pseudoDelNodes);
    SCIPfreeBufferArray(scip, &nodereplacebounds);
 
-  // printf("reps =%d \n", nreplacings);
    *nelims += nreplacings;
-  // exit(1);
 
    return SCIP_OKAY;
 }
@@ -2587,7 +2612,6 @@ SCIP_RETCODE reduce_da(
          // todo remove
          if( SCIPisFeasGT(scip, redcosts_getDualBoundTop(redcostdata), upperbound) )
          {
-           // graph_writeStpByName(scip, graph, "pcfail.stp", 0.0);
             printf("WRONG BOUND: upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
             return SCIP_ERROR;
          }
@@ -2616,21 +2640,6 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( extreduce_init(scip, useSd, paramsda->extredMode, graph, redcostdata, &extpermanent) );
             extreduce_extPermaAddRandnumgen(randnumgen, extpermanent);
             havebestsol = havebestsol && solstp_isUnreduced(scip, graph, bestresult);
-
-
-            {
-            static int first = TRUE;
-            // deleteme to trigger DP algo for OGE instance id_331 that cannot be solved yet, remove once
-            // ext full backtracking is there
-            // remove before release!
-            if( 0 && first && graph->terms == 200 && (int64_t) graph->terms * (int64_t) graph->edges * graph->knots == 851810086400 )
-            {
-               printf("test DP\n");
-               havebestsol = FALSE;
-               upperbound *= 0.985;
-            }
-            first = FALSE;
-            }
 
             extpermanent->solIsValid = havebestsol;
             extpermanent->result = havebestsol ? bestresult : NULL;
