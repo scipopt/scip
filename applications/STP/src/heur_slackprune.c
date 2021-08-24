@@ -134,13 +134,13 @@ void setMinMaxElims(
 
    factor = (double) anedges / min;
    factor = ((double) nround / (2.5 * maxnrounds)) * factor;
-#if 1
+
    if( SCIPisGT(scip, factor, 1.0) )
    {
       SCIP_Real tmp = min * factor;
       min = (int) tmp;
    }
-#endif
+
    min = MAX(totminnelims, min);
 
    min = MIN(min, (anedges - 1));
@@ -308,88 +308,6 @@ SCIP_RETCODE reduceExact(
  * Callback methods of primal heuristic
  */
 
-#if 0
-/** for debug purposes only */
-static
-SCIP_RETCODE printGraph(
-   SCIP* scip,
-   const GRAPH*          graph,              /**< Graph to be printed */
-   const char           filename,           /**< Name of the output file */
-   int*                  result
-   )
-{
-   char label[SCIP_MAXSTRLEN];
-   FILE* file;
-   int e;
-   int n;
-   int m;
-   STP_Bool* stnodes;
-   SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, graph->knots ) );
-
-   assert(graph != NULL);
-   file = fopen((filename != NULL) ? filename : "graphX.gml", "w");
-
-   for( e = 0; e < graph->knots; e++ )
-   {
-      stnodes[e] = FALSE;
-   }
-   for( e = 0; e < graph->edges; e++ )
-   {
-      if( result[e] == CONNECT )
-      {
-         stnodes[graph->tail[e]] = TRUE;
-         stnodes[graph->head[e]] = TRUE;
-      }
-   }
-
-   /* write GML format opening, undirected */
-   SCIPgmlWriteOpening(file, FALSE);
-
-   /* write all nodes, discriminate between root, terminals and the other nodes */
-   e = 0;
-   m = 0;
-   for( n = 0; n < graph->knots; ++n )
-   {
-      if( stnodes[n] )
-      {
-         if( n == graph->source )
-         {
-            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
-            SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
-            m = 1;
-         }
-         else if( graph->term[n] == 0 )
-         {
-            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Terminal %d", n, e + 1);
-            SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#ff0000", NULL);
-            e += 1;
-         }
-         else
-         {
-            (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", n, n + 1 - e - m);
-            SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#336699", NULL);
-         }
-      }
-   }
-
-   /* write all edges (undirected) */
-   for( e = 0; e < graph->edges; e ++ )
-   {
-      if( result[e] == CONNECT )
-      {
-         (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
-
-         SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
-      }
-   }
-   SCIPfreeBufferArray(scip, &stnodes);
-   /* write GML format closing */
-   SCIPgmlWriteClosing(file);
-
-   return SCIP_OKAY;
-}
-#endif
-
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopySlackPrune)
@@ -542,10 +460,8 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    /* solution found by slackprune heuristic? */
    if( success )
    {
-      SCIP_Real pobj;
+      SCIP_Real pobj = 0.0;
       SCIP_Real* nval;
-
-      pobj = 0.0;
 
       /* allocate memory to store solution */
       SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
