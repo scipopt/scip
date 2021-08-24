@@ -3784,20 +3784,6 @@ SCIP_Real SCIPexprGetEvalValue(
    return expr->evalvalue;
 }
 
-/* TODO make private or remove */
-/** sets the evaluation value */
-void SCIPexprSetEvalValue(
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Real             value,              /**< value to set */
-   SCIP_Longint          tag                 /**< tag of solution that was evaluated, or 0 */
-   )
-{
-   assert(expr != NULL);
-
-   expr->evalvalue = value;
-   expr->evaltag = tag;
-}
-
 /** gives the evaluation tag from the last evaluation, or 0
  *
  * @see SCIPevalExpr

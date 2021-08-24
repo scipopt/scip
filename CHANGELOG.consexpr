@@ -400,7 +400,7 @@ expression handler:
 expression:
 - added SCIPcaptureExpr(), SCIPreleaseExpr(), SCIPexprGetNUses()
 - added SCIPexprGetHdlr(), SCIPexprGetData(), SCIPexprSetData(), SCIPexprGetOwnerData()
-- added SCIPevalExpr(), SCIPgetExprNewSoltag(), SCIPexprGetEvalValue(), SCIPexprSetEvalValue(), SCIPexprGetEvalTag()
+- added SCIPevalExpr(), SCIPgetExprNewSoltag(), SCIPexprGetEvalValue(), SCIPexprGetEvalTag()
 - added SCIPevalExprGradient(), SCIPevalExprHessianDir(), SCIPexprGetDerivative(), SCIPexprGetDot(), SCIPexprGetBardot(), SCIPexprGetDiffTag()
 - added SCIPevalExprActivity(), SCIPexprGetActivity(), SCIPexprGetActivityTag(), SCIPexprSetActivity()
 - added SCIPcomputeExprCurvature(), SCIPexprGetCurvature(), SCIPexprSetCurvature()

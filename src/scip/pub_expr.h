@@ -393,15 +393,6 @@ SCIP_Real SCIPexprGetEvalValue(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/* TODO make private or remove */
-/** sets the evaluation value */
-SCIP_EXPORT
-void SCIPexprSetEvalValue(
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Real             value,              /**< value to set */
-   SCIP_Longint          tag                 /**< tag of solution that was evaluated, or 0 */
-   );
-
 /** gives the evaluation tag from the last evaluation, or 0
  *
  * @see SCIPevalExpr
