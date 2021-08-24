@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-/** creates the handler for sin expressions and includes it into the expression constraint handler
+/** creates the handler for sin expressions and includes it into SCIP
  *
  * @ingroup ExprhdlrIncludes
  */
@@ -40,7 +40,7 @@ SCIP_RETCODE SCIPincludeExprhdlrSin(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates the handler for cos expressions and includes it into the expression constraint handler
+/** creates the handler for cos expressions and includes it into SCIP
  *
  * @ingroup ExprhdlrIncludes
  */
@@ -53,11 +53,15 @@ SCIP_RETCODE SCIPincludeExprhdlrCos(
  *
  * @{
  *
- * @name Sine expression.
+ * @name Sine and Cosine expression
  *
- * This expression handler provides the sine function, that is,
+ * These expression handler provide the sine and cosine functions, that is,
  * \f[
  *   x \mapsto \sin(x)
+ * \f]
+ * and
+ * \f[
+ *   x \mapsto \cos(x).
  * \f]
  *
  * @{

@@ -444,7 +444,7 @@ void computeSecant(
  *
  * - even positive powers: x^2, x^4, x^6 with x arbitrary, or
  * - positive powers > 1: x^1.5, x^2.5 with x >= 0
-
+ <pre>
   100 +--------------------------------------------------------------------+
       |*               +                 +                +               *|
    90 |**                                                     x**2 ********|
@@ -467,7 +467,7 @@ void computeSecant(
       |                +       *****     +    *****       +                |
     0 +--------------------------------------------------------------------+
      -10              -5                 0                5                10
-
+ </pre>
  */
 static
 void estimateParabola(
@@ -510,7 +510,7 @@ void estimateParabola(
  * - odd positive powers, x^3, x^5, x^7
  * - sign(x)|x|^n for n > 1
  * - lower bound on x is negative (otherwise one should use separation for parabola)
-
+ <pre>
   100 +--------------------------------------------------------------------+
       |                +                 +                +              **|
       |                                                   x*abs(x) ******* |
@@ -533,7 +533,7 @@ void estimateParabola(
       |**              +                 +                +                |
  -100 +--------------------------------------------------------------------+
      -10              -5                 0                5                10
-
+ </pre>
  */
 static
 void estimateSignedpower(
@@ -658,7 +658,7 @@ void estimateSignedpower(
  *
  * - x^-2, x^-4 with x arbitrary
  * - x^-0.5, x^-1, x^-1.5, x^-3, x^-5 with x >= 0
-
+ <pre>
   5 +----------------------------------------------------------------------+
     |                 +               * +*               +                 |
     |                                 *  *                 x**(-2) ******* |
@@ -681,7 +681,7 @@ void estimateSignedpower(
     |                 +                 +                +                 |
  -1 +----------------------------------------------------------------------+
    -10               -5                 0                5                 10
-
+ </pre>
  */
 static
 void estimateHyperbolaPositive(
@@ -871,7 +871,7 @@ void estimateHyperbolaPositive(
 /** Separation for mixed-sign hyperbola
  *
  * - x^-1, x^-3, x^-5 without x >= 0 (either x arbitrary or x negative)
-
+ <pre>
     +----------------------------------------------------------------------+
     |                 +                 *                +                 |
   4 |-+                                  *                 x**(-1) *******-|
@@ -894,7 +894,7 @@ void estimateHyperbolaPositive(
     |                 +                *+                +                 |
     +----------------------------------------------------------------------+
    -10               -5                 0                5                 10
-
+ </pre>
  */
 static
 void estimateHyperbolaMixed(
@@ -976,7 +976,7 @@ void estimateHyperbolaMixed(
 /** Separation for roots with exponent in [0,1]
  *
  * - x^0.5 with x >= 0
-
+ <pre>
   8 +----------------------------------------------------------------------+
     |             +             +              +             +             |
   7 |-+                                                     x**0.5 ********|
@@ -999,7 +999,7 @@ void estimateHyperbolaMixed(
     |*            +             +              +             +             |
   0 +----------------------------------------------------------------------+
     0             10            20             30            40            50
-
+ </pre>
  */
 static
 void estimateRoot(
@@ -1226,10 +1226,9 @@ void addTangentRefpoints(
    refpoints[2] = (lb + 7.0 * ub) / 8.0;
 }
 
-/** fills an array of reference points for sign(x)*abs(x)^n or x^n (n odd),
- *  where x has mixed signs
+/** fills an array of reference points for sign(x)*abs(x)^n or x^n (n odd), where x has mixed signs
  *
- *  the reference points are: the lower and upper bounds (one for secant and one for tangent);
+ *  The reference points are: the lower and upper bounds (one for secant and one for tangent);
  *  and for the second tangent, the point on the convex part of the function between the point
  *  deciding between tangent and secant, and the corresponding bound
  */
@@ -1888,7 +1887,8 @@ SCIP_DECL_EXPREVAL(evalPow)
    return SCIP_OKAY;
 }
 
-/** derivative evaluation callback:
+/** derivative evaluation callback
+ *
  * computes <gradient, children.dot>
  * if expr is child^p, then computes
  * p child^(p-1) dot(child)
@@ -1921,10 +1921,11 @@ SCIP_DECL_EXPRFWDIFF(fwdiffPow)
 }
 
 /** expression backward forward derivative evaluation callback
+ *
  * computes partial/partial child ( <gradient, children.dot> )
  * if expr is child^n, then computes
  * n * (n - 1) child^(n-2) dot(child)
- * */
+ */
 static
 SCIP_DECL_EXPRBWFWDIFF(bwfwdiffPow)
 {  /*lint --e{715}*/

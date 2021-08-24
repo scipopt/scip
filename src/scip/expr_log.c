@@ -30,7 +30,7 @@
 #include "scip/expr_log.h"
 
 #define EXPRHDLR_NAME         "log"
-#define EXPRHDLR_DESC         "logarithmic expression"
+#define EXPRHDLR_DESC         "natural logarithm expression"
 #define EXPRHDLR_PRECEDENCE   80000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(16273.0)
 
@@ -158,8 +158,10 @@ void addLogLinearization(
  * Callback methods of expression handler
  */
 
-/** simplifies a log expression.
- * Evaluates the logarithm function when its child is a value expression
+/** simplifies a log expression
+ *
+ * Evaluates the logarithm function when its child is a value expression.
+ *
  * TODO: split products ?
  * TODO: log(exp(*)) = *
  */
@@ -406,7 +408,7 @@ SCIP_DECL_EXPRESTIMATE(estimateLog)
    return SCIP_OKAY;
 }
 
-/** init sepa callback that initializes LP for a logarithm expression */
+/** initial estimates callback that provides initial linear estimators for a logarithm expression */
 static
 SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
 {

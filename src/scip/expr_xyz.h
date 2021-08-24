@@ -45,11 +45,11 @@ SCIP_RETCODE SCIPincludeExprhdlrXyz(
  *
  * @{
  *
- * @name Xyz expression.
+ * @name Xyz expression
  *
  * This expression handler provides the xyz function, that is,
  * \f[
- *   x \mapsto xyz(x)
+ *   x \mapsto xyz(x).
  * \f]
  *
  * @{

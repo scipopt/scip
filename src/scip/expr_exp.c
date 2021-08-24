@@ -150,8 +150,10 @@ void addExpLinearization(
  * Callback methods of expression handler
  */
 
-/** simplifies an exp expression.
- * Evaluates the exponential function when its child is a value expression
+/** simplifies an exp expression
+ *
+ * Evaluates the exponential function when its child is a value expression.
+ *
  * TODO: exp(log(*)) = *
  */
 static
@@ -464,7 +466,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityExp)
    return SCIP_OKAY;
 }
 
-/** creates the handler for exponential expressions and includes it into the expression constraint handler */
+/** creates the handler for exponential expressions and includes it into SCIP */
 SCIP_RETCODE SCIPincludeExprhdlrExp(
    SCIP*                 scip                /**< SCIP data structure */
    )

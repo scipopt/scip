@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_erf.c
- * @ingroup DEFPLUGINS_EXPR
  * @brief  handler for Gaussian error function expressions
  * @author Benjamin Mueller
  */

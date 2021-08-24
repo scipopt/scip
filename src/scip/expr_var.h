@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPincludeExprhdlrVar(
  *
  * @{
  *
- * @name SCIP variable expression.
+ * @name SCIP variable expression
  *
  * This expression handler handles a SCIP variables. It cannot have children.
  * @{

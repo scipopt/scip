@@ -28,7 +28,7 @@
 #include "scip/expr_sum.h"
 
 #define EXPRHDLR_NAME         "var"
-#define EXPRHDLR_DESC         "variable expression"
+#define EXPRHDLR_DESC         "SCIP variable expression"
 #define EXPRHDLR_PRECEDENCE   0
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(22153.0)
 
@@ -41,9 +41,10 @@
 
 /** simplifies a variable expression
  *
- * We replace the variable when fixed by its value
+ * We replace the variable when fixed by its value.
  * If a variable is fixed, (multi)aggregated or more generally, inactive, we replace it with its active counterpart
- * IMPLEMENTATION NOTE:
+ *
+ * Implementation note:
  * - we follow the general approach of the simplify, where we replace the var expression for its
  *   simplified expression only in the current parent. So if we see that there is any performance issue in the simplify
  *   we might have to revisit this decision.
@@ -133,7 +134,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
 }
 
 /** the order of two variable is given by their indices
- * @note: this is affected by permutations in the problem!
+ *
+ * @note this is affected by permutations in the problem
  */
 static
 SCIP_DECL_EXPRCOMPARE(compareVar)

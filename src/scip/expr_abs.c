@@ -29,7 +29,7 @@
 #include "scip/expr.h"
 
 #define EXPRHDLR_NAME         "abs"
-#define EXPRHDLR_DESC         "absolute expression"
+#define EXPRHDLR_DESC         "absolute value expression"
 #define EXPRHDLR_PRECEDENCE   70000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(7187.0)
 
@@ -121,8 +121,10 @@ SCIP_RETCODE computeCutsAbs(
  * Callback methods of expression handler
  */
 
-/** simplifies an abs expression.
- * Evaluates the absolute value function when its child is a value expression
+/** simplifies an abs expression
+ *
+ * Evaluates the absolute value function when its child is a value expression.
+ *
  * TODO: abs(*) = * if * >= 0 or - * if * < 0
  */
 static
@@ -477,7 +479,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityAbs)
 }
 
 
-/** creates the handler for absolute expression and includes it into the expression constraint handler */
+/** creates the handler for absolute expression and includes it into SCIP */
 SCIP_RETCODE SCIPincludeExprhdlrAbs(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -503,7 +505,7 @@ SCIP_RETCODE SCIPincludeExprhdlrAbs(
    return SCIP_OKAY;
 }
 
-/** creates an absolute expression */
+/** creates an absolute value expression */
 SCIP_RETCODE SCIPcreateExprAbs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */

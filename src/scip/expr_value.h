@@ -44,7 +44,7 @@ SCIP_RETCODE SCIPincludeExprhdlrValue(
  *
  * @{
  *
- * @name Constant value expression.
+ * @name Constant value expression
  *
  * This expression handler handles a constant value. It cannot have children.
  * @{
