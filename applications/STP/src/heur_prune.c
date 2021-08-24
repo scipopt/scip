@@ -54,10 +54,10 @@
 #define HEUR_USESSUBSCIP      FALSE            /**< does the heuristic use a secondary SCIP instance?                  */
 
 #define DEFAULT_PRUNE_MAXFRQ      FALSE       /**< executions of the heuristic at maximum frequency?                  */
-#define DEFAULT_PRUNE_TMRUNS     100          /**< number of runs in TM heuristic when called by prune heuristic      */
+#define PRUNE_TMRUNS             100          /**< number of runs in TM heuristic when called by prune heuristic      */
+#define PRUNE_TMRUNS_FAST        70           /**< number of runs in TM heuristic when called by prune heuristic      */
 #define PRUNE_MINREDELIMS        2            /**< maximum number of eliminations for reduction package when called by prune heuristic */
 #define PRUNE_MAXREDROUNDS       6            /**< maximum number of reduction rounds in prune heuristic */
-#define BREAKONERROR  FALSE
 #define MAXNTERMINALS 500
 #define MAXNEDGES     10000
 
@@ -85,37 +85,42 @@ struct SCIP_HeurData
 static
 void setNodeSolArray(
    const GRAPH* g,
-   SCIP_Real* uborg,
-   int* solnode,
+   SCIP_Real* RESTRICT uborg,
+   int* RESTRICT solnode,
    const int* soledge
    )
 {
-   SCIP_Real ub;
-   int e;
-   int k;
-   int nedges;
-   int nnodes;
+   SCIP_Real ub = 0.0;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
 
-   assert(g != NULL);
    assert(solnode != NULL);
    assert(soledge != NULL);
 
-   ub = 0.0;
-   nedges = g->edges;
-   nnodes = g->knots;
-
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
       solnode[k] = UNKNOWN;
 
-   for( e = 0; e < nedges; e++ )
+   solnode[g->source] = CONNECT;
+
+   for( int e = 0; e < nedges; e++ )
    {
       if( soledge[e] == CONNECT )
       {
          ub += g->cost[e];
-         solnode[g->tail[e]] = CONNECT;
          solnode[g->head[e]] = CONNECT;
       }
    }
+
+#ifndef NDEBUG
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( soledge[e] == CONNECT )
+      {
+         assert(solnode[g->tail[e]] == CONNECT);
+         assert(solnode[g->head[e]] == CONNECT);
+      }
+   }
+#endif
 
    if( uborg != NULL)
       *uborg = ub;
@@ -127,15 +132,13 @@ SCIP_RETCODE computeNewSols(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    GRAPH*                prunegraph,         /**< pruned graph data structure */
-   PATH*                 path,               /**< shortest path struct */
    int*                  nodearrint,         /**< array */
-   int*                  edgearrint,         /**< array */
    int*                  solnode,            /**< array for best solution nodes wrt prunegraph */
    int*                  soledge,            /**< array for best solution edges wrt prunegraph */
    int*                  globalsoledge,      /**< array storing best solution wrt g */
-   STP_Bool*             nodearrchar,        /**< array */
    SCIP_Real*            globalobj,          /**< pointer to objective value of best solution wrt g */
    SCIP_Bool             incumbentgiven,     /**< incumbent solution for pruned graph given? */
+   SCIP_Bool             beFast,
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
 )
 {
@@ -159,7 +162,15 @@ SCIP_RETCODE computeNewSols(
          nruns++;
    }
 
-   nruns = MIN(nruns, DEFAULT_PRUNE_TMRUNS);
+   if( beFast )
+   {
+      nruns = MIN(nruns, PRUNE_TMRUNS);
+      nruns = MIN(prunegraph->terms, nruns);
+   }
+   else
+   {
+      nruns = MIN(nruns, PRUNE_TMRUNS);
+   }
    SCIPStpHeurTMCompStarts(prunegraph, nodearrint, &nruns);
 
    /* run shortest path heuristic */
@@ -175,6 +186,7 @@ SCIP_RETCODE computeNewSols(
 }
 
 /* get reduction bound */
+/* todo tune, rather random values at the moment */
 static
 int getRedBound(
    int nround,
@@ -189,6 +201,7 @@ int getRedBound(
 }
 
 
+/* todo tune, rather random values at the moment */
 static
 void setMinMaxElims(
    SCIP*                 scip,
@@ -217,7 +230,6 @@ void setMinMaxElims(
    totminnelims = MAX(PRUNE_MINREDELIMS, (anedges / 20));
 
    min = (anedges / 10);
-
    min -= (int) ( ((SCIP_Real) min * anterms) / ( (SCIP_Real) annodes) );
    min = MAX(min, 1);
 
@@ -301,7 +313,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolPrune)
    assert(heurdata != NULL);
 
    /* initialize data */
-   heurdata->ntmruns = DEFAULT_PRUNE_TMRUNS;
+   heurdata->ntmruns = PRUNE_TMRUNS;
    heurdata->nfailures = 0;
    heurdata->bestsolindex = -1;
 
@@ -521,7 +533,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
       SCIPdebugMessage("objold %f objnew %f \n", objold, objnew);
 
       /* keep (reconstructed) old solution? */
-      if( objold < objnew )
+      if( LT(objold, objnew) )
       {
          for( int e = 0; e < nedges; e++ )
             soledge[e] = UNKNOWN;
@@ -551,19 +563,11 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
 
    assert(solstp_isValid(scip, g, edgearrint));
 
-#if BREAKONERROR
-   if( !solstp_isValid(scip, g, edgearrint) )
-   {
-      printf("TM orig sol in prune not valid %d \n", 0);
-      exit(1);
-   }
-#endif
-
    objnew = solstp_getObjBounded(g, edgearrint, 0.0, nedges);
 
    SCIPdebugMessage("old global obj: %f ... new global obj: %f \n", *globalobj, objnew);
 
-   if( objnew < (*globalobj) )
+   if( LT(objnew, (*globalobj)) )
    {
       SCIPdebugMessage("new global solution is better \n");
       *globalobj = objnew;
@@ -781,9 +785,9 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    else
    {
       globalobj = FARAWAY;
-      SCIP_CALL( computeNewSols(scip, g, prunegraph, path, nodearrint, edgearrint, solnode, soledge, globalsoledge, nodearrchar, &globalobj, FALSE, success) );
+      SCIP_CALL( computeNewSols(scip, g, prunegraph, nodearrint, solnode, soledge, globalsoledge, &globalobj, FALSE, FALSE, success) );
 
-      assert(success);
+      assert(*success);
    }
 
    SCIPdebugMessage("initially reduced graph: |V| = %d, |E| = %d, |T| = %d  \n", annodes, anedges, anterms);
@@ -813,8 +817,8 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          if( i > 0 )
          {
-            SCIP_CALL( computeNewSols(scip, g, prunegraph, path, nodearrint, edgearrint, solnode, soledge, globalsoledge,
-                  nodearrchar, &globalobj, TRUE, success) );
+            SCIP_CALL( computeNewSols(scip, g, prunegraph, nodearrint, solnode, soledge, globalsoledge,
+                 &globalobj, TRUE, TRUE, success) );
          }
 
          if( pcmw )
@@ -901,33 +905,22 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          if( anterms <= 2 )
          {
-            SCIPdebugMessage("less than two terminals, break !! \n");
-            SCIP_CALL( computeNewSols(scip, g, prunegraph, path, nodearrint, edgearrint, solnode, soledge, globalsoledge,
-                              nodearrchar, &globalobj, TRUE, success) );
+            SCIPdebugMessage("less than two terminals, break! \n");
+            SCIP_CALL( computeNewSols(scip, g, prunegraph, nodearrint, solnode, soledge, globalsoledge,
+                              &globalobj, TRUE, TRUE, success) );
             break;
          }
       } /* reduction loop */
    } /* main prune loop */
 
-   for( int k = 0; k < nnodes; k++ )
-      nodearrchar[k] = FALSE;
-
    graph_path_exit(scip, prunegraph);
 
-   *success = solstp_isValid(scip, g, globalsoledge);
-   assert(*success);
+   *success = TRUE;
+   assert(solstp_isValid(scip, g, globalsoledge));
 
    SCIPdebugMessage("obj of best prune sol: %f \n", solstp_getObjBounded(g, globalsoledge, 0.0, nedges));
 
    BMScopyMemoryArray(soledge, globalsoledge, nedges);
-
-#if BREAKONERROR
-   if( !(*success) )
-   {
-      printf("final sol not valid %d \n", 0);
-      return SCIP_ERROR;
-   }
-#endif
 
    /* free memory */
    graph_free(scip, &prunegraph, TRUE);
