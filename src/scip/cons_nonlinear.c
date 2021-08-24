@@ -61,6 +61,7 @@
 #include "scip/heur_trysol.h"
 #include "scip/nlpi_ipopt.h"  /* for SCIPsolveLinearProb */
 #include "scip/debug.h"
+#include "scip/dialog_default.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -88,6 +89,10 @@
 #define TABLE_DESC_NONLINEAR           "nonlinear constraint handler statistics"
 #define TABLE_POSITION_NONLINEAR       14600                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NONLINEAR SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+
+#define DIALOG_NAME            "nlhdlrs"
+#define DIALOG_DESC            "display nonlinear handlers"
+#define DIALOG_ISSUBMENU          FALSE
 
 #define VERTEXPOLY_MAXPERTURBATION      1e-3 /**< maximum perturbation */
 #define VERTEXPOLY_USEDUALSIMPLEX       TRUE /**< use dual or primal simplex algorithm? */
@@ -10364,6 +10369,47 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
    return SCIP_OKAY;
 }
 
+/** execution method of display nlhdlrs dialog */
+static
+SCIP_DECL_DIALOGEXEC(dialogExecDisplayNlhdlrs)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   /* add dialog to history of dialogs that have been executed */
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* display list of nonlinear handler */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " nonlinear handler  enabled  detectprio  enforceprio  description\n");
+   SCIPdialogMessage(scip, NULL, " -----------------  -------  ----------  -----------  -----------\n");
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_NLHDLR* nlhdlr = conshdlrdata->nlhdlrs[i];
+      assert(nlhdlr != NULL);
+
+      SCIPdialogMessage(scip, NULL, " %-17s ", SCIPnlhdlrGetName(nlhdlr));
+      SCIPdialogMessage(scip, NULL, " %7s ", SCIPnlhdlrIsEnabled(nlhdlr) ? "yes" : "no");
+      SCIPdialogMessage(scip, NULL, " %10d ", SCIPnlhdlrGetDetectPriority(nlhdlr));
+      SCIPdialogMessage(scip, NULL, " %11d ", SCIPnlhdlrGetEnfoPriority(nlhdlr));
+      SCIPdialogMessage(scip, NULL, " %s", SCIPnlhdlrGetDesc(nlhdlr));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   /* next dialog will be root dialog again */
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /*
  * constraint handler specific interface methods
  */
@@ -10374,6 +10420,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_DIALOG* parentdialog;
 
    /* create nonlinear constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
@@ -10554,6 +10601,24 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NONLINEAR, TABLE_DESC_NONLINEAR, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNonlinear,
          NULL, TABLE_POSITION_NONLINEAR, TABLE_EARLIEST_STAGE_NONLINEAR) );
+
+   /* includes or updates the default dialog menus in SCIP */
+   SCIP_CALL( SCIPincludeDialogDefault(scip) );
+
+   /* create, include, and release display nlhdlrs dialog */
+   if( SCIPdialogFindEntry(SCIPgetRootDialog(scip), "display", &parentdialog) == 1 )
+   {
+      SCIP_DIALOG* dialog;
+
+      assert(parentdialog != NULL);
+      assert(!SCIPdialogHasEntry(parentdialog, DIALOG_NAME));
+
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, dialogExecDisplayNlhdlrs, NULL, NULL,
+            DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
 
    return SCIP_OKAY;
 }
