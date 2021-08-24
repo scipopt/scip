@@ -721,8 +721,7 @@ SCIP_RETCODE dpiterAddNewPrepare(
    {
       if( valid_traces[i].prevs[0] != -1 && valid_traces[i].prevs[1] == -1 )
       {
-         assert(rootmap[valid_traces[i].prevs[0]] >= 0); // todo really true? if not, remove above
-         // NDEBUG
+         assert(rootmap[valid_traces[i].prevs[0]] >= 0);
          valid_traces[i].prevs[0] = rootmap[valid_traces[i].prevs[0]];
       }
    }

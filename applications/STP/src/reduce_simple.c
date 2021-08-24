@@ -37,7 +37,7 @@
 #include "scip/scip.h"
 
 
-#ifdef XXX_XXX
+#ifdef SCIP_DISABLED
 /** deletes entire graph */
 static
 void deleteAllEdges(
@@ -377,8 +377,8 @@ SCIP_RETCODE reduce_simple(
       SCIP_CALL( reduce_unconnected(scip, g) );
    }
 
-   /* NOTE: seems to hurt performance in ascend-prune, not sure why.... */
-#if 0
+   /* todo: seems to hurt performance in ascend-prune, not sure why.... */
+#ifdef SCIP_DISABLED
    if( g->terms == 1 )
    {
       deleteAllEdges(scip, g);
@@ -1041,9 +1041,6 @@ SCIP_RETCODE reduce_cutEdgeTryPrune(
          *success = TRUE;
       }
    }
-
-  // int c = 0;
-  // SCIP_CALL( reduce_aritculations(scip, g, NULL, &c ) );
 
    SCIPfreeBufferArray(scip, &nodes_visited);
 

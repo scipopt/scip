@@ -1378,8 +1378,8 @@ SCIP_RETCODE reduce_nvAdv(
 }
 
 
-
-#if 0
+// todo finish
+#ifdef SCIP_DISABLED
 /** domination vertex reduction for the SPG */
 void reduce_alt_dv(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1509,7 +1509,7 @@ SCIP_RETCODE reduce_ans(
 
       marked[k] = TRUE;
 
-      if( SCIPisLT(scip, g->prize[k], 0.0) )
+      if( LT(g->prize[k], 0.0) )
          min = g->prize[k];
       else
          min = 0.0;
@@ -1801,7 +1801,6 @@ SCIP_RETCODE reduce_cnsAdv(
    SCIP_Real kprize;
    int neighbarr[STP_RED_CNSNN + 1];
    int neighbarr2[STP_RED_CNSNN + 1];
-   int k;
    int j;
    int e;
    int k2;
@@ -1810,8 +1809,8 @@ SCIP_RETCODE reduce_cnsAdv(
    int nn;
    int nn2;
    int k2grad;
-   int nnodes;
    int maxgrad;
+   const int nnodes = graph_get_nNodes(g);
 
    assert(scip   != NULL);
    assert(g      != NULL);
@@ -1821,16 +1820,15 @@ SCIP_RETCODE reduce_cnsAdv(
 
    k2grad = 0;
    *count = 0;
-   nnodes = g->knots;
 
    /* unmark all nodes */
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
       marked[k] = VERTEX_OTHER;
 
    /* first run: consider node plus adjacent terminals */
 
    /* check neighborhood of all nodes */
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       if( !(g->mark[k]) || (g->grad[k] < 2) )
          continue;
@@ -1842,14 +1840,14 @@ SCIP_RETCODE reduce_cnsAdv(
       maxgrad = g->grad[k];
 
       /* mark adjacent vertices and k */
-      for (e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e])
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          j = g->head[e];
 
          if( !g->mark[j] )
             continue;
 
-         if( SCIPisGE(scip, g->prize[j], 0.0) && nn < STP_RED_CNSNN - 1 )
+         if( GE(g->prize[j], 0.0) && nn < STP_RED_CNSNN - 1 )
          {
             neighbarr[nn++] = j;
             marked[j] = VERTEX_CONNECT;
@@ -1863,9 +1861,9 @@ SCIP_RETCODE reduce_cnsAdv(
       marked[k] = VERTEX_CONNECT;
 
       /* traverse all connected non-negative nodes and mark their neighbors */
-      for (l = 0; l < nn; l++)
+      for( l = 0; l < nn; l++ )
       {
-         for (e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e])
+         for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
          {
             j = g->head[e];
             if( !g->mark[j] )
@@ -1883,7 +1881,7 @@ SCIP_RETCODE reduce_cnsAdv(
          min = g->prize[k];
 
       /* traverse all vertices (main loop) */
-      for (j = 0; j < nnodes; j++)
+      for( j = 0; j < nnodes; j++ )
       {
          /* vertex part of the current connected subset? Or terminal? Or belonging to the extension of the graph? */
          if( marked[j] != VERTEX_CONNECT && g->mark[j] && !Is_term(g->term[j])
@@ -1891,7 +1889,7 @@ SCIP_RETCODE reduce_cnsAdv(
                /* valid candidate? */
                g->grad[j] <= maxgrad && SCIPisLE(scip, g->prize[j], min) )
          {
-            for (e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2])
+            for( e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2] )
                if( marked[g->head[e2]] == VERTEX_OTHER )
                   break;
 
@@ -1899,7 +1897,7 @@ SCIP_RETCODE reduce_cnsAdv(
             if( e2 == EAT_LAST )
             {
                /* yes, delete vertex */
-               while (g->outbeg[j] != EAT_LAST)
+               while( g->outbeg[j] != EAT_LAST )
                {
                   e2 = g->outbeg[j];
                   (*count)++;
@@ -1911,11 +1909,11 @@ SCIP_RETCODE reduce_cnsAdv(
          }
       }
 
-      for (e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e])
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          marked[g->head[e]] = VERTEX_OTHER;
 
-      for (l = 0; l < nn; l++)
-         for (e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e])
+      for( l = 0; l < nn; l++ )
+         for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
             marked[g->head[e]] = VERTEX_OTHER;
 
       marked[k] = VERTEX_OTHER;
@@ -1928,7 +1926,7 @@ SCIP_RETCODE reduce_cnsAdv(
    }
     /* second run: consider the same plus an additional (non-positive) vertex  */
 
-   for (k = 0; k < nnodes; k++)
+   for( int k = 0; k < nnodes; k++ )
    {
       if( !(g->mark[k]) || g->grad[k] < 2 || Is_term(g->term[k]) )
          continue;
@@ -1940,7 +1938,7 @@ SCIP_RETCODE reduce_cnsAdv(
       maxgrad = g->grad[k];
 
       /* mark adjacent vertices and k */
-      for (e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e])
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          j = g->head[e];
 
@@ -1967,9 +1965,9 @@ SCIP_RETCODE reduce_cnsAdv(
       marked[k] = VERTEX_CONNECT;
 
       /* traverse all connected non-negative nodes and mark their neighbors */
-      for (l = 0; l < nn; l++)
+      for( l = 0; l < nn; l++ )
       {
-         for (e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e])
+         for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
          {
             j = g->head[e];
             if( !g->mark[j] )
@@ -1996,14 +1994,14 @@ SCIP_RETCODE reduce_cnsAdv(
       else
          min = g->prize[k];
 
-      for (l = 0; l < nn2; l++)
+      for( l = 0; l < nn2; l++ )
       {
          k2 = neighbarr2[l];
 
          if( !g->mark[k2] )
             continue;
 
-         for (e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e])
+         for( e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e] )
             if( marked[g->head[e]] == VERTEX_OTHER && g->mark[g->head[e]] )
                marked[g->head[e]] = VERTEX_TEMPNEIGHBOR;
          min += g->prize[k2];
@@ -2012,7 +2010,7 @@ SCIP_RETCODE reduce_cnsAdv(
          assert(SCIPisLE(scip, g->prize[k2], 0.0));
 
          /* traverse all vertices (main loop) */
-         for (j = 0; j < nnodes; j++)
+         for( j = 0; j < nnodes; j++ )
          {
             /* vertex part of the current connected subset? Or terminal? Or belonging to the extension of the graph? */
             if( marked[j] != VERTEX_CONNECT && g->mark[j]
@@ -2020,7 +2018,7 @@ SCIP_RETCODE reduce_cnsAdv(
                   /* valid candidate? */
                   g->grad[j] <= maxgrad && SCIPisLE(scip, g->prize[j], min) )
             {
-               for (e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2])
+               for( e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2] )
                   if( marked[g->head[e2]] == VERTEX_OTHER )
                      break;
 
@@ -2028,7 +2026,7 @@ SCIP_RETCODE reduce_cnsAdv(
                if( e2 == EAT_LAST )
                {
                   /* yes, delete vertex */
-                  while (g->outbeg[j] != EAT_LAST)
+                  while( g->outbeg[j] != EAT_LAST )
                   {
                      e2 = g->outbeg[j];
                      (*count)++;
@@ -2039,7 +2037,7 @@ SCIP_RETCODE reduce_cnsAdv(
                }
             }
          }
-         for (e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e])
+         for( e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e] )
             if( marked[g->head[e]] == VERTEX_TEMPNEIGHBOR
                   && g->mark[g->head[e]] )
                marked[g->head[e]] = VERTEX_OTHER;
@@ -2047,11 +2045,11 @@ SCIP_RETCODE reduce_cnsAdv(
          maxgrad -= k2grad - 1;
 
       }
-      for (e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e])
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          marked[g->head[e]] = VERTEX_OTHER;
 
-      for (l = 0; l < nn; l++)
-         for (e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e])
+      for( l = 0; l < nn; l++ )
+         for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
             marked[g->head[e]] = VERTEX_OTHER;
 
       marked[k] = VERTEX_OTHER;
@@ -2636,7 +2634,6 @@ SCIP_RETCODE reduce_impliedProfitBased(
 
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 
-
    /* first call edge elimination tests */
    if( !isPcMw )
    {
@@ -2644,20 +2641,12 @@ SCIP_RETCODE reduce_impliedProfitBased(
    }
    SCIP_CALL( reduce_sdStarBiasedWithProfit(scip, edgelimit, sdistance->sdprofit, TRUE, g, &nelimsnew) );
 
-#if 0
-   SCIP_CALL( reduce_sdAddNeighborSd(scip, g, sdistance) );
-   SCIP_CALL( reduce_sdBiasedNeighbor(scip, sdistance, g, nelims) );
-#endif
-
    if( nelimsnew > 0 )
    {
       SCIP_CALL( reduce_sdprofitBuildFromBLC(scip, g, sdistance->blctree, FALSE, sdistance->sdprofit) );
       SCIP_CALL( graph_tpathsRecomputeBiased(sdistance->sdprofit, g, sdistance->terminalpaths) );
       *nelims += nelimsnew;
    }
-
- //  reduce_sdFree(scip, &sdistance);
- //  SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );
 
    /* now call edge contraction tests */
    SCIP_CALL( reduce_nsvImplied(scip, sdistance, g, solnode, fixed, nelims) );

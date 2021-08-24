@@ -154,7 +154,6 @@ void partitionSortSubsets(
       subsizes[nsubsets++] = (iter2 - iter) + 1;
 
       /* sentinel */
-//     partition[iter - 1] *= -1;
       for( int i = iter + 1; i < iter2; i++ )
       {
          int j;
@@ -167,8 +166,7 @@ void partitionSortSubsets(
          }
          partition[j + 1] = curr;
       }
-    //  assert(partition[iter - 1] <= 0);
-   //   partition[iter - 1] *= -1;
+
       iter = iter2;
    }
 

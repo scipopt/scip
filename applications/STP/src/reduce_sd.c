@@ -1914,14 +1914,12 @@ SCIP_RETCODE reduce_sdBiased(
 
          if( deleteEdge )
          {
-            int todo; // continue seems to hurt with SP hard...need to tune
 #ifdef SCIP_DEBUG
             SCIPdebugMessage("SD biased deletes (sd=%f):  ", sd);
             graph_edge_printInfo(g, e);
 #endif
             graph_edge_del(scip, g, e, TRUE);
             (*nelims)++;
-            // break;
          }
       }
    }
@@ -2887,279 +2885,6 @@ SCIP_RETCODE reduce_ledge(
 }
 
 
-
-/** Non-Terminal-Set test
- * DEPRECATED! */
-SCIP_RETCODE reduce_nts(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph structure */
-   PATH*                 pathtail,           /**< array for internal use */
-   PATH*                 pathhead,           /**< array for internal use */
-   int*                  heap,               /**< array for internal use */
-   int*                  statetail,          /**< array for internal use */
-   int*                  statehead,          /**< array for internal use */
-   int*                  memlbltail,         /**< array for internal use */
-   int*                  memlblhead,         /**< array for internal use */
-   int*                  nelims,             /**< point to return number of eliminations */
-   int                   limit               /**< limit for edges to consider for each vertex */
-   )
-{
-   PATH mst[STP_BD_MAXDEGREE];
-   SCIP_Real ecost[STP_BD_MAXDEGREE];
-   int outedge[STP_BD_MAXDEGREE];
-   int adjvert[STP_BD_MAXDEGREE];
-   GRAPH* auxg;
-   int* pathmaxnodetail = NULL;
-   int* pathmaxnodehead = NULL;
-   const int nnodes = g->knots;
-   const int nedges = g->edges;
-   const SCIP_Bool pc = g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG;
-
-   SCIPdebugMessage("NTS-Reduction: ");
-
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(heap != NULL);
-   assert(nelims != NULL);
-   assert(limit > 0);
-
-   // todo extra method, also called from bd34
-
-   /* initialize new graph for nts tests */
-   SCIP_CALL( graph_init(scip, &auxg, STP_BD_MAXDEGREE, 2 * STP_BD_MAXDNEDGES, 1) );
-
-   for( int k = 0; k < STP_BD_MAXDEGREE; k++ )
-   {
-      graph_knot_add(auxg, -1);
-      auxg->mark[k] = TRUE;
-   }
-
-   for( int k = 0; k < STP_BD_MAXDEGREE; k++ )
-      for( int k2 = STP_BD_MAXDEGREE - 1; k2 >= k + 1; k2-- )
-         graph_edge_add(scip, auxg, k, k2, 1.0, 1.0);
-
-   /* init graph for mst computation */
-   SCIP_CALL( graph_path_init(scip, auxg) );
-
-   *nelims = 0;
-
-   if( pc )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodetail, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodehead, nnodes) );
-   }
-   else
-   {
-      for( int  i = 0; i < nnodes; i++ )
-         g->mark[i] = (g->grad[i] > 0);
-   }
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      statetail[i]     = UNKNOWN;
-      pathtail[i].dist = FARAWAY;
-      pathtail[i].edge = UNKNOWN;
-      statehead[i]     = UNKNOWN;
-      pathhead[i].dist = FARAWAY;
-      pathhead[i].edge = UNKNOWN;
-      if( pc )
-      {
-         pathmaxnodetail[i] = -1;
-         pathmaxnodehead[i] = -1;
-      }
-   }
-
-   for( int degree = 4; degree <= STP_BD_MAXDEGREE; degree++ )
-   {
-      for( int edge = 0; edge < nedges; edge += 2 )
-      {
-         /* edge not deleted? */
-         if( g->oeat[edge] != EAT_FREE )
-         {
-            SCIP_Real csum;
-            SCIP_Real mstcost;
-            const SCIP_Real edgecost = g->cost[edge];
-            int edgecount;
-            const int tail = g->tail[edge];
-            const int head = g->head[edge];
-            SCIP_Bool success = TRUE;
-            SCIP_Bool duplicate;
-
-            assert(edge >= 0);
-            assert(tail >= 0 && head >= 0);
-
-            // todo
-            if( g->grad[tail] != 3 || g->grad[head] != 3 )
-               continue;
-
-            if( Is_term(g->term[tail]) || Is_term(g->term[head]) )
-               continue;
-
-            edgecount = 0;
-            for( int e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
-            {
-               if( g->head[e] == head )
-                  continue;
-               outedge[edgecount] = e;
-               ecost[edgecount] = g->cost[e];
-               adjvert[edgecount++] = g->head[e];
-            }
-
-            for( int e = g->outbeg[head]; e != EAT_LAST; e = g->oeat[e] )
-            {
-               if( g->head[e] == tail )
-                  continue;
-               outedge[edgecount] = e;
-               ecost[edgecount] = g->cost[e];
-               adjvert[edgecount++] = g->head[e];
-            }
-
-            assert(edgecount == degree);
-
-            duplicate = FALSE;
-
-            /* check for shared neighbor */
-            for( int i = 0; i < degree - 1; i++ )
-               for( int j = i + 1; j < degree; j++ )
-                  if( adjvert[i] == adjvert[j] && adjvert[j] >= 0 )
-                  {
-                     adjvert[j] = -adjvert[j] - 1;
-                     duplicate = TRUE;
-                  }
-
-            // todo reshuffle
-            if( duplicate )
-            {
-               continue;
-            }
-
-            assert(g->mark[head] && g->mark[tail]);
-
-            g->mark[head] = FALSE;
-            g->mark[tail] = FALSE;
-
-            csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
-
-            /* compute sd values and check 2-subsets of neighbors */
-            for( int k = 0; k < degree - 1 && success; k++ )
-            {
-               for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
-               {
-                  const int k2 = auxg->head[e];
-                  if( k2 > k )
-                  {
-                     SCIP_Real s1 = -1.0;
-
-                     if( pc )
-                     {
-                        assert(0 && "fix me");
-                   //     SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                     //               pathmaxnodetail, pathmaxnodehead, adjvert[k], adjvert[k2], limit) );
-                     }
-                     else
-                     {
-                        SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                              adjvert[k], adjvert[k2], limit, pc, FALSE) );
-                     }
-
-                     assert(s1 >= 0);
-
-                     if( g->tail[outedge[k]] != g->tail[outedge[k2]] )
-                     {
-                        const SCIP_Real innercost = ecost[k] + ecost[k2] + edgecost;
-
-                        if( SCIPisGT(scip, s1, innercost) )
-                        {
-          //                 success = FALSE;
-            //               break;
-                        }
-                     }
-
-                     auxg->cost[e] = s1;
-                     auxg->cost[flipedge(e)] = s1;
-                  }
-               }
-            }
-
-            g->mark[head] = TRUE;
-            g->mark[tail] = TRUE;
-
-            for( int l = 0; l < 4; l++ )
-               mst[l].dist = UNKNOWN;
-
-            /* compute MST on all neighbors */
-            graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-            mstcost = 0.0;
-
-            /* sum cost of (root == 0) */
-            for( int l = 1; l < 4; l++ )
-            {
-               assert(mst[l].dist != UNKNOWN);
-               mstcost += mst[l].dist;
-            }
-
-            success = (success && SCIPisGE(scip, csum, mstcost));
-
-
-            if( success && 0)
-            {
-               /* compute MST on all 3-subsets of all neighbors */
-               for( int k = 0; k < degree; k++ )
-               {
-                  assert(auxg->mark[k]);
-
-                  auxg->mark[k] = FALSE;
-                  mstcost = 0.0;
-
-                  if( k != 0 )
-                  {
-                     graph_path_exec(scip, auxg, MST_MODE, 0, auxg->cost, mst);
-                     for( int l = 1; l < 4; l++ )
-                        if( auxg->mark[l] )
-                           mstcost += mst[l].dist;
-                  }
-                  else
-                  {
-                     graph_path_exec(scip, auxg, MST_MODE, 1, auxg->cost, mst);
-                     for( int l = 2; l < 4; l++ )
-                        mstcost += mst[l].dist;
-                  }
-
-                  auxg->mark[k] = TRUE;
-
-                  if( SCIPisLT(scip, csum - ecost[k], mstcost) )
-                  {
-                     success = FALSE;
-                     break;
-                  }
-               }
-            }
-
-            if( success )
-            {
-             //  graph_edge_del(scip, g, edge, TRUE);
-
-               (*nelims)++;
-            }
-         } /* check single edge */
-      } /* for all edges */
-   } /* for all degrees */
-
-
-   /* free memory */
-
-   SCIPfreeBufferArrayNull(scip, &pathmaxnodehead);
-   SCIPfreeBufferArrayNull(scip, &pathmaxnodetail);
-
-   graph_path_exit(scip, auxg);
-   graph_free(scip, &auxg, TRUE);
-
-   assert(graph_valid(scip, g));
-
-   return SCIP_OKAY;
-}
-
-
 /** SDC test for the SAP using a limited version of Dijkstra's algorithm from both endpoints of an arc */
 SCIP_RETCODE reduce_sdspSap(
    SCIP*                 scip,
@@ -3240,7 +2965,7 @@ SCIP_RETCODE reduce_sdspSap(
          graph_sdPaths(g, pathhead, costrev, g->cost[e], heap, statehead, memlblhead, &nlblhead, i2, i, limit);
 
          sdist = FARAWAY;
-#if 0
+#ifdef SCIP_DISABLED
          if( statetail[i2] != UNKNOWN )
          {
             sdist = pathtail[i2].dist;
@@ -3280,17 +3005,6 @@ SCIP_RETCODE reduce_sdspSap(
             pathhead[l].edge = UNKNOWN;
          }
 
-#ifdef SCIP_DISABLED
-         for( k = 0; k < nnodes; k++ )
-         {
-            assert(statetail[k]     == UNKNOWN);
-            assert(pathtail[k].dist == FARAWAY);
-            assert(pathtail[k].edge == UNKNOWN);
-            assert(statehead[k]     == UNKNOWN);
-            assert(pathhead[k].dist == FARAWAY);
-            assert(pathhead[k].edge == UNKNOWN);
-         }
-#endif
          /* can edge be deleted? */
          if( SCIPisGE(scip, g->cost[e], sdist) )
          {
@@ -3808,20 +3522,12 @@ SCIP_RETCODE reduce_sdStar(
                {
                   assert(star_base[starbase] != SDSTAR_BASE_UNSET);
 
-                  /* path still valid? todo really necessary? */
-                  if( 1 ) //star_base[starbase] != SDSTAR_BASE_KILLED )
-                  {
-                     star_base[starnode] = SDSTAR_BASE_KILLED;
-                     edge_deletable[edgeid_csr[e] / 2] = TRUE;
-                     graph_dcsr_deleteEdgeBi(scip, dcsr, e);
+                  star_base[starnode] = SDSTAR_BASE_KILLED;
+                  edge_deletable[edgeid_csr[e] / 2] = TRUE;
+                  graph_dcsr_deleteEdgeBi(scip, dcsr, e);
 
-                     (*nelims)++;
-                     enext--;
-                  }
-                  else
-                  {
-                     runloop = TRUE;
-                  }
+                  (*nelims)++;
+                  enext--;
                }
             } /* traverse star nodes */
          } /* if success */
