@@ -59,6 +59,7 @@ Interface changes
 - renamed SCIPcomputeArraysIntersection() and SCIPcomputeArraysSetminus() to
   SCIPcomputeArraysIntersectionInt() and SCIPcomputeArraysSetminusInt(), respectively, and changed
   their return type from SCIP_RETCODE (which _always_ was SCIP_OKAY) to void
+- removed SCIPincludeDialogDefault(), use SCIPincludeDialogDefaultBasic() instead and check whether you also need SCIPincludeDialogDefaultSet() and SCIPincludeDialogDefaultFix()
 
 ### New API functions
 
@@ -80,6 +81,7 @@ Interface changes
   add an activeone argument to specify whether the indicator constraint should be activated on 0 or 1.
 - added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
 - added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
+- added SCIPincludeDialogDefaultBasic()
 
 ### Command line interface
 ### Interfaces to external software
