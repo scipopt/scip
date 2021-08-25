@@ -186,7 +186,7 @@ SCIP_RETCODE solveLinearProb3(
 }
 
 /* solves a linear problem of the form Ax = b for a regular matrix A */
-SCIP_RETCODE SCIPsolveLinearProb(
+SCIP_RETCODE SCIPsolveLinearEquationsIpopt(
    int                   N,                  /**< dimension */
    SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */

@@ -59,7 +59,7 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
-#include "scip/nlpi_ipopt.h"  /* for SCIPsolveLinearProb */
+#include "scip/nlpi_ipopt.h"  /* for SCIPsolveLinearEquationsIpopt */
 #include "scip/debug.h"
 #include "scip/dialog_default.h"
 
@@ -8928,7 +8928,7 @@ SCIP_RETCODE computeHyperplaneThreePoints(
       SCIPdebugMsg(scip, "numerical troubles - try to solve the linear system via an LU factorization\n");
 
       /* solve the linear problem */
-      SCIP_CALL( SCIPsolveLinearProb(3, m, rhs, x, &success) );
+      SCIP_CALL( SCIPsolveLinearEquationsIpopt(3, m, rhs, x, &success) );
 
       *delta  = rhs[0];
       *alpha  = x[0];

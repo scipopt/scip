@@ -369,6 +369,7 @@ nlpi:
 - removed SCIPgetIpoptApplicationPointerIpopt(), use SCIPgetNlpiSolverPointer() instead
 - removed SCIPnlpStatisticsCreate(), SCIPnlpStatisticsFree(), SCIPnlpStatisticsGetNIterations(), SCIPnlpStatisticsGetTotalTime(), SCIPnlpStatisticsSetNIterations(), SCIPnlpStatisticsSetTotalTime(), the struct is public now
 - renamed LapackDsyev() to SCIPcallLapackDsyevIpopt()
+- renamed SCIPsolveLinearProb() to SCIPsolveLinearEquationsIpopt()
 
 ### New API functions
 
