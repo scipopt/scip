@@ -94,7 +94,7 @@ SCIP_RETCODE LapackDsyev(
 
 /* solves a linear problem of the form Ax = b for a regular 3*3 matrix A */
 static
-SCIP_RETCODE SCIPsolveLinearProb3(
+SCIP_RETCODE solveLinearProb3(
    SCIP_Real*            A,                  /**< matrix data on input (size 3*3); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size 3) */
    SCIP_Real*            x,                  /**< buffer to store solution (size 3) */
@@ -217,10 +217,10 @@ SCIP_RETCODE SCIPsolveLinearProb(
    assert(x != NULL);
    assert(success != NULL);
 
-   /* call SCIPsolveLinearProb3() for performance reasons */
+   /* call solveLinearProb3() for performance reasons */
    if( N == 3 )
    {
-      SCIP_CALL( SCIPsolveLinearProb3(A, b, x, success) );
+      SCIP_CALL( solveLinearProb3(A, b, x, success) );
       return SCIP_OKAY;
    }
 

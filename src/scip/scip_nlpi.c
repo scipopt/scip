@@ -93,7 +93,7 @@ SCIP_DECL_EXPR_MAPEXPR(mapvar2varidx)
    return SCIP_OKAY;
 }
 
-/** create a NLPI and includes it into SCIP */
+/** creates an NLPI and includes it into SCIP */
 SCIP_RETCODE SCIPincludeNlpi(
    SCIP*                           scip,                        /**< SCIP data structure */
    const char*                     name,                        /**< name of NLP interface */
@@ -211,9 +211,7 @@ SCIP_RETCODE SCIPsetNlpiPriority(
    return SCIP_OKAY;
 }
 
-/** gets pointer for NLP solver
- * @return void pointer to solver
- */
+/** gets internal pointer to NLP solver */
 SCIP_DECL_NLPIGETSOLVERPOINTER(SCIPgetNlpiSolverPointer)
 {
    assert(scip != NULL);
@@ -241,9 +239,7 @@ SCIP_DECL_NLPIFREEPROBLEM(SCIPfreeNlpiProblem)
    return SCIP_OKAY;
 }
 
-/** gets pointer to solver-internal problem instance
- * @return void pointer to problem instance
- */
+/** gets internal pointer to solver-internal problem instance */
 SCIP_DECL_NLPIGETPROBLEMPOINTER(SCIPgetNlpiProblemPointer)
 {
    assert(scip != NULL);
@@ -361,7 +357,21 @@ SCIP_DECL_NLPISETINITIALGUESS(SCIPsetNlpiInitialGuess)
    return SCIP_OKAY;
 }
 
-/** try to solve NLP */
+/** try to solve NLP with all parameters given as SCIP_NLPPARAM struct
+ *
+ * Typical use is
+ *
+ *     SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
+ *     nlpparam.iterlim = 42;
+ *     SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem, nlpparam) );
+ *
+ * or, in "one" line:
+ *
+ *     SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem,
+ *        (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), .iterlimit = 42 }) );
+ *
+ * To get the latter, also \ref SCIPsolveNlpi can be used.
+ */
 SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam)
 {
    assert(scip != NULL);

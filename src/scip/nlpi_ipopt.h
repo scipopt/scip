@@ -70,7 +70,8 @@ void* SCIPgetNlpiOracleIpopt(
    );
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
- * It's here, because Ipopt is linked against Lapack.
+ *
+ * It's here, because we use Ipopt's C interface to Lapack.
  */
 SCIP_EXPORT
 SCIP_RETCODE LapackDsyev(
@@ -82,9 +83,10 @@ SCIP_RETCODE LapackDsyev(
 
 /** solves a linear problem of the form Ax = b for a regular matrix A
  *
- *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
+ *  Calls Lapacks DGETRF routine to calculate a LU factorization and uses this factorization to solve
  *  the linear problem Ax = b.
- *  It's here, because Ipopt is linked against Lapack.
+ *
+ * It's here, because we use Ipopt's C interface to Lapack.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsolveLinearProb(

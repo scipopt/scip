@@ -279,30 +279,6 @@ SCIP_RETCODE SCIPnlpiGetStatistics(
    SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
    );
 
-/** gives required size of a buffer to store a warmstart object */
-SCIP_RETCODE SCIPnlpiGetWarmstartSize(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   size_t*               size                /**< pointer to store required size for warmstart buffer */
-   );
-
-/** stores warmstart information in buffer */
-SCIP_RETCODE SCIPnlpiGetWarmstartMemo(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   void*                 buffer              /**< memory to store warmstart information */
-   );
-
-/** sets warmstart information in solver */
-SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   void*                 buffer              /**< warmstart information */
-   );
-
 #ifdef __cplusplus
 }
 #endif
