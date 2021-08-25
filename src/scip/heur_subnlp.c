@@ -898,6 +898,9 @@ SCIP_RETCODE solveSubNLP(
          }
       }
 
+      /* we should either have variables, or the problem was trivial, in which case it should have been presolved or solved */
+      assert(SCIPgetNVars(heurdata->subscip) > 0 || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED);
+
       SCIPdebug( SCIP_CALL( SCIPprintStatistics(heurdata->subscip, NULL) ); )
 
       /* if sub-SCIP found solutions already, then pass them to main scip */
@@ -972,9 +975,6 @@ SCIP_RETCODE solveSubNLP(
             }
          }
       }
-
-      /* we should either have variables, or the problem was trivial, in which case it should have been presolved or solved */
-      assert(SCIPgetNVars(heurdata->subscip) > 0 || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(heurdata->subscip) == SCIP_STAGE_SOLVED);
 
       /* if subscip is infeasible here, we signal this to the caller */
       if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
