@@ -90,6 +90,12 @@
 #define TABLE_POSITION_NONLINEAR       14600                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NONLINEAR SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
+/* properties of the nonlinear handler statistics table */
+#define TABLE_NAME_NLHDLR              "nlhdlr"
+#define TABLE_DESC_NLHDLR              "nonlinear handler statistics"
+#define TABLE_POSITION_NLHDLR          14601                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_NLHDLR    SCIP_STAGE_PRESOLVING  /**< output of the statistics table is only printed from this stage onwards */
+
 #define DIALOG_NAME            "nlhdlrs"
 #define DIALOG_DESC            "display nonlinear handlers"
 #define DIALOG_ISSUBMENU          FALSE
@@ -10363,6 +10369,26 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
    SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));
    SCIPinfoMessage(scip, file, "\n");
 
+   return SCIP_OKAY;
+}
+
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputNlhdlr)
+{ /*lint --e{715}*/
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* skip nlhdlr table if there never were active nonlinear constraints */
+   if( SCIPconshdlrGetMaxNActiveConss(conshdlr) == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* print statistics for nonlinear handlers */
    SCIPnlhdlrPrintStatistics(scip, conshdlrdata->nlhdlrs, conshdlrdata->nnlhdlrs, file);
 
@@ -10596,11 +10622,16 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "signals a bound change to a nonlinear constraint", processVarEvent, NULL) );
    assert(conshdlrdata->eventhdlr != NULL);
 
-   /* include table for statistics */
+   /* include tables for statistics */
    assert(SCIPfindTable(scip, TABLE_NAME_NONLINEAR) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NONLINEAR, TABLE_DESC_NONLINEAR, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNonlinear,
          NULL, TABLE_POSITION_NONLINEAR, TABLE_EARLIEST_STAGE_NONLINEAR) );
+
+   assert(SCIPfindTable(scip, TABLE_NAME_NLHDLR) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLHDLR, TABLE_DESC_NLHDLR, TRUE,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNlhdlr,
+         NULL, TABLE_POSITION_NLHDLR, TABLE_EARLIEST_STAGE_NLHDLR) );
 
    /* includes or updates the default dialog menus in SCIP */
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
