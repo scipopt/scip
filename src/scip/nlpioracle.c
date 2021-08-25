@@ -1281,7 +1281,7 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
    return SCIP_OKAY;
 }
 
-/** change constraint bounds */
+/** change constraint sides */
 SCIP_RETCODE SCIPnlpiOracleChgConsSides(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -1544,7 +1544,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    return SCIP_OKAY;
 }
 
-/** changes linear coefficients in one constraint or objective */
+/** changes (or adds) linear coefficients in one constraint or objective */
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -1640,7 +1640,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    return SCIP_OKAY;
 }
 
-/** replaces expression of one constraint or objective  */
+/** replaces expression of one constraint or objective */
 SCIP_RETCODE SCIPnlpiOracleChgExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -1753,7 +1753,7 @@ char** SCIPnlpiOracleGetVarNames(
    return oracle->varnames;
 }
 
-/** indicates whether variable appear nonlinear in any objective or constraint */
+/** indicates whether variable appears nonlinear in any objective or constraint */
 SCIP_Bool SCIPnlpiOracleIsVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -1768,7 +1768,7 @@ SCIP_Bool SCIPnlpiOracleIsVarNonlinear(
    return oracle->varnlcount[varidx] > 0;
 }
 
-/** returns number of linear and nonlinear appearances of variables objective and constraints */
+/** returns number of linear and nonlinear appearances of variables in objective and constraints */
 void SCIPnlpiOracleGetVarCounts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -2140,10 +2140,10 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    return SCIP_OKAY;
 }
 
-/** evaluates the Jacobi matrix in a given point
+/** evaluates the Jacobian matrix in a given point
  * 
- *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
- *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
+ *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity().
+ *  The user need to call SCIPnlpiOracleGetJacobianSparsity() at least ones before using this function.
  *
  * @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
@@ -2270,7 +2270,7 @@ TERMINATE:
 
 /** gets sparsity pattern of the Hessian matrix of the Lagrangian
  * 
- *  Note that internal data is returned in *offset and *col, thus the user must not allocate memory there.
+ *  Note that internal data is returned in *offset and *col, thus the user must not to allocate memory there.
  *  Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
  *  Only elements of the lower left triangle and the diagonal are counted.
  */
@@ -2362,8 +2362,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
 
 /** evaluates the Hessian matrix of the Lagrangian in a given point
  * 
- *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
- *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
+ *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity().
+ *  The user must call SCIPnlpiOracleGetHessianLagSparsity() at least ones before using this function.
  *  Only elements of the lower left triangle and the diagonal are computed.
  *
  * @return SCIP_INVALIDDATA, if the Hessian could not be evaluated (domain error, etc.)
@@ -2505,6 +2505,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
 }
 
 /** prints the problem to a file in GAMS format
+ *
  * If there are variable (equation, resp.) names with more than 9 characters, then variable (equation, resp.) names are prefixed with an unique identifier.
  * This is to make it easier to identify variables solution output in the listing file.
  * Names with more than 64 characters are shorten to 64 letters due to GAMS limits.
