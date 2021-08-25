@@ -619,6 +619,16 @@ SCIP_DECL_SORTPTRCOMP(SCIPexprhdlrComp)
    return strcmp(((SCIP_EXPRHDLR*)elem1)->name, ((SCIP_EXPRHDLR*)elem2)->name);
 }
 
+/** gets number of times an expression has been created with given expression handler */
+unsigned int SCIPexprhdlrGetNCreated(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->ncreated;
+}
+
 /** gets number of times the interval evaluation callback was called */
 SCIP_Longint SCIPexprhdlrGetNIntevalCalls(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
@@ -800,6 +810,7 @@ void SCIPexprhdlrInit(
 
    if( set->misc_resetstat )
    {
+      exprhdlr->ncreated = 0;
       exprhdlr->nestimatecalls = 0;
       exprhdlr->nintevalcalls = 0;
       exprhdlr->npropcalls = 0;
@@ -1675,6 +1686,8 @@ SCIP_RETCODE SCIPexprCreate(
    }
 
    SCIPexprCapture(*expr);
+
+   ++exprhdlr->ncreated;
 
    /* initializes the ownerdata */
    if( ownercreate != NULL )

@@ -239,6 +239,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPexprhdlrComp);
 /**@name Expression Handler Statistics */
 /**@{ */
 
+/** gets number of times an expression has been created with given expression handler */
+SCIP_EXPORT
+unsigned int SCIPexprhdlrGetNCreated(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
 /** gets number of times the interval evaluation callback was called */
 SCIP_EXPORT
 SCIP_Longint SCIPexprhdlrGetNIntevalCalls(

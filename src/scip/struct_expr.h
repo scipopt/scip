@@ -60,6 +60,7 @@ struct SCIP_Exprhdlr
    SCIP_DECL_EXPRINTEGRALITY((*integrality));/**< integrality detection callback (can be NULL) */
 
    /* statistics */
+   unsigned int          ncreated;           /**< number of times expression has been created */
    SCIP_Longint          nestimatecalls;     /**< number of times the estimation callback was called */
    SCIP_Longint          nintevalcalls;      /**< number of times the interval evaluation callback was called */
    SCIP_Longint          npropcalls;         /**< number of times the propagation callback was called */
