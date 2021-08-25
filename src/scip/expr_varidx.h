@@ -45,11 +45,11 @@ SCIP_RETCODE SCIPincludeExprhdlrVaridx(
  *
  * @{
  *
- * @name Index variable expression.
+ * @name Index variable expression
  *
  * This expression handler handles a variable that is given by a variable index. It cannot have children.
  *
- * This expression handler is used for expression that are passed to a NLP solver via the NLPI.
+ * This expression handler is used for expressions that are passed to a NLP solver via the NLPI.
  * @{
  */
 

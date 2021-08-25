@@ -177,7 +177,8 @@ Vector ADFun<Base>::Hessian(const Vector &x, const Vector &w)
 	);
 
 	// point at which we are evaluating the Hessian
-	Forward(0, x);
+	// SV took this out, as exprinterpret_cppad ensures that Forward has been called if necessary before eval the Hessian
+	// SV Forward(0, x);
 
 	// define the return value
 	Vector hes(n * n);

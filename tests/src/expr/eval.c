@@ -495,16 +495,6 @@ Test(evalexpr, complicated, .description = "Tests expression evaluation for a la
    SCIP_CALL( SCIPevalExpr(scip, mainexpr, sol, 0) );
    cr_expect_eq(SCIPexprGetEvalValue(mainexpr), SCIP_INVALID);
 
-   /* set values for variable expression explicitly */
-   printf("evaluate expression after setting value for variable expressions\n");
-   for( i = 1; i < 3; ++i )
-   {
-      SCIPexprSetEvalValue(xexpr, i*i, i);
-      SCIPexprSetEvalValue(yexpr, 1.0 / i, i);
-      SCIP_CALL( SCIPevalExpr(scip, mainexpr, NULL, i) );
-      checkExprEval(xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, i*i, 1.0 / i, i);
-   }
-
    /* release all expressions */
    SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );

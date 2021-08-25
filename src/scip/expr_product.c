@@ -20,9 +20,6 @@
  * @author Benjamin Mueller
  * @author Felipe Serrano
  * @author Ksenia Bestuzheva
- *
- * Implementation of the product expression, representing a product of expressions
- * and a constant, i.e., coef * prod_i x_i.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -42,7 +39,7 @@
 #include "scip/nlhdlr_bilinear.h"
 
 #define EXPRHDLR_NAME         "prod"
-#define EXPRHDLR_DESC         "product of children"
+#define EXPRHDLR_DESC         "product expression"
 #define EXPRHDLR_PRECEDENCE   50000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(54949.0)
 
@@ -311,8 +308,8 @@ SCIP_RETCODE createExprProductFromExprlist(
 
 /** simplifies a factor of a product expression: base, so that it is a valid children of a simplified product expr
  *
- * @note: in contrast to other simplify methods, this does *not* return a simplified expression.
- * Instead, the method is intended to be called only when simplifying a product expression,
+ * @note In contrast to other simplify methods, this does *not* return a simplified expression.
+ * Instead, the method is intended to be called only when simplifying a product expression.
  * Since in general, base is not a simplified child of a product expression, this method returns
  * a list of expressions L, such that (prod L) = baset *and* each expression in L
  * is a valid child of a simplified product expression.
@@ -386,7 +383,7 @@ SCIP_RETCODE simplifyFactor(
  * In the process of enforcing SP4, it could happen that SP2 is violated. Since enforcing SP2
  * could generate further violations, we remove the affected children from finalchildren
  * and include them in unsimplifiedchildren for further processing.
- * @note: if tomerge has more than one element, then they are the children of a simplified product expression
+ * @note if tomerge has more than one element, then they are the children of a simplified product expression
  */
 static
 SCIP_RETCODE mergeProductExprlist(
@@ -1166,6 +1163,75 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
+/** computes an estimator for a product as a vertex polyhedral function
+ *
+ * Since the product is multilinear, its convex and concave envelopes are piecewise linear.
+ */
+static
+SCIP_RETCODE estimateVertexPolyhedralProduct(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   int                   nfactors,           /**< number of factors */
+   SCIP_INTERVAL*        bounds,             /**< bound for each factor */
+   SCIP_Real             constantfactor,     /**< another constant factor */
+   SCIP_Real*            refpoint,           /**< reference point where to estimate, or NULL if called from initestimates */
+   SCIP_Bool             overestimate,       /**< should estimator overestimate expr (TRUE) or underestimate (FALSE) */
+   SCIP_Real             targetvalue,        /**< no need to compute facet if value in xstar would be worse than target value */
+   SCIP_Real*            coefs,              /**< array to store cut coefficients */
+   SCIP_Real*            constant,           /**< pointer to store cut constant */
+   SCIP_Bool*            success             /**< pointer to store whether estimation was successful */
+   )
+{
+   SCIP_Real* box;
+   SCIP_Real* xstar;
+   int nfixed;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(nfactors > 0);
+   assert(bounds != NULL);
+   assert(constantfactor != 0.0);
+   assert(coefs != NULL);
+   assert(constant != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* assemble box, check for unbounded variables, assemble xstar */
+   SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nfactors) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nfactors) );
+   for( i = 0, nfixed = 0; i < nfactors; ++i )
+   {
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bounds[i]));
+
+      if( SCIPisInfinity(scip, -bounds[i].inf) || SCIPisInfinity(scip, bounds[i].sup) )
+      {
+         SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
+         goto CLEANUP;
+      }
+
+      box[2*i] = bounds[i].inf;
+      box[2*i+1] = bounds[i].sup;
+
+      xstar[i] = refpoint != NULL ? refpoint[i] : 0.5 * (box[2*i] + box[2*i+1]);
+
+      if( SCIPisRelEQ(scip, box[2*i], box[2*i+1]) )
+         ++nfixed;
+   }
+
+   if( nfixed < nfactors && nfactors - nfixed <= SCIP_MAXVERTEXPOLYDIM )
+   {
+      SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, conshdlr,
+         overestimate, prodfunction, &constantfactor, xstar, box, nfactors, targetvalue, success, coefs, constant) );
+   }
+
+CLEANUP:
+   SCIPfreeBufferArray(scip, &xstar);
+   SCIPfreeBufferArray(scip, &box);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of expression handler
  */
@@ -1173,14 +1239,16 @@ CLEANUP:
 /** simplifies a product expression
  *
  * Summary: we first build a list of expressions (called finalchildren) which will be the children of the simplified product
- * and then we process this list in order to enforce SP8 and SP10
+ * and then we process this list in order to enforce SP8 and SP10.
+ *
  * Description: In order to build finalchildren, we first build a list of unsimplified children (called unsimplifiedchildren)
  * with the children of the product. Each node of the list is manipulated (see simplifyFactor) in order to satisfy
- * SP2 and SP7 as follows
- * SP7: if the node's expression is a value, multiply the value to the products's coef
- * SP2: if the node's expression is a product, then build a list with the child's children
+ * SP2 and SP7 as follows:
+ * - SP7: if the node's expression is a value, multiply the value to the products's coef
+ * - SP2: if the node's expression is a product, then build a list with the child's children
+ *
  * Then, we merge the built list (or the simplified node) into finalchildren. While merging, nodes from finalchildren
- * can go back to unsimplifiedchildren for further processing (see mergeProductExprlist for more details)
+ * can go back to unsimplifiedchildren for further processing (see mergeProductExprlist() for more details).
  * After building finalchildren, we create the simplified product out of it, taking care that SP8 and SP10 are satisfied
  */
 static
@@ -1242,13 +1310,18 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyProduct)
    return SCIP_OKAY;
 }
 
-/** the order of two product expressions, u and v, is a lexicographical order on the factors.
+/** compare two product expressions
+ *
+ *  The order of two product expressions, u and v, is a lexicographical order on the factors.
+ *
  *  Starting from the *last*, we find the first child where they differ, say, the i-th.
  *  Then u < v <=> u_i < v_i.
- *  If there is no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v)
- *  If all children are the same and they have the same number of childre, u < v <=> coeff(u) < coeff(v)
+ *  If there is no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v).
+ *  If all children are the same and they have the same number of children, then u < v <=> coeff(u) < coeff(v).
  *  Otherwise, they are the same.
- *  Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
+ *
+ *  Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc.
+ *
  *  Example: y * z < x * y * z
  */
 static
@@ -1477,10 +1550,9 @@ SCIP_DECL_EXPREVAL(evalProduct)
    return SCIP_OKAY;
 }
 
-/** derivative evaluation callback
+/** derivative evaluation callback computing <gradient, children.dot>
  *
- * computes <gradient, children.dot>
- * if expr is Pi_i x_i, then computes sum_j Pi_(i != j) x_i x^dot_j
+ * If expr is \f$\prod_i x_i\f$, then computes \f$\sum_j \prod_{i\neq j} x_i x^{\text{dot}}_j\f$.
  */
 static
 SCIP_DECL_EXPRFWDIFF(fwdiffProduct)
@@ -1529,11 +1601,11 @@ SCIP_DECL_EXPRFWDIFF(fwdiffProduct)
 
 /** expression backward forward derivative evaluation callback
  *
- * computes partial/partial childidx ( <gradient, children.dot> )
+ * Computes \f$\frac{\partial}{\partial \text{childidx}} ( \langle \text{gradient}, \text{children.dot}\rangle )\f$.
  *
- * if expr is Pi_i x_i, and childidx is k then computes
- *   partial_k sum_j Pi_(i != j) x_i x^dot_j
- *   = sum_(j != k) Pi_(i != j, k) x_i  x^dot_j
+ * If expr is \f$\prod_i x_i\f$, and childidx is \f$k\f$ then computes
+ *   \f$\partial_k \sum_j \prod_{i \neq j} x_i x^{\text{dot}}_j
+ *   = \sum_{j \neq k} \prod_{i \neq j, k} x_i x^{\text{dot}}_j\f$
  */
 static
 SCIP_DECL_EXPRBWFWDIFF(bwfwdiffProduct)
@@ -1662,80 +1734,11 @@ SCIP_DECL_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
-/** computes an estimator for a product as a vertex polyhedral function
- *
- * Since the product is multilinear, its convex and concave envelopes are piecewise linear.
- */
-static
-SCIP_RETCODE estimateVertexPolyhedralProduct(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
-   int                   nfactors,           /**< number of factors */
-   SCIP_INTERVAL*        bounds,             /**< bound for each factor */
-   SCIP_Real             constantfactor,     /**< another constant factor */
-   SCIP_Real*            refpoint,           /**< reference point where to estimate, or NULL if called from initestimates */
-   SCIP_Bool             overestimate,       /**< should estimator overestimate expr (TRUE) or underestimate (FALSE) */
-   SCIP_Real             targetvalue,        /**< no need to compute facet if value in xstar would be worse than target value */
-   SCIP_Real*            coefs,              /**< array to store cut coefficients */
-   SCIP_Real*            constant,           /**< pointer to store cut constant */
-   SCIP_Bool*            success             /**< pointer to store whether estimation was successful */
-   )
-{
-   SCIP_Real* box;
-   SCIP_Real* xstar;
-   int nfixed;
-   int i;
-
-   assert(conshdlr != NULL);
-   assert(nfactors > 0);
-   assert(bounds != NULL);
-   assert(constantfactor != 0.0);
-   assert(coefs != NULL);
-   assert(constant != NULL);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* assemble box, check for unbounded variables, assemble xstar */
-   SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nfactors) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nfactors) );
-   for( i = 0, nfixed = 0; i < nfactors; ++i )
-   {
-      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bounds[i]));
-
-      if( SCIPisInfinity(scip, -bounds[i].inf) || SCIPisInfinity(scip, bounds[i].sup) )
-      {
-         SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
-         goto CLEANUP;
-      }
-
-      box[2*i] = bounds[i].inf;
-      box[2*i+1] = bounds[i].sup;
-
-      xstar[i] = refpoint != NULL ? refpoint[i] : 0.5 * (box[2*i] + box[2*i+1]);
-
-      if( SCIPisRelEQ(scip, box[2*i], box[2*i+1]) )
-         ++nfixed;
-   }
-
-   if( nfixed < nfactors && nfactors - nfixed <= SCIP_MAXVERTEXPOLYDIM )
-   {
-      SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, conshdlr,
-         overestimate, prodfunction, &constantfactor, xstar, box, nfactors, targetvalue, success, coefs, constant) );
-   }
-
-CLEANUP:
-   SCIPfreeBufferArray(scip, &xstar);
-   SCIPfreeBufferArray(scip, &box);
-
-   return SCIP_OKAY;
-}
-
-/** estimates a multilinear function of the form \f$ f(x) := a \Pi_{i = 1}^n x_i  \f$
+/** estimates a multilinear function of the form \f$ f(x) := a \prod_{i = 1}^n x_i  \f$
  *
  * \f$ x_i \f$ are the auxiliary variables of the children.
  * If !overestimate, then we look for an affine underestimator of \f$ f(x) \f$ which has a value above targetvalue at \f$ x^* \f$,
- * i.e., \f$ g(x) := \alpha^T x + \beta \le f(x)\f$ for all \f$ x \f$ in the domain, such that \f$ \alpha x^* + \beta > targetvalue \f$.
+ * i.e., \f$ g(x) := \alpha^T x + \beta \le f(x)\f$ for all \f$ x \f$ in the domain, such that \f$ \alpha x^* + \beta > \text{targetvalue}\f$.
  *
  * Since \f$ f(x) \f$ is componentwise linear, its convex envelope is piecewise linear and its value can be computed by
  * finding the largest affine underestimator.

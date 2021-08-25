@@ -35,20 +35,20 @@ extern "C" {
  *
  * @{
  *
- * @name Power and signed power expression.
+ * @name Power and signed power expression
  *
  * These expression handler provide the power function, that is,
  * \f[
- *   x \mapsto \begin{case}
- *     x^e & \textrm{if} x \geq 0 or e integral, \\
- *     \textrm{undefined}, & otherwise.
+ *   x \mapsto \begin{cases}
+ *     x^e & \textrm{if}\; x \geq 0\; \textrm{or}\; e\in\mathbb{Z}, \\
+ *     \textrm{undefined}, & \textrm{otherwise}.
  *     \end{cases}
  * \f]
  * and the signed power function, that is,
  * \f[
  *   x \mapsto \textrm{sign}(e) |x|^e
  * \f]
- * for some exponent e.
+ * for some exponent \f$e\f$.
  *
  * @{
  */

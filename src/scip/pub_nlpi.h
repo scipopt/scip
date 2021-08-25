@@ -53,7 +53,7 @@ const char* SCIPnlpiGetName(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
-/** gets NLP solver descriptions */
+/** gets NLP solver description */
 SCIP_EXPORT
 const char* SCIPnlpiGetDesc(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
@@ -94,7 +94,7 @@ SCIP_Real SCIPnlpiGetSolveTime(
 
 /** gives total time spend in function evaluation during NLP solves
  *
- * If timing/nlpieval is off (the default), depending on the NLP solver, this may just return 0.
+ * If parameter `timing/nlpieval` is off (the default), depending on the NLP solver, this may just return 0.
  */
 SCIP_EXPORT
 SCIP_Real SCIPnlpiGetEvalTime(

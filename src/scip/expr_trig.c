@@ -19,7 +19,7 @@
  * @author Fabian Wegscheider
  *
  * The estimator/separator code always computes underestimators for sin(x).
- * For overestimator or cos(x), we first reduce to underestimators of sin(x).
+ * For overestimators of cos(x), we first reduce to underestimators of sin(x).
  *
  * Overestimator for sin(x):
  *   Assume that a*y+b <= sin(y) for y in [-ub,-lb].
@@ -66,6 +66,7 @@
  */
 
 /** evaluates the function a*x + b - sin(x) for some coefficient a and constant b at a given point p
+ *
  *  the constants a and b are expected to be stored in that order in params
  */
 static
@@ -78,6 +79,7 @@ SCIP_DECL_NEWTONEVAL(function1)
 }
 
 /** evaluates the derivative of a*x + b - sin(x) for some coefficient a and constant b at a given point p
+ *
  *  the constants a and b are expected to be stored in that order in params
  */
 static
@@ -90,6 +92,7 @@ SCIP_DECL_NEWTONEVAL(derivative1)
 }
 
 /** evaluates the function sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
+ *
  *  the constant alpha is expected to be stored in params
  */
 static
@@ -102,6 +105,7 @@ SCIP_DECL_NEWTONEVAL(function2)
 }
 
 /** evaluates the derivative of sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
+ *
  *  the constant alpha is expected to be stored in params
  */
 static
@@ -114,6 +118,7 @@ SCIP_DECL_NEWTONEVAL(derivative2)
 }
 
 /** helper function to compute the secant if it is a valid underestimator
+ *
  *  returns true if the estimator was computed successfully
  */
 static
@@ -145,6 +150,7 @@ SCIP_Bool computeSecantSin(
 }
 
 /** helper function to compute the tangent at lower bound if it is underestimating
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -177,6 +183,7 @@ SCIP_Bool computeLeftTangentSin(
  * right now, this function is only checking whether the tangent underestimates independenly of the lower bound!
  */
 /** helper function to compute the tangent at upper bound if it is an underestimator
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -205,6 +212,7 @@ SCIP_Bool computeRightTangentSin(
 }
 
 /** helper function to compute the tangent at solution point if it is an underestimator
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -279,6 +287,7 @@ SCIP_Bool computeSolTangentSin(
 }
 
 /** helper function to compute the secant between lower bound and some point of the graph such that it underestimates
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -360,6 +369,7 @@ SCIP_Bool computeLeftSecantSin(
 }
 
 /** helper function to compute the secant between upper bound and some point of the graph such that it underestimates
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -533,7 +543,7 @@ SCIP_RETCODE computeRevPropIntervalSin(
  *  - right secant: secant between upper bound and some point of the graph
  *
  *  They are ordered such that a successful computation for one of them cannot be improved by following ones in terms
- *  of value at the reference point
+ *  of value at the reference point.
  */
 static
 SCIP_Bool computeEstimatorsTrig(
@@ -763,8 +773,10 @@ SCIP_DECL_EXPRCOPYHDLR(copyhdlrSin)
    return SCIP_OKAY;
 }
 
-/** simplifies a sin expression
- * Evaluates the sine value function when its child is a value expression
+/** simplifies a sine expression
+ *
+ * Evaluates the sine value function when its child is a value expression.
+ *
  * TODO: add further simplifications
  */
 static
@@ -853,10 +865,9 @@ SCIP_DECL_EXPRBWDIFF(bwdiffSin)
    return SCIP_OKAY;
 }
 
-/** derivative evaluation callback:
- * computes <gradient, children.dot>
- * if expr is SIN(child), then computes
- * COS(child) dot(child)
+/** derivative evaluation callback
+ *
+ * Computes <gradient, children.dot>, that is, cos(child) dot(child).
  */
 static
 SCIP_DECL_EXPRFWDIFF(fwdiffSin)
@@ -877,10 +888,9 @@ SCIP_DECL_EXPRFWDIFF(fwdiffSin)
 }
 
 /** expression backward forward derivative evaluation callback
- * computes partial/partial child ( <gradient, children.dot> )
- * if expr is SIN(child), then computes
- * -SIN(child) dot(child)
- * */
+ *
+ * Computes partial/partial child ( <gradient, children.dot> ), that is, -sin(child) dot(child).
+ */
 static
 SCIP_DECL_EXPRBWFWDIFF(bwfwdiffSin)
 {  /*lint --e{715}*/
@@ -977,7 +987,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropSin)
    return SCIP_OKAY;
 }
 
-/** sin hash callback */
+/** sine hash callback */
 static
 SCIP_DECL_EXPRHASH(hashSin)
 {  /*lint --e{715}*/
@@ -1073,9 +1083,11 @@ SCIP_DECL_EXPRCOPYHDLR(copyhdlrCos)
    return SCIP_OKAY;
 }
 
-/** simplifies a cos expression
- *  Evaluates the sine value function when its child is a value expression
- *  TODO: add further simplifications
+/** simplifies a cosine expression
+ *
+ * Evaluates the cosine value function when its child is a value expression.
+ *
+ * TODO: add further simplifications
  */
 static
 SCIP_DECL_EXPRSIMPLIFY(simplifyCos)
@@ -1258,7 +1270,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropCos)
    return SCIP_OKAY;
 }
 
-/** cos hash callback */
+/** cosine hash callback */
 static
 SCIP_DECL_EXPRHASH(hashCos)
 {  /*lint --e{715}*/
@@ -1345,7 +1357,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityCos)
    return SCIP_OKAY;
 }
 
-/** creates the handler for sin expressions and includes it into the expression constraint handler */
+/** creates the handler for sin expressions and includes it into SCIP */
 SCIP_RETCODE SCIPincludeExprhdlrSin(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -1370,7 +1382,7 @@ SCIP_RETCODE SCIPincludeExprhdlrSin(
    return SCIP_OKAY;
 }
 
-/** creates the handler for cos expressions and includes it into the expression constraint handler */
+/** creates the handler for cos expressions and includes it SCIP */
 SCIP_RETCODE SCIPincludeExprhdlrCos(
    SCIP*                 scip                /**< SCIP data structure */
    )

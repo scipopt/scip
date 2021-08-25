@@ -3865,6 +3865,7 @@ void SCIPprintExpressionHandlerStatistics(
    FILE*                 file                /**< output file */
    )
 {
+   SCIP_Bool headerprinted = FALSE;
    int i;
 
    assert(scip != NULL);
@@ -3872,14 +3873,22 @@ void SCIPprintExpressionHandlerStatistics(
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintExpressionHandlerStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file,
-      "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
-      "#IntEval", "IntEvalTi", "#RevProp", "RevPropTi", "DomReds", "Cutoffs", "#Estimate", "EstimTime", "Branching", "#Simplify", "SimplifyTi", "Simplified");
-
    for( i = 0; i < scip->set->nexprhdlrs; ++i )
    {
       SCIP_EXPRHDLR* exprhdlr = scip->set->exprhdlrs[i];
       assert(exprhdlr != NULL);
+
+      /* skip unused expression handler */
+      if( SCIPexprhdlrGetNCreated(exprhdlr) == 0 )
+         continue;
+
+      if( !headerprinted )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file,
+            "Expressions        : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+            "#IntEval", "IntEvalTi", "#RevProp", "RevPropTi", "DomReds", "Cutoffs", "#Estimate", "EstimTime", "Branching", "#Simplify", "SimplifyTi", "Simplified");
+         headerprinted = TRUE;
+      }
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:", SCIPexprhdlrGetName(exprhdlr));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNIntevalCalls(exprhdlr));
@@ -3915,23 +3924,13 @@ void SCIPprintNLPIStatistics(
    FILE*                 file                /**< output file */
    )
 {
+   SCIP_Bool printedheader = FALSE;
    int i;
 
    assert(scip != NULL);
    assert(scip->set != NULL);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintNLPIStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   SCIPmessageFPrintInfo(scip->messagehdlr, file,
-      "NLP Solvers        : %10s %10s %10s %10s %s%10s %10s"
-      " %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s"
-      " %10s %10s %10s %10s %10s %10s %10s\n",
-      "#Problems", "ProblemTi", "#Solves", "SolveTime",
-      scip->set->time_nlpieval ? "  EvalTime%" : "",
-      "#Iter", "Time/Iter",
-      "#Okay", "#TimeLimit", "#IterLimit", "#LObjLimit", "#Interrupt", "#NumError", "#EvalError", "#OutOfMem", "#LicenseEr", "#OtherTerm",
-      "#GlobOpt", "#LocOpt", "#Feasible", "#LocInfeas", "#GlobInfea", "#Unbounded", "#Unknown"
-   );
 
    for( i = 0; i < scip->set->nnlpis; ++i )
    {
@@ -3943,6 +3942,25 @@ void SCIPprintNLPIStatistics(
 
       nlpi = scip->set->nlpis[i];
       assert(nlpi != NULL);
+
+      /* skip unused NLP solver */
+      if( SCIPnlpiGetNProblems(nlpi) == 0 )
+         continue;
+
+      if( !printedheader )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file,
+            "NLP Solvers        : %10s %10s %10s %10s %s%10s %10s"
+            " %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s"
+            " %10s %10s %10s %10s %10s %10s %10s\n",
+            "#Problems", "ProblemTi", "#Solves", "SolveTime",
+            scip->set->time_nlpieval ? "  EvalTime%" : "",
+            "#Iter", "Time/Iter",
+            "#Okay", "#TimeLimit", "#IterLimit", "#LObjLimit", "#Interrupt", "#NumError", "#EvalError", "#OutOfMem", "#LicenseEr", "#OtherTerm",
+            "#GlobOpt", "#LocOpt", "#Feasible", "#LocInfeas", "#GlobInfea", "#Unbounded", "#Unknown"
+         );
+         printedheader = TRUE;
+      }
 
       solvetime = SCIPnlpiGetSolveTime(nlpi);
       if( scip->set->time_nlpieval )

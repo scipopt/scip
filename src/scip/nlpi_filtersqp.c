@@ -50,14 +50,14 @@
 #include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
 
-#define NLPI_NAME              "filtersqp"                 /* short concise name of solver */
-#define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /* description of solver */
-#define NLPI_PRIORITY          -1000                       /* priority of NLP solver */
+#define NLPI_NAME              "filtersqp"                 /**< short concise name of solver */
+#define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /**< description of solver */
+#define NLPI_PRIORITY          -1000                       /**< priority of NLP solver */
 
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
 #define MAXNRUNS               3             /**< maximal number of FilterSQP calls per NLP solve (several calls if increasing workspace or decreasing eps) */
-#define WORKSPACEGROWTHFACTOR  2             /**< factor by which to increase worksapce */
+#define WORKSPACEGROWTHFACTOR  2             /**< factor by which to increase workspace */
 #define MINEPS                 1e-14         /**< minimal FilterSQP epsilon */
 #define OPTTOLFACTOR           0.5           /**< factor to apply to optimality tolerance, because FilterSQP do scaling */
 
@@ -450,6 +450,7 @@ void F77_FUNC(objgrad,OBJGRAD)(void)
 /** Hessian of the Lagrangian evaluation
  *
  * phase = 1 : Hessian of the Lagrangian without objective Hessian
+ *
  * phase = 2 : Hessian of the Lagrangian (including objective Hessian)
  *
  * \note If an arithmetic exception occurred, then the Hessian must not be modified.
@@ -937,7 +938,11 @@ SCIP_DECL_NLPIFREE(nlpiFreeFilterSQP)
    return SCIP_OKAY;
 }
 
-/** gets pointer for NLP solver */
+/** gets internal pointer to NLP solver
+ *
+ * Depending on the solver interface, a solver pointer may exist for every NLP problem instance.
+ * For this case, a NLPI problem can be passed in as well.
+ */
 static
 SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerFilterSQP)
 {
@@ -1829,7 +1834,7 @@ SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
    return SCIP_OKAY;
 }
 
-/** gets string that identifies filterSQP (version number) */
+/** gets string that identifies filterSQP */
 const char* SCIPgetSolverNameFilterSQP(
    void
    )

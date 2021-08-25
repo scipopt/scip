@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPincludeExprhdlrSum(
  *
  * @{
  *
- * @name Sum expression.
+ * @name Sum expression
  *
  * This expression handler provides the sum function, that is,
  * \f[

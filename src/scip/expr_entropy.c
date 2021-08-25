@@ -31,8 +31,8 @@
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "entropy"
-#define EXPRHDLR_DESC         "expression handler for -x*log(x)"
-#define EXPRHDLR_PRECEDENCE   0
+#define EXPRHDLR_DESC         "entropy expression (-x*log(x))"
+#define EXPRHDLR_PRECEDENCE   81000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(7477.0)
 
 /*
@@ -634,7 +634,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityEntropy)
    return SCIP_OKAY;
 }
 
-/** creates the handler for x*log(x) expressions and includes it into SCIP */
+/** creates the handler for entropy expressions and includes it into SCIP */
 SCIP_RETCODE SCIPincludeExprhdlrEntropy(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -666,7 +666,7 @@ SCIP_RETCODE SCIPincludeExprhdlrEntropy(
    return SCIP_OKAY;
 }
 
-/** creates an x*log(x) expression */
+/** creates an entropy expression */
 SCIP_RETCODE SCIPcreateExprEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */

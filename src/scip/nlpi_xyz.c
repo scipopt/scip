@@ -31,9 +31,9 @@
 #include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 
-#define NLPI_NAME              "xyz"                       /* short concise name of solver */
-#define NLPI_DESC              "solver interface template" /* description of solver */
-#define NLPI_PRIORITY          0                           /* priority of NLP solver */
+#define NLPI_NAME              "xyz"                       /**< short concise name of solver */
+#define NLPI_DESC              "solver interface template" /**< description of solver */
+#define NLPI_PRIORITY          0                           /**< priority of NLP solver */
 
 /*
  * Data structures

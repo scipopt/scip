@@ -40,19 +40,19 @@ extern "C" {
  * @{
  */
 
-/** includes an NLPI in SCIP */
+/** creates an NLPI and includes it into SCIP */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlpi(
    SCIP*                           scip,                        /**< SCIP data structure */
    const char*                     name,                        /**< name of NLP interface */
    const char*                     description,                 /**< description of NLP interface */
    int                             priority,                    /**< priority of NLP interface */
-   SCIP_DECL_NLPICOPY              ((*nlpicopy)),               /**< copying an NLPI */
+   SCIP_DECL_NLPICOPY              ((*nlpicopy)),               /**< copying an NLPI, can be NULL */
    SCIP_DECL_NLPIFREE              ((*nlpifree)),               /**< free NLPI user data */
-   SCIP_DECL_NLPIGETSOLVERPOINTER  ((*nlpigetsolverpointer)),   /**< get solver pointer */
+   SCIP_DECL_NLPIGETSOLVERPOINTER  ((*nlpigetsolverpointer)),   /**< get solver pointer, can be NULL */
    SCIP_DECL_NLPICREATEPROBLEM     ((*nlpicreateproblem)),      /**< create a new problem instance */
    SCIP_DECL_NLPIFREEPROBLEM       ((*nlpifreeproblem)),        /**< free a problem instance */
-   SCIP_DECL_NLPIGETPROBLEMPOINTER ((*nlpigetproblempointer)),  /**< get problem pointer */
+   SCIP_DECL_NLPIGETPROBLEMPOINTER ((*nlpigetproblempointer)),  /**< get problem pointer, can be NULL */
    SCIP_DECL_NLPIADDVARS           ((*nlpiaddvars)),            /**< add variables */
    SCIP_DECL_NLPIADDCONSTRAINTS    ((*nlpiaddconstraints)),     /**< add constraints */
    SCIP_DECL_NLPISETOBJECTIVE      ((*nlpisetobjective)),       /**< set objective */
@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPincludeNlpi(
    SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs)),     /**< change coefficients in linear part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPR           ((*nlpichgexpr)),            /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant)),     /**< change the constant offset in the objective */
-   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess */
+   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess, can be NULL */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve)),              /**< solve NLP */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat)),         /**< get solution status */
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
@@ -99,8 +99,10 @@ SCIP_RETCODE SCIPsetNlpiPriority(
    int                   priority            /**< new priority of the NLPI */
    );
 
-/** gets pointer for NLP solver
- * @return void pointer to solver
+/** gets internal pointer to NLP solver
+ *
+ * Depending on the solver interface, a solver pointer may exist for every NLP problem instance.
+ * For this case, a NLPI problem can be passed in as well.
  */
 SCIP_EXPORT
 SCIP_DECL_NLPIGETSOLVERPOINTER(SCIPgetNlpiSolverPointer);
@@ -113,9 +115,7 @@ SCIP_DECL_NLPICREATEPROBLEM(SCIPcreateNlpiProblem);
 SCIP_EXPORT
 SCIP_DECL_NLPIFREEPROBLEM(SCIPfreeNlpiProblem);
 
-/** gets pointer to solver-internal problem instance
- * @return void pointer to problem instance
- */
+/** gets internal pointer to solver-internal problem instance */
 SCIP_EXPORT
 SCIP_DECL_NLPIGETPROBLEMPOINTER(SCIPgetNlpiProblemPointer);
 
@@ -166,12 +166,16 @@ SCIP_DECL_NLPISETINITIALGUESS(SCIPsetNlpiInitialGuess);
 /** try to solve NLP with all parameters given as SCIP_NLPPARAM struct
  *
  * Typical use is
- *    SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
- *    nlpparam.iterlim = 42;
- *    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem, nlpparam) );
+ *
+ *     SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
+ *     nlpparam.iterlimit = 42;
+ *     SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem, nlpparam) );
+ *
  * or, in "one" line:
- *    SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem,
- *       (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), .iterlim = 42 }) );
+ *
+ *     SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiproblem,
+ *        (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), .iterlimit = 42 }) );
+ *
  * To get the latter, also \ref SCIPsolveNlpi can be used.
  */
 SCIP_EXPORT
@@ -180,10 +184,13 @@ SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam);
 /** try to solve NLP with non-default parameters given as optional arguments
  *
  * Typical use is
- *    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiproblem) );
+ *
+ *     SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiproblem) );
+ *
  * to solve with default parameters.
  * Additionally, one or several values of SCIP_NLPPARAM can be set:
- *    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiproblem, .iterlim = 42, .verblevel = 1) );  //lint !e666
+ *
+ *     SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiproblem, .iterlimit = 42, .verblevel = 1) );  //lint !e666
  */
 /* the problem argument has been made part of the variadic arguments, since ISO C99 requires at least one argument for the "..." part and we want to allow leaving all parameters at default
  * for the same reason, we set the .caller argument, so that macro SCIP_VARARGS_REST will have at least one arg to return

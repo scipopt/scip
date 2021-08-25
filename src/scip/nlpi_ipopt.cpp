@@ -873,13 +873,7 @@ void collectStatistic(
 }
 #endif
 
-/** copy method of NLP interface (called when SCIP copies plugins)
- *
- *  input:
- *  - blkmem block memory of target SCIP
- *  - sourcenlpi the NLP interface to copy
- *  - targetnlpi buffer to store pointer to copy of NLP interface
- */
+/** copy method of NLP interface (called when SCIP copies plugins) */
 static
 SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
 {
@@ -888,11 +882,7 @@ SCIP_DECL_NLPICOPY(nlpiCopyIpopt)
    return SCIP_OKAY;
 }
 
-/** destructor of NLP interface to free nlpi data
- * 
- * input:
- *  - nlpi datastructure for solver interface
- */
+/** destructor of NLP interface to free nlpi data */
 static
 SCIP_DECL_NLPIFREE(nlpiFreeIpopt)
 {
@@ -904,28 +894,17 @@ SCIP_DECL_NLPIFREE(nlpiFreeIpopt)
    return SCIP_OKAY;
 }
 
-/** gets pointer for NLP solver to do dirty stuff
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *
- *  return: void pointer to solver
- */
+/** gets pointer for NLP solver to do dirty stuff */
 static
 SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerIpopt)
 {
-   assert(nlpi != NULL);
+   if( problem == NULL )
+      return NULL;
 
-   return NULL;
+   return (void*)GetRawPtr(problem->ipopt);
 }
 
-/** creates a problem instance
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem pointer to store the problem data
- *  - name name of problem, can be NULL
- */
+/** creates a problem instance */
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 {
@@ -1042,12 +1021,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    return SCIP_OKAY;
 }
 
-/** free a problem instance
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem pointer where problem data is stored 
- */
+/** free a problem instance */
 static
 SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
 {
@@ -1080,14 +1054,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
    return SCIP_OKAY;
 }
 
-/** gets pointer to solver-internal problem instance to do dirty stuff
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *
- *  return: void pointer to problem instance
- */
+/** gets pointer to solver-internal problem instance to do dirty stuff */
 static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerIpopt)
 {
@@ -1097,16 +1064,7 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerIpopt)
    return GetRawPtr(problem->nlp);
 }
 
-/** add variables
- * 
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nvars number of variables 
- *  - lbs lower bounds of variables, can be NULL if -infinity
- *  - ubs upper bounds of variables, can be NULL if +infinity
- *  - varnames names of variables, can be NULL
- */
+/** add variables */
 static
 SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
 {
@@ -1130,35 +1088,7 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
    return SCIP_OKAY;
 }
 
-/** add constraints
- *
- * quadratic coefficiens: row oriented matrix for each constraint
- * 
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - ncons number of added constraints
- *  - lhss left hand sides of constraints
- *  - rhss right hand sides of constraints
- *  - linoffsets start index of each constraints linear coefficients in lininds and linvals
- *    length: ncons + 1, linoffsets[ncons] gives length of lininds and linvals
- *    may be NULL in case of no linear part
- *  - lininds variable indices
- *    may be NULL in case of no linear part
- *  - linvals coefficient values
- *    may be NULL in case of no linear part
- *  - nquadelems number of quadratic elements for each constraint
- *    may be NULL in case of no quadratic part
- *  - quadelems quadratic elements for each constraint
- *    may be NULL in case of no quadratic part
- *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
- *    entry of array may be NULL in case of no expression tree
- *    may be NULL in case of no expression tree in any constraint
- *  - exprtrees expression tree for nonquadratic part of constraints
- *    entry of array may be NULL in case of no nonquadratic part
- *    may be NULL in case of no nonquadratic part in any constraint
- *  - names of constraints, may be NULL or entries may be NULL
- */
+/** add constraints */
 static
 SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
 {
@@ -1181,27 +1111,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
    return SCIP_OKAY;
 }
 
-/** sets or overwrites objective, a minimization problem is expected
- *
- *  May change sparsity pattern.
- *
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nlins number of linear variables
- *  - lininds variable indices
- *    may be NULL in case of no linear part
- *  - linvals coefficient values
- *    may be NULL in case of no linear part
- *  - nquadelems number of elements in matrix of quadratic part
- *  - quadelems elements of quadratic part
- *    may be NULL in case of no quadratic part
- *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
- *    may be NULL in case of no expression tree
- *  - exprtree expression tree for nonquadratic part of objective function
- *    may be NULL in case of no nonquadratic part
- *  - constant objective value offset
- */
+/** sets or overwrites objective, a minimization problem is expected */
 static
 SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 {
@@ -1224,16 +1134,7 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
    return SCIP_OKAY;
 }
 
-/** change variable bounds
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nvars number of variables to change bounds
- *  - indices indices of variables to change bounds
- *  - lbs new lower bounds
- *  - ubs new upper bounds
- */
+/** change variable bounds */
 static
 SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 {
@@ -1277,16 +1178,7 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
    return SCIP_OKAY;
 }
 
-/** change constraint bounds
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nconss number of constraints to change sides
- *  - indices indices of constraints to change sides
- *  - lhss new left hand sides
- *  - rhss new right hand sides
- */
+/** change constraint bounds */
 static
 SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesIpopt)
 {
@@ -1319,17 +1211,7 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesIpopt)
    return SCIP_OKAY;
 }
 
-/** delete a set of variables
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - nlpi datastructure for solver interface
- *  - dstats deletion status of vars; 1 if var should be deleted, 0 if not
- *
- *  output:
- *  - dstats new position of var, -1 if var was deleted
- */
+/** delete a set of variables */
 static
 SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
 {
@@ -1391,16 +1273,7 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
    return SCIP_OKAY;
 }
 
-/** delete a set of constraints
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - dstats deletion status of rows; 1 if row should be deleted, 0 if not
- *
- *  output:
- *  - dstats new position of row, -1 if row was deleted
- */
+/** delete a set of constraints */
 static
 SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetIpopt)
 {
@@ -1445,18 +1318,7 @@ SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetIpopt)
    return SCIP_OKAY;
 }
 
-/** change one linear coefficient in a constraint or objective
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idx index of constraint or -1 for objective
- *  - nvals number of values in linear constraint
- *  - varidxs indices of variable
- *  - vals new values for coefficient
- *
- *  return: Error if coefficient did not exist before
- */
+/** change one linear coefficient in a constraint or objective */
 static
 SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
 {
@@ -1471,14 +1333,7 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
    return SCIP_OKAY;
 }
 
-/** replaces the expression tree of a constraint or objective
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idxcons index of constraint or -1 for objective
- *  - exprtree new expression tree for constraint or objective, or NULL to only remove previous tree
- */
+/** replaces the expression tree of a constraint or objective */
 static
 SCIP_DECL_NLPICHGEXPR(nlpiChgExprIpopt)
 {
@@ -1494,13 +1349,7 @@ SCIP_DECL_NLPICHGEXPR(nlpiChgExprIpopt)
    return SCIP_OKAY;
 }
 
-/** change the constant offset in the objective
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - objconstant new value for objective constant
- */
+/** change the constant offset in the objective */
 static
 SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantIpopt)
 {
@@ -1520,16 +1369,7 @@ SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantIpopt)
    return SCIP_OKAY;
 }
 
-/** sets initial guess for primal variables
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - primalvalues initial primal values for variables, or NULL to clear previous values
- *  - consdualvalues initial dual values for constraints, or NULL to clear previous values
- *  - varlbdualvalues  initial dual values for variable lower bounds, or NULL to clear previous values
- *  - varubdualvalues  initial dual values for variable upper bounds, or NULL to clear previous values
- */
+/** sets initial guess for primal variables */
 static
 SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
 {
@@ -1600,12 +1440,7 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
    return SCIP_OKAY;
 }
 
-/** tries to solve NLP
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- */
+/** tries to solve NLP */
 static
 SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 {
@@ -1812,14 +1647,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
    return SCIP_OKAY;
 }
 
-/** gives solution status
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *
- *  return: Solution Status
- */
+/** gives solution status */
 static
 SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatIpopt)
 {
@@ -1829,14 +1657,7 @@ SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatIpopt)
    return problem->solstat;
 }
 
-/** gives termination reason
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *
- *  return: Termination Status
- */
+/** gives termination reason */
 static
 SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatIpopt)
 {
@@ -1846,17 +1667,7 @@ SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatIpopt)
    return problem->termstat;
 }
 
-/** gives primal and dual solution values
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - primalvalues buffer to store pointer to array to primal values, or NULL if not needed
- *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
- *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
- *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
- *  - objval buffer store the objective value, or NULL if not needed
- */
+/** gives primal and dual solution values */
 static
 SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
 {
@@ -1881,16 +1692,7 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
    return SCIP_OKAY;
 }
 
-/** gives solve statistics
- *
- *  input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - statistics pointer to store statistics
- *
- *  output:
- *  - statistics solve statistics
- */
+/** gives solve statistics */
 static
 SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsIpopt)
 {
@@ -2036,16 +1838,6 @@ const char* SCIPgetSolverDescIpopt(void)
 SCIP_Bool SCIPisIpoptAvailableIpopt(void)
 {
    return TRUE;
-}
-
-/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
-void* SCIPgetIpoptApplicationPointerIpopt(
-   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
-   )
-{
-   assert(nlpiproblem != NULL);
-
-   return (void*)GetRawPtr(nlpiproblem->ipopt);
 }
 
 /** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */
@@ -2859,9 +2651,9 @@ void ScipNLP::finalize_solution(
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
  *
- *  It's here, because we use Ipopt's interface to Lapack.
+ * It's here, because we use Ipopt's C interface to Lapack.
  */
-SCIP_RETCODE LapackDsyev(
+SCIP_RETCODE SCIPcallLapackDsyevIpopt(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
    int                   N,                  /**< dimension */
    SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
@@ -2887,7 +2679,7 @@ SCIP_RETCODE LapackDsyev(
 
 /** solves a linear problem of the form Ax = b for a regular matrix 3*3 A */
 static
-SCIP_RETCODE SCIPsolveLinearProb3(
+SCIP_RETCODE solveLinearProb3(
    SCIP_Real*            A,                  /**< matrix data on input (size 3*3); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size 3) */
    SCIP_Real*            x,                  /**< buffer to store solution (size 3) */
@@ -2940,11 +2732,12 @@ SCIP_RETCODE SCIPsolveLinearProb3(
 
 /** solves a linear problem of the form Ax = b for a regular matrix A
  *
- *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
+ *  Calls Lapacks DGETRF routine to calculate a LU factorization and uses this factorization to solve
  *  the linear problem Ax = b.
- *  It's here, because Ipopt is linked against Lapack.
+ *
+ * It's here, because we use Ipopt's C interface to Lapack.
  */
-SCIP_RETCODE SCIPsolveLinearProb(
+SCIP_RETCODE SCIPsolveLinearEquationsIpopt(
    int                   N,                  /**< dimension */
    SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */
@@ -2963,10 +2756,10 @@ SCIP_RETCODE SCIPsolveLinearProb(
    assert(x != NULL);
    assert(success != NULL);
 
-   /* call SCIPsolveLinearProb3() for performance reasons */
+   /* call solveLinearProb3() for performance reasons */
    if( N == 3 )
    {
-      SCIP_CALL( SCIPsolveLinearProb3(A, b, x, success) );
+      SCIP_CALL( solveLinearProb3(A, b, x, success) );
       return SCIP_OKAY;
    }
 

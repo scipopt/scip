@@ -2592,7 +2592,6 @@ SCIP_RETCODE determineSymmetry(
    SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
    )
 { /*lint --e{641}*/
-   SCIP_CONSHDLR* conshdlr;
    SCIP_Bool successful;
    int maxgenerators;
    int nhandleconss;
@@ -2773,10 +2772,6 @@ SCIP_RETCODE determineSymmetry(
    /* determine maximal number of generators depending on the number of variables */
    maxgenerators = propdata->maxgenerators;
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
-
-   /* store whether problem is linear */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   propdata->islinearproblem = (conshdlr == NULL) || (SCIPconshdlrGetNConss(conshdlr) == 0);
 
    /* actually compute (global) symmetry */
    SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, propdata->compresssymmetries, propdata->compressthreshold,
@@ -6931,6 +6926,7 @@ static
 SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   SCIP_CONSHDLR* nlconshdlr;
 
    assert( scip != NULL );
    assert( prop != NULL );
@@ -6958,6 +6954,10 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
       else
          propdata->sstenabled = FALSE;
    }
+
+   /* store whether problem is linear */
+   nlconshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   propdata->islinearproblem = (nlconshdlr == NULL) || (SCIPconshdlrGetNConss(nlconshdlr) == 0);
 
    /* add symmetry handling constraints if required  */
    if ( (propdata->symconsenabled || propdata->sstenabled) && propdata->addconsstiming == 0 )

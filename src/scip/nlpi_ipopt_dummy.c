@@ -55,16 +55,6 @@ SCIP_Bool SCIPisIpoptAvailableIpopt(void)
    return FALSE;
 }
 
-/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */ /*lint -e715*/
-void* SCIPgetIpoptApplicationPointerIpopt(
-   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
-   )
-{
-   SCIPerrorMessage("Ipopt not available!\n");
-   SCIPABORT();
-   return NULL;  /*lint !e527*/
-}  /*lint !e715*/
-
 /** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */ /*lint -e715*/
 void* SCIPgetNlpiOracleIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
@@ -78,7 +68,7 @@ void* SCIPgetNlpiOracleIpopt(
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
  * It's here, because Ipopt is linked against Lapack.
  */ /*lint -e715*/
-SCIP_RETCODE LapackDsyev(
+SCIP_RETCODE SCIPcallLapackDsyevIpopt(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
    int                   N,                  /**< dimension */
    SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
@@ -94,7 +84,7 @@ SCIP_RETCODE LapackDsyev(
 
 /* solves a linear problem of the form Ax = b for a regular 3*3 matrix A */
 static
-SCIP_RETCODE SCIPsolveLinearProb3(
+SCIP_RETCODE solveLinearProb3(
    SCIP_Real*            A,                  /**< matrix data on input (size 3*3); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size 3) */
    SCIP_Real*            x,                  /**< buffer to store solution (size 3) */
@@ -196,7 +186,7 @@ SCIP_RETCODE SCIPsolveLinearProb3(
 }
 
 /* solves a linear problem of the form Ax = b for a regular matrix A */
-SCIP_RETCODE SCIPsolveLinearProb(
+SCIP_RETCODE SCIPsolveLinearEquationsIpopt(
    int                   N,                  /**< dimension */
    SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */
@@ -217,10 +207,10 @@ SCIP_RETCODE SCIPsolveLinearProb(
    assert(x != NULL);
    assert(success != NULL);
 
-   /* call SCIPsolveLinearProb3() for performance reasons */
+   /* call solveLinearProb3() for performance reasons */
    if( N == 3 )
    {
-      SCIP_CALL( SCIPsolveLinearProb3(A, b, x, success) );
+      SCIP_CALL( solveLinearProb3(A, b, x, success) );
       return SCIP_OKAY;
    }
 

@@ -222,7 +222,7 @@ SCIP_Bool SCIPnlpiOracleIsVarNonlinear(
    int                   varidx              /**< the variable to check */
    );
 
-/** returns number of linear and nonlinear appearances of variables objective and constraints */
+/** returns number of linear and nonlinear appearances of variables in objective and constraints */
 SCIP_EXPORT
 void SCIPnlpiOracleGetVarCounts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -265,7 +265,7 @@ SCIP_Bool SCIPnlpiOracleIsConstraintNonlinear(
    int                   considx             /**< index of constraint for which nonlinearity status is returned, or -1 for objective */
    );
 
-/** Gives the evaluation capabilities that are shared among all expressions in the problem. */
+/** gives the evaluation capabilities that are shared among all expressions in the problem */
 SCIP_EXPORT
 SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -343,12 +343,12 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
                                               *   offsets[nconss] gives length of col, can be NULL */
    );
 
-/** evaluates the Jacobi matrix in a given point
+/** evaluates the Jacobian matrix in a given point
  * 
- *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
- *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function.
+ *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity().
+ *  The user need to call SCIPnlpiOracleGetJacobianSparsity() at least ones before using this function.
  *
- *  @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
+ * @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
@@ -377,8 +377,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
 
 /** evaluates the Hessian matrix of the Lagrangian in a given point
  * 
- *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
- *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
+ *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity().
+ *  The user must call SCIPnlpiOracleGetHessianLagSparsity() at least ones before using this function.
  *  Only elements of the lower left triangle and the diagonal are computed.
  *
  * @return SCIP_INVALIDDATA, if the Hessian could not be evaluated (domain error, etc.)
@@ -421,6 +421,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    );
 
 /** prints the problem to a file in GAMS format
+ *
  * If there are variable (equation, resp.) names with more than 9 characters, then variable (equation, resp.) names are prefixed with an unique identifier.
  * This is to make it easier to identify variables solution output in the listing file.
  * Names with more than 64 characters are shorten to 64 letters due to GAMS limits.

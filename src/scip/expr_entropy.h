@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-/** creates the handler for x*log(x) expressions and includes it into SCIP
+/** creates the handler for entropy expressions and includes it into SCIP
  *
  * @ingroup ExprhdlrIncludes
  */
@@ -46,21 +46,21 @@ SCIP_RETCODE SCIPincludeExprhdlrEntropy(
  *
  * @{
  *
- * @name Entropy value expression.
+ * @name Entropy value expression
  *
  * This expression handler provides the entropy function, that is,
  * \f[
  *   x \mapsto \begin{cases}
  *     -x\log(x), & \mathrm{if} x > 0,\\
  *     0, & \mathrm{if} x = 0, \\
- *     \mathrm{undefined}, & \mathrm{else}
+ *     \mathrm{undefined}, & \mathrm{else}.
  *     \end{cases}
  * \f]
  *
  * @{
  */
 
-/** creates an x*log(x) expression */
+/** creates an entropy expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateExprEntropy(
    SCIP*                 scip,               /**< SCIP data structure */

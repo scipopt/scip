@@ -15,7 +15,7 @@
 
 /**@file   nlpi.c
  * @ingroup OTHER_CFILES
- * @brief  methods for handling nlp interface
+ * @brief  methods for handling NLP solver interface
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
  */
@@ -189,14 +189,15 @@ void SCIPnlpiInit(
 /** gets pointer for NLP solver */
 void* SCIPnlpiGetSolverPointer(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi                /**< solver interface */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem             /**< problem instance, or NULL */
    )
 {
    assert(set != NULL);
    assert(nlpi != NULL);
 
    if( nlpi->nlpigetsolverpointer != NULL )
-      return nlpi->nlpigetsolverpointer(set->scip, nlpi);
+      return nlpi->nlpigetsolverpointer(set->scip, nlpi, problem);
    else
       return NULL;
 }
@@ -668,7 +669,7 @@ const char* SCIPnlpiGetName(
    return nlpi->name;
 }
 
-/** gets NLP solver descriptions */
+/** gets NLP solver description */
 const char* SCIPnlpiGetDesc(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    )
@@ -741,7 +742,7 @@ SCIP_Real SCIPnlpiGetSolveTime(
 
 /** gives total time spend in function evaluation during NLP solves
  *
- * If timing/nlpieval is off (the default), depending on the NLP solver, this may just return 0.
+ * If parameter `timing/nlpieval` is off (the default), depending on the NLP solver, this may just return 0.
  */
 SCIP_Real SCIPnlpiGetEvalTime(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */

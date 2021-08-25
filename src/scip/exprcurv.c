@@ -188,8 +188,8 @@ SCIP_EXPRCURV SCIPexprcurvPower(
    return SCIP_EXPRCURV_UNKNOWN;
 }
 
-/** gives required curvature for base so that base^exponent has given curvature under given bounds
- * on base and constant exponent
+/** gives required curvature for base so that base^exponent has given curvature under given bounds on base and constant exponent
+ *
  * returns curvature unknown if expected curvature cannot be obtained
  */
 SCIP_EXPRCURV SCIPexprcurvPowerInv(
@@ -311,6 +311,8 @@ SCIP_EXPRCURV SCIPexprcurvPowerInv(
  *
  *  See Maranas and Floudas, Finding All Solutions of Nonlinearly Constrained Systems of Equations, JOGO 7, 1995
  *  for the categorization in the case that all factors are linear.
+ *
+ *  Exponents can also be negative or rational.
  */
 SCIP_EXPRCURV SCIPexprcurvMonomial(
    int                   nfactors,           /**< number of factors in monomial */
@@ -436,7 +438,7 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
 /** for a monomial with given bounds for each factor, gives condition on the curvature of each factor,
  * so that monomial has a requested curvature, if possible
  *
- * @return whether monomialcurv can be achieved
+ * @return whether `monomialcurv` can be achieved
  */
 SCIP_Bool SCIPexprcurvMonomialInv(
    SCIP_EXPRCURV         monomialcurv,       /**< desired curvature */

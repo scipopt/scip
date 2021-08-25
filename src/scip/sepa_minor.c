@@ -528,7 +528,7 @@ SCIP_RETCODE getEigenValues(
    eigenvecs[8] = yy;
 
    /* use LAPACK to compute the eigenvalues and eigenvectors */
-   if( LapackDsyev(TRUE, 3, eigenvecs, eigenvals) != SCIP_OKAY )
+   if( SCIPcallLapackDsyevIpopt(TRUE, 3, eigenvecs, eigenvals) != SCIP_OKAY )
    {
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors of augmented quadratic form matrix.\n");
       *success = FALSE;

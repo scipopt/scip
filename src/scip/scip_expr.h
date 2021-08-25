@@ -34,11 +34,10 @@ extern "C" {
 #include "scip/type_misc.h"
 
 /**@addtogroup PublicExprMethods
- *
  * @{
  */
 
-/**@name Expression Handler Methods */
+/**@name Expression Handler */
 /**@{ */
 
 /** creates the handler for an expression handler and includes it into SCIP */
@@ -104,7 +103,7 @@ SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
 
 /** @} */
 
-/**@name Expression Methods */
+/**@name Expressions */
 /**@{ */
 
 /** creates and captures an expression with given expression data and children */
@@ -149,7 +148,11 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** creates and captures an expression representing a monomial */
+/** creates and captures an expression representing a monomial
+ *
+ * @note In deviation from the actual definition of monomials, we also allow for negative and rational exponents.
+ * So this function actually creates an expression for a signomial that has exactly one term.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateExprMonomial(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -161,7 +164,10 @@ SCIP_RETCODE SCIPcreateExprMonomial(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** appends child to the children list of expr */
+/** appends child to the children list of expr
+ *
+ * @attention Only use if you really know what you are doing. The expression handler of the expression needs to be able to handle an increase in the number of children.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPappendExprChild(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -171,7 +177,7 @@ SCIP_RETCODE SCIPappendExprChild(
 
 /** overwrites/replaces a child of an expressions
  *
- * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
+ * The old child is released and the newchild is captured, unless they are the same (=same pointer).
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPreplaceExprChild(
@@ -183,7 +189,7 @@ SCIP_RETCODE SCIPreplaceExprChild(
 
 /** remove all children of expr
  *
- * @attention only use if you really know what you are doing
+ * @attention Only use if you really know what you are doing. The expression handler of the expression needs to be able to handle the removal of all children.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPremoveExprChildren(
@@ -191,7 +197,7 @@ SCIP_RETCODE SCIPremoveExprChildren(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** duplicates the given expression (including children) */
+/** duplicates the given expression and its children */
 SCIP_EXPORT
 SCIP_RETCODE SCIPduplicateExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -203,7 +209,7 @@ SCIP_RETCODE SCIPduplicateExpr(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** duplicates the given expression without its children */
+/** duplicates the given expression, but reuses its children */
 SCIP_EXPORT
 SCIP_RETCODE SCIPduplicateExprShallow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -213,7 +219,7 @@ SCIP_RETCODE SCIPduplicateExprShallow(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** copies an expression to use in a (possibly different) SCIP instance (including children) */
+/** copies an expression including children to use in a (possibly different) SCIP instance */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcopyExpr(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
@@ -232,8 +238,10 @@ SCIP_RETCODE SCIPcopyExpr(
 
 /** creates an expression from a string
  *
- * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
- * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
+ * We specify the grammar that defines the syntax of an expression.
+ * Loosely speaking, a `Base` will be any "block", a `Factor` is a `Base` to a power,
+ * a `Term` is a product of `Factors` and an `Expression` is a sum of `Terms`.
+ *
  * The actual definition:
  * <pre>
  * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
@@ -241,12 +249,10 @@ SCIP_RETCODE SCIPcopyExpr(
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
  * </pre>
- * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a.
+ * where `[a|b]` means `a` or `b` or none, `(a|b)` means `a` or `b`, `{a}` means 0 or more `a`.
  *
- * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
- * OpExpression to whatever string the expression handler accepts (through its parse method).
- *
- * See also @ref parseExpr in expr.c.
+ * Note that `Op` and `OpExpression` are undefined.
+ * `Op` corresponds to the name of an expression handler and `OpExpression` to whatever string the expression handler accepts (through its parse method).
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPparseExpr(
@@ -399,90 +405,103 @@ SCIP_Longint SCIPgetExprNewSoltag(
 
 /**@} */
 
-/** @name Differentiation methods
- * Gradients (Automatic differentiation Backward mode)
- * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
- * using a tree diagram. Suppose we want to compute the partial derivative of f w.r.t x. Write the function as a tree:
- * f
- * |-----|
- * s     t
- * |--|  |--|
- * x  y  x  y
- * The weight of an edge between two nodes represents the partial derivative of the parent w.r.t the children, eg,
- * f
- * |   is d_s f [where d is actually \f$ \partial \f$]
- * s
+/** @name Differentiation
+ * @anchor SCIP_EXPR_DIFF
+ *
+ * @par Gradients (Automatic differentiation Backward mode)
+ *
+ * Given a function, say, \f$f(s(x,y),t(x,y))\f$ there is a common mnemonic technique to compute its partial derivatives, using a tree diagram.
+ * Suppose we want to compute the partial derivative of \f$f\f$ w.r.t. \f$x\f$.
+ * Write the function as a tree:
+ *
+ *     f
+ *     |-----|
+ *     s     t
+ *     |--|  |--|
+ *     x  y  x  y
+ *
+ * The weight of an edge between two nodes represents the partial derivative of the parent w.r.t. the children, e.g.,
+ *
+ *     f
+ *     |
+ *     s
+ *
+ * is \f$ \partial_sf \f$.
  * The weight of a path is the product of the weight of the edges in the path.
- * The partial derivative of f w.r.t. x is then the sum of the weights of all paths connecting f with x:
- * df/dx = d_s f * d_x s + d_t f * d_x t
+ * The partial derivative of \f$f\f$ w.r.t. \f$x\f$ is then the sum of the weights of all paths connecting \f$f\f$ with \f$x\f$:
+ * \f[ \frac{\partial f}{\partial x} = \partial_s f \cdot \partial_x s + \partial_t f \cdot \partial_x t. \f]
  *
  * We follow this method in order to compute the gradient of an expression (root) at a given point (point).
  * Note that an expression is a DAG representation of a function, but there is a 1-1 correspondence between paths
  * in the DAG and path in a tree diagram of a function.
- * Initially, we set root->derivative to 1.0.
- * Then, traversing the tree in Depth First (see SCIPexpriterInit), for every expr that *has* children,
- * we store in its i-th child
- * child[i]->derivative = the derivative of expr w.r.t child evaluated at point * expr->derivative
- * Example:
- * f->derivative = 1.0
- * s->derivative = d_s f * f->derivative = d_s f
- * x->derivative = d_x s * s->derivative = d_x s * d_s f
- * However, when the child is a variable expressions, we actually need to initialize child->derivative to 0.0
+ * Initially, we set `root->derivative` to 1.0.
+ * Then, traversing the tree in Depth First (see \ref SCIPexpriterInit), for every expr that *has* children,
+ * we store in its i-th child, `child[i]->derivative`, the derivative of expr w.r.t. child evaluated at point multiplied with `expr->derivative`.
+ *
+ * For example:
+ * 1. `f->derivative` = 1.0
+ * 2. `s->derivative` = \f$\partial_s f \,\cdot\f$ `f->derivative` = \f$\partial_s f\f$
+ * 3. `x->derivative` = \f$\partial_x s \,\cdot\f$ `s->derivative` = \f$\partial_x s \cdot \partial_s f\f$
+ *
+ * However, when the child is a variable expressions, we actually need to initialize `child->derivative` to 0.0
  * and afterwards add, instead of overwrite the computed value.
  * The complete example would then be:
- * f->derivative = 1.0, x->derivative = 0.0, y->derivative = 0.0
- * s->derivative = d_s f * f->derivative = d_s f
- * x->derivative += d_x s * s->derivative = d_x s * d_s f
- * y->derivative += d_t s * s->derivative = d_t s * d_s f
- * t->derivative = d_t f * f->derivative = d_t f
- * x->derivative += d_x t * t->derivative = d_x t * d_t f
- * y->derivative += d_t t * t->derivative = d_t t * d_t f
  *
- * At the end we have: x->derivative == d_x s * d_s f + d_x t * d_t f, y->derivative == d_t s * d_s f + d_t t * d_t f
+ * 1. `f->derivative` = 1.0, `x->derivative` = 0.0, `y->derivative` = 0.0
+ * 2. `s->derivative` =  \f$\partial_s f \,\cdot\f$ `f->derivative` = \f$\partial_s f\f$
+ * 3. `x->derivative` += \f$\partial_x s \,\cdot\f$ `s->derivative` = \f$\partial_x s \cdot \partial_s f\f$
+ * 4. `y->derivative` += \f$\partial_y s \,\cdot\f$ `s->derivative` = \f$\partial_y s \cdot \partial_s f\f$
+ * 5. `t->derivative` =  \f$\partial_t f \,\cdot\f$ `f->derivative` = \f$\partial_t f\f$
+ * 6. `x->derivative` += \f$\partial_x t \,\cdot\f$ `t->derivative` = \f$\partial_x t \cdot \partial_t f\f$
+ * 7. `y->derivative` += \f$\partial_y t \,\cdot\f$ `t->derivative` = \f$\partial_y t \cdot \partial_t f\f$
  *
- * Note that, to compute this, we only need to know, for each expression, its partial derivatives w.r.t a given child
- * at a point. This is what the callback SCIP_DECL_EXPRBWDIFF should return.
- * Indeed, from child[i]->derivative = the derivative of expr w.r.t child evaluated at point * expr->derivative,
- * note that at the moment of processing a child, we already know expr->derivative, so the only
- * missing piece of information is 'the derivative of expr w.r.t child evaluated at point'.
+ * Note that, to compute this, we only need to know, for each expression, its partial derivatives w.r.t a given child at a point.
+ * This is what the callback `SCIP_DECL_EXPRBWDIFF` should return.
+ * Indeed, from "derivative of expr w.r.t. child evaluated at point multiplied with expr->derivative",
+ * note that at the moment of processing a child, we already know `expr->derivative`, so the only
+ * missing piece of information is "the derivative of expr w.r.t. child evaluated at point".
  *
- * An equivalent way of interpreting the procedure is that expr->derivative stores the derivative of the root w.r.t expr.
- * This way, x->derivative and y->derivative will contain the partial derivatives of root w.r.t to the variable,
- * that is, the gradient. Note, however, that this analogy is only correct for leave expressions, since
- * the derivative value of an intermediate expression gets overwritten.
+ * An equivalent way of interpreting the procedure is that `expr->derivative` stores the derivative of the root w.r.t. expr.
+ * This way, `x->derivative` and `y->derivative` will contain the partial derivatives of root w.r.t. the variable, that is, the gradient.
+ * Note, however, that this analogy is only correct for leave expressions, since the derivative value of an intermediate expression gets overwritten.
  *
  *
- * Hessian (Automatic differentiation Backward on Forward mode)
+ * \par Hessian (Automatic differentiation Backward on Forward mode)
+ *
  * Computing the Hessian is more complicated since it is the derivative of the gradient, which is a function with more than one output.
- * We compute the Hessian by computing 'directions' of the Hessian, that is H*u for different 'u'
- * This is easy in general, since it is the gradient of the *scalar* function `grad f^T u`, that is, the directional derivative of f
- * in the direction u, D_u f.
+ * We compute the Hessian by computing "directions" of the Hessian, that is \f$H\cdot u\f$ for different \f$u\f$.
+ * This is easy in general, since it is the gradient of the *scalar* function \f$\nabla f u\f$, that is,
+ * the directional derivative of \f$f\f$ in the direction \f$u\f$: \f$D_u f\f$.
+ *
  * This is easily computed via the so called forward mode.
- * Just as expr->derivative stores the partial derivative of the root w.r.t expr,
- * expr->dot stores the directional derivative of expr in the direction 'u'.
- * Then, by the chain rule, expr->dot = sum_(c : children) d_c expr * c->dot.
- * Starting with x_i->dot = u_i, we can compute expr->dot for every expression at the same time we evaluate expr.
- * Computing expr->dot is the purpose of the callback SCIP_DECL_EXPRFWDIFF.
- * Obviously, when this callback is called, the dots of all children are known
+ * Just as `expr->derivative` stores the partial derivative of the root w.r.t. expr,
+ * `expr->dot` stores the directional derivative of expr in the direction \f$u\f$.
+ * Then, by the chain rule, `expr->dot` = \f$\sum_{c:\text{children}} \partial_c \text{expr} \,\cdot\f$ `c->dot`.
+ *
+ * Starting with `x[i]->dot` = \f$u_i\f$, we can compute `expr->dot` for every expression at the same time we evaluate expr.
+ * Computing `expr->dot` is the purpose of the callback `SCIP_DECL_EXPRFWDIFF`.
+ * Obviously, when this callback is called, the "dots" of all children are known
  * (just like evaluation, where the value of all children are known).
  *
  * Once we have this information, we compute the gradient of this function, following the same idea as before.
- * We define expr->bardot to be the directional derivative in direction u of the partial derivative of the root w.r.t expr `grad f^T u` w.r.t expr,
- * that is D_u (d_expr f) = D_u (expr->derivative).
+ * We define `expr->bardot` to be the directional derivative in direction \f$u\f$ of the partial derivative of the root w.r.t `expr`,
+ * that is \f$D_u (\partial_{\text{expr}} f) = D_u\f$ (`expr->derivative`).
  *
- * This way, x_i->bardot = D_u (d_(x_i) f) = e_i^T H_f u. Hence vars->bardot contain H_f u.
+ * This way, `x[i]->bardot` = \f$D_u (\partial_{x_i} f) = e_i^T H_f u\f$.
+ * Hence `vars->bardot` contain \f$H_f u\f$.
  * By the chain rule, product rule, and definition we have
+ * \f{eqnarray*}{
+ * \texttt{expr->bardot} & = & D_u (\partial_{\text{expr}} f) \\
+ *   & = & D_u ( \partial_{\text{parent}} f \cdot \partial_{\text{expr}} \text{parent} )  \\
+ *   & = & D_u ( \texttt{parent->derivative} \cdot \partial_{\text{expr}} \text{parent} ) \\
+ *   & = & \partial_{\text{expr}} \text{parent} \cdot D_u (\texttt{parent->derivative}) + \texttt{parent->derivative} \cdot D_u (\partial_{\text{expr}} \text{parent}) \\
+ *   & = & \texttt{parent->bardot} \cdot \partial_{\text{expr}} \text{parent} + \texttt{parent->derivative} \cdot D_u (\partial_{\text{expr}} \text{parent})
+ * \f}
  *
- * expr->bardot = D_u (d_expr f) =
- * D_u ( d_parent f * d_expr parent ) =
- * D_u( parent->derivative * d_expr parent ) =
- * d_expr parent * D_u (parent->derivative) + parent->derivative * D_u (d_expr parent) =
- * parent->bardot * d_expr parent + parent->derivative * D_u (d_expr parent)
- *
- * Note that we have computed parent->bardot and parent->derivative at this point,
- * while (d_expr parent) is the return of SCIP_DECL_EXPRBWDIFF.
- * Hence the only information we need to compute is D_u (d_expr parent).
- * This is the purpose of the callback SCIP_DECL_EXPRBWFWDIFF.
+ * Note that we have computed `parent->bardot` and `parent->derivative` at this point,
+ * while \f$\partial_{\text{expr}} \text{parent}\f$ is the return of `SCIP_DECL_EXPRBWDIFF`.
+ * Hence the only information we need to compute is \f$D_u (\partial_{\text{expr}} \text{parent})\f$.
+ * This is the purpose of the callback `SCIP_DECL_EXPRBWFWDIFF`.
  *
  * @{
  */
@@ -520,7 +539,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
 
 /**@} */  /* end of differentiation methods */
 
-/**@name Expression Methods
+/**@name Expressions
  * @{
  */
 
@@ -544,7 +563,7 @@ SCIP_RETCODE SCIPevalExprActivity(
 
 /** compare expressions
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
- * @note: The given expressions are assumed to be simplified.
+ * @note The given expressions are assumed to be simplified.
  */
 SCIP_EXPORT
 int SCIPcompareExpr(
@@ -563,135 +582,132 @@ SCIP_RETCODE SCIPhashExpr(
 
 /** simplifies an expression
  *
- * The given expression will be released and overwritten with the simplified expression.
- * To keep the expression, duplicate it via SCIPduplicateExpr before calling this method.
- *
- * This is largely inspired in Joel Cohen's
- * Computer algebra and symbolic computation: Mathematical methods
- * In particular Chapter 3
- * The other fountain of inspiration is the current simplifying methods in expr.c.
+ * This is largely inspired by Joel Cohen's
+ * *Computer algebra and symbolic computation: Mathematical methods*,
+ * in particular Chapter 3.
+ * The other fountain of inspiration are the simplifying methods of expr.c in SCIP 7.
  *
  * Note: The things to keep in mind when adding simplification rules are the following.
- * I will be using the product expressions as an example.
+ * I will be using the product expressions (see expr_product.c) as an example.
  * There are mainly 3 parts of the simplification process. You need to decide
  * at which stage the simplification rule makes sense.
- * 1. Simplify each factor (simplifyFactor): At this stage we got the children of the product expression.
- * At this point, each child is simplified when viewed as a stand-alone
- * expression, but not necessarily when viewed as child of a product
- * expression. Rules like SP2, SP7, etc are enforced at this point.
- * 2. Multiply the factors (mergeProductExprlist): At this point rules like SP4, SP5 and SP14 are enforced.
- * 3. Build the actual simplified product expression (buildSimplifiedProduct):
- * At this point rules like SP10, SP11, etc are enforced.
+ * 1. Simplify each factor (simplifyFactor()): At this stage we got the children of the product expression.
+ *    At this point, each child is simplified when viewed as a stand-alone expression, but not necessarily when viewed as child of a product expression.
+ *    Rules like SP2, SP7, etc are enforced at this point.
+ * 2. Multiply the factors (mergeProductExprlist()): At this point rules like SP4, SP5 and SP14 are enforced.
+ * 3. Build the actual simplified product expression (buildSimplifiedProduct()):
+ *    At this point rules like SP10, SP11, etc are enforced.
  *
- * **During step 1. and 2. do not forget to set the flag changed to TRUE when something actually changes**
+ * During steps 1 and 2 do not forget to set the flag `changed` to TRUE when something actually changes.
  *
- * Definition of simplified expressions
- * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ * \par Definition of simplified expressions
+ *
  * An expression is simplified if it
  * - is a value expression
  * - is a var expression
  * - is a product expression such that
- *    SP1:  every child is simplified
- *    SP2:  no child is a product
- *    SP4:  no two children are the same expression (those should be multiplied)
- *    SP5:  the children are sorted [commutative rule]
- *    SP7:  no child is a value
- *    SP8:  its coefficient is 1.0 (otherwise should be written as sum)
- *    SP10: it has at least two children
- *    ? at most one child is an abs
- *    SP11: no two children are expr*log(expr)
- *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
- *    happen at the simplification level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
- *    SP12: if it has two children, then neither of them is a sum (expand sums)
- *    SP13: no child is a sum with a single term
- *    SP14: at most one child is an exp
+ *   - SP1: every child is simplified
+ *   - SP2: no child is a product
+ *   - SP4: no two children are the same expression (those should be multiplied)
+ *   - SP5: the children are sorted [commutative rule]
+ *   - SP7: no child is a value
+ *   - SP8: its coefficient is 1.0 (otherwise should be written as sum)
+ *   - SP10: it has at least two children
+ *   - TODO?: at most one child is an `abs`
+ *   - SP11: no two children are `expr*log(expr)`
+ *     (TODO: we could handle more complicated stuff like \f$xy\log(x) \to - y * \mathrm{entropy}(x)\f$, but I am not sure this should happen at the simplification level;
+ *            similar for \f$(xy) \log(xy)\f$, which currently simplifies to \f$xy \log(xy)\f$)
+ *   - SP12: if it has two children, then neither of them is a sum (expand sums)
+ *   - SP13: no child is a sum with a single term
+ *   - SP14: at most one child is an `exp`
  * - is a power expression such that
- *    POW1: exponent is not 0
- *    POW2: exponent is not 1
- *    POW3: its child is not a value
- *    POW4: its child is simplified
- *    POW5: if exponent is integer, its child is not a product
- *    POW6: if exponent is integer, its child is not a sum with a single term ((2*x)^2 -> 4*x^2)
- *    POW7: if exponent is 2, its child is not a sum (expand sums)
- *    POW8: its child is not a power unless (x^n)^m with n*m being integer and n or m fractional and n not being even integer
- *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
- *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
- *    POW11: its child is not an exponential: exp(expr)^e --> exp(e * expr)
+ *   - POW1: exponent is not 0
+ *   - POW2: exponent is not 1
+ *   - POW3: its child is not a value
+ *   - POW4: its child is simplified
+ *   - POW5: if exponent is integer, its child is not a product
+ *   - POW6: if exponent is integer, its child is not a sum with a single term (\f$(2x)^2 \to 4x^2\f$)
+ *   - POW7: if exponent is 2, its child is not a sum (expand sums)
+ *   - POW8: its child is not a power unless \f$(x^n)^m\f$ with \f$nm\f$ being integer and \f$n\f$ or \f$m\f$ fractional and \f$n\f$ not being even integer
+ *   - POW9: its child is not a sum with a single term with a positive coefficient: \f$(25x)^{0.5} \to 5 x^{0.5}\f$
+ *   - POW10: its child is not a binary variable: \f$b^e, e > 0 \to b\f$; \f$b^e, e < 0 \to b := 1\f$
+ *   - POW11: its child is not an exponential: \f$\exp(\text{expr})^e \to \exp(e\cdot\text{expr})\f$
  * - is a signedpower expression such that
- *   TODO: Some of these criteria are too restrictive for signed powers; for example, the exponent does not need to be
- *   an integer for signedpower to distribute over a product (SPOW5, SPOW6, SPOW8). Others can also be improved
- *    SPOW1: exponent is not 0
- *    SPOW2: exponent is not 1
- *    SPOW3: its child is not a value
- *    SPOW4: its child is simplified
- *    SPOW5: (TODO) do we want to distribute signpowers over products like we do powers?
- *    SPOW6: exponent is not an odd integer: (signpow odd expr) -> (pow odd expr)
- *    SPOW8: if exponent is integer, its child is not a power
- *    SPOW9: its child is not a sum with a single term: (25*x)^0.5 -> 5 x^0.5
- *    SPOW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
- *    SPOW11: its child is not an exponential: exp(expr)^e --> exp(e * expr)
- *    SPOW?: TODO: what happens when child is another signed power?
- *    SPOW?: if child >= 0 -> transform to normal power; if child < 0 -> transform to - normal power
- * - is a sum expression such that
- *    SS1: every child is simplified
- *    SS2: no child is a sum
- *    SS3: no child is a value (values should go in the constant of the sum)
- *    SS4: no two children are the same expression (those should be summed up)
- *    SS5: the children are sorted [commutative rule]
- *    SS6: it has at least one child
- *    SS7: if it consists of a single child, then either constant is != 0.0 or coef != 1
- *    SS8: no child has coefficient 0
- *    SS9: if a child c is a product that has an exponential expression as one of its factors, then the coefficient of c is +/-1.0
- *    SS10: if a child c is an exponential, then the coefficient of c is +/-1.0
- *    x if it consists of a single child, then its constant != 0.0 (otherwise, should be written as a product)
- * - it is a function with simplified arguments, but not all of them can be values
- * ? a logarithm doesn't have a product as a child
- * ? the exponent of an exponential is always 1
+ *   - SPOW1: exponent is not 0
+ *   - SPOW2: exponent is not 1
+ *   - SPOW3: its child is not a value
+ *   - SPOW4: its child is simplified
+ *   - SPOW5: (TODO) do we want to distribute signpowers over products like we do for powers?
+ *   - SPOW6: exponent is not an odd integer: (signpow odd expr) -> (pow odd expr)
+ *   - SPOW8: if exponent is integer, its child is not a power
+ *   - SPOW9: its child is not a sum with a single term: \f$\mathrm{signpow}(25x,0.5) \to 5\mathrm{signpow}(x,0.5)\f$
+ *   - SPOW10: its child is not a binary variable: \f$\mathrm{signpow}(b,e), e > 0 \to b\f$; \f$\mathrm{signpow}(b,e), e < 0 \to b := 1\f$
+ *   - SPOW11: its child is not an exponential: \f$\mathrm{signpow}(\exp(\text{expr}),e) \to \exp(e\cdot\text{expr})\f$
+ *   - TODO: what happens when child is another signed power?
+ *   - TODO: if child &ge; 0 -> transform to normal power; if child < 0 -> transform to - normal power
  *
- * ORDERING RULES (see SCIPexprCompare())
- * ^^^^^^^^^^^^^^
+ *   TODO: Some of these criteria are too restrictive for signed powers; for example, the exponent does not need to be
+ *   an integer for signedpower to distribute over a product (SPOW5, SPOW6, SPOW8). Others can also be improved.
+ * - is a sum expression such that
+ *   - SS1: every child is simplified
+ *   - SS2: no child is a sum
+ *   - SS3: no child is a value (values should go in the constant of the sum)
+ *   - SS4: no two children are the same expression (those should be summed up)
+ *   - SS5: the children are sorted [commutative rule]
+ *   - SS6: it has at least one child
+ *   - SS7: if it consists of a single child, then either constant is != 0.0 or coef != 1
+ *   - SS8: no child has coefficient 0
+ *   - SS9: if a child c is a product that has an exponential expression as one of its factors, then the coefficient of c is +/-1.0
+ *   - SS10: if a child c is an exponential, then the coefficient of c is +/-1.0
+ * - it is a function with simplified arguments, but not all of them can be values
+ * - TODO? a logarithm doesn't have a product as a child
+ * - TODO? the exponent of an exponential is always 1
+ *
+ * \par Ordering Rules (see SCIPexprCompare())
+ *
  * These rules define a total order on *simplified* expressions.
- * There are two groups of rules, when comparing equal type expressions and different type expressions
+ * There are two groups of rules, when comparing equal type expressions and different type expressions.
+ *
  * Equal type expressions:
- * OR1: u,v value expressions: u < v <=> val(u) < val(v)
- * OR2: u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v))
- * OR3: u,v are both sum or product expression: < is a lexicographical order on the terms
- * OR4: u,v are both pow: u < v <=> base(u) < base(v) or, base(u) == base(v) and expo(u) < expo(v)
- * OR5: u,v are u = FUN(u_1, ..., u_n), v = FUN(v_1, ..., v_m): u < v <=> For the first k such that u_k != v_k, u_k < v_k,
- *      or if such a k doesn't exist, then n < m.
+ * - OR1: u,v value expressions: u < v &hArr; val(u) < val(v)
+ * - OR2: u,v var expressions: u < v &hArr; `SCIPvarGetIndex(var(u))` < `SCIPvarGetIndex(var(v))`
+ * - OR3: u,v are both sum or product expression: < is a lexicographical order on the terms
+ * - OR4: u,v are both pow: u < v &hArr; base(u) < base(v) or, base(u) = base(v) and expo(u) < expo(v)
+ * - OR5: u,v are \f$u = f(u_1, ..., u_n), v = f(v_1, ..., v_m)\f$: u < v &hArr; For the first k such that \f$u_k \neq v_k\f$, \f$u_k < v_k\f$, or if such a \f$k\f$ doesn't exist, then \f$n < m\f$.
  *
  * Different type expressions:
- * OR6: u value, v other: u < v always
- * OR7: u sum, v var or func: u < v <=> u < 0+v
- *      In other words, u = sum_{i = 1}^n alpha_i u_i, then u < v <=> u_n < v or if u_n = v and alpha_n < 1
- * OR8: u product, v pow, sum, var or func: u < v <=> u < 1*v
- *      In other words, u = Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
- *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
- *             do *not* have constant coefficients
- * OR9: u pow, v sum, var or func: u < v <=> u < v^1
- * OR10: u var, v func: u < v always
- * OR11: u func, v other type of func: u < v <=> name(type(u)) < name(type(v))
- * OR12: none of the rules apply: u < v <=> ! v < u
- * Examples:
- * OR12: x < x^2 ?:  x is var and x^2 product, so none applies.
- *       Hence, we try to answer x^2 < x ?: x^2 < x <=> x < x or if x = x and 2 < 1 <=> 2 < 1 <=> False, so x < x^2 is True
- *       x < x^-1 --OR12--> ~(x^-1 < x) --OR9--> ~(x^-1 < x^1) --OR4--> ~(x < x or -1 < 1) --> ~True --> False
- *       x*y < x --OR8--> x*y < 1*x --OR3--> y < x --OR2--> False
- *       x*y < y --OR8--> x*y < 1*y --OR3--> y < x --OR2--> False
+ * - OR6: u value, v other: u < v always
+ * - OR7: u sum, v var or func: u < v &hArr; u < 0+v;
+ *        In other words, if \f$u = \sum_{i=1}^n \alpha_i u_i\f$, then u < v &hArr; \f$u_n\f$ < v or if \f$u_n\f$ = v and \f$\alpha_n\f$ < 1.
+ * - OR8: u product, v pow, sum, var or func: u < v &hArr; u < 1*v;
+ *        In other words, if \f$u = \prod_{i=1}^n u_i\f$, then u < v &hArr; \f$u_n\f$ < v.
+ *        Note: since this applies only to simplified expressions, the form of the product is correct.
+ *              Simplified products  do *not* have constant coefficients.
+ * - OR9: u pow, v sum, var or func: u < v &hArr; u < v^1
+ * - OR10: u var, v func: u < v always
+ * - OR11: u func, v other type of func: u < v &hArr; name(type(u)) < name(type(v))
+ * - OR12: none of the rules apply: u < v &hArr; ! v < u
  *
- * Algorithm
- * ^^^^^^^^^
+ * Examples:
+ * - x < x^2 ?:  x is var and x^2 power, so none applies (OR12).
+ *   Hence, we try to answer x^2 < x ?: x^2 < x &hArr; x < x or if x = x and 2 < 1 &hArr; 2 < 1 &hArr; False. So x < x^2 is True.
+ * - x < x^-1 --OR12&rarr; ~(x^-1 < x) --OR9&rarr; ~(x^-1 < x^1) --OR4&rarr; ~(x < x or -1 < 1) &rarr; ~True &rarr; False
+ * - x*y < x --OR8&rarr; x*y < 1*x --OR3&rarr; y < x --OR2&rarr; False
+ * - x*y < y --OR8&rarr; x*y < 1*y --OR3&rarr; y < x --OR2&rarr; False
+ *
+ * \par Algorithm
+ *
  * The recursive version of the algorithm is
  *
- * EXPR simplify(expr)
- *    for c in 1..expr->nchildren
- *       expr->children[c] = simplify(expr->children[c])
- *    end
- *    return expr->exprhdlr->simplify(expr)
- * end
+ *     EXPR simplify(expr)
+ *        for c in 1..expr->nchildren
+ *           expr->children[c] = simplify(expr->children[c])
+ *        end
+ *        return expr->exprhdlr->simplify(expr)
+ *     end
  *
  * Important: Whatever is returned by a simplify callback **has** to be simplified.
- * Also, all children of the given expression **are** already simplified
+ * Also, all children of the given expression **are** already simplified.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsimplifyExpr(
@@ -715,7 +731,7 @@ SCIP_RETCODE SCIPsimplifyExpr(
  *     hash table, otherwise we add it to the hash table
  *
  *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
- *  (with the same hash) are structurally the same we use the function SCIPexprCompare()
+ *  (with the same hash) are structurally the same we use the function SCIPexprCompare().
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPreplaceCommonSubexpressions(
@@ -729,7 +745,7 @@ SCIP_RETCODE SCIPreplaceCommonSubexpressions(
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
  *  @note this function relies on information from the curvature callback of expression handlers only,
- *    consider using function @ref SCIPhasExprCurvature() of the convex-nlhdlr as that uses more information to deduce convexity
+ *    consider using function @ref SCIPhasExprCurvature() of the convex-nlhdlr instead, as that uses more information to deduce convexity
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeExprCurvature(
@@ -739,7 +755,7 @@ SCIP_RETCODE SCIPcomputeExprCurvature(
 
 /** computes integrality information of a given expression and all its subexpressions
  *
- * the integrality information can be accessed via SCIPexprIsIntegral()
+ * The integrality information can be accessed via SCIPexprIsIntegral().
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeExprIntegrality(
@@ -781,7 +797,7 @@ SCIP_RETCODE SCIPgetExprVarExprs(
 
 /** @} */
 
-/**@name Direct calls to exprhdlr callbacks
+/**@name Expression Handler Callbacks
  * @{
  */
 
@@ -806,9 +822,9 @@ SCIP_DECL_EXPRMONOTONICITY(SCIPcallExprMonotonicity);
 /** calls the eval callback for an expression with given values for children
  *
  * Does not iterates over expressions, but requires values for children to be given.
- * Value is not stored in expression, but returned in @par val.
+ * Value is not stored in expression, but returned in `val`.
  * If an evaluation error (division by zero, ...) occurs, this value will
- * be set to SCIP_INVALID.
+ * be set to `SCIP_INVALID`.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcallExprEval(
@@ -822,11 +838,11 @@ SCIP_RETCODE SCIPcallExprEval(
  *
  * Does not iterates over expressions, but requires values for children and direction to be given.
  *
- * Value is not stored in expression, but returned in @par val.
- * If an evaluation error (division by zero, ...) occurs, this value will be set to SCIP_INVALID.
+ * Value is not stored in expression, but returned in `val`.
+ * If an evaluation error (division by zero, ...) occurs, this value will be set to `SCIP_INVALID`.
  *
- * Direction is not stored in expression, but returned in @par dot.
- * If an differentiation error (division by zero, ...) occurs, this value will be set to SCIP_INVALID.
+ * Direction is not stored in expression, but returned in `dot`.
+ * If an differentiation error (division by zero, ...) occurs, this value will be set to `SCIP_INVALID`.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcallExprEvalFwdiff(
@@ -840,7 +856,7 @@ SCIP_RETCODE SCIPcallExprEvalFwdiff(
 
 /** calls the interval evaluation callback for an expression
  *
- * @see SCIP_DECL_EXPRMONOTONICITY
+ * @see SCIP_DECL_EXPRINTEVAL
  *
  * Returns entire interval if callback not implemented.
  */
@@ -880,7 +896,7 @@ SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify);
  *
  * @see SCIP_DECL_EXPRREVERSEPROP
  *
- * Returns unmodified childrenbounds if reverseprop callback not implemented.
+ * Returns unmodified `childrenbounds` if reverseprop callback not implemented.
  */
 SCIP_EXPORT
 SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
@@ -888,7 +904,7 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
 /** @} */
 
 
-/**@name Expression Iterator Methods */
+/**@name Expression Iterator */
 /**@{ */
 
 /** creates an expression iterator */
@@ -907,7 +923,7 @@ void SCIPfreeExpriter(
 /** @} */
 
 
-/**@name Quadratic expression functions */
+/**@name Quadratic Expressions */
 /**@{ */
 
 /** checks whether an expression is quadratic
@@ -915,7 +931,7 @@ void SCIPfreeExpriter(
  * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
  * or a sum of terms where at least one is a square or a product.
  *
- * Use \ref SCIPexprGetQuadraticData to get data about the representation as quadratic.
+ * Use SCIPexprGetQuadraticData() to get data about the representation as quadratic.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcheckExprQuadratic(
@@ -926,7 +942,6 @@ SCIP_RETCODE SCIPcheckExprQuadratic(
 
 /** frees information on quadratic representation of an expression
  *
- * Reverts SCIPcheckExprQuadratic().
  * Before doing changes to an expression, it can be useful to call this function.
  */
 SCIP_EXPORT
@@ -937,7 +952,7 @@ void SCIPfreeExprQuadratic(
 
 /** evaluates quadratic term in a solution
  *
- * \note This requires that every expr used in the quadratic data is a variable expression.
+ * \note This requires that every expressiion used in the quadratic data is a variable expression.
  */
 SCIP_EXPORT
 SCIP_Real SCIPevalExprQuadratic(
@@ -953,14 +968,15 @@ SCIP_RETCODE SCIPprintExprQuadratic(
    SCIP_EXPR*            expr                /**< quadratic expression */
    );
 
-/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+/** checks the curvature of the quadratic expression
  *
- * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
- * - semidefinite positive -> provided is set to sepaunder
- * - semidefinite negative -> provided is set to sepaover
- * - otherwise -> provided is set to none
+ * For this, it builds the matrix Q of quadratic coefficients and computes its eigenvalues using LAPACK.
+ * If Q is
+ * - semidefinite positive -> curv is set to convex,
+ * - semidefinite negative -> curv is set to concave,
+ * - otherwise -> curv is set to unknown.
  *
- * If assumevarfixed is given and some entries of x correspond to variables present in
+ * If `assumevarfixed` is given and some expressions in quadratic terms correspond to variables present in
  * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
  */
 SCIP_EXPORT
