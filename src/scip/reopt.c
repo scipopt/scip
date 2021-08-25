@@ -8335,9 +8335,9 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
    int i;
 
    assert(reopt != NULL);
-   assert(reopt->activeconss != NULL);
-   assert(reopt->activeconssset != NULL);
-   assert(reopt->nmaxactiveconss > 0);
+   assert(reopt->activeconss != NULL || reopt->nmaxactiveconss == 0);
+   assert(reopt->activeconssset != NULL || reopt->nmaxactiveconss == 0);
+   assert(reopt->nmaxactiveconss >= 0);
 
    SCIPsetDebugMsg(set, "Reset %d active conss.\n", reopt->nactiveconss);
 
