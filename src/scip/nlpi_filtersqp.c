@@ -938,17 +938,6 @@ SCIP_DECL_NLPIFREE(nlpiFreeFilterSQP)
    return SCIP_OKAY;
 }
 
-/** gets internal pointer to NLP solver
- *
- * Depending on the solver interface, a solver pointer may exist for every NLP problem instance.
- * For this case, a NLPI problem can be passed in as well.
- */
-static
-SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerFilterSQP)
-{
-   return NULL;  /*lint !e527*/
-}  /*lint !e715*/
-
 /** creates a problem instance */
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
@@ -1006,13 +995,6 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    assert(*problem == NULL);
 
    return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets pointer to solver-internal problem instance */
-static
-SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerFilterSQP)
-{
-   return NULL;  /*lint !e527*/
 }  /*lint !e715*/
 
 /** add variables */
@@ -1818,8 +1800,8 @@ SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
    /* create solver interface */
    SCIP_CALL( SCIPincludeNlpi(scip,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
-         nlpiCopyFilterSQP, nlpiFreeFilterSQP, nlpiGetSolverPointerFilterSQP,
-         nlpiCreateProblemFilterSQP, nlpiFreeProblemFilterSQP, nlpiGetProblemPointerFilterSQP,
+         nlpiCopyFilterSQP, nlpiFreeFilterSQP, NULL,
+         nlpiCreateProblemFilterSQP, nlpiFreeProblemFilterSQP, NULL,
          nlpiAddVarsFilterSQP, nlpiAddConstraintsFilterSQP, nlpiSetObjectiveFilterSQP,
          nlpiChgVarBoundsFilterSQP, nlpiChgConsSidesFilterSQP, nlpiDelVarSetFilterSQP, nlpiDelConstraintSetFilterSQP,
          nlpiChgLinearCoefsFilterSQP, nlpiChgExprFilterSQP,

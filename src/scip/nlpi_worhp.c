@@ -976,15 +976,6 @@ SCIP_DECL_NLPIFREE(nlpiFreeWorhp)
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gets pointer for NLP solver */
-static
-SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerWorhp)
-{
-   assert(nlpi != NULL);
-
-   return NULL;
-}  /*lint !e715*/
-
 /** creates a problem instance */
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
@@ -1049,16 +1040,6 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
    *problem = NULL;
 
    return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets pointer to solver-internal problem instance */
-static
-SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerWorhp)
-{
-   assert(nlpi    != NULL);
-   assert(problem != NULL);
-
-   return NULL;
 }  /*lint !e715*/
 
 /** add variables */
@@ -1633,8 +1614,8 @@ SCIP_RETCODE SCIPincludeNlpSolverWorhp(
 
    SCIP_CALL( SCIPincludeNlpi(scip,
          name, NLPI_DESC, priority,
-         nlpiCopyWorhp, nlpiFreeWorhp, nlpiGetSolverPointerWorhp,
-         nlpiCreateProblemWorhp, nlpiFreeProblemWorhp, nlpiGetProblemPointerWorhp,
+         nlpiCopyWorhp, nlpiFreeWorhp, NULL,
+         nlpiCreateProblemWorhp, nlpiFreeProblemWorhp, NULL,
          nlpiAddVarsWorhp, nlpiAddConstraintsWorhp, nlpiSetObjectiveWorhp,
          nlpiChgVarBoundsWorhp, nlpiChgConsSidesWorhp, nlpiDelVarSetWorhp, nlpiDelConstraintSetWorhp,
          nlpiChgLinearCoefsWorhp, nlpiChgExprWorhp,
