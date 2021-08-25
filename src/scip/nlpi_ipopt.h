@@ -57,12 +57,6 @@ const char* SCIPgetSolverDescIpopt(void);
 SCIP_EXPORT
 SCIP_Bool SCIPisIpoptAvailableIpopt(void);
 
-/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
-SCIP_EXPORT
-void* SCIPgetIpoptApplicationPointerIpopt(
-   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
-   );
-
 /** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */
 SCIP_EXPORT
 void* SCIPgetNlpiOracleIpopt(

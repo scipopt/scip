@@ -123,7 +123,7 @@ Interface changes
 - removed nquadelems, quadelems, exprvaridxs arguments from SCIP_DECL_NLPIADDCONSTRAINTS, changed exprtrees argument to exprs
 - removed nquadelems, quadelems, exprvaridxs arguments from SCIP_DECL_NLPISETOBJECTIVE, changed exprtree argument to expr
 - removed SCIP_DECL_NLPICHGQUADCOEFS, SCIP_DECL_NLPICHGNONLINCOEF, SCIP_DECL_NLPISETMESSAGEHDLR
-- added SCIPisSolveInterrupted() to check whether SCIPinterruptSolve() has been called
+- added SCIP_NLPIPROBLEM* problem to SCIP_DECL_NLPIGETSOLVERPOINTER
 
 ### Deleted and changed API methods
 
@@ -366,6 +366,7 @@ nlpi:
 - renamed SCIPupdateNlpiProb() to SCIPupdateNlpiProblem() and moved into scip_nlpi.{h,c}
 - renamed SCIPaddNlpiProbRows() to SCIPaddNlpiProblemRows() and moved into scip_nlpi.{h,c}
 - removed SCIPsetModifiedDefaultSettingsIpopt()
+- removed SCIPgetIpoptApplicationPointerIpopt(), use SCIPgetNlpiSolverPointer() instead
 - removed SCIPnlpStatisticsCreate(), SCIPnlpStatisticsFree(), SCIPnlpStatisticsGetNIterations(), SCIPnlpStatisticsGetTotalTime(), SCIPnlpStatisticsSetNIterations(), SCIPnlpStatisticsSetTotalTime(), the struct is public now
 
 ### New API functions
@@ -387,6 +388,7 @@ nlpi:
 - added SCIPexprintHessianSparsity(), SCIPexprintHessian()
 - added SCIPexprcurvPowerInv(), SCIPexprcurvMonomialInv()
 - added SCIPsetClockEnabled()
+- added SCIPisSolveInterrupted() to check whether SCIPinterruptSolve() has been called
 
 expression handler:
 - added SCIPincludeExprhdlr(), SCIPgetExprhdlrs(), SCIPgetNExprhdlrs(), SCIPfindExprhdlr()

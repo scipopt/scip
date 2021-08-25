@@ -938,7 +938,11 @@ SCIP_DECL_NLPIFREE(nlpiFreeFilterSQP)
    return SCIP_OKAY;
 }
 
-/** gets pointer for NLP solver */
+/** gets internal pointer to NLP solver
+ *
+ * Depending on the solver interface, a solver pointer may exist for every NLP problem instance.
+ * For this case, a NLPI problem can be passed in as well.
+ */
 static
 SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerFilterSQP)
 {

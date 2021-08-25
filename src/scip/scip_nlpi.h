@@ -99,7 +99,11 @@ SCIP_RETCODE SCIPsetNlpiPriority(
    int                   priority            /**< new priority of the NLPI */
    );
 
-/** gets internal pointer to NLP solver */
+/** gets internal pointer to NLP solver
+ *
+ * Depending on the solver interface, a solver pointer may exist for every NLP problem instance.
+ * For this case, a NLPI problem can be passed in as well.
+ */
 SCIP_EXPORT
 SCIP_DECL_NLPIGETSOLVERPOINTER(SCIPgetNlpiSolverPointer);
 

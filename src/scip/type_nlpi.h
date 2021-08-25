@@ -215,14 +215,19 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
  * 
  * Implementation of this callback is optional.
  *
- * \param[in] scip SCIP data structure
- * \param[in] nlpi datastructure for solver interface
+ * Depending on the solver interface, a solver pointer may exist for every NLP problem instance.
+ * For this case, a nlpiproblem can be passed in as well.
+ *
+ * \param[in] scip    SCIP data structure
+ * \param[in] nlpi    datastructure for solver interface
+ * \param[in] problem datastructure for problem instance, or NULL
  *  
  * \return void pointer to solver
  */
 #define SCIP_DECL_NLPIGETSOLVERPOINTER(x) void* x (\
    SCIP*      scip, \
-   SCIP_NLPI* nlpi)
+   SCIP_NLPI* nlpi, \
+   SCIP_NLPIPROBLEM* problem)
 
 /** creates a problem instance
  * 

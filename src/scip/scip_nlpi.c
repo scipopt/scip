@@ -216,7 +216,7 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(SCIPgetNlpiSolverPointer)
 {
    assert(scip != NULL);
 
-   return SCIPnlpiGetSolverPointer(scip->set, nlpi);
+   return SCIPnlpiGetSolverPointer(scip->set, nlpi, problem);
 }
 
 /** creates an empty problem instance */

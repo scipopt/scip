@@ -189,14 +189,15 @@ void SCIPnlpiInit(
 /** gets pointer for NLP solver */
 void* SCIPnlpiGetSolverPointer(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi                /**< solver interface */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem             /**< problem instance, or NULL */
    )
 {
    assert(set != NULL);
    assert(nlpi != NULL);
 
    if( nlpi->nlpigetsolverpointer != NULL )
-      return nlpi->nlpigetsolverpointer(set->scip, nlpi);
+      return nlpi->nlpigetsolverpointer(set->scip, nlpi, problem);
    else
       return NULL;
 }

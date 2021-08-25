@@ -659,9 +659,10 @@ SCIP_DECL_NLPIFREE(nlpiFreeIpopt)
 static
 SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerIpopt)
 {
-   assert(nlpi != NULL);
+   if( problem == NULL )
+      return NULL;
 
-   return NULL;
+   return (void*)GetRawPtr(problem->ipopt);
 }
 
 /** creates a problem instance */
@@ -1569,16 +1570,6 @@ const char* SCIPgetSolverDescIpopt(void)
 SCIP_Bool SCIPisIpoptAvailableIpopt(void)
 {
    return TRUE;
-}
-
-/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
-void* SCIPgetIpoptApplicationPointerIpopt(
-   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
-   )
-{
-   assert(nlpiproblem != NULL);
-
-   return (void*)GetRawPtr(nlpiproblem->ipopt);
 }
 
 /** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */

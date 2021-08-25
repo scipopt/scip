@@ -55,16 +55,6 @@ SCIP_Bool SCIPisIpoptAvailableIpopt(void)
    return FALSE;
 }
 
-/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */ /*lint -e715*/
-void* SCIPgetIpoptApplicationPointerIpopt(
-   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
-   )
-{
-   SCIPerrorMessage("Ipopt not available!\n");
-   SCIPABORT();
-   return NULL;  /*lint !e527*/
-}  /*lint !e715*/
-
 /** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */ /*lint -e715*/
 void* SCIPgetNlpiOracleIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */

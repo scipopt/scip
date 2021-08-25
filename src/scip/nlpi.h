@@ -92,7 +92,8 @@ void SCIPnlpiInit(
 /** gets pointer for NLP solver */
 void* SCIPnlpiGetSolverPointer(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi                /**< solver interface */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem             /**< problem instance, or NULL */
    );
 
 /** creates a problem instance */
