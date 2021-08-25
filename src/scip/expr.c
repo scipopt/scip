@@ -3662,7 +3662,7 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    }
 
    /* compute eigenvalues */
-   if( LapackDsyev(storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
+   if( SCIPcallLapackDsyevIpopt(storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
    {
       SCIPmessagePrintWarning(messagehdlr, "Failed to compute eigenvalues of quadratic coefficient "
             "matrix --> don't know curvature\n");

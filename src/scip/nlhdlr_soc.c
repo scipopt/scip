@@ -1999,7 +1999,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    /* compute eigenvalues and vectors, A = PDP^t
     * note: eigvecmatrix stores P^t, i.e., P^t_{i,j} = eigvecmatrix[i*nvars+j]
     */
-   if( LapackDsyev(TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
+   if( SCIPcallLapackDsyevIpopt(TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
    {
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors for expression:\n");
 

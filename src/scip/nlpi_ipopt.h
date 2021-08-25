@@ -68,7 +68,7 @@ void* SCIPgetNlpiOracleIpopt(
  * It's here, because we use Ipopt's C interface to Lapack.
  */
 SCIP_EXPORT
-SCIP_RETCODE LapackDsyev(
+SCIP_RETCODE SCIPcallLapackDsyevIpopt(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
    int                   N,                  /**< dimension */
    SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
