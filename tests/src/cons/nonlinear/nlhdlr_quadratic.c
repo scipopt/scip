@@ -58,7 +58,9 @@ static SCIP_VAR* t;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_NLHDLR* nlhdlr = NULL;
 
+#ifdef ENABLE_INTERSECTIONCUT
 static RAYS* myrays = NULL;
+#endif
 
 #define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
 
@@ -119,9 +121,11 @@ void setup(void)
 static
 void teardown(void)
 {
+#ifdef ENABLE_INTERSECTIONCUT
    /* free rays */
    if( myrays != NULL )
       freeRays(scip, &myrays);
+#endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
@@ -465,7 +469,7 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/useintersectioncuts", FALSE) );
+   SCIPnlhdlrGetData(nlhdlr)->useintersectioncuts = FALSE;
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
@@ -713,7 +717,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* to register events */
 
    /* detect */
-   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/useintersectioncuts", FALSE) );
+   SCIPnlhdlrGetData(nlhdlr)->useintersectioncuts = FALSE;
 
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;

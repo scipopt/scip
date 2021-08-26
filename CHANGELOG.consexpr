@@ -42,7 +42,7 @@ conshdlr:
 - methods that work on a particular nonlinear structure are now implemented via nonlinearity handlers (nlhdlr);
   these handlers are plugins of cons_nonlinear (thus not the SCIP core) and interact with cons_nonlinear by detecting structures in expressions and providing propagation and separation mechanisms
 - added nlhdlr default as a mandatory nlhdlr: this is a nlhdlr that gets active on expressions that no other nlhdlr handles; it then uses the callbacks implemented in expression handlers to provide domain propagation and linear under/overestimates
-- added nlhdlr for quadratic expressions: domain propagation that was previously part of cons_quadratic; separation via intersection cuts (currently disabled)
+- added nlhdlr for quadratic expressions: domain propagation that was previously part of cons_quadratic
 - added nlhdlr for bilinear expressions: collects bilinear products and provides under/overestimation of a product over a 2D-projection of the LP
 - added nlhdlr for convex and concave expressions: detection of convex/concave subexpressions and linear under/overestimation
 - added nlhdlr for quotients: detects quotients, provides specialized linear under/overestimation and domain propagation for univariate quotients
@@ -75,7 +75,6 @@ conshdlr:
 - when a variable appears in only one concave less-or-equal constraint, it will be fixed to one of its bounds in more cases now
 - new branching rule for variables in nonlinear constraints (implemented in the conshdlr) that scores candidates based on constraint violation, variable type, and pseudo-costs simultaneously
 - added tables to print statistics of nonlinear constraint handler and nonlinear handlers
-- added table to print statistics on quadratic nonlinear handlers
 - knapsack, linear, logicor, setppc, and varbound constraints now add themselves to the NLP relaxation, if enabled
 - and and linking constraints and bounddisjunctions in one variable are added to the NLP relaxation now
 
@@ -543,14 +542,14 @@ nlpi:
 - nlhdlr/concave/enabled, nlhdlr/concave/detectsum, nlhdlr/concave/cvxquadratic, nlhdlr/concave/cvxsignomial, nlhdlr/concave/cvxprodcomp, nlhdlr/concave/handletrivial
 - nlhdlr/bilinear/enabled, nlhdlr/bilinear/useinteval, nlhdlr/bilinear/usereverseprop, nlhdlr/bilinear/maxseparoundsroot, nlhdlr/bilinear/maxseparounds, nlhdlr/bilinear/maxsepadepth
 - nlhdlr/perspective/enabled, nlhdlr/perspective/maxproprounds, nlhdlr/perspective/mindomreduction, nlhdlr/perspective/minviolprobing, nlhdlr/perspective/probingonlyinsepa, nlhdlr/perspective/probingfreq, nlhdlr/perspective/convexonly, nlhdlr/perspective/tightenbounds
-- nlhdlr/quadratic/enabled, nlhdlr/quadratic/useintersectioncuts, nlhdlr/quadratic/usestrengthening, nlhdlr/quadratic/ncutslimit, nlhdlr/quadratic/ncutslimitroot, nlhdlr/quadratic/maxrank, nlhdlr/quadratic/mincutviolation, nlhdlr/quadratic/minviolation, nlhdlr/quadratic/atwhichnodes, nlhdlr/quadratic/nstrengthlimit
+- nlhdlr/quadratic/enabled
 - nlhdlr/quotient/enabled
 - nlhdlr/soc/enabled, nlhdlr/soc/mincutefficacy, nlhdlr/soc/compeigenvalues
 - propagating/obbt/createlincons
 - propagating/symmetry/onlybinarysymmetry
 - separating/minor/priority, separating/minor/freq, separating/minor/maxbounddist, separating/minor/delay, separating/minor/expbackoff, separating/minor/maxminorsconst, separating/minor/maxminorsfac, separating/minor/mincutviol, separating/minor/maxrounds, separating/minor/maxroundsroot, separating/minor/ignorepackingconss
 - separating/rlt/priority, separating/rlt/freq, separating/rlt/maxbounddist, separating/rlt/delay, separating/rlt/expbackoff, separating/rlt/maxncuts, separating/rlt/maxunknownterms, separating/rlt/maxusedvars, separating/rlt/maxrounds, separating/rlt/maxroundsroot, separating/rlt/onlyeqrows, separating/rlt/onlycontrows, separating/rlt/onlyoriginal, separating/rlt/useinsubscip, separating/rlt/useprojection, separating/rlt/detecthidden, separating/rlt/hiddenrlt, separating/rlt/addtopool, separating/rlt/goodscore, separating/rlt/badscore, separating/rlt/objparalweight, separating/rlt/efficacyweight, separating/rlt/dircutoffdistweight, separating/rlt/goodmaxparall, separating/rlt/maxparall
-- table/nonlinear/active, table/nlhdlr/active, table/exprhdlr/active, table/quadratic_nlhdlr_table/active, table/nlpi/active
+- table/nonlinear/active, table/nlhdlr/active, table/exprhdlr/active, table/nlpi/active
 - expr/log/minzerodistance, expr/pow/minzerodistance
 - benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
 - nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
