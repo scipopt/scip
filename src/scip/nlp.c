@@ -3478,7 +3478,6 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->nunflushedvardel   = 0;
    (*nlp)->nunflushednlrowadd = 0;
    (*nlp)->nunflushednlrowdel = 0;
-   (*nlp)->isrelax    = TRUE;
    (*nlp)->indiving   = FALSE;
 
    /* variables in problem and NLPI problem */
