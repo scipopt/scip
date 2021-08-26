@@ -529,7 +529,7 @@ SCIP_RETCODE SCIPnlpiSolve(
    /* check that parameter values are in accepted range (if type allows more than we would accept) */
    if( param->iterlimit < 0 )
    {
-      SCIPerrorMessage("Value %d for parameter iteration limit cannot be negative.\n", param->iterlimit);
+      SCIPerrorMessage("Value %d for parameter iteration limit must be non-negative.\n", param->iterlimit);
       return SCIP_PARAMETERWRONGVAL;
    }
    if( param->feastol < 0.0 )
@@ -537,9 +537,14 @@ SCIP_RETCODE SCIPnlpiSolve(
       SCIPerrorMessage("Value %g for parameter feasibility tolerance cannot be negative\n", param->feastol);
       return SCIP_PARAMETERWRONGVAL;
    }
-   if( param->relobjtol < 0.0 )
+   if( param->opttol < 0.0 )
    {
-      SCIPerrorMessage("Value %g for parameter relative objective tolerance cannot be negative\n", param->relobjtol);
+      SCIPerrorMessage("Value %g for parameter optimality tolerance cannot be negative\n", param->opttol);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   if( param->solvertol < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter solver tolerance cannot be negative\n", param->solvertol);
       return SCIP_PARAMETERWRONGVAL;
    }
    if( param->timelimit < 0.0 )
@@ -779,7 +784,8 @@ int SCIPnlpiGetNSolStat(
 /** adds statistics from one NLPI to another */
 void SCIPnlpiMergeStatistics(
    SCIP_NLPI*            targetnlpi,         /**< NLP interface where to add statistics */
-   SCIP_NLPI*            sourcenlpi          /**< NLP interface from which add statistics */
+   SCIP_NLPI*            sourcenlpi,         /**< NLP interface from which to add statistics */
+   SCIP_Bool             reset               /**< whether to reset statistics in sourcescip */
    )
 {
    int i;
@@ -798,6 +804,21 @@ void SCIPnlpiMergeStatistics(
       targetnlpi->ntermstat[i] += sourcenlpi->ntermstat[i];
    for( i = (int)SCIP_NLPSOLSTAT_GLOBOPT; i <= (int)SCIP_NLPSOLSTAT_UNKNOWN; ++i )
       targetnlpi->nsolstat[i] += sourcenlpi->nsolstat[i];
+
+   if( reset )
+   {
+      sourcenlpi->nproblems = 0;
+      sourcenlpi->nsolves = 0;
+      SCIPclockReset(sourcenlpi->problemtime);
+      sourcenlpi->solvetime = 0.0;
+      sourcenlpi->evaltime = 0.0;
+      sourcenlpi->niter = 0;
+
+      for( i = (int)SCIP_NLPTERMSTAT_OKAY; i <= (int)SCIP_NLPTERMSTAT_OTHER; ++i )
+         sourcenlpi->ntermstat[i] = 0;
+      for( i = (int)SCIP_NLPSOLSTAT_GLOBOPT; i <= (int)SCIP_NLPSOLSTAT_UNKNOWN; ++i )
+         sourcenlpi->nsolstat[i] = 0;
+   }
 }
 
 /**@} */ /* Statistics */

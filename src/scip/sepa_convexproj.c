@@ -371,7 +371,7 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPsolveNlpi(scip, sepadata->nlpi, sepadata->nlpiprob,
       .iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX,
       .feastol = SCIPfeastol(scip) / 10.0, /* use tighter tolerances for the NLP solver */
-      .relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
+      .opttol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, sepadata->nlpi, sepadata->nlpiprob));
 
    /* if solution is feasible, add cuts */

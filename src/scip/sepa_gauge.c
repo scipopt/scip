@@ -256,7 +256,7 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob,
       .iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX,
       .feastol = NLPFEASFAC * SCIPfeastol(scip),
-      .relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );   /*lint !e666*/
+      .opttol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );   /*lint !e666*/
    SCIPdebugMsg(scip, "finish interior point computation\n");
 
 #ifdef SCIP_DEBUG

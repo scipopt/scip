@@ -125,7 +125,8 @@ int SCIPnlpiGetNSolStat(
 SCIP_EXPORT
 void SCIPnlpiMergeStatistics(
    SCIP_NLPI*            targetnlpi,         /**< NLP interface where to add statistics */
-   SCIP_NLPI*            sourcenlpi          /**< NLP interface from which add statistics */
+   SCIP_NLPI*            sourcenlpi,         /**< NLP interface from which to add statistics */
+   SCIP_Bool             reset               /**< whether to reset statistics in sourcescip */
    );
 
 /**@} */ /* Statistics */

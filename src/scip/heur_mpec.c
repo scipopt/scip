@@ -353,7 +353,7 @@ SCIP_RETCODE heurExec(
 
    /* set parameters of NLP solver */
    nlpparam.feastol /= 10.0;
-   nlpparam.relobjtol /= 10.0;
+   nlpparam.opttol /= 10.0;
    nlpparam.iterlimit = heurdata->maxnlpiter;
 
    /* main loop */
@@ -423,9 +423,7 @@ SCIP_RETCODE heurExec(
             SCIP_CALL( SCIPsetSolVal(scip, refpoint, var, val) );
          }
 
-         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, -1LL,
-               heurdata->minimprove, NULL,
-               NULL) );
+         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
          SCIPdebugMsg(scip, "result of sub-NLP call: %d\n", subnlpresult);
 

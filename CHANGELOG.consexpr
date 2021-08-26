@@ -93,6 +93,7 @@ Performance improvements
 - products in nonlinear constraints are no longer disaggregated for the extended formulation
 - no longer relax bounds of integral variables when computing bounds on activity in nonlinear constraints
 - revised and improved Ipopt interface
+- revised and improved subNLP primal heuristic, in particular choice of iteration limit and starting condition and reuse of subSCIP
 
 Examples and applications
 -------------------------
@@ -131,7 +132,7 @@ Interface changes
 - removed refpoint argument from SCIPaddSquareSecant()
 - added argument exprdata to SYMcomputeSymmetryGenerators()
 - removed SCIPconsNonlinearGetRhs(), SCIPconsNonlinearGetLhs(), SCIPconsNonlinearAddLinearCoef()
-- removed parameter timelimit from SCIPapplyHeurSubNlp()
+- removed arguments timelimit, minimprove, itercontingent, and iterused from SCIPapplyHeurSubNlp()
 - removed SCIPresolveSolHeurSubNlp(), SCIPgetSubScipHeurSubNlp(), SCIPgetVarMappingScip2SubScipHeurSubNlp(), SCIPgetVarMappingSubScip2ScipHeurSubNlp()
 - SCIPlockVarCons() and SCIPunlockVarCons() are now allowed in stage TRANSFORMED as well
 
@@ -390,6 +391,7 @@ nlpi:
 - added SCIPexprcurvPowerInv(), SCIPexprcurvMonomialInv()
 - added SCIPsetClockEnabled()
 - added SCIPisSolveInterrupted() to check whether SCIPinterruptSolve() has been called
+- added SCIPgetNPresolRounds()
 
 expression handler:
 - added SCIPincludeExprhdlr(), SCIPgetExprhdlrs(), SCIPgetNExprhdlrs(), SCIPfindExprhdlr()
@@ -520,12 +522,16 @@ nlpi:
 - changed default of presolving/qpkktref/maxrounds from -1 to 0
 - changed default of propagating/obbt/onlynonconvexvars from FALSE to TRUE
 - changed default of heuristics/subnlp/resolvetolfactor from 0.001 to 1.0
-- changed default of heuristics/subnlp/nlpiterlimit from 0 (no limit) to 3000
 - removed heuristics/subnlp/nlpoptfile, use nlpi/ipopt/optfile instead
 - removed separating/convexproj/nlptimelimit
 - removed separating/gauge/nlptimelimit
-- removed heuristics/subnlp/nlptimelimit
+- removed heuristics/subnlp/nlptimelimit and heuristics/subnlp/nlpiterlimit
 - removed heuristics/subnlp/resolvetolfactor and heuristics/subnlp/resolvefromscratch
+- changed default of heuristics/subnlp/itermin to 20
+- renamed heuristics/subnlp/iteroffset to heuristics/subnlp/nodesoffset
+- renamed heuristics/subnlp/iterquotient to heuristics/subnlp/nodesfactor
+- removed heuristics/subnlp/runalways, use heuristics/subnlp/nodesoffset=INT_MAX and heuristics/subnlp/successrateexp = 0.0 instead
+- removed heuristics/subnlp/minimprove, heuristics/multistart/nlpminimpr
 
 ### New parameters
 
@@ -554,7 +560,11 @@ nlpi:
 - benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
 - nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
 - nlpi/ipopt/print_level, nlpi/ipopt/hsllib, nlpi/ipopt/pardisolib, nlpi/ipopt/linear_system_scaling, nlpi/ipopt/nlp_scaling_method, nlpi/ipopt/mu_strategy, nlpi/ipopt/hessian_approximation
+- nlpi/ipopt/warm_start_push
 - timing/nlpieval
+- heuristics/subnlp/iterinit, heuristics/subnlp/ninitsolves, heuristics/subnlp/successrateexp
+- heuristics/subnlp/expectinfeas, heuristics/subnlp/opttol, heuristics/subnlp/feastolfactor
+- heuristics/subnlp/presolveemphasis, heuristics/subnlp/setcutoff
 
 ### Data structures and types
 
