@@ -2821,7 +2821,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectQuadratic)
    SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
 
    /* not quadratic -> nothing for us */
-   if( ! isquadratic )
+   if( !isquadratic )
    {
       SCIPdebugMsg(scip, "expr %p is not quadratic -> abort detect\n", (void*)expr);
       return SCIP_OKAY;
@@ -2836,11 +2836,10 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectQuadratic)
       return SCIP_OKAY;
    }
 
-   /* If we do not use intersection cuts, then we only generate cut for convex quadratics; however, if a convex
-    * quadratic is not propagable, we do not want to handle it; otherwise, we need to check the curvature to decide if
-    * we want to handle it or not.
+   /* if we do not use intersection cuts and are not propagable, then we do not want to handle it at all;
+    * if not propagable, then we need to check the curvature to decide if we want to generate intersection cuts
     */
-   if( ! propagable && ! nlhdlrdata->useintersectioncuts )
+   if( !propagable && !nlhdlrdata->useintersectioncuts )
    {
       SCIPdebugMsg(scip, "expr %p is not propagable -> abort detect\n", (void*)expr);
       return SCIP_OKAY;
