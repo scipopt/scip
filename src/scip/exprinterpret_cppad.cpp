@@ -1312,7 +1312,7 @@ void evalIntPower(
    resultant = Type(1.0)/arg;
 }
 
-/** CppAD compatible evaluation of an expression for given arguments and parameters */
+/** CppAD compatible evaluation of an expression for given arguments */
 template<class Type>
 static
 SCIP_RETCODE eval(
@@ -1506,7 +1506,10 @@ SCIP_RETCODE SCIPexprintFree(
 
 /** compiles an expression and returns interpreter-specific data for expression
  *
- * @attention the expression is assumed to use varidx expressions but no var expressions
+ * can be called again with existing exprintdata if expression has been changed
+ *
+ * @attention *exprintdata needs to be initialized to NULL at first call
+ * @attention the expression is assumed to use varidx expressions instead of var expressions
  */
 SCIP_RETCODE SCIPexprintCompile(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1657,7 +1660,7 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetExprCapability(
    return exprintdata->userevalcapability;
 }/*lint !e715*/
 
-/** evaluates an expression tree */
+/** evaluates an expression */
 SCIP_RETCODE SCIPexprintEval(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -1733,7 +1736,7 @@ SCIP_RETCODE SCIPexprintEval(
    return SCIP_OKAY;
 }
 
-/** computes value and gradient of an expression tree */
+/** computes value and gradient of an expression */
 SCIP_RETCODE SCIPexprintGrad(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -1797,11 +1800,11 @@ SCIP_RETCODE SCIPexprintGrad(
    return SCIP_OKAY;
 }
 
-/** gives sparsity pattern of lower-triangular part of hessian
+/** gives sparsity pattern of lower-triangular part of Hessian
  *
- * Since the AD code might need to do a forward sweep, you should pass variable values in here.
+ * Since the AD code might need to do a forward sweep, variable values need to be passed in here.
  *
- * Result will have (*colidxs)[i] <= (*rowidixs)[i] for i=0..*nnz.
+ * Result will have `(*colidxs)[i] <= (*rowidixs)[i]` for `i=0..*nnz`.
  */
 SCIP_RETCODE SCIPexprintHessianSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1970,10 +1973,10 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
    return SCIP_OKAY;
 }
 
-/** computes value and hessian of an expression
+/** computes value and Hessian of an expression
  *
- * Returned arrays rowidxs and colidxs and number of elements nnz are the same as given by SCIPexprintHessianSparsity().
- * Returned array hessianvals will contain the corresponding Hessian elements.
+ * Returned arrays `rowidxs` and `colidxs` and number of elements `nnz` are the same as given by SCIPexprintHessianSparsity().
+ * Returned array `hessianvals` will contain the corresponding Hessian elements.
  */
 SCIP_RETCODE SCIPexprintHessian(
    SCIP*                 scip,               /**< SCIP data structure */

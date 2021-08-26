@@ -37,7 +37,7 @@ const char* SCIPexprintGetDesc(
    void
    )
 {
-   return "dummy expression interpreter which solely purpose it is to resolve linking symbols";
+   return "dummy expression interpreter which sole purpose it is to resolve linking symbols";
 }  /*lint !e715*/
 
 /** gets capabilities of expression interpreter (using bitflags) */
@@ -54,9 +54,6 @@ SCIP_RETCODE SCIPexprintCreate(
    SCIP_EXPRINT**        exprint             /**< buffer to store pointer to expression interpreter */
    )
 {
-   SCIPdebugMessage("SCIPexprintCreate()\n");
-   SCIPdebugMessage("Note that there is no expression interpreter linked to the binary.\n");
-
    *exprint = (SCIP_EXPRINT*)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
 
    return SCIP_OKAY;
@@ -73,7 +70,13 @@ SCIP_RETCODE SCIPexprintFree(
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** compiles an expression and stores compiled data in expression */
+/** compiles an expression and returns interpreter-specific data for expression
+ *
+ * can be called again with existing exprintdata if expression has been changed
+ *
+ * @attention *exprintdata needs to be initialized to NULL at first call
+ * @attention the expression is assumed to use varidx expressions instead of var expressions
+ */
 SCIP_RETCODE SCIPexprintCompile(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -84,7 +87,7 @@ SCIP_RETCODE SCIPexprintCompile(
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** frees interpreter data */
+/** frees interpreter data for expression */
 SCIP_RETCODE SCIPexprintFreeData(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -145,11 +148,11 @@ SCIP_RETCODE SCIPexprintGrad(
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
 
-/** gives sparsity pattern of lower-triangular part of hessian
+/** gives sparsity pattern of lower-triangular part of Hessian
  *
- * Since the AD code might need to do a forward sweep, you should pass variable values in here.
+ * Since the AD code might need to do a forward sweep, variable values need to be passed in here.
  *
- * Result will have (*colidxs)[i] <= (*rowidixs)[i] for i=0..*nnz.
+ * Result will have `(*colidxs)[i] <= (*rowidixs)[i]` for `i=0..*nnz`.
  */
 SCIP_RETCODE SCIPexprintHessianSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -166,10 +169,10 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
 
-/** computes value and hessian of an expression
+/** computes value and Hessian of an expression
  *
- * Returned arrays rowidxs and colidxs and number of elements nnz are the same as given by SCIPexprintHessianSparsity().
- * Returned array hessianvals will contain the corresponding Hessian elements.
+ * Returned arrays `rowidxs` and `colidxs` and number of elements `nnz` are the same as given by SCIPexprintHessianSparsity().
+ * Returned array `hessianvals` will contain the corresponding Hessian elements.
  */
 SCIP_RETCODE SCIPexprintHessian(
    SCIP*                 scip,               /**< SCIP data structure */

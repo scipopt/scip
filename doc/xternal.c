@@ -5038,13 +5038,14 @@
 
 /**@page EXPRINT How to add interfaces to expression interpreters
  *
- * An expression interpreter is a tool to compute point-wise and interval-wise the function values, gradients, and
- * derivatives of algebraic expressions which are given in the form of an expression tree.
+ * An expression interpreter is a tool to compute point-wise the function values, gradients, and
+ * Hessians of algebraic expressions which are given in the form of an expression.
+ * Typically, this is done via automatic differentiation.
  * It is used, e.g., by an NLP solver interface to compute Jacobians and Hessians for the solver.
  *
  * The expression interpreter interface in SCIP has been implemented similar to those of the LP solver interface (LPI).
  * For one binary, exactly one expression interpreter has to be linked.
- * The expression interpreter API has been designed such that it can be used independently from SCIP.
+ * The expression interpreter API has been designed such that it can be used independently from a SCIP problem.
  *
  * A complete list of all expression interpreters contained in this release can be found \ref EXPRINTS "here".
  *
@@ -5053,89 +5054,83 @@
  * Unlike most other plugins, it is written in C++.
  *
  * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters,
- * can be found in the file \ref exprinterpret.h
+ * can be found in the file \ref exprinterpret.h.
  *
  * Here is what you have to do to implement an expression interpreter:
- * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpreti_myexprinterpret.c".
- *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor.
+ * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpret_myad.c".
+ *    Make sure to adjust your Makefile such that this file is compiled and linked to your project instead of exprinterpret implementations.
+ * -# Open the new file with a text editor.
  * -# Define the expression interpreter data (see \ref EXPRINT_DATA).
  * -# Implement the interface methods (see \ref EXPRINT_INTERFACE).
  *
  *
  * @section EXPRINT_DATA Expression Interpreter Data
  *
- * In "struct SCIP_ExprInt", you can store the general data of your expression interpreter.
- * For example, you could store a pointer to the block memory data structure.
+ * In `struct SCIP_ExprInt`, you can store the general data of your expression interpreter.
+ * For example, you could store the environment of your automatic differentiation code.
  *
  * @section EXPRINT_INTERFACE Interface Methods
  *
  * The expression interpreter has to implement a set of interface method.
- * In your "exprinterpret_myexprinterpret.c", these methods are mostly dummy methods that return error codes.
+ * In your "exprinterpret_myad.c", these methods are mostly dummy methods that return error codes.
  *
  * @subsection SCIPexprintGetName
  *
- * The SCIPexprintGetName method should return the name of the expression interpreter.
+ * The SCIPexprintGetName() method should return the name of the expression interpreter.
  *
  * @subsection SCIPexprintGetDesc
  *
- * The SCIPexprintGetDesc method should return a short description of the expression interpreter, e.g., the name of the developer of the code.
+ * The SCIPexprintGetDesc() method should return a short description of the expression interpreter, e.g., the name of the developer of the code.
  *
  * @subsection SCIPexprintGetCapability
  *
- * The SCIPexprintGetCapability method should return a bitmask that indicates the capabilities of the expression interpreter,
- * i.e., whether it can evaluate gradients, Hessians, or do interval arithmetic.
+ * The SCIPexprintGetCapability() method should return a bitmask that indicates the capabilities of the expression interpreter,
+ * i.e., whether it can compute gradients and Hessians.
  *
  * @subsection SCIPexprintCreate
  *
- * The SCIPexprintCreate method is called to create an expression interpreter data structure.
- * The method should initialize a "struct SCIP_ExprInt" here.
+ * The SCIPexprintCreate() method is called to create an expression interpreter data structure.
+ * The method should initialize a `struct SCIP_ExprInt` here.
  *
  * @subsection SCIPexprintFree
  *
- * The SCIPexprintFree method is called to free an expression interpreter data structure.
- * The method should free a "struct SCIP_ExprInt" here.
+ * The SCIPexprintFree() method is called to free an expression interpreter data structure.
+ * The method should free a `struct SCIP_ExprInt` here.
  *
  * @subsection SCIPexprintCompile
  *
- * The SCIPexprintCompile method is called to initialize the data structures that are required to evaluate
- * a particular expression tree.
- * The expression interpreter can store data that is particular to a given expression tree in the tree by using
- * SCIPexprtreeSetInterpreterData().
+ * The SCIPexprintCompile() method is called to initialize the data structures that are required to evaluate a particular expression.
+ * The expression interpreter can create and return data that is particular to a given expression in the argument `exprintdata`.
  *
  * @subsection SCIPexprintFreeData
  *
- * The SCIPexprintFreeData method is called when an expression tree is freed.
- * The expression interpreter should free the given data structure.
+ * The SCIPexprintFreeData() method is called to free the data that is particular to a given expression and was possibly created in SCIPexprintCompile().
  *
- * @subsection SCIPexprintNewParametrization
+ * @subsection SCIPexprintGetExprCapability
  *
- * The SCIPexprintNewParametrization method is called when the values of the parameters in a parametrized expression tree have changed.
+ * The SCIPexprintGetExprCapability() method is called to request the capability to evaluate a specific expression by the expression interpreter.
+ *
+ * In cases of user-given expressions, higher order derivatives may not be available for the user-expression,
+ * even if the expression interpreter could handle these. This method allows to recognize that, e.g., the
+ * Hessian for an expression is not available because it contains a user expression that does not provide
+ * Hessians.
  *
  * @subsection SCIPexprintEval
  *
- * The SCIPexprintEval method is called when the value of an expression represented by an expression tree should be computed for a point.
- *
- * @subsection SCIPexprintEvalInt
- *
- * The SCIPexprintEvalInt method is called when an interval that contains the range of an expression represented by an expression tree with respect to intervals for the variables should be computed.
+ * The SCIPexprintEval() method is called when the value of an expression should be computed for a point.
  *
  * @subsection SCIPexprintGrad
  *
- * The SCIPexprintGrad method is called when the gradient of an expression represented by an expression tree should be computed for a point.
+ * The SCIPexprintGrad() method is called when the gradient of an expression represented by an expression should be computed for a point.
  *
- * @subsection SCIPexprintGradInt
+ * @subsection SCIPexprintHessianSparsity
  *
- * The SCIPexprintGradInt method is called when an interval vector that contains the range of the gradients of an expression represented by an expression tree with respect to intervals for the variables should be computed.
+ * The SCIPexprintHessianSparsity() method is called when the sparsity structure of the Hessian matrix should be computed and returned.
+ * Only the position of nonzero entries in the lower-triangular part of Hessian should be reported.
  *
- * @subsection SCIPexprintHessianSparsityDense
+ * @subsection SCIPexprintHessian
  *
- * The SCIPexprintHessianSparsityDense method is called when the sparsity structure of the Hessian matrix should be computed and returned in dense form.
- *
- * @subsection SCIPexprintHessianDense
- *
- * The SCIPexprintHessianDense method is called when the Hessian of an expression represented by an expression tree should be computed for a point.
+ * The SCIPexprintHessian() method is called when the Hessian of an expression should be computed for a point.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

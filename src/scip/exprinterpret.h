@@ -17,15 +17,14 @@
  * @brief  methods to interpret (evaluate) an expression "fast"
  * @ingroup EXPRINTS
  * @author Stefan Vigerske
- * @author Thorsten Gellermann
+ *
  * Realized similar to LPI: one implementation of an interpreter is linked in.
  */
 
 /* @todo product Gradient times vector
    @todo product Hessian times vector
-   @todo product Hessian of Lagrangian times vector
-   @todo sparse Hessian of expression
-   @todo sparse Hessian of Lagrangian (sets of expressions and quadratic parts)?
+   @todo product Hessian of Lagrangian times vector?
+   @todo sparse Hessian of Lagrangian (sets of expressions)?
 */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -77,7 +76,7 @@ SCIP_RETCODE SCIPexprintFree(
  * can be called again with existing exprintdata if expression has been changed
  *
  * @attention *exprintdata needs to be initialized to NULL at first call
- * @attention the expression is assumed to use varidx expressions but no var expressions
+ * @attention the expression is assumed to use varidx expressions instead of var expressions
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintCompile(
@@ -135,11 +134,11 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIP_Real*            gradient            /**< buffer to store expression gradient */
    );
 
-/** gives sparsity pattern of lower-triangular part of hessian
+/** gives sparsity pattern of lower-triangular part of Hessian
  *
- * Since the AD code might need to do a forward sweep, you should pass variable values in here.
+ * Since the AD code might need to do a forward sweep, variable values need to be passed in here.
  *
- * Result will have (*colidxs)[i] <= (*rowidixs)[i] for i=0..*nnz.
+ * Result will have `(*colidxs)[i] <= (*rowidixs)[i]` for `i=0..*nnz`.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintHessianSparsity(
@@ -153,10 +152,10 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
    int*                  nnz                 /**< buffer to return length of arrays */
    );
 
-/** computes value and hessian of an expression
+/** computes value and Hessian of an expression
  *
- * Returned arrays rowidxs and colidxs and number of elements nnz are the same as given by SCIPexprintHessianSparsity().
- * Returned array hessianvals will contain the corresponding Hessian elements.
+ * Returned arrays `rowidxs` and `colidxs` and number of elements `nnz` are the same as given by SCIPexprintHessianSparsity().
+ * Returned array `hessianvals` will contain the corresponding Hessian elements.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintHessian(

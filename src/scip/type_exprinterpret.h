@@ -17,7 +17,6 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for expression interpreter
  * @author Stefan Vigerske
- * @author Thorsten Gellermann
  */
 
 /** @defgroup DEFPLUGINS_EXPRINT Default expression interpreter
