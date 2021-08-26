@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   exprcurv.c
+ * @ingroup OTHER_CFILES
  * @brief  functions to work with curvature (convex, concave, etc)
  * @author Stefan Vigerske
  *
@@ -117,7 +118,8 @@ SCIP_EXPRCURV SCIPexprcurvPower(
       SCIP_INTERVAL leftbounds;
       SCIP_INTERVAL rightbounds;
 
-      /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole interval due to the singularity at 0.0 */
+      /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole interval
+       * due to the singularity at 0.0 */
       if( exponent < 0.0 )
          return SCIP_EXPRCURV_UNKNOWN;
 
@@ -187,6 +189,7 @@ SCIP_EXPRCURV SCIPexprcurvPower(
 }
 
 /** gives required curvature for base so that base^exponent has given curvature under given bounds on base and constant exponent
+ *
  * returns curvature unknown if expected curvature cannot be obtained
  */
 SCIP_EXPRCURV SCIPexprcurvPowerInv(
@@ -229,7 +232,8 @@ SCIP_EXPRCURV SCIPexprcurvPowerInv(
       SCIP_EXPRCURV leftcurv;
       SCIP_EXPRCURV rightcurv;
 
-      /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole interval due to the singularity at 0.0 */
+      /* something like x^(-2) may look convex on each side of zero, but is not convex on the whole
+       * interval due to the singularity at 0.0 */
       if( exponent < 0.0 )
          return SCIP_EXPRCURV_UNKNOWN;
 
@@ -307,6 +311,8 @@ SCIP_EXPRCURV SCIPexprcurvPowerInv(
  *
  *  See Maranas and Floudas, Finding All Solutions of Nonlinearly Constrained Systems of Equations, JOGO 7, 1995
  *  for the categorization in the case that all factors are linear.
+ *
+ *  Exponents can also be negative or rational.
  */
 SCIP_EXPRCURV SCIPexprcurvMonomial(
    int                   nfactors,           /**< number of factors in monomial */
@@ -429,9 +435,10 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
    return curv;
 }
 
-/** for a monomial with given bounds for each factor, gives condition on the curvature of each factor, so that monomial has a requested curvature, if possible
+/** for a monomial with given bounds for each factor, gives condition on the curvature of each factor,
+ * so that monomial has a requested curvature, if possible
  *
- * @return whether monomialcurv can be achieved
+ * @return whether `monomialcurv` can be achieved
  */
 SCIP_Bool SCIPexprcurvMonomialInv(
    SCIP_EXPRCURV         monomialcurv,       /**< desired curvature */
@@ -527,7 +534,9 @@ SCIP_Bool SCIPexprcurvMonomialInv(
       for( j = 0; j < nfactors; ++j )
       {
          e = exponents != NULL ? exponents[j] : 1.0;
-         if( factorbounds[j].inf < 0.0 && EPSISINT(e, 0.0) )  /* if factor is negative, then factorcurv[j] need to be flipped, which we can also get by flipping e */  /*lint !e835*/
+
+         /* if factor is negative, then factorcurv[j] need to be flipped, which we can also get by flipping e */
+         if( factorbounds[j].inf < 0.0 && EPSISINT(e, 0.0) )  /*lint !e835*/
             e = -e;
          if( e >= 0.0 )
             factorcurv[j] = SCIP_EXPRCURV_CONVEX;
@@ -547,7 +556,9 @@ SCIP_Bool SCIPexprcurvMonomialInv(
       for( j = 0; j < nfactors; ++j )
       {
          e = exponents != NULL ? exponents[j] : 1.0;
-         if( factorbounds[j].inf < 0.0 && EPSISINT(e, 0.0) )  /* if factor is negative, then factorcurv[j] need to be flipped, i.e. convex */  /*lint !e835*/
+
+         /* if factor is negative, then factorcurv[j] need to be flipped, i.e. convex */
+         if( factorbounds[j].inf < 0.0 && EPSISINT(e, 0.0) )  /*lint !e835*/
             factorcurv[j] = SCIP_EXPRCURV_CONVEX;
          else
             factorcurv[j] = SCIP_EXPRCURV_CONCAVE;

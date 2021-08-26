@@ -3,18 +3,19 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_nlhdlr.h
  * @brief  public functions of nonlinear handlers of nonlinear constraints
+ * @ingroup PUBLICCOREAPI
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
  * @author Felipe Serrano
@@ -32,31 +33,33 @@ extern "C" {
 #include "scip/type_scip.h"
 #include "scip/type_nlhdlr.h"
 
-/**@name Nonlinear Handler Methods */
-/**@{ */
+/**@addtogroup PublicNlhdlrInterfaceMethods
+ *
+ * @{
+ */
 
-/** set the copy handler callback of a nonlinear handler */
+/** sets the copy handler callback of a nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetCopyHdlr(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRCOPYHDLR((*copy))         /**< copy callback (can be NULL) */
 );
 
-/** set the nonlinear handler callback to free the nonlinear handler data */
+/** sets the nonlinear handler callback to free the nonlinear handler data */
 SCIP_EXPORT
 void SCIPnlhdlrSetFreeHdlrData(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
 );
 
-/** set the nonlinear handler callback to free expression specific data of nonlinear handler */
+/** sets the nonlinear handler callback to free expression specific data of nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetFreeExprData(
    SCIP_NLHDLR*          nlhdlr,            /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
 );
 
-/** set the initialization and deinitialization callback of a nonlinear handler */
+/** sets the initialization and deinitialization callback of a nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetInitExit(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
@@ -64,7 +67,7 @@ void SCIPnlhdlrSetInitExit(
    SCIP_DECL_NLHDLREXIT((*exit))             /**< deinitialization callback (can be NULL) */
 );
 
-/** set the propagation callbacks of a nonlinear handler */
+/** sets the propagation callbacks of a nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetProp(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
@@ -72,7 +75,7 @@ void SCIPnlhdlrSetProp(
    SCIP_DECL_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
-/** set the enforcement callbacks of a nonlinear handler */
+/** sets the enforcement callbacks of a nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetSepa(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */

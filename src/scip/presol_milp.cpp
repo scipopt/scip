@@ -309,39 +309,35 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* set up the presolvers that shall participate */
    using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
 
+   /* fast presolvers*/
    presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
+
+   /* medium presolver */
+   presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
+   if( data->enableparallelrows )
+      presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
+   /* todo: parallel cols cannot be handled by SCIP currently
+   * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
    presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
-
-   if( data->enableparallelrows )
-       presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
-
-   /* todo: parallel cols cannot be handled by SCIP currently
-    * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
-
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
 
+   /* exhaustive presolvers*/
+   presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
    if( data->enabledualinfer )
-       presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
-
-   if( data->enablemultiaggr )
-       presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
-
+      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
    if( data->enableprobing )
-       presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-
+      presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
    if( data->enabledomcol )
-       presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
-
-    if( data->enablesparsify )
+      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+   if( data->enablemultiaggr )
+      presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
+   if( data->enablesparsify )
       presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
-
-   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
 
 
    /* set tolerances */
@@ -696,9 +692,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization [GitHash: {}]", PAPILO_GITHASH);
+   String desc = fmt::format("parallel presolve for integer and linear optimization (https://github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
 #else
-   String desc("parallel presolve for integer and linear optimization");
+   String desc("parallel presolve for integer and linear optimization (https://github.com/scipopt/papilo)");
 #endif
 
    /* add external code info for the presolve library */

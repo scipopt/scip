@@ -30,8 +30,7 @@
 #include "scip/expr_pow.h"
 #include "scip/expr_product.h"
 #include "scip/expr_sum.h"
-#include "scip/expr_sin.h"
-#include "scip/expr_cos.h"
+#include "scip/expr_trig.h"
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
 #include "scip/nlhdlr_soc.c"
@@ -71,14 +70,14 @@ void setup(void)
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
 
    /* include some expr handlers */
-   SCIP_CALL( SCIPincludeExprHdlrExp(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrProduct(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert_not_null(conshdlr);

@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPincludeDialog(
    assert(scip != NULL);
    assert(dialog != NULL);
 
-   /* check whether display column is already present */
+   /* check whether dialog is already present */
    if( dialogcopy != NULL && SCIPexistsDialog(scip, *dialog) )
    {
       SCIPerrorMessage("dialog <%s> already included.\n", name);

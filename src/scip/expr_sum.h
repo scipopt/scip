@@ -38,7 +38,7 @@ extern "C" {
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrSum(
+SCIP_RETCODE SCIPincludeExprhdlrSum(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPincludeExprHdlrSum(
  *
  * @{
  *
- * @name Sum expression.
+ * @name Sum expression
  *
  * This expression handler provides the sum function, that is,
  * \f[

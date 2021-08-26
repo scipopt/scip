@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_nl.cpp
+ * @ingroup DEFPLUGINS_READER
  * @brief  AMPL .nl file reader
  * @author Stefan Vigerske
  *
@@ -39,8 +40,7 @@
 #include "scip/expr_pow.h"
 #include "scip/expr_log.h"
 #include "scip/expr_exp.h"
-#include "scip/expr_sin.h"
-#include "scip/expr_cos.h"
+#include "scip/expr_trig.h"
 #include "scip/expr_abs.h"
 
 // disable -Wshadow warnings for upcoming includes of AMPL/MP

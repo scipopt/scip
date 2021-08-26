@@ -553,7 +553,7 @@ void teardown(void)
 }
 
 Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
-   .description = "test basic functionality of nonlinear handler of the cons_expr constraint handler."
+   .description = "test basic functionality of nonlinear handler of the nonlinear constraint handler."
    )
 {
    SCIP_NLHDLR* nlhdlr;

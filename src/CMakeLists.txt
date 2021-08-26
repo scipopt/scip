@@ -9,6 +9,11 @@ endfunction(setLibProperties)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
+set(CMAKE_C_EXTENSIONS OFF)
+
+if(NOT WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=600")
+endif()
 
 #configure the scipbuildflags.c source file for the build tree
 configure_file(${PROJECT_SOURCE_DIR}/src/scipbuildflags.c.in
@@ -78,15 +83,14 @@ set(scipsources
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/expr_abs.c
-    scip/expr_cos.c
     scip/expr_entropy.c
     scip/expr_erf.c
     scip/expr_exp.c
     scip/expr_log.c
     scip/expr_pow.c
     scip/expr_product.c
-    scip/expr_sin.c
     scip/expr_sum.c
+    scip/expr_trig.c
     scip/expr_value.c
     scip/expr_var.c
     scip/expr_varidx.c
@@ -324,7 +328,6 @@ set(scipsources
     scip/scip_nlp.c
     scip/scip_nlpi.c
     scip/scip_nodesel.c
-    scip/scip_nonlinear.c
     scip/scip_numerics.c
     scip/scip_param.c
     scip/scip_presol.c
@@ -529,15 +532,14 @@ set(scipheaders
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/expr_abs.h
-    scip/expr_cos.h
     scip/expr_entropy.h
     scip/expr_erf.h
     scip/expr_exp.h
     scip/expr_log.h
     scip/expr_pow.h
     scip/expr_product.h
-    scip/expr_sin.h
     scip/expr_sum.h
+    scip/expr_trig.h
     scip/expr_value.h
     scip/expr_var.h
     scip/expr_varidx.h
@@ -773,7 +775,6 @@ set(scipheaders
     scip/scip_nlp.h
     scip/scip_nlpi.h
     scip/scip_nodesel.h
-    scip/scip_nonlinear.h
     scip/scip_numerics.h
     scip/scip_param.h
     scip/scip_presol.h

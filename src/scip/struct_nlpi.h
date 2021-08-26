@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_nlpi.h
+ * @ingroup INTERNALAPI
  * @brief  data definitions for an NLP solver interface
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
@@ -53,22 +54,23 @@ struct SCIP_Nlpi
    SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs));     /**< change coefficients in linear part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPR           ((*nlpichgexpr));            /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant));     /**< change the constant offset in the objective */
-   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess));    /**< set initial guess for primal variables in a problem  */
+   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess));    /**< set initial guess */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve));              /**< solve a problem */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat));         /**< get solution status for a problem  */
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat));        /**< get termination status for a problem  */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution));        /**< get solution of a problem  */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics));      /**< get solve statistics for a problem  */
-   SCIP_DECL_NLPIGETWARMSTARTSIZE  ((*nlpigetwarmstartsize));   /**< get size for warmstart object buffer for a problem  */
-   SCIP_DECL_NLPIGETWARMSTARTMEMO  ((*nlpigetwarmstartmemo));   /**< get warmstart object for a problem  */
-   SCIP_DECL_NLPISETWARMSTARTMEMO  ((*nlpisetwarmstartmemo));   /**< set warmstart object for a problem  */
-   SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar));          /**< get value of integer parameter in a problem  */
-   SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar));          /**< set value of integer parameter in a problem  */
-   SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar));         /**< get value of floating point parameter in a problem  */
-   SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar));         /**< set value of floating point parameter in a problem  */
-   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar));       /**< get value of string parameter in a problem  */
-   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar));       /**< set value of string parameter in a problem  */
    SCIP_NLPIDATA*                  nlpidata;                    /**< NLP interface local data */
+
+   /* statistics */
+   int                             nproblems;                   /**< number of problems created */
+   int                             nsolves;                     /**< number of solves */
+   SCIP_CLOCK*                     problemtime;                 /**< time spend in problem setup and modification */
+   SCIP_Real                       solvetime;                   /**< time spend in solve as reported by solver */
+   SCIP_Real                       evaltime;                    /**< time spend in function evaluation during solve */
+   SCIP_Longint                    niter;                       /**< total number of iterations */
+   int                             ntermstat[SCIP_NLPTERMSTAT_OTHER+1]; /**< number of times a specific termination status occurred */
+   int                             nsolstat[SCIP_NLPSOLSTAT_UNKNOWN+1]; /**< number of times a specific solution status occurred */
 };
 
 #ifdef __cplusplus

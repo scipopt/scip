@@ -60,8 +60,8 @@ struct SCIP_NlpiOracle
    SCIP_Real*            varlbs;             /**< array with variable lower bounds */
    SCIP_Real*            varubs;             /**< array with variable upper bounds */
    char**                varnames;           /**< array with variable names */
-   int*                  vardegrees;         /**< array with maximal degree of variable over objective and all constraints */
-   SCIP_Bool             vardegreesuptodate; /**< whether the variable degrees are up to date */
+   int*                  varlincount;        /**< array with number of appearances of variable in linear part of objective or constraints */
+   int*                  varnlcount;         /**< array with number of appearances of variable in nonlinear part of objective or constraints */
 
    int                   consssize;          /**< length of constraints related arrays */
    int                   nconss;             /**< number of constraints */
@@ -76,6 +76,7 @@ struct SCIP_NlpiOracle
    int*                  heslagcols;         /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
 
    SCIP_EXPRINT*         exprinterpreter;    /**< interpreter for expressions: evaluation and derivatives */
+   SCIP_CLOCK*           evalclock;          /**< clock measuring evaluation time */
 };
 
 /**@} */
@@ -87,7 +88,7 @@ struct SCIP_NlpiOracle
 /**@name Local functions */
 /**@{ */
 
-/** ensures that variables related arrays in oracle have at least a given length */
+/** ensures that those arrays in oracle that store information on variables have at least a given length */
 static
 SCIP_RETCODE ensureVarsSize(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -110,7 +111,8 @@ SCIP_RETCODE ensureVarsSize(
       {
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->varnames, oracle->varssize, newsize) );
       }
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->vardegrees, oracle->varssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->varlincount, oracle->varssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &oracle->varnlcount, oracle->varssize, newsize) );
 
       oracle->varssize = newsize;
    }
@@ -227,6 +229,51 @@ void invalidateHessianLagSparsity(
    SCIPfreeBlockMemoryArray(scip, &oracle->heslagoffsets, oracle->nvars + 1);
 }
 
+/** increases or decreases variable counts in oracle w.r.t. linear and nonlinear appearance */
+static
+SCIP_RETCODE updateVariableCounts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< oracle data structure */
+   int                   factor,             /**< whether to add (factor=1) or remove (factor=-1) variable counts */
+   int                   nlinidxs,           /**< number of linear indices */
+   const int*            linidxs,            /**< indices of variables in linear part */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   int j;
+
+   assert(oracle != NULL);
+   assert(oracle->varlincount != NULL || (nlinidxs == 0 && expr == NULL));
+   assert(oracle->varnlcount != NULL || (nlinidxs == 0 && expr == NULL));
+   assert(factor == 1 || factor == -1);
+   assert(nlinidxs == 0 || linidxs != NULL);
+
+   for( j = 0; j < nlinidxs; ++j )
+   {
+      oracle->varlincount[linidxs[j]] += factor;
+      assert(oracle->varlincount[linidxs[j]] >= 0);
+   }
+
+   if( expr != NULL )
+   {
+      SCIP_EXPRITER* it;
+
+      SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+      SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+
+      for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         if( SCIPisExprVaridx(scip, expr) )
+         {
+            oracle->varnlcount[SCIPgetIndexExprVaridx(expr)] += factor;
+            assert(oracle->varnlcount[SCIPgetIndexExprVaridx(expr)] >= 0);
+         }
+
+      SCIPfreeExpriter(&it);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** sorts a linear term, merges duplicate entries and removes entries with coefficient 0.0 */
 static
 void sortLinearCoefficients(
@@ -280,6 +327,7 @@ void sortLinearCoefficients(
 static
 SCIP_RETCODE createConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_NLPIORACLECONS** cons,               /**< buffer where to store pointer to constraint */
    int                   nlinidxs,           /**< length of linear part */
    const int*            linidxs,            /**< indices of linear part, or NULL if nlinidxs == 0 */
@@ -315,6 +363,8 @@ SCIP_RETCODE createConstraint(
    {
       (*cons)->expr = expr;
       SCIPcaptureExpr(expr);
+
+      SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, (*cons)->expr, &(*cons)->exprintdata) );
    }
 
    if( lhs > rhs )
@@ -330,6 +380,9 @@ SCIP_RETCODE createConstraint(
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*cons)->name, name, strlen(name)+1) );
    }
 
+   /* add variable counts */
+   SCIP_CALL( updateVariableCounts(scip, oracle, 1, (*cons)->nlinidxs, (*cons)->linidxs, (*cons)->expr) );
+
    return SCIP_OKAY;
 }
 
@@ -338,7 +391,8 @@ static
 SCIP_RETCODE freeConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   SCIP_NLPIORACLECONS** cons                /**< pointer to constraint that should be freed */
+   SCIP_NLPIORACLECONS** cons,               /**< pointer to constraint that should be freed */
+   SCIP_Bool             updatevarcount      /**< whether the update variable counts (typically TRUE) */
    )
 {
    assert(oracle != NULL);
@@ -346,6 +400,12 @@ SCIP_RETCODE freeConstraint(
    assert(*cons  != NULL);
 
    SCIPdebugMessage("free constraint %p\n", (void*)*cons);
+
+   /* remove variable counts */
+   if( updatevarcount )
+   {
+      SCIP_CALL( updateVariableCounts(scip, oracle, -1, (*cons)->nlinidxs, (*cons)->linidxs, (*cons)->expr) );
+   }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*cons)->linidxs, (*cons)->linsize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*cons)->lincoefs, (*cons)->linsize);
@@ -367,7 +427,10 @@ SCIP_RETCODE freeConstraint(
    return SCIP_OKAY;
 }
 
-/** frees all constraints */
+/** frees all constraints
+ *
+ * \attention This omits updating the variable counts in the oracle.
+ */
 static
 SCIP_RETCODE freeConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -382,7 +445,7 @@ SCIP_RETCODE freeConstraints(
 
    for( i = 0; i < oracle->nconss; ++i )
    {
-      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[i]) );
+      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[i], FALSE) );
       assert(oracle->conss[i] == NULL);
    }
    oracle->nconss = 0;
@@ -414,19 +477,17 @@ SCIP_RETCODE moveVariable(
    assert(fromidx < oracle->nvars);
    assert(toidx   < oracle->nvars);
 
-   assert(SCIPisInfinity(scip, -oracle->varlbs[toidx]));
-   assert(SCIPisInfinity(scip, oracle->varubs[toidx]));
    assert(oracle->varnames == NULL || oracle->varnames[toidx] == NULL);
-   assert(!oracle->vardegreesuptodate || oracle->vardegrees[toidx] == -1);
 
    oracle->varlbs[toidx] = oracle->varlbs[fromidx];
    oracle->varubs[toidx] = oracle->varubs[fromidx];
-
    oracle->varlbs[fromidx] = -SCIPinfinity(scip);
    oracle->varubs[fromidx] =  SCIPinfinity(scip);
 
-   oracle->vardegrees[toidx]   = oracle->vardegrees[fromidx];
-   oracle->vardegrees[fromidx] = -1;
+   oracle->varlincount[toidx] = oracle->varlincount[fromidx];
+   oracle->varnlcount[toidx] = oracle->varnlcount[fromidx];
+   oracle->varlincount[fromidx] = 0;
+   oracle->varnlcount[fromidx] = 0;
 
    if( oracle->varnames != NULL )
    {
@@ -462,81 +523,13 @@ void freeVariables(
       SCIPfreeBlockMemoryArrayNull(scip, &oracle->varnames, oracle->varssize);
    }
    oracle->nvars = 0;
-   oracle->vardegreesuptodate = TRUE; 
 
-   SCIPfreeBlockMemoryArrayNull(scip, &oracle->varlbs,     oracle->varssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &oracle->varubs,     oracle->varssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &oracle->vardegrees, oracle->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &oracle->varlbs, oracle->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &oracle->varubs, oracle->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &oracle->varlincount, oracle->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &oracle->varnlcount, oracle->varssize);
 
    oracle->varssize = 0;
-}
-
-/** increases variable degrees in oracle w.r.t. variables occurring in a single constraint */
-static
-SCIP_RETCODE updateVariableDegreesCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPIORACLE*      oracle,             /**< oracle data structure */
-   SCIP_NLPIORACLECONS*  cons                /**< oracle constraint */
-   )
-{
-   int j;
-
-   assert(oracle != NULL);
-   assert(oracle->nvars == 0 || oracle->vardegrees != NULL);
-   assert(cons != NULL);
-
-   for( j = 0; j < cons->nlinidxs; ++j )
-      if( oracle->vardegrees[cons->linidxs[j]] < 1 )
-         oracle->vardegrees[cons->linidxs[j]] = 1;
-
-   /* we could get actual degree of a variable in expr,
-    * but so far no solver could make use of this information */
-   if( cons->expr != NULL )
-   {
-      SCIP_EXPRITER* it;
-      SCIP_EXPR* expr;
-
-      SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-      SCIP_CALL( SCIPexpriterInit(it, cons->expr, SCIP_EXPRITER_DFS, FALSE) );
-
-      for( expr = cons->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
-         if( SCIPisExprVaridx(scip, expr) )
-            oracle->vardegrees[SCIPgetIndexExprVaridx(expr)] = INT_MAX;
-
-      SCIPfreeExpriter(&it);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** Updates the degrees of all variables. */
-static
-SCIP_RETCODE updateVariableDegrees(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPIORACLE*      oracle              /**< pointer to store NLPIORACLE data structure */
-   )
-{
-   int c;
-
-   assert(oracle != NULL);
-   assert(oracle->nvars == 0 || oracle->vardegrees != NULL);
-   assert(oracle->objective != NULL);
-
-   SCIPdebugMessage("%p update variable degrees\n", (void*)oracle);
-
-   if( oracle->vardegreesuptodate || oracle->nvars == 0 )
-      return SCIP_OKAY;
-
-   /* assume all variables do not appear in NLP */
-   BMSclearMemoryArray(oracle->vardegrees, oracle->nvars);
-
-   SCIP_CALL( updateVariableDegreesCons(scip, oracle, oracle->objective) );
-   for( c = 0; c < oracle->nconss; ++c )
-      SCIP_CALL( updateVariableDegreesCons(scip, oracle, oracle->conss[c]) );
-
-   oracle->vardegreesuptodate = TRUE;
-
-   return SCIP_OKAY;
 }
 
 /** applies a mapping of indices to one array of indices */
@@ -908,7 +901,7 @@ SCIP_RETCODE printFunction(
    for( i = 0; i < cons->nlinidxs; ++i )
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->linidxs[i]] : NULL, cons->linidxs[i], 'x', NULL, longvarnames);
-      SCIPinfoMessage(scip, file, "%+.20g*%s", cons->lincoefs[i], namebuf);
+      SCIPinfoMessage(scip, file, "%+.15g*%s", cons->lincoefs[i], namebuf);
       if( i % 10 == 9 )
          SCIPinfoMessage(scip, file, "\n");
    }
@@ -983,6 +976,8 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    SCIP_NLPIORACLE**     oracle              /**< pointer to store NLPIORACLE data structure */
    )
 {
+   SCIP_Bool nlpieval;
+
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p oracle create\n", (void*)oracle);
@@ -990,13 +985,17 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    SCIP_CALL( SCIPallocMemory(scip, oracle) );
    BMSclearMemory(*oracle);
 
-   (*oracle)->vardegreesuptodate = TRUE;
-
    SCIPdebugMessage("Oracle initializes expression interpreter %s\n", SCIPexprintGetName());
    SCIP_CALL( SCIPexprintCreate(scip, &(*oracle)->exprinterpreter) );
 
+   SCIP_CALL( SCIPcreateClock(scip, &(*oracle)->evalclock) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "timing/nlpieval", &nlpieval) );
+   if( !nlpieval )
+      SCIPsetClockEnabled((*oracle)->evalclock, FALSE);
+
    /* create zero objective function */
-   SCIP_CALL( createConstraint(scip, &(*oracle)->objective, 0, NULL, NULL, NULL, 0.0, 0.0, NULL) );
+   SCIP_CALL( createConstraint(scip, *oracle, &(*oracle)->objective, 0, NULL, NULL, NULL, 0.0, 0.0, NULL) );
 
    return SCIP_OKAY;
 }
@@ -1015,9 +1014,11 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    invalidateJacobiSparsity(scip, *oracle);
    invalidateHessianLagSparsity(scip, *oracle);
 
-   SCIP_CALL( freeConstraint(scip, *oracle, &(*oracle)->objective) );
+   SCIP_CALL( freeConstraint(scip, *oracle, &(*oracle)->objective, FALSE) );
    SCIP_CALL( freeConstraints(scip, *oracle) );
    freeVariables(scip, *oracle);
+
+   SCIP_CALL( SCIPfreeClock(scip, &(*oracle)->evalclock) );
 
    SCIP_CALL( SCIPexprintFree(scip, &(*oracle)->exprinterpreter) );
 
@@ -1138,7 +1139,8 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
       BMSclearMemoryArray(&oracle->varnames[oracle->nvars], nvars);
    }
 
-   BMSclearMemoryArray(&oracle->vardegrees[oracle->nvars], nvars);
+   BMSclearMemoryArray(&oracle->varlincount[oracle->nvars], nvars);
+   BMSclearMemoryArray(&oracle->varnlcount[oracle->nvars], nvars);
 
    /* @TODO update sparsity pattern by extending heslagoffsets */
    invalidateHessianLagSparsity(scip, oracle);
@@ -1187,7 +1189,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    SCIP_CALL( ensureConssSize(scip, oracle, oracle->nconss + nconss) );
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( createConstraint(scip, &cons,
+      SCIP_CALL( createConstraint(scip, oracle, &cons,
             nlininds != NULL ? nlininds[c] : 0,
             lininds != NULL ? lininds[c] : NULL,
             linvals != NULL ? linvals[c] : NULL,
@@ -1198,16 +1200,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             ) );
 
       if( cons->expr != NULL )
-      {
          addednlcon = TRUE;
-         SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, cons->expr, &cons->exprintdata) );
-      }
-
-      /* keep variable degrees updated */
-      if( oracle->vardegreesuptodate )
-      {
-         SCIP_CALL( updateVariableDegreesCons(scip, oracle, cons) );
-      }
 
       oracle->conss[oracle->nconss+c] = cons;
    }
@@ -1242,17 +1235,11 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       invalidateHessianLagSparsity(scip, oracle);
 
    /* clear previous objective */
-   SCIP_CALL( freeConstraint(scip, oracle, &oracle->objective) );
+   SCIP_CALL( freeConstraint(scip, oracle, &oracle->objective, TRUE) );
 
-   SCIP_CALL( createConstraint(scip, &oracle->objective,
+   /* create new objective */
+   SCIP_CALL( createConstraint(scip, oracle, &oracle->objective,
          nlin, lininds, linvals, expr, constant, constant, NULL) );
-
-   if( oracle->objective->expr != NULL )
-   {
-      SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, oracle->objective->expr, &oracle->objective->exprintdata) );
-   }
-
-   oracle->vardegreesuptodate = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1294,7 +1281,7 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
    return SCIP_OKAY;
 }
 
-/** change constraint bounds */
+/** change constraint sides */
 SCIP_RETCODE SCIPnlpiOracleChgConsSides(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -1385,13 +1372,13 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
       }
       assert(delstats[c] == 1); /* variable should be deleted */
 
-      if( oracle->varnames && oracle->varnames[c] != NULL )
+      if( oracle->varnames != NULL && oracle->varnames[c] != NULL )
       {
          SCIPfreeBlockMemoryArray(scip, &oracle->varnames[c], strlen(oracle->varnames[c])+1);
       }
       delstats[c] = -1;
 
-      /* move constraint at position lastgood to position c */
+      /* move variable at position lastgood to position c */
       SCIP_CALL( moveVariable(scip, oracle, lastgood, c) );
       delstats[lastgood] = c; /* mark that lastgood variable is now at position c */
 
@@ -1488,7 +1475,6 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
 
    invalidateJacobiSparsity(scip, oracle);
    invalidateHessianLagSparsity(scip, oracle);
-   oracle->vardegreesuptodate = FALSE;
 
    lastgood = oracle->nconss - 1;
    while( lastgood >= 0 && delstats[lastgood] == 1)
@@ -1499,13 +1485,21 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       for( c = 0; c < oracle->nconss; ++c )
          delstats[c] = -1;
       SCIP_CALL( freeConstraints(scip, oracle) );
+
+      /* the previous call did not keep variable counts uptodate
+       * since we only have an objective function left, we reset the counts to the ones of the objective
+       */
+      BMSclearMemoryArray(oracle->varlincount, oracle->nvars);
+      BMSclearMemoryArray(oracle->varnlcount, oracle->nvars);
+      SCIP_CALL( updateVariableCounts(scip, oracle, 1, oracle->objective->nlinidxs, oracle->objective->linidxs, oracle->objective->expr) );
+
       return SCIP_OKAY;
    }
 
    /* delete constraints at the end */
    for( c = oracle->nconss - 1; c > lastgood; --c )
    {
-      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c]) );
+      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c], TRUE) );
       assert(oracle->conss[c] == NULL);
       delstats[c] = -1;
    }
@@ -1523,7 +1517,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       }
       assert(delstats[c] == 1); /* constraint should be deleted */
 
-      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c]) );
+      SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[c], TRUE) );
       assert(oracle->conss[c] == NULL);
       delstats[c] = -1;
 
@@ -1537,7 +1531,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       /* move lastgood forward, delete constraints on the way */
       while( lastgood > c && delstats[lastgood] == 1)
       {
-         SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[lastgood]) );
+         SCIP_CALL( freeConstraint(scip, oracle, &oracle->conss[lastgood], TRUE) );
          assert(oracle->conss[lastgood] == NULL);
          delstats[lastgood] = -1;
          --lastgood;
@@ -1550,7 +1544,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    return SCIP_OKAY;
 }
 
-/** changes linear coefficients in one constraint or objective */
+/** changes (or adds) linear coefficients in one constraint or objective */
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -1592,6 +1586,8 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
       cons->linsize  = nentries;
       cons->nlinidxs = nentries;
 
+      SCIP_CALL( updateVariableCounts(scip, oracle, 1, nentries, varidxs, NULL) );
+
       needsort = TRUE;
    }
    else
@@ -1611,6 +1607,12 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
 
             /* remember that we need to sort/merge/squeeze array if coefficient became zero here */
             needsort |= (newcoefs[i] == 0.0);  /*lint !e613 !e514*/
+
+            if( newcoefs[i] == 0.0 )
+            {
+               --oracle->varlincount[varidxs[i]];
+               assert(oracle->varlincount[varidxs[i]] >= 0);
+            }
          }
          else if( newcoefs[i] != 0.0 )  /*lint !e613*/
          {
@@ -1622,6 +1624,8 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
             cons->lincoefs[cons->nlinidxs] = newcoefs[i];  /*lint !e613*/
             ++cons->nlinidxs;
 
+            ++oracle->varlincount[varidxs[i]];
+
             needsort = TRUE;
          }
       }
@@ -1629,26 +1633,14 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
 
    if( needsort )
    {
-      int oldlen;
-
       invalidateJacobiSparsity(scip, oracle);
-
-      oldlen = cons->nlinidxs;
       sortLinearCoefficients(&cons->nlinidxs, cons->linidxs, cons->lincoefs);
-
-      /* if sorting removed an entry, then the var degrees are not uptodate anymore */
-      oracle->vardegreesuptodate &= (cons->nlinidxs == oldlen);  /*lint !e514*/
-
-      /* increase variable degrees of variables to 1 */
-      if( oracle->vardegreesuptodate )
-         for( i = 0; i < cons->nlinidxs; ++i )
-            oracle->vardegrees[varidxs[i]] = MAX(1, oracle->vardegrees[varidxs[i]]);  /*lint !e613*/
    }
 
    return SCIP_OKAY;
 }
 
-/** replaces expression of one constraint or objective  */
+/** replaces expression of one constraint or objective */
 SCIP_RETCODE SCIPnlpiOracleChgExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -1672,9 +1664,9 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
    /* free previous expression */
    if( cons->expr != NULL )
    {
+      SCIP_CALL( updateVariableCounts(scip, oracle, -1, 0, NULL, cons->expr) );
       SCIP_CALL( SCIPexprintFreeData(scip, oracle->exprinterpreter, cons->expr, &cons->exprintdata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &cons->expr) );
-      oracle->vardegreesuptodate = FALSE;
    }
 
    /* if user did not want to set new expr, then we are done */
@@ -1688,11 +1680,8 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
    SCIPcaptureExpr(cons->expr);
    SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, cons->expr, &cons->exprintdata) );
 
-   /* keep variable degrees up to date */
-   if( oracle->vardegreesuptodate )
-   {
-      SCIP_CALL( updateVariableDegreesCons(scip, oracle, cons) );
-   }
+   /* keep variable counts up to date */
+   SCIP_CALL( updateVariableCounts(scip, oracle, 1, 0, NULL, cons->expr) );
 
    return SCIP_OKAY;
 }
@@ -1764,49 +1753,46 @@ char** SCIPnlpiOracleGetVarNames(
    return oracle->varnames;
 }
 
-/** Gives indicator whether variable appears in NLP and whether that is only linear or nonlinear.
- *
- * Degree is 0 if variable does not appear in objective or any constraint.
- * Degree is 1 if variable appears only linearly.
- * Degree is INT_MAX if variable appears nonlinear.
- */ 
-SCIP_RETCODE SCIPnlpiOracleGetVarDegree(
+/** indicates whether variable appears nonlinear in any objective or constraint */
+SCIP_Bool SCIPnlpiOracleIsVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   varidx,             /**< the variable for which the degree is returned */
-   int*                  vardegree           /**< buffer to store variable degree */
+   int                   varidx              /**< the variable to check */
    )
 {
    assert(oracle != NULL);
    assert(varidx >= 0);
    assert(varidx < oracle->nvars);
-   assert(vardegree != NULL);
+   assert(oracle->varnlcount != NULL);
 
-   SCIP_CALL( updateVariableDegrees(scip, oracle) );
-
-   *vardegree = oracle->vardegrees[varidx];
-
-   return SCIP_OKAY;
+   return oracle->varnlcount[varidx] > 0;
 }
 
-/** Gives indicator which variables appears in NLP and whether that is only linear or nonlinear.
- *
- * See @ref SCIPnlpiOracleGetVarDegree.
- */
-SCIP_RETCODE SCIPnlpiOracleGetVarDegrees(
+/** returns number of linear and nonlinear appearances of variables in objective and constraints */
+void SCIPnlpiOracleGetVarCounts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int**                 vardegrees          /**< buffer to return pointer to array of variable degrees */
+   const int**           lincounts,          /**< buffer to return pointer to array of counts of linear appearances */
+   const int**           nlcounts            /**< buffer to return pointer to array of counts of nonlinear appearances */
    )
 {
    assert(oracle != NULL);
-   assert(vardegrees != NULL);
+   assert(lincounts != NULL);
+   assert(nlcounts != NULL);
 
-   SCIP_CALL( updateVariableDegrees(scip, oracle) );
+   *lincounts = oracle->varlincount;
+   *nlcounts = oracle->varnlcount;
+}
 
-   *vardegrees = oracle->vardegrees;
+/** gives constant term of objective */
+SCIP_Real SCIPnlpiOracleGetObjectiveConstant(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   assert(oracle != NULL);
+   assert(oracle->objective->lhs == oracle->objective->rhs);  /*lint !e777*/
 
-   return SCIP_OKAY;
+   return oracle->objective->lhs;
 }
 
 /** gives left-hand side of a constraint */
@@ -1848,12 +1834,10 @@ char* SCIPnlpiOracleGetConstraintName(
    return oracle->conss[considx]->name;
 }
 
-/** gives maximum degree of a constraint or objective
- *  The degree is the maximal degree of all summands,, and is infinity for nonpolynomial terms.
- */ 
-int SCIPnlpiOracleGetConstraintDegree(
+/** indicates whether constraint is nonlinear */
+SCIP_Bool SCIPnlpiOracleIsConstraintNonlinear(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   considx             /**< index of constraint for which the degree is requested, or -1 for objective */
+   int                   considx             /**< index of constraint for which nonlinearity status is returned, or -1 for objective */
    )
 {
    SCIP_NLPIORACLECONS* cons;
@@ -1864,14 +1848,7 @@ int SCIPnlpiOracleGetConstraintDegree(
 
    cons = considx < 0 ? oracle->objective : oracle->conss[considx];
 
-   /* could do something more clever, but no solver uses this so far */
-   if( cons->expr != NULL )
-      return INT_MAX;
-
-   if( cons->nlinidxs > 0 )
-      return 1;
-
-   return 0;
+   return cons->expr != NULL;
 }
 
 /** gives the evaluation capabilities that are shared among all expressions in the problem */
@@ -1905,16 +1882,21 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    SCIP_Real*            objval              /**< pointer to store objective value */  
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p eval obj value\n", (void*)oracle);
 
-   SCIP_CALL_QUIET( evalFunctionValue(scip, oracle, oracle->objective, x, objval) );
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionValue(scip, oracle, oracle->objective, x, objval);
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
    assert(oracle->objective->lhs == oracle->objective->rhs);  /*lint !e777*/
-   *objval += oracle->objective->lhs;
+   if( retcode == SCIP_OKAY )
+      *objval += oracle->objective->lhs;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** evaluates one constraint function in a given point */
@@ -1926,15 +1908,19 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
    SCIP_Real*            conval              /**< pointer to store constraint value */  
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(oracle != NULL);
    assert(x != NULL || oracle->nvars == 0);
    assert(conval != NULL);
 
    SCIPdebugMessage("%p eval cons value\n", (void*)oracle);
 
-   SCIP_CALL_QUIET( evalFunctionValue(scip, oracle, oracle->conss[considx], x, conval) );
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionValue(scip, oracle, oracle->conss[considx], x, conval);
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** evaluates all constraint functions in a given point */
@@ -1945,6 +1931,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    SCIP_Real*            convals             /**< buffer to store constraint values */  
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
    int i;
 
    SCIPdebugMessage("%p eval cons values\n", (void*)oracle);
@@ -1953,12 +1940,16 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    assert(x != NULL || oracle->nvars == 0);
    assert(convals != NULL);
 
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
    for( i = 0; i < oracle->nconss; ++i )
    {
-      SCIP_CALL_QUIET( evalFunctionValue(scip, oracle, oracle->conss[i], x, &convals[i]) );
+      retcode = evalFunctionValue(scip, oracle, oracle->conss[i], x, &convals[i]);
+      if( retcode != SCIP_OKAY )
+         break;
    }
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** computes the objective gradient in a given point
@@ -1974,16 +1965,20 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_Real*            objgrad             /**< pointer to store (dense) objective gradient */  
    )
 {
+   SCIP_RETCODE retcode;
    assert(oracle != NULL);
 
    SCIPdebugMessage("%p eval obj grad\n", (void*)oracle);
 
-   SCIP_CALL_QUIET( evalFunctionGradient(scip, oracle, oracle->objective, x, isnewx, objval, objgrad) );
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionGradient(scip, oracle, oracle->objective, x, isnewx, objval, objgrad);
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
    assert(oracle->objective->lhs == oracle->objective->rhs);  /*lint !e777*/
-   *objval += oracle->objective->lhs;
+   if( retcode == SCIP_OKAY )
+      *objval += oracle->objective->lhs;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** computes a constraints gradient in a given point
@@ -2000,15 +1995,19 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_Real*            congrad             /**< pointer to store (dense) constraint gradient */  
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(oracle != NULL);
    assert(x != NULL || oracle->nvars == 0);
    assert(conval != NULL);
 
    SCIPdebugMessage("%p eval cons grad\n", (void*)oracle);
 
-   SCIP_CALL_QUIET( evalFunctionGradient(scip, oracle, oracle->conss[considx], x, isnewx, conval, congrad) );
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionGradient(scip, oracle, oracle->conss[considx], x, isnewx, conval, congrad);
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** gets sparsity pattern (rowwise) of Jacobian matrix
@@ -2046,6 +2045,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       return SCIP_OKAY;
    }
 
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->jacoffsets, oracle->nconss + 1) );
 
    maxnnz = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
@@ -2059,6 +2060,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          *offset = oracle->jacoffsets;
       if( col != NULL )
          *col = oracle->jaccols;
+
+      SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
       return SCIP_OKAY;
    }
    nnz = 0;
@@ -2131,13 +2135,15 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    if( col != NULL )
       *col = oracle->jaccols;
 
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
    return SCIP_OKAY;
 }
 
-/** evaluates the Jacobi matrix in a given point
+/** evaluates the Jacobian matrix in a given point
  * 
- *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
- *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
+ *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity().
+ *  The user need to call SCIPnlpiOracleGetJacobianSparsity() at least ones before using this function.
  *
  * @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
@@ -2166,6 +2172,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
 
    assert(oracle->jacoffsets != NULL);
    assert(oracle->jaccols    != NULL);
+
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &grad, oracle->nvars) );
 
@@ -2255,12 +2263,14 @@ TERMINATE:
 
    SCIPfreeCleanBufferArray(scip, &grad);
 
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
    return retcode;
 }
 
 /** gets sparsity pattern of the Hessian matrix of the Lagrangian
  * 
- *  Note that internal data is returned in *offset and *col, thus the user must not allocate memory there.
+ *  Note that internal data is returned in *offset and *col, thus the user must not to allocate memory there.
  *  Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
  *  Only elements of the lower left triangle and the diagonal are counted.
  */
@@ -2292,6 +2302,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
          *col = oracle->heslagcols;
       return SCIP_OKAY;
    }
+
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &oracle->heslagoffsets, oracle->nvars + 1) );
 
@@ -2343,13 +2355,15 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    if( col != NULL )
       *col = oracle->heslagcols;
 
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
    return SCIP_OKAY;
 }
 
 /** evaluates the Hessian matrix of the Lagrangian in a given point
  * 
- *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
- *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
+ *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity().
+ *  The user must call SCIPnlpiOracleGetHessianLagSparsity() at least ones before using this function.
  *  Only elements of the lower left triangle and the diagonal are computed.
  *
  * @return SCIP_INVALIDDATA, if the Hessian could not be evaluated (domain error, etc.)
@@ -2358,12 +2372,14 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
+   SCIP_Bool             isnewx_obj,         /**< has the point x changed since the last call to an objective evaluation function? */
+   SCIP_Bool             isnewx_cons,        /**< has the point x changed since the last call to the constraint evaluation function? */
    SCIP_Real             objfactor,          /**< weight for objective function */
    const SCIP_Real*      lambda,             /**< weights (Lagrangian multipliers) for the constraints */ 
    SCIP_Real*            hessian             /**< pointer to store sparse hessian values */  
    )
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode = SCIP_OKAY;
    int i;
 
    assert(oracle != NULL);
@@ -2376,22 +2392,53 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    SCIPdebugMessage("%p eval hessian lag\n", (void*)oracle);
 
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+
    BMSclearMemoryArray(hessian, oracle->heslagoffsets[oracle->nvars]);
 
    if( objfactor != 0.0 && oracle->objective->expr != NULL )
    {
-      SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, objfactor, x, isnewx, oracle->objective->expr, oracle->objective->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+      retcode = hessLagAddExpr(scip, oracle, objfactor, x, isnewx_obj, oracle->objective->expr, oracle->objective->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian);
    }
 
-   for( i = 0; i < oracle->nconss; ++i )
+   for( i = 0; i < oracle->nconss && retcode == SCIP_OKAY; ++i )
    {
       assert( lambda != NULL ); /* for lint */
       if( lambda[i] == 0.0 || oracle->conss[i]->expr == NULL )
          continue;
-      SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, lambda[i], x, isnewx, oracle->conss[i]->expr, oracle->conss[i]->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+      retcode = hessLagAddExpr(scip, oracle, lambda[i], x, isnewx_cons, oracle->conss[i]->expr, oracle->conss[i]->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian);
    }
 
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
+   return retcode;
+}
+
+/** resets clock that measures evaluation time */
+SCIP_RETCODE SCIPnlpiOracleResetEvalTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   assert(oracle != NULL);
+
+   SCIP_CALL( SCIPresetClock(scip, oracle->evalclock) );
+
    return SCIP_OKAY;
+}
+
+/** gives time spend in evaluation since last reset of clock
+ *
+ * Gives 0 if the eval clock is disabled.
+ */
+SCIP_Real SCIPnlpiOracleGetEvalTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   assert(oracle != NULL);
+
+   return SCIPgetClockTime(scip, oracle->evalclock);
 }
 
 /** prints the problem to a file. */
@@ -2420,15 +2467,13 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
       else
          SCIPinfoMessage(scip, file, "x%09d", i);
       SCIPinfoMessage(scip, file, ": [%8g, %8g]", oracle->varlbs[i], oracle->varubs[i]);
-      if( oracle->vardegreesuptodate )
-         SCIPinfoMessage(scip, file, "\t degree: %d", oracle->vardegrees[i]);
-      SCIPinfoMessage(scip, file, "\n");
+      SCIPinfoMessage(scip, file, "\t #linear: %d #nonlinear: %d\n", oracle->varlincount[i], oracle->varnlcount[i]);
    }
 
    SCIPinfoMessage(scip, file, "objective: ");
    SCIP_CALL( printFunction(scip, oracle, file, oracle->objective, FALSE) );
    if( oracle->objective->lhs != 0.0 )
-      SCIPinfoMessage(scip, file, "%+.20g", oracle->objective->lhs);
+      SCIPinfoMessage(scip, file, "%+.15g", oracle->objective->lhs);
    SCIPinfoMessage(scip, file, "\n");
 
    for( i = 0; i < oracle->nconss; ++i )
@@ -2442,16 +2487,16 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
       rhs = oracle->conss[i]->rhs;
       SCIPinfoMessage(scip, file, ": ");
       if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && lhs != rhs )
-         SCIPinfoMessage(scip, file, "%.20g <= ", lhs);
+         SCIPinfoMessage(scip, file, "%.15g <= ", lhs);
 
       SCIP_CALL( printFunction(scip, oracle, file, oracle->conss[i], FALSE) );
 
       if( lhs == rhs )
-         SCIPinfoMessage(scip, file, " = %.20g", rhs);
+         SCIPinfoMessage(scip, file, " = %.15g", rhs);
       else if( !SCIPisInfinity(scip, rhs) )
-         SCIPinfoMessage(scip, file, " <= %.20g", rhs);
+         SCIPinfoMessage(scip, file, " <= %.15g", rhs);
       else if( !SCIPisInfinity(scip, -lhs) )
-         SCIPinfoMessage(scip, file, " >= %.20g", lhs);
+         SCIPinfoMessage(scip, file, " >= %.15g", lhs);
 
       SCIPinfoMessage(scip, file, "\n");
    }
@@ -2460,6 +2505,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
 }
 
 /** prints the problem to a file in GAMS format
+ *
  * If there are variable (equation, resp.) names with more than 9 characters, then variable (equation, resp.) names are prefixed with an unique identifier.
  * This is to make it easier to identify variables solution output in the listing file.
  * Names with more than 64 characters are shorten to 64 letters due to GAMS limits.
@@ -2523,25 +2569,25 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       if( oracle->varlbs[i] == oracle->varubs[i] )
       {
          printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-         SCIPinfoMessage(scip, file, "%s.fx = %.20g;\t", namebuf, oracle->varlbs[i]);
+         SCIPinfoMessage(scip, file, "%s.fx = %.15g;\t", namebuf, oracle->varlbs[i]);
       }
       else
       {
          if( !SCIPisInfinity(scip, -oracle->varlbs[i]) )
          {
             printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-            SCIPinfoMessage(scip, file, "%s.lo = %.20g;\t", namebuf, oracle->varlbs[i]);
+            SCIPinfoMessage(scip, file, "%s.lo = %.15g;\t", namebuf, oracle->varlbs[i]);
          }
          if( !SCIPisInfinity(scip, oracle->varubs[i]) )
          {
             printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-            SCIPinfoMessage(scip, file, "%s.up = %.20g;\t", namebuf, oracle->varubs[i]);
+            SCIPinfoMessage(scip, file, "%s.up = %.15g;\t", namebuf, oracle->varubs[i]);
          }
       }
       if( initval != NULL )
       {
          printName(namebuf, name, i, 'x', NULL, havelongvarnames);
-         SCIPinfoMessage(scip, file, "%s.l = %.20g;\t", namebuf, initval[i]);
+         SCIPinfoMessage(scip, file, "%s.l = %.15g;\t", namebuf, initval[i]);
       }
       SCIPinfoMessage(scip, file, "\n");
    }
@@ -2567,7 +2613,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIPinfoMessage(scip, file, "NLPIORACLEOBJ.. NLPIORACLEOBJVAR =E= ");
    SCIP_CALL( printFunction(scip, oracle, file, oracle->objective, havelongvarnames) );
    if( oracle->objective->lhs != 0.0 )
-      SCIPinfoMessage(scip, file, "%+.20g", oracle->objective->lhs);
+      SCIPinfoMessage(scip, file, "%+.15g", oracle->objective->lhs);
    SCIPinfoMessage(scip, file, ";\n");
 
    for( i = 0; i < oracle->nconss; ++i )
@@ -2584,11 +2630,11 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
       rhs = oracle->conss[i]->rhs;
 
       if( lhs == rhs )
-         SCIPinfoMessage(scip, file, " =E= %.20g", rhs);
+         SCIPinfoMessage(scip, file, " =E= %.15g", rhs);
       else if( !SCIPisInfinity(scip, rhs) )
-         SCIPinfoMessage(scip, file, " =L= %.20g", rhs);
+         SCIPinfoMessage(scip, file, " =L= %.15g", rhs);
       else if( !SCIPisInfinity(scip, -lhs) )
-         SCIPinfoMessage(scip, file, " =G= %.20g", lhs);
+         SCIPinfoMessage(scip, file, " =G= %.15g", lhs);
       else
          SCIPinfoMessage(scip, file, " =N= 0");
       SCIPinfoMessage(scip, file, ";\n");
@@ -2600,7 +2646,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
 
          SCIP_CALL( printFunction(scip, oracle, file, oracle->conss[i], havelongvarnames) );
 
-         SCIPinfoMessage(scip, file, " =G= %.20g;\n", lhs);
+         SCIPinfoMessage(scip, file, " =G= %.15g;\n", lhs);
       }
 
       if( nllevel <= 1 && oracle->conss[i]->expr != NULL )

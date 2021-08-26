@@ -13591,11 +13591,6 @@ SCIP_DECL_EVENTEXEC(eventExecCumulative)
 
 /**@} */
 
-/**@name Interface methods
- *
- * @{
- */
-
 /*
  * constraint specific interface methods
  */
@@ -14520,5 +14515,3 @@ int SCIPcomputeHmax(
 
    return INT_MIN;
 }
-
-/**@} */

@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    exprinterpret_cppad.cpp
- * @brief   methods to interpret (evaluate) an expression tree "fast" using CppAD
- * @ingroup EXPRINTS
+ * @brief   methods to interpret (evaluate) an expression "fast" using CppAD
+ * @ingroup DEFPLUGINS_EXPRINT
  * @author  Stefan Vigerske
  */
 
@@ -178,7 +178,6 @@ public:
         userevalcapability(SCIP_EXPRINTCAPABILITY_ALL),
         hesrowidxs(NULL),
         hescolidxs(NULL),
-        hesvalues(NULL),
         hesnnz(0),
         hesconstant(false)
    { }
@@ -210,12 +209,17 @@ public:
    vector<atomic_userexpr*> userexprs;       /**< vector of atomic_userexpr that are created during eval() and need to be kept as long as the tape exists */
    SCIP_EXPRINTCAPABILITY userevalcapability;/**< (intersection of) capabilities of evaluation routines of user expressions */
 
-   vector<bool>          hessparsity;        /**< sparsity pattern of Hessian as given by CppAD */
-   int*                  hesrowidxs;         /**< row indices of Hessian sparsity */
-   int*                  hescolidxs;         /**< column indices of Hessian sparsity */
-   SCIP_Real*            hesvalues;          /**< values of Hessian */
+   int*                  hesrowidxs;         /**< row indices of Hessian sparsity: indices are the variables used in expression */
+   int*                  hescolidxs;         /**< column indices of Hessian sparsity: indices are the variables used in expression */
+   vector<SCIP_Real>     hesvalues;          /**< values of Hessian (a vector<> so we can pass it to CppAD) */
    int                   hesnnz;             /**< number of nonzeros in Hessian */
    SCIP_Bool             hesconstant;        /**< whether Hessian is constant (because expr is at most quadratic) */
+
+   // Hessian data in CppAD style: indices are 0..n-1 and elements on both lower and upper diagonal of matrix are considered
+   CppAD::local::internal_sparsity<bool>::pattern_type hessparsity_pattern;  /**< packed sparsity pattern of Hessian in CppAD-internal form */
+   CppAD::vector<size_t> hessparsity_row;    /**< row indices of sparsity pattern of Hessian in CppAD-internal form */
+   CppAD::vector<size_t> hessparsity_col;    /**< column indices of sparsity pattern of Hessian in CppAD-internal form */
+   CppAD::sparse_hessian_work heswork;       /**< work memory of CppAD for sparse Hessians */
 };
 
 #ifndef NO_CPPAD_USER_ATOMIC
@@ -1308,7 +1312,7 @@ void evalIntPower(
    resultant = Type(1.0)/arg;
 }
 
-/** CppAD compatible evaluation of an expression for given arguments and parameters */
+/** CppAD compatible evaluation of an expression for given arguments */
 template<class Type>
 static
 SCIP_RETCODE eval(
@@ -1502,7 +1506,10 @@ SCIP_RETCODE SCIPexprintFree(
 
 /** compiles an expression and returns interpreter-specific data for expression
  *
- * @attention the expression is assumed to use varidx expressions but no var expressions
+ * can be called again with existing exprintdata if expression has been changed
+ *
+ * @attention *exprintdata needs to be initialized to NULL at first call
+ * @attention the expression is assumed to use varidx expressions instead of var expressions
  */
 SCIP_RETCODE SCIPexprintCompile(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1627,7 +1634,6 @@ SCIP_RETCODE SCIPexprintFreeData(
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hesrowidxs, (*exprintdata)->hesnnz);
    SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hescolidxs, (*exprintdata)->hesnnz);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hesvalues, (*exprintdata)->hesnnz);
 
    delete *exprintdata;
    *exprintdata = NULL;
@@ -1654,7 +1660,7 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetExprCapability(
    return exprintdata->userevalcapability;
 }/*lint !e715*/
 
-/** evaluates an expression tree */
+/** evaluates an expression */
 SCIP_RETCODE SCIPexprintEval(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -1683,7 +1689,7 @@ SCIP_RETCODE SCIPexprintEval(
       /* free old Hessian data, if any */
       SCIPfreeBlockMemoryArrayNull(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz);
       SCIPfreeBlockMemoryArrayNull(scip, &exprintdata->hescolidxs, exprintdata->hesnnz);
-      SCIPfreeBlockMemoryArrayNull(scip, &exprintdata->hesvalues, exprintdata->hesnnz);
+      exprintdata->hesvalues.clear();
       exprintdata->hesnnz = 0;
 
       for( size_t i = 0; i < n; ++i )
@@ -1730,7 +1736,7 @@ SCIP_RETCODE SCIPexprintEval(
    return SCIP_OKAY;
 }
 
-/** computes value and gradient of an expression tree */
+/** computes value and gradient of an expression */
 SCIP_RETCODE SCIPexprintGrad(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -1794,11 +1800,11 @@ SCIP_RETCODE SCIPexprintGrad(
    return SCIP_OKAY;
 }
 
-/** gives sparsity pattern of lower-triangular part of hessian
+/** gives sparsity pattern of lower-triangular part of Hessian
  *
- * Since the AD code might need to do a forward sweep, you should pass variable values in here.
+ * Since the AD code might need to do a forward sweep, variable values need to be passed in here.
  *
- * Result will have (*colidxs)[i] <= (*rowidixs)[i] for i=0..*nnz.
+ * Result will have `(*colidxs)[i] <= (*rowidixs)[i]` for `i=0..*nnz`.
  */
 SCIP_RETCODE SCIPexprintHessianSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1821,7 +1827,7 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
    if( exprintdata->hesrowidxs == NULL )
    {
       assert(exprintdata->hescolidxs == NULL);
-      assert(exprintdata->hesvalues == NULL);
+      assert(exprintdata->hesvalues.size() == 0);
       assert(exprintdata->hesnnz == 0);
 
       size_t n = exprintdata->varidxs.size();
@@ -1879,30 +1885,70 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
 
       SCIPdebugMessage("calling RevSparseHes\n");
 
-      vector<bool> s(1, true);
-      exprintdata->hessparsity = exprintdata->f.RevSparseHes(n, s);
+      // this was originally
+      //   vector<bool> s(1, true);
+      //   hessparsity = exprintdata->f.RevSparseHes(n, s);
+      // RevSparseHes is just calling RevSparseHesCase
+      // to avoid copying hessparsity, call RevSparseHesCase directly
+      vector<bool> hessparsity;
+      exprintdata->f.RevSparseHesCase(true, false, n, vector<bool>(1, true), hessparsity);
 
+      // count number of hessian elements and setup hessparsity_pattern
+      exprintdata->hessparsity_pattern.resize(0, 0);  // clear old data, if any
+      exprintdata->hessparsity_pattern.resize(n, n);
+      size_t hesnnz_full = 0;   // number of nonzeros in full matrix, that is, not only lower-diagonal
       for( size_t i = 0; i < nn; ++i )
-         if( exprintdata->hessparsity[i] )
+         if( hessparsity[i] )
          {
             size_t row = i / n;
             size_t col = i % n;
+
+            ++hesnnz_full;
+
             if( col > row )
                continue;
             ++exprintdata->hesnnz;
          }
 
+      // hessian sparsity in sparse form
+      // - hesrowidxs,hescolidxs are nonzero entries in the lower-diagonal of the Hessian and are returned to the caller; indices are variable indices as in expression
+      // - hessparsity_row,hessparsity_col are nonzero entries in the full Hessian and are used in SCIPexprintHessian(); indices are 0..n-1 (n=dimension of f)
+      // - hessparsity_pattern is the same information as hessparsity_row,hessparsity_col, but stored in different form
+      //   originally we were calling CppAD::local::sparsity_user2internal(exprintdata->hessparsity_pattern, exprintdata->hessparsity, n, n, false, ""),
+      //   which was again looping over hessparsity, so this is included into one loop here
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
 
-      int j = 0;
-      for( size_t i = 0; i < nn; ++i )
-         if( exprintdata->hessparsity[i] )
+      exprintdata->hessparsity_row.resize(hesnnz_full);
+      exprintdata->hessparsity_col.resize(hesnnz_full);
+
+      for( size_t i = 0, j = 0, k = 0; i < nn; ++i )
+         if( hessparsity[i] )
          {
             size_t row = i / n;
             size_t col = i % n;
+
+            if( (size_t)exprintdata->hesnnz <= nn/4 )
+            {
+               // we need hessparsity_pattern only if SCIPexprintHessian is doing a sparse hessian eval; nn/4 is the threshold for that
+               exprintdata->hessparsity_pattern.add_element(row, col);
+            }
+
             if( col > row )
+            {
+               // add above-diagonal elements into end part of hessparsity_row/col, so we have a 1:1 correspondence
+               // between hessparsity_row/col and hesrowidxs/hescolidxs
+               assert(exprintdata->hesnnz + k < hesnnz_full);
+               exprintdata->hessparsity_row[exprintdata->hesnnz + k] = row;
+               exprintdata->hessparsity_col[exprintdata->hesnnz + k] = col;
+               ++k;
                continue;
+            }
+
+            exprintdata->hessparsity_row[j] = row;
+            exprintdata->hessparsity_col[j] = col;
+
+            assert(j < (size_t)exprintdata->hesnnz);
             exprintdata->hesrowidxs[j] = exprintdata->varidxs[row];
             exprintdata->hescolidxs[j] = exprintdata->varidxs[col];
             ++j;
@@ -1927,10 +1973,10 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
    return SCIP_OKAY;
 }
 
-/** computes value and hessian of an expression
+/** computes value and Hessian of an expression
  *
- * Returned arrays rowidxs and colidxs and number of elements nnz are the same as given by SCIPexprintHessianSparsity().
- * Returned array hessianvals will contain the corresponding Hessian elements.
+ * Returned arrays `rowidxs` and `colidxs` and number of elements `nnz` are the same as given by SCIPexprintHessianSparsity().
+ * Returned array `hessianvals` will contain the corresponding Hessian elements.
  */
 SCIP_RETCODE SCIPexprintHessian(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1956,7 +2002,7 @@ SCIP_RETCODE SCIPexprintHessian(
       int* dummy2;
 
       assert(exprintdata->hescolidxs == NULL);
-      assert(exprintdata->hesvalues == NULL);
+      assert(exprintdata->hesvalues.size() == 0);
       assert(exprintdata->hesnnz == 0);
 
       SCIP_CALL( SCIPexprintHessianSparsity(scip, exprint, expr, exprintdata, varvals, &dummy2, &dummy2, &dummy1) );
@@ -1973,48 +2019,40 @@ SCIP_RETCODE SCIPexprintHessian(
 
    size_t n = exprintdata->varidxs.size();
 
-   // eval hessian; if constant, then only if not evaluated yet (hesvalues is NULL
-   if( n > 0 && (!exprintdata->hesconstant || exprintdata->hesvalues == NULL) )
+   // eval hessian; if constant, then only if not evaluated yet (hesvalues has size 0, but hesnnz > 0)
+   if( n > 0 && (!exprintdata->hesconstant || exprintdata->hesvalues.size() < (size_t)exprintdata->hesnnz) )
    {
-      vector<double> hess;
       size_t nn = n*n;
 
-      if( exprintdata->hesvalues == NULL )
+      if( exprintdata->hesvalues.size() == 0 )
       {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesvalues, exprintdata->hesnnz) );
+         // using here hessparsity_row.size() instead of hesnnz as we want to pass hesvalues to CppAD and it prefers to calculate a full Hessian
+         exprintdata->hesvalues.resize(exprintdata->hessparsity_row.size());
       }
 
-      // use dense Hessian if there are many nonzero elements (approx more than half (recall only lower (or upper)-triangular is considered))
-      // because it seems faster than the sparse Hessian if there isn't actually much sparsity
       // these use reverse mode
       if( (size_t)exprintdata->hesnnz > nn/4 )
-         hess = exprintdata->f.Hessian(exprintdata->x, 0);
-      else
-         hess = exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity);
-
-      // going through all n*n entries to fill hesvalues takes about about n*n time
-      // using the sparsity in hesrowidx/hescolidx takes nnz*2*log2(n) time, because getVarPos() takes about log2(n) time
-      // so we go through all n*n entries for denser matrices
-      if( nn < exprintdata->hesnnz*2*log2(n) )
       {
-         int j = 0;
-         for( size_t i = 0; i < hess.size(); ++i )
-            if( exprintdata->hessparsity[i] )
-            {
-               size_t row = i / n;
-               size_t col = i % n;
-               if( col > row )
-                  continue;
-               exprintdata->hesvalues[j++] = hess[i];
-            }
+         // use dense Hessian if there are many nonzero elements (approx more than half (recall only lower (or upper)-triangular is considered))
+         // because it seems faster than the sparse Hessian if there isn't actually much sparsity
+         vector<double> hess = exprintdata->f.Hessian(exprintdata->x, 0);
+         for( int i = 0; i < exprintdata->hesnnz; ++i )
+            exprintdata->hesvalues[i] = hess[exprintdata->hessparsity_row[i] * n + exprintdata->hessparsity_col[i]];
       }
       else
-         for( int i = 0; i < exprintdata->hesnnz; ++i )
-            exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
-   }
-   else if( exprintdata->hesvalues == NULL )
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesvalues, 0) );
+      {
+         // originally, this was hess = exprintdata->f.SparseHessian(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity),
+         //    where hess was a dense nxn matrix as in the case above
+         // to reuse the coloring of the sparsity pattern and use also a sparse matrix for the Hessian values, we now call SparseHessianCompute directly
+         exprintdata->f.SparseHessianCompute(exprintdata->x, vector<double>(1, 1.0), exprintdata->hessparsity_pattern, exprintdata->hessparsity_row, exprintdata->hessparsity_col, exprintdata->hesvalues, exprintdata->heswork);
+
+#ifndef NDEBUG
+         // hessparsity_row, hessparsity_col, hessparsity_pattern are no longer used by SparseHessianCompute after coloring has been computed in first call, except for some asserts, so we free some mem
+         exprintdata->hessparsity_row.clear();
+         exprintdata->hessparsity_col.clear();
+         exprintdata->hessparsity_pattern.resize(0,0);
+#endif
+      }
    }
 
 #ifdef SCIP_DEBUG
@@ -2035,7 +2073,7 @@ SCIP_RETCODE SCIPexprintHessian(
 
    *rowidxs = exprintdata->hesrowidxs;
    *colidxs = exprintdata->hescolidxs;
-   *hessianvals = exprintdata->hesvalues;
+   *hessianvals = exprintdata->hesvalues.data();
    *nnz = exprintdata->hesnnz;
 
    return SCIP_OKAY;

@@ -35,20 +35,20 @@ extern "C" {
  *
  * @{
  *
- * @name Power and signed power expression.
+ * @name Power and signed power expression
  *
  * These expression handler provide the power function, that is,
  * \f[
- *   x \mapsto \begin{case}
- *     x^e & \textrm{if} x \geq 0 or e integral, \\
- *     \textrm{undefined}, & otherwise.
+ *   x \mapsto \begin{cases}
+ *     x^e & \textrm{if}\; x \geq 0\; \textrm{or}\; e\in\mathbb{Z}, \\
+ *     \textrm{undefined}, & \textrm{otherwise}.
  *     \end{cases}
  * \f]
  * and the signed power function, that is,
  * \f[
  *   x \mapsto \textrm{sign}(e) |x|^e
  * \f]
- * for some exponent e.
+ * for some exponent \f$e\f$.
  *
  * @{
  */
@@ -91,7 +91,7 @@ SCIP_Bool SCIPisExprSignpower(
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrPow(
+SCIP_RETCODE SCIPincludeExprhdlrPow(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -100,8 +100,32 @@ SCIP_RETCODE SCIPincludeExprHdlrPow(
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrSignpower(
+SCIP_RETCODE SCIPincludeExprhdlrSignpower(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** computes coefficients of linearization of a square term in a reference point */
+SCIP_EXPORT
+void SCIPaddSquareLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             refpoint,           /**< point where to linearize */
+   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
+/** computes coefficients of secant of a square term */
+SCIP_EXPORT
+void SCIPaddSquareSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             lb,                 /**< lower bound on variable */
+   SCIP_Real             ub,                 /**< upper bound on variable */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
    );
 
 #ifdef __cplusplus

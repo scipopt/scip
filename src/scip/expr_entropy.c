@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_entropy.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  handler for -x*log(x) expressions
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
@@ -30,8 +31,8 @@
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "entropy"
-#define EXPRHDLR_DESC         "expression handler for -x*log(x)"
-#define EXPRHDLR_PRECEDENCE   0
+#define EXPRHDLR_DESC         "entropy expression (-x*log(x))"
+#define EXPRHDLR_PRECEDENCE   81000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(7477.0)
 
 /*
@@ -220,7 +221,7 @@ SCIP_RETCODE reverseProp(
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrEntropy)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrEntropy(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrEntropy(scip) );
 
    return SCIP_OKAY;
 }
@@ -633,8 +634,8 @@ SCIP_DECL_EXPRINTEGRALITY(integralityEntropy)
    return SCIP_OKAY;
 }
 
-/** creates the handler for x*log(x) expressions and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrEntropy(
+/** creates the handler for entropy expressions and includes it into SCIP */
+SCIP_RETCODE SCIPincludeExprhdlrEntropy(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -645,7 +646,7 @@ SCIP_RETCODE SCIPincludeExprHdlrEntropy(
    exprhdlrdata = NULL;
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE,
          evalEntropy, exprhdlrdata) );
    assert(exprhdlr != NULL);
 
@@ -665,7 +666,7 @@ SCIP_RETCODE SCIPincludeExprHdlrEntropy(
    return SCIP_OKAY;
 }
 
-/** creates an x*log(x) expression */
+/** creates an entropy expression */
 SCIP_RETCODE SCIPcreateExprEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
@@ -680,7 +681,7 @@ SCIP_RETCODE SCIPcreateExprEntropy(
    assert(expr != NULL);
    assert(child != NULL);
 
-   exprhdlr = SCIPfindExprHdlr(scip, EXPRHDLR_NAME);
+   exprhdlr = SCIPfindExprhdlr(scip, EXPRHDLR_NAME);
    assert(exprhdlr != NULL);
 
    /* create expression data */

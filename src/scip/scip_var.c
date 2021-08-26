@@ -368,7 +368,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
    return SCIP_OKAY;
 }
 
-/** print the given monomials as polynomial in the following form
+/** print the given terms as signomial in the following form
  *  c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...
  *
  *  This string can be parsed by the method SCIPparseVarsPolynomial().
@@ -783,7 +783,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    return SCIP_OKAY;
 }
 
-/** parse the given string as polynomial of variables and coefficients
+/** parse the given string as signomial of variables and coefficients
  *  (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
  *  (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
  *
@@ -1138,7 +1138,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    return SCIP_OKAY;
 }
 
-/** frees memory allocated when parsing a polynomial from a string
+/** frees memory allocated when parsing a signomial from a string
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1270,9 +1270,9 @@ SCIP_RETCODE SCIPreleaseVar(
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
-      if( !SCIPvarIsTransformed(*var) && (*var)->nuses == 1 )
+      if( !SCIPvarIsTransformed(*var) && (*var)->nuses == 1 && (*var)->data.original.transvar != NULL )
       {
-         SCIPerrorMessage("cannot release last use of original variable while the transformed problem exists\n");
+         SCIPerrorMessage("cannot release last use of original variable while associated transformed variable exists\n");
          return SCIP_INVALIDCALL;
       }
       SCIP_CALL( SCIPvarRelease(var, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
@@ -4336,6 +4336,7 @@ SCIP_RETCODE SCIPaddVarLocks(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -4356,7 +4357,7 @@ SCIP_RETCODE SCIPlockVarCons(
    int nlocksup[NLOCKTYPES];
    int i;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -4421,6 +4422,7 @@ SCIP_RETCODE SCIPlockVarCons(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -4441,7 +4443,7 @@ SCIP_RETCODE SCIPunlockVarCons(
    int nlocksup[NLOCKTYPES];
    int i;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPunlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPunlockVarCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -4471,6 +4473,7 @@ SCIP_RETCODE SCIPunlockVarCons(
       assert(!SCIPvarIsTransformed(var));
       /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:

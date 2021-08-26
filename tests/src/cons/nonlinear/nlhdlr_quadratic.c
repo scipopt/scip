@@ -35,9 +35,8 @@
 #include "scip/expr_pow.h"
 #include "scip/expr_product.h"
 #include "scip/expr_sum.h"
-#include "scip/expr_sin.h"
+#include "scip/expr_trig.h"
 #include "scip/expr_var.h"
-#include "scip/expr_cos.h"
 #include "scip/expr_value.h"
 #include "scip/nlpi_ipopt.h"
 
@@ -58,7 +57,9 @@ static SCIP_VAR* t;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_NLHDLR* nlhdlr = NULL;
 
+#ifdef ENABLE_INTERSECTIONCUT
 static RAYS* myrays = NULL;
+#endif
 
 #define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
 
@@ -72,16 +73,16 @@ void setup(void)
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
 
    /* include some expr handlers */
-   SCIP_CALL( SCIPincludeExprHdlrAbs(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrExp(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrProduct(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert_not_null(conshdlr);
@@ -119,9 +120,11 @@ void setup(void)
 static
 void teardown(void)
 {
+#ifdef ENABLE_INTERSECTIONCUT
    /* free rays */
    if( myrays != NULL )
       freeRays(scip, &myrays);
+#endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
@@ -465,7 +468,7 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/useintersectioncuts", FALSE) );
+   SCIPnlhdlrGetData(nlhdlr)->useintersectioncuts = FALSE;
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
@@ -713,7 +716,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* to register events */
 
    /* detect */
-   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/useintersectioncuts", FALSE) );
+   SCIPnlhdlrGetData(nlhdlr)->useintersectioncuts = FALSE;
 
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;

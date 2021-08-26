@@ -32,6 +32,5 @@ done
 
 export LC_NUMERIC=C
 
-awk -f permcmpresall.awk "${AWKARGS}" "${FILES}"
-
-
+# the variables AWKARGS and FILES need to be without quotation marks here
+awk -f permcmpresall.awk ${AWKARGS} ${FILES}

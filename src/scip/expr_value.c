@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_value.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  constant value expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -47,7 +48,7 @@ SCIP_DECL_EXPRCOMPARE(compareValue)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrValue)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
 
    return SCIP_OKAY;
 }
@@ -213,13 +214,13 @@ SCIP_DECL_EXPRINTEGRALITY(integralityValue)
 }
 
 /** creates the handler for constant value expression and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrValue(
+SCIP_RETCODE SCIPincludeExprhdlrValue(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE,
          evalValue, NULL) );
    assert(exprhdlr != NULL);
 
@@ -254,7 +255,7 @@ SCIP_RETCODE SCIPcreateExprValue(
    assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*)); /*lint !e506*/
    memcpy(&exprdata, &value, sizeof(SCIP_Real)); /*lint !e857*/
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrValue(scip), exprdata, 0, NULL, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrValue(scip), exprdata, 0, NULL, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_xyz.h
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  xyz nonlinear handler
  * @author Benjamin Mueller
  */

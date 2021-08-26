@@ -146,7 +146,7 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
          }
       }
 
-      cr_expect(found, "variable %s must be in the cut", SCIPvarGetName(vars[j]));
+      cr_expect(found, "variable %s must be in the cut", SCIPvarGetName(var));
    }
 }
 
@@ -500,7 +500,7 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    cr_assert_eq(nlhdlrexprdata->indicators[1], z_2, "Expecting the second indicator to be z_2, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[1]));
    cr_assert_eq(nlhdlrexprdata->exprvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->exprvals0[1]);
 
-   /* make sure there is an auxvar; since expr is not part of a constraint, we cannot lean on cons_expr to do that for us TODO but it is part of a constraint? */
+   /* make sure there is an auxvar; since expr is not part of a constraint, we cannot lean on cons_nonlinear to do that for us TODO but it is part of a constraint? */
    SCIP_CALL( createAuxVar(scip, expr) );
    auxvar = SCIPgetExprAuxVarNonlinear(expr);
 

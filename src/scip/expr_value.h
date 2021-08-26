@@ -36,7 +36,7 @@ extern "C" {
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrValue(
+SCIP_RETCODE SCIPincludeExprhdlrValue(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -44,7 +44,7 @@ SCIP_RETCODE SCIPincludeExprHdlrValue(
  *
  * @{
  *
- * @name Constant value expression.
+ * @name Constant value expression
  *
  * This expression handler handles a constant value. It cannot have children.
  * @{

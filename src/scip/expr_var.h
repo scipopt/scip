@@ -38,7 +38,7 @@ extern "C" {
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrVar(
+SCIP_RETCODE SCIPincludeExprhdlrVar(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPincludeExprHdlrVar(
  *
  * @{
  *
- * @name SCIP variable expression.
+ * @name SCIP variable expression
  *
  * This expression handler handles a SCIP variables. It cannot have children.
  * @{

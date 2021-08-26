@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_abs.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  absolute expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -28,7 +29,7 @@
 #include "scip/expr.h"
 
 #define EXPRHDLR_NAME         "abs"
-#define EXPRHDLR_DESC         "absolute expression"
+#define EXPRHDLR_DESC         "absolute value expression"
 #define EXPRHDLR_PRECEDENCE   70000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(7187.0)
 
@@ -54,7 +55,6 @@ SCIP_RETCODE computeCutsAbs(
    assert(scip != NULL);
 
    *nreturned = 0;
-   printf("building cut for |x| x in %g %g\n", bounds.inf, bounds.sup);
 
    if( ! overestimate )
    {
@@ -121,8 +121,10 @@ SCIP_RETCODE computeCutsAbs(
  * Callback methods of expression handler
  */
 
-/** simplifies an abs expression.
- * Evaluates the absolute value function when its child is a value expression
+/** simplifies an abs expression
+ *
+ * Evaluates the absolute value function when its child is a value expression.
+ *
  * TODO: abs(*) = * if * >= 0 or - * if * < 0
  */
 static
@@ -157,7 +159,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyAbs)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrAbs)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
 
    return SCIP_OKAY;
 }
@@ -477,14 +479,14 @@ SCIP_DECL_EXPRINTEGRALITY(integralityAbs)
 }
 
 
-/** creates the handler for absolute expression and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprHdlrAbs(
+/** creates the handler for absolute expression and includes it into SCIP */
+SCIP_RETCODE SCIPincludeExprhdlrAbs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
          EXPRHDLR_PRECEDENCE, evalAbs, NULL) );
    assert(exprhdlr != NULL);
 
@@ -503,7 +505,7 @@ SCIP_RETCODE SCIPincludeExprHdlrAbs(
    return SCIP_OKAY;
 }
 
-/** creates an absolute expression */
+/** creates an absolute value expression */
 SCIP_RETCODE SCIPcreateExprAbs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
@@ -514,9 +516,9 @@ SCIP_RETCODE SCIPcreateExprAbs(
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindExprHdlr(scip, EXPRHDLR_NAME) != NULL);
+   assert(SCIPfindExprhdlr(scip, EXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

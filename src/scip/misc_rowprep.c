@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc_rowprep.c
+ * @ingroup OTHER_CFILES
  * @brief  linear inequalities in preparation
  * @author Stefan Vigerske
  * @author Benjamin Mueller

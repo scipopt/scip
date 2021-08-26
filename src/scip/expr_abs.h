@@ -37,17 +37,17 @@ extern "C" {
  *
  * @{
  *
- * @name Absolute value expression.
+ * @name Absolute value expression
  *
  * This expression handler provides the absolute-value function, that is,
  * \f[
- *   x \mapsto |x|
+ *   x \mapsto |x|.
  * \f]
  *
  * @{
  */
 
-/** creates a absolute expression */
+/** creates an absolute value expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateExprAbs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -61,12 +61,12 @@ SCIP_RETCODE SCIPcreateExprAbs(
   * @}
   */
 
-/** creates the handler for absolute expression and includes it into the expression constraint handler
+/** creates the handler for absolute expression and includes it into SCIP
  *
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrAbs(
+SCIP_RETCODE SCIPincludeExprhdlrAbs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

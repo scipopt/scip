@@ -13,8 +13,12 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* This is a TEMPLATE for a NLPI. Use this as starting point to implement your own NLPI.
+ * Copy the file, rename it, and replace all occurences of XYZ by the name of your NLP solver.
+ */
+
 /**@file    nlpi_xyz.c
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   XYZ NLP interface
  * @author  you
  */
@@ -27,9 +31,9 @@
 #include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 
-#define NLPI_NAME              "xyz"                       /* short concise name of solver */
-#define NLPI_DESC              "solver interface template" /* description of solver */
-#define NLPI_PRIORITY          0                           /* priority of NLP solver */
+#define NLPI_NAME              "xyz"                       /**< short concise name of solver */
+#define NLPI_DESC              "solver interface template" /**< description of solver */
+#define NLPI_PRIORITY          0                           /**< priority of NLP solver */
 
 /*
  * Data structures
@@ -59,9 +63,9 @@ struct SCIP_NlpiProblem
  * Callback methods of NLP solver interface
  */
 
-/* TODO: Implement all necessary NLP interface methods. The methods with an #if 0 ... #else #define ... are optional
- * (currently, all methods are required) */
+/* TODO: Implement all necessary NLP interface methods. The methods with an #ifdef SCIP_DISABLED_CODE ... #else #define ... are optional */
 
+#ifdef SCIP_DISABLED_CODE
 /** copy method of NLP interface (called when SCIP copies plugins) */
 static
 SCIP_DECL_NLPICOPY(nlpiCopyXyz)
@@ -71,6 +75,9 @@ SCIP_DECL_NLPICOPY(nlpiCopyXyz)
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
+#else
+#define nlpiCopyXyz NULL
+#endif
 
 /** destructor of NLP interface to free nlpi data */
 static
@@ -82,6 +89,7 @@ SCIP_DECL_NLPIFREE(nlpiFreeXyz)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
+#ifdef SCIP_DISABLED_CODE
 /** gets pointer for NLP solver */
 static
 SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
@@ -91,6 +99,9 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerXyz)
 
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
+#else
+#define nlpiGetSolverPointerXyz NULL
+#endif
 
 /** creates a problem instance */
 static
@@ -112,6 +123,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemXyz)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
+#ifdef SCIP_DISABLED_CODE
 /** gets pointer to solver-internal problem instance */
 static
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXyz)
@@ -121,6 +133,9 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXyz)
 
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
+#else
+#define nlpiGetProblemPointerXyz NULL
+#endif
 
 /** add variables */
 static 
@@ -223,7 +238,8 @@ SCIP_DECL_NLPICHGOBJCONSTANT(nlpiChgObjConstantXyz)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** sets initial guess for primal variables */
+#ifdef SCIP_DISABLED_CODE
+/** sets initial guess */
 static
 SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessXyz)
 {
@@ -232,8 +248,14 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessXyz)
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
+#else
+#define nlpiSetInitialGuessXyz NULL
+#endif
 
-/** tries to solve NLP */
+/** try to solve NLP
+ *
+ * Note that SCIP will already have reset a timelimit of SCIP_REAL_MAX to the time remaining for the SCIP solve in SCIPnlpiSolve().
+ */
 static
 SCIP_DECL_NLPISOLVE(nlpiSolveXyz)
 {
@@ -283,96 +305,6 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsXyz)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** gives required size of a buffer to store a warmstart object */
-static
-SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** stores warmstart information in buffer */
-static
-SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets warmstart information in solver */
-static
-SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** gets integer parameter of NLP */
-static
-SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets integer parameter of NLP */
-static
-SCIP_DECL_NLPISETINTPAR(nlpiSetIntParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** gets floating point parameter of NLP */
-static
-SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets floating point parameter of NLP */
-static
-SCIP_DECL_NLPISETREALPAR(nlpiSetRealParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** gets string parameter of NLP */
-static
-SCIP_DECL_NLPIGETSTRINGPAR(nlpiGetStringParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets string parameter of NLP */
-static
-SCIP_DECL_NLPISETSTRINGPAR(nlpiSetStringParXyz)
-{
-   SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
 /*
  * NLP solver interface specific interface methods
  */
@@ -382,30 +314,27 @@ SCIP_RETCODE SCIPincludeNlpSolverXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_NLPI* nlpi;
    SCIP_NLPIDATA* nlpidata;
 
    /* create xyz solver interface data */
    nlpidata = NULL;
    /* TODO: (optional) create solver interface specific data here */
 
-   /* create solver interface */
-   SCIP_CALL( SCIPnlpiCreate(&nlpi,
+   /* create and include solver interface */
+   SCIP_CALL( SCIPincludeNlpi(scip,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
          nlpiCopyXyz, nlpiFreeXyz, nlpiGetSolverPointerXyz,
          nlpiCreateProblemXyz, nlpiFreeProblemXyz, nlpiGetProblemPointerXyz,
          nlpiAddVarsXyz, nlpiAddConstraintsXyz, nlpiSetObjectiveXyz,
          nlpiChgVarBoundsXyz, nlpiChgConsSidesXyz, nlpiDelVarSetXyz, nlpiDelConstraintSetXyz,
-         nlpiChgLinearCoefsXyz, nlpiChgExprXyz,
-         nlpiChgObjConstantXyz, nlpiSetInitialGuessXyz, nlpiSolveXyz, nlpiGetSolstatXyz, nlpiGetTermstatXyz,
-         nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
-         nlpiGetWarmstartSizeXyz, nlpiGetWarmstartMemoXyz, nlpiSetWarmstartMemoXyz,
-         nlpiGetIntParXyz, nlpiSetIntParXyz, nlpiGetRealParXyz, nlpiSetRealParXyz, nlpiGetStringParXyz, nlpiSetStringParXyz,
+         nlpiChgLinearCoefsXyz, nlpiChgExprXyz, nlpiChgObjConstantXyz,
+         nlpiSetInitialGuessXyz, nlpiSolveXyz,
+         nlpiGetSolstatXyz, nlpiGetTermstatXyz, nlpiGetSolutionXyz, nlpiGetStatisticsXyz,
          nlpidata) );
-   assert(nlpi != NULL);
 
-   /* include NLPI into SCIP */
-   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+   /* TODO: (optional) add information about third-party library
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "Xyz", "Xyz developed by Jane Doe et.al (github.com/xzy/xyz)") );
+   */
 
    return SCIP_OKAY;
 }

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_varidx.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  handler for variable index expressions
  * @author Benjamin Mueller
  */
@@ -41,7 +42,7 @@
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrVaridx)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrVaridx(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
 
    return SCIP_OKAY;
 }
@@ -178,7 +179,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityVaridx)
 }
 
 /** creates the handler for variable index expressions and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrVaridx(
+SCIP_RETCODE SCIPincludeExprhdlrVaridx(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -189,7 +190,7 @@ SCIP_RETCODE SCIPincludeExprHdlrVaridx(
    exprhdlrdata = NULL;
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalVaridx,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalVaridx,
          exprhdlrdata) );
    assert(exprhdlr != NULL);
 
@@ -219,7 +220,7 @@ SCIP_RETCODE SCIPcreateExprVaridx(
 
    assert(expr != NULL);
 
-   exprhdlr = SCIPfindExprHdlr(scip, EXPRHDLR_NAME);
+   exprhdlr = SCIPfindExprhdlr(scip, EXPRHDLR_NAME);
 
    if( exprhdlr == NULL )
    {

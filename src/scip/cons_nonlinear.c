@@ -59,8 +59,9 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
-#include "scip/nlpi_ipopt.h"  /* for SCIPsolveLinearProb */
+#include "scip/nlpi_ipopt.h"  /* for SCIPsolveLinearEquationsIpopt */
 #include "scip/debug.h"
+#include "scip/dialog_default.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -84,10 +85,20 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
 /* properties of the nonlinear constraint handler statistics table */
-#define TABLE_NAME_NONLINEAR           "nonlinear"
+#define TABLE_NAME_NONLINEAR           "cons_nonlinear"
 #define TABLE_DESC_NONLINEAR           "nonlinear constraint handler statistics"
 #define TABLE_POSITION_NONLINEAR       14600                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NONLINEAR SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+
+/* properties of the nonlinear handler statistics table */
+#define TABLE_NAME_NLHDLR              "nlhdlr"
+#define TABLE_DESC_NLHDLR              "nonlinear handler statistics"
+#define TABLE_POSITION_NLHDLR          14601                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_NLHDLR    SCIP_STAGE_PRESOLVING  /**< output of the statistics table is only printed from this stage onwards */
+
+#define DIALOG_NAME            "nlhdlrs"
+#define DIALOG_DESC            "display nonlinear handlers"
+#define DIALOG_ISSUBMENU          FALSE
 
 #define VERTEXPOLY_MAXPERTURBATION      1e-3 /**< maximum perturbation */
 #define VERTEXPOLY_USEDUALSIMPLEX       TRUE /**< use dual or primal simplex algorithm? */
@@ -381,7 +392,7 @@ SCIP_RETCODE freeAuxVar(
 /** frees data used for enforcement of expression, that is, nonlinear handlers
  *
  * can also clear indicators whether expr needs enforcement methods, that is,
- * free an associated auxiliary variable and reset the activityusage counts
+ * free an associated auxiliary variable and reset the nactivityuses counts
  */
 static
 SCIP_RETCODE freeEnfoData(
@@ -537,9 +548,7 @@ SCIP_DECL_EXPR_OWNERPRINT(exprownerPrint)
 
 /** possibly reevaluates and then returns the activity of the expression
  *
- * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
- * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
- * since last evaluation.
+ * Reevaluate activity if currently stored is not up to date (some bound was changed since last evaluation).
  */
 static
 SCIP_DECL_EXPR_OWNEREVALACTIVITY(exprownerEvalactivity)
@@ -725,7 +734,7 @@ SCIP_RETCODE storeVarExprs(
    SCIP_CALL( SCIPgetExprVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
    assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
 
-   /* realloc array if there are less variable expression than variables */
+   /* shrink array if there are less variables in the expression than in the problem */
    if( SCIPgetNTotalVars(scip) > consdata->nvarexprs )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip), consdata->nvarexprs) );
@@ -812,7 +821,7 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
    }
-   assert(lb <= ub);  /* can SCIP ensure by now that variable bounds are not contradicting? */
+   assert(lb <= ub);  /* SCIP should ensure that variable bounds are not contradicting */
 
    /* implicit integer variables may have non-integer bounds, apparently (run space25a) */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
@@ -968,10 +977,10 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          assert(ownerdata->conss[c] != NULL);
          consdata = SCIPconsGetData(ownerdata->conss[c]);
 
-         /* if boundtightening, then mark constraints to be propagated again
+         /* if bound tightening, then mark constraints to be propagated again
           * TODO we could try be more selective here and only trigger a propagation if a relevant bound has changed,
           *   that is, we don't need to repropagate x + ... <= rhs if only the upper bound of x has been tightened
-          *   the locks could help if they were available on a per-constraint base, but they aren't (and it may not be worth it)
+          *   the locks don't help since they are not available separately for each constraint
           */
          if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
          {
@@ -1119,7 +1128,7 @@ SCIP_RETCODE catchVarEvents(
       SCIP_CALL( catchVarEvent(scip, eventhdlr, expr, cons) );
 
       /* from now on, activity of var-expr will usually be updated in processVarEvent if variable bound is changing
-       * since we just registered this eventhdlr, we should make sure that the activity is also uptodate now
+       * since we just registered this eventhdlr, we should make sure that the activity is also up to date now
        */
       if( SCIPexprGetActivityTag(expr) < conshdlrdata->curboundstag )
       {
@@ -1246,9 +1255,9 @@ SCIP_RETCODE dropVarEvents(
    return SCIP_OKAY;
 }
 
-/** returns whether the variable events on variable expression are catched */
+/** returns whether variable events on variable expression are caught */
 static
-SCIP_Bool isVarEventCatched(
+SCIP_Bool areVarEventsCaught(
    SCIP_EXPR*            expr                /**< variable expression */
    )
 {
@@ -1260,7 +1269,7 @@ SCIP_Bool isVarEventCatched(
 
 /** creates and captures a nonlinear constraint
  *
- * @attention Use copyexpr=FALSE only if expr is already "owned" by conshdlr
+ * @attention Use copyexpr=FALSE only if expr is already "owned" by conshdlr, that is, if expressions were created with exprownerCreate and ownerdata passed in the last two arguments
  */
 static
 SCIP_RETCODE createCons(
@@ -1303,14 +1312,13 @@ SCIP_RETCODE createCons(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* TODO remove this once we allow for local expression constraints */
    if( local && SCIPgetDepth(scip) != 0 )
    {
       SCIPerrorMessage("Locally valid expression constraints are not supported, yet.\n");
       return SCIP_INVALIDCALL;
    }
 
-   /* TODO remove this once we allow for non-initial expression constraints */
+   /* TODO we should allow for non-initial nonlinear constraints */
    if( !initial )
    {
       SCIPerrorMessage("Non-initial expression constraints are not supported, yet.\n");
@@ -1696,8 +1704,9 @@ void findUnlockedLinearVar(
 
          if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
          {
-            /* for a*x + f(y) \in [lhs, rhs], we can decrease x without harming other constraints */
-            /* if we have already one candidate, then take the one where the loss in the objective function is less */
+            /* for a*x + f(y) \in [lhs, rhs], we can decrease x without harming other constraints
+             * if we have already one candidate, then take the one where the loss in the objective function is less
+             */
             if( (consdata->linvardecr == NULL) ||
                (SCIPvarGetObj(consdata->linvardecr) / consdata->linvardecrcoef > SCIPvarGetObj(var) / coef) )
             {
@@ -1708,8 +1717,9 @@ void findUnlockedLinearVar(
 
          if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) - poslock == 0 )
          {
-            /* for a*x + f(y) \in [lhs, rhs], we can increase x without harm */
-            /* if we have already one candidate, then take the one where the loss in the objective function is less */
+            /* for a*x + f(y) \in [lhs, rhs], we can increase x without harm
+             * if we have already one candidate, then take the one where the loss in the objective function is less
+             */
             if( (consdata->linvarincr == NULL) ||
                (SCIPvarGetObj(consdata->linvarincr) / consdata->linvarincrcoef > SCIPvarGetObj(var) / coef) )
             {
@@ -1915,7 +1925,7 @@ SCIP_RETCODE tightenAuxVarBounds(
    *cutoff = FALSE;
 
    /* do not tighten variable in problem stage (important for unittests)
-    * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
+    * TODO put some kind of #ifdef UNITTEST around this
     */
    if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) > SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
@@ -2063,15 +2073,15 @@ SCIP_RETCODE forwardPropExpr(
          {
             SCIP_INTERVAL activity;
 
-            /* we should not have entered this expression if its activity was already uptodate */
+            /* we should not have entered this expression if its activity was already up to date */
             assert(SCIPexprGetActivityTag(expr) < conshdlrdata->curboundstag);
 
             /* for var exprs where varevents are catched, activity is updated immediately when the varbound has been changed
-             * so we can assume that the activity is uptodate for all these variables
+             * so we can assume that the activity is up to date for all these variables
              * UNLESS we changed the method used to evaluate activity of variable expressions
              *   or we currently use global bounds (varevents are catched for local bound changes only)
              */
-            if( SCIPisExprVar(scip, expr) && isVarEventCatched(expr) &&
+            if( SCIPisExprVar(scip, expr) && areVarEventsCaught(expr) &&
                 SCIPexprGetActivityTag(expr) >= conshdlrdata->lastvaractivitymethodchange && !conshdlrdata->globalbounds )
             {
 #ifndef NDEBUG
@@ -2242,6 +2252,7 @@ SCIP_RETCODE forwardPropExpr(
 
          default:
             /* you should never be here */
+            SCIPerrorMessage("unexpected iterator stage\n");
             SCIPABORT();
             break;
       }
@@ -2451,7 +2462,7 @@ SCIP_RETCODE reversePropQueue(
 /** calls domain propagation for a given set of constraints
  *
  *  The algorithm alternates calls of forward and reverse propagation.
- *  Forward propagation ensures that activity of expressions is uptodate.
+ *  Forward propagation ensures that activity of expressions is up to date.
  *  Reverse propagation tries to derive tighter variable bounds by reversing the activity computation, using the constraints
  *  [lhs,rhs] interval as starting point.
  *
@@ -2472,7 +2483,7 @@ SCIP_RETCODE reversePropQueue(
  *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
  *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
  *
- *  @TODO should we distinguish between expressions where activity information is used for separation and those where not,
+ *  TODO should we distinguish between expressions where activity information is used for separation and those where not,
  *    e.g., try less to propagate on convex constraints?
  */
 static
@@ -2519,7 +2530,7 @@ SCIP_RETCODE propConss(
    *result = SCIP_DIDNOTFIND;
    roundnr = 0;
 
-   /* tightenAuxVarBounds needs to know whether boundtightenings are to be forced */
+   /* tightenAuxVarBounds() needs to know whether boundtightenings are to be forced */
    conshdlrdata->forceboundtightening = force;
 
    /* invalidate all propbounds (probably not needed) */
@@ -2675,7 +2686,7 @@ SCIP_RETCODE propConss(
  * This is meant to propagate any domain restrictions on functions onto variable bounds, if possible.
  *
  * Assumes that activities are still valid and curpropboundstag does not need to be increased.
- * That is, a good place to call this function is immediately after propConss or after forwardPropExpr if outside propagation.
+ * Therefore, a good place to call this function is immediately after propConss or after forwardPropExpr if outside propagation.
  */
 static
 SCIP_RETCODE propExprDomains(
@@ -2802,7 +2813,7 @@ SCIP_RETCODE propagateLocks(
 
    assert(expr != NULL);
 
-   /* if no locks, then nothing to do, then do nothing */
+   /* if no locks, then nothing to propagate */
    if( nlockspos == 0 && nlocksneg == 0 )
       return SCIP_OKAY;
 
@@ -3118,9 +3129,9 @@ SCIP_RETCODE detectNlhdlr(
    assert(ownerdata->enfos == NULL);
 
    /* check which enforcement methods are required by setting flags in enforcemethods for those that are NOT required
-    * - if no auxiliary variable usage, then do not need sepabelow or sepaabove
-    * - if auxiliary variable usage, but nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
-    * - if auxiliary variable usage, but nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
+    * - if no auxiliary variable is used, then do not need sepabelow or sepaabove
+    * - if auxiliary variable is used, but nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
+    * - if auxiliary variable is used, but nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
     * - if no one uses activity, then do not need activity methods
     */
    enforcemethods = SCIP_NLHDLR_METHOD_NONE;
@@ -3337,12 +3348,12 @@ SCIP_RETCODE detectNlhdlrs(
          if( ownerdata->nenfos >= 0 )
             continue;
 
-         /* if there is auxvar usage, then someone requires that
+         /* if there is use of the auxvar, then someone requires that
           *   auxvar == expr (or auxvar >= expr or auxvar <= expr) or we are at the root expression (expr==consdata->expr)
           *   thus, we need to find nlhdlrs that separate or estimate
-          * if there is activity usage, then there is someone requiring that
-          *   activity of this expression is updated; this someone would also benefit from better bounds on the activity
-          *   of this expression thus, we need to find nlhdlrs that do interval-evaluation
+          * if there is use of the activity, then there is someone requiring that
+          *   activity of this expression is updated; this someone would also benefit from better bounds on the activity of this expression
+          *   thus, we need to find nlhdlrs that do interval-evaluation
           */
          if( ownerdata->nauxvaruses > 0 || ownerdata->nactivityusesprop > 0 || ownerdata->nactivityusessepa > 0 )
          {
@@ -3443,7 +3454,7 @@ SCIP_RETCODE initSolve(
          SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
 
          /* add nlrow representation to NLP, if NLP had been constructed */
-         if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
+         if( SCIPisNLPConstructed(scip) && SCIPconsIsActive(conss[c]) )
          {
             if( consdata->nlrow == NULL )
             {
@@ -3492,7 +3503,7 @@ SCIP_RETCODE deinitSolve(
 
    /* call deinitialization callbacks of expression and nonlinear handlers
     * free nonlinear handlers information from expressions
-    * remove auxiliary variables and activityusagecounts from expressions
+    * remove auxiliary variables and nactivityuses counts from expressions
     */
    for( c = 0; c < nconss; ++c )
    {
@@ -3520,7 +3531,7 @@ SCIP_RETCODE deinitSolve(
          {
             /* ensure activity is valid if consdata->expr activity is valid
              * this is mainly to ensure that we do not leave invalid activities in parts of the expression tree where activity was not used,
-             * e.g., an expr's activity was kept uptodate by a nlhdlr, but without using some childs activity
+             * e.g., an expr's activity was kept up to date by a nlhdlr, but without using some childs activity
              * so this childs activity would be invalid, which can generate confusion
              */
             SCIP_CALL( SCIPevalExprActivity(scip, expr) );
@@ -4741,7 +4752,7 @@ SCIP_RETCODE canonicalizeConstraints(
 
       SCIPfreeBufferArray(scip, &rootexprs);
 
-      /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
+      /* TODO this is a possibly expensive way to update the variable expressions stored inside an expression which might have
        * been changed after simplification; now we completely recollect all variable expression and variable events
        */
 
@@ -5727,7 +5738,7 @@ SCIP_RETCODE createAuxVar(
 
 /** initializes separation for constraint
  *
- * - ensures that activities are uptodate in all expressions
+ * - ensures that activities are up to date in all expressions
  * - creates auxiliary variables where required
  * - calls propExprDomains to possibly tighten auxvar bounds
  * - calls separation initialization callback of nlhdlrs
@@ -5765,7 +5776,7 @@ SCIP_RETCODE initSepa(
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
    SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
 
-   /* first ensure activities are uptodate and create auxvars */
+   /* first ensure activities are up to date and create auxvars */
    *infeasible = FALSE;
    for( c = 0; c < nconss; ++c )
    {
@@ -6184,6 +6195,7 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
 
    return SCIP_OKAY;
 }
+
 /** registers all variables in violated constraints with branching scores as external branching candidates */
 static
 SCIP_RETCODE registerBranchingCandidates(
@@ -6783,7 +6795,7 @@ void scoreBranchingCandidates(
       }
    }
 
-   /* now computed a weighted score for each candidate from the single scores
+   /* now compute a weighted score for each candidate from the single scores
     * the single scores are scaled to be in [0,1] for this
     */
    for( c = 0; c < ncands; ++c )
@@ -7188,7 +7200,7 @@ SCIP_RETCODE enforceExpr(
        * that is, if auxvalue is good enough for the constraint to be satisfied, but when looking at evalvalue we see
        * the the constraint is violated, then some of the auxvars that nlhdlr uses is not having a good enough value,
        * so we should enforce in these auxiliaries first
-       * if changing this here, we must also adapt analyzeViolation
+       * if changing this here, we must also adapt analyzeViolation()
        */
 
       auxviol = getExprAbsAuxViolation(scip, expr, ownerdata->enfos[e]->auxvalue, sol, &auxunderestimate, &auxoverestimate);
@@ -7201,7 +7213,7 @@ SCIP_RETCODE enforceExpr(
                   "auxviolation %g << origviolation %g under:%d over:%d\n", SCIPnlhdlrGetName(nlhdlr), (void*)expr,
                   SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), auxviol, origviol, underestimate, overestimate); )
 
-         /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
+         /* TODO should we do expr->lastenforced = conshdlrdata->enforound even though we haven't enforced, but only decided not to enforce? */
          continue;
       }
 
@@ -7212,7 +7224,7 @@ SCIP_RETCODE enforceExpr(
                   "auxviolation %g under:%d over:%d\n", SCIPnlhdlrGetName(nlhdlr), (void*)expr, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), auxviol,
                   underestimate, overestimate); )
 
-         /* TODO expr->lastenforced = conshdlrdata->enforound;  ??? */
+            /* TODO should we do expr->lastenforced = conshdlrdata->enforound even though we haven't enforced, but only decided not to enforce? */
          continue;
       }
 
@@ -8697,7 +8709,6 @@ SCIP_RETCODE computeVertexPolyhedralFacetLP(
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_LPINFO, 1) );
 #endif
-   /* SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") ); */
 
    /*
     * solve the LP and store the resulting facet for the transformed space
@@ -8917,8 +8928,7 @@ SCIP_RETCODE computeHyperplaneThreePoints(
       SCIPdebugMsg(scip, "numerical troubles - try to solve the linear system via an LU factorization\n");
 
       /* solve the linear problem */
-      SCIP_CALL( SCIPsolveLinearProb(3, m, rhs, x, &success) );
-      /* assert(success); */
+      SCIP_CALL( SCIPsolveLinearEquationsIpopt(3, m, rhs, x, &success) );
 
       *delta  = rhs[0];
       *alpha  = x[0];
@@ -10359,8 +10369,69 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
    SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));
    SCIPinfoMessage(scip, file, "\n");
 
+   return SCIP_OKAY;
+}
+
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputNlhdlr)
+{ /*lint --e{715}*/
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* skip nlhdlr table if there never were active nonlinear constraints */
+   if( SCIPconshdlrGetMaxNActiveConss(conshdlr) == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* print statistics for nonlinear handlers */
    SCIPnlhdlrPrintStatistics(scip, conshdlrdata->nlhdlrs, conshdlrdata->nnlhdlrs, file);
+
+   return SCIP_OKAY;
+}
+
+/** execution method of display nlhdlrs dialog */
+static
+SCIP_DECL_DIALOGEXEC(dialogExecDisplayNlhdlrs)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   /* add dialog to history of dialogs that have been executed */
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* display list of nonlinear handler */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " nonlinear handler  enabled  detectprio  enforceprio  description\n");
+   SCIPdialogMessage(scip, NULL, " -----------------  -------  ----------  -----------  -----------\n");
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_NLHDLR* nlhdlr = conshdlrdata->nlhdlrs[i];
+      assert(nlhdlr != NULL);
+
+      SCIPdialogMessage(scip, NULL, " %-17s ", SCIPnlhdlrGetName(nlhdlr));
+      SCIPdialogMessage(scip, NULL, " %7s ", SCIPnlhdlrIsEnabled(nlhdlr) ? "yes" : "no");
+      SCIPdialogMessage(scip, NULL, " %10d ", SCIPnlhdlrGetDetectPriority(nlhdlr));
+      SCIPdialogMessage(scip, NULL, " %11d ", SCIPnlhdlrGetEnfoPriority(nlhdlr));
+      SCIPdialogMessage(scip, NULL, " %s", SCIPnlhdlrGetDesc(nlhdlr));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   /* next dialog will be root dialog again */
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
 }
@@ -10375,6 +10446,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_DIALOG* parentdialog;
 
    /* create nonlinear constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
@@ -10550,11 +10622,34 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "signals a bound change to a nonlinear constraint", processVarEvent, NULL) );
    assert(conshdlrdata->eventhdlr != NULL);
 
-   /* include table for statistics */
+   /* include tables for statistics */
    assert(SCIPfindTable(scip, TABLE_NAME_NONLINEAR) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NONLINEAR, TABLE_DESC_NONLINEAR, TRUE,
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NONLINEAR, TABLE_DESC_NONLINEAR, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNonlinear,
          NULL, TABLE_POSITION_NONLINEAR, TABLE_EARLIEST_STAGE_NONLINEAR) );
+
+   assert(SCIPfindTable(scip, TABLE_NAME_NLHDLR) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLHDLR, TABLE_DESC_NLHDLR, TRUE,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNlhdlr,
+         NULL, TABLE_POSITION_NLHDLR, TABLE_EARLIEST_STAGE_NLHDLR) );
+
+   /* includes or updates the default dialog menus in SCIP */
+   SCIP_CALL( SCIPincludeDialogDefault(scip) );
+
+   /* create, include, and release display nlhdlrs dialog */
+   if( SCIPdialogFindEntry(SCIPgetRootDialog(scip), "display", &parentdialog) == 1 )
+   {
+      SCIP_DIALOG* dialog;
+
+      assert(parentdialog != NULL);
+      assert(!SCIPdialogHasEntry(parentdialog, DIALOG_NAME));
+
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, dialogExecDisplayNlhdlrs, NULL, NULL,
+            DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
 
    return SCIP_OKAY;
 }
@@ -11047,7 +11142,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          /* TODO if violations are really tiny, then maybe handle special (decrease LP feastol, for example) */
 
          /* if estimate didn't report branchscores explicitly, then consider branching on those children for
-          * which the following cleanup changes coefficients (we had/have this in cons_expr_sum this way)
+          * which the following cleanup changes coefficients (we had/have this in expr_sum this way)
           */
          if( !branchscoresuccess )
             SCIProwprepRecordModifications(rowprep);
@@ -11810,7 +11905,7 @@ SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
    return consdata->curv;
 }
 
-/** returns representation of the expression of the given expression constraint as quadratic form, if possible
+/** checks whether expression of constraint can be represented as quadratic form
  *
  * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
  * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
@@ -11956,7 +12051,7 @@ SCIP_RETCODE SCIPchgExprNonlinear(
    assert(consdata->expr != NULL);
 
    /* we should not have collected additional data for the expr
-    * if some of these asserts fail, we may have to remove it and add some code to keep information uptodate
+    * if some of these asserts fail, we may have to remove it and add some code to keep information up to date
     */
    assert(consdata->nvarexprs == 0);
    assert(consdata->varexprs == NULL);
@@ -12014,7 +12109,7 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
    assert(consdata->expr != NULL);
 
    /* we should not have collected additional data for it
-    * if some of these asserts fail, we may have to remove it and add some code to keep information uptodate
+    * if some of these asserts fail, we may have to remove it and add some code to keep information up to date
     */
    assert(consdata->nvarexprs == 0);
    assert(consdata->varexprs == NULL);
@@ -12087,7 +12182,7 @@ SCIP_RETCODE SCIPaddExprNonlinear(
    assert(consdata->expr != NULL);
 
    /* we should not have collected additional data for it
-    * if some of these asserts fail, we may have to remove it and add some code to keep information uptodate
+    * if some of these asserts fail, we may have to remove it and add some code to keep information up to date
     */
    assert(consdata->nvarexprs == 0);
    assert(consdata->varexprs == NULL);
@@ -12887,7 +12982,6 @@ SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
    SCIP_Bool*            success             /**< buffer to store whether at least one violscore was added */
    )
 {
-   /* distribute violation as branching score to original variables in children of expr that are marked in branchcand */
    SCIP_EXPRITER* it;
    SCIP_EXPR** varexprs;
    SCIP_EXPR* e;

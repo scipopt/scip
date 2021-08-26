@@ -52,7 +52,7 @@ SCIP_RETCODE SCIPincludeSepaRlt(
  * @{
  */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

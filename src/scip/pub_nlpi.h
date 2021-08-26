@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-/**@addtogroup PublicNLPIMethods
+/**@addtogroup PublicNLPIInterfaceMethods
  *
  * @{
  */
@@ -53,7 +53,7 @@ const char* SCIPnlpiGetName(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
 
-/** gets NLP solver descriptions */
+/** gets NLP solver description */
 SCIP_EXPORT
 const char* SCIPnlpiGetDesc(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
@@ -64,6 +64,71 @@ SCIP_EXPORT
 int SCIPnlpiGetPriority(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    );
+
+/**@name Statistics */
+/**@{ */
+
+/** gives number of problems created for NLP solver so far */
+SCIP_EXPORT
+int SCIPnlpiGetNProblems(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives total time spend in problem creation/modification/freeing */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiGetProblemTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** total number of NLP solves so far */
+SCIP_EXPORT
+int SCIPnlpiGetNSolves(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives total time spend in NLP solves (as reported by solver) */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiGetSolveTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives total time spend in function evaluation during NLP solves
+ *
+ * If parameter `timing/nlpieval` is off (the default), depending on the NLP solver, this may just return 0.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiGetEvalTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives total number of iterations spend by NLP solver so far */
+SCIP_EXPORT
+SCIP_Longint SCIPnlpiGetNIterations(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   );
+
+/** gives number of times a solve ended with a specific termination status */
+SCIP_EXPORT
+int SCIPnlpiGetNTermStat(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   SCIP_NLPTERMSTAT      termstatus          /**< the termination status to query for */
+   );
+
+/** gives number of times a solve ended with a specific solution status */
+SCIP_EXPORT
+int SCIPnlpiGetNSolStat(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   SCIP_NLPSOLSTAT       solstatus           /**< the solution status to query for */
+   );
+
+/** adds statistics from one NLPI to another */
+SCIP_EXPORT
+void SCIPnlpiMergeStatistics(
+   SCIP_NLPI*            targetnlpi,         /**< NLP interface where to add statistics */
+   SCIP_NLPI*            sourcenlpi          /**< NLP interface from which add statistics */
+   );
+
+/**@} */ /* Statistics */
 
 /**@} */ /* PublicNLPIMethods */
 

@@ -31,7 +31,7 @@ extern "C" {
 
 /** creates the handler for erf expressions and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrErf(
+SCIP_RETCODE SCIPincludeExprhdlrErf(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

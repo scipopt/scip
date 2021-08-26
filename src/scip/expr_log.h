@@ -36,11 +36,11 @@ extern "C" {
  *
  * @{
  *
- * @name Logarithm expression.
+ * @name Logarithm expression
  *
  * This expression handler provides the natural logarithm function, that is,
  * \f[
- *   x \mapsto \ln(x)
+ *   x \mapsto \ln(x).
  * \f]
  *
  * @{
@@ -72,7 +72,7 @@ SCIP_Bool SCIPisExprLog(
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrLog(
+SCIP_RETCODE SCIPincludeExprhdlrLog(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -2107,6 +2107,54 @@ SCIP_RETCODE freeTransform(
    return SCIP_OKAY;
 }
 
+/** free transformed problem in case an error occurs during transformation and return to SCIP_STAGE_PROBLEM */
+static
+SCIP_RETCODE freeTransforming(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->set->stage == SCIP_STAGE_TRANSFORMING);
+
+   /* switch stage to FREETRANS */
+   scip->set->stage = SCIP_STAGE_FREETRANS;
+
+   /* free transformed problem data structures */
+   SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
+   SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
+   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
+   SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue, scip->lp) );
+
+   /* free the debug solution which might live in transformed primal data structure */
+   SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
+   SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
+
+   SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
+   SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
+   SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPeventqueueFree(&scip->eventqueue) );
+
+   if( scip->set->misc_resetstat )
+   {
+      /* reset statistics to the point before the problem was transformed */
+      SCIPstatReset(scip->stat, scip->set, scip->transprob, scip->origprob);
+   }
+   else
+   {
+      /* even if statistics are not completely reset, a partial reset of the primal-dual integral is necessary */
+      SCIPstatResetPrimalDualIntegrals(scip->stat, scip->set, TRUE);
+   }
+
+   /* switch stage to PROBLEM */
+   scip->set->stage = SCIP_STAGE_PROBLEM;
+
+   return SCIP_OKAY;
+}
+
 /** displays most relevant statistics after problem was solved */
 static
 SCIP_RETCODE displayRelevantStats(
@@ -2398,6 +2446,7 @@ SCIP_RETCODE SCIPpresolve(
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
    SCIP_Bool vanished;
+   SCIP_RETCODE retcode;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -2416,7 +2465,13 @@ SCIP_RETCODE SCIPpresolve(
    {
    case SCIP_STAGE_PROBLEM:
       /* initialize solving data structures and transform problem */
-      SCIP_CALL( SCIPtransformProb(scip) );
+      retcode =  SCIPtransformProb(scip);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIP_CALL( SCIPfreeTransform(scip) );
+         return retcode;
+      }
+
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
       /*lint -fallthrough*/
@@ -3361,7 +3416,7 @@ SCIP_RETCODE SCIPfreeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPfreeTransform", TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPfreeTransform", TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* release variables and constraints captured by reoptimization */
    if( scip->reopt != NULL )
@@ -3408,6 +3463,12 @@ SCIP_RETCODE SCIPfreeTransform(
       assert(scip->set->stage == SCIP_STAGE_PROBLEM);
       return SCIP_OKAY;
 
+   case SCIP_STAGE_TRANSFORMING:
+      assert(scip->set->stage == SCIP_STAGE_TRANSFORMING);
+      SCIP_CALL( freeTransforming(scip) );
+      assert(scip->set->stage == SCIP_STAGE_PROBLEM);
+      return SCIP_OKAY;
+
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
@@ -3445,6 +3506,35 @@ SCIP_RETCODE SCIPinterruptSolve(
    scip->stat->userinterrupt = TRUE;
 
    return SCIP_OKAY;
+}
+
+/** indicates whether \SCIP has been informed that the solving process should be interrupted as soon as possible
+ *
+ *  This function returns whether SCIPinterruptSolve() has been called, which is different from SCIPinterrupted(),
+ *  which returns whether a SIGINT signal has been received by the SCIP signal handler.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note the \SCIP stage does not get changed
+ */
+SCIP_Bool SCIPisSolveInterrupted(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPisSolveInterrupted", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->userinterrupt;
 }
 
 /** informs SCIP that the solving process should be restarted as soon as possible (e.g., after the current node has

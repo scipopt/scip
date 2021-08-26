@@ -3080,7 +3080,7 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
    idx = (int) (size_t) eventdata;
    assert(idx >= 0);
 
-   SCIPdebugMsg(scip, "eventexec (type=%lu): try to add sort index %d: %s(%s) to priority queue\n", SCIPeventGetType(event),
+   SCIPdebugMsg(scip, "eventexec (type=%" SCIP_EVENTTYPE_FORMAT "): try to add sort index %d: %s(%s) to priority queue\n", SCIPeventGetType(event),
       idx, indexGetBoundString(propdata->topoorder[idx]),
       SCIPvarGetName(propdata->vars[getVarIndex(propdata->topoorder[idx])]));
 
@@ -3109,10 +3109,6 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
 
 /**@} */
 
-/**@name Interface methods
- *
- * @{
- */
 
 /** creates the vbounds propagator and includes it in SCIP */
 SCIP_RETCODE SCIPincludePropVbounds(
@@ -3217,5 +3213,3 @@ SCIP_RETCODE SCIPexecPropVbounds(
 
    return SCIP_OKAY;
 }
-
-/**@} */

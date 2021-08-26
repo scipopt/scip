@@ -177,13 +177,12 @@ void setup_sepadata(void)
    sepadata->nlpi = SCIPgetNlpis(scip)[0];
    cr_assert_not_null(sepadata->nlpi);
 
-   SCIP_CALL( SCIPcreateNlpiProblem(scip, sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp-unittest") );
    SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
    /* I shouldn't care about the cutoff, just assert that the lp solution satisfies the cutoff bound */
-   SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, nlrows, 3,
-            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp-unittest", nlrows, 3,
+            sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
    /* set quadratic part of objective function */
    SCIP_CALL( setQuadraticObj(scip, sepadata) );

@@ -15,7 +15,7 @@
 
 /**@file   nlpi.c
  * @ingroup OTHER_CFILES
- * @brief  methods for handling nlp interface
+ * @brief  methods for handling NLP solver interface
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
  */
@@ -29,8 +29,10 @@
 #include "scip/nlpi.h"
 #include "scip/pub_message.h"
 #include "scip/pub_nlpi.h"
+#include "scip/clock.h"
 #include "scip/struct_nlpi.h"
 #include "scip/struct_set.h"
+#include "scip/struct_stat.h"
 
 /** compares two NLPIs w.r.t. their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPnlpiComp)
@@ -44,12 +46,12 @@ SCIP_RETCODE SCIPnlpiCreate(
    const char*                     name,                        /**< name of NLP interface */
    const char*                     description,                 /**< description of NLP interface */
    int                             priority,                    /**< priority of NLP interface */
-   SCIP_DECL_NLPICOPY              ((*nlpicopy)),               /**< copying an NLPI */
+   SCIP_DECL_NLPICOPY              ((*nlpicopy)),               /**< copying of NLPI, can be NULL */
    SCIP_DECL_NLPIFREE              ((*nlpifree)),               /**< free NLPI user data */
-   SCIP_DECL_NLPIGETSOLVERPOINTER  ((*nlpigetsolverpointer)),   /**< get solver pointer */
+   SCIP_DECL_NLPIGETSOLVERPOINTER  ((*nlpigetsolverpointer)),   /**< get solver pointer, can be NULL */
    SCIP_DECL_NLPICREATEPROBLEM     ((*nlpicreateproblem)),      /**< create a new problem instance */
    SCIP_DECL_NLPIFREEPROBLEM       ((*nlpifreeproblem)),        /**< free a problem instance */
-   SCIP_DECL_NLPIGETPROBLEMPOINTER ((*nlpigetproblempointer)),  /**< get problem pointer */
+   SCIP_DECL_NLPIGETPROBLEMPOINTER ((*nlpigetproblempointer)),  /**< get problem pointer, can be NULL */
    SCIP_DECL_NLPIADDVARS           ((*nlpiaddvars)),            /**< add variables */
    SCIP_DECL_NLPIADDCONSTRAINTS    ((*nlpiaddconstraints)),     /**< add constraints */
    SCIP_DECL_NLPISETOBJECTIVE      ((*nlpisetobjective)),       /**< set objective */
@@ -60,21 +62,12 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs)),     /**< change coefficients in linear part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPR           ((*nlpichgexpr)),            /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant)),     /**< change the constant offset in the objective */
-   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess for primal variables */
+   SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess, can be NULL */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve)),              /**< solve NLP */
    SCIP_DECL_NLPIGETSOLSTAT        ((*nlpigetsolstat)),         /**< get solution status */
    SCIP_DECL_NLPIGETTERMSTAT       ((*nlpigettermstat)),        /**< get termination status */
    SCIP_DECL_NLPIGETSOLUTION       ((*nlpigetsolution)),        /**< get solution */
    SCIP_DECL_NLPIGETSTATISTICS     ((*nlpigetstatistics)),      /**< get solve statistics */
-   SCIP_DECL_NLPIGETWARMSTARTSIZE  ((*nlpigetwarmstartsize)),   /**< get size for warmstart object buffer */
-   SCIP_DECL_NLPIGETWARMSTARTMEMO  ((*nlpigetwarmstartmemo)),   /**< get warmstart object */
-   SCIP_DECL_NLPISETWARMSTARTMEMO  ((*nlpisetwarmstartmemo)),   /**< set warmstart object */
-   SCIP_DECL_NLPIGETINTPAR         ((*nlpigetintpar)),          /**< get value of integer parameter */
-   SCIP_DECL_NLPISETINTPAR         ((*nlpisetintpar)),          /**< set value of integer parameter */
-   SCIP_DECL_NLPIGETREALPAR        ((*nlpigetrealpar)),         /**< get value of floating point parameter */
-   SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
-   SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
-   SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    )
 {  /*lint --e{715}*/
@@ -82,12 +75,9 @@ SCIP_RETCODE SCIPnlpiCreate(
 
    assert(name != NULL);
    assert(description != NULL);
-   assert(nlpicopy != NULL);
    assert(nlpifree != NULL);
-   assert(nlpigetsolverpointer != NULL);
    assert(nlpicreateproblem != NULL);
    assert(nlpifreeproblem != NULL);
-   assert(nlpigetproblempointer != NULL);
    assert(nlpiaddvars != NULL);
    assert(nlpiaddconstraints != NULL);
    assert(nlpisetobjective != NULL);
@@ -96,23 +86,13 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpidelconsset != NULL);
    assert(nlpichglinearcoefs != NULL);
    assert(nlpichgobjconstant != NULL);
-   assert(nlpisetinitialguess != NULL);
    assert(nlpisolve != NULL);
    assert(nlpigetsolstat != NULL);
    assert(nlpigettermstat != NULL);
    assert(nlpigetsolution != NULL);
    assert(nlpigetstatistics != NULL);
-   assert(nlpigetwarmstartsize != NULL);
-   assert(nlpigetwarmstartmemo != NULL);
-   assert(nlpisetwarmstartmemo != NULL);
-   assert(nlpigetintpar != NULL);
-   assert(nlpisetintpar != NULL);
-   assert(nlpigetrealpar != NULL);
-   assert(nlpisetrealpar != NULL);
-   assert(nlpigetstringpar != NULL);
-   assert(nlpisetstringpar != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(nlpi) );
+   SCIP_ALLOC( BMSallocClearMemory(nlpi) );
 
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*nlpi)->description, description, strlen(description)+1) );
@@ -138,16 +118,9 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpigettermstat = nlpigettermstat;
    (*nlpi)->nlpigetsolution = nlpigetsolution;
    (*nlpi)->nlpigetstatistics = nlpigetstatistics;
-   (*nlpi)->nlpigetwarmstartsize = nlpigetwarmstartsize;
-   (*nlpi)->nlpigetwarmstartmemo = nlpigetwarmstartmemo;
-   (*nlpi)->nlpisetwarmstartmemo = nlpisetwarmstartmemo;
-   (*nlpi)->nlpigetintpar = nlpigetintpar;
-   (*nlpi)->nlpisetintpar = nlpisetintpar;
-   (*nlpi)->nlpigetrealpar = nlpigetrealpar;
-   (*nlpi)->nlpisetrealpar = nlpisetrealpar;
-   (*nlpi)->nlpigetstringpar = nlpigetstringpar;
-   (*nlpi)->nlpisetstringpar = nlpisetstringpar;
    (*nlpi)->nlpidata = nlpidata;
+
+   SCIP_CALL( SCIPclockCreate(&(*nlpi)->problemtime, SCIP_CLOCKTYPE_DEFAULT) );
 
    return SCIP_OKAY;
 }
@@ -159,10 +132,12 @@ SCIP_RETCODE SCIPnlpiCopyInclude(
    )
 {
    assert(sourcenlpi != NULL);
-   assert(sourcenlpi->nlpicopy != NULL);
    assert(targetset != NULL);
 
-   SCIP_CALL( sourcenlpi->nlpicopy(targetset->scip, sourcenlpi) );
+   if( sourcenlpi->nlpicopy != NULL )
+   {
+      SCIP_CALL( sourcenlpi->nlpicopy(targetset->scip, sourcenlpi) );
+   }
 
    return SCIP_OKAY;
 }
@@ -184,6 +159,9 @@ SCIP_RETCODE SCIPnlpiFree(
    }
    BMSfreeMemoryArray(&(*nlpi)->name);
    BMSfreeMemoryArray(&(*nlpi)->description);
+
+   SCIPclockFree(&(*nlpi)->problemtime);
+
    BMSfreeMemory(nlpi);
 
    assert(*nlpi == NULL);
@@ -191,17 +169,37 @@ SCIP_RETCODE SCIPnlpiFree(
    return SCIP_OKAY;
 }
 
+/** initializes NLPI */
+void SCIPnlpiInit(
+   SCIP_NLPI*            nlpi                /**< solver interface */
+   )
+{
+   assert(nlpi != NULL);
+
+   nlpi->nproblems = 0;
+   nlpi->nsolves = 0;
+   SCIPclockReset(nlpi->problemtime);
+   nlpi->solvetime = 0.0;
+   nlpi->evaltime = 0.0;
+   nlpi->niter = 0L;
+   BMSclearMemoryArray(nlpi->ntermstat, (int)SCIP_NLPTERMSTAT_OTHER+1);
+   BMSclearMemoryArray(nlpi->nsolstat, (int)SCIP_NLPSOLSTAT_UNKNOWN+1);
+}
+
 /** gets pointer for NLP solver */
 void* SCIPnlpiGetSolverPointer(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi                /**< solver interface */
+   SCIP_NLPI*            nlpi,               /**< solver interface */
+   SCIP_NLPIPROBLEM*     problem             /**< problem instance, or NULL */
    )
 {
    assert(set != NULL);
    assert(nlpi != NULL);
-   assert(nlpi->nlpigetsolverpointer != NULL);
 
-   return nlpi->nlpigetsolverpointer(set->scip, nlpi);
+   if( nlpi->nlpigetsolverpointer != NULL )
+      return nlpi->nlpigetsolverpointer(set->scip, nlpi, problem);
+   else
+      return NULL;
 }
 
 /** creates a problem instance */
@@ -217,7 +215,13 @@ SCIP_RETCODE SCIPnlpiCreateProblem(
    assert(nlpi->nlpicreateproblem != NULL);
    assert(problem != NULL);
 
-   return nlpi->nlpicreateproblem(set->scip, nlpi, problem, name);
+   SCIPclockStart(nlpi->problemtime, set);
+   SCIP_CALL( nlpi->nlpicreateproblem(set->scip, nlpi, problem, name) );
+   SCIPclockStop(nlpi->problemtime, set);
+
+   ++nlpi->nproblems;
+
+   return SCIP_OKAY;
 }
 
 /** frees a problem instance */
@@ -232,7 +236,11 @@ SCIP_RETCODE SCIPnlpiFreeProblem(
    assert(nlpi->nlpifreeproblem != NULL);
    assert(problem != NULL);
 
-   return nlpi->nlpifreeproblem(set->scip, nlpi, problem);
+   SCIPclockStart(nlpi->problemtime, set);
+   SCIP_CALL( nlpi->nlpifreeproblem(set->scip, nlpi, problem) );
+   SCIPclockStop(nlpi->problemtime, set);
+
+   return SCIP_OKAY;
 }
 
 /** gets pointer to solver-internal problem instance */
@@ -244,10 +252,12 @@ void* SCIPnlpiGetProblemPointer(
 {
    assert(set != NULL);
    assert(nlpi != NULL);
-   assert(nlpi->nlpigetproblempointer != NULL);
    assert(problem != NULL);
 
-   return nlpi->nlpigetproblempointer(set->scip, nlpi, problem);
+   if( nlpi->nlpigetproblempointer != NULL )
+      return nlpi->nlpigetproblempointer(set->scip, nlpi, problem);
+   else
+      return NULL;
 }
 
 /** add variables to nlpi */
@@ -266,7 +276,9 @@ SCIP_RETCODE SCIPnlpiAddVars(
    assert(nlpi->nlpiaddvars != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpiaddvars(set->scip, nlpi, problem, nvars, lbs, ubs, varnames) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -291,7 +303,9 @@ SCIP_RETCODE SCIPnlpiAddConstraints(
    assert(nlpi->nlpiaddconstraints != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpiaddconstraints(set->scip, nlpi, problem, nconss, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -313,7 +327,9 @@ SCIP_RETCODE SCIPnlpiSetObjective(
    assert(nlpi->nlpisetobjective != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpisetobjective(set->scip, nlpi, problem, nlins, lininds, linvals, expr, constant) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -334,7 +350,9 @@ SCIP_RETCODE SCIPnlpiChgVarBounds(
    assert(nlpi->nlpichgvarbounds != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichgvarbounds(set->scip, nlpi, problem, nvars, indices, lbs, ubs) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -355,7 +373,9 @@ SCIP_RETCODE SCIPnlpiChgConsSides(
    assert(nlpi->nlpichgconssides != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichgconssides(set->scip, nlpi, problem, nconss, indices, lhss, rhss) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -374,7 +394,9 @@ SCIP_RETCODE SCIPnlpiDelVarSet(
    assert(nlpi->nlpidelvarset != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpidelvarset(set->scip, nlpi, problem, dstats, dstatssize) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -393,7 +415,9 @@ SCIP_RETCODE SCIPnlpiDelConsSet(
    assert(nlpi->nlpidelconsset != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpidelconsset(set->scip, nlpi, problem, dstats, dstatssize) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -414,7 +438,9 @@ SCIP_RETCODE SCIPnlpiChgLinearCoefs(
    assert(nlpi->nlpichglinearcoefs != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichglinearcoefs(set->scip, nlpi, problem, idx, nvals, varidxs, vals) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -433,7 +459,9 @@ SCIP_RETCODE SCIPnlpiChgExpr(
    assert(nlpi->nlpichgexpr != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichgexpr(set->scip, nlpi, problem, idxcons, expr) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -451,7 +479,9 @@ SCIP_RETCODE SCIPnlpiChgObjConstant(
    assert(nlpi->nlpichgobjconstant != NULL);
    assert(problem != NULL);
 
+   SCIPclockStart(nlpi->problemtime, set);
    SCIP_CALL( nlpi->nlpichgobjconstant(set->scip, nlpi, problem, objconstant) );
+   SCIPclockStop(nlpi->problemtime, set);
 
    return SCIP_OKAY;
 }
@@ -469,10 +499,12 @@ SCIP_RETCODE SCIPnlpiSetInitialGuess(
 {
    assert(set != NULL);
    assert(nlpi != NULL);
-   assert(nlpi->nlpisetinitialguess != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( nlpi->nlpisetinitialguess(set->scip, nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
+   if( nlpi->nlpisetinitialguess != NULL )
+   {
+      SCIP_CALL( nlpi->nlpisetinitialguess(set->scip, nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
+   }
 
    return SCIP_OKAY;
 }
@@ -480,16 +512,62 @@ SCIP_RETCODE SCIPnlpiSetInitialGuess(
 /** tries to solve NLP */
 SCIP_RETCODE SCIPnlpiSolve(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem             /**< problem instance */
+   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
+   SCIP_NLPPARAM*        param               /**< solve parameters */
    )
 {
+   SCIP_NLPSTATISTICS stats;
+
    assert(set != NULL);
    assert(nlpi != NULL);
    assert(nlpi->nlpisolve != NULL);
    assert(problem != NULL);
+   assert(param != NULL);
 
-   SCIP_CALL( nlpi->nlpisolve(set->scip, nlpi, problem) );
+   /* check that parameter values are in accepted range (if type allows more than we would accept) */
+   if( param->iterlimit < 0 )
+   {
+      SCIPerrorMessage("Value %d for parameter iteration limit cannot be negative.\n", param->iterlimit);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   if( param->feastol < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter feasibility tolerance cannot be negative\n", param->feastol);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   if( param->relobjtol < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter relative objective tolerance cannot be negative\n", param->relobjtol);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+   if( param->timelimit < 0.0 )
+   {
+      SCIPerrorMessage("Value %g for parameter time limit cannot be negative\n", param->timelimit);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
+   if( param->timelimit == SCIP_REAL_MAX && set->istimelimitfinite )  /*lint !e777*/
+   {
+      /* set timelimit to time remaining if limits/time has been set */
+      param->timelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( param->timelimit < 0.0 )
+         param->timelimit = 0.0;
+      /* still call NLP solver if no time left to ensure proper termination codes */
+   }
+
+   ++nlpi->nsolves;
+
+   SCIP_CALL( nlpi->nlpisolve(set->scip, nlpi, problem, *param) );
+
+   ++nlpi->ntermstat[nlpi->nlpigettermstat(set->scip, nlpi, problem)];
+   ++nlpi->nsolstat[nlpi->nlpigetsolstat(set->scip, nlpi, problem)];
+
+   SCIP_CALL( nlpi->nlpigetstatistics(set->scip, nlpi, problem, &stats) );
+   nlpi->solvetime += stats.totaltime;
+   nlpi->evaltime += stats.evaltime;
+   nlpi->niter += stats.niterations;
 
    return SCIP_OKAY;
 }
@@ -566,181 +644,6 @@ SCIP_RETCODE SCIPnlpiGetStatistics(
    return SCIP_OKAY;
 }
 
-/** gives required size of a buffer to store a warmstart object */
-SCIP_RETCODE SCIPnlpiGetWarmstartSize(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   size_t*               size                /**< pointer to store required size for warmstart buffer */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpigetwarmstartsize != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( nlpi->nlpigetwarmstartsize(set->scip, nlpi, problem, size) );
-
-   return SCIP_OKAY;
-}
-
-/** stores warmstart information in buffer */
-SCIP_RETCODE SCIPnlpiGetWarmstartMemo(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   void*                 buffer              /**< memory to store warmstart information */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpigetwarmstartmemo != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( nlpi->nlpigetwarmstartmemo(set->scip, nlpi, problem, buffer) );
-
-   return SCIP_OKAY;
-}
-
-/** sets warmstart information in solver */
-SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   void*                 buffer              /**< warmstart information */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpisetwarmstartmemo != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( nlpi->nlpisetwarmstartmemo(set->scip, nlpi, problem, buffer) );
-
-   return SCIP_OKAY;
-}
-
-/**@name Parameter Methods */
-/**@{ */
-
-/** gets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpiGetIntPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int*                  ival                /**< pointer to store the parameter value */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpigetintpar != NULL);
-   assert(problem != NULL);
-   assert(ival != NULL);
-
-   SCIP_CALL( nlpi->nlpigetintpar(set->scip, nlpi, problem, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** sets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpiSetIntPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int                   ival                /**< parameter value */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpisetintpar != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( nlpi->nlpisetintpar(set->scip, nlpi, problem, type, ival) );
-
-   return SCIP_OKAY;
-}
-
-/** gets floating point parameter of NLP */
-SCIP_RETCODE SCIPnlpiGetRealPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real*            dval                /**< pointer to store the parameter value */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpigetrealpar != NULL);
-   assert(problem != NULL);
-   assert(dval != NULL);
-
-   SCIP_CALL( nlpi->nlpigetrealpar(set->scip, nlpi, problem, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets floating point parameter of NLP */
-SCIP_RETCODE SCIPnlpiSetRealPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real             dval                /**< parameter value */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpisetrealpar != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( nlpi->nlpisetrealpar(set->scip, nlpi, problem, type, dval) );
-
-   return SCIP_OKAY;
-}
-
-/** gets string parameter of NLP */
-SCIP_RETCODE SCIPnlpiGetStringPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char**          sval                /**< pointer to store the string value, the user must not modify the string */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpigetstringpar != NULL);
-   assert(problem != NULL);
-   assert(sval != NULL);
-
-   SCIP_CALL( nlpi->nlpigetstringpar(set->scip, nlpi, problem, type, sval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets string parameter of NLP */
-SCIP_RETCODE SCIPnlpiSetStringPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLPI*            nlpi,               /**< solver interface */
-   SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char*           sval                /**< parameter value */
-   )
-{
-   assert(set != NULL);
-   assert(nlpi != NULL);
-   assert(nlpi->nlpisetstringpar != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( nlpi->nlpisetstringpar(set->scip, nlpi, problem, type, sval) );
-
-   return SCIP_OKAY;
-}
-/**@} */
-
 /** gets data of an NLPI */
 SCIP_NLPIDATA* SCIPnlpiGetData(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
@@ -761,7 +664,7 @@ const char* SCIPnlpiGetName(
    return nlpi->name;
 }
 
-/** gets NLP solver descriptions */
+/** gets NLP solver description */
 const char* SCIPnlpiGetDesc(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
    )
@@ -791,3 +694,110 @@ void SCIPnlpiSetPriority(
 
    nlpi->priority = priority;
 }
+
+
+/**@name Statistics */
+/**@{ */
+
+/** gives number of problems created for NLP solver so far */
+int SCIPnlpiGetNProblems(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->nproblems;
+}
+
+/** gives total time spend in problem creation/modification/freeing */
+SCIP_Real SCIPnlpiGetProblemTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return SCIPclockGetTime(nlpi->problemtime);
+}
+
+/** total number of NLP solves so far */
+int SCIPnlpiGetNSolves(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->nsolves;
+}
+
+/** gives total time spend in NLP solves (as reported by solver) */
+SCIP_Real SCIPnlpiGetSolveTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->solvetime;
+}
+
+/** gives total time spend in function evaluation during NLP solves
+ *
+ * If parameter `timing/nlpieval` is off (the default), depending on the NLP solver, this may just return 0.
+ */
+SCIP_Real SCIPnlpiGetEvalTime(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->evaltime;
+}
+
+/** gives total number of iterations spend by NLP solver so far */
+SCIP_Longint SCIPnlpiGetNIterations(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->niter;
+}
+
+/** gives number of times a solve ended with a specific termination status */
+int SCIPnlpiGetNTermStat(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   SCIP_NLPTERMSTAT      termstatus          /**< the termination status to query for */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->ntermstat[termstatus];
+}
+
+/** gives number of times a solve ended with a specific solution status */
+int SCIPnlpiGetNSolStat(
+   SCIP_NLPI*            nlpi,               /**< NLP interface structure */
+   SCIP_NLPSOLSTAT       solstatus           /**< the solution status to query for */
+   )
+{
+   assert(nlpi != NULL);
+   return nlpi->nsolstat[solstatus];
+}
+
+/** adds statistics from one NLPI to another */
+void SCIPnlpiMergeStatistics(
+   SCIP_NLPI*            targetnlpi,         /**< NLP interface where to add statistics */
+   SCIP_NLPI*            sourcenlpi          /**< NLP interface from which add statistics */
+   )
+{
+   int i;
+
+   assert(targetnlpi != NULL);
+   assert(sourcenlpi != NULL);
+
+   targetnlpi->nproblems += sourcenlpi->nproblems;
+   targetnlpi->nsolves += sourcenlpi->nsolves;
+   SCIPclockSetTime(targetnlpi->problemtime, SCIPclockGetTime(targetnlpi->problemtime) + SCIPclockGetTime(sourcenlpi->problemtime));
+   targetnlpi->solvetime += sourcenlpi->solvetime;
+   targetnlpi->evaltime += sourcenlpi->evaltime;
+   targetnlpi->niter += sourcenlpi->niter;
+
+   for( i = (int)SCIP_NLPTERMSTAT_OKAY; i <= (int)SCIP_NLPTERMSTAT_OTHER; ++i )
+      targetnlpi->ntermstat[i] += sourcenlpi->ntermstat[i];
+   for( i = (int)SCIP_NLPSOLSTAT_GLOBOPT; i <= (int)SCIP_NLPSOLSTAT_UNKNOWN; ++i )
+      targetnlpi->nsolstat[i] += sourcenlpi->nsolstat[i];
+}
+
+/**@} */ /* Statistics */

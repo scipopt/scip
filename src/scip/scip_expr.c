@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_expr.c
+ * @ingroup OTHER_CFILES
  * @brief  public functions to work with algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
@@ -258,7 +259,7 @@ SCIP_RETCODE parseBase(
       }
 
       /* search for expression handler */
-      exprhdlr = SCIPfindExprHdlr(scip, operatorname);
+      exprhdlr = SCIPfindExprhdlr(scip, operatorname);
 
       /* check expression handler exists and has a parsing method */
       if( exprhdlr == NULL )
@@ -799,7 +800,7 @@ SCIP_RETCODE hashExpr(
 
 /** creates the handler for an expression handler and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlr(
+SCIP_RETCODE SCIPincludeExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
    const char*           name,               /**< name of expression handler (must not be NULL) */
@@ -822,7 +823,7 @@ SCIP_RETCODE SCIPincludeExprHdlr(
 }
 
 /** gives expression handlers */
-SCIP_EXPRHDLR** SCIPgetExprHdlrs(
+SCIP_EXPRHDLR** SCIPgetExprhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -833,7 +834,7 @@ SCIP_EXPRHDLR** SCIPgetExprHdlrs(
 }
 
 /** gives number of expression handlers */
-int SCIPgetNExprHdlrs(
+int SCIPgetNExprhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -844,7 +845,7 @@ int SCIPgetNExprHdlrs(
 }
 
 /** returns an expression handler of a given name (or NULL if not found) */
-SCIP_EXPRHDLR* SCIPfindExprHdlr(
+SCIP_EXPRHDLR* SCIPfindExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of expression handler */
    )
@@ -856,7 +857,7 @@ SCIP_EXPRHDLR* SCIPfindExprHdlr(
 }
 
 /** returns expression handler for variable expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrVar(
+SCIP_EXPRHDLR* SCIPgetExprhdlrVar(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -867,7 +868,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrVar(
 }
 
 /** returns expression handler for constant value expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrValue(
+SCIP_EXPRHDLR* SCIPgetExprhdlrValue(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -878,7 +879,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrValue(
 }
 
 /** returns expression handler for sum expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrSum(
+SCIP_EXPRHDLR* SCIPgetExprhdlrSum(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -889,7 +890,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrSum(
 }
 
 /** returns expression handler for product expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrProduct(
+SCIP_EXPRHDLR* SCIPgetExprhdlrProduct(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -900,7 +901,7 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrProduct(
 }
 
 /** returns expression handler for power expressions (or NULL if not included) */
-SCIP_EXPRHDLR* SCIPgetExprHdlrPower(
+SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1079,7 +1080,11 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
    return SCIP_OKAY;
 }
 
-/** creates and captures an expression representing a monomial */
+/** creates and captures an expression representing a monomial
+ *
+ * @note In deviation from the actual definition of monomials, we also allow for negative and rational exponents.
+ * So this function actually creates an expression for a signomial that has exactly one term.
+ */
 SCIP_RETCODE SCIPcreateExprMonomial(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
@@ -1165,7 +1170,10 @@ SCIP_RETCODE SCIPcreateExprMonomial(
    return SCIP_OKAY;
 }
 
-/** appends child to the children list of expr */
+/** appends child to the children list of expr
+ *
+ * @attention Only use if you really know what you are doing. The expression handler of the expression needs to be able to handle an increase in the number of children.
+ */
 SCIP_RETCODE SCIPappendExprChild(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
@@ -1182,7 +1190,7 @@ SCIP_RETCODE SCIPappendExprChild(
 
 /** overwrites/replaces a child of an expressions
  *
- * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
+ * The old child is released and the newchild is captured, unless they are the same (=same pointer).
  */
 SCIP_RETCODE SCIPreplaceExprChild(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1201,7 +1209,7 @@ SCIP_RETCODE SCIPreplaceExprChild(
 
 /** remove all children of expr
  *
- * @attention only use if you really know what you are doing
+ * @attention Only use if you really know what you are doing. The expression handler of the expression needs to be able to handle the removal of all children.
  */
 SCIP_RETCODE SCIPremoveExprChildren(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1216,7 +1224,7 @@ SCIP_RETCODE SCIPremoveExprChildren(
    return SCIP_OKAY;
 }
 
-/** duplicates the given expression (including children) */
+/** duplicates the given expression and its children */
 SCIP_RETCODE SCIPduplicateExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
@@ -1236,7 +1244,7 @@ SCIP_RETCODE SCIPduplicateExpr(
    return SCIP_OKAY;
 }
 
-/** duplicates the given expression without its children */
+/** duplicates the given expression, but reuses its children */
 SCIP_RETCODE SCIPduplicateExprShallow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
@@ -1253,7 +1261,7 @@ SCIP_RETCODE SCIPduplicateExprShallow(
    return SCIP_OKAY;
 }
 
-/** copies an expression to use in a (possibly different) SCIP instance (including children) */
+/** copies an expression including children to use in a (possibly different) SCIP instance */
 SCIP_RETCODE SCIPcopyExpr(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1300,8 +1308,10 @@ SCIP_RETCODE SCIPcopyExpr(
 
 /** creates an expression from a string
  *
- * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
- * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
+ * We specify the grammar that defines the syntax of an expression.
+ * Loosely speaking, a `Base` will be any "block", a `Factor` is a `Base` to a power,
+ * a `Term` is a product of `Factors` and an `Expression` is a sum of `Terms`.
+ *
  * The actual definition:
  * <pre>
  * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
@@ -1309,12 +1319,10 @@ SCIP_RETCODE SCIPcopyExpr(
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
  * </pre>
- * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a.
+ * where `[a|b]` means `a` or `b` or none, `(a|b)` means `a` or `b`, `{a}` means 0 or more `a`.
  *
- * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
- * OpExpression to whatever string the expression handler accepts (through its parse method).
- *
- * See also @ref parseExpr.
+ * Note that `Op` and `OpExpression` are undefined.
+ * `Op` corresponds to the name of an expression handler and `OpExpression` to whatever string the expression handler accepts (through its parse method).
  */
 SCIP_RETCODE SCIPparseExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1667,7 +1675,7 @@ SCIP_RETCODE SCIPevalExprActivity(
 
 /** compare expressions
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
- * @note: The given expressions are assumed to be simplified.
+ * @note The given expressions are assumed to be simplified.
  */
 int SCIPcompareExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1737,7 +1745,7 @@ SCIP_RETCODE SCIPsimplifyExpr(
  *     hash table, otherwise we add it to the hash table
  *
  *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
- *  (with the same hash) are structurally the same we use the function SCIPexprCompare()
+ *  (with the same hash) are structurally the same we use the function SCIPexprCompare().
  */
 SCIP_RETCODE SCIPreplaceCommonSubexpressions(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1852,7 +1860,7 @@ SCIP_RETCODE SCIPreplaceCommonSubexpressions(
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
  *  @note this function relies on information from the curvature callback of expression handlers only,
- *    consider using function @ref SCIPhasExprCurvature() of the convex-nlhdlr as that uses more information to deduce convexity
+ *    consider using function @ref SCIPhasExprCurvature() of the convex-nlhdlr instead, as that uses more information to deduce convexity
  */
 SCIP_RETCODE SCIPcomputeExprCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1932,7 +1940,7 @@ SCIP_RETCODE SCIPcomputeExprCurvature(
 
 /** computes integrality information of a given expression and all its subexpressions
  *
- * the integrality information can be accessed via SCIPexprIsIntegral()
+ * The integrality information can be accessed via SCIPexprIsIntegral().
  */
 SCIP_RETCODE SCIPcomputeExprIntegrality(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2085,12 +2093,12 @@ SCIP_DECL_EXPRMONOTONICITY(SCIPcallExprMonotonicity)
    return SCIP_OKAY;
 }
 
-/** calls the eval callback of an expression with given values for children
+/** calls the eval callback for an expression with given values for children
  *
  * Does not iterates over expressions, but requires values for children to be given.
- * Value is not stored in expression, but returned in @par val.
+ * Value is not stored in expression, but returned in `val`.
  * If an evaluation error (division by zero, ...) occurs, this value will
- * be set to SCIP_INVALID.
+ * be set to `SCIP_INVALID`.
  */
 SCIP_RETCODE SCIPcallExprEval(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2113,11 +2121,11 @@ SCIP_RETCODE SCIPcallExprEval(
  *
  * Does not iterates over expressions, but requires values for children and direction to be given.
  *
- * Value is not stored in expression, but returned in @par val.
- * If an evaluation error (division by zero, ...) occurs, this value will be set to SCIP_INVALID.
+ * Value is not stored in expression, but returned in `val`.
+ * If an evaluation error (division by zero, ...) occurs, this value will be set to `SCIP_INVALID`.
  *
- * Direction is not stored in expression, but returned in @par dot.
- * If an differentiation error (division by zero, ...) occurs, this value will be set to SCIP_INVALID.
+ * Direction is not stored in expression, but returned in `dot`.
+ * If an differentiation error (division by zero, ...) occurs, this value will be set to `SCIP_INVALID`.
  */
 SCIP_RETCODE SCIPcallExprEvalFwdiff(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2137,9 +2145,9 @@ SCIP_RETCODE SCIPcallExprEvalFwdiff(
    return SCIP_OKAY;
 }
 
-/** calls the interval evaluation callback of an expression handler
+/** calls the interval evaluation callback for an expression
  *
- * @see SCIP_DECL_EXPRMONOTONICITY
+ * @see SCIP_DECL_EXPRINTEVAL
  *
  * Returns entire interval if callback not implemented.
  */
@@ -2259,7 +2267,7 @@ void SCIPfreeExpriter(
  * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
  * or a sum of terms where at least one is a square or a product.
  *
- * Use \ref SCIPexprGetQuadraticData to get data about the representation as quadratic.
+ * Use SCIPexprGetQuadraticData() to get data about the representation as quadratic.
  */
 SCIP_RETCODE SCIPcheckExprQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2277,7 +2285,6 @@ SCIP_RETCODE SCIPcheckExprQuadratic(
 
 /** frees information on quadratic representation of an expression
  *
- * Reverts SCIPcheckExprQuadratic().
  * Before doing changes to an expression, it can be useful to call this function.
  */
 void SCIPfreeExprQuadratic(
@@ -2293,7 +2300,7 @@ void SCIPfreeExprQuadratic(
 
 /** evaluates quadratic term in a solution
  *
- * \note This requires that every expr used in the quadratic data is a variable expression.
+ * \note This requires that every expression used in the quadratic data is a variable expression.
  */
 SCIP_Real SCIPevalExprQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2460,14 +2467,15 @@ SCIP_RETCODE SCIPprintExprQuadratic(
    return SCIP_OKAY;
 }
 
-/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+/** checks the curvature of the quadratic expression
  *
- * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
- * - semidefinite positive -> provided is set to sepaunder
- * - semidefinite negative -> provided is set to sepaover
- * - otherwise -> provided is set to none
+ * For this, it builds the matrix Q of quadratic coefficients and computes its eigenvalues using LAPACK.
+ * If Q is
+ * - semidefinite positive -> curv is set to convex,
+ * - semidefinite negative -> curv is set to concave,
+ * - otherwise -> curv is set to unknown.
  *
- * If assumevarfixed is given and some entries of x correspond to variables present in
+ * If `assumevarfixed` is given and some expressions in quadratic terms correspond to variables present in
  * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
  */
 SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(

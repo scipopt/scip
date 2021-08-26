@@ -4292,7 +4292,7 @@ SCIP_RETCODE SCIPwriteMps(
 
          SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varFixedHash) );
       }
-      else if( strcmp(conshdlrname, "expr") == 0 )
+      else if( strcmp(conshdlrname, "nonlinear") == 0 )
       {
          SCIP_EXPR* expr;
          SCIP_VAR** quadvars;
