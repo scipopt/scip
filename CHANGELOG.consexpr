@@ -549,7 +549,7 @@ nlpi:
 - propagating/symmetry/onlybinarysymmetry
 - separating/minor/priority, separating/minor/freq, separating/minor/maxbounddist, separating/minor/delay, separating/minor/expbackoff, separating/minor/maxminorsconst, separating/minor/maxminorsfac, separating/minor/mincutviol, separating/minor/maxrounds, separating/minor/maxroundsroot, separating/minor/ignorepackingconss
 - separating/rlt/priority, separating/rlt/freq, separating/rlt/maxbounddist, separating/rlt/delay, separating/rlt/expbackoff, separating/rlt/maxncuts, separating/rlt/maxunknownterms, separating/rlt/maxusedvars, separating/rlt/maxrounds, separating/rlt/maxroundsroot, separating/rlt/onlyeqrows, separating/rlt/onlycontrows, separating/rlt/onlyoriginal, separating/rlt/useinsubscip, separating/rlt/useprojection, separating/rlt/detecthidden, separating/rlt/hiddenrlt, separating/rlt/addtopool, separating/rlt/goodscore, separating/rlt/badscore, separating/rlt/objparalweight, separating/rlt/efficacyweight, separating/rlt/dircutoffdistweight, separating/rlt/goodmaxparall, separating/rlt/maxparall
-- table/nonlinear/active, table/nlhdlr/active, table/exprhdlr/active, table/nlpi/active
+- table/cons_nonlinear/active, table/nlhdlr/active, table/exprhdlr/active, table/nlpi/active
 - expr/log/minzerodistance, expr/pow/minzerodistance
 - benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
 - nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
