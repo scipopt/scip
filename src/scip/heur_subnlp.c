@@ -113,7 +113,7 @@ struct SCIP_HeurData
    SCIP_Real             nodesfactor;        /**< factor to apply to number of nodes in SCIP to compute initial itercontingent */
    SCIP_Real             successrateexp;     /**< exponent for power of success rate to be multiplied with itercontingent */
    int                   iterinit;           /**< number of iterations used for initial NLP solves */
-   int                   ninitsolves;        /**< number of NLP solves until switching to iterlimit guess and using success rate */
+   int                   ninitsolves;        /**< number of successful NLP solves until switching to iterlimit guess and using success rate */
    int                   itermin;            /**< minimal number of iterations for NLP solves */
 };
 
@@ -966,11 +966,11 @@ SCIP_RETCODE solveSubNLP(
             {
                if( heurdata->nlpverblevel >= 1 )
                {
-                  SCIPinfoMessage(scip, NULL, "SCIP solution form sub-SCIP root node is not feasible\n");
+                  SCIPinfoMessage(scip, NULL, "SCIP solution from sub-SCIP root node is not feasible\n");
                }
                else
                {
-                  SCIPdebugMsg(scip, "SCIP solution form sub-SCIP root node is not feasible\n");
+                  SCIPdebugMsg(scip, "SCIP solution from sub-SCIP root node is not feasible\n");
                }
             }
          }
@@ -1107,7 +1107,7 @@ SCIP_RETCODE solveSubNLP(
       SCIPgetNLPTermstat(heurdata->subscip), SCIPgetNLPSolstat(heurdata->subscip), SCIPgetNLPObjval(heurdata->subscip));
 
    /* add NLP solve statistics from subscip to main SCIP, so they show up in final statistics
-    * for continuous problem, we also ask to reset statistics, since we do not retransform subSCIP in the next run (which would reset all stats)
+    * for continuous problems, we also ask to reset statistics, since we do not retransform subSCIP in the next run (which would reset all stats)
     * (merging statistics once in exitsol is too late, since they may be printed before)
     */
    SCIPmergeNLPIStatistics(heurdata->subscip, scip, heurdata->continuous);
@@ -1607,7 +1607,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
     */
    itercontingent = heurdata->nodesfactor * (SCIPgetNNodes(scip) + heurdata->nodesoffset);
    /* weight by previous success of heuristic if we have been running already
-    * require at least ninitsolves many runs that either didn't went into the NLP iterlimit
+    * require at least ninitsolves many runs that didn't run into the NLP iterlimit
     * (so if we are still in the phase of finding a good iterlimit, do not consider success rate so far)
     */
    if( heurdata->successrateexp > 0.0 && SCIPheurGetNCalls(heur) - heurdata->nnlpsolvesiterlim >= heurdata->ninitsolves )
@@ -1702,7 +1702,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          &heurdata->nodesfactor, FALSE, 0.3, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/successrateexp",
-         "exponent for power of success rate to be multiplied with itercontingent (lower value decreases impact use of success rate)",
+         "exponent for power of success rate to be multiplied with itercontingent (lower value decreases impact of success rate)",
          &heurdata->successrateexp, FALSE, 1.0, 0.0, DBL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/iterinit",
@@ -1710,7 +1710,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          &heurdata->iterinit, FALSE, 300, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/ninitsolves",
-         "number of NLP solves until switching to iterlimit guess and using success rate",
+         "number of successful NLP solves until switching to iterlimit guess and using success rate",
          &heurdata->ninitsolves, FALSE, 2, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/itermin",
@@ -1746,7 +1746,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
          &heurdata->keepcopy, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/expectinfeas",
-         "percentage of NLP solves with infeasible status required to tell NLP solver to expect and infeasible NLP",
+         "percentage of NLP solves with infeasible status required to tell NLP solver to expect an infeasible NLP",
          &heurdata->expectinfeas, FALSE, 0.0, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
