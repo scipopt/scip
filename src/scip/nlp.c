@@ -15,14 +15,14 @@
 
 /**@file   nlp.c
  * @ingroup OTHER_CFILES
- * @brief  NLP management methods and datastructures
+ * @brief  NLP management methods
  * @author Thorsten Gellermann
  * @author Stefan Vigerske
  *
- *  In NLP management, we have to differ between the current NLP and the NLPI problem
+ *  In NLP management, we have to distinguish between the current NLP and the NLPI problem
  *  stored in the NLP solver. All NLP methods affect the current NLP only.
  *  Before solving the current NLP with the NLP solver, the NLP solvers data
- *  has to be updated to the current NLP with a call to nlpFlush().
+ *  has to be updated to the current NLP with a call to SCIPnlpFlush().
  *
  *  @todo handle linear rows from LP
  */
@@ -88,8 +88,9 @@ static
 SCIP_DECL_EVENTEXEC( eventExecNlp );
 
 /** announces, that a row of the NLP was modified
- * adjusts status of current solution
- * calling method has to ensure that change is passed to the NLPI!
+ *
+ * adjusts status of current solution;
+ * calling method has to ensure that change is passed on to the NLPI!
  */
 static
 SCIP_RETCODE nlpRowChanged(
@@ -189,7 +190,7 @@ SCIP_DECL_EXPR_MAPEXPR(mapvar2varidx)
    return SCIP_OKAY;
 }
 
-/** announces, that an expression tree changed */
+/** announces, that an expression changed */
 static
 SCIP_RETCODE nlrowExprChanged(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
@@ -610,6 +611,7 @@ SCIP_RETCODE nlrowCalcActivityBounds(
 }
 
 /** makes sure that there is no fixed variable at position pos of the linear part of a nonlinear row
+ *
  * a fixed variable is replaced with the corresponding constant or disaggregated term
  */
 static
@@ -739,7 +741,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefs(
    return SCIP_OKAY;
 }
 
-/** removes fixed variables from expression tree of a nonlinear row */
+/** removes fixed variables from expression of a nonlinear row */
 static
 SCIP_RETCODE nlrowSimplifyExpr(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
@@ -819,8 +821,13 @@ SCIP_RETCODE nlrowRemoveFixedVar(
 /*
  * public NLP nonlinear row methods
  */
+/**@addtogroup PublicNLRowMethods
+ *
+ * @{
+ */
 
 /** create a new nonlinear row
+ *
  * the new row is already captured
  */
 SCIP_RETCODE SCIPnlrowCreate(
@@ -919,6 +926,7 @@ SCIP_RETCODE SCIPnlrowCreate(
 }
 
 /** create a nonlinear row that is a copy of a given row
+ *
  * the new row is already captured
  */
 SCIP_RETCODE SCIPnlrowCreateCopy(
@@ -953,6 +961,7 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
 }
 
 /** create a new nonlinear row from a linear row
+ *
  * the new row is already captured
  */
 SCIP_RETCODE SCIPnlrowCreateFromRow(
@@ -1017,7 +1026,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
    return SCIP_OKAY;   
 }
 
-/** outputs nonlinear row to file stream */
+/** output nonlinear row to file stream */
 SCIP_RETCODE SCIPnlrowPrint(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1064,7 +1073,7 @@ SCIP_RETCODE SCIPnlrowPrint(
    return SCIP_OKAY;
 }
 
-/** increases usage counter of NLP nonlinear row */
+/** increases usage counter of nonlinear row */
 void SCIPnlrowCapture(
    SCIP_NLROW*           nlrow               /**< nonlinear row to capture */
    )
@@ -1076,7 +1085,7 @@ void SCIPnlrowCapture(
    nlrow->nuses++;
 }
 
-/** decreases usage counter of NLP nonlinear row */
+/** decreases usage counter of nonlinear row */
 SCIP_RETCODE SCIPnlrowRelease(
    SCIP_NLROW**          nlrow,              /**< nonlinear row to free */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1146,7 +1155,7 @@ SCIP_RETCODE SCIPnlrowEnsureLinearSize(
    return SCIP_OKAY;
 }
 
-/** adds a previously non existing linear coefficient to an NLP nonlinear row */
+/** adds a previously non existing linear coefficient to a nonlinear row */
 SCIP_RETCODE SCIPnlrowAddLinearCoef(
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1265,7 +1274,7 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    return SCIP_OKAY;
 }
 
-/** replaces an expression in nonlinear row */
+/** replaces or deletes an expression in a nonlinear row */
 SCIP_RETCODE SCIPnlrowChgExpr(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1387,7 +1396,7 @@ SCIP_RETCODE SCIPnlrowSimplify(
    return SCIP_OKAY;
 }
 
-/** recalculates the current activity of a nonlinear row */
+/** recalculates the current activity of a nonlinear row in the current NLP solution */
 SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1439,7 +1448,7 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
    return SCIP_OKAY;
 }
 
-/** returns the activity of a nonlinear row in the current NLP solution */
+/** gives the activity of a nonlinear row in the current NLP solution */
 SCIP_RETCODE SCIPnlrowGetNLPActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1844,6 +1853,7 @@ SCIP_Bool SCIPnlrowIsInNLP(
 }
 
 /** gets the dual NLP solution of a nlrow
+ *
  * for a ranged constraint, the dual value is positive if the right hand side is active and negative if the left hand side is active
  */
 SCIP_Real SCIPnlrowGetDualsol(
@@ -1855,8 +1865,10 @@ SCIP_Real SCIPnlrowGetDualsol(
    return nlrow->nlpiindex >= 0 ? nlrow->dualsol : 0.0;
 }
 
+/** @} */
+
 /*
- * private NLP methods
+ * local NLP methods
  */
 
 /** announces, that a row of the NLP was modified
@@ -2617,7 +2629,8 @@ SCIP_RETCODE nlpFlushNlRowDeletions(
 }
 
 /** deletes variables from the NLPI problem that have been marked as to remove
- * assumes that there are no pending row deletions (nlpFlushNlRowDeletions should be called first)
+ *
+ * assumes that there are no pending row deletions (nlpFlushNlRowDeletions() should be called first)
  */
 static
 SCIP_RETCODE nlpFlushVarDeletions(
@@ -2712,7 +2725,9 @@ SCIP_RETCODE nlpFlushVarDeletions(
 }
 
 /** adds nonlinear rows to NLPI problem that have been added to NLP before
- * assumes that there are no pending variable additions or deletions (nlpFlushVarDeletions and nlpFlushVarAdditions should be called first) */
+ *
+ * assumes that there are no pending variable additions or deletions (nlpFlushVarDeletions() and nlpFlushVarAdditions() should be called first)
+ */
 static
 SCIP_RETCODE nlpFlushNlRowAdditions(
    SCIP_NLP*             nlp,                /**< NLP data */
@@ -2858,7 +2873,9 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 
 
 /** adds variables to NLPI problem that have been added to NLP before
- * may set nlp->objflushed to FALSE if a variable with nonzero obj.coefficient is added to the NLPI problem */
+ *
+ * may set nlp->objflushed to FALSE if a variable with nonzero objective coefficient is added to the NLPI problem
+ */
 static
 SCIP_RETCODE nlpFlushVarAdditions(
    SCIP_NLP*             nlp,                /**< NLP data */
@@ -2945,7 +2962,8 @@ SCIP_RETCODE nlpFlushVarAdditions(
 }
 
 /** updates the objective in the NLPI problem, if necessary
- * assumes that there are no unflushed variable additions or deletions (nlpFlushVarDeletions and nlpFlushVarAdditions should be called first)
+ *
+ * assumes that there are no unflushed variable additions or deletions (nlpFlushVarDeletions() and nlpFlushVarAdditions() should be called first)
  */
 static
 SCIP_RETCODE nlpFlushObjective(
@@ -3004,10 +3022,7 @@ SCIP_RETCODE nlpFlushObjective(
    return SCIP_OKAY;
 }
 
-/** solves the NLP, assuming it has been flushed already
- *
- *  is used also to solve diving NLP
- */
+/** solves the NLP (or diving NLP), assuming it has been flushed already */
 static
 SCIP_RETCODE nlpSolve(
    SCIP_NLP*             nlp,                /**< NLP data */
@@ -3380,7 +3395,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
  * public NLP methods
  */
 
-/** includes NLP specific plugins (e.g., event handler) and parameters */
+/** includes event handler that is used by NLP */
 SCIP_RETCODE SCIPnlpInclude(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory */
@@ -3788,7 +3803,9 @@ SCIP_RETCODE SCIPnlpEnsureNlRowsSize(
 }
 
 /** adds a nonlinear row to the NLP and captures it
- * all variables of the row need to be present in the NLP */
+ *
+ * all variables of the row need to be present in the NLP
+ */
 SCIP_RETCODE SCIPnlpAddNlRow(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3812,7 +3829,9 @@ SCIP_RETCODE SCIPnlpAddNlRow(
 }
 
 /** adds nonlinear rows to the NLP and captures them
- * all variables of the row need to be present in the NLP */
+ *
+ * all variables of the row need to be present in the NLP
+ */
 SCIP_RETCODE SCIPnlpAddNlRows(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3840,7 +3859,9 @@ SCIP_RETCODE SCIPnlpAddNlRows(
 }
 
 /** deletes a nonlinear row from the NLP
- * does nothing if nonlinear row is not in NLP */
+ *
+ * does nothing if nonlinear row is not in NLP
+ */
 SCIP_RETCODE SCIPnlpDelNlRow(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -4377,7 +4398,7 @@ SCIP_RETCODE SCIPnlpGetStatistics(
 /** indicates whether a solution for the current NLP is available
  *
  * The solution may be optimal, feasible, or infeasible.
- * Thus, returns whether the NLP solution status is at most locinfeasible.
+ * Thus, returns whether the NLP solution status is at most \ref SCIP_NLPSOLSTAT_LOCINFEASIBLE.
  */
 SCIP_Bool SCIPnlpHasSolution(
    SCIP_NLP*             nlp                 /**< current NLP data */

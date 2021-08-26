@@ -42,12 +42,6 @@
 extern "C" {
 #endif
 
-/**@addtogroup PublicNLPMethods
- *
- * @{
- */
-
-
 /**@addtogroup PublicNLRowMethods
  *
  * @{
@@ -127,6 +121,7 @@ SCIP_Bool SCIPnlrowIsInNLP(
    );
 
 /** gets the dual NLP solution of a nlrow
+ *
  * for a ranged constraint, the dual value is positive if the right hand side is active and negative if the left hand side is active
  */
 SCIP_EXPORT
@@ -135,8 +130,6 @@ SCIP_Real SCIPnlrowGetDualsol(
    );
 
 /**@} */
-
-/**@} */ /* PublicNLPMethods */
 
 #ifdef __cplusplus
 }
