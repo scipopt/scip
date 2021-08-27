@@ -7601,6 +7601,11 @@
  * @brief  methods for event handlers
  */
 
+/**@defgroup PublicExprHandlerMethods Expression Handler
+ * @ingroup PluginManagementMethods
+ * @brief  methods for expression handlers
+ */
+
 /**@defgroup PublicHeuristicMethods Primal Heuristics
  * @ingroup PluginManagementMethods
  * @brief  methods for primal heuristic plugins

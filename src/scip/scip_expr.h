@@ -33,12 +33,9 @@ extern "C" {
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
 
-/**@addtogroup PublicExprMethods
+/**@addtogroup PublicExprHandlerMethods
  * @{
  */
-
-/**@name Expression Handler */
-/**@{ */
 
 /** creates the handler for an expression handler and includes it into SCIP */
 SCIP_EXPORT
@@ -102,6 +99,10 @@ SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
    );
 
 /** @} */
+
+/**@addtogroup PublicExprMethods
+ * @{
+ */
 
 /**@name Expressions */
 /**@{ */

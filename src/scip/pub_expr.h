@@ -33,15 +33,9 @@ extern "C" {
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
 
-/**@defgroup PublicExprMethods Expressions
- * @ingroup DataStructures
- * @brief an algebraic expression used for nonlinear constraints and NLPs
- *
- *@{
+/**@addtogroup PublicExprHandlerMethods
+ * @{
  */
-
-/**@name Expression Handler */
-/**@{ */
 
 /** set the expression handler callbacks to copy and free an expression handler */
 SCIP_EXPORT
@@ -234,8 +228,6 @@ SCIP_Bool SCIPexprhdlrHasReverseProp(
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPexprhdlrComp);
 
-/** @} */ /* expression handler methods */
-
 /**@name Expression Handler Statistics */
 /**@{ */
 
@@ -333,8 +325,16 @@ SCIP_Longint SCIPexprhdlrGetNSimplifications(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
-/** @} */
+/** @} */ /* expression handler statistics */
 
+/** @} */ /* expression handler methods */
+
+/**@defgroup PublicExprMethods Expressions
+ * @ingroup DataStructures
+ * @brief an algebraic expression used for nonlinear constraints and NLPs
+ *
+ *@{
+ */
 
 /**@name Expressions */
 /**@{ */
