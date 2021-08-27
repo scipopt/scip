@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi_qso.c
- * @ingroup OTHER_CFILES
+ * @ingroup LPIS
  * @brief  LP interface for QSopt version >= 070303
  * @author Daniel Espinoza
  * @author Marc Pfetsch
