@@ -31,11 +31,11 @@
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "bilinear"
 #define NLHDLR_DESC               "bilinear handler for expressions"
-#define NLHDLR_DETECTPRIORITY     -10 /* it is important that the nlhdlr runs after the default nldhlr */
+#define NLHDLR_DETECTPRIORITY     -10  /**< it is important that the nlhdlr runs after the default nldhlr */
 #define NLHDLR_ENFOPRIORITY       -10
 
-#define MIN_INTERIORITY           0.01 /* minimum interiority for a reference point for applying separation */
-#define MIN_ABSBOUNDSIZE          0.1  /* minimum size of variable bounds for applying separation */
+#define MIN_INTERIORITY           0.01 /**< minimum interiority for a reference point for applying separation */
+#define MIN_ABSBOUNDSIZE          0.1  /**< minimum size of variable bounds for applying separation */
 
 #ifdef SCIP_STATISTIC
 /* properties of the bilinear nlhdlr statistics table */
@@ -1451,6 +1451,63 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
  * nonlinear handler specific interface methods
  */
 
+/** includes bilinear nonlinear handler in nonlinear constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrBilinear(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_NLHDLRDATA* nlhdlrdata;
+   SCIP_NLHDLR* nlhdlr;
+
+   assert(scip != NULL);
+
+   /* create nonlinear handler specific data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
+   BMSclearMemory(nlhdlrdata);
+
+   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectBilinear, nlhdlrEvalauxBilinear, nlhdlrdata) );
+   assert(nlhdlr != NULL);
+
+   SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrBilinear);
+   SCIPnlhdlrSetFreeHdlrData(nlhdlr, nlhdlrFreehdlrdataBilinear);
+   SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataBilinear);
+   SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitBilinear, nlhdlrExitBilinear);
+   SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaBilinear, nlhdlrEnfoBilinear, nlhdlrEstimateBilinear, nlhdlrExitSepaBilinear);
+   SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalBilinear, nlhdlrReversepropBilinear);
+
+   /* parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/useinteval",
+         "whether to use the interval evaluation callback of the nlhdlr",
+         &nlhdlrdata->useinteval, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/usereverseprop",
+         "whether to use the reverse propagation callback of the nlhdlr",
+         &nlhdlrdata->usereverseprop, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxseparoundsroot",
+         "maximum number of separation rounds in the root node",
+         &nlhdlrdata->maxseparoundsroot, FALSE, 10, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxseparounds",
+         "maximum number of separation rounds in a local node",
+         &nlhdlrdata->maxseparounds, FALSE, 1, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxsepadepth",
+         "maximum depth to apply separation",
+         &nlhdlrdata->maxsepadepth, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
+
+#ifdef SCIP_STATISTIC
+   /* statistic table */
+   assert(SCIPfindTable(scip, TABLE_NAME_BILINEAR) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BILINEAR, TABLE_DESC_BILINEAR, TRUE,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputBilinear,
+         NULL, TABLE_POSITION_BILINEAR, TABLE_EARLIEST_STAGE_BILINEAR) );
+#endif
+
+   return SCIP_OKAY;
+}
+
 /** returns an array of expressions that have been detected by the bilinear nonlinear handler */
 SCIP_EXPR** SCIPgetNlhdlrBilinearExprs(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
@@ -1483,9 +1540,7 @@ int SCIPgetNlhdlrBilinearNExprs(
    return nlhdlrdata->nexprs;
 }
 
-/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant to a product expression
- * of the form x*y
- */
+/** adds a globally valid inequality of the form \f$\text{xcoef}\cdot x \leq \text{ycoef} \cdot y + \text{constant}\f$ to a product expression of the form \f$x\cdot y\f$ */
 SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
@@ -1636,63 +1691,6 @@ SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
        */
       SCIP_CALL( SCIPmarkExprPropagateNonlinear(scip, expr) );
    }
-
-   return SCIP_OKAY;
-}
-
-/** includes Bilinear nonlinear handler to consexpr */
-SCIP_RETCODE SCIPincludeNlhdlrBilinear(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_NLHDLRDATA* nlhdlrdata;
-   SCIP_NLHDLR* nlhdlr;
-
-   assert(scip != NULL);
-
-   /* create nonlinear handler specific data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
-   BMSclearMemory(nlhdlrdata);
-
-   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
-      NLHDLR_ENFOPRIORITY, nlhdlrDetectBilinear, nlhdlrEvalauxBilinear, nlhdlrdata) );
-   assert(nlhdlr != NULL);
-
-   SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrBilinear);
-   SCIPnlhdlrSetFreeHdlrData(nlhdlr, nlhdlrFreehdlrdataBilinear);
-   SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataBilinear);
-   SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitBilinear, nlhdlrExitBilinear);
-   SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaBilinear, nlhdlrEnfoBilinear, nlhdlrEstimateBilinear, nlhdlrExitSepaBilinear);
-   SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalBilinear, nlhdlrReversepropBilinear);
-
-   /* parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/useinteval",
-         "whether to use the interval evaluation callback of the nlhdlr",
-         &nlhdlrdata->useinteval, FALSE, TRUE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/usereverseprop",
-         "whether to use the reverse propagation callback of the nlhdlr",
-         &nlhdlrdata->usereverseprop, FALSE, TRUE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxseparoundsroot",
-         "maximum number of separation rounds in the root node",
-         &nlhdlrdata->maxseparoundsroot, FALSE, 10, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxseparounds",
-         "maximum number of separation rounds in a local node",
-         &nlhdlrdata->maxseparounds, FALSE, 1, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/maxsepadepth",
-         "maximum depth to apply separation",
-         &nlhdlrdata->maxsepadepth, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
-
-#ifdef SCIP_STATISTIC
-   /* statistic table */
-   assert(SCIPfindTable(scip, TABLE_NAME_BILINEAR) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BILINEAR, TABLE_DESC_BILINEAR, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputBilinear,
-         NULL, TABLE_POSITION_BILINEAR, TABLE_EARLIEST_STAGE_BILINEAR) );
-#endif
 
    return SCIP_OKAY;
 }
@@ -2171,12 +2169,11 @@ void SCIPcomputeBilinEnvelope1(
 #endif
 }
 
-/** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequality
+/** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequalities
  *  involving only the variables of the bilinear term
  *
  *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
  *        by Marco Locatelli
- *
  */
 void SCIPcomputeBilinEnvelope2(
    SCIP*                 scip,               /**< SCIP data structure */

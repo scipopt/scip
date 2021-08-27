@@ -32,11 +32,20 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLHDLRS
+/** includes quotient nonlinear handler in nonlinear constraint handler
  *
+ * @ingroup NlhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeNlhdlrQuotient(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/**@addtogroup NLHDLRS
  * @{
  *
- * @name Quotient nonlinear handler.
+ * @name Quotient nonlinear handler
  *
  * This nonlinear handler detects quotients and provides specialized propagation and estimation functionality.
  *
@@ -46,15 +55,6 @@ extern "C" {
 /** @}
   * @}
   */
-
-/** includes quotient nonlinear handler to nonlinear constraint handler
- *
- * @ingroup NlhdlrIncludes
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeNlhdlrQuotient(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 #ifdef __cplusplus
 }

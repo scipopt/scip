@@ -31,11 +31,19 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLHDLRS
+/** includes bilinear nonlinear handler in nonlinear constraint handler
  *
+ * @ingroup NlhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeNlhdlrBilinear(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup NLHDLRS
  * @{
  *
- * @name Bilinear nonlinear handler.
+ * @name Bilinear nonlinear handler
  *
  * This nonlinear handler detects and collects bilinear terms and provides specialized propagation and estimation functionality.
  *
@@ -60,7 +68,7 @@ int SCIPgetNlhdlrBilinearNExprs(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
-/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant to a product expression of the form x*y */
+/** adds a globally valid inequality of the form \f$\text{xcoef}\cdot x \leq \text{ycoef} \cdot y + \text{constant}\f$ to a product expression of the form \f$x\cdot y\f$ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -70,19 +78,6 @@ SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
    SCIP_Real             ycoef,              /**< y coefficient */
    SCIP_Real             constant,           /**< constant part */
    SCIP_Bool*            success             /**< buffer to store whether inequality has been accepted */
-   );
-
-/** @}
-  * @}
-  */
-
-/** includes bilinear nonlinear handler in nonlinear constraint handler
- *
- * @ingroup NlhdlrIncludes
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeNlhdlrBilinear(
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** computes coefficients of linearization of a bilinear term in a reference point */
@@ -142,12 +137,11 @@ void SCIPcomputeBilinEnvelope1(
    SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
    );
 
-/** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequality
+/** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequalities
  *  involving only the variables of the bilinear term
  *
  *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
  *        by Marco Locatelli
- *
  */
 SCIP_EXPORT
 void SCIPcomputeBilinEnvelope2(
@@ -171,6 +165,10 @@ void SCIPcomputeBilinEnvelope2(
    SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
    SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
    );
+
+/** @}
+  * @}
+  */
 
 #ifdef __cplusplus
 }

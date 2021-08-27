@@ -20,9 +20,9 @@
  * @author Antonia Chmiela
  *
  * Some definitions:
- * - a BILINEXPRTERM is a product of two expressions
- * - a SCIP_QUADEXPRTERM stores an expression expr that is known to appear in a nonlinear, quadratic term, that is
- *   expr^2 or expr * other_expr. It stores its sqrcoef (that can be 0), its linear coef and all the bilinear expression
+ * - a `BILINEXPRTERM` is a product of two expressions
+ * - a `QUADEXPRTERM` stores an expression `expr` that is known to appear in a nonlinear, quadratic term, that is
+ *   `expr^2` or `expr*other_expr`. It stores its `sqrcoef` (that can be 0), its linear coef and all the bilinear expression
  *   terms in which expr appears.
  */
 
@@ -2451,8 +2451,8 @@ SCIP_Bool isPropagableTerm(
    return (lincoef != 0.0) + (sqrcoef != 0.0) + nadjbilin >= 2;  /*lint !e514*/ /* actually MIN(2, nadjbilin), but we check >= 2 */
 }
 
-/** solves a quadratic equation \f$ a expr^2 + b expr \in rhs \f$ (with b an interval) and reduces bounds on expr or
- * deduces infeasibility if possible; expr is quadexpr.expr
+/** solves a quadratic equation \f$ a\, \text{expr}^2 + b\, \text{expr} \in \text{rhs} \f$ (with \f$b\f$ an interval)
+ * and reduces bounds on `expr` or deduces infeasibility if possible
  */
 static
 SCIP_RETCODE propagateBoundsQuadExpr(
@@ -2504,7 +2504,7 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    return SCIP_OKAY;
 }
 
-/** solves a linear equation \f$ b expr \in rhs \f$ (with b a scalar) and reduces bounds on expr or deduces infeasibility if possible */
+/** solves a linear equation \f$ b\, \text{expr} \in \text{rhs} \f$ (with \f$b\f$ a scalar) and reduces bounds on `expr` or deduces infeasibility if possible */
 static
 SCIP_RETCODE propagateBoundsLinExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2627,14 +2627,14 @@ SCIP_Real computeMaxForBilinearProp(
 
 /** computes the range of rhs/x - coef * x for x in exprdom; this is used for the propagation of bilinear terms
  *
- * If 0 is in the exprdom, we set range to R (even though this is not quite correct, it is correct for the
+ * If 0 is in the exprdom, we set range to \f$\mathbb{R}\f$ (even though this is not quite correct, it is correct for the
  * intended use of the function).
  * TODO: maybe check before calling it whether 0 is in the domain and then just avoid calling it
  *
- * If rhs is [A,B] and x > 0, then we want the min of A/x - coef*x and max of B/x - coef * x for x in [exprdom].
- * If rhs is [A,B] and x < 0, then we want the min of B/x - coef*x and max of A/x - coef * x for x in [exprdom].
- * However, this is the same as min of -B/x + coef*x and max of -A/x + coef * x for x in -[exprdom].
- * Thus, we can reduce to x > 0 always by multiplying [exprdom], rhs, and coef by -1.
+ * If rhs is [A,B] and x > 0, then we want the min of A/x - coef*x and max of B/x - coef*x for x in [exprdom].
+ * If rhs is [A,B] and x < 0, then we want the min of B/x - coef*x and max of A/x - coef*x for x in [exprdom].
+ * However, this is the same as min of -B/x + coef*x and max of -A/x + coef*x for x in -[exprdom].
+ * Thus, we can always reduce to x > 0 by multiplying [exprdom], rhs, and coef by -1.
  */
 static
 void computeRangeForBilinearProp(
@@ -2670,7 +2670,7 @@ void computeRangeForBilinearProp(
    SCIPintervalSetBounds(range, min, max);
 }
 
-/** reverse propagates coef_i expr_i + constant \f$\in\f$ rhs */
+/** reverse propagates coef_i expr_i + constant in rhs */
 static
 SCIP_RETCODE reversePropagateLinearExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2722,7 +2722,7 @@ SCIP_RETCODE reversePropagateLinearExpr(
 
 /** callback to free expression specific data */
 static
-SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
+SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeexprdataQuadratic)
 {  /*lint --e{715}*/
    assert(nlhdlrexprdata != NULL);
    assert(*nlhdlrexprdata != NULL);
@@ -2741,42 +2741,36 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrfreeExprDataQuadratic)
 
 /** callback to detect structure in expression tree
  *
- * A term is quadratic if:
- * - It is a product expression of two expressions
- * - It is power expression of an expression with exponent 2.0
+ * A term is quadratic if
+ * - it is a product expression of two expressions, or
+ * - it is power expression of an expression with exponent 2.0.
  *
- * We define a propagable quadratic expression as a quadratic expression whose termwise propagation does not yield the
+ * We define a _propagable_ quadratic expression as a quadratic expression whose termwise propagation does not yield the
  * best propagation. In other words, is a quadratic expression that suffers from the dependency problem.
  *
  * Specifically, a propagable quadratic expression is a sum expression such that there is at least one expr that appears
- * at least twice (because of simplification, this means it appears in a quadratic terms and somewhere else). For
- * example: x^2 + y^2 is not a propagable quadratic expression; x^2 + x is a propagable quadratic expression; x^2 + x *
- * y is also a propagable quadratic expression
+ * at least twice (because of simplification, this means it appears in a quadratic terms and somewhere else).
+ * For example: \f$x^2 + y^2\f$ is not a propagable quadratic expression; \f$x^2 + x\f$ is a propagable quadratic expression;
+ * \f$x^2 + x y\f$ is also a propagable quadratic expression
  *
- * Furthermore, we distinguish between propagable and non-propagable terms. A term is propagable if any the expressions
- * involved in it appear somewhere else. For example, x*y + z^2 + z is a propagable quadratic, the term 'x*y' is
- * non-propagable, and 'z^2' is propagable. For propagation, non-propagable terms are handled as if they were linear
- * terms, that is, we do not use the activity of 'x' and 'y' to compute the activity of 'x*y' but rather we use directly
- * the activity of 'x*y'. Similarly, we do not backward propagate to 'x' and 'y' (the product expr handler will do
- * this), but we backward propagate to 'x*y'. More technically, we register 'x*y' for its activity usage, rather than
- * 'x' and 'y'.
+ * Furthermore, we distinguish between propagable and non-propagable terms. A term is propagable if any of the expressions
+ * involved in it appear somewhere else. For example, \f$xy + z^2 + z\f$ is a propagable quadratic, the term \f$xy\f$ is
+ * non-propagable, and \f$z^2\f$ is propagable. For propagation, non-propagable terms are handled as if they were linear
+ * terms, that is, we do not use the activity of \f$x\f$ and \f$y\f$ to compute the activity of \f$xy\f$ but rather we use directly
+ * the activity of \f$xy\f$. Similarly, we do not backward propagate to \f$x\f$ and \f$y\f$ (the product expr handler will do this),
+ * but we backward propagate to \f$x*y\f$. More technically, we register \f$xy\f$ for its activity usage, rather than\f$x\f$ and \f$y\f$.
  *
  * For propagation, we store the quadratic in our data structure in the following way: We count how often a variable
  * appears. Then, a bilinear product expr_i * expr_j is stored as expr_i * expr_j if # expr_i appears > # expr_j
- * appears. When # expr_i appears == # expr_j appears, it then it will be stored as expr_i * expr_j if and only if
- * expr_i < expr_j, where '<' is the expression order (see Ordering Rules in scip_expr.h documentation).
+ * appears. When # expr_i appears = # expr_j appears, it then it will be stored as expr_i * expr_j if and only if
+ * expr_i < expr_j, where '<' is the expression order (see \ref EXPR_ORDER "Ordering Rules" in \ref scip_expr.h).
  * Heuristically, this should be useful for propagation. The intuition is that by factoring out the variable that
  * appears most often we should be able to take care of the dependency problem better.
  *
- * Simple convex quadratics like x^2 + y^2 are ignored since the default nlhdlr will take care of them.
- * More complicated convex quadratics are handled here. (TODO: extended formulation using eigen-decomposition?)
- * Note that simple convex quadratics are exactly the non-propagable quadratics.
+ * Simple convex quadratics like \f$x^2 + y^2\f$ are ignored since the default nlhdlr will take care of them.
  *
- * TODO: when nonconvex quadratics are handled, detection should be revisited.
- *
- * @note:
- * - the expression needs to be simplified (in particular, it is assumed to be sorted)
- * - common subexpressions are also assumed to have been identified, the hashing will fail otherwise!
+ * @note The expression needs to be simplified (in particular, it is assumed to be sorted).
+ * @note Common subexpressions are also assumed to have been identified, the hashing will fail otherwise!
  *
  * Sorted implies that:
  *  - expr < expr^2: bases are the same, but exponent 1 < 2
@@ -2984,7 +2978,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectQuadratic)
       /* if nobody can do anything, remove data */
       if( *participating == SCIP_NLHDLR_METHOD_NONE ) /*lint !e845*/
       {
-         SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, nlhdlrexprdata) );
+         SCIP_CALL( nlhdlrFreeexprdataQuadratic(scip, nlhdlr, expr, nlhdlrexprdata) );
       }
       else
       {
@@ -3020,7 +3014,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectQuadratic)
    /* if nobody can do anything, remove data */
    if( *participating == SCIP_NLHDLR_METHOD_NONE ) /*lint !e845*/
    {
-      SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, nlhdlrexprdata) );
+      SCIP_CALL( nlhdlrFreeexprdataQuadratic(scip, nlhdlr, expr, nlhdlrexprdata) );
       return SCIP_OKAY;
    }
 
@@ -3066,7 +3060,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectQuadratic)
 
 /** nonlinear handler auxiliary evaluation callback */
 static
-SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
+SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxQuadratic)
 {  /*lint --e{715}*/
    int i;
    int nlinexprs;
@@ -3358,28 +3352,30 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
 /** nonlinear handler forward propagation callback
  *
  * This method should solve the problem
- * max/min quad expression over box constraints
+ * <pre>
+ *    max/min quad expression over box constraints
+ * </pre>
  * However, this problem is difficult so we are satisfied with a proxy.
  * Interval arithmetic suffices when no variable appears twice, however this is seldom the case, so we try
  * to take care of the dependency problem to some extent:
- * Let P_l = \{i : expr_l expr_i is a bilinear expr\}.
+ * Let \f$P_l = \{i : \text{expr}_l \text{expr}_i \,\text{is a bilinear expr}\}\f$.
  * 1. partition the quadratic expression as sum of quadratic functions \f$\sum_l q_l\f$
- *    where \f$q_l = a_l expr_l^2 + c_l expr_l + \sum_{i \in P_l} b_il expr_i expr_l\f$
- * 2. build interval quadratic functions, i.e, a x^2 + b x where b is an interval, i.e.,
- *    \f$a_l expr_l^2 + \[\sum_{i \in P_l} b_il expr_i + c_l\] expr_l\f$
- * 3. compute min and max { a x^2 + b x : x \f$\in\f$ [x] } for each interval quadratic, i.e.,
- *    \f$\min/\max a_l expr_l^2 + expr_l \[\sum_{i \in P_l} b_il expr_i + c_l\] : expr_l \in \[expr_l\]\f$
+ *    where \f$q_l = a_l \text{expr}_l^2 + c_l \text{expr}_l + \sum_{i \in P_l} b_{il} \text{expr}_i \text{expr}_l\f$
+ * 2. build interval quadratic functions, i.e., \f$a x^2 + b x\f$ where \f$b\f$ is an interval, i.e.,
+ *    \f$a_l \text{expr}_l^2 + [\sum_{i \in P_l} b_{il} \text{expr}_i + c_l] \text{expr}_l\f$
+ * 3. compute \f$\min/\max \{ a x^2 + b x : x \in [x] \}\f$ for each interval quadratic, i.e.,
+ *    \f$\min/\max a_l \text{expr}_l^2 + \text{expr}_l [\sum_{i \in P_l} b_{il} \text{expr}_i + c_l] : \text{expr}_l \in [\text{expr}_l]\f$
  *
  * Notes:
- * 1. The l-th quadratic expr (expressions that appear quadratically) is associated with q_l
- * 2. nlhdlrdata->quadactivities[l] is the activity of q_l as computed in the description above.
- * 3. The q_l of a quadratic term might be empty, in which case nlhdlrdata->quadactivities[l] is [0,0].
- * For example, consider x^2 + x*y. There are two quadratic expressions, 'x' and 'y'.
- * The q associated to 'x' is 'x^2 + x*y', while the q associated to 'y' is empty.
- * Thus, nlhdlrdata->quadactivities[1] is [0,0] in this case.
- * The logic is to avoid considering the term 'x*y' twice.
+ * 1. The \f$l\f$-th quadratic expr (expressions that appear quadratically) is associated with \f$q_l\f$.
+ * 2. `nlhdlrdata->quadactivities[l]` is the activity of \f$q_l\f$ as computed in the description above.
+ * 3. The \f$q_l\f$ of a quadratic term might be empty, in which case `nlhdlrdata->quadactivities[l]` is [0,0].\n
+ *    For example, consider \f$x^2 + xy\f$. There are two quadratic expressions, \f$x\f$ and \f$y\f$.
+ *    The \f$q\f$ associated to \f$x\f$ is \f$x^2 + xy\f$, while the \f$q\f$ associated to \f$y\f$ is empty.
+ *    Thus, `nlhdlrdata->quadactivities[1]` is [0,0] in this case.
+ *    The logic is to avoid considering the term \f$xy\f$ twice.
  *
- * @note The order matters! If expr_i * expr_l is a term in of the quadratic, then i is *not* in P_l
+ * @note The order matters! If \f$\text{expr}_i\, \text{expr}_l\f$ is a term in the quadratic, then \f$i\f$ is *not* in \f$P_l\f$
  */
 static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
@@ -3639,16 +3635,9 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
 }
 
 /** nonlinear handler reverse propagation callback
- * @note: the implemented technique is a proxy for solving the OBBT problem min/max{ x_i : quad expr in [quad expr] }
- * and as such can be improved.
  *
- * input:
- *  - scip : SCIP main data structure
- *  - nlhdlr : nonlinear handler
- *  - expr : expression
- *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
- *  - nreductions : buffer to store the number of interval reductions of all children
+ * @note the implemented technique is a proxy for solving the problem min/max{ x_i : quad expr in [quad expr] }
+ * and as such can be improved.
  */
 static
 SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
@@ -3974,14 +3963,9 @@ SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataQuadratic)
    return SCIP_OKAY;
 }
 
-/** nonlinear handler copy callback
- *
- * the method includes the nonlinear handler into a expression constraint handler
- *
- * This method is usually called when doing a copy of an expression constraint handler.
- */
+/** nonlinear handler copy callback */
 static
-SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrcopyHdlrQuadratic)
+SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrQuadratic)
 {  /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
@@ -4007,11 +3991,11 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
    BMSclearMemory(nlhdlrdata);
 
    SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
-      NLHDLR_ENFOPRIORITY, nlhdlrDetectQuadratic, nlhdlrEvalAuxQuadratic, nlhdlrdata) );
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectQuadratic, nlhdlrEvalauxQuadratic, nlhdlrdata) );
 
-   SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrcopyHdlrQuadratic);
+   SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrQuadratic);
    SCIPnlhdlrSetFreeHdlrData(nlhdlr, nlhdlrFreehdlrdataQuadratic);
-   SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrfreeExprDataQuadratic);
+   SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeexprdataQuadratic);
 #ifdef ENABLE_INTERSECTIONCUT
    SCIPnlhdlrSetSepa(nlhdlr, NULL, nlhdlrEnfoQuadratic, NULL, NULL);
 #endif

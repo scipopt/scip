@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr.c
+ * @ingroup OTHER_CFILES
  * @brief  functions for nonlinearity handlers of nonlinear constraint handler
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
@@ -32,9 +33,11 @@
 #include "scip/scip_message.h"
 #include "scip/pub_misc.h"
 
-/* nlhdlr public API functions from pub_nlhdlr.h */
+/**@addtogroup PublicNlhdlrInterfaceMethods
+ * @{
+ */
 
-/** set the copy handler callback of a nonlinear handler */
+/** sets the copy handler callback of a nonlinear handler */
 void SCIPnlhdlrSetCopyHdlr(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRCOPYHDLR((*copy))         /**< copy callback (can be NULL) */
@@ -45,7 +48,7 @@ void SCIPnlhdlrSetCopyHdlr(
    nlhdlr->copyhdlr = copy;
 }
 
-/** set the nonlinear handler callback to free the nonlinear handler data */
+/** sets the nonlinear handler callback to free the nonlinear handler data */
 void SCIPnlhdlrSetFreeHdlrData(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
@@ -56,7 +59,7 @@ void SCIPnlhdlrSetFreeHdlrData(
    nlhdlr->freehdlrdata = freehdlrdata;
 }
 
-/** set the nonlinear handler callback to free expression specific data of nonlinear handler */
+/** sets the nonlinear handler callback to free expression specific data of nonlinear handler */
 void SCIPnlhdlrSetFreeExprData(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback
@@ -68,7 +71,7 @@ void SCIPnlhdlrSetFreeExprData(
    nlhdlr->freeexprdata = freeexprdata;
 }
 
-/** set the initialization and deinitialization callback of a nonlinear handler */
+/** sets the initialization and deinitialization callback of a nonlinear handler */
 void SCIPnlhdlrSetInitExit(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRINIT((*init)),            /**< initialization callback (can be NULL) */
@@ -81,7 +84,7 @@ void SCIPnlhdlrSetInitExit(
    nlhdlr->exit = exit_;
 }
 
-/** set the propagation callbacks of a nonlinear handler */
+/** sets the propagation callbacks of a nonlinear handler */
 void SCIPnlhdlrSetProp(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRINTEVAL((*inteval)),      /**< interval evaluation callback (can be NULL) */
@@ -94,7 +97,7 @@ void SCIPnlhdlrSetProp(
    nlhdlr->reverseprop = reverseprop;
 }
 
-/** set the enforcement callbacks of a nonlinear handler */
+/** sets the enforcement callbacks of a nonlinear handler */
 void SCIPnlhdlrSetSepa(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRINITSEPA((*initsepa)),    /**< separation initialization callback (can be NULL) */
@@ -267,7 +270,9 @@ SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrCompEnfo)
 }
 #endif
 
-/* nlhdlr private API functions from pub_nlhdlr.h */
+/** @} */
+
+/* nlhdlr private API functions from nlhdlr.h */
 
 /** creates a nonlinear handler */
 SCIP_RETCODE SCIPnlhdlrCreate(
@@ -446,7 +451,7 @@ SCIP_DECL_NLHDLREVALAUX(SCIPnlhdlrEvalaux)
    return SCIP_OKAY;
 }
 
-/** calls the interval evaluation callback of a nonlinear handler */
+/** call the interval evaluation callback of a nonlinear handler */
 SCIP_DECL_NLHDLRINTEVAL(SCIPnlhdlrInteval)
 {
    assert(scip != NULL);
@@ -465,7 +470,7 @@ SCIP_DECL_NLHDLRINTEVAL(SCIPnlhdlrInteval)
    return SCIP_OKAY;
 }
 
-/** calls the reverse propagation callback of a nonlinear handler */
+/** call the reverse propagation callback of a nonlinear handler */
 SCIP_DECL_NLHDLRREVERSEPROP(SCIPnlhdlrReverseprop)
 {
    assert(scip != NULL);
@@ -495,7 +500,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(SCIPnlhdlrReverseprop)
    return SCIP_OKAY;
 }
 
-/** calls the separation initialization callback of a nonlinear handler */
+/** call the separation initialization callback of a nonlinear handler */
 SCIP_DECL_NLHDLRINITSEPA(SCIPnlhdlrInitsepa)
 {
    assert(scip != NULL);
@@ -520,7 +525,7 @@ SCIP_DECL_NLHDLRINITSEPA(SCIPnlhdlrInitsepa)
    return SCIP_OKAY;
 }
 
-/** calls the separation deinitialization callback of a nonlinear handler */
+/** call the separation deinitialization callback of a nonlinear handler */
 SCIP_DECL_NLHDLREXITSEPA(SCIPnlhdlrExitsepa)
 {
    assert(scip != NULL);
@@ -537,7 +542,7 @@ SCIP_DECL_NLHDLREXITSEPA(SCIPnlhdlrExitsepa)
    return SCIP_OKAY;
 }
 
-/** calls the enforcement callback of a nonlinear handler */
+/** call the enforcement callback of a nonlinear handler */
 SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo)
 {
    assert(scip != NULL);
@@ -588,7 +593,7 @@ SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo)
    return SCIP_OKAY;
 }
 
-/** calls the estimator callback of a nonlinear handler */
+/** call the estimator callback of a nonlinear handler */
 SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate)
 {
    assert(scip != NULL);

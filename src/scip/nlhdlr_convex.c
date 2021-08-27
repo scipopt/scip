@@ -456,8 +456,10 @@ DECL_CURVCHECK(curvCheckQuadratic)
 }
 
 /** looks whether top of given expression looks like a signomial that can have a given curvature
+ *
  * e.g., sqrt(x)*sqrt(y) is convex if x,y >= 0 and x and y are convex
- * unfortunately, doesn't work for tls, because i) it's originally sqrt(x*y), and ii) it is expanded into some sqrt(z*y+y)
+ *
+ * unfortunately, doesn't work for tls, because i) it's originally sqrt(x*y), and ii) it is expanded into some sqrt(z*y+y);
  * but works for cvxnonsep_nsig
  */
 static
@@ -565,24 +567,24 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** looks for f(c*h(x)+d)*h(x) * constant-factor
+/** looks for \f$f(c h(x)+d) h(x) \cdot \text{constant}\f$ and tries to conclude conditions on curvature
  *
- * Assume h is univariate:
- * - First derivative is f'(c h + d) c h' h + f(c h + d) h'.
- * - Second derivative is f''(c h + d) c h' c h' h + f'(c h + d) (c h'' h + c h' h') + f'(c h + d) c h' h' + f(c h + d) h''
- *   = f''(c h + d) c^2 h'^2 h + f'(c h + d) c h'' h + 2 f'(c h + d) c h'^2 + f(c h + d) h''
- *   Remove always positive factors: f''(c h + d) h, f'(c h + d) c h'' h, f'(c h + d) c, f(c h + d) h''
+ * Assume \f$h\f$ is univariate:
+ * - First derivative is \f$f'(c h + d) c h' h + f(c h + d) h'\f$.
+ * - Second derivative is \f{align}{&f''(c h + d) c h' c h' h + f'(c h + d) (c h'' h + c h' h') + f'(c h + d) c h' h' + f(c h + d) h'' \\
+ *   =& f''(c h + d) c^2 h'^2 h + f'(c h + d) c h'' h + 2 f'(c h + d) c h'^2 + f(c h + d) h''.\f}
+ *   Remove always positive factors leaves \f[f''(c h + d) h,\quad f'(c h + d) c h'' h,\quad f'(c h + d) c,\quad f(c h + d) h''.\f]
  *   For convexity we want all these terms to be nonnegative. For concavity we want all of them to be nonpositive.
- *   Note, that in each term either f'(c h + d) and c occur, or none of them.
- * - Thus, f(c h(x) + d)h(x) is convex if c*f is monotonically increasing (c f' >= 0) and either
- *   - f is convex (f'' >= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
- *   - f is concave (f'' <= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
- *   and f(c h(x) + d)h(x) is concave if c*f is monotonically decreasing (c f' <= 0) and either
- *   - f is convex (f'' >= 0) and h is nonpositive (h <= 0) and h is concave (h'' <= 0) and [f is nonnegative (f >= 0) or h is linear (h''=0)], or
- *   - f is concave (f'' <= 0) and h is nonnegative (h >= 0) and h is convex (h'' >= 0) and [f is nonpositive (f <= 0) or h is linear (h''=0)]
+ *   Note, that in each term either both \f$f'(c h + d)\f$ and \f$c\f$ occur, or none of them.
+ * - Thus, \f$f(c h(x) + d)h(x)\f$ is convex if \f$cf\f$ is monotonically increasing \f$(c f' \geq 0)\f$ and either
+ *   - \f$f\f$ is convex \f$(f'' \geq 0)\f$ and \f$h\f$ is nonnegative \f$(h \geq 0)\f$ and \f$h\f$ is convex \f$(h'' \geq 0)\f$ and [\f$f\f$ is nonnegative \f$(f \geq 0)\f$ or \f$h\f$ is linear \f$(h''=0)\f$], or
+ *   - \f$f\f$ is concave \f$(f'' \leq 0)\f$ and \f$h\f$ is nonpositive \f$(h \leq 0)\f$ and \f$h\f$ is concave \f$(h'' \leq 0)\f$ and [\f$f\f$ is nonpositive \f$(f \leq 0)\f$ or \f$h\f$ is linear \f$(h''=0)\f$].
+ * - Further, \f$f(c h(x) + d)h(x)\f$ is concave if \f$cf\f$ is monotonically decreasing \f$(c f' \leq 0)\f$ and either
+ *   - f is convex \f$(f'' \geq 0)\f$ and \f$h\f$ is nonpositive \f$(h \leq 0)\f$ and \f$h\f$ is concave \f$(h'' \leq 0)\f$ and [\f$f\f$ is nonnegative \f$(f \geq 0)\f$ or \f$h\f$ is linear \f$(h''=0)\f$], or
+ *   - f is concave \f$(f'' \leq 0)\f$ and \f$h\f$ is nonnegative \f$(h >= 0)\f$ and \f$h\f$ is convex \f$(h'' \geq 0)\f$ and [\f$f\f$ is nonpositive \f$(f \leq 0)\f$ or \f$h\f$ is linear \f$(h''=0)\f$].
  *
- * This should hold also for multivariate and linear h, as things are invariant under linear transformations.
- * Similar to signomial, I'll assume that this will also hold for other multivariate h (someone has a formal proof?).
+ * This should hold also for multivariate and linear \f$h\f$, as things are invariant under linear transformations.
+ * Similar to signomial, I'll assume that this will also hold for other multivariate \f$h\f$ (someone has a formal proof?).
  */
 static
 DECL_CURVCHECK(curvCheckProductComposite)
@@ -863,19 +865,19 @@ TERMINATE:
 }
 
 /** curvature check and expression-growing methods
+ *
  * some day this could be plugins added by users at runtime, but for now we have a fixed list here
- * NOTE: curvCheckExprhdlr should be last
+ * @note curvCheckExprhdlr should be last
  */
 static DECL_CURVCHECK((*CURVCHECKS[])) = { curvCheckProductComposite, curvCheckSignomial, curvCheckQuadratic, curvCheckExprhdlr };
 /** number of curvcheck methods */
 static const int NCURVCHECKS = sizeof(CURVCHECKS) / sizeof(void*);
 
-/** checks whether expression is a sum with more than one child and each child being a variable ...
+/** checks whether expression is a sum with more than one child and each child being a variable or going to be a variable if `expr` is a nlhdlr-specific copy
  *
- * ... or going to be a variable if expr is a nlhdlr-specific copy
  * Within constructExpr(), we can have an expression of any type which is a copy of an original expression,
  * but without children. At the end of constructExpr() (after the loop with the stack), these expressions
- * will remain as leafs and will eventually be turned into variables in collectLeafs(). Thus we treat
+ * will remain as leafs and will eventually be turned into variables in collectLeafs(). Thus, we treat
  * every child that has no children as if it were a variable. Theoretically, there is still the possibility
  * that it could be a constant (value-expression), but simplify should have removed these.
  */
@@ -910,7 +912,7 @@ SCIP_Bool exprIsMultivarLinear(
  * If the curvature cannot be achieved for an expression in the original expression graph,
  * then this expression becomes a leaf in the nlhdlr-expression.
  *
- * Sets *rootnlexpr to NULL if failed.
+ * Sets `*rootnlexpr` to NULL if failed.
  */
 static
 SCIP_RETCODE constructExpr(
@@ -1326,8 +1328,8 @@ SCIP_RETCODE createNlhdlrExprData(
 
 /** adds an estimator for a vertex-polyhedral (e.g., concave) function to a given rowprep
  *
- * calls \ref SCIPcomputeFacetVertexPolyhedralNonlinear() for given function and
- * box set to local bounds of auxiliary variables
+ * Calls \ref SCIPcomputeFacetVertexPolyhedralNonlinear() for given function and
+ * box set to local bounds of auxiliary variables.
  */
 static
 SCIP_RETCODE estimateVertexPolyhedral(

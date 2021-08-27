@@ -45,32 +45,31 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
  *
  * @{
  *
- * @name SOC nonlinear handler.
+ * @name SOC nonlinear handler
  *
  * This nonlinear handler detects second-order cone constraints in the extended formulation and provides specialized separation functionality.
  *
  * @{
  */
 
-/** checks whether constraint is SOC representable in original variables and if yes, returns the SOC
- * representation
+/** checks whether constraint is SOC representable in original variables and returns the SOC representation
  *
  * The SOC representation has the form:
  * \f$\sqrt{\sum_{i=1}^{n} (v_i^T x + \beta_i)^2} - v_{n+1}^T x - \beta_{n+1} \lessgtr 0\f$,
- * where \f$n+1 = nterms\f$ and the inequality type is given by sidetype (SCIP_SIDETYPE_RIGHT if inequality
- * is \f$\leq\f$, SCIP_SIDETYPE_LEFT if \f$\geq\f$).
+ * where \f$n+1 = \text{nterms}\f$ and the inequality type is given by sidetype (`SCIP_SIDETYPE_RIGHT` if inequality
+ * is \f$\leq\f$, `SCIP_SIDETYPE_LEFT` if \f$\geq\f$).
  *
- * For each term (i.e. for each i in the above notation as well as n+1), the constant \f$\beta_i\f$ is given by the
- * corresponding element offsets[i-1], and termbegins[i-1] is the starting position of the term in arrays
- * transcoefs and transcoefsidx. The overall number of nonzeros is termbegins[nterms].
+ * For each term (i.e. for each \f$i\f$ in the above notation as well as \f$n+1\f$), the constant \f$\beta_i\f$ is given by the
+ * corresponding element `offsets[i-1]` and `termbegins[i-1]` is the starting position of the term in arrays
+ * `transcoefs` and `transcoefsidx`. The overall number of nonzeros is `termbegins[nterms]`.
  *
- * Arrays transcoefs and transcoefsidx have size termbegins[nterms] and define the linear expressions \f$v_i^T x\f$
- * for each term. For a term i in the above notation, the nonzeroes are given by elements
- * termbegins[i-1]...termbegins[i] of transcoefs and transcoefsidx. There may be no nonzeroes for some term (i.e.,
- * constant terms are possible). transcoefs contains the coefficients v_i and transcoefsidx contains positions of
- * variables in the vars array.
+ * Arrays `transcoefs` and `transcoefsidx` have size `termbegins[nterms]` and define the linear expressions \f$v_i^T x\f$
+ * for each term. For a term \f$i\f$ in the above notation, the nonzeroes are given by elements
+ * `termbegins[i-1]...termbegins[i]` of `transcoefs` and `transcoefsidx`. There may be no nonzeroes for some term (i.e.,
+ * constant terms are possible). `transcoefs` contains the coefficients \f$v_i\f$ and `transcoefsidx` contains positions of
+ * variables in the `vars` array.
  *
- * The vars array has size nvars and contains \f$x\f$ variables; each variable is included at most once.
+ * The `vars` array has size `nvars` and contains \f$x\f$ variables; each variable is included at most once.
  *
  * The arrays should be freed by calling SCIPfreeSOCArraysNonlinear().
  *

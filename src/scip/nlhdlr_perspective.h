@@ -31,11 +31,19 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLHDLRS
+/** includes perspective nonlinear handler in nonlinear constraint handler
  *
+ * @ingroup NlhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeNlhdlrPerspective(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup NLHDLRS
  * @{
  *
- * @name Perspective nonlinear handler.
+ * @name Perspective nonlinear handler
  *
  * This nonlinear handler detects expressions in semi-continuous variables and strengthens estimators computed by other nlhdlr by means of perspective cuts.
  *
@@ -45,15 +53,6 @@ extern "C" {
 /** @}
   * @}
   */
-
-/** includes perspective nonlinear handler to nonlinear constraint handler
- *
- * @ingroup NlhdlrIncludes
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeNlhdlrPerspective(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 #ifdef __cplusplus
 }

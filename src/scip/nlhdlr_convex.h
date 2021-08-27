@@ -50,10 +50,9 @@ SCIP_RETCODE SCIPincludeNlhdlrConcave(
    );
 
 /**@addtogroup NLHDLRS
- *
  * @{
  *
- * @name Convex and concave nonlinear handlers.
+ * @name Convex and concave nonlinear handlers
  *
  * These nonlinear handler detect convex and concave subexpressions and provide specialized estimation functionality.
  *

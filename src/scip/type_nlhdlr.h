@@ -26,6 +26,11 @@
  *  - \ref NLHDLRS "List of available nonlinear handlers"
  */
 
+/** @defgroup DEFPLUGINS_NLHDLR Default nonlinear handlers
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default nonlinear handlers of SCIP
+ */
+
 #ifndef SCIP_TYPE_NLHDLR_H_
 #define SCIP_TYPE_NLHDLR_H_
 

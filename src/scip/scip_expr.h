@@ -664,7 +664,7 @@ SCIP_RETCODE SCIPhashExpr(
  * - TODO? the exponent of an exponential is always 1
  *
  * \par Ordering Rules (see SCIPexprCompare())
- *
+ * \anchor EXPR_ORDER
  * These rules define a total order on *simplified* expressions.
  * There are two groups of rules, when comparing equal type expressions and different type expressions.
  *

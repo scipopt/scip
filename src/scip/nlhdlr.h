@@ -64,22 +64,22 @@ SCIP_DECL_NLHDLRDETECT(SCIPnlhdlrDetect);
 /** call the auxiliary evaluation callback of a nonlinear handler */
 SCIP_DECL_NLHDLREVALAUX(SCIPnlhdlrEvalaux);
 
-/** calls the interval evaluation callback of a nonlinear handler */
+/** call the interval evaluation callback of a nonlinear handler */
 SCIP_DECL_NLHDLRINTEVAL(SCIPnlhdlrInteval);
 
-/** calls the reverse propagation callback of a nonlinear handler */
+/** call the reverse propagation callback of a nonlinear handler */
 SCIP_DECL_NLHDLRREVERSEPROP(SCIPnlhdlrReverseprop);
 
-/** calls the separation initialization callback of a nonlinear handler */
+/** call the separation initialization callback of a nonlinear handler */
 SCIP_DECL_NLHDLRINITSEPA(SCIPnlhdlrInitsepa);
 
-/** calls the separation deinitialization callback of a nonlinear handler */
+/** call the separation deinitialization callback of a nonlinear handler */
 SCIP_DECL_NLHDLREXITSEPA(SCIPnlhdlrExitsepa);
 
-/** calls the enforcement callback of a nonlinear handler */
+/** call the enforcement callback of a nonlinear handler */
 SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo);
 
-/** calls the estimator callback of a nonlinear handler */
+/** call the estimator callback of a nonlinear handler */
 SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate);
 
 /** reset number of detections counter for last round */

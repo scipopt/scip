@@ -32,11 +32,19 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLHDLRS
+/** includes quadratic nonlinear handler in nonlinear constraint handler
  *
+ * @ingroup NlhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup NLHDLRS
  * @{
  *
- * @name Quadratic nonlinear handler.
+ * @name Quadratic nonlinear handler
  *
  * This nonlinear handler detects quadratic subexpressions and provides specialized propagation and estimation functionality.
  *
@@ -46,15 +54,6 @@ extern "C" {
 /** @}
   * @}
   */
-
-/** includes quadratic nonlinear handler in nonlinear constraint handler
- *
- * @ingroup NlhdlrIncludes
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 #ifdef __cplusplus
 }

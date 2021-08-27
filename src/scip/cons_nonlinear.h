@@ -952,10 +952,11 @@ SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
 
 /** @} */
 
-/**@name Nonlinear Handler Methods */
-/**@{ */
+/**@addtogroup PublicNlhdlrInterfaceMethods
+ * @{
+ */
 
-/** creates the nonlinearity handler and includes it into the nonlinear constraint handler */
+/** creates a nonlinear handler and includes it into the nonlinear constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -976,9 +977,9 @@ SCIP_NLHDLR* SCIPfindNlhdlrNonlinear(
    const char*           name                /**< name of nonlinear handler */
    );
 
-/** gives nonlinear handler expression data
+/** gives expression data that a given nonlinear handler stored in an expression
  *
- * @return NULL if expr has not been detected by nlhdlr or nlhdlr did not store data
+ * Returns NULL if expr has not been detected by nlhdlr or nlhdlr did not store data.
  */
 SCIP_EXPORT
 SCIP_NLHDLREXPRDATA* SCIPgetNlhdlrExprDataNonlinear(

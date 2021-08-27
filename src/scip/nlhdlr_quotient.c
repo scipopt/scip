@@ -39,7 +39,7 @@
 
 /** translate from one value of infinity to another
  *
- *  if val is >= infty1, then give infty2, else give val
+ *  if val is &ge; infty1, then give infty2, else give val
  */
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
@@ -126,7 +126,7 @@ SCIP_RETCODE exprdataFree(
    return SCIP_OKAY;
 }
 
-/** helper method to transform an expression g(x) as a * f(x) + b */
+/** helper method to transform an expression g(x) into a*f(x) + b */
 static
 void transformExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -156,15 +156,16 @@ void transformExpr(
    }
 }
 
-/** helper method to detect an expression of the form (a*x + b) / (c*y + d) + e; due to the expansion of products,
-  * there are two types of expressions that can be detected:
-  *
-  * 1. prod(f(x), pow(g(y),-1))
-  * 2. sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1))
-  *
-  * @todo At the moment quotients like xy / z are not detected, because they are turned into a product expression
-  * with three children, i.e., x * y * (1 / z).
-  */
+/** helper method to detect an expression of the form (a*x + b) / (c*y + d) + e
+ *
+ * Due to the expansion of products, there are two types of expressions that can be detected:
+ *
+ * 1. prod(f(x), pow(g(y),-1))
+ * 2. sum(prod(f(x),pow(g(y),-1)), pow(g(y),-1))
+ *
+ * @todo At the moment quotients like xy / z are not detected, because they are turned into a product expression
+ * with three children, i.e., x * y * (1 / z).
+ */
 static
 SCIP_RETCODE detectExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -518,14 +519,14 @@ SCIP_RETCODE createRowprep(
  *  on the right side of the singularity at -d/c, and whether it is the monotone increasing
  *  (ad - bc > 0) or decreasing part (ad - bc < 0). Together, there are 8 cases:
  *
- *  mon. incr. + overestimate + left hand side  -->  secant
- *  mon. incr. + overestimate + right hand side -->  tangent
- *  mon. incr. + understimate + left hand side  -->  tangent
- *  mon. incr. + understimate + right hand side -->  secant
- *  mon. decr. + overestimate + left hand side  -->  tangent
- *  mon. decr. + overestimate + right hand side -->  secant
- *  mon. decr. + understimate + left hand side  -->  secant
- *  mon. decr. + understimate + right hand side -->  tangent
+ *  - mon. incr. + overestimate + left hand side  -->  secant
+ *  - mon. incr. + overestimate + right hand side -->  tangent
+ *  - mon. incr. + understimate + left hand side  -->  tangent
+ *  - mon. incr. + understimate + right hand side -->  secant
+ *  - mon. decr. + overestimate + left hand side  -->  tangent
+ *  - mon. decr. + overestimate + right hand side -->  secant
+ *  - mon. decr. + understimate + left hand side  -->  secant
+ *  - mon. decr. + understimate + right hand side -->  tangent
  */
 static
 SCIP_RETCODE estimateUnivariate(
@@ -691,10 +692,12 @@ SCIP_RETCODE estimateUnivariateQuotient(
 }
 
 /** helper method to compute a gradient cut for
+ *  \f[
+ *     h^c(x,y) := \frac{1}{y} \left(\frac{x + \sqrt{\text{lbx}\cdot\text{ubx}}}{\sqrt{\text{lbx}} + \sqrt{\text{ubx}}}\right)^2
+ *  \f]
+ *  at a given reference point
  *
- *     h^c(x,y) := 1/y ((x + sqrt(lbx * ubx)) / (sqrt(lbx) + sqrt(ubx)))^2
- *
- *  at a given reference point, see Zamora and Grossmann (1988) for more details
+ *  See Zamora and Grossmann (1988) for more details.
  */
 static
 void hcGradCut(
@@ -726,23 +729,23 @@ void hcGradCut(
    *constant = 2.0 * SQRT(lbx * ubx) * tmp1 / tmp2;
 }
 
-/** computes an over- or underestimator at a given point for the bivariate case x/y <=/>= z
+/** computes an over- or underestimator at a given point for the bivariate case x/y &le;/&ge; z
  *
  *  There are the following cases for y > 0:
  *
- *    1. lbx < 0 < ubx
+ *    1. lbx < 0 < ubx:
  *          Rewrite x / y = z as x = y * z and use McCormick to compute a valid inequality of the form
- *          x = y * z <= a * y +  b * z + c. Note that b > 0 because of y > 0. The inequality is then transformed
- *          to x / b - a/b * y - c/b <= z, which results in a valid underestimator for x / y over the set
- *          {(x,y) | lbz <= x / y <= ubz}. Note that overestimating/underestimating the bilinear term with McCormick
+ *          x = y * z &le; a * y +  b * z + c. Note that b > 0 because of y > 0. The inequality is then transformed
+ *          to x / b - a/b * y - c/b &le; z, which results in a valid underestimator for x / y over the set
+ *          {(x,y) | lbz &le; x / y &le; ubz}. Note that overestimating/underestimating the bilinear term with McCormick
  *          results in an underestimator/overestimator for x / y.
  *
- *    2. lbx >= 0 or ubx <= 0
- *       a) overestimation:  use z <= 1/(lby*uby) * min{uby*x - lbx*y + lbx*lby, lby*x - ubx*y + ubx*uby}
- *       b) underestimation: use z >= x/y >= (1/y) * ( (x + sqrt(lbx * ubx)) / (sqrt(lbx) + sqrt(ubx)) )
- *                           and build gradient cut
+ *    2. lbx &ge; 0 or ubx &le; 0:
+ *       - overestimation:  use \f$z \leq \frac{1}{\text{lby}\cdot\text{uby}} \min(\text{uby}\cdot x - \text{lbx}\cdot y + \text{lbx}\cdot\text{lby}, \text{lby}\cdot x - \text{ubx}\cdot y + \text{ubx}\cdot\text{uby})\f$
+ *       - underestimation: use \f$z \geq x/y \geq \frac{1}{y} \frac{x + \sqrt{\text{lbx}\cdot\text{ubx}}}{\sqrt{\text{lbx} + \sqrt{\text{ubx}}}}\f$ and build gradient cut
  *
  *    If y < 0, swap and negate its bounds and compute the respective opposite estimator (and negate it).
+ *
  *    If 0 is in the interval of y, nothing is possible.
  */
 static
@@ -897,9 +900,12 @@ SCIP_RETCODE estimateBivariate(
    return SCIP_OKAY;
 }
 
-/** method to construct an estimator for a quotient expression of the form (ax + b) / (cy + d) + e; the
- *  resulting estimator is stored in a rowprep; the method first computes an estimator for x' / y' with
- *  x := ax + b and y := cy + d and then transforms this estimator to one for the quotient (ax + b) / (cy + d) + e
+/** construct an estimator for a quotient expression of the form (ax + b) / (cy + d) + e
+ *
+ *  The resulting estimator is stored in a rowprep.
+ *
+ *  The method first computes an estimator for x' / y' with x := ax + b and y := cy + d
+ *  and then transforms this estimator to one for the quotient (ax + b) / (cy + d) + e.
  */
 static
 SCIP_RETCODE estimateBivariateQuotient(
@@ -1242,7 +1248,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
  * nonlinear handler specific interface methods
  */
 
-/** includes Quotient nonlinear handler to consexpr */
+/** includes quotient nonlinear handler in nonlinear constraint handler */
 SCIP_RETCODE SCIPincludeNlhdlrQuotient(
    SCIP*                 scip                /**< SCIP data structure */
    )
