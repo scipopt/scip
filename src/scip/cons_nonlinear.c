@@ -7103,6 +7103,7 @@ SCIP_RETCODE enforceExprNlhdlr(
          rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
 
          assert(rowprep != NULL);
+         assert(SCIProwprepGetSidetype(rowprep) == (overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT));
 
          /* complete estimator to cut */
          SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
