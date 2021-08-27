@@ -1732,7 +1732,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          /* ask the nonlinear handler for an estimator */
          SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr, nlhdlr2exprdata, solcopy, nlhdlr2auxvalue,
-               overestimate, SCIPgetSolVal(scip, solcopy, auxvar), rowpreps2, &success2, FALSE, &addedbranchscores2j) );
+               overestimate, SCIPgetSolVal(scip, solcopy, auxvar), FALSE, rowpreps2, &success2, &addedbranchscores2j) );
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
          maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps2);

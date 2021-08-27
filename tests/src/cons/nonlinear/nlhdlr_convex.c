@@ -317,7 +317,7 @@ SCIP_RETCODE estimate(
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
    SCIP_CALL( nlhdlrEvalAuxConvexConcave(scip, nlhdlr, expr, nlhdlrexprdata, &auxvalue, sol) );
    SCIP_CALL( nlhdlrEstimateConvex(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, enforceabove,
-         targetvalue, rowpreps, &success, FALSE, &addedbranchscores) );
+         targetvalue, FALSE, rowpreps, &success, &addedbranchscores) );
 
    cr_assert(success);
    cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);

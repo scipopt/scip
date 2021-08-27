@@ -615,8 +615,7 @@ SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate)
 #endif
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
-   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue,
-         rowpreps, success, addbranchscores, addedbranchscores) );
+   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue, addbranchscores, rowpreps, success, addedbranchscores) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
    /* update statistics */

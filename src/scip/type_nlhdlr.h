@@ -373,9 +373,9 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * \param[in] auxvalue           current value of expression w.r.t. auxiliary variables as obtained from \ref SCIP_DECL_NLHDLREVALAUX "EVALAUX"
  * \param[in] overestimate       whether the expression needs to be over- or underestimated
  * \param[in] targetvalue        a value the estimator shall exceed, can be +/-infinity
+ * \param[in] addbranchscores    indicates whether to register branching scores
  * \param[out] rowpreps          an array where to store the estimators
  * \param[out] success           buffer to indicate whether an estimator could be computed
- * \param[in] addbranchscores    indicates whether to register branching scores
  * \param[out] addedbranchscores buffer to store whether the branching score callback was successful
  */
 #define SCIP_DECL_NLHDLRESTIMATE(x) SCIP_RETCODE x (\
@@ -388,9 +388,9 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP_Real            auxvalue,        \
    SCIP_Bool            overestimate,    \
    SCIP_Real            targetvalue,     \
+   SCIP_Bool            addbranchscores, \
    SCIP_PTRARRAY*       rowpreps,        \
    SCIP_Bool*           success,         \
-   SCIP_Bool            addbranchscores, \
    SCIP_Bool*           addedbranchscores)
 
 typedef struct SCIP_Nlhdlr         SCIP_NLHDLR;          /**< nonlinear handler */

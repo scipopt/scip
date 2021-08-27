@@ -7085,7 +7085,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       assert(auxvar != NULL);
 
       SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
-               SCIPgetSolVal(scip, sol, auxvar), rowpreps, &sepasuccess, inenforcement, &branchscoresuccess) );
+               SCIPgetSolVal(scip, sol, auxvar), inenforcement, rowpreps, &sepasuccess, &branchscoresuccess) );
 
       minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
       maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps);
