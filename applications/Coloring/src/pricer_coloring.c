@@ -242,12 +242,12 @@ SCIP_RETCODE calculateScalingValue(
   int i;
 
   /* calculate largest possible sum in maximum clique problem */
-  for(i = 0; i < nnodes; ++i)
+  for ( i = 0; i < nnodes; ++i )
      maxsum += pricerdata->pi[i];
 
   /* Calculate largest possible scalar value so that this sum is still representable using the type of TCLIQUE_WEIGHT (int).
    * A buffer of nnodes+1 is used for roundoff errors. */
-  if( maxsum == 0.0 )
+  if ( maxsum == 0.0 )
      maxscale = 1e20;
   else
      maxscale = (INT_MAX - nnodes - 1) / maxsum;
@@ -256,7 +256,7 @@ SCIP_RETCODE calculateScalingValue(
         &pricerdata->scalefactor, &scalesuccess) );
 
   /* if no nice denominator can be found, use the largest possible scaling value to reduce numerical issues */
-  if( ! scalesuccess )
+  if ( ! scalesuccess )
      pricerdata->scalefactor = maxscale;
 
   return SCIP_OKAY;
@@ -279,7 +279,7 @@ TCLIQUE_WEIGHT getScaledDualWeight(
    downval = EPSFLOOR(scaledval, 0.0); /*lint !e835*/
    upval = EPSCEIL(scaledval, 0.0); /*lint !e835*/
 
-   if( SCIPrelDiff(scaledval, upval) >= mindelta )
+   if ( SCIPrelDiff(scaledval, upval) >= mindelta )
       intval = (TCLIQUE_WEIGHT) upval;
    else
       intval = (TCLIQUE_WEIGHT) downval;
@@ -325,7 +325,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolPricer)
    *acceptsol = TRUE;
 
    /* stop solving if we found maxvarsround variables and we are not proving optimality */
-   if( ! pricerdata->onlybest && pricerdata->actindex+1 >= pricerdata->maxvarsround )
+   if ( ! pricerdata->onlybest && pricerdata->actindex+1 >= pricerdata->maxvarsround )
       *stopsolving = TRUE;
 
 }/*lint !e715*/
@@ -794,7 +794,7 @@ SCIP_DECL_PARAMCHGD(paramChgdMaxvarsround)
    assert(paramdata != NULL);
    pricerdata = (SCIP_PRICERDATA*) paramdata;
 
-   if( pricerdata->maxvarsround == pricerdata->oldmaxvarsround )
+   if(  pricerdata->maxvarsround == pricerdata->oldmaxvarsround )
       return SCIP_OKAY;
 
    if ( pricerdata->maxvarsround <= 1 )
