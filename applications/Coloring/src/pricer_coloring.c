@@ -57,10 +57,10 @@
 
 
 /* default values for parameters */
-#define DEFAULT_MAXVARSROUND     0
+#define DEFAULT_MAXVARSROUND     1
 #define DEFAULT_USETCLIQUE      TRUE
 #define DEFAULT_USEGREEDY       TRUE
-#define DEFAULT_ONLYBEST        TRUE
+#define DEFAULT_ONLYBEST        FALSE
 #define DEFAULT_MAXROUNDSROOT   -1
 #define DEFAULT_MAXROUNDSNODE   -1
 #define DEFAULT_MAXTCLIQUENODES INT_MAX
