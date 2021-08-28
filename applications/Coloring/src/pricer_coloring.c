@@ -16,6 +16,7 @@
 /**@file   pricer_coloring.c
  * @brief  variable pricer for the vertex coloring problem
  * @author Gerald Gamrath
+ * @author Rolf van der Hulst
  *
  * This file implements the pricer for the coloring algorithm.
  *
@@ -53,7 +54,6 @@
 #define MAXDNOM                10000LL
 #define MINDELTA               1e-12
 #define MAXDELTA               1e-09
-#define MAXSCALE               1000.0
 
 
 /* default values for parameters */
@@ -64,7 +64,6 @@
 #define DEFAULT_MAXROUNDSROOT   -1
 #define DEFAULT_MAXROUNDSNODE   -1
 #define DEFAULT_MAXTCLIQUENODES INT_MAX
-
 
 
 /*
@@ -284,7 +283,60 @@ SCIP_Longint getIntegralVal(
    return intval;
 }
 
+/** Calculates a good scalar value to use in order to scale the dual weights to integer values without large loss of precision */
+static
+SCIP_RETCODE calculateScalingValue(
+   SCIP_PRICERDATA*      pricerdata,         /**< pricer data */
+   int                   nnodes              /**< number of nodes */
+   )
+{
+  SCIP_Real maxsum = 0.0;
+  SCIP_Real maxscale;
+  SCIP_Bool scalesuccess;
+  int i;
 
+  /* calculate largest possible sum in maximum clique problem */
+  for (i = 0; i < nnodes; ++i)
+     maxsum += pricerdata->pi[i];
+
+  /* Calculate largest possible scalar value so that this sum is still representable using the type of TCLIQUE_WEIGHT (int).
+   * A buffer of nnodes+1 is used for roundoff errors. */
+  maxscale = (INT_MAX - nnodes - 1) / maxsum;
+
+  SCIP_CALL( SCIPcalcIntegralScalar(pricerdata->pi, nnodes, -MINDELTA, MAXDELTA, MAXDNOM, maxscale,
+        &pricerdata->scalefactor, &scalesuccess) );
+
+  /* if no nice denominator can be found, use the largest possible scaling value to reduce numerical issues */
+  if( ! scalesuccess )
+     pricerdata->scalefactor = maxscale;
+
+  return SCIP_OKAY;
+}
+
+/** get scaled weight */
+static
+TCLIQUE_WEIGHT getScaledDualWeight(
+   SCIP_Real             val,                /**< value to be scaled */
+   SCIP_Real             scalefactor,        /**< scaling factor */
+   SCIP_Real             mindelta            /**< minimal delta value */
+   )
+{
+   SCIP_Real scaledval;
+   SCIP_Real downval;
+   SCIP_Real upval;
+   TCLIQUE_WEIGHT intval;
+
+   scaledval = val * scalefactor;
+   downval = EPSFLOOR(scaledval, 0.0);
+   upval = EPSCEIL(scaledval, 0.0);
+
+   if( SCIPrelDiff(scaledval, upval) >= mindelta )
+      intval = (TCLIQUE_WEIGHT) upval;
+   else
+      intval = (TCLIQUE_WEIGHT) downval;
+
+   return intval;
+}
 
 /** generates improving variables using a stable set found by the algorithm for maximum weight clique,
  *  decides whether to stop generating cliques with the algorithm for maximum weight clique
@@ -315,32 +367,17 @@ TCLIQUE_NEWSOL(tcliqueNewsolPricer)
    /* compute the index, at which the new stable set will be stored in the improvingstablesets-array */
    pricerdata->actindex = (pricerdata->actindex+1)%(pricerdata->maxvarsround);
 
-   /* found maxvarsround variables */
-   if ( pricerdata->nstablesetnodes[pricerdata->actindex] == -1 )
-   {
-      /* if we are looking for the best stable sets, continue at the beginning
-         and overwrite the stable set with least improvement */
-      if ( pricerdata->onlybest )
-      {
-         pricerdata->actindex = 0;
-      }
-      /* if we only want to find maxvarsround variables (onlybest = false), we can stop now */
-      else
-      {
-         *stopsolving = TRUE;
-         return;
-      }
-   }
-
    /* write the new improving stable set into the improvingstablesets-array */
    pricerdata->nstablesetnodes[pricerdata->actindex] = ncliquenodes;
    for ( i = 0; i < ncliquenodes; i++ )
-   {
       pricerdata->improvingstablesets[pricerdata->actindex][i] = cliquenodes[i];
-   }
 
    /* accept the solution as new incumbent */
    *acceptsol = TRUE;
+
+   /* stop solving if we found maxvarsround variables and we are not proving optimality */
+   if( ! pricerdata->onlybest && pricerdata->actindex+1 >= pricerdata->maxvarsround )
+      *stopsolving = TRUE;
 
 }/*lint !e715*/
 
@@ -606,66 +643,46 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
    {
       SCIPdebugMessage("starting tclique algorithm...\n");
       maxredcost = 0;
+
       /* get the complementary graph from the current cons */
       cgraph = COLORconsGetComplementaryGraph(scip);
       SCIP_CALL( SCIPallocBufferArray(scip, &maxstablesetnodes, nnodes) );
+
       /* get dual solutions and set weight of nodes */
-      weightsIntegral = TRUE;
+      /* clamp solutions to [0,1] for safety; numerical errors may be problematic */
       for ( i = 0; i < nnodes; i++ )
       {
-         pricerdata->pi[i] = SCIPgetDualsolSetppc(scip, pricerdata->constraints[i]);
+         SCIP_Real dualsol;
 
-         if( !isIntegralScalar(pricerdata->pi[i], 1.0, -MINDELTA, MAXDELTA) )
-         {
-            weightsIntegral = FALSE;
-         }
+         dualsol = SCIPgetDualsolSetppc(scip, pricerdata->constraints[i]);
+         pricerdata->pi[i] = MAX( MIN(dualsol, 1.0), 0.0);
       }
-      /* are weigths integral? */
-      if( weightsIntegral )
-      {
-         pricerdata->scalefactor = 1.0;
-         scalesuccess = TRUE;
-      }
-      else
-      {
-         /* compute factor, which makes the weights integral */
-         scalesuccess = FALSE;
-         SCIP_CALL( SCIPcalcIntegralScalar(pricerdata->pi, nnodes, -MINDELTA, MAXDELTA, MAXDNOM, MAXSCALE,
-               &(pricerdata->scalefactor), &scalesuccess) );
-      }
-      assert(scalesuccess);
+      SCIP_CALL( calculateScalingValue(pricerdata, nnodes) );
+
       /* change the weights for the nodes in the graph to the dual solution value * scalefactor */
       for ( i = 0; i < nnodes; i++ )
       {
-         tcliqueChangeWeight(cgraph, i, getIntegralVal(pricerdata->pi[i], pricerdata->scalefactor, -MINDELTA, MAXDELTA)); /*lint !e712 !e747*/
+         tcliqueChangeWeight(cgraph, i, getScaledDualWeight(pricerdata->pi[i], pricerdata->scalefactor, -MINDELTA)); /*lint !e712 !e747*/
       }
       /* clear the improvingstablesets array */
       pricerdata->actindex = -1;
-      for ( i = 0; i < pricerdata->maxvarsround-pricerdata->nstablesetsfound; i++ )
-      {
+      for ( i = 0; i < pricerdata->maxvarsround; i++ )
          pricerdata->nstablesetnodes[i] = 0;
-      }
-      for ( ; i < pricerdata->maxvarsround; i++ )
-      {
-         pricerdata->nstablesetnodes[i] = -1;
-      }
 
       /* compute maximal clique */
       tcliqueMaxClique(NULL, NULL, NULL, NULL, cgraph, tcliqueNewsolPricer, (TCLIQUE_DATA*)pricerdata, maxstablesetnodes,
          &(nmaxstablesetnodes), &maxstablesetweight, 0,
-         (int)getIntegralVal(pricerdata->scalefactor, 1.0, -MINDELTA, MAXDELTA), pricerdata->maxtcliquenodes, 0, INT_MAX, -1,
+         getScaledDualWeight(1.0, pricerdata->scalefactor, -MINDELTA), pricerdata->maxtcliquenodes, 0, INT_MAX, -1,
          NULL, &status);
-      assert(status == TCLIQUE_OPTIMAL);
+      assert(status == TCLIQUE_OPTIMAL || status == TCLIQUE_USERABORT);
 
-      /* if only the best vaiable should be priced per round, take the one which is given as return value from
-         tcliqueMaxClique and put it into improvingstablesets array so that it will be inserted into the LP */
+      /* if only the best variable should be priced per round, take the one which is given as return value from
+       * tcliqueMaxClique and put it into improvingstablesets array so that it will be inserted into the LP */
       if ( pricerdata->onlybest && pricerdata->maxvarsround == 1 )
       {
          pricerdata->nstablesetnodes[0] = nmaxstablesetnodes;
          for ( i = 0; i < nmaxstablesetnodes; i++ )
-         {
             pricerdata->improvingstablesets[0][i] = maxstablesetnodes[i];
-         }
       }
 
       SCIPfreeBufferArray(scip, &maxstablesetnodes);
@@ -677,19 +694,19 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
          {
             maxstablesetweightreal = 0;
             for ( j = 0; j < pricerdata->nstablesetnodes[i]; j++ )
-            {
                maxstablesetweightreal += pricerdata->pi[pricerdata->improvingstablesets[i][j]];
-            }
+
             if ( maxredcost < maxstablesetweightreal )
-            {
                maxredcost = maxstablesetweightreal;
-            }
+
             if ( SCIPisFeasGT(scip, maxstablesetweightreal, 1.0) )
             {
                setnumber = -1;
+
                /* insert new variable */
                SCIP_CALL( COLORprobAddNewStableSet(pricerdata->scip, pricerdata->improvingstablesets[i],
                      pricerdata->nstablesetnodes[i], &setnumber) );
+
                /* only insert, if there yet is no variable for this stable set */
                if ( setnumber >= 0  )
                {
@@ -703,6 +720,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                   SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
 
                   pricerdata->nstablesetsfound += 1;
+
                   /* add variable to the constraints in which it appears */
                   for ( j = 0; j < pricerdata->nstablesetnodes[i]; j++ )
                   {
@@ -714,12 +732,13 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
             }
          }
       }
-      if ( SCIPisFeasGT(scip, maxredcost, 1.0) )
+
+      if ( status == TCLIQUE_OPTIMAL && SCIPisFeasGT(scip, maxredcost, 1.0) )
       {
          if ( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
-            pricerdata->lowerbound = MAX( pricerdata->lowerbound,
-               (SCIPgetLPObjval(scip) + ((1.0 - maxredcost) * SCIPgetPrimalbound(scip))) ); /*lint !e666*/
+            pricerdata->lowerbound = MAX( pricerdata->lowerbound, (SCIPgetLPObjval(scip) / maxredcost )); /*lint !e666*/
+            SCIP_CALL( SCIPupdateLocalLowerbound(scip,pricerdata->lowerbound) );
          }
       }
    }
