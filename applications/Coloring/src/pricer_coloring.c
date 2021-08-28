@@ -50,8 +50,8 @@
 #define PRICER_DELAY           TRUE     /* only call pricer if all problem variables have non-negative reduced costs */
 
 /* defines for rounding for tclique */
-#define MAXDNOM                1000LL
-#define MINDELTA               1e-03
+#define MAXDNOM                10000LL
+#define MINDELTA               1e-12
 #define MAXDELTA               1e-09
 #define MAXSCALE               1000.0
 
