@@ -229,60 +229,6 @@ SCIP_RETCODE greedyStableSet(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
-static
-SCIP_Bool isIntegralScalar(
-   SCIP_Real             val,                /**< value that should be scaled to an integral value */
-   SCIP_Real             scalar,             /**< scalar that should be tried */
-   SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
-   SCIP_Real             maxdelta            /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
-   )
-{
-   SCIP_Real sval;
-   SCIP_Real downval;
-   SCIP_Real upval;
-
-   assert(mindelta <= 0.0);
-   assert(maxdelta >= 0.0);
-
-   sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0); /*lint !e835*/
-   upval = EPSCEIL(sval, 0.0); /*lint !e835*/
-
-   return (SCIPrelDiff(sval, downval) <= maxdelta || SCIPrelDiff(sval, upval) >= mindelta);
-}
-
-/** get integral number with error in the bounds which corresponds to given value scaled by a given scalar;
- *  should be used in connection with isIntegralScalar()
- */
-static
-SCIP_Longint getIntegralVal(
-   SCIP_Real             val,                /**< value that should be scaled to an integral value */
-   SCIP_Real             scalar,             /**< scalar that should be tried */
-   SCIP_Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
-   SCIP_Real             maxdelta            /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
-   )
-{
-   SCIP_Real sval;
-   SCIP_Real downval;
-   SCIP_Real upval;
-   SCIP_Longint intval;
-
-   assert(mindelta <= 0.0);
-   assert(maxdelta >= 0.0);
-
-   sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0); /*lint !e835*/
-   upval = EPSCEIL(sval, 0.0); /*lint !e835*/
-
-   if( SCIPrelDiff(sval, upval) >= mindelta )
-      intval = (SCIP_Longint) upval;
-   else
-      intval = (SCIP_Longint) downval;
-
-   return intval;
-}
-
 /** Calculates a good scalar value to use in order to scale the dual weights to integer values without large loss of precision */
 static
 SCIP_RETCODE calculateScalingValue(
@@ -497,10 +443,6 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
 
    SCIP_VAR*        var;                   /* pointer to the new created variable */
    int              setnumber;             /* index of the new created variable */
-
-   /* variables used for scaling the rational dual-solutions to integers */
-   SCIP_Bool        scalesuccess;
-   SCIP_Bool        weightsIntegral;
 
    int              i;
    int              j;
