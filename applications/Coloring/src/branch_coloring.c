@@ -238,6 +238,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    assert(node1 != -1);
    assert(node1 == COLORconsGetRepresentative(scip, node1));
    assert(node2 == COLORconsGetRepresentative(scip, node2));
+   assert(SCIPconsIsEnabled(COLORprobGetConstraint(scip,node1)));
+   assert(SCIPconsIsEnabled(COLORprobGetConstraint(scip,node2)));
    assert(!tcliqueIsEdge(COLORconsGetCurrentGraph(scip), node1, node2));
 
    /* create the b&b-tree child-nodes of the current node */
