@@ -575,6 +575,8 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    SCIP_CONS** constraints;
    TCLIQUE_GRAPH* graph;
    SCIP_HEURDATA* heurdata;
+   SCIP_Bool onlybest;
+   int maxvarsround;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -582,6 +584,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    *result = SCIP_DIDNOTFIND;
    nnodes = COLORprobGetNNodes(scip);
    graph = COLORprobGetGraph(scip);
+
    /* create stable sets if no solution was read */
    if( COLORprobGetNStableSets(scip) == 0 )
    {
@@ -684,8 +687,12 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    assert(stored);
 
    /* set maximal number of variables to be priced in each round */
-   SCIP_CALL( SCIPsetIntParam(scip, "pricers/coloring/maxvarsround",
-         COLORprobGetNStableSets(scip)*COLORprobGetNNodes(scip)/50) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "pricers/coloring/onlybest", &onlybest) );
+   if( onlybest )
+      maxvarsround = COLORprobGetNStableSets(scip) * COLORprobGetNNodes(scip)/50;
+   else
+      maxvarsround = 1;
+   SCIP_CALL( SCIPsetIntParam(scip, "pricers/coloring/maxvarsround", maxvarsround) );
 
    *result = SCIP_FOUNDSOL;
 
