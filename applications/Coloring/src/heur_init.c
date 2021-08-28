@@ -99,12 +99,12 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Bool usetabu;   /* should the tabu search heuristic be used in order to improve the greedy-solution? */
-   int maxiter;         /* maximal number of iterations to be performed in each tabu-run */
-   int tabubase;        /* constant part of the tabu-duration */
-   SCIP_Real tabugamma; /* factor for the linear part of the tabu-duration */
-   int output;          /* verbosity level for the output of the tabu search, 0: no output, 1: normal, 2: high */
-   int dispfreq;        /* frequency for displaying status information, only active with output verbosity level 2 */
+   SCIP_Bool             usetabu;            /**< should the tabu search heuristic be used in order to improve the greedy-solution? */
+   int                   maxiter;            /**< maximal number of iterations to be performed in each tabu-run */
+   int                   tabubase;           /**< constant part of the tabu-duration */
+   SCIP_Real             tabugamma;          /**< factor for the linear part of the tabu-duration */
+   int                   output;             /**< verbosity level for the output of the tabu search, 0: no output, 1: normal, 2: high */
+   int                   dispfreq;           /**< frequency for displaying status information, only active with output verbosity level 2 */
 };
 
 
