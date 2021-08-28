@@ -631,6 +631,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
                nstablesetnodes++;
             }
          }
+
          /* try to add more nodes to the stable set without violating the stability */
          for( j = 0; j < nnodes; j++ )
          {
@@ -643,12 +644,14 @@ SCIP_DECL_HEUREXEC(heurExecInit)
                   break;
                }
             }
+
             if( indnode == TRUE )
             {
                colors[nstablesetnodes] = j;
                nstablesetnodes++;
             }
          }
+
          /* create variable for the stable set and add it to SCIP */
          SCIPsortDownInt(colors, nstablesetnodes);
          SCIP_CALL( COLORprobAddNewStableSet(scip, colors, nstablesetnodes, &setnumber) );
@@ -667,16 +670,15 @@ SCIP_DECL_HEUREXEC(heurExecInit)
             /* add variable to node constraints of nodes in the set */
             SCIP_CALL( SCIPaddCoefSetppc(scip, constraints[colors[j]], var) );
          }
-
-
       }
 
       SCIPfreeBufferArray(scip, &bestcolors);
       SCIPfreeBufferArray(scip, &colors);
 
    }
-   /* create solution consisting of all yet created stable sets,
-      that means all sets of the solution given by the solution file or created by the greedy and tabu search */
+
+   /* create solution consisting of all yet created stable sets, i.e., all sets of the solution given by the solution
+    * file or created by the greedy and tabu search */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    assert(sol != NULL);
    for( i = 0; i < COLORprobGetNStableSets(scip); i++ )
