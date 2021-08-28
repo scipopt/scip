@@ -343,11 +343,14 @@ SCIP_RETCODE runTabuCol(
 
    srand( seed ); /*lint !e732*/
 
-   /* init random coloring */
+   /* init random coloring, optionally keeping colors from a previous coloring */
    for( i = 0; i < nnodes; i++ )
    {
-      int rnd = rand();
-      colors[i] = rnd % maxcolors;
+      if( colors[i] < 0 || colors[i] >= maxcolors )
+      {
+         int rnd = rand();
+         colors[i] = rnd % maxcolors;
+      }
       assert( 0 <= colors[i] && colors[i] < maxcolors );
    }
 
@@ -600,16 +603,15 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          while( success )
          {
             ncolors--;
+
+            /* initialize with colors from previous iteration; the last color is randomized */
             SCIP_CALL( runTabuCol(graph, 0, ncolors, colors, heurdata, &success) );
 
             if( success )
             {
                for( i = 0; i < nnodes; i++ )
-               {
                   bestcolors[i] = colors[i];
-               }
             }
-
          }
       }
 
