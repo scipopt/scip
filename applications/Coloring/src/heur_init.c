@@ -450,7 +450,7 @@ SCIP_RETCODE runTabuCol(
                }
             }
             if( aspiration )
-            break;
+               break;
          }
 
          /* if no candidate could be found - tabu list is too restrictive: just skip current iteration */

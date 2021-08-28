@@ -242,12 +242,15 @@ SCIP_RETCODE calculateScalingValue(
   int i;
 
   /* calculate largest possible sum in maximum clique problem */
-  for (i = 0; i < nnodes; ++i)
+  for(i = 0; i < nnodes; ++i)
      maxsum += pricerdata->pi[i];
 
   /* Calculate largest possible scalar value so that this sum is still representable using the type of TCLIQUE_WEIGHT (int).
    * A buffer of nnodes+1 is used for roundoff errors. */
-  maxscale = (INT_MAX - nnodes - 1) / maxsum;
+  if( maxsum == 0.0 )
+     maxscale = 1e20;
+  else
+     maxscale = (INT_MAX - nnodes - 1) / maxsum;
 
   SCIP_CALL( SCIPcalcIntegralScalar(pricerdata->pi, nnodes, -MINDELTA, MAXDELTA, MAXDNOM, maxscale,
         &pricerdata->scalefactor, &scalesuccess) );
@@ -273,8 +276,8 @@ TCLIQUE_WEIGHT getScaledDualWeight(
    TCLIQUE_WEIGHT intval;
 
    scaledval = val * scalefactor;
-   downval = EPSFLOOR(scaledval, 0.0);
-   upval = EPSCEIL(scaledval, 0.0);
+   downval = EPSFLOOR(scaledval, 0.0); /*lint !e835*/
+   upval = EPSCEIL(scaledval, 0.0); /*lint !e835*/
 
    if( SCIPrelDiff(scaledval, upval) >= mindelta )
       intval = (TCLIQUE_WEIGHT) upval;
@@ -679,7 +682,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
       {
          if ( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
-            pricerdata->lowerbound = MAX( pricerdata->lowerbound, (SCIPgetLPObjval(scip) / maxredcost )); /*lint !e666*/
+            assert( maxredcost > 0.0 );
+            pricerdata->lowerbound = MAX(pricerdata->lowerbound, SCIPgetLPObjval(scip) / maxredcost); /*lint !e666*/
             SCIP_CALL( SCIPupdateLocalLowerbound(scip,pricerdata->lowerbound) );
          }
       }
