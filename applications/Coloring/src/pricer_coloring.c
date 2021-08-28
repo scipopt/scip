@@ -870,8 +870,7 @@ SCIP_RETCODE SCIPincludePricerColoring(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "pricers/coloring/usetclique",
-         "should the tclique-algorithm be used to solve the pricing-problem to optimality?\n \
-             WARNING: computed (optimal) solutions are not necessarily optimal if this is set to FALSE",
+         "should the tclique-algorithm be used to solve the pricing-problem to optimality? WARNING: computed (optimal) solutions are not necessarily optimal if this is set to FALSE.",
          &pricerdata->usetclique, TRUE, DEFAULT_USETCLIQUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
