@@ -10634,11 +10634,8 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNlhdlr,
          NULL, TABLE_POSITION_NLHDLR, TABLE_EARLIEST_STAGE_NLHDLR) );
 
-   /* includes or updates the default dialog menus in SCIP */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
-
    /* create, include, and release display nlhdlrs dialog */
-   if( SCIPdialogFindEntry(SCIPgetRootDialog(scip), "display", &parentdialog) == 1 )
+   if( SCIPgetRootDialog(scip) != NULL && SCIPdialogFindEntry(SCIPgetRootDialog(scip), "display", &parentdialog) == 1 )
    {
       SCIP_DIALOG* dialog;
 
