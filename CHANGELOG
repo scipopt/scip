@@ -59,6 +59,7 @@ Interface changes
 - renamed SCIPcomputeArraysIntersection() and SCIPcomputeArraysSetminus() to
   SCIPcomputeArraysIntersectionInt() and SCIPcomputeArraysSetminusInt(), respectively, and changed
   their return type from SCIP_RETCODE (which _always_ was SCIP_OKAY) to void
+- removed SCIPincludeDialogDefault(), use SCIPincludeDialogDefaultBasic() instead and check whether you also need SCIPincludeDialogDefaultSet() and SCIPincludeDialogDefaultFix()
 
 ### New API functions
 
@@ -74,11 +75,13 @@ Interface changes
 - new internal function SCIPcomputeOrbitVar() to compute the symmetry orbit of a variable
 - added SCIPcalcFibHash(SCIP_Real) to hash a floating-point value to an unsigned integer
 - added SCIPcomputeArraysIntersectionPtr() to compute intersection of two sorted arrays of pointers
+- new function SCIPinterruptLP() (intended to be called from a different thread) that interrupts ongoing lp solve
 - added SCIPcreateConsIndicatorGeneric() and SCIPcreateConsIndicatorGenericLinCons()
   which copy the interface of SCIPcreateConsIndicator() and SCIPcreateConsIndicatorLinCons() and
   add an activeone argument to specify whether the indicator constraint should be activated on 0 or 1.
 - added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
 - added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
+- added SCIPincludeDialogDefaultBasic()
 
 ### Command line interface
 ### Interfaces to external software

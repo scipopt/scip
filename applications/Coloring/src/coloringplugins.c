@@ -31,6 +31,8 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_CALL( SCIPincludeDialogDefaultBasic(scip) );
+
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
@@ -97,7 +99,6 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
 #endif
 
    SCIP_CALL( SCIPincludeDispDefault(scip) );
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
 
    return SCIP_OKAY;
 }

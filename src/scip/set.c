@@ -876,6 +876,16 @@ SCIP_RETCODE SCIPsetCopyPlugins(
 
    *allvalid = TRUE;
 
+   /* copy all dialog plugins */
+   if( copydialogs && sourceset->dialogs != NULL )
+   {
+      for( p = sourceset->ndialogs - 1; p >= 0; --p )
+      {
+         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
+         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
+      }
+   }
+
    /* copy all reader plugins */
    if( copyreaders && sourceset->readers != NULL )
    {
@@ -1014,16 +1024,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = sourceset->ndisps - 1; p >= 0; --p )
       {
          SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
-      }
-   }
-
-   /* copy all dialog plugins */
-   if( copydialogs && sourceset->dialogs != NULL )
-   {
-      for( p = sourceset->ndialogs - 1; p >= 0; --p )
-      {
-         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
-         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
       }
    }
 
