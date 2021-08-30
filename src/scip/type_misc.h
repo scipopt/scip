@@ -155,7 +155,7 @@ typedef struct SCIP_Regression SCIP_REGRESSION;
  */
 typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
 
-/** a linear inequality row in preparation
+/** a linear inequality row in preparation to become a SCIP_ROW
  *
  * Used to assemble data that could eventually make a SCIP_ROW.
  * @note Only one-sided rows are allowed here.

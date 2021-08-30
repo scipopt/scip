@@ -47,7 +47,7 @@
 #define M_SQRT2 sqrt(2.0)
 #endif
 
-/** adds a variable to the rowprep->modifiedvars array, if recording of modification has been enabled and the variable is not fixed */
+/** adds a variable to the `rowprep->modifiedvars` array, if recording of modification has been enabled and the variable is not fixed */
 static
 SCIP_RETCODE rowprepRecordModifiedVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -82,7 +82,7 @@ SCIP_RETCODE rowprepRecordModifiedVar(
    return SCIP_OKAY;
 }
 
-/** sort cut terms by absolute value of coefficients, from largest to smallest */
+/** sort terms by absolute value of coefficients, from largest to smallest */
 static
 SCIP_RETCODE rowprepCleanupSortTerms(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -138,7 +138,7 @@ SCIP_RETCODE rowprepCleanupSortTerms(
    return SCIP_OKAY;
 }
 
-/** try to improve coef range by aggregating cut with variable bounds
+/** try to improve coef range by aggregating row with variable bounds
  *
  * Assumes terms have been sorted by rowprepCleanupSortTerms().
  */
@@ -513,7 +513,7 @@ void rowprepCleanupSide(
 
 /** creates a SCIP_ROWPREP datastructure
  *
- * Initial cut represents 0 <= 0.
+ * Initial row represents 0 &le; 0.
  */
 SCIP_RETCODE SCIPcreateRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -670,7 +670,7 @@ SCIP_VAR** SCIProwprepGetModifiedVars(
    return rowprep->modifiedvars;
 }
 
-/** resets rowprep to have 0 terms and side 0 */
+/** resets rowprep to have 0 terms and side 0.0 */
 void SCIProwprepReset(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
    )
@@ -910,12 +910,12 @@ SCIP_RETCODE SCIPaddRowprepTerms(
    return SCIP_OKAY;
 }
 
-/** computes violation of cut in a given solution
+/** computes violation of rowprep in a given solution
  *
- * Can return whether the violation value is reliable from a float-point accuracy point of view.
+ * Can return whether the violation value is reliable from a floating-point accuracy point of view.
  * The value will not be deemed reliable when its calculation involved the subtraction of large numbers.
  * To be precise, the violation of an inequality \f$ \sum_i a_ix_i \leq b \f$ in a solution \f$x^*\f$ is deemed
- * reliable if \f$ |\sum_i a_ix^*_i - b| >= 2^-50 \max (|b|, \max_i |a_ix^*_i|) \f$.
+ * reliable if \f$ |\sum_i a_ix^*_i - b| \geq 2^{-50} \max (|b|, \max_i |a_ix^*_i|) \f$.
  */
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1005,9 +1005,9 @@ SCIP_Real SCIPgetRowprepViolation(
    return MAX(violation, 0.0);
 }
 
-/** computes violation of cut in a given solution and reports whether that value seem numerically reliable
+/** computes violation of rowprep in a given solution and reports whether that value seem numerically reliable
  *
- * @see SCIPgetRowprepViolation
+ * @see SCIPgetRowprepViolation()
  */
 SCIP_Bool SCIPisRowprepViolationReliable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1025,13 +1025,13 @@ SCIP_Bool SCIPisRowprepViolationReliable(
    return reliable;
 }
 
-/** Merge terms that use same variable and eliminate zero coefficients and fixed variables.
+/** Merge terms that use same variable and eliminate zero coefficients.
  *
  * Removes a variable if its bounds have a relative difference of below epsilon.
  * Local bounds are checked for local rows, otherwise global bounds are used.
  * If the bounds are not absolute equal, the bound that relaxes the row is used.
  *
- * Terms are sorted by variable (@see SCIPvarComp) after return.
+ * Terms are sorted by variable (see SCIPvarComp()) after return.
  */
 void SCIPmergeRowprepTerms(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1128,23 +1128,23 @@ void SCIPmergeRowprepTerms(
 
 /** Cleans up and attempts to improve rowprep
  *
- * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
- * Scales coefficients and side up to reach minimal violation, if possible.
- * Scaling is omitted if violation is very small (ROWPREP_SCALEUP_VIOLNONZERO) or
- * maximal coefficient would become huge (ROWPREP_SCALEUP_MAXMAXCOEF).
+ * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the row.
+ * Scales coefficients up to reach minimal violation, if possible.
+ * Scaling is omitted if violation is very small (\ref ROWPREP_SCALEUP_VIOLNONZERO) or
+ * maximal coefficient would become huge (\ref ROWPREP_SCALEUP_MAXMAXCOEF).
  * Scales coefficients and side down if they are large and if the minimal violation is still reached.
- * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
- * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
+ * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the row.
+ * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the row least.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
- * Thus, the coef.range can be obtained via REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1]) (if nvars>0).
+ * Thus, the coefrange can be obtained via `REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1])` (if nvars>0).
  *
- * success is set to TRUE if and only if the rowprep satisfies the following:
- * - the coef.range is below maxcoefrange
- * - the violation is at least minviol
- * - the violation is reliable or minviol == 0
- * - the absolute value of coefficients are below SCIPs value of infinity
- * - the absolute value of the side is below SCIPs value of infinity
+ * `success` is set to TRUE if and only if the rowprep satisfies the following:
+ * - the coefrange is below `maxcoefrange`
+ * - the violation is at least `minviol`
+ * - the violation is reliable or `minviol` = 0
+ * - the absolute value of coefficients are below SCIPinfinity()
+ * - the absolute value of the side is below SCIPinfinity()
  */
 SCIP_RETCODE SCIPcleanupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1303,20 +1303,22 @@ SCIP_RETCODE SCIPcleanupRowprep(
    return SCIP_OKAY;
 }
 
-/** Cleans up and attempts to improve rowprep
+/** Cleans up and attempts to improve rowprep without regard for violation
  *
- * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
- * Scales coefficients and side to have maximal coefficient in [1/maxcoefbound,maxcoefbound].
- * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
- * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
+ * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the row.
+ * Scales coefficients and side to have maximal coefficient in `[1/maxcoefbound,maxcoefbound]`.
+ * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the row.
+ * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the row least.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
- * Thus, the coef.range can be obtained via REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1]) (if nvars>0).
+ * Thus, the coefrange can be obtained via `REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1])` (if nvars>0).
  *
- * success is set to TRUE if and only if the rowprep satisfies the following:
- * - the coef.range is below maxcoefrange
- * - the absolute value of coefficients are below SCIPs value of infinity
- * - the absolute value of the side is below SCIPs value of infinity
+ * `success` is set to TRUE if and only if the rowprep satisfies the following:
+ * - the coefrange is below `maxcoefrange`
+ * - the absolute value of coefficients are below SCIPinfinity()
+ * - the absolute value of the side is below SCIPinfinity()
+ *
+ * In difference to SCIPcleanupRowprep(), this function does not scale up the row to increase the absolute violation.
  */
 SCIP_RETCODE SCIPcleanupRowprep2(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1435,14 +1437,15 @@ SCIP_RETCODE SCIPcleanupRowprep2(
  *
  * Computes the minimal fractionality of all fractional coefficients and the side of the rowprep.
  * If this fractionality is below epsilon, the rowprep is scaled up such that the fractionality exceeds epsilon,
- * if this will not put any coefficient or side above SCIPhugeValue.
+ * if this will not put any coefficient or side above SCIPhugeValue().
  *
- * This does not relax the rowprep.
- * *success is set to TRUE if the resulting rowprep can be turned into a SCIP_ROW, that is,
- * all coefs and the side is below SCIPinfinity and fractionalities are above epsilon.
- * If *success is set to FALSE, then the rowprep will not have been modified.
+ * This function does not relax the rowprep.
  *
- * @return The applied scaling factor, if *success is set to TRUE.
+ * `success` is set to TRUE if the resulting rowprep can be turned into a SCIP_ROW, that is,
+ * all coefs and the side is below SCIPinfinity() and fractionalities are above epsilon.
+ * If `success` is set to FALSE, then the rowprep will not have been modified.
+ *
+ * @return The applied scaling factor, if `success` is set to TRUE.
  */
 SCIP_Real SCIPscaleupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1562,9 +1565,9 @@ SCIP_Real SCIPscaleupRowprep(
    return factor;
 }
 
-/** scales a rowprep
+/** scales a rowprep by given factor (after some rounding)
  *
- * @return Exponent of actually applied scaling factor, if written as 2^x.
+ * @return Exponent of actually applied scaling factor, if written as \f$2^x\f$.
  */
 int SCIPscaleRowprep(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be scaled */
@@ -1594,7 +1597,7 @@ int SCIPscaleRowprep(
    return expon;
 }
 
-/** generates a SCIP_ROW from a rowprep */
+/** generates a SCIP_ROW from a rowprep, setting its origin to given constraint handler */
 SCIP_RETCODE SCIPgetRowprepRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
@@ -1617,7 +1620,7 @@ SCIP_RETCODE SCIPgetRowprepRowConshdlr(
    return SCIP_OKAY;
 }
 
-/** generates a SCIP_ROW from a rowprep */
+/** generates a SCIP_ROW from a rowprep, setting its origin to given constraint */
 SCIP_RETCODE SCIPgetRowprepRowCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
@@ -1640,7 +1643,7 @@ SCIP_RETCODE SCIPgetRowprepRowCons(
    return SCIP_OKAY;
 }
 
-/** generates a SCIP_ROW from a rowprep */
+/** generates a SCIP_ROW from a rowprep, setting its origin to given separator */
 SCIP_RETCODE SCIPgetRowprepRowSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
