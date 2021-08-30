@@ -154,8 +154,10 @@ SCIP_Real scoring(
          SCIP_Real intsupport;
          SCIP_Real efficacy;
 
-         intsupport = intsupportweight > 0.0 ?  intsupportweight * SCIPgetRowNumIntCols(scip, cuts[i]) / (SCIP_Real)
-            SCIProwGetNNonz(cuts[i]) : 0.0;
+         if( intsupportweight > 0.0 )
+            intsupport = intsupportweight * SCIPgetRowNumIntCols(scip, cuts[i]) / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
+         else
+            intsupport = 0.0;
 
          objparallelism = objparalweight > 0.0 ? objparalweight * SCIPgetRowObjParallelism(scip, cuts[i]) : 0.0;
 
