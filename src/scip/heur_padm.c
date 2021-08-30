@@ -352,6 +352,7 @@ SCIP_RETCODE copyToSubscip(
    SCIP_HASHMAP*         varmap,             /**< hashmap used for the copy process of variables */
    SCIP_HASHMAP*         consmap,            /**< hashmap used for the copy process of constraints */
    int                   nconss,             /**< number of constraints to copy */
+   SCIP_Bool             original,           /**< do we use the original problem? */
    SCIP_Bool*            success             /**< pointer to store whether copying was successful */
    )
 {
@@ -374,9 +375,14 @@ SCIP_RETCODE copyToSubscip(
    for( i = 0; i < nconss; ++i )
    {
       assert(conss[i] != NULL);
-      assert(!SCIPconsIsModifiable(conss[i]));
-      assert(SCIPconsIsActive(conss[i]));
-      assert(!SCIPconsIsDeleted(conss[i]));
+
+      /* do not check this if we use the original problem */
+      if( !original )
+      {
+         assert(!SCIPconsIsModifiable(conss[i]));
+         assert(SCIPconsIsActive(conss[i]));
+         assert(!SCIPconsIsDeleted(conss[i]));
+      }
 
       /* copy the constraint */
       SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varmap, consmap, NULL,
@@ -403,6 +409,7 @@ SCIP_RETCODE blockCreateSubscip(
    SCIP_HASHMAP*         consmap,            /**< constraint hashmap used to improve performance */
    SCIP_CONS**           conss,              /**< constraints contained in this block */
    int                   nconss,             /**< number of constraints contained in this block */
+   SCIP_Bool             original,           /**< do we use the original problem? */
    SCIP_Bool*            success             /**< pointer to store whether the copying process was successful */
    )
 {
@@ -434,7 +441,7 @@ SCIP_RETCODE blockCreateSubscip(
       /* get name of the original problem and add "comp_nr" */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", problem->name, block->number);
 
-      SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, varmap, consmap, nconss, success) );
+      SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, varmap, consmap, nconss, original, success) );
 
       if( !(*success) )
       {
@@ -474,6 +481,7 @@ SCIP_RETCODE createAndSplitProblem(
    int*                  blockstartsconss,   /**< start points of blocks in sortedconss array */
    int                   nblocks,            /**< number of blocks */
    PROBLEM**             problem,            /**< pointer to store problem structure */
+   SCIP_Bool             original,           /**< do we use the original problem? */
    SCIP_Bool*            success             /**< pointer to store whether the process was successful */
    )
 {
@@ -510,7 +518,7 @@ SCIP_RETCODE createAndSplitProblem(
       nblockconss = blockstartsconss[b + 1] - blockstartsconss[b];
 
       /* build subscip for block */
-      SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, success) );
+      SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, original, success) );
 
       SCIPhashmapFree(&varmap);
 
@@ -902,9 +910,16 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_CALL( SCIPwriteTransProblem(scip, "trans_problem", NULL, FALSE) );
 #endif
 
-   /* take original problem */
+   /* take original problem (This is only for testing and not recommended!) */
    if( heurdata->original )
    {
+      /* multiaggregation of variables has to be switched off */
+      if( !SCIPdoNotMultaggr(scip) )
+      {
+         SCIPwarningMessage(scip, "switch of multiaggregation to use the original problem in %s\n", HEUR_NAME);
+         return SCIP_OKAY;
+      }
+
       SCIPgetDecomps(scip, &alldecomps, &ndecomps, TRUE);
       if( ndecomps == 0)
          return SCIP_OKAY;
@@ -1022,7 +1037,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    }
 
    /* create blockproblems */
-   SCIP_CALL( createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem, &success) );
+   SCIP_CALL( createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem, heurdata->original, &success) );
 
    if( !success )
    {
@@ -1846,7 +1861,7 @@ SCIP_RETCODE SCIPincludeHeurPADM(
       "should linking constraints be assigned?", &heurdata->assignlinking, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/original",
-      "should the original problem be used?", &heurdata->original, TRUE, FALSE, NULL, NULL) );
+      "should the original problem be used? This is only for testing and not recommended!", &heurdata->original, TRUE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/timing",
       "should the heuristic run before or after the processing of the node? (0: before, 1: after, 2: both)",
