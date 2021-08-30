@@ -36,20 +36,18 @@ extern "C" {
 #endif
 
 /**@addtogroup CONSHDLRS
- *
  * @{
  *
  * @name Nonlinear Constraints
- *
  * @{
  */
 
-/** linear auxiliary expression of the form xy {<=,>=,==} coefs[0]w + coefs[1]x + coefs[2]y + cst */
+/** linear auxiliary expression of the form xy {&le;,&ge;,=} coefs[0]w + coefs[1]x + coefs[2]y + cst */
 struct SCIP_ConsNonlinear_Auxexpr
 {
-   SCIP_Real             coefs[3];           /**< coefficients in the expression */
+   SCIP_Real             coefs[3];           /**< coefficients in the auxiliary expression */
    SCIP_Real             cst;                /**< constant */
-   SCIP_VAR*             auxvar;             /**< auxiliary variable w in xy {<=,>=,==} auxexpr(w, x, y) */
+   SCIP_VAR*             auxvar;             /**< auxiliary variable w in xy {&le;,&ge;,=} auxexpr(w, x, y) */
    SCIP_Bool             underestimate;      /**< whether the auxexpr underestimates the product */
    SCIP_Bool             overestimate;       /**< whether the auxexpr overestimates the product */
 };
@@ -59,9 +57,9 @@ typedef struct SCIP_ConsNonlinear_Auxexpr SCIP_CONSNONLINEAR_AUXEXPR;
  *
  * This can represent a product which
  * - explicitly exists in the problem and is under- and/or overestimated by a single auxiliary variable
- *   stored as auxvar in the union (case nauxexprs == 0) or
+ *   stored as `var` in the union `aux` (case `nauxexprs` = 0) or
  * - is involved in bilinear relations implicitly given by linear constraints with binary variables, and
- *   is under- and/or overestimated by linear expression(s) stored as auxexprs in the union (case nauxexprs > 0).
+ *   is under- and/or overestimated by linear expression(s) stored as `exprs` in the union `aux` (case `nauxexprs` > 0).
  *
  * An explicitly existing product can also be involved in implicit relations, then it will be stored as in
  * the second case.
@@ -74,9 +72,9 @@ struct SCIP_ConsNonlinear_BilinTerm
    {
       SCIP_CONSNONLINEAR_AUXEXPR** exprs;    /**< auxiliary expressions for the implicit product of x and y */
       SCIP_VAR*          var;                /**< auxiliary variable for the explicit product of x and y */
-   } aux;
-   int                   nauxexprs;          /**< number of auxexprs (0 for products without implicit relations) */
-   int                   auxexprssize;       /**< size of the auxexprs array */
+   }                     aux;
+   int                   nauxexprs;          /**< number of aux.exprs (0 for products without implicit relations) */
+   int                   auxexprssize;       /**< size of the aux.exprs array */
    int                   nlockspos;          /**< number of positive expression locks */
    int                   nlocksneg;          /**< number of negative expression locks */
    SCIP_Bool             existing;           /**< does the product exist explicitly in the problem? */
@@ -85,42 +83,38 @@ typedef struct SCIP_ConsNonlinear_BilinTerm SCIP_CONSNONLINEAR_BILINTERM; /**< b
 
 /** evaluation callback for (vertex-polyhedral) functions used as input for facet computation of its envelopes
  *
- * input:
- * - args the point to be evaluated
- * - nargs the number of arguments of the function (length of array args)
- * - funcdata user-data of function evaluation callback
- *
- * return:
- * - value of function in point x or SCIP_INVALID if could not be evaluated
+ * \param[in] args     the point to be evaluated
+ * \param[in] nargs    the number of arguments of the function (length of array `args`)
+ * \param[in] funcdata user-data of function evaluation callback
+ * \return value of function in point given by `args` or SCIP_INVALID if could not be evaluated
  */
 #define SCIP_DECL_VERTEXPOLYFUN(f) SCIP_Real f (SCIP_Real* args, int nargs, void* funcdata)
 
 /** maximum dimension of vertex-polyhedral function for which we can try to compute a facet of its convex or concave envelope */
 #define SCIP_MAXVERTEXPOLYDIM 14
 
-/* maybe should make this a parameter (was cutmaxrange in other conshdlr)
- * maybe should derive this from the current feastol (e.g., 10/feastol)
+/* TODO maybe should make this a parameter (was cutmaxrange in previous conshdlr)
+ * TODO maybe should derive this from the current feastol (e.g., 10/feastol)
  */
+/** maximal range for nonzero coefficients in generated cuts */
 #define SCIP_CONSNONLINEAR_CUTMAXRANGE 1.0e7
 
 /** upgrading method for nonlinear constraints into more specific constraints
  *
- * the method might upgrade a nonlinear constraint into a set of upgrade constraints
- * the caller provided an array upgdconss to store upgrade constraints
- * the length of upgdconss is given by upgdconsssize
- * if an upgrade is not possible, set *nupgdconss to zero
- * if more than upgdconsssize many constraints shall replace cons, the function
- * should return the required number as negated value in *nupgdconss
- * i.e., if cons should be replaced by 3 constraints, the function should set
- * *nupgdconss to -3 and return with SCIP_OKAY
+ * The method might upgrade a nonlinear constraint into a set of upgrade constraints.
+ * The caller provided an array `upgdconss` of size `upgdconsssize` to store upgrade constraints.
+ * If an upgrade is not possible, set `*nupgdconss` to zero.
+ * If more than `upgdconsssize` many constraints shall replace `cons`, the function
+ * should return the required number as negated value in `*nupgdconss`,
+ * e.g., if `cons` should be replaced by 3 constraints, the function should set
+ * `*nupgdconss` to -3 and return with SCIP_OKAY.
  *
- *  input:
- *  - scip            : SCIP main data structure
- *  - cons            : the nonlinear constraint to upgrade
- *  - nvarexprs       : total number of variable expressions in the nonlinear constraint
- *  - nupgdconss      : pointer to store number of constraints that replace this constraint
- *  - upgdconss       : array to store constraints that replace this constraint
- *  - upgdconsssize   : length of the provided upgdconss array
+ * \param[in] scip           SCIP main data structure
+ * \param[in] cons           the nonlinear constraint to upgrade
+ * \param[in] nvarexprs      total number of variable expressions in the nonlinear constraint
+ * \param[out] nupgdconss    pointer to store number of constraints that replace this constraint
+ * \param[out] upgdconss     array to store constraints that replace this constraint
+ * \param[in] upgdconsssize  length of the provided `upgdconss` array
  */
 #define SCIP_DECL_NONLINCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, int nvarexprs, \
       int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
@@ -146,10 +140,9 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
  * @{
  */
 
-/**@name Nonlinear Constraint Handler Methods */
-/**@{ */
+/* Nonlinear Constraint Handler Methods */
 
-/** includes an expression constraint upgrade method into the expression constraint handler */
+/** includes a nonlinear constraint upgrade method into the nonlinear constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -195,6 +188,10 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
 
 /** creates and captures a nonlinear constraint with all its constraint flags set to their default values
  *
+ *  All flags can be set via SCIPconsSetFLAGNAME-methods.
+ *
+ *  @see SCIPcreateConsNonlinear() for information about the basic constraint flag configuration.
+ *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_EXPORT
@@ -207,7 +204,10 @@ SCIP_RETCODE SCIPcreateConsBasicNonlinear(
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
-/** creates and captures a quadratic nonlinear constraint */
+/** creates and captures a quadratic nonlinear constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -244,7 +244,14 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    );
 
-/** creates and captures a quadratic nonlinear constraint with all its constraint flags set to their default values */
+/** creates and captures a quadratic nonlinear constraint with all its constraint flags set to their default values
+ *
+ *  All flags can be set via SCIPconsSetFLAGNAME-methods.
+ *
+ *  @see SCIPcreateConsQuadraticNonlinear() for information about the basic constraint flag configuration.
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -264,6 +271,8 @@ SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
 /** creates and captures a signpower nonlinear constraint with all its constraint flags set to their default values
  *
  * \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicSignpowerNonlinear(
@@ -285,21 +294,21 @@ SCIP_Longint SCIPgetCurBoundsTagNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
    );
 
-/** gets the curboundstag at the last time where variable bounds were relaxed */
+/** gets the `curboundstag` from the last time where variable bounds were relaxed */
 SCIP_EXPORT
 SCIP_Longint SCIPgetLastBoundRelaxTagNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
    );
 
-/** increments the curboundstag and resets lastboundrelax in constraint handler data
+/** increments `curboundstag` and resets `lastboundrelax` in constraint handler data
  *
- * @note This method is not intended for normal use.
+ * @attention This method is not intended for normal use.
  *   These tags are maintained by the event handler for variable bound change events.
  *   This method is used by some unittests.
  */
 SCIP_EXPORT
 void SCIPincrementCurBoundsTagNonlinear(
-   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_CONSHDLR*          conshdlr,         /**< nonlinear constraint handler */
    SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
    );
 
@@ -321,7 +330,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
    SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
    SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
-   SCIP_Bool             branchscoresuccess, /**< buffer to store whether the branching score callback of the estimator was successful */
+   SCIP_Bool             branchscoresuccess, /**< whether the estimator generation generated branching scores */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
    SCIP_RESULT*          result              /**< pointer to store the result */
@@ -329,7 +338,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
 
 /** collects all bilinear terms for a given set of constraints
  *
- * @note This method should only be used for unit tests that depend on SCIPgetBilinTermsNonlinear(),
+ * @attention This method should only be used for unit tests that depend on SCIPgetBilinTermsNonlinear(),
  *       SCIPgetBilinTermNonlinear() or SCIPgetBilinTermIdxNonlinear().
  */
 SCIP_EXPORT
@@ -349,7 +358,7 @@ int SCIPgetNBilinTermsNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
    );
 
-/** returns all bilinear terms that are contained in all expression constraints
+/** returns all bilinear terms that are contained in all nonlinear constraints
  *
  * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
  * @note The value of the auxiliary variable of a bilinear term might be NULL, which indicates that the term does not have an auxiliary variable.
@@ -371,7 +380,7 @@ int SCIPgetBilinTermIdxNonlinear(
    SCIP_VAR*             y                   /**< second variable */
    );
 
-/** returns the bilinear term that representing the product of two given variables
+/** returns the bilinear term that represents the product of two given variables
  *
  * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
  * @return The method returns NULL if the variables do not appear bilinearly.
@@ -425,7 +434,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
  * If \f$ f(x) \f$ is vertex-polyhedral, then \f$ g \f$ is a convex underestimator if and only if
  * \f$ g(v^i) \leq f(v^i), \forall i \f$, where \f$ \{ v^i \}_{i = 1}^{2^n} \subseteq \mathbb R^n \f$ are the vertices
  * of the domain of \f$ x \f$, \f$ [\ell,u] \f$. Hence, we can compute a linear underestimator by solving the following
- * LP (we don't necessarily get a facet of the convex envelope, see Technical detail below):
+ * LP (we don't necessarily get a facet of the convex envelope, see below):
  *
  * \f{align*}{
  *              \max \, & \alpha^T x^* + \beta \\
@@ -447,7 +456,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
  *     s.t. \; & \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
  * \f}
  *
- * and recover \f$ g \f$ by solving \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i, \bar \beta = \sum_i \alpha_i \ell_i +
+ * and recover \f$ g \f$ by calculating \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i, \bar \beta = \sum_i \alpha_i \ell_i +
  * \beta \f$. Notice that \f$ f(T(u^i)) = f(v^i) \f$ so the right hand side doesn't change after the change of variables.
  *
  * Furthermore, the LP has more constraints than variables, so we solve its dual:
@@ -462,11 +471,11 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
  * of minimize.
  *
  * #### Technical and implementation details
- * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 14 \f$.
+ * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$n\f$ &le; \ref SCIP_MAXVERTEXPOLYDIM.
  * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
  * otherwise the dual is infeasible.
  * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
- *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPlpfeastol, then we weaken \f$
+ *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPlpfeastol(), then we weaken \f$
  *  \beta \f$ by this amount, otherwise, we discard the cut.
  * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
  * expression. Note that since we are checking the cut for validity, this will never produce wrong result.
@@ -508,11 +517,8 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
    SCIP_Real*            facetconstant       /**< buffer to store constant part of facet defining inequality */
    );
 
-/**@} */
 
-
-/**@name Nonlinear Constraint Methods */
-/**@{ */
+/* Nonlinear Constraint Methods */
 
 /** returns the expression of the given nonlinear constraint */
 SCIP_EXPORT
@@ -540,9 +546,9 @@ SCIP_RETCODE SCIPgetNlRowNonlinear(
    SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    );
 
-/** returns the root curvature of the given nonlinear constraint
+/** returns the curvature of the expression of a given nonlinear constraint
  *
- * @note The curvature information are computed during CONSINITSOL.
+ * @note The curvature information is computed during CONSINITSOL.
  */
 SCIP_EXPORT
 SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
@@ -551,8 +557,8 @@ SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
 
 /** checks whether expression of constraint can be represented as quadratic form
  *
- * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
- * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
+ * Only sets `*isquadratic` to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
+ * That is, the expression in each \ref SCIP_QUADEXPR_QUADTERM will be a variable expressions and
  * \ref SCIPgetVarExprVar() can be used to retrieve the variable.
  */
 SCIP_EXPORT
@@ -623,7 +629,7 @@ SCIP_RETCODE SCIPaddExprNonlinear(
  *
  * This function evaluates the constraints in the given solution.
  *
- * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
+ * If this value is at most SCIPfeastol(), the constraint would be considered feasible.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetAbsViolationNonlinear(
@@ -666,12 +672,9 @@ void SCIPgetLinvarMayIncreaseNonlinear(
    SCIP_Real*            coef                /**< pointer to store the coefficient */
    );
 
-/** @} */
 
-
-/**@name Methods for Expressions in Nonlinear Constraints
- * @note All functions in this group assume that the expression is owned by a the nonlinear constraint handler.
- * @{
+/* Methods for Expressions in Nonlinear Constraints
+ * All functions in this group assume that the expression is owned by a the nonlinear constraint handler.
  */
 
 /** returns the number of positive rounding locks of an expression */
@@ -749,18 +752,18 @@ unsigned int SCIPgetExprNAuxvarUsesNonlinear(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** method to be called by a nlhdlr during NLHDLRDETECT to notify expression that it will be used
+/** method to be called by a nlhdlr during NLHDLRDETECT to notify an expression that it will be used
  *
- * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
- * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
- * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetExprNPropUsesActivityNonlinear
- * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetExprNSepaUsesActivityNonlinear
+ * - if `useauxvar` is enabled, then ensures that an auxiliary variable will be created in INITLP
+ * - if `useactivityforprop` or `useactivityforsepa{below,above}` is enabled, then ensured that activity will be updated for `expr`
+ * - if `useactivityforprop` is enabled, then increments the count returned by SCIPgetExprNPropUsesActivityNonlinear()
+ * - if `useactivityforsepa{below,above}` is enabled, then increments the count returned by SCIPgetExprNSepaUsesActivityNonlinear()
  *   and also increments this count for all variables in the expression.
  *
- * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
+ * The distinction into `useactivityforprop` and `useactivityforsepa{below,above}` is to recognize variables which domain influences
  * under/overestimators. Domain propagation routines (like OBBT) may invest more work for these variables.
- * The distinction into useactivityforsepabelow and useactivityforsepaabove is to recognize whether a nlhdlr that called this method
- * will use activity of expr in enfomethod sepabelow or enfomethod sepaabove.
+ * The distinction into `useactivityforsepabelow` and `useactivityforsepaabove` is to recognize whether a nlhdlr that called this method
+ * will use activity of `expr` in enfomethod \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPregisterExprUsageNonlinear(
@@ -777,12 +780,12 @@ SCIP_RETCODE SCIPregisterExprUsageNonlinear(
  * Assume the expression is f(x), where x are original (i.e., not auxiliary) variables.
  * Assume that f(x) is associated with auxiliary variable z.
  *
- * If there are negative locks, then return the violation of z <= f(x) and sets violover to TRUE.
- * If there are positive locks, then return the violation of z >= f(x) and sets violunder to TRUE.
- * Of course, if there both negative and positive locks, then return the violation of z == f(x).
+ * If there are negative locks, then returns the violation of z &le; f(x) and sets `violover` to TRUE.
+ * If there are positive locks, then returns the violation of z &ge; f(x) and sets `violunder` to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z = f(x).
  *
  * If necessary, f is evaluated in the given solution. If that fails (domain error),
- * then viol is set to SCIPinfinity and both violover and violunder are set to TRUE.
+ * then `viol` is set to SCIPinfinity() and both `violover` and `violunder` are set to TRUE.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetExprAbsOrigViolationNonlinear(
@@ -800,12 +803,12 @@ SCIP_RETCODE SCIPgetExprAbsOrigViolationNonlinear(
  * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
  * Assume that f(w) is associated with auxiliary variable z.
  *
- * If there are negative locks, then return the violation of z <= f(w) and sets violover to TRUE.
- * If there are positive locks, then return the violation of z >= f(w) and sets violunder to TRUE.
- * Of course, if there both negative and positive locks, then return the violation of z == f(w).
+ * If there are negative locks, then returns the violation of z &le; f(w) and sets `violover` to TRUE.
+ * If there are positive locks, then returns the violation of z &ge; f(w) and sets `violunder` to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z = f(w).
  *
- * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
- * both violover and violunder are set to TRUE.
+ * If the given value of f(w) is SCIP_INVALID, then `viol` is set to SCIPinfinity() and
+ * both `violover` and `violunder` are set to TRUE.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetExprAbsAuxViolationNonlinear(
@@ -823,11 +826,11 @@ SCIP_RETCODE SCIPgetExprAbsAuxViolationNonlinear(
  * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
  * Assume that f(w) is associated with auxiliary variable z.
  *
- * Taking the absolute violation from SCIPgetExprAbsAuxViolationNonlinear, this function returns
+ * Taking the absolute violation from SCIPgetExprAbsAuxViolationNonlinear(), this function returns
  * the absolute violation divided by max(1,|f(w)|).
  *
- * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
- * both violover and violunder are set to TRUE.
+ * If the given value of f(w) is SCIP_INVALID, then `viol` is set to SCIPinfinity() and
+ * both `violover` and `violunder` are set to TRUE.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
@@ -843,9 +846,9 @@ SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
 /** returns bounds on the expression
  *
  * This gives an intersection of bounds from
- * - activity calculation (\ref SCIPexprGetActivity), if valid,
+ * - activity calculation (SCIPexprGetActivity()), if valid,
  * - auxiliary variable, if present,
- * - stored by \ref SCIPtightenExprIntervalNonlinear during domain propagation
+ * - stored by SCIPtightenExprIntervalNonlinear() during domain propagation
  *
  * @note The returned interval can be empty!
  */
@@ -890,9 +893,10 @@ SCIP_RETCODE SCIPmarkExprPropagateNonlinear(
  * The expression must either be a variable expression or have an aux-variable.
  * In the latter case, branching on auxiliary variables must have been enabled.
  * In case of doubt, use SCIPaddExprsViolScoreNonlinear(). Roughly, the difference between these functions is that the current
- * function adds the violscore to the expression directly, while SCIPaddExprsViolScoreNonlinear() will split the
- * violation score among all the given expressions according to constraints/expr/branching/violsplit. See
- * SCIPaddExprsViolScoreNonlinear() for more details.
+ * function adds `violscore` to the expression directly, while SCIPaddExprsViolScoreNonlinear() will split the
+ * violation score among all the given expressions according to parameter constraints/nonlinear/branching/violsplit.
+ *
+ * @see SCIPaddExprsViolScoreNonlinear()
  */
 SCIP_EXPORT
 void SCIPaddExprViolScoreNonlinear(
@@ -904,8 +908,8 @@ void SCIPaddExprViolScoreNonlinear(
 /** adds violation-branching score to a set of expressions, distributing the score among all the expressions
  *
  * Each expression must either be a variable expression or have an aux-variable.
- * If branching on aux-variables is disabled, then the violation branching score will be distributed among all among the
- * variables present in exprs
+ * If branching on aux-variables is disabled, then the violation branching score will be distributed among all
+ * variables present in `exprs`.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
@@ -923,7 +927,10 @@ SCIP_Real SCIPgetExprViolScoreNonlinear(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @see SCIPexprGetDerivative()
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetExprPartialDiffNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -931,7 +938,10 @@ SCIP_Real SCIPgetExprPartialDiffNonlinear(
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    );
 
-/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @see SCIPexprGetBardot()
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -941,7 +951,7 @@ SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
 
 /** evaluates quadratic term in a solution w.r.t. auxiliary variables
  *
- * \note This requires that for every expr used in the quadratic data, a variable or auxiliary variable is available
+ * \note This requires that for every expr used in the quadratic data, a variable or auxiliary variable is available.
  */
 SCIP_EXPORT
 SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
@@ -950,6 +960,7 @@ SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
    SCIP_SOL*             sol                 /**< solution to evaluate, or NULL for LP solution */
    );
 
+/** @} */
 /** @} */
 
 /**@addtogroup PublicNlhdlrInterfaceMethods
@@ -987,9 +998,6 @@ SCIP_NLHDLREXPRDATA* SCIPgetNlhdlrExprDataNonlinear(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** @} */
-
-/** @} */
 /** @} */
 
 #ifdef __cplusplus

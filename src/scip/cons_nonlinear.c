@@ -111,7 +111,7 @@
 
 /** translate from one value of infinity to another
  *
- *  if val is >= infty1, then give infty2, else give val
+ *  if val is &ge; infty1, then give infty2, else give val
  */
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
@@ -920,7 +920,7 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
    return interval;
 }
 
-/** compares two expression constraints by its index
+/** compares two nonlinear constraints by its index
  *
  * Usable as compare operator in array sort functions.
  */
@@ -1030,7 +1030,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
 /** registers event handler to catch variable events on variable
  *
- * Additionally, the given constraint is stored in the data of the variable-expression.
+ * Additionally, the given constraint is stored in the ownerdata of the variable-expression.
  * When an event occurs, all stored constraints are notified.
  */
 static
@@ -1149,7 +1149,7 @@ SCIP_RETCODE catchVarEvents(
 
 /** unregisters event handler to catch variable events on variable
  *
- * The given constraint is removed from the constraints array in the data of the variable-expression.
+ * The given constraint is removed from the constraints array in the ownerdata of the variable-expression.
  * If this was the last constraint, then the event handler is unregistered for this variable.
  */
 static
@@ -1255,21 +1255,9 @@ SCIP_RETCODE dropVarEvents(
    return SCIP_OKAY;
 }
 
-/** returns whether variable events on variable expression are caught */
-static
-SCIP_Bool areVarEventsCaught(
-   SCIP_EXPR*            expr                /**< variable expression */
-   )
-{
-   assert(expr != NULL);
-   assert(SCIPexprGetOwnerData(expr) != NULL);
-
-   return SCIPexprGetOwnerData(expr)->filterpos >= 0;
-}
-
 /** creates and captures a nonlinear constraint
  *
- * @attention Use copyexpr=FALSE only if expr is already "owned" by conshdlr, that is, if expressions were created with exprownerCreate and ownerdata passed in the last two arguments
+ * @attention Use copyexpr=FALSE only if expr is already "owned" by conshdlr, that is, if expressions were created with exprownerCreate() and ownerdata passed in the last two arguments
  */
 static
 SCIP_RETCODE createCons(
@@ -1314,14 +1302,14 @@ SCIP_RETCODE createCons(
 
    if( local && SCIPgetDepth(scip) != 0 )
    {
-      SCIPerrorMessage("Locally valid expression constraints are not supported, yet.\n");
+      SCIPerrorMessage("Locally valid nonlinear constraints are not supported, yet.\n");
       return SCIP_INVALIDCALL;
    }
 
    /* TODO we should allow for non-initial nonlinear constraints */
    if( !initial )
    {
-      SCIPerrorMessage("Non-initial expression constraints are not supported, yet.\n");
+      SCIPerrorMessage("Non-initial nonlinear constraints are not supported, yet.\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -1349,15 +1337,16 @@ SCIP_RETCODE createCons(
 
    return SCIP_OKAY;
 }
+
 /** returns absolute violation for auxvar relation in an expression w.r.t. original variables
  *
  * Assume the expression is f(x), where x are original (i.e., not auxiliary) variables.
  * Assume that f(x) is associated with auxiliary variable z.
  *
- * If there are negative locks, then return the violation of z <= f(x) and sets violover to TRUE.
- * If there are positive locks, then return the violation of z >= f(x) and sets violunder to TRUE.
- * Of course, if there both negative and positive locks, then return the violation of z == f(x).
- * If f could not be evaluated, then return SCIPinfinity and set both violover and violunder to TRUE.
+ * If there are negative locks, then return the violation of z &le; f(x) and sets `violover` to TRUE.
+ * If there are positive locks, then return the violation of z &ge; f(x) and sets `violunder` to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z = f(x).
+ * If f could not be evaluated, then return SCIPinfinity() and set both `violover` and `violunder` to TRUE.
  *
  * @note This does not reevaluate the violation, but assumes that the expression has been evaluated
  */
@@ -1420,10 +1409,10 @@ SCIP_Real getExprAbsOrigViolation(
  * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
  * Assume that f(w) is associated with auxiliary variable z.
  *
- * If there are negative locks, then return the violation of z <= f(w) and sets violover to TRUE.
- * If there are positive locks, then return the violation of z >= f(w) and sets violunder to TRUE.
- * Of course, if there both negative and positive locks, then return the violation of z == f(w).
- * If f could not be evaluated, then return SCIPinfinity and set both violover and violunder to TRUE.
+ * If there are negative locks, then return the violation of z &le; f(w) and sets `violover` to TRUE.
+ * If there are positive locks, then return the violation of z &ge; f(w) and sets `violunder` to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z = f(w).
+ * If f could not be evaluated, then return SCIPinfinity() and set both `violover` and `violunder` to TRUE.
  *
  * @note This does not reevaluate the violation, but assumes that f(w) is passed in with auxvalue.
  */
@@ -1521,7 +1510,7 @@ SCIP_RETCODE computeViolation(
 
 /** returns absolute violation of a constraint
  *
- * @note This does not reevaluate the violation, but assumes that @ref computeViolation has been called before.
+ * @note This does not reevaluate the violation, but assumes that computeViolation() has been called before.
  */
 static
 SCIP_Real getConsAbsViolation(
@@ -1540,7 +1529,7 @@ SCIP_Real getConsAbsViolation(
 
 /** computes relative violation of a constraint
  *
- * @note This does not reevaluate the absolute violation, but assumes that @ref computeViolation has been called before.
+ * @note This does not reevaluate the violation, but assumes that computeViolation() has been called before.
  */
 static
 SCIP_RETCODE getConsRelViolation(
@@ -1640,7 +1629,7 @@ SCIP_RETCODE getConsRelViolation(
 
 /** returns whether constraint is currently violated
  *
- * @note This does not reevaluate the violation, but assumes that @ref computeViolation has been called before.
+ * @note This does not reevaluate the violation, but assumes that computeViolation() has been called before.
  */
 static
 SCIP_Bool isConsViolated(
@@ -1743,7 +1732,7 @@ void findUnlockedLinearVar(
    }
 }
 
-/** Given a solution where every expression constraint is either feasible or can be made feasible by
+/** Given a solution where every nonlinear constraint is either feasible or can be made feasible by
  *  moving a linear variable, construct the corresponding feasible solution and pass it to the trysol heuristic.
  *
  *  The method assumes that this is always possible and that not all constraints are feasible already.
@@ -1894,8 +1883,8 @@ SCIP_RETCODE proposeFeasibleSolution(
 
 /** tightens the bounds of the auxiliary variable associated with an expression (or original variable if being a variable-expression) according to given bounds
  *
- *  The given bounds may very well be the exprs activity (when called from forwardPropExpr), but can also be some
- *  tighter bounds (when called from SCIPtightenExprIntervalNonlinear).
+ *  The given bounds may very well be the exprs activity (when called from forwardPropExpr()), but can also be some
+ *  tighter bounds (when called from SCIPtightenExprIntervalNonlinear()).
  *
  *  Nothing will happen if SCIP is not in presolve or solve.
  */
@@ -2076,12 +2065,15 @@ SCIP_RETCODE forwardPropExpr(
             /* we should not have entered this expression if its activity was already up to date */
             assert(SCIPexprGetActivityTag(expr) < conshdlrdata->curboundstag);
 
+            ownerdata = SCIPexprGetOwnerData(expr);
+            assert(ownerdata != NULL);
+
             /* for var exprs where varevents are catched, activity is updated immediately when the varbound has been changed
              * so we can assume that the activity is up to date for all these variables
              * UNLESS we changed the method used to evaluate activity of variable expressions
              *   or we currently use global bounds (varevents are catched for local bound changes only)
              */
-            if( SCIPisExprVar(scip, expr) && areVarEventsCaught(expr) &&
+            if( SCIPisExprVar(scip, expr) && ownerdata->filterpos >= 0 &&
                 SCIPexprGetActivityTag(expr) >= conshdlrdata->lastvaractivitymethodchange && !conshdlrdata->globalbounds )
             {
 #ifndef NDEBUG
@@ -2127,9 +2119,6 @@ SCIP_RETCODE forwardPropExpr(
                /* start with current activity, since it is valid */
                activity = SCIPexprGetActivity(expr);
             }
-
-            ownerdata = SCIPexprGetOwnerData(expr);
-            assert(ownerdata != NULL);
 
             /* if activity of expr is not used, but expr participated in detect (nenfos >= 0), then do nothing */
             if( ownerdata->nenfos >= 0 && ownerdata->nactivityusesprop == 0 && ownerdata->nactivityusessepa == 0 && !conshdlrdata->indetect )
@@ -2265,13 +2254,14 @@ SCIP_RETCODE forwardPropExpr(
    return SCIP_OKAY;
 }
 
-/** returns whether intersecting oldinterval with newinterval would provide a properly smaller interval
+/** returns whether intersecting `oldinterval` with `newinterval` would provide a properly smaller interval
  *
- * If subsetsufficient is TRUE, then the intersection being smaller than oldinterval is sufficient.
- * If subsetsufficient is FALSE, then we require
+ * If `subsetsufficient` is TRUE, then the intersection being smaller than oldinterval is sufficient.
+ *
+ * If `subsetsufficient` is FALSE, then we require
  *  - a change from an unbounded interval to a bounded one, or
  *  - or a change from an unfixed (width > epsilon) to a fixed interval, or
- *  - a minimal tightening of one of the interval bounds as defined by SCIPis{Lb,Ub}Better.
+ *  - a minimal tightening of one of the interval bounds as defined by SCIPis{Lb,Ub}Better().
  */
 static
 SCIP_Bool isIntervalBetter(
@@ -2312,14 +2302,14 @@ SCIP_Bool isIntervalBetter(
    return FALSE;
 }
 
-/** propagates bounds for each sub-expression in the reversepropqueue by starting from the root expressions
+/** propagates bounds for each sub-expression in the `reversepropqueue` by starting from the root expressions
  *
- *  the expression will be traversed in breadth first search by using this queue
+ *  The expression will be traversed in breadth first search by using this queue.
  *
- *  @note calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
- *  forwardPropExpr() before calling this function
+ *  @note Calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
+ *  forwardPropExpr() before calling this function.
  *
- *  @note calling this function with *infeasible == TRUE will only empty the queue
+ *  @note Calling this function with `*infeasible` = TRUE will only empty the queue.
  */
 static
 SCIP_RETCODE reversePropQueue(
@@ -2466,22 +2456,18 @@ SCIP_RETCODE reversePropQueue(
  *  Reverse propagation tries to derive tighter variable bounds by reversing the activity computation, using the constraints
  *  [lhs,rhs] interval as starting point.
  *
- *  the propagation algorithm works as follows:
+ *  The propagation algorithm works as follows:
+ *   1. apply forward propagation (update activities) for all constraints not marked as propagated
+ *   2. if presolve or propauxvars is disabled: collect expressions for which the constraint sides provide tighter bounds
+ *      if solve and propauxvars is enabled: collect expressions for which auxvars (including those in root exprs)
+ *      provide tighter bounds
+ *   3. apply reverse propagation to all collected expressions; don't explore
+ *      sub-expressions which have not changed since the beginning of the propagation loop
+ *   4. if we have found enough tightenings go to 1, otherwise leave propagation loop
  *
- *   1.) apply forward propagation (update activities) for all constraints not marked as propagated
- *
- *   2.) if presolve or propauxvars is disabled: collect expressions for which the constraint sides provide tighter bounds
- *       if solve and propauxvars is enabled: collect expressions for which auxvars (including those in root exprs)
- *       provide tighter bounds
- *
- *   3.) apply reverse propagation to all collected expressions; don't explore
- *       sub-expressions which have not changed since the beginning of the propagation loop
- *
- *   4.) if we have found enough tightenings go to 1.) otherwise leave propagation loop
- *
- *  @note after calling forward propagation for a constraint we mark this constraint as propagated; this flag might be
+ *  @note After calling forward propagation for a constraint, we mark this constraint as propagated. This flag might be
  *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
- *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
+ *  constraint. Resetting this flag is done in the EVENTEXEC callback of the event handler
  *
  *  TODO should we distinguish between expressions where activity information is used for separation and those where not,
  *    e.g., try less to propagate on convex constraints?
@@ -2681,12 +2667,12 @@ SCIP_RETCODE propConss(
    return SCIP_OKAY;
 }
 
-/* calls the reverseprop callbacks of all nlhdlrs in all expressions in all constraints using activity as bounds
+/** calls the reverseprop callbacks of all nlhdlrs in all expressions in all constraints using activity as bounds
  *
  * This is meant to propagate any domain restrictions on functions onto variable bounds, if possible.
  *
  * Assumes that activities are still valid and curpropboundstag does not need to be increased.
- * Therefore, a good place to call this function is immediately after propConss or after forwardPropExpr if outside propagation.
+ * Therefore, a good place to call this function is immediately after propConss() or after forwardPropExpr() if outside propagation.
  */
 static
 SCIP_RETCODE propExprDomains(
@@ -2798,7 +2784,7 @@ SCIP_RETCODE propExprDomains(
    return SCIP_OKAY;
 }
 
-/** propagates variable locks through expression and adds lock to variables */
+/** propagates variable locks through expression and adds locks to variables */
 static
 SCIP_RETCODE propagateLocks(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2936,23 +2922,26 @@ SCIP_RETCODE propagateLocks(
    return SCIP_OKAY;
 }
 
-/** main function for adding locks to expressions and variables; locks for an expression constraint are used to update
- *  locks for all sub-expressions and variables; locks of expressions depend on the monotonicity of expressions
- *  w.r.t. their children, e.g., consider the constraint x^2 <= 1 with x in [-2,-1] implies an up-lock for the root
- *  expression (pow) and a down-lock for its child x because x^2 is decreasing on [-2,-1]; since the monotonicity (and thus
- *  the locks) might also depend on variable bounds, the function remembers the computed monotonicity information ofcan
- *  each expression until all locks of an expression have been removed, which implies that updating the monotonicity
- *  information during the next locking of this expression does not break existing locks
+/** main function for adding locks to expressions and variables
  *
- *  @note when modifying the structure of an expression, e.g., during simplification, it is necessary to remove all
- *        locks from an expression and repropagating them after the structural changes have been applied; because of
- *        existing common sub-expressions, it might be necessary to remove the locks of all constraints to ensure
- *        that an expression is unlocked (see canonicalizeConstraints() for an example)
+ * Locks for a nonlinear constraint are used to update locks for all sub-expressions and variables.
+ * Locks of expressions depend on the monotonicity of expressions w.r.t. their children, e.g.,
+ * consider the constraint \f$x^2 \leq 1\f$ with \f$x \in [-2,-1]\f$ implies an up-lock for the root
+ * expression (pow) and a down-lock for its child \f$x\f$ because \f$x^2\f$ is decreasing on [-2,-1].
+ * Since the monotonicity (and thus the locks) might also depend on variable bounds, the function remembers
+ * the computed monotonicity information of each expression until all locks of an expression have been removed,
+ * which implies that updating the monotonicity information during the next locking of this expression does not
+ * break existing locks.
+ *
+ * @note When modifying the structure of an expression, e.g., during simplification, it is necessary to remove all
+ *       locks from an expression and repropagating them after the structural changes have been applied.
+ *       Because of existing common sub-expressions, it might be necessary to remove the locks of all constraints
+ *       to ensure that an expression is unlocked (see canonicalizeConstraints() for an example)
  */
 static
 SCIP_RETCODE addLocks(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
    int                   nlockspos,          /**< number of positive rounding locks */
    int                   nlocksneg           /**< number of negative rounding locks */
    )
@@ -3069,7 +3058,7 @@ SCIP_RETCODE createNlRow(
 
 /** compares enfodata by enforcement priority of nonlinear handler
  *
- * if handlers have same enforcement priority, then compare by detection priority, then by name
+ * If handlers have same enforcement priority, then compare by detection priority, then by name.
  */
 static
 SCIP_DECL_SORTPTRCOMP(enfodataCmp)
@@ -3288,7 +3277,7 @@ SCIP_RETCODE detectNlhdlrs(
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
       /* ensure that activities are recomputed w.r.t. the global variable bounds if CONSACTIVE is called in a local node;
-       * for example, this happens if globally valid expression constraints are added during the tree search
+       * for example, this happens if globally valid nonlinear constraints are added during the tree search
        */
       SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
       conshdlrdata->globalbounds = TRUE;
@@ -3478,10 +3467,11 @@ SCIP_RETCODE initSolve(
  * This removes the initialization data created in initSolve().
  *
  * This function can be called in presolve and solve.
+ *
  * TODO At the moment, it should not be called for a constraint if there are other constraints
  * that use the same expressions but still require their nlhdlr.
- * We should probably only decrement the auxvar and acitivity usage for the root expr and then
- * proceed as in detectNlhdlrs, i.e., free enfo data only where none is used.
+ * We should probably only decrement the auxvar and activity usage for the root expr and then
+ * proceed as in detectNlhdlrs(), i.e., free enfo data only where none is used.
  */
 static
 SCIP_RETCODE deinitSolve(
@@ -3660,7 +3650,7 @@ SCIP_RETCODE getBilinearBinaryTerms(
    return SCIP_OKAY;
 }
 
-/** helper method to reformulate x_i * sum_j c_ij x_j */
+/** helper method to reformulate \f$x_i \sum_j c_{ij} x_j\f$ */
 static
 SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3759,7 +3749,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    return SCIP_OKAY;
 }
 
-/** helper method to generate an expression for a sum of product of binary variables; note that the method captures the generated expression */
+/** helper method to generate an expression for a sum of products of binary variables; note that the method captures the generated expression */
 static
 SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4286,35 +4276,35 @@ SCIP_RETCODE replaceBinaryProducts(
 
 /** reformulates products of binary variables during presolving in the following way:
  *
- * Let sum_{i,j} Q_ij x_i x_j be a subexpression that only contains binary variables. Each term x_i x_j is
- * reformulated with the help of an extra (implicit integer) variable z_ij in {0,1}:
+ * Let \f$\sum_{i,j} Q_{ij} x_i x_j\f$ be a subexpression that only contains binary variables.
+ * Each term \f$x_i x_j\f$ is reformulated with the help of an extra (implicit integer) variable \f$z_{ij}\f$ in {0,1}:
+ * \f[
+ *    z_{ij} \leq x_i, \qquad z_{ij} \leq x_j, \qquad x_i + x_j - z_{ij} \leq 1.
+ * \f]
  *
- *    z_ij <= x_i, z_ij <= x_j, x_i + x_j - z_ij <= 1
+ * Before reformulating \f$x_i x_j\f$ in this way, it is checked whether there is a clique that contains \f$x_i\f$ and \f$x_j\f$.
+ * These cliques allow for a better reformulation. There are four cases:
  *
- * Before reformulating x_i x_j in this way, it is checked whether there is a clique that contains x_i and x_j. These
- * cliques allows for a better reformulation. There are four cases:
+ *    1. \f$x_i + x_j \leq 1\f$ implies that \f$x_i x_j = 0\f$
+ *    2. \f$x_i + (1 - x_j) \leq 1\f$ implies \f$x_i x_j = x_i\f$
+ *    3. \f$(1 - x_i) + x_j \leq 1\f$ implies \f$x_i x_j = x_j\f$
+ *    4. \f$(1 - x_i) + (1 - x_j) \leq 1\f$ implies \f$x_i x_j = x_i + x_j - 1\f$
  *
- *    1. x_i + x_j <= 1 implies that x_i x_j = 0
- *
- *    2. x_i + (1 - x_j) <= 1 implies x_i x_j = x_i
- *
- *    3. (1 - x_i) + x_j <= 1 implies x_i x_j = x_j
- *
- *    4. (1 - x_i) + (1 - x_j) <= 1 implies x_i x_j = x_i + x_j - 1
- *
- * The reformulation using z_ij or the cliques is implemented in getBinaryProductExpr().
+ * The reformulation using \f$z_{ij}\f$ or the cliques is implemented in getBinaryProductExpr().
  *
  * Introducing too many extra variables and constraints can have a negative impact on the performance (e.g., due to
- * slow probing). For this reason, it is checked in getFactorizedBinaryQuadraticExpr() whether sum_{i,j} Q_ij x_i x_j
- * contains large (>= reformbinprodsfac parameter) lower sums of the form x_i sum_{j} Q_ij x_j. Such a lower sum is
- * reformulated with only one extra variable w_i:
- *
- *    maxact := sum_j max{0, Q_ij}, minact := sum_j min{0, Q_ij}
- *    minact x_i <= w_i, w_i <= maxact x_i
- *    minact <= sum_j Q_ij x_j - w_i + minact x_i
- *    maxact >= sum_j Q_ij x_j - w_i + maxact x_i
- *
- * We mark w_i to be implicit integer if all Q_ij are integer. After each replacement of a lower sum, it
+ * slow probing). For this reason, it is checked in getFactorizedBinaryQuadraticExpr() whether \f$\sum_{i,j} Q_{ij} x_i x_j\f$
+ * contains large (&ge; `reformbinprodsfac` parameter) lower sums of the form \f$x_i \sum_j Q_{ij} x_j\f$.
+ * Such a lower sum is reformulated with only one extra variable w_i:
+ * \f{align}{
+ *    \text{maxact} & := \sum_j \max(0, Q_{ij}), \\
+ *    \text{minact} & := \sum_j \min(0, Q_{ij}), \\
+ *    \text{minact}\, x_i & \leq w_i, \\
+ *    w_i &\leq \text{maxact}\, x_i, \\
+ *    \text{minact} &\leq \sum_j Q_{ij} x_j - w_i + \text{minact}\, x_i \\
+ *    \text{maxact} &\geq \sum_j Q_{ij} x_j - w_i + \text{maxact}\, x_i
+ * \f}
+ * We mark \f$w_i\f$ to be implicit integer if all \f$Q_{ij}\f$ are integer. After each replacement of a lower sum, it
  * is checked whether there are enough terms left to factorize other binary variables. Lower sums with a larger number
  * of terms are prioritized.
  */
@@ -4335,7 +4325,7 @@ SCIP_RETCODE presolveBinaryProducts(
 
    assert(conshdlr != NULL);
 
-   /* no expression constraints or binary variables -> skip */
+   /* no nonlinear constraints or binary variables -> skip */
    if( nconss == 0 || SCIPgetNBinVars(scip) == 0 )
       return SCIP_OKAY;
    assert(conss != NULL);
@@ -4390,19 +4380,18 @@ SCIP_RETCODE presolveBinaryProducts(
    return SCIP_OKAY;
 }
 
-/** scales the sides of the constraint l <= sum_i c_i f_i(x) <= r according to the following rules:
+/** scales the sides of the constraint \f$\ell \leq \sum_i c_i f_i(x) \leq r\f$.
  *
- *  let n_+ the number of positive coefficients c_i and n_- be the number of negative coefficients
- *
- *   i. scale by -1 if n_+ < n_-
- *
- *  ii. scale by -1 if n_+ = n_- & r = INF
+ *  Let \f$n_+\f$ the number of positive coefficients \f$c_i\f$ and \f$n_-\f$ be the number of negative coefficients.
+ *  Then scale by -1 if
+ *  - \f$n_+ < n_-\f$, or
+ *  - \f$n_+ = n_-\f$ and \f$r = \infty\f$.
  */
 static
 SCIP_RETCODE scaleConsSides(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_Bool*            changed             /**< buffer to store if the expression of cons changed */
    )
 {
@@ -4978,7 +4967,7 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarRedundancyCheck)
  * might violate variable bounds by up to feastol, too.
  * This is the main reason why the redundancy check is not done in propConss(), which relaxes variable bounds by epsilon only.
  *
- * Also removes constraints of the form lhs <= variable <= rhs.
+ * Also removes constraints of the form lhs &le; variable &le; rhs.
  *
  * @todo it would be sufficient to check constraints for which we know that they are not currently violated by a valid solution
  *
@@ -5154,7 +5143,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** tries to automatically convert an expression constraint into a more specific and more specialized constraint */
+/** tries to automatically convert a nonlinear constraint into a more specific and more specialized constraint */
 static
 SCIP_RETCODE presolveUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5259,7 +5248,7 @@ SCIP_RETCODE presolveUpgrade(
 }
 
 /** returns whether the variable of a given variable expression is a candidate for presolveSingleLockedVars(), i.e.,
- *  the variable is only contained in a single expression constraint, has no objective coefficient, has finite
+ *  the variable is only contained in a single nonlinear constraint, has no objective coefficient, has finite
  *  variable bounds, and is not binary
  */
 static
@@ -5309,20 +5298,22 @@ SCIP_RETCODE removeSingleLockedVars(
    return SCIP_OKAY;
 }
 
-/** presolving method to fix a variable x_i to one of its bounds if the variable is only contained in a single
- *  expression constraint g(x) <= rhs (>= lhs) if g is concave (convex) in x_i;  if a continuous variable has bounds
- *  [0,1], then the variable type is changed to be binary; otherwise a bound disjunction constraint is added
+/** presolving method to fix a variable \f$x_i\f$ to one of its bounds if the variable is only contained in a single
+ *  nonlinear constraint g(x) &le; rhs (&ge; lhs) if g() is concave (convex) in \f$x_i\f$
  *
- *  @todo the same reduction can be applied if g(x) is not concave, but monotone in x_i for g(x) <= rhs
+ *  If a continuous variable has bounds [0,1], then the variable type is changed to be binary.
+ *  Otherwise, a bound disjunction constraint is added.
+ *
+ *  @todo the same reduction can be applied if g(x) is not concave, but monotone in \f$x_i\f$ for g(x) &le; rhs
  *  @todo extend this to cases where a variable can appear in a monomial with an exponent, essentially relax
- *    g(x) to sum_i [a_i,b_i] x^{p_i} for a single variable x and try to conclude montonicity or convexity/concavity
- *    on this (probably have one or two flags per variable and update this whenever another x^{p_i} is found)
+ *    g(x) to \f$\sum_i [a_i,b_i] x^{p_i}\f$ for a single variable \f$x\f$ and try to conclude montonicity or convexity/concavity
+ *    on this (probably have one or two flags per variable and update this whenever another \f$x^{p_i}\f$ is found)
  */
 static
 SCIP_RETCODE presolveSingleLockedVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
    int*                  nchgvartypes,       /**< pointer to store the total number of changed variable types */
    int*                  naddconss,          /**< pointer to store the total number of added constraints */
    SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
@@ -5521,7 +5512,7 @@ SCIP_RETCODE presolveSingleLockedVars(
    return SCIP_OKAY;
 }
 
-/* presolving method to check if there is a single linear continuous variable that can be made implicit integer */
+/** presolving method to check if there is a single linear continuous variable that can be made implicit integer */
 static
 SCIP_RETCODE presolveImplint(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5740,7 +5731,7 @@ SCIP_RETCODE createAuxVar(
  *
  * - ensures that activities are up to date in all expressions
  * - creates auxiliary variables where required
- * - calls propExprDomains to possibly tighten auxvar bounds
+ * - calls propExprDomains() to possibly tighten auxvar bounds
  * - calls separation initialization callback of nlhdlrs
  */
 static
@@ -5993,7 +5984,7 @@ SCIP_Real getViolSplitWeight(
  * Each expression must either be a variable expression or have an aux-variable.
  *
  * If unbounded variables are present, each unbounded var gets an even score.
- * If no unbounded variables, then parameter constraints/expr/branching/violsplit decides weight for each var.
+ * If no unbounded variables, then parameter constraints/nonlinear/branching/violsplit decides weight for each var.
  */
 static
 void addExprsViolScore(
@@ -6077,8 +6068,8 @@ void addExprsViolScore(
 
 /** adds violation-branching score to children of expression for given auxiliary variables
  *
- * Iterates over the successors of expr to find expressions that are associated with one of the given auxiliary variables.
- * Adds violatoin-branching scores to all found exprs by means of addConsExprExprsViolScore().
+ * Iterates over the successors of `expr` to find expressions that are associated with one of the given auxiliary variables.
+ * Adds violation-branching scores to all found exprs by means of SCIPaddExprsViolScoreNonlinear().
  *
  * @note This method may modify the given auxvars array by means of sorting.
  */
@@ -6501,16 +6492,17 @@ SCIP_RETCODE collectBranchingCandidates(
  * To score a variable, we then sum the values lambda_i * (f(x) - a_i'x + b_i) for all rows in which the variable appears.
  * To scale, we divide by the LP objective value (if >1).
  *
- * TODO if we branch only on original variables, we neglect here estimators that are build on auxiliary variables
+ * TODO if we branch only on original variables, we neglect here estimators that are build on auxiliary variables;
  *     these are affected by the bounds on original variables indirectly (through forward-propagation)
- * TODO if we branch also on auxiliary variables, then separating z from the x-variables in the row a'x+b <= z should happen
+ *
+ * TODO if we branch also on auxiliary variables, then separating z from the x-variables in the row a'x+b <= z should happen;
  *     in effect, we should go from the row to the expression for which it was generated and consider only variables that
  *     would also be branching candidates
  */
 static
 SCIP_Real getDualBranchscore(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraints handler */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraints handler */
    SCIP_VAR*             var                 /**< variable */
    )
 {
@@ -6593,7 +6585,7 @@ SCIP_Real getDualBranchscore(
  *
  * Then compute for each candidate a "weighted" score using the weights as specified by parameters
  * and the scores as previously computed, but scale each score to be in [0,1], i.e., divide each score by the maximum
- * score all candidate.
+ * score of all candidates.
  * Further divide by the sum of all weights where a score was available (even if the score was 0).
  *
  * For example:
@@ -7123,7 +7115,7 @@ SCIP_RETCODE enforceExprNlhdlr(
 
 /** tries to enforce violation in an expression by separation, bound tightening, or finding a branching candidate
  *
- * if not inenforcement, then we should be called by consSepa, and thus only try separation
+ * if not inenforcement, then we should be called by consSepa(), and thus only try separation
  */
 static
 SCIP_RETCODE enforceExpr(
@@ -8044,7 +8036,7 @@ SCIP_DECL_HASHKEYVAL(bilinearTermsGetHashkeyVal)
 
 /** compare two auxiliary expressions
  *
- *  Compares auxiliary variables, followed by coefficients and then constants.
+ *  Compares auxiliary variables, followed by coefficients, and then constants.
  */
 static
 SCIP_DECL_SORTPTRCOMP(auxexprComp)
@@ -8123,7 +8115,7 @@ SCIP_RETCODE bilinTermAddAuxExpr(
    return SCIP_OKAY;
 }
 
-/** iterates through all expressions of all expression constraints and adds the corresponding bilinear terms to the hash table */
+/** iterates through all expressions of all nonlinear constraints and adds the corresponding bilinear terms to the hash table */
 static
 SCIP_RETCODE bilinearTermsInsertAll(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8560,11 +8552,11 @@ SCIP_Real computeVertexPolyhedralMaxFacetError(
    return maxerror;
 }
 
-/** computes a facet of the convex or concave envelope of a vertex polyhedral function using by solving an LP */  /*lint -e{715}*/
+/** computes a facet of the convex or concave envelope of a vertex polyhedral function by solving an LP */  /*lint -e{715}*/
 static
 SCIP_RETCODE computeVertexPolyhedralFacetLP(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
    SCIP_Real*            xstar,              /**< point to be separated */
    SCIP_Real*            box,                /**< box where to compute facet: should be lb_1, ub_1, lb_2, ub_2... */
@@ -8848,6 +8840,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetUnivariate(
 }
 
 /** given three points, constructs coefficient of equation for hyperplane generated by these three points
+ *
  * Three points a, b, and c are given.
  * Computes coefficients alpha, beta, gamma, and delta, such that a, b, and c, satisfy
  * alpha * x1 + beta * x2 + gamma * x3 = delta and gamma >= 0.0.
@@ -9801,7 +9794,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       }
    }
 
-   /* fix variables that are contained in only one expression constraint to their upper or lower bounds, if possible */
+   /* fix variables that are contained in only one nonlinear constraint to their upper or lower bounds, if possible */
    if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) && SCIPisPresolveFinished(scip)
       && !conshdlrdata->checkedvarlocks && conshdlrdata->checkvarlocks != 'd' )
    {
@@ -10652,7 +10645,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    return SCIP_OKAY;
 }
 
-/** includes an expression constraint upgrade method into the expression constraint handler */
+/** includes a nonlinear constraint upgrade method into the nonlinear constraint handler */
 SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_NONLINCONSUPGD((*nlconsupgd)),  /**< method to call for upgrading nonlinear constraint */
@@ -10671,7 +10664,7 @@ SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
    assert(conshdlrname != NULL );
    assert(nlconsupgd != NULL);
 
-   /* find the expression constraint handler */
+   /* find the nonlinear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
@@ -10694,13 +10687,13 @@ SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
       }
    }
 
-   /* create an expression constraint upgrade data object */
+   /* create a nonlinear constraint upgrade data object */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consupgrade) );
    consupgrade->consupgd = nlconsupgd;
    consupgrade->priority = priority;
    consupgrade->active   = active;
 
-   /* insert expression constraint upgrade method into constraint handler data */
+   /* insert nonlinear constraint upgrade method into constraint handler data */
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &conshdlrdata->consupgrades, &conshdlrdata->consupgradessize, conshdlrdata->nconsupgrades+1) );
    assert(conshdlrdata->nconsupgrades+1 <= conshdlrdata->consupgradessize);
 
@@ -10771,8 +10764,11 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    return SCIP_OKAY;
 }
 
-/** creates and captures a nonlinear constraint with all its constraint flags set to their
- *  default values
+/** creates and captures a nonlinear constraint with all its constraint flags set to their default values
+ *
+ *  All flags can be set via SCIPconsSetFLAGNAME-methods.
+ *
+ *  @see SCIPcreateConsNonlinear() for information about the basic constraint flag configuration.
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
@@ -10791,7 +10787,10 @@ SCIP_RETCODE SCIPcreateConsBasicNonlinear(
    return SCIP_OKAY;
 }
 
-/** creates and captures a quadratic nonlinear constraint */
+/** creates and captures a quadratic nonlinear constraint
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -10833,7 +10832,7 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
    assert(nquadterms == 0 || (quadvars1 != NULL && quadvars2 != NULL && quadcoefs != NULL));
 
-   /* get expression constraint handler */
+   /* get nonlinear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
@@ -10845,7 +10844,7 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    SCIP_CALL( SCIPcreateExprQuadratic(scip, &expr, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, exprownerCreate, (void*)conshdlr) );
    assert(expr != NULL);
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( createCons(scip, conshdlr, cons, name, expr, lhs, rhs, FALSE,
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
@@ -10855,7 +10854,14 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    return SCIP_OKAY;
 }
 
-/** creates and captures a quadratic nonlinear constraint with all its constraint flags set to their default values */
+/** creates and captures a quadratic nonlinear constraint with all its constraint flags set to their default values
+ *
+ *  All flags can be set via SCIPconsSetFLAGNAME-methods.
+ *
+ *  @see SCIPcreateConsQuadraticNonlinear() for information about the basic constraint flag configuration.
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
 SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -10880,6 +10886,8 @@ SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
 /** creates and captures a signpower nonlinear constraint with all its constraint flags set to their default values
  *
  * \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsBasicSignpowerNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10944,7 +10952,7 @@ SCIP_Longint SCIPgetCurBoundsTagNonlinear(
    return conshdlrdata->curboundstag;
 }
 
-/** gets the curboundstag at the last time where variable bounds were relaxed */
+/** gets the `curboundstag` from the last time where variable bounds were relaxed */
 SCIP_Longint SCIPgetLastBoundRelaxTagNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
    )
@@ -10957,14 +10965,14 @@ SCIP_Longint SCIPgetLastBoundRelaxTagNonlinear(
    return conshdlrdata->lastboundrelax;
 }
 
-/** increments the curboundstag and resets lastboundrelax in constraint handler data
+/** increments `curboundstag` and resets `lastboundrelax` in constraint handler data
  *
- * @note This method is not intended for normal use.
+ * @attention This method is not intended for normal use.
  *   These tags are maintained by the event handler for variable bound change events.
  *   This method is used by some unittests.
  */
 void SCIPincrementCurBoundsTagNonlinear(
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_Bool             boundrelax          /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
    )
 {
@@ -11001,7 +11009,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
    SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
    SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
-   SCIP_Bool             branchscoresuccess, /**< buffer to store whether the branching score callback of the estimator was successful */
+   SCIP_Bool             branchscoresuccess, /**< whether the estimator generation generated branching scores */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
    SCIP_RESULT*          result              /**< pointer to store the result */
@@ -11262,7 +11270,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
 
 /** collects all bilinear terms for a given set of constraints
  *
- * @note This method should only be used for unit tests that depend on SCIPgetBilinTermsNonlinear(),
+ * @attention This method should only be used for unit tests that depend on SCIPgetBilinTermsNonlinear(),
  *       SCIPgetBilinTermNonlinear() or SCIPgetBilinTermIdxNonlinear().
  */
 SCIP_RETCODE SCIPcollectBilinTermsNonlinear(
@@ -11298,7 +11306,7 @@ int SCIPgetNBilinTermsNonlinear(
    return conshdlrdata->nbilinterms;
 }
 
-/** returns all bilinear terms that are contained in all expression constraints
+/** returns all bilinear terms that are contained in all nonlinear constraints
  *
  * @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
  * @note The value of the auxiliary variable of a bilinear term might be NULL, which indicates that the term does not have an auxiliary variable.
@@ -11362,7 +11370,7 @@ int SCIPgetBilinTermIdxNonlinear(
    return idx;
 }
 
-/** returns the bilinear term that representing the product of two given variables
+/** returns the bilinear term that represents the product of two given variables
  *
  * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
  * @return The method returns NULL if the variables do not appear bilinearly.
@@ -11548,78 +11556,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
    return SCIP_OKAY;
 }
 
-/** computes a facet of the convex or concave envelope of a vertex polyhedral function
- *
- * If \f$ f(x) \f$ is vertex-polyhedral, then \f$ g \f$ is a convex underestimator if and only if
- * \f$ g(v^i) \leq f(v^i), \forall i \f$, where \f$ \{ v^i \}_{i = 1}^{2^n} \subseteq \mathbb R^n \f$ are the vertices
- * of the domain of \f$ x \f$, \f$ [\ell,u] \f$. Hence, we can compute a linear underestimator by solving the following
- * LP (we don't necessarily get a facet of the convex envelope, see Technical detail below):
- *
- * \f{align*}{
- *              \max \, & \alpha^T x^* + \beta \\
- *     s.t. \; & \alpha^T v^i + \beta \le f(v^i), \, \forall i = 1, \ldots, 2^n
- * \f}
- *
- * In principle, one would need to update the LP whenever the domain changes. However, \f$ [\ell,u] = T([0, 1]^n) \f$,
- * where \f$ T \f$ is an affine linear invertible transformation given by \f$ T(y)_i = (u_i - \ell_i) y_i + \ell_i \f$.
- * Working with the change of variables \f$ x = T(y) \f$ allows us to keep the constraints of the LP, even if the domain
- * changes. Indeed, after the change of variables, the problem is: find an affine underestimator \f$ g \f$ such that \f$
- * g(T(y)) \le f(T(y)) \f$, for all \f$ y \in [0, 1]^n \f$. Now \f$ f(T(y)) \f$ is componentwise affine, but still
- * satisfies that \f$ g \f$ is a valid underestimator if and only if \f$ g(T(u)) \leq f(T(u)), \forall u \in \{0, 1\}^n
- * \f$. So we now look for \f$ \bar g(y) := g(T(y)) = g(((u_i - \ell_i) y_i + \ell_i)_i) = \bar \alpha^T y + \bar \beta
- * \f$, where \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i \f$ and \f$ \bar \beta = \sum_i \alpha_i \ell_i + \beta \f$. So
- * we find \f$ \bar g \f$ by solving the LP:
- *
- * \f{align*}{
- *              \max \, & \bar \alpha^T T^{-1}(x^*) + \bar \beta \\
- *     s.t. \; & \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
- * \f}
- *
- * and recover \f$ g \f$ by solving \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i, \bar \beta = \sum_i \alpha_i \ell_i +
- * \beta \f$. Notice that \f$ f(T(u^i)) = f(v^i) \f$ so the right hand side doesn't change after the change of variables.
- *
- * Furthermore, the LP has more constraints than variables, so we solve its dual:
- * \f{align*}{
- *              \min \, & \sum_i \lambda_i f(v^i) \\
- *     s.t. \; & \sum_i \lambda_i u^i = T^{-1}(x^*) \\
- *             & \sum_i \lambda_i = 1 \\
- *             & \forall i, \, \lambda_i \geq 0
- * \f}
- *
- * In case we look for an overestimate, we do exactly the same, but have to maximize in the dual LP instead
- * of minimize.
- *
- * #### Technical and implementation details
- * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 14 \f$.
- * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
- * otherwise the dual is infeasible.
- * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
- *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPlpfeastol, then we weaken \f$
- *  \beta \f$ by this amount, otherwise, we discard the cut.
- * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
- * expression. Note that since we are checking the cut for validity, this will never produce wrong result.
- * -# If \f$ x^* \f$ is in the boundary of the domain, then the LP has infinitely many solutions, some of which might
- * have very bad numerical properties. For this reason, we perturb \f$ x^* \f$ to be in the interior of the region.
- * Furthermore, for some interior points, there might also be infinitely many solutions (e.g. for \f$ x y \f$ in \f$
- * [0,1]^2 \f$ any point \f$ (x^*, y^*) \f$ such that \f$ y^* = 1 - x^* \f$ has infinitely many solutions). For this
- * reason, we perturb any given \f$ x^* \f$. The idea is to try to get a facet of the convex/concave envelope. This only
- * happens when the solution has \f$ n + 1 \f$ non zero \f$ \lambda \f$'s (i.e. the primal has a unique solution).
- * -# We need to compute \f$ f(v^i) \f$ for every vertex of \f$ [\ell,u] \f$. A vertex is encoded by a number between 0
- * and \f$ 2^n - 1 \f$, via its binary representation (0 bit is lower bound, 1 bit is upper bound), so we can compute
- * all these values by iterating between 0 and \f$ 2^n - 1 \f$.
- * -# To check that the computed cut is valid we do the following: we use a gray code to loop over the vertices
- * of the box domain w.r.t. unfixed variables in order to evaluate the underestimator. To ensure the validity of the
- * underestimator, we check whether \f$ \alpha v^i + \beta \le f(v^i) \f$ for every vertex \f$ v^i \f$ and adjust
- * \f$ \beta \f$ if the maximal violation is small.
- *
- * @todo the solution is a facet if all variables of the primal have positive reduced costs (i.e. the solution is
- * unique). In the dual, this means that there are \f$ n + 1 \f$ variables with positive value. Can we use this or some
- * other information to handle any of both cases (point in the boundary or point in the intersection of polytopes
- * defining different pieces of the convex envelope)? In the case where the point is in the boundary, can we use that
- * information to maybe solve another to find a facet? How do the polytopes defining the pieces where the convex
- * envelope is linear looks like, i.e, given a point in the interior of a facet of the domain, does the midpoint of the
- * segment joining \f$ x^* \f$ with the center of the domain, always belongs to the interior of one of those polytopes?
- */
+/* replication of long comment on SCIPcomputeFacetVertexPolyhedralNonlinear() in cons_nonlinear.h omitted here */
 SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
@@ -11884,9 +11821,9 @@ SCIP_RETCODE SCIPgetNlRowNonlinear(
    return SCIP_OKAY;
 }
 
-/** returns the root curvature of the given nonlinear constraint
+/** returns the curvature of the expression of a given nonlinear constraint
  *
- * @note The curvature information are computed during CONSINITSOL.
+ * @note The curvature information is computed during CONSINITSOL.
  */
 SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
@@ -11905,8 +11842,8 @@ SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
 
 /** checks whether expression of constraint can be represented as quadratic form
  *
- * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
- * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
+ * Only sets `*isquadratic` to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
+ * That is, the expression in each \ref SCIP_QUADEXPR_QUADTERM will be a variable expressions and
  * \ref SCIPgetVarExprVar() can be used to retrieve the variable.
  */
 SCIP_RETCODE SCIPcheckQuadraticNonlinear(
@@ -12219,7 +12156,7 @@ SCIP_RETCODE SCIPaddExprNonlinear(
  *
  * This function evaluates the constraints in the given solution.
  *
- * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
+ * If this value is at most SCIPfeastol(), the constraint would be considered feasible.
  */
 SCIP_RETCODE SCIPgetAbsViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12468,18 +12405,18 @@ unsigned int SCIPgetExprNAuxvarUsesNonlinear(
    return SCIPexprGetOwnerData(expr)->nauxvaruses;
 }
 
-/** method to be called by a nlhdlr during NLHDLRDETECT to notify expression that it will be used
+/** method to be called by a nlhdlr during NLHDLRDETECT to notify an expression that it will be used
  *
- * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
- * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
- * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetExprNPropUsesActivityNonlinear
- * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetExprNSepaUsesActivityNonlinear
+ * - if `useauxvar` is enabled, then ensures that an auxiliary variable will be created in INITLP
+ * - if `useactivityforprop` or `useactivityforsepa{below,above}` is enabled, then ensured that activity will be updated for `expr`
+ * - if `useactivityforprop` is enabled, then increments the count returned by SCIPgetExprNPropUsesActivityNonlinear()
+ * - if `useactivityforsepa{below,above}` is enabled, then increments the count returned by SCIPgetExprNSepaUsesActivityNonlinear()
  *   and also increments this count for all variables in the expression.
  *
- * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
+ * The distinction into `useactivityforprop` and `useactivityforsepa{below,above}` is to recognize variables which domain influences
  * under/overestimators. Domain propagation routines (like OBBT) may invest more work for these variables.
- * The distinction into useactivityforsepabelow and useactivityforsepaabove is to recognize whether a nlhdlr that called this method
- * will use activity of expr in enfomethod sepabelow or enfomethod sepaabove.
+ * The distinction into `useactivityforsepabelow` and `useactivityforsepaabove` is to recognize whether a nlhdlr that called this method
+ * will use activity of `expr` in enfomethod \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE.
  */
 SCIP_RETCODE SCIPregisterExprUsageNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12558,17 +12495,18 @@ SCIP_RETCODE SCIPregisterExprUsageNonlinear(
 
    return SCIP_OKAY;
 }
+
 /** computes absolute violation for auxvar relation in an expression w.r.t. original variables
  *
  * Assume the expression is f(x), where x are original (i.e., not auxiliary) variables.
  * Assume that f(x) is associated with auxiliary variable z.
  *
- * If there are negative locks, then return the violation of z <= f(x) and sets violover to TRUE.
- * If there are positive locks, then return the violation of z >= f(x) and sets violunder to TRUE.
- * Of course, if there both negative and positive locks, then return the violation of z == f(x).
+ * If there are negative locks, then returns the violation of z &le; f(x) and sets `violover` to TRUE.
+ * If there are positive locks, then returns the violation of z &ge; f(x) and sets `violunder` to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z = f(x).
  *
  * If necessary, f is evaluated in the given solution. If that fails (domain error),
- * then viol is set to SCIPinfinity and both violover and violunder are set to TRUE.
+ * then `viol` is set to SCIPinfinity() and both `violover` and `violunder` are set to TRUE.
  */
 SCIP_RETCODE SCIPgetExprAbsOrigViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12598,12 +12536,12 @@ SCIP_RETCODE SCIPgetExprAbsOrigViolationNonlinear(
  * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
  * Assume that f(w) is associated with auxiliary variable z.
  *
- * If there are negative locks, then return the violation of z <= f(w) and sets violover to TRUE.
- * If there are positive locks, then return the violation of z >= f(w) and sets violunder to TRUE.
- * Of course, if there both negative and positive locks, then return the violation of z == f(w).
+ * If there are negative locks, then returns the violation of z &le; f(w) and sets `violover` to TRUE.
+ * If there are positive locks, then returns the violation of z &ge; f(w) and sets `violunder` to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z = f(w).
  *
- * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
- * both violover and violunder are set to TRUE.
+ * If the given value of f(w) is SCIP_INVALID, then `viol` is set to SCIPinfinity() and
+ * both `violover` and `violunder` are set to TRUE.
  */
 SCIP_RETCODE SCIPgetExprAbsAuxViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12625,16 +12563,17 @@ SCIP_RETCODE SCIPgetExprAbsAuxViolationNonlinear(
    return SCIP_OKAY;
 }
 
+
 /** computes relative violation for auxvar relation in an expression w.r.t. auxiliary variables
  *
  * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
  * Assume that f(w) is associated with auxiliary variable z.
  *
- * Taking the absolute violation from SCIPgetExprAbsAuxViolationNonlinear, this function returns
+ * Taking the absolute violation from SCIPgetExprAbsAuxViolationNonlinear(), this function returns
  * the absolute violation divided by max(1,|f(w)|).
  *
- * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
- * both violover and violunder are set to TRUE.
+ * If the given value of f(w) is SCIP_INVALID, then `viol` is set to SCIPinfinity() and
+ * both `violover` and `violunder` are set to TRUE.
  */
 SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12665,9 +12604,9 @@ SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
 /** returns bounds on the expression
  *
  * This gives an intersection of bounds from
- * - activity calculation (\ref SCIPexprGetActivity), if valid,
+ * - activity calculation (SCIPexprGetActivity()), if valid,
  * - auxiliary variable, if present,
- * - stored by \ref SCIPtightenExprIntervalNonlinear during domain propagation
+ * - stored by SCIPtightenExprIntervalNonlinear() during domain propagation
  *
  * @note The returned interval can be empty!
  */
@@ -12921,9 +12860,10 @@ SCIP_RETCODE SCIPmarkExprPropagateNonlinear(
  * The expression must either be a variable expression or have an aux-variable.
  * In the latter case, branching on auxiliary variables must have been enabled.
  * In case of doubt, use SCIPaddExprsViolScoreNonlinear(). Roughly, the difference between these functions is that the current
- * function adds the violscore to the expression directly, while SCIPaddExprsViolScoreNonlinear() will split the
- * violation score among all the given expressions according to constraints/expr/branching/violsplit. See
- * SCIPaddExprsViolScoreNonlinear() for more details.
+ * function adds `violscore` to the expression directly, while SCIPaddExprsViolScoreNonlinear() will split the
+ * violation score among all the given expressions according to parameter constraints/nonlinear/branching/violsplit.
+ *
+ * @see SCIPaddExprsViolScoreNonlinear()
  */
 void SCIPaddExprViolScoreNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12968,8 +12908,8 @@ void SCIPaddExprViolScoreNonlinear(
 /** adds violation-branching score to a set of expressions, distributing the score among all the expressions
  *
  * Each expression must either be a variable expression or have an aux-variable.
- * If branching on aux-variables is disabled, then the violation branching score will be distributed among all among the
- * variables present in exprs
+ * If branching on aux-variables is disabled, then the violation branching score will be distributed among all
+ * variables present in `exprs`.
  */
 SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13084,7 +13024,10 @@ SCIP_Real SCIPgetExprViolScoreNonlinear(
    }
 }
 
-/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @see SCIPexprGetDerivative()
+ */
 SCIP_Real SCIPgetExprPartialDiffNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPevalExprGradient() call */
@@ -13127,7 +13070,10 @@ SCIP_Real SCIPgetExprPartialDiffNonlinear(
    return (SCIPexprGetDiffTag(expr) != SCIPexprGetDiffTag(varexpr)) ? 0.0 : SCIPexprGetDerivative(varexpr);
 }
 
-/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @see SCIPexprGetBardot()
+ */
 SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPevalExprHessianDir() call */
@@ -13172,7 +13118,7 @@ SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
 
 /** evaluates quadratic term in a solution w.r.t. auxiliary variables
  *
- * \note This requires that for every expr used in the quadratic data, a variable or auxiliary variable is available
+ * \note This requires that for every expr used in the quadratic data, a variable or auxiliary variable is available.
  */
 SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */

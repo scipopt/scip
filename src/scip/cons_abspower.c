@@ -24,13 +24,13 @@
 #include "scip/cons_abspower.h"
 #include "scip/cons_nonlinear.h"
 
-/** creates and captures a absolute power nonlinear constraint
+
+/** creates and captures an absolute power nonlinear constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  *
- *  @deprecated Use SCIPcreateConsNonlinear instead.
+ *  @deprecated Use SCIPcreateConsNonlinear() instead.
  */
-SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_RETCODE SCIPcreateConsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPcreateConsAbspower(
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are seperated as constraints. */
+                                              *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -85,16 +85,16 @@ SCIP_RETCODE SCIPcreateConsAbspower(
 }
 
 /** creates and captures an absolute power nonlinear constraint
- *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
- *  method SCIPcreateConsAbspower(); all flags can be set via SCIPconsSetFLAGNAME-methods in scip.h
+ *  in its most basic version, i.e., all constraint flags are set to their basic value
+ *
+ *  All flags can be set via SCIPconsSetFLAGNAME-methods.
  *
  *  @see SCIPcreateConsAbspower() for information about the basic constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  *
- *  @deprecated Use SCIPcreateConsNonlinear instead.
+ *  @deprecated Use SCIPcreateConsBasicNonlinear() instead.
  */
-SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_RETCODE SCIPcreateConsBasicAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -116,9 +116,8 @@ SCIP_RETCODE SCIPcreateConsBasicAbspower(
 
 /** gets the absolute power constraint as a nonlinear row representation
  *
- *  @deprecated Use SCIPgetNlRowNonlinear instead.
+ *  @deprecated Use SCIPgetNlRowNonlinear)_ instead.
  */
-SCIP_EXPORT
 SCIP_DEPRECATED
 SCIP_RETCODE SCIPgetNlRowAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
