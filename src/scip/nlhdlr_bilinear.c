@@ -37,13 +37,12 @@
 #define MIN_INTERIORITY           0.01 /**< minimum interiority for a reference point for applying separation */
 #define MIN_ABSBOUNDSIZE          0.1  /**< minimum size of variable bounds for applying separation */
 
-#ifdef SCIP_STATISTIC
 /* properties of the bilinear nlhdlr statistics table */
-#define TABLE_NAME_BILINEAR                 "bilinear_nlhdlr"
+#define TABLE_NAME_BILINEAR                 "nlhdlr_bilinear"
 #define TABLE_DESC_BILINEAR                 "bilinear nlhdlr statistics table"
-#define TABLE_POSITION_BILINEAR             12500                  /**< the position of the statistics table */
-#define TABLE_EARLIEST_STAGE_BILINEAR       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
-#endif
+#define TABLE_POSITION_BILINEAR             14800                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_BILINEAR       SCIP_STAGE_INITSOLVE   /**< output of the statistics table is only printed from this stage onwards */
+
 
 /*
  * Data structures
@@ -932,7 +931,6 @@ void computeBilinEnvelope2(
    }
 }
 
-#ifdef SCIP_STATISTIC
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
@@ -963,7 +961,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
       SCIP_CALL( SCIPhashmapInsertInt(hashmap, nlhdlrdata->exprs[c], 0) );
    }
 
-   /* count in how many constraint each expression is contained */
+   /* count in how many constraints each expression is contained */
    for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
    {
       SCIP_CONS* cons = SCIPconshdlrGetConss(conshdlr)[c];
@@ -999,8 +997,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
    }
 
    /* print statistics */
-   SCIPinfoMessage(scip, file, "Bilinear Nlhdlr    : %10s %10s\n", "sumFound", "sumTotal");
-   SCIPinfoMessage(scip, file, "  %-17s:", "Bilinear Nlhdlr");
+   SCIPinfoMessage(scip, file, "Bilinear Nlhdlr    : %10s %10s\n", "#found", "#total");
+   SCIPinfoMessage(scip, file, "  %-17s:", "");
    SCIPinfoMessage(scip, file, " %10d", resfound);
    SCIPinfoMessage(scip, file, " %10d", restotal);
    SCIPinfoMessage(scip, file, "\n");
@@ -1011,7 +1009,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
 
    return SCIP_OKAY;
 }
-#endif
+
 
 /*
  * Callback methods of nonlinear handler
@@ -1497,13 +1495,11 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
          "maximum depth to apply separation",
          &nlhdlrdata->maxsepadepth, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 
-#ifdef SCIP_STATISTIC
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_BILINEAR) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BILINEAR, TABLE_DESC_BILINEAR, TRUE,
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BILINEAR, TABLE_DESC_BILINEAR, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputBilinear,
          NULL, TABLE_POSITION_BILINEAR, TABLE_EARLIEST_STAGE_BILINEAR) );
-#endif
 
    return SCIP_OKAY;
 }
