@@ -62,12 +62,12 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of cut selector */
       const char*        desc,               /**< description of cut selector */
-      int                priority,           /**< priority of the cut */
+      int                priority            /**< priority of the cut */
       )
       : scip_(scip),
         scip_name_(0),
         scip_desc_(0),
-        scip_priority_(priority),
+        scip_priority_(priority)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
