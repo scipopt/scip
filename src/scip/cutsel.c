@@ -377,6 +377,17 @@ SCIP_CUTSELDATA* SCIPcutselGetData(
    return cutsel->cutseldata;
 }
 
+/** sets user data of cut selector; user has to free old data in advance! */
+void SCIPcutselSetData(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_CUTSELDATA*      cutseldata          /**< new cut selector user data */
+)
+{
+   assert(cutsel != NULL);
+
+   cutsel->cutseldata = cutseldata;
+}
+
 /** gets priority of cut selector */
 int SCIPcutselGetPriority(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
