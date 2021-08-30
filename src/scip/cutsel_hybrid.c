@@ -127,7 +127,8 @@ SCIP_Real scoring(
          score += objparallelism + intsupport + efficacy;
 
          /* add small term to prefer global pool cuts */
-         score += SCIProwIsInGlobalCutpool(cuts[i]) ? 1e-4 : 0.0;
+         if( SCIProwIsInGlobalCutpool(cuts[i]) )
+            score += 1e-4;
 
          if( randnumgen != NULL )
          {
