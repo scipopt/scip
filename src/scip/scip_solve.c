@@ -73,6 +73,7 @@
 #include "scip/scip_concurrent.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_general.h"
+#include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -2460,6 +2461,7 @@ SCIP_RETCODE SCIPpresolve(
 
    /* reset the user interrupt flag */
    scip->stat->userinterrupt = FALSE;
+   SCIP_CALL( SCIPinterruptLP(scip, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -2663,6 +2665,7 @@ SCIP_RETCODE SCIPsolve(
 
    /* reset the user interrupt flag */
    scip->stat->userinterrupt = FALSE;
+   SCIP_CALL( SCIPinterruptLP(scip, FALSE) );
 
    /* automatic restarting loop */
    restart = scip->stat->userrestart;
