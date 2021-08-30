@@ -17,6 +17,7 @@
  * @ingroup SEPARATORS
  * @brief  reformulation-linearization technique separator
  * @author Fabian Wegscheider
+ * @author Ksenia Bestuzheva
  *
  *
  * This seperator generates a collection of cuts constructed by the reformulation-linearization technique (RLT).

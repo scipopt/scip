@@ -43,7 +43,7 @@
 #define SEPA_PRIORITY                10 /**< priority for separation */
 #define SEPA_FREQ                     0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define SEPA_MAXBOUNDDIST           1.0 /**< maximal relative distance from the current node's dual bound to primal bound
-+                                        *   compared to best node's dual bound for applying separation.*/
+                                         *   compared to best node's dual bound for applying separation.*/
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
@@ -160,7 +160,10 @@ typedef struct RLT_SimpleRow RLT_SIMPLEROW;
  * Local methods
  */
 
-/** returns TRUE iff both keys are equal; two variable pairs/triples are equal if the variables are equal */
+/** returns TRUE iff both keys are equal
+ *
+ * two variable pairs/triples are equal if the variables are equal
+ */
 static
 SCIP_DECL_HASHKEYEQ(hashdataKeyEqConss)
 {  /*lint --e{715}*/
@@ -223,7 +226,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValConss)
    return SCIPhashFour(hashdata->nvars, minidx, mididx, maxidx);
 }
 
-/* store a pair of adjacent variables */
+/** store a pair of adjacent variables */
 static
 SCIP_RETCODE addAdjacentVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -344,7 +347,7 @@ void clearVarAdjacency(
    }
 }
 
-/* free separator data */
+/** free separator data */
 static
 SCIP_RETCODE freeSepaData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -494,7 +497,7 @@ SCIP_RETCODE storeSuitableRows(
    return SCIP_OKAY;
 }
 
-/* make sure that the arrays in sepadata are large enough to store information on n variables */
+/** make sure that the arrays in sepadata are large enough to store information on n variables */
 static
 SCIP_RETCODE ensureVarsSize(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -614,21 +617,21 @@ SCIP_RETCODE addProductVars(
  *   a_1x + b_1w + c_1y \leq/\geq d_1,\\
  *   a_2x + b_2w + c_2y \leq/\geq d_2,
  * \f]
- * where \f$ a_1a_2 \leq 0 \f$ and the first implied relation is enabled when \f$ x == 1 \f$
- * and the second when \f$ x == 0 \f$, and \f$ b_1, b_2 > 0 \f$, the product relation can be written as:
+ * where \f$ a_1a_2 \leq 0 \f$ and the first implied relation is enabled when \f$ x = 1 \f$
+ * and the second when \f$ x = 0 \f$, and \f$ b_1, b_2 > 0 \f$, the product relation can be written as:
  * \f[
- *   \fraq{1}{b_1c_2 - c_1b_2}(b_1b_2w + (b_2(a_1 - d_1) + b_1d_2)x + b_1c_2y - b_1d_2) \leq/\geq xy.
+ *   \frac{b_1b_2w + (b_2(a_1 - d_1) + b_1d_2)x + b_1c_2y - b_1d_2}{b_1c_2 - c_1b_2} \leq/\geq xy.
  * \f]
  * The inequality sign in the product relation is similar to that in the given linear relations if
- * \f$ b1c2 - c1b2 > 0 \f$ and opposite if \f$ b1c2 - c1b2 > 0 \f$.
+ * \f$ b_1c_2 - c_1b_2 > 0 \f$ and opposite if \f$ b_1c_2 - c_1b_2 > 0 \f$.
  *
  * To obtain this formula, the given relations are first multiplied by scaling factors \f$ \alpha \f$
  * and \f$ \beta \f$, which is necessary in order for the solution to always exist, and written as
  * implications:
- * \f[
- *   x == 1 ~\Rightarrow~ \alpha b_1w + \alpha c_1y \leq/\geq \alpha(d_1 - a_1), \\
- *   x == 0 ~\Rightarrow~ \beta b_2w + \beta c_2y \leq/\geq \beta d_2,
- * \f]
+ * \f{align}{
+ *   x = 1 & ~\Rightarrow~ \alpha b_1w + \alpha c_1y \leq/\geq \alpha(d_1 - a_1), \\
+ *   x = 0 & ~\Rightarrow~ \beta b_2w + \beta c_2y \leq/\geq \beta d_2.
+ * \f}
  * Then a linear system is solved which ensures that the coefficients of the two implications of the product
  * relation are equal to the corresponding coefficients in the linear relations.
  * If the product relation is written as:
@@ -787,7 +790,7 @@ SCIP_RETCODE extractProducts(
    return SCIP_OKAY;
 }
 
-/** convert an implied bound: binvar == binval  =>  implvar <=/>= implbnd  into a big-M constraint */
+/** convert an implied bound: `binvar` = `binval`  &rArr;  `implvar` &le;/&ge; `implbnd` into a big-M constraint */
 static
 void implBndToBigM(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -834,7 +837,7 @@ void implBndToBigM(
 }
 
 /** extract products from a relation given by coefs1, vars, side1 and sidetype1 and
- *  implied bounds of the form binvar == !f => implvar >=/<= implbnd
+ *  implied bounds of the form `binvar` = `!f` &rArr; `implvar` &ge;/&le; `implbnd`
  */
 static
 SCIP_RETCODE detectProductsImplbnd(
@@ -899,8 +902,8 @@ SCIP_RETCODE detectProductsImplbnd(
    return SCIP_OKAY;
 }
 
-/** extract products from a relation given by coefs1, vars_xwy, side1 and sidetype1 and
- *  cliques containing vars_xwy[varpos1] and vars_xwy[varpos2]
+/** extract products from a relation given by `coefs1`, `vars_xwy`, `side1` and `sidetype1` and
+ *  cliques containing `vars_xwy[varpos1]` and `vars_xwy[varpos2]`
  */
 static
 SCIP_RETCODE detectProductsClique(
@@ -972,8 +975,8 @@ SCIP_RETCODE detectProductsClique(
 }
 
 
-/** extract products from a relation given by coefs1, vars, side1 and sidetype1 and unconditional relations
- * (inequalities with 2 nonzeros) containing vars[varpos1] and vars[varpos2]
+/** extract products from a relation given by `coefs1`, `vars`, `side1` and `sidetype1` and unconditional relations
+ * (inequalities with 2 nonzeros) containing `vars[varpos1]` and `vars[varpos2]`
  */
 static
 SCIP_RETCODE detectProductsUnconditional(
@@ -1061,7 +1064,7 @@ SCIP_RETCODE detectProductsUnconditional(
    return SCIP_OKAY;
 }
 
-/** finds and stores implied relations (x == f => ay + bw <= c, f can be 0 or 1) and 2-variable relations
+/** finds and stores implied relations (x = f &rArr; ay + bw &le; c, f can be 0 or 1) and 2-variable relations
  *
  *  Fills the following:
  *
@@ -1070,13 +1073,13 @@ SCIP_RETCODE detectProductsUnconditional(
  *   mapping variables to ADJACENTVARDATAs.
  *
  * - Hashtables storing hashdata objects with the two or three variables and the position of the first row in the
- *   prob_rows array, which in combination with the linked list (described below) will allow access to all rows that
+ *   `prob_rows` array, which in combination with the linked list (described below) will allow access to all rows that
  *   depend only on the corresponding variables.
  *
  * - Linked lists of row indices. Each list corresponds to a pair or triple of variables and contains positions of rows
- *   which depend only on those variables. All lists are stored in row_list, an array of length nrows, which is
- *   possible because each row belongs to at most one list. The array indices of row_list represent the positions of
- *   rows in prob_rows, and a value in the row_list array represents the next index in the list (-1 if there is no next
+ *   which depend only on those variables. All lists are stored in `row_list`, an array of length `nrows`, which is
+ *   possible because each row belongs to at most one list. The array indices of `row_list` represent the positions of
+ *   rows in `prob_rows`, and a value in the `row_list` array represents the next index in the list (-1 if there is no next
  *   list element). The first index of each list is stored in one of the hashdata objects as firstrow.
  */
 static
@@ -1206,7 +1209,7 @@ SCIP_RETCODE fillRelationTables(
    return SCIP_OKAY;
 }
 
-/* detect bilinear products encoded in linear constraints */
+/** detect bilinear products encoded in linear constraints */
 static
 SCIP_RETCODE detectHiddenProducts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1700,8 +1703,9 @@ SCIP_RETCODE createSepaData(
    return SCIP_OKAY;
 }
 
-/** get the positions of the most violated auxiliary under- and overestimators for each product; -1 means
- *  no relation with given product is violated
+/** get the positions of the most violated auxiliary under- and overestimators for each product
+ *
+ * -1 means no relation with given product is violated
  */
 static
 void getBestEstimators(
@@ -1802,8 +1806,9 @@ SCIP_RETCODE isAcceptableRow(
    return SCIP_OKAY;
 }
 
-/** adds coefficients and constant of an auxiliary expression;
- *  the variables the pointers are pointing to must already be initialised
+/** adds coefficients and constant of an auxiliary expression
+ *
+ *  the variables the pointers are pointing to must already be initialized
  */
 static
 void addAuxexprCoefs(
@@ -1842,9 +1847,9 @@ void addAuxexprCoefs(
    *cst += coef * auxexpr->cst;
 }
 
-/** add a linear term coef*colvar multiplied by a bound factor (var - lb(var)) or (ub(var) - var)
+/** add a linear term `coef`*`colvar` multiplied by a bound factor (var - lb(var)) or (ub(var) - var)
  *
- *  adds the linear term with colvar to cut and updates coefvar and cst
+ *  adds the linear term with `colvar` to `cut` and updates `coefvar` and `cst`
  */
 static
 SCIP_RETCODE addRltTerm(
@@ -2078,12 +2083,12 @@ SCIP_RETCODE addRltTerm(
 
 /** creates the RLT cut formed by multiplying a given row with (x - lb) or (ub - x)
  *
- * in detail:
- * - The row is multiplied either with (x - lb(x)) or with (ub(x) - x), depending on parameter uselb, or by x if
+ * In detail:
+ * - The row is multiplied either with (x - lb(x)) or with (ub(x) - x), depending on parameter `uselb`, or by x if
  *   this is an equality cut
- * - The (inequality) cut is computed either for lhs or rhs, depending on parameter uselhs.
- * - Terms for which no auxiliary variable and no clique relation exists are replaced by either McCormick, secants
- *   or gradient linearization cuts
+ * - The (inequality) cut is computed either for lhs or rhs, depending on parameter `uselhs`.
+ * - Terms for which no auxiliary variable and no clique relation exists are replaced by either McCormick, secants,
+ *   or gradient linearization cuts.
  */
 static
 SCIP_RETCODE computeRltCut(
@@ -2420,9 +2425,9 @@ void freeProjRows(
 /** mark a row for rlt cut selection
  *
  * depending on the sign of the coefficient and violation, set or update mark which cut is required:
- * 1 - cuts for axy < aw case,
- * 2 - cuts for axy > aw case,
- * 3 - cuts for both cases
+ * - 1 - cuts for axy < aw case,
+ * - 2 - cuts for axy > aw case,
+ * - 3 - cuts for both cases
  */
 static
 void addRowMark(
@@ -2470,7 +2475,7 @@ void addRowMark(
    }
 }
 
-/* mark all rows that should be multiplied by xj */
+/** mark all rows that should be multiplied by xj */
 static
 SCIP_RETCODE markRowsXj(
    SCIP*                 scip,               /**< SCIP data structure */

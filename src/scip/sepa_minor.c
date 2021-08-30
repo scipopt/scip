@@ -537,7 +537,7 @@ SCIP_RETCODE getEigenValues(
    return SCIP_OKAY;
 }
 
-/** helper generate and add a cut */
+/** generate and add a cut */
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
