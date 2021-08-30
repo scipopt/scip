@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -413,7 +413,14 @@ SCIP_RETCODE SCIPprintStage(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "presolving is being exited");
       break;
    case SCIP_STAGE_PRESOLVED:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "problem is presolved");
+      if( SCIPsolveIsStopped(scip->set, scip->stat, TRUE) )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "solving was interrupted [");
+         SCIP_CALL( SCIPprintStatus(scip, file) );
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "]");
+      }
+      else
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "problem is presolved");
       break;
    case SCIP_STAGE_INITSOLVE:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "solving process initialization");
@@ -746,7 +753,7 @@ int SCIPgetNExternalCodes(
    return scip->set->nextcodes;
 }
 
-/** prints information on external codes to a file stream via the message handler system
+/** prints information on external libraries to a file stream via the message handler system
  *
  *  @note If the message handler is set to a NULL pointer nothing will be printed
  */
@@ -757,7 +764,7 @@ void SCIPprintExternalCodes(
 {
    int i;
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "External codes: ");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "External libraries: ");
    if( scip->set->nextcodes == 0 )
    {
       SCIPinfoMessage(scip, file, "none\n");

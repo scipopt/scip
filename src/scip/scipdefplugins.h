@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -78,6 +78,7 @@
 #include "scip/cons_xor.h"
 #include "scip/cons_components.h"
 #include "scip/disp_default.h"
+#include "scip/dialog_default.h"
 #include "scip/event_estim.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
@@ -211,6 +212,7 @@
 #include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_intobj.h"
 #include "scip/sepa_mcf.h"
+#include "scip/sepa_mixing.h"
 #include "scip/sepa_oddcycle.h"
 #include "scip/sepa_rapidlearning.h"
 #include "scip/sepa_strongcg.h"

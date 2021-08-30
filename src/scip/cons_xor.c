@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -502,7 +502,7 @@ SCIP_RETCODE consdataPrint(
    SCIP_CALL( SCIPwriteVarsList(scip, file, consdata->vars, consdata->nvars, TRUE, ',') );
 
    /* close variable list and write right hand side */
-   SCIPinfoMessage(scip, file, ") = %d", consdata->rhs);
+   SCIPinfoMessage(scip, file, ") = %u", consdata->rhs);
 
    /* write integer variable if it exists */
    if( consdata->intvar != NULL )
@@ -5036,7 +5036,7 @@ SCIP_DECL_CONSCHECK(consCheckXor)
 
             if( consdata->intvar != NULL )
             {
-               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE but integer variable has value of %g\n", SCIPgetSolVal(scip, sol, consdata->intvar));
+               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE but integer variable has value of %g\n", sum, SCIPgetSolVal(scip, sol, consdata->intvar));
             }
             else
             {

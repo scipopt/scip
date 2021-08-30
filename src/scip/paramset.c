@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,7 +89,7 @@ SCIP_RETCODE paramTestBool(
 
    if( value != TRUE && value != FALSE )
    {
-      SCIPerrorMessage("Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n", value, param->name);
+      SCIPerrorMessage("Invalid value <%u> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n", value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -176,7 +176,7 @@ SCIP_RETCODE paramTestChar(
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
-      SCIPerrorMessage("Invalid value <%x> for char parameter <%s>.\n", (int)value, param->name);
+      SCIPerrorMessage("Invalid value <%d> for char parameter <%s>.\n", (int)value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -223,7 +223,7 @@ SCIP_RETCODE paramTestString(
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
       {
-         SCIPerrorMessage("Invalid character <%x> in string parameter <%s> at position %d.\n", (int)value[i], param->name, i);
+         SCIPerrorMessage("Invalid character <%d> in string parameter <%s> at position %u.\n", (int)value[i], param->name, i);
          return SCIP_PARAMETERWRONGVAL;
       }
    }

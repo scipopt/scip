@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,6 +60,11 @@
  *    gives a point outside the region, we do not separate. The reason is that the interior point we computed could be
  *    almost at the boundary and the segment \f$[\bar x, x_0]\f$ could be tangent to the region. In that case, the cuts
  *    we generate will not separate \f$ x_0 \f$ from the feasible region.
+ *
+ * This callback is currently disabled by default. It requires additional
+ * tuning to be enabled by default. However, it may be useful to enable
+ * it on instances with convex nonlinear constraints if SCIP spends
+ * many iterations in the separation loop without doing sufficient progress.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

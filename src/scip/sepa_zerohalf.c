@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2163,7 +2163,7 @@ SCIP_RETCODE doSeparation(
    SCIP_SOL*             sol,
    SCIP_RESULT*          result,
    SCIP_Bool             allowlocal,
-   int                   depth               /**< current depth */
+   int                   depth               /* current depth */
    )
 {
    int i;

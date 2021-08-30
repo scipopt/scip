@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1064,6 +1064,9 @@ SCIP_RETCODE SCIPnodeFree(
 
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
+   /* check lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
+
    if( SCIPnodeGetType(*node) != SCIP_NODETYPE_PROBINGNODE )
    {
       SCIP_EVENT event;
@@ -1856,7 +1859,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub))
          || (boundtype == SCIP_BOUNDTYPE_UPPER && newbound < oldub && newbound * oldub <= 0.0));
 
-   SCIPsetDebugMsg(set, "adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
+   SCIPsetDebugMsg(set, "adding boundchange at node %" SCIP_LONGINT_FORMAT " at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
       node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, infercons != NULL ? "cons" : "prop",
       infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo);
@@ -4338,6 +4341,12 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(conflictstore != NULL);
    assert(cutoff != NULL);
 
+   /* check global lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
+
+   /* check local lower bound w.r.t. debugging solution */
+   SCIP_CALL( SCIPdebugCheckLocalLowerbound(blkmem, set, *node) );
+
    SCIPsetDebugMsg(set, "focusing node #%" SCIP_LONGINT_FORMAT " of type %d in depth %d\n",
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
       *node != NULL ? SCIPnodeGetDepth(*node) : -1);
@@ -5487,7 +5496,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
    {
-      SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
+      SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
@@ -5973,7 +5982,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
    {
-      SCIPerrorMessage("Cannot branch on continuous variables without a given branching value.\n", SCIPvarGetName(var));
+      SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
@@ -7556,7 +7565,7 @@ void SCIPnodeGetNDomchg(
       for( i = 0; i < (int) node->domchg->domchgbound.nboundchgs; i++ )
       {
          if( count_branchings && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
-            (*nbranchings)++;
+            (*nbranchings)++; /*lint !e413*/
          else if( count_consprop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
             (*nconsprop)++; /*lint !e413*/
          else if( count_prop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER )
@@ -7680,10 +7689,10 @@ void SCIPnodeGetDualBoundchgs(
       j = 0;
       for( i = i+1; i < nboundchgs; i++)
       {
-         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
          if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
           || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
          {
+            assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                   && boundchgs[i].data.inferencedata.reason.cons == NULL)
              || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER

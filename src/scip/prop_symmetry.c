@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -185,8 +185,7 @@
 /* default parameters for orbital fixing */
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
-#define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
-#define DEFAULT_DISABLEOFRESTART    FALSE    /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
+#define DEFAULT_RECOMPUTERESTART        0    /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if OF found reduction) */
 
 /* default parameters for Schreier Sims constraints */
 #define DEFAULT_SSTTIEBREAKRULE   1          /**< index of tie break rule for selecting orbit for Schreier Sims constraints? */
@@ -309,14 +308,13 @@ struct SCIP_PropData
    int*                  permvarsevents;     /**< stores events caught for permvars */
    SCIP_Shortbool*       inactiveperms;      /**< array to store whether permutations are inactive */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
-   SCIP_Bool             recomputerestart;   /**< Recompute symmetries after a restart has occured? */
+   int                   recomputerestart;   /**< Recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if OF found reduction) */
    int                   ofsymcomptiming;    /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
    SCIP_Bool             offoundreduction;   /**< whether orbital fixing has found a reduction since the last time computing symmetries */
-   SCIP_Bool             disableofrestart;   /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 
    /* data necessary for Schreier Sims constraints */
    SCIP_Bool             sstenabled;         /**< Use Schreier Sims constraints? */
@@ -1183,7 +1181,7 @@ SCIP_RETCODE collectCoefficients(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matrhsidx), matrixdata->nmaxmatcoef, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matvaridx), matrixdata->nmaxmatcoef, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(matrixdata->matcoef), matrixdata->nmaxmatcoef, newsize) );
-      SCIPdebugMsg(scip, "Resized matrix coefficients from %u to %d.\n", matrixdata->nmaxmatcoef, newsize);
+      SCIPdebugMsg(scip, "Resized matrix coefficients from %d to %d.\n", matrixdata->nmaxmatcoef, newsize);
       matrixdata->nmaxmatcoef = newsize;
    }
 
@@ -1346,7 +1344,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    int j;
    int p;
 
-   SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %u).\n", nperms);
+   SCIPdebugMsg(scip, "Checking whether symmetries are symmetries (generators: %d).\n", nperms);
 
    /* set up dense row for permuted row */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &permrow, matrixdata->npermvars) );
@@ -2500,21 +2498,16 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
-   /* if a restart occured, either disable orbital fixing... */
-   if ( propdata->offoundreduction && propdata->disableofrestart  && SCIPgetNRuns(scip) > propdata->lastrestart )
-      propdata->ofenabled = FALSE;
-   /* ... or free symmetries after a restart to recompute them later */
-   else if ( (propdata->offoundreduction || propdata->recomputerestart)
-      && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
+   /* if a restart occured, possibly prepare symmetry data to be recomputed */
+   if ( SCIPgetNRuns(scip) > propdata->lastrestart && (propdata->recomputerestart == SCIP_RECOMPUTESYM_ALWAYS ||
+         (propdata->recomputerestart == SCIP_RECOMPUTESYM_OFFOUNDRED && propdata->offoundreduction)) )
    {
-      assert( propdata->npermvars > 0 );
-      assert( propdata->permvars != NULL );
-      assert( ! propdata->ofenabled || propdata->permvarmap != NULL );
-      assert( ! propdata->ofenabled || propdata->bg0list != NULL );
-
       /* reset symmetry information */
       SCIP_CALL( delSymConss(scip, propdata) );
       SCIP_CALL( freeSymmetryData(scip, propdata) );
+
+      propdata->lastrestart = SCIPgetNRuns(scip);
+      propdata->offoundreduction = FALSE;
    }
 
    /* skip computation if symmetry has already been computed */
@@ -2612,7 +2605,7 @@ SCIP_RETCODE determineSymmetry(
    if ( maxgenerators == 0 )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "-");
    else
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%u", maxgenerators);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%d", maxgenerators);
 
    /* display statistics: log10 group size, number of affected vars*/
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.1f", propdata->log10groupsize);
@@ -2741,8 +2734,8 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-   /* set up data for Schreier Sims constraints */
-   if ( propdata->sstenabled && ! propdata->ofenabled )
+   /* set up data for Schreier Sims constraints or subgroup detection */
+   if ( (propdata->sstenabled || propdata->detectsubgroups) && ! propdata->ofenabled )
    {
       int v;
 
@@ -2865,6 +2858,10 @@ SCIP_RETCODE determineSymmetry(
  *  If @p activevars == NULL, then the function assumes all permutations of the component are active and therefore all
  *  moved vars are considered.
  *
+ *  We need to keep track of the number of generatored columns, because we might not be able to detect all orbitopes.
+ *  For example (1,2), (2,3), (3,4), (3,5) defines the symmetric group on {1,2,3,4,5}, but the generators we expect
+ *  in our construction need shape (1,2), (2,3), (3,4), (4,5).
+ *
  *  @pre @p orbitopevaridx has to be an initialized 2D array of size @p ntwocycles x @p nperms
  *  @pre @p columnorder has to be an initialized array of size nperms
  *  @pre @p nusedelems has to be an initialized array of size npermvars
@@ -2881,10 +2878,10 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    int**                 orbitopevaridx,     /**< pointer to store variable index matrix */
    int*                  columnorder,        /**< pointer to store column order */
    int*                  nusedelems,         /**< pointer to store how often each element was used */
+   int*                  nusedcols,          /**< pointer to store numer of columns used in orbitope (or NULL) */
    SCIP_Shortbool*       rowisbinary,        /**< pointer to store which rows are binary (or NULL) */
    SCIP_Bool*            isorbitope,         /**< buffer to store result */
-   SCIP_Shortbool*       activevars,         /**< bitset to store whether a variable is active (or NULL) */
-   int                   nactivevars         /**< number of active vars (if activevars not NULL) */
+   SCIP_Shortbool*       activevars          /**< bitset to store whether a variable is active (or NULL) */
    )
 {  /*lint --e{571}*/
    SCIP_Bool* usedperm;
@@ -2910,6 +2907,8 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    assert( activevars == NULL || (0 <= nactiveperms && nactiveperms < npermvars) );
 
    *isorbitope = TRUE;
+   if ( nusedcols != NULL )
+      *nusedcols = 0;
 
    /* whether a permutation was considered to contribute to orbitope */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &usedperm, nactiveperms) );
@@ -2954,7 +2953,14 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
 
       ++ntestedperms;
    }
-   assert( row == ntwocycles );
+
+   /* in the subgroup case it might happen that a generator has less than ntwocycles many 2-cyles */
+   if ( row < ntwocycles )
+   {
+      *isorbitope = FALSE;
+      SCIPfreeBufferArray(scip, &usedperm);
+      return SCIP_OKAY;
+   }
 
    usedperm[ntestedperms - 1] = TRUE;
    ++nusedperms;
@@ -3035,7 +3041,9 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    if ( activevars == NULL && nusedperms < nactiveperms ) /*lint !e850*/
       *isorbitope = FALSE;
 
-   assert( activevars == NULL || nusedperms == nactivevars / ntwocycles - 1 );
+   if ( nusedcols != NULL )
+      *nusedcols = nfilledcols;
+   assert( ! *isorbitope || activevars == NULL || nusedperms < nfilledcols );
 
    SCIPfreeBufferArray(scip, &usedperm);
 
@@ -3419,6 +3427,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    SCIP_Bool isorbitope;
    SCIP_Bool infeasible = FALSE;
    int nactivevars = 0;
+   int ngencols = 0;
    int k;
 
    assert( scip != NULL );
@@ -3480,10 +3489,18 @@ SCIP_RETCODE addOrbitopeSubgroup(
    }
    assert( nactivevars == nrows * ncols );
 
-   /* build the variable index matrix for the orbitope */
+   /* build the variable index matrix for the orbitope
+    *
+    * It is possible that we find an orbitope, but not using all possible columns. For example
+    * (1,2), (2,3), (3,4), (3,5) defines the symmetric group on {1,2,3,4,5}, but the generators
+    * we expect in our construction need shape (1,2), (2,3), (3,4), (4,5). For this reason,
+    * we need to store how many columns have been generated.
+    *
+    * @todo ensure compatibility with more general generators
+    */
    SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata->permvars, propdata->npermvars,
          propdata->perms, usedperms, nrows, nusedperms, orbitopevaridx, columnorder,
-         nusedelems, NULL, &isorbitope, activevars, nactivevars) );
+         nusedelems, &ngencols, NULL, &isorbitope, activevars) );
 
    /* it might happen that we cannot detect the orbitope if it is generated by permutations with different
     *  number of 2-cycles.
@@ -3510,8 +3527,8 @@ SCIP_RETCODE addOrbitopeSubgroup(
     */
    if ( firstvaridx != NULL )
    {
-      if ( columnorder[ncols-1] > -1 )
-         *firstvaridx = orbitopevaridx[0][ncols-1];
+      if ( columnorder[ngencols-1] > -1 )
+         *firstvaridx = orbitopevaridx[0][ngencols-1];
       else
          *firstvaridx = orbitopevaridx[0][1];
    }
@@ -3533,6 +3550,9 @@ SCIP_RETCODE addOrbitopeSubgroup(
          if ( ! SCIPvarIsBinary(firstvar) )
             continue;
 
+         /* iterate over all columns (elements in orbit), because we cannot see from ngencols which columns
+          * have been left out
+          */
          for (l = 0; l < ncols; ++l)
          {
             if ( graphcomponents[compstart + l] == *firstvaridx )
@@ -3549,11 +3569,11 @@ SCIP_RETCODE addOrbitopeSubgroup(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nrows) );
    for (k = 0; k < nrows; ++k)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix[k], ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix[k], ngencols) );
    }
 
    /* build the matrix containing the actual variables of the orbitope */
-   SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(scip, &orbitopevarmatrix, nrows, ncols,
+   SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(scip, &orbitopevarmatrix, nrows, ngencols,
          propdata->permvars, propdata->npermvars, orbitopevaridx, columnorder,
          nusedelems, NULL, &infeasible, TRUE, lexorder, nvarslexorder, maxnvarslexorder) );
 
@@ -3563,7 +3583,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "suborbitope_%d_%d", graphcoloridx, propdata->norbitopes);
 
    SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopevarmatrix,
-         SCIP_ORBITOPETYPE_FULL, nrows, ncols, FALSE, mayinteract, FALSE, FALSE, propdata->conssaddlp,
+         SCIP_ORBITOPETYPE_FULL, nrows, ngencols, FALSE, mayinteract, FALSE, FALSE, propdata->conssaddlp,
          TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -4107,7 +4127,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int nusedperms;
       int ntrivialcolors = 0;
       int j;
-      SCIP_Bool useorbitope;
       int* lexorder = NULL;
       int nvarslexorder = 0;
       int maxnvarslexorder = 0;
@@ -4268,6 +4287,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          int k;
          SCIP_Bool isorbitope = TRUE;
          SCIP_Bool orbitopeadded = FALSE;
+         SCIP_Bool useorbitope;
 #ifdef SCIP_DEBUG
          SCIP_Bool binaffected = FALSE;
          SCIP_Bool intaffected = FALSE;
@@ -4750,7 +4770,7 @@ SCIP_RETCODE detectOrbitopes(
       /* check if the permutations fulfill properties of an orbitope */
       SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, permvars, npermvars, perms,
             &(components[componentbegins[i]]), ntwocyclescomp, npermsincomponent,
-            orbitopevaridx, columnorder, nusedelems, rowisbinary, &isorbitope, NULL, 0) );
+            orbitopevaridx, columnorder, nusedelems, NULL, rowisbinary, &isorbitope, NULL) );
 
       if ( ! isorbitope )
          goto FREEDATASTRUCTURES;
@@ -7253,10 +7273,10 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "run orbital fixing during presolving?",
          &propdata->performpresolving, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/recomputerestart",
-         "recompute symmetries after a restart has occured?",
-         &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
+         "recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if OF found reduction)",
+         &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/compresssymmetries",
@@ -7318,11 +7338,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/sstmixedcomponents",
          "Should Schreier Sims constraints be added if a symmetry component contains variables of different types?",
          &propdata->sstmixedcomponents, TRUE, DEFAULT_SSTMIXEDCOMPONENTS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/disableofrestart",
-         "Shall orbital fixing be disabled if orbital fixing has found a reduction and a restart occurs?",
-         &propdata->disableofrestart, TRUE, DEFAULT_DISABLEOFRESTART, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/symfixnonbinaryvars",

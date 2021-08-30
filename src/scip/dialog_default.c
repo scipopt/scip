@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -323,8 +323,10 @@ SCIP_DECL_DIALOGCOPY(dialogCopyDefault)
    assert(scip != NULL);
    assert(dialog != NULL);
 
-   /* call inclusion method of dialog */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
+   /* call inclusion method of basic dialog entries
+    * "set" and "fix" dialog entries will be added when SCIPstartInteraction() is called on target SCIP
+    */
+   SCIP_CALL( SCIPincludeDialogDefaultBasic(scip) );
 
    return SCIP_OKAY;
 }
@@ -3757,13 +3759,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
             else
             {
                SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "finite solution could not be created\n");
-               SCIPdialogMessage(scip, NULL, "finite solution could not be created\n", filename);
+               SCIPdialogMessage(scip, NULL, "finite solution could not be created\n");
             }
          }
          else
          {
             SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no solution available\n");
-            SCIPdialogMessage(scip, NULL, "no solution available\n", filename);
+            SCIPdialogMessage(scip, NULL, "no solution available\n");
          }
 
          fclose(file);
@@ -3957,8 +3959,8 @@ SCIP_RETCODE SCIPcreateRootDialog(
 }
 
 
-/** includes or updates the default dialog menus in SCIP */
-SCIP_RETCODE SCIPincludeDialogDefault(
+/** includes or updates the default dialog menus in SCIP except for menus "fix" and "set" */
+SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -4523,12 +4525,6 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-
-   /* set */
-   SCIP_CALL( SCIPincludeDialogDefaultSet(scip) );
-
-   /* fix */
-   SCIP_CALL( SCIPincludeDialogDefaultFix(scip) );
 
    /* write */
    if( !SCIPdialogHasEntry(root, "write") )

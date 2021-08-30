@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -163,7 +163,7 @@ SCIP_RETCODE constructCompression(
       nleaveids = SCIPgetNReoptLeaves(scip, currentnode);
    }
 
-   SCIPdebugMsg(scip, ">> start <%s> at node %llu (nleaves: %d, depth: %d)\n", COMPR_NAME,
+   SCIPdebugMsg(scip, ">> start <%s> at node %" SCIP_LONGINT_FORMAT " (nleaves: %d, depth: %d)\n", COMPR_NAME,
       SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVED ? 0 : SCIPnodeGetNumber(SCIPgetCurrentNode(scip)),
       nleaveids, SCIPgetStage(scip) <= SCIP_STAGE_PRESOLVED ? 0 : SCIPnodeGetDepth(currentnode));
 

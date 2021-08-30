@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -104,6 +104,15 @@ enum SCIP_OrbitopeType
    SCIP_ORBITOPETYPE_PACKING      = 2        /**< constraint is a packing orbitope constraint:      rowsum(x) <= 1 */
 };
 typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
+
+/** conditions to recompute symmetries after a restart */
+enum SCIP_RecomputesymType
+{
+   SCIP_RECOMPUTESYM_NEVER         = 0,       /**< never recompute symmetries */
+   SCIP_RECOMPUTESYM_ALWAYS        = 1,       /**< always recompute symmetries */
+   SCIP_RECOMPUTESYM_OFFOUNDRED    = 2        /**< only if orbital fixing found a reduction in previous run */
+};
+typedef enum SCIP_RecomputesymType SCIP_RECOMPUTESYMTYPE;
 
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -6692,7 +6692,7 @@ void SCIPprofilePrint(
 {
    int t;
 
-   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", profile, profile->capacity);
+   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", (void*)profile, profile->capacity);
 
    for( t = 0; t < profile->ntimepoints; ++t )
    {

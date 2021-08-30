@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -382,6 +382,7 @@ SCIP_RETCODE SCIPexprAddToLinear(
    );
 
 /** creates a SCIP_EXPR_QUADRATIC expression: constant + sum_i coef_i child_i + sum_i coef_i child1_i child2_i */
+SCIP_EXPORT
 SCIP_RETCODE SCIPexprCreateQuadratic(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */

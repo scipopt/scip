@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,11 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   initlp.c
- * @brief  unit test for checking behaviour of the initlp callback
+/**@file   slack.c
+ * @brief  unit test for checking slack models
  *
- * TODO: how to specify the path of the file?
- * What should the test actually test?
+ * test the solution of a slack model minizing the violation of constraints and/or variable bounds
+ *
  *
  */
 

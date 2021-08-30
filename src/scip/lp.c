@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -10103,6 +10103,22 @@ SCIP_RETCODE SCIPlpFreeState(
    return SCIP_OKAY;
 }
 
+/** interrupts the currently ongoing lp solve, or disables the interrupt */
+SCIP_RETCODE SCIPlpInterrupt(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{
+   assert(lp != NULL);
+
+   if( lp->lpi == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPlpiInterrupt(lp->lpi, interrupt) );
+
+   return SCIP_OKAY;
+}
+
 /** stores pricing norms into LP norms object */
 SCIP_RETCODE SCIPlpGetNorms(
    SCIP_LP*              lp,                 /**< LP data */
@@ -12541,7 +12557,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") solution of LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%d, dfeas=%d) -- solving again without FASTMIP\n",
+                  "(node %" SCIP_LONGINT_FORMAT ") solution of LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%u, dfeas=%u) -- solving again without FASTMIP\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                fastmip = 0;
                goto SOLVEAGAIN;
@@ -12552,7 +12568,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * tolerance
                 */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") solution of LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%d, dfeas=%d) -- solving again with tighter feasibility tolerance\n",
+                  "(node %" SCIP_LONGINT_FORMAT ") solution of LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%u, dfeas=%u) -- solving again with tighter feasibility tolerance\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                tightprimfeastol = tightprimfeastol || !primalfeasible;
                tightdualfeastol = tightdualfeastol || !dualfeasible;
@@ -12562,7 +12578,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again from scratch */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") solution of LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%d, dfeas=%d) -- solving again from scratch\n",
+                  "(node %" SCIP_LONGINT_FORMAT ") solution of LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%u, dfeas=%u) -- solving again from scratch\n",
                   stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                fromscratch = TRUE;
                goto SOLVEAGAIN;
@@ -12688,7 +12704,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* unbounded solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") solution of unbounded LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%d, rfeas=%d) -- solving again without FASTMIP\n",
+                  "(node %" SCIP_LONGINT_FORMAT ") solution of unbounded LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%u, rfeas=%u) -- solving again without FASTMIP\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                fastmip = 0;
                goto SOLVEAGAIN;
@@ -12699,7 +12715,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                 * tolerance
                 */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") solution of unbounded LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%d, rfeas=%d) -- solving again with tighter primal feasibility tolerance\n",
+                  "(node %" SCIP_LONGINT_FORMAT ") solution of unbounded LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%u, rfeas=%u) -- solving again with tighter primal feasibility tolerance\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                tightprimfeastol = TRUE;
                goto SOLVEAGAIN;
@@ -12708,7 +12724,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                /* unbounded solution is infeasible (this can happen due to numerical problems): solve again from scratch */
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") solution of unbounded LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%d, rfeas=%d) -- solving again from scratch\n",
+                  "(node %" SCIP_LONGINT_FORMAT ") solution of unbounded LP %" SCIP_LONGINT_FORMAT " not optimal (pfeas=%u, rfeas=%u) -- solving again from scratch\n",
                   stat->nnodes, stat->nlps, primalfeasible, rayfeasible);
                fromscratch = TRUE;
                goto SOLVEAGAIN;
@@ -13018,7 +13034,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          /* make sure that we evaluate the time limit exactly in order to avoid erroneous warning */
          stat->nclockskipsleft = 0;
-         if( !SCIPsolveIsStopped(set, stat, FALSE) )
+         if( !stat->userinterrupt && !SCIPsolveIsStopped(set, stat, FALSE) )
          {
             SCIPmessagePrintWarning(messagehdlr, "LP solver reached time limit, but SCIP time limit is not exceeded yet; "
                "you might consider switching the clock type of SCIP\n");
@@ -14963,7 +14979,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid  or NULL */
+   SCIP_Bool*            valid               /**< pointer to store whether the Farkas proof is valid or NULL */
    )
 {
    SCIP_COL** lpicols;
@@ -15043,7 +15059,8 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
             SCIPsetDebugMsg(set, "farkas proof is invalid: row <%s>[lhs=%g,rhs=%g,c=%g] has multiplier %g\n",
                SCIProwGetName(lpirows[r]), lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->constant, dualfarkas[r]);
 
-            *valid = FALSE; /*lint !e613*/
+            if( valid != NULL )
+               *valid = FALSE;
 
             goto TERMINATE;
          }
@@ -15118,7 +15135,8 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    {
       SCIPsetDebugMsg(set, "farkas proof is invalid: maxactivity=%.12f, lhs=%.12f\n", maxactivity, farkaslhs);
 
-      *valid = FALSE; /*lint !e613*/
+      if( valid != NULL )
+         *valid = FALSE;
    }
 
   TERMINATE:

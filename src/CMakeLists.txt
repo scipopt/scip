@@ -1,5 +1,3 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 #
 # interface function for setting common library properties
 #
@@ -11,13 +9,18 @@ endfunction(setLibProperties)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
+set(CMAKE_C_EXTENSIONS OFF)
+
+if(NOT WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=600")
+endif()
 
 #configure the scipbuildflags.c source file for the build tree
 configure_file(${PROJECT_SOURCE_DIR}/src/scipbuildflags.c.in
-  "${CMAKE_BINARY_DIR}/scipbuildflag.c" @ONLY)
+  "${PROJECT_BINARY_DIR}/scipbuildflag.c" @ONLY)
 
 set(scipsources
-    ${CMAKE_BINARY_DIR}/scipbuildflag.c
+    ${PROJECT_BINARY_DIR}/scipbuildflag.c
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
@@ -213,6 +216,7 @@ set(scipsources
     scip/sepa_impliedbounds.c
     scip/sepa_intobj.c
     scip/sepa_mcf.c
+    scip/sepa_mixing.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
@@ -778,6 +782,7 @@ set(scipheaders
     scip/sepa_impliedbounds.h
     scip/sepa_intobj.h
     scip/sepa_mcf.h
+    scip/sepa_mixing.h
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
     scip/sepastore.h
@@ -962,6 +967,7 @@ add_library(liblpi EXCLUDE_FROM_ALL
 setLibProperties(liblpi "lpi")
 
 add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
+
 if(MSVC)
    # msvc otherwise is not smart enough and tries to link the scip.exe binary as a library
    setLibProperties(libscip "libscip")
@@ -969,8 +975,13 @@ else()
    setLibProperties(libscip "scip")
 endif()
 
+target_include_directories(libscip PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>)
+
 target_link_libraries(libscip PRIVATE
-    ${ZLIB_LIBRARIES}
+    $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
@@ -991,8 +1002,11 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
+add_executable(SCIP::SCIP ALIAS scip)
+add_library(SCIP::libscip ALIAS libscip)
+
 include(GenerateExportHeader)
-generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/scip/scip_export.h)
+generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/scip/scip_export.h)
 target_compile_definitions(scip PRIVATE SCIP_STATIC_DEFINE)
 
 if(CMAKE_BUILD_TYPE EQUAL "Debug")
@@ -1000,8 +1014,16 @@ if(CMAKE_BUILD_TYPE EQUAL "Debug")
     add_sanitizers(scip)
 endif()
 
-target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES} ${PAPILO_IMPORTED_TARGETS})
+target_link_libraries(scip
+   $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
+   ${Readline_LIBRARY}
+   ${GMP_LIBRARIES}
+   ${ZIMPL_LIBRARIES}
+   ${LPS_LIBRARIES}
+   ${SYM_LIBRARIES}
+   ${THREAD_LIBRARIES}
+   ${NLPI_LIBRARIES}
+   ${PAPILO_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
@@ -1010,6 +1032,11 @@ set_target_properties(libscip PROPERTIES
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
     SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
     INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+target_include_directories(scip PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>)
 
 # set the install rpath to the installed destination
 set_target_properties(scip PROPERTIES
@@ -1021,7 +1048,7 @@ install(FILES ${lpiheaders} DESTINATION include/lpi)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
 install(FILES ${nlpiheaders} DESTINATION include/nlpi)
 install(FILES ${objscipheaders} DESTINATION include/objscip)
-install(FILES ${scipheaders} ${CMAKE_BINARY_DIR}/scip/config.h ${CMAKE_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
+install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
 install(FILES ${tcliqueheaders} DESTINATION include/tclique)
 install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)
@@ -1038,7 +1065,7 @@ install(TARGETS scip libscip EXPORT scip-targets
 
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip
-  FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
+  FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 #make soplex and zimpl dir absolute for the config file
 if(SOPLEX_NEEDED)
@@ -1050,13 +1077,13 @@ if(ZIMPL_NEEDED)
 endif()
 
 #configure the config file for the build tree
-set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${PROJECT_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
-  "${CMAKE_BINARY_DIR}/scip-config.cmake" @ONLY)
+  "${PROJECT_BINARY_DIR}/scip-config.cmake" @ONLY)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-${CMAKE_BINARY_DIR}/scip-config-version.cmake
+${PROJECT_BINARY_DIR}/scip-config-version.cmake
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
     COMPATIBILITY SameMajorVersion
     )
@@ -1076,5 +1103,5 @@ configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
 # can link easily against scip
 install(EXPORT scip-targets DESTINATION lib/cmake/scip)
 install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
-              ${CMAKE_BINARY_DIR}/scip-config-version.cmake
+              ${PROJECT_BINARY_DIR}/scip-config-version.cmake
         DESTINATION lib/cmake/scip)

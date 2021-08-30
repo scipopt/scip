@@ -40,8 +40,8 @@
 #define GOODSCORE                 0.9
 #define BADSCORE                  0.0
 
-#define DEFAULT_EFFICACYWEIGHT          0.6  /**< weight of efficacy in score calculation */
-#define DEFAULT_DIRCUTOFFDISTWEIGHT     0.5  /**< weight of directed cutoff distance in score calculation */
+#define DEFAULT_EFFICACYWEIGHT          1.0  /**< weight of efficacy in score calculation */
+#define DEFAULT_DIRCUTOFFDISTWEIGHT     0.0  /**< weight of directed cutoff distance in score calculation */
 #define DEFAULT_OBJPARALWEIGHT          0.1  /**< weight of objective parallelism in score calculation */
 #define DEFAULT_INTSUPPORTWEIGHT        0.1  /**< weight of integral support in cut score calculation */
 #define DEFAULT_MINORTHO                0.90 /**< minimal orthogonality for a cut to enter the LP */

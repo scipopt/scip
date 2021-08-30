@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    )
 {
    SCIP_NLPI* nlpi;
+
+   /* include some default dialogs, since other plugins require that at least the root dialog is available */
+   SCIP_CALL( SCIPincludeDialogDefaultBasic(scip) );
 
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear must be before linear, quadratic, abspower, and and due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) ); /* quadratic must be before linear due to constraint upgrading */
@@ -214,6 +217,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
+   SCIP_CALL( SCIPincludeSepaMixing(scip) );
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1673,7 +1673,7 @@ void computeBoundsX(
 
    /* apply signedpow(x+offset, n) >= lhs - (zcoef * zbnds).sup */
    z = (consdata->zcoef > 0.0 ? zbnds.sup : zbnds.inf);
-   if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, REALABS(z)) )
+   if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, REALABS(z)) )
    {
       bnd = consdata->lhs - PROPSIDETOL - consdata->zcoef * z - REALABS(consdata->zcoef) * PROPVARTOL;
       if( consdata->exponent == 2.0 )

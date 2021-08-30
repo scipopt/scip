@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2072,7 +2072,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          SCIPfreeBufferArray(scip, &buffer);
       }
 
-      SCIPdialogMessage(scip, NULL, " (%d non-trivial feasible subtrees)\n", SCIPgetNCountedFeasSubtrees(scip));
+      SCIPdialogMessage(scip, NULL, " (%" SCIP_LONGINT_FORMAT " non-trivial feasible subtrees)\n", SCIPgetNCountedFeasSubtrees(scip));
 
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -2475,14 +2475,13 @@ SCIP_RETCODE createCountDialog(
 {
    SCIP_DIALOG* root;
    SCIP_DIALOG* dialog;
-   SCIP_DIALOG* setmenu;
    SCIP_DIALOG* submenu;
 
-   /* includes or updates the default dialog menus in SCIP */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
-
    root = SCIPgetRootDialog(scip);
-   assert( root != NULL );
+
+   /* skip dialogs if they seem to be disabled */
+   if( root == NULL )
+      return SCIP_OKAY;
 
    /* add dialog entry for counting */
    if( !SCIPdialogHasEntry(root, "count") )
@@ -2518,14 +2517,6 @@ SCIP_RETCODE createCountDialog(
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-
-   /* search for the "set" sub menu to find the "emphasis" sub menu */
-   if( SCIPdialogFindEntry(root, "set", &setmenu) != 1 )
-   {
-      SCIPerrorMessage("set sub menu not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert(setmenu != NULL);
 
    return SCIP_OKAY;
 }

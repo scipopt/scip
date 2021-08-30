@@ -17,7 +17,7 @@ set(instances
 # add a test to build the lop example
 #
 add_test(NAME examples-lop-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target lop
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target lop
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -46,4 +46,12 @@ foreach(instance ${instances})
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
                                 DEPENDS examples-lop-build
                             )
+        if(WIN32)
+            # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+            # on other systems this directory does not exist.
+            set_tests_properties(examples-lop-${basename}
+                PROPERTIES
+                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+                )
+        endif()
 endforeach(instance)

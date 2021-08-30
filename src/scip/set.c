@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -424,6 +424,7 @@
                                                  *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_CUTSELRESTART     'a' /**< cut selection during restart ('a'ge, activity 'q'uotient) */
 #define SCIP_DEFAULT_SEPA_CUTSELSUBSCIP     'a' /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
+#define SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL TRUE /**< should cutpool separate only cuts with high relative efficacy? */
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS          -1 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -870,6 +871,16 @@ SCIP_RETCODE SCIPsetCopyPlugins(
 
    *allvalid = TRUE;
 
+   /* copy all dialog plugins */
+   if( copydialogs && sourceset->dialogs != NULL )
+   {
+      for( p = sourceset->ndialogs - 1; p >= 0; --p )
+      {
+         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
+         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
+      }
+   }
+
    /* copy all reader plugins */
    if( copyreaders && sourceset->readers != NULL )
    {
@@ -1017,16 +1028,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = sourceset->ndisps - 1; p >= 0; --p )
       {
          SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
-      }
-   }
-
-   /* copy all dialog plugins */
-   if( copydialogs && sourceset->dialogs != NULL )
-   {
-      for( p = sourceset->ndialogs - 1; p >= 0; --p )
-      {
-         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
-         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
       }
    }
 
@@ -2409,6 +2410,11 @@ SCIP_RETCODE SCIPsetCreate(
          "cut selection for sub SCIPs  ('a'ge, activity 'q'uotient)",
          &(*set)->sepa_cutselsubscip, TRUE, SCIP_DEFAULT_SEPA_CUTSELSUBSCIP, "aq",
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "separating/filtercutpoolrel",
+         "should cutpool separate only cuts with high relative efficacy?",
+         &(*set)->sepa_filtercutpoolrel, TRUE, SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxruns",
          "maximal number of runs for which separation is enabled (-1: unlimited)",
@@ -2830,6 +2836,9 @@ SCIP_RETCODE SCIPsetFree(
       SCIPbanditvtableFree(&(*set)->banditvtables[i]);
    }
    BMSfreeMemoryArrayNull(&(*set)->banditvtables);
+
+   /* free debugging data structure */
+   SCIP_CALL( SCIPdebugFree(*set) );
 
    BMSfreeMemory(set);
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2664,7 +2664,11 @@ SCIP_RETCODE preprocessConstraintPairs(
              * @note we need to force the bound change since we are deleting the constraint afterwards
              */
             SCIP_CALL( SCIPtightenVarUb(scip, consdata0->var, rhs, TRUE, &infeasible, &tightened) );
-            assert(!infeasible);
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               break;
+            }
             if( tightened )
                ++(*nchgbds);
 
@@ -2673,7 +2677,11 @@ SCIP_RETCODE preprocessConstraintPairs(
              * @note we need to force the bound change since we are deleting the constraint afterwards
              */
             SCIP_CALL( SCIPtightenVarLb(scip, consdata0->var, lhs, TRUE, &infeasible, &tightened) );
-            assert(!infeasible);
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               break;
+            }
             if( tightened )
                ++(*nchgbds);
 
@@ -4962,11 +4970,6 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
 /**@} */
 
 
-/**@name Interface methods
- *
- * @{
- */
-
 /** creates the handler for variable bound constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -5360,5 +5363,3 @@ SCIP_RETCODE SCIPcleanupConssVarbound(
 
    return SCIP_OKAY;
 }
-
-/**@} */

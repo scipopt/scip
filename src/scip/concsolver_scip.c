@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -288,15 +288,15 @@ SCIP_RETCODE initConcsolver(
 
       SCIPfreeBufferArray(data->solverscip, &solvals);
 
-      SCIP_CALL( SCIPaddSol(data->solverscip, solversol, &stored) );
+      SCIP_CALL( SCIPaddSolFree(data->solverscip, &solversol, &stored) );
 
       assert(stored);
    }
 
    /* create the concurrent data structure for the concurrent solver's SCIP */
-   /* this assert fails on check/instances/Orbitope/packorb_1-FullIns_3.cip
+   /* this assert fails on check/instances/Symmetry/packorb_1-FullIns_3.cip
     * assert(SCIPgetNOrigVars(data->solverscip) == data->nvars);
-    * also fails on check/instances/Orbitope/partorb_1-FullIns_3.cip
+    * also fails on check/instances/Symmetry/partorb_1-FullIns_3.cip
     * TODO: test if this leads to any problems
     */
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm) );
@@ -577,7 +577,7 @@ SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
    return SCIP_OKAY;
 }
 
-/** writes new solutions and global boundchanges to the iven synchronization data */
+/** writes new solutions and global boundchanges to the given synchronization data */
 static
 SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 {
@@ -621,7 +621,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 
          solobj = SCIPgetSolOrigObj(data->solverscip, sols[i]);
 
-         SCIPdebugMessage("adding sol to spi in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
+         SCIPdebugMessage("adding sol in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
          SCIPsyncdataGetSolutionBuffer(syncstore, syncdata, solobj, concsolverid, &solvals);
 
          /* if syncstore has no place for this solution we can stop since the next solution will have

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -252,7 +252,7 @@ SCIP_RETCODE SCIPapplyLockFixings(
 
    updatelocks = heurdata->updatelocks && (SCIPgetNCheckConss(scip) == SCIPgetNLPRows(scip));
 
-   SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%d\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
+   SCIPdebugMsg(scip, "%d constraints: %d logicor, updatelocks=%u\n", SCIPgetNConss(scip), SCIPconshdlrGetNCheckConss(SCIPfindConshdlr(scip, "logicor")), updatelocks);
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
    assert(vars != NULL);

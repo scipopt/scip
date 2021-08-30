@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,7 @@
  *    \<variable name\> \<lower bound\> \<upper bound\>
  *
  * where infinite bounds can be written as inf, +inf or -inf.  Note that only a subset of the variables may appear in
- * the file.  Lines with unknown variable names are ignored.  The writing functionality is currently not supported.
+ * the file.  Lines with unknown variable names are ignored.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

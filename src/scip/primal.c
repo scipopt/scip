@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,6 +39,7 @@
 #include "scip/struct_event.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/scip_solvingstats.h"
 
 
 /*
@@ -656,6 +657,24 @@ SCIP_RETCODE primalAddSol(
 
    SCIPsetDebugMsg(set, "insert primal solution %p with obj %g at position %d (replace=%u):\n",
       (void*)sol, obj, insertpos, replace);
+
+   /* make sure that the primal bound is at least the lower bound */
+   if( ! SCIPsetIsInfinity(set, obj) && ! SCIPsetIsInfinity(set, -SCIPgetLowerbound(set->scip)) && SCIPsetIsFeasGT(set, SCIPgetLowerbound(set->scip), obj) )
+   {
+      if( origprob->objsense == SCIP_OBJSENSE_MINIMIZE )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "Dual bound %g is larger than the objective of the primal solution %g. The solution might not be optimal.\n",
+            SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
+      }
+      else
+      {
+         SCIPmessagePrintWarning(messagehdlr, "Dual bound %g is smaller than the objective of the primal solution %g. The solution might not be optimal.\n",
+            SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
+      }
+#ifdef WITH_DEBUG_SOLUTION
+      SCIPABORT();
+#endif
+   }
 
    SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4961,7 +4961,7 @@ SCIP_RETCODE exprparseReadVariable(
    namelength = varnameendptr - *str; /*lint !e712*/
    if( namelength >= SCIP_MAXSTRLEN )
    {
-      SCIPerrorMessage("Variable name %.*s is too long for buffer in exprparseReadVariable.\n", namelength, str);
+      SCIPerrorMessage("Variable name %.*s is too long for buffer in exprparseReadVariable.\n", namelength, *str);
       return SCIP_READERROR;
    }
 
@@ -4984,7 +4984,7 @@ SCIP_RETCODE exprparseReadVariable(
       (*varnameslength) -= (int)(1 + (strlen(varname) + 1) / sizeof(int) + 1);
       if( *varnameslength < 0 )
       {
-         SCIPerrorMessage("Buffer in exprparseReadVariable is too short for varaible name %.*s.\n", namelength, str);
+         SCIPerrorMessage("Buffer in exprparseReadVariable is too short for varaible name %.*s.\n", namelength, *str);
          return SCIP_READERROR;
       }
 
@@ -8368,15 +8368,13 @@ void SCIPexprPrint(
       default:
       {
          int i;
-         char opstr[SCIP_MAXSTRLEN];
 
          SCIPmessageFPrintInfo(messagehdlr, file, "(");
          for( i = 0; i < expr->nchildren; ++i )
          {
             if( i > 0 )
             {
-               (void) SCIPsnprintf(opstr, SCIP_MAXSTRLEN, "%s", expr->op == SCIP_EXPR_SUM ? " + " : " * ");
-               SCIPmessageFPrintInfo(messagehdlr, file, opstr);
+               SCIPmessageFPrintInfo(messagehdlr, file, "%s", expr->op == SCIP_EXPR_SUM ? " + " : " * ");
             }
             SCIPexprPrint(expr->children[i], messagehdlr, file, varnames, paramnames, paramvals);
          }
@@ -13400,7 +13398,7 @@ SCIP_RETCODE SCIPexprgraphCreateNode(
    case SCIP_EXPR_POLYNOMIAL:
    case SCIP_EXPR_USER      :
    {
-      SCIPerrorMessage("cannot create node with operand %d via SCIPexprgraphCreateNode\n");
+      SCIPerrorMessage("cannot create node with operand %d via SCIPexprgraphCreateNode\n", op);
       SCIPABORT();
       return SCIP_ERROR;  /*lint !e527*/
    }
