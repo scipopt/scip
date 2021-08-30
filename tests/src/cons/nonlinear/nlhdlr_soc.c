@@ -58,7 +58,7 @@ static SCIP_EXPR* uexpr;
 static SCIP_NLHDLR* nlhdlr;
 static SCIP_CONSHDLR* conshdlr;
 
-/* creates scip, problem, includes expression constraint handler, creates and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
 {
@@ -364,7 +364,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (8 + 2*(<x> + 1)^2 + 4*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -415,7 +415,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 2*<x>^2 - 9*<y>^2 + sin(<z>)^2  <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -467,7 +467,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 5 - 9*cos(<x>)^2 + <y>^2 + 2*sin(<z>)^2 <= 4",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -518,7 +518,7 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression tha
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: - 7*cos(<x>)^2 + <y>^2 - 2*sin(<z>)^2  <= 5",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -557,7 +557,7 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 1 + 8*<x>^2 - 2*<y>*<u> + 2*<z>^2 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -607,7 +607,7 @@ Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic exp
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 7*<x>^2 - 2*<y>*<u> - 2*<z>^2 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -646,7 +646,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: -5 + 9*cos(<x>)^2 - <y>^2 - 2*sin(<z>)^2 >= -4",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -696,7 +696,7 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: -1 - 8*<x>^2 + 2*<y>*<u> - 2*<z>^2 >= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -749,7 +749,7 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    if( !SCIPisIpoptAvailableIpopt() )
       return;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: <x>^2 + 2*<y>^2 + 3*<z>^2 + 5*<x>*<y> + 5*<x>*<z> + 2*<y>*<z> + 10*<x> + 8 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
@@ -805,7 +805,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    if( !SCIPisIpoptAvailableIpopt() )
       return;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: -<x>^2 - 2*<y>^2 - 3*<z>^2 - 5*<x>*<y> - 5*<x>*<z> - 2*<y>*<z> - 10*<x> - 8 >= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
@@ -858,7 +858,7 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: (<x>^2 - 4*<x> + 1)^0.5 <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
@@ -898,7 +898,7 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: <x>^2 + <y>^2 - <z> * <u> <= -2",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
@@ -940,7 +940,7 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    SCIP_Bool infeasible;
    SCIP_Bool success;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -1241,7 +1241,7 @@ Test(nlhdlrsoc, access, .description = "public detect for simple quadratic const
    SCIP_SIDETYPE sidetype;
    SCIP_Bool infeasible;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 2*<x>^2 - 9*<y>^2 + <z>^2  <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);

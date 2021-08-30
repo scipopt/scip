@@ -130,7 +130,7 @@ Test(nlhdlrquotient, detectandfree1, .description = "detects simple quotient exp
    int i;
    SCIP_EXPR_OWNERDATA* ownerdata;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: <x> / <y> <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -169,7 +169,7 @@ Test(nlhdlrquotient, detectandfree2, .description = "detects simple quotient exp
    int i;
    SCIP_EXPR_OWNERDATA* ownerdata;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (4*<x> + 1) / (-3*<x> - 3) <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -208,7 +208,7 @@ Test(nlhdlrquotient, detectandfree3, .description = "detects simple quotient exp
    int i;
    SCIP_EXPR_OWNERDATA* ownerdata;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: log((4*<x> + 3) / (<x> + 1)) <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -247,7 +247,7 @@ Test(nlhdlrquotient, detectandfree4, .description = "detects simple quotient exp
    int i;
    SCIP_EXPR_OWNERDATA* ownerdata;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (4*<x> + 2*<y> + 3) / (<x> + 1) <= 10",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -285,7 +285,7 @@ Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient exp
    int i;
    SCIP_EXPR_OWNERDATA* ownerdata;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: log(<x>) / abs(<y>) <= 10",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
@@ -328,7 +328,7 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
    int i;
    SCIP_EXPR_OWNERDATA* ownerdata;
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: ((4*<x> + 1) / (-3*<x> - 3) + 2) <= 3",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);

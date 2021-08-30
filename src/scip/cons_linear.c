@@ -17519,7 +17519,7 @@ SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
       SCIP_CALL( addCoef(scip, upgdconss[0], SCIPgetVarExprVar(SCIPexprGetChildren(expr)[i]), SCIPgetCoefsExprSum(expr)[i]) );
    }
 
-   /* check violation of this linear constraint with absolute tolerances, to be consistent with the original expression constraint */
+   /* check violation of this linear constraint with absolute tolerances, to be consistent with the original nonlinear constraint */
    consdata->checkabsolute = TRUE;
 
    *nupgdconss = 1;

@@ -1021,7 +1021,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
       return SCIP_OKAY;
    }
 
-   /* add the nodes for expression constraints to the graph */
+   /* add the nodes for nonlinear constraints to the graph */
    SCIP_CALL( fillGraphByNonlinearConss(scip, &G, exprdata, nnodes, nedges, nusedcolors, success) );
 
    if ( !success )

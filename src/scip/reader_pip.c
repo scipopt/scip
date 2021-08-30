@@ -2937,10 +2937,10 @@ SCIP_RETCODE SCIPwritePip(
       {
          SCIP_Bool isquadratic;
 
-         /* get the quadratic representation of the expression constraint */
+         /* get the quadratic representation of the nonlinear constraint */
          SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
 
-         /* we cannot handle expression constraint that are not quadratically representable
+         /* we cannot handle nonlinear constraint that are not quadratically representable
           * TODO we should, see disabled printRowNl code
           */
          if( !isquadratic )

@@ -1624,7 +1624,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
    if( conshdlr != NULL )
       nconss += SCIPconshdlrGetNConss(conshdlr);
 
-   /* desired structure: all the non-expression constraints are linear constraints */
+   /* desired structure: all the non-nonlinear constraints are linear constraints */
    if( nconss != SCIPgetNConss(scip) - 1 )
       return SCIP_OKAY;
 
@@ -1842,7 +1842,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    assert( naddconss != NULL );
    assert( ndelconss != NULL );
 
-   /* desired structure: there exists only one expression constraint */
+   /* desired structure: there exists only one nonlinear constraint */
    nlconshdlr = SCIPfindConshdlr(scip, "nonlinear");
    if( nlconshdlr == NULL || SCIPconshdlrGetNConss(nlconshdlr) != 1 )
       return SCIP_OKAY;
@@ -1851,19 +1851,19 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   /* get expression constraint */
+   /* get nonlinear constraint */
    conss = SCIPconshdlrGetConss(nlconshdlr);
    cons = conss[0];
    assert( cons != NULL );
 
    SCIPdebugMsg(scip, "tries to add the KKT conditions for constraint <%s>\n", SCIPconsGetName(cons));
 
-   /* get quadratic representation of the expression constraint, if possible */
+   /* get quadratic representation of the nonlinear constraint, if possible */
    SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
 
    if( !isquadratic )
    {
-      SCIPdebugMsg(scip, "expression constraint is not quadratic -> skip\n");
+      SCIPdebugMsg(scip, "nonlinear constraint is not quadratic -> skip\n");
       return SCIP_OKAY;
    }
 
@@ -1913,11 +1913,11 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
       int nvars;
       int i;
 
-      /* get total number of variables in the expression constraint */
+      /* get total number of variables in the nonlinear constraint */
       SCIP_CALL( SCIPgetConsNVars(scip, cons, &nvars, &success) );
       assert(success);
 
-      /* allocate memory to store variables of the expression constraint */
+      /* allocate memory to store variables of the nonlinear constraint */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
       /* get variables */

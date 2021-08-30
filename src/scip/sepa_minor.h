@@ -31,7 +31,7 @@
  * computes the globally valid linear inequality \f$ v' A(x,X) v \ge 0 \f$.
  *
  *
- * To identify which entries of the matrix X exist, we (the separator) iterate over the available expression constraints.
+ * To identify which entries of the matrix X exist, we (the separator) iterate over the available nonlinear constraints.
  * For each constraint, we explore its expression tree and collect all nodes (expressions) of the form
  * - x^2
  * - y * z

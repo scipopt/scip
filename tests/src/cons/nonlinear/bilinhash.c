@@ -36,7 +36,7 @@ void setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* store expression constraint handler */
+   /* store nonlinear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert(conshdlr != NULL);
 
@@ -92,7 +92,7 @@ Test(bilinhash, createInsert)
    cr_expect_eq(bilinterms[1].y, z);
 }
 
-/* tests API methods for a simple problem containing two expression constraints */
+/* tests API methods for a simple problem containing two nonlinear constraints */
 Test(bilinhash, api_methods)
 {
    const char* inputs[2] = {"[nonlinear] <c1>: (<x>[C])^2 + <x>[C] * <y>[C] <= 4;",
@@ -104,7 +104,7 @@ Test(bilinhash, api_methods)
    SCIP_Bool cutoff;
    int i;
 
-   /* create, add, and release expression constraints */
+   /* create, add, and release nonlinear constraints */
    for( i = 0; i < 2; ++i )
    {
       SCIP_CONS* cons;

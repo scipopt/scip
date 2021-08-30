@@ -1944,7 +1944,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nallvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
 
-   /* create hashset for auxvars and iterator for expression constraints */
+   /* create hashset for auxvars and iterator for nonlinear constraints */
    if( nnlconss > 0 )
    {
       SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, isnonlinvar, nvars) );
@@ -2272,7 +2272,7 @@ SCIP_RETCODE computeSymmetryGroup(
          rootexpr = SCIPgetExprNonlinear(cons);
          assert(rootexpr != NULL);
 
-         /* for expression constraints, only collect auxiliary variables for now */
+         /* for nonlinear constraints, only collect auxiliary variables for now */
          SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
          SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
 

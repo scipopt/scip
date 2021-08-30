@@ -507,7 +507,7 @@ static SCIP_VAR* x;
 static SCIP_VAR* y;
 
 
-/* creates scip, problem, includes expression constraint handler, creates and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
 {

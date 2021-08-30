@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   locks.c
- * @brief  tests locking mechanism for expression constraints
+ * @brief  tests locking mechanism for nonlinear constraints
  * @author Benjamin Mueller
  */
 

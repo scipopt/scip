@@ -96,7 +96,7 @@ SCIP_RETCODE createAndDetect(
  * tests
  */
 
-/* creates and adds two expression constraints and check output of SCIPgetBilinearExprsExpr */
+/* creates and adds two nonlinear constraints and check output of SCIPgetBilinearExprsExpr */
 Test(nlhdlrbilinear, collect_product_expressions)
 {
    SCIP_CONS* conss[2];
@@ -517,7 +517,7 @@ Test(nlhdlrbilinear, inteval_three_lines)
    /* transform problem */
    TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[0], SCIPvarGetTransVar(x), NULL, NULL) );
    SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[1], SCIPvarGetTransVar(y), NULL, NULL) );
    SCIP_CALL( SCIPcreateExprProduct(scip, &expr, 2, varexprs, -2.0, NULL, NULL) );

@@ -1609,7 +1609,7 @@ SCIP_RETCODE createSepaData(
    /* create variable map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), varmapsize) );
 
-   /* get all bilinear terms from the expression constraint handler */
+   /* get all bilinear terms from the nonlinear constraint handler */
    bilinterms = SCIPgetBilinTermsNonlinear(sepadata->conshdlr);
 
    /* store the information of all variables that appear bilinearly */

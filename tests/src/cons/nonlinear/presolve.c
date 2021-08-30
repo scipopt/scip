@@ -117,7 +117,7 @@ Test(presolve, mergeconss)
    }
 }
 
-/** helper method to create, add, and release an expression constraint */
+/** helper method to create, add, and release a nonlinear constraint */
 static
 SCIP_RETCODE addCons(
    const char*           exprstr,            /**< string with the expr to parse */
@@ -214,7 +214,7 @@ Test(presolve, implint)
    SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_INTEGER, &infeasible) );
    SCIP_CALL( SCIPchgVarType(scip, z, SCIP_VARTYPE_BINARY, &infeasible) );
 
-   /* add expression constraint */
+   /* add nonlinear constraint */
    SCIP_CALL( addCons("<x> + 2*<y>^2 - 3*<y>^3 - 4*<z>", 5.0, 5.0) );
 
    /* apply presolving */
@@ -241,7 +241,7 @@ Test(presolve, setppcupg)
    SCIP_CALL( SCIPchgVarType(scip, x, SCIP_VARTYPE_BINARY, &infeasible) );
    SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_BINARY, &infeasible) );
 
-   /* add expression constraint -2xy + 2x + 2y -6 = -4, which is equivalent to (x-1)(y-1) = 0 */
+   /* add nonlinear constraint -2xy + 2x + 2y -6 = -4, which is equivalent to (x-1)(y-1) = 0 */
    SCIP_CALL( addCons("-2 * <x> * <y> + 2 * <x> + 2 * <y> - 6", -4.0, -4.0) );
 
    /* apply presolving */

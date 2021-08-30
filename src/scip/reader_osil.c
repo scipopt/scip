@@ -549,7 +549,7 @@ SCIP_RETCODE createConstraint(
             SCIP_CALL( SCIPappendExprSumExpr(scip, expr, varexpr, -1.0) );
          }
 
-         /* create expression constraint */
+         /* create nonlinear constraint */
          SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, name, expr, lhs, rhs,
             initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
 
@@ -573,7 +573,7 @@ SCIP_RETCODE createConstraint(
             /* create sum expression */
             SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 2, children, coefs, 0.0, NULL, NULL) );
 
-            /* create expression constraint */
+            /* create nonlinear constraint */
             SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, name, sumexpr, lhs, rhs,
                initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
 
@@ -582,7 +582,7 @@ SCIP_RETCODE createConstraint(
          }
          else
          {
-            /* create expression constraint */
+            /* create nonlinear constraint */
             SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, name, nlexpr, lhs, rhs,
                initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
          }

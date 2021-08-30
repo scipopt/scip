@@ -44,7 +44,7 @@ static SCIP_VAR* x_3;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_NLHDLR* nlhdlr = NULL;
 
-/* creates scip, problem, includes expression constraint handler, creates and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
 {

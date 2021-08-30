@@ -3957,13 +3957,13 @@ SCIP_RETCODE SCIPwriteLp(
       SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregated) );
    }
 
-   /* check for aggregated variables in expression constraints and output aggregations as linear constraints */
+   /* check for aggregated variables in nonlinear constraints and output aggregations as linear constraints */
    for( c = 0; c < nConsExpr; ++c )
    {
       SCIP_Bool success;
       int ntmpvars;
 
-      /* get variables of the expression constraint */
+      /* get variables of the nonlinear constraint */
       SCIP_CALL( SCIPgetConsNVars(scip, consExpr[c], &ntmpvars, &success) );
       assert(success);
       SCIP_CALL( SCIPgetConsVars(scip, consExpr[c], tmpvars, SCIPgetNTotalVars(scip), &success) );

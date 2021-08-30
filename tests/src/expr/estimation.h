@@ -53,7 +53,7 @@ static SCIP_EXPR* vexpr;
 
 static SCIP_RANDNUMGEN* randnumgen; /* needs it for the multilinear separation */
 
-/* creates scip, problem, includes expression constraint handler, creates  and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
 {
