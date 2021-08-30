@@ -503,6 +503,26 @@ SCIP_Bool SCIPcutselIsInitialized(
    return cutsel->initialized;
 }
 
+/** gets time in seconds used in this cut selector for setting up for next stages */
+SCIP_Real SCIPcutselGetSetupTime(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(cutsel != NULL);
+
+   return SCIPclockGetTime(cutsel->setuptime);
+}
+
+/** gets time in seconds used in this cut selector */
+SCIP_Real SCIPcutselGetTime(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(cutsel != NULL);
+
+   return SCIPclockGetTime(cutsel->cutseltime);
+}
+
 /** compares two cut selectors w. r. to their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPcutselComp)
 {  /*lint --e{715}*/
