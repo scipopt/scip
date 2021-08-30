@@ -288,6 +288,8 @@ SCIP_DECL_CUTSELFREE(cutselFreeHybrid)
 
    SCIPfreeBlockMemory(scip, &cutseldata);
 
+   SCIPcutselSetData(cutsel, NULL);
+
    return SCIP_OKAY;
 }
 /**! [SnippetCutselFreeHybrid] */
