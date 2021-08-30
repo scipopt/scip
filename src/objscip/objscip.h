@@ -28,6 +28,7 @@
 #include "objscip/objbenderscut.h"
 #include "objscip/objbranchrule.h"
 #include "objscip/objconshdlr.h"
+#include "objscip/objcutsel.h"
 #include "objscip/objdialog.h"
 #include "objscip/objdisp.h"
 #include "objscip/objeventhdlr.h"
