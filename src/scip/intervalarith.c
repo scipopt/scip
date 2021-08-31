@@ -431,7 +431,7 @@ void SCIPintervalSetBounds(
    resultant->sup = sup;
 }
 
-/** sets interval to empty interval, which will be [infinity, -infinity] */
+/** sets interval to empty interval, which will be [1.0, -1.0] */
 void SCIPintervalSetEmpty(
    SCIP_INTERVAL*        resultant           /**< resultant interval of operation */
    )
@@ -466,7 +466,7 @@ void SCIPintervalSetEntire(
    resultant->sup =  infinity;
 }
 
-/** indicates whether interval is entire, i.e., whether inf <= -infinity and sup >= infinity */
+/** indicates whether interval is entire, i.e., whether inf &le; -infinity and sup &ge; infinity */
 SCIP_Bool SCIPintervalIsEntire(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand             /**< operand of operation */
@@ -524,7 +524,7 @@ SCIP_Bool SCIPintervalAreDisjoint(
 /** indicates whether operand1 and operand2 are disjoint with epsilon tolerance
  *
  * Returns whether minimal (relative) distance of intervals is larger than epsilon.
- * Same as SCIPintervalIsEmpty(SCIPintervalIntersectEps(operand1, operand2)).
+ * Same as `SCIPintervalIsEmpty(SCIPintervalIntersectEps(operand1, operand2))`.
  */
 SCIP_Bool SCIPintervalAreDisjointEps(
    SCIP_Real             eps,                /**< epsilon */
@@ -559,9 +559,9 @@ void SCIPintervalIntersect(
  * If intersection of operand1 and operand2 is empty, but minimal (relative) distance of intervals
  * is at most epsilon, then set resultant to singleton containing the point in operand1
  * that is closest to operand2, i.e.,
- * - resultant = { operand1.sup }, if operand1.sup < operand2.inf and reldiff(operand2.inf,operand1.sup) <= eps
- * - resultant = { operand1.inf }, if operand1.inf > operand2.sup and reldiff(operand1.inf,operand2.sup) <= eps
- * - resultant = intersection of operand1 and operand2, otherwise
+ * - `resultant = { operand1.sup }`, if `operand1.sup` < `operand2.inf` and `reldiff(operand2.inf,operand1.sup)` &le; eps
+ * - `resultant = { operand1.inf }`, if `operand1.inf` > `operand2.sup` and `reldiff(operand1.inf,operand2.sup)` &le; eps
+ * - `resultant` = intersection of `operand1` and `operand2`, otherwise
  */
 void SCIPintervalIntersectEps(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1335,9 +1335,7 @@ void SCIPintervalScalprod(
    intervalSetRoundingMode(roundmode);
 }
 
-/** computes scalar product of a vector of intervals and a vector of scalars and stores infimum of result in infimum of 
- *  resultant 
- */
+/** computes the scalar product of a vector of intervals and a vector of scalars and stores infimum of result in infimum of resultant */
 void SCIPintervalScalprodScalarsInf(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1363,9 +1361,7 @@ void SCIPintervalScalprodScalarsInf(
    }
 }
 
-/** computes the scalar product of a vector of intervals and a vector of scalars and stores supremum of result in 
- *  supremum of resultant 
- */
+/** computes the scalar product of a vector of intervals and a vector of scalars and stores supremum of result in supremum of resultant */
 void SCIPintervalScalprodScalarsSup(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1595,8 +1591,9 @@ void SCIPintervalPower(
 }
 
 /** computes lower bound on power of a scalar operand1 to an integer operand2
- * both operands need to be finite numbers
- * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
+ *
+ * Both operands need to be finite numbers.
+ * Needs to have operand1 &ge; 0 and need to have operand2 &ge; 0 if operand1 = 0.
  */
 SCIP_Real SCIPintervalPowerScalarIntegerInf(
    SCIP_Real             operand1,           /**< first operand of operation */
@@ -1677,8 +1674,9 @@ SCIP_Real SCIPintervalPowerScalarIntegerInf(
 }
 
 /** computes upper bound on power of a scalar operand1 to an integer operand2
- * both operands need to be finite numbers
- * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
+ *
+ * Both operands need to be finite numbers.
+ * Needs to have operand1 &ge; 0 and needs to have operand2 &ge; 0 if operand1 = 0.
  */
 SCIP_Real SCIPintervalPowerScalarIntegerSup(
    SCIP_Real             operand1,           /**< first operand of operation */
@@ -1751,8 +1749,9 @@ SCIP_Real SCIPintervalPowerScalarIntegerSup(
 }
 
 /** computes bounds on power of a scalar operand1 to an integer operand2
- * both operands need to be finite numbers
- * need to have operand1 >= 0 and need to have operand2 >= 0 if operand1 == 0
+ *
+ * Both operands need to be finite numbers.
+ * Needs to have operand1 &ge; 0 and needs to have operand2 &ge; 0 if operand1 = 0.
  */
 void SCIPintervalPowerScalarInteger(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1841,8 +1840,9 @@ void SCIPintervalPowerScalarInteger(
 }
 
 /** stores bounds on the power of a scalar operand1 to a scalar operand2 in resultant
- * both operands need to be finite numbers
- * need to have operand1 >= 0 or operand2 integer and need to have operand2 >= 0 if operand1 == 0
+ *
+ * Both operands need to be finite numbers.
+ * Needs to have operand1 &ge; 0 or operand2 integer and needs to have operand2 &ge; 0 if operand1 = 0.
  * @attention we assume a correctly rounded pow(double) function when rounding is to nearest
  */
 void SCIPintervalPowerScalarScalar(
@@ -2133,8 +2133,9 @@ void SCIPintervalPowerScalar(
 }
 
 /** given an interval for the image of a power operation, computes an interval for the origin
- * that is, for y = x^p with p = exponent a given scalar and y = image a given interval,
- * computes a subinterval x of basedomain such that y in x^p and such that for all z in basedomain less x, z^p not in y
+ *
+ * That is, for \f$y = x^p\f$ with the exponent \f$p\f$ a given scalar and \f$y\f$ = `image` a given interval,
+ * computes \f$x \subseteq \text{basedomain}\f$ such that \f$y \in x^p\f$ and such that for all \f$z \in \text{basedomain} \setminus x: z^p \not \in y\f$.
  */
 void SCIPintervalPowerScalarInverse(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -2211,9 +2212,9 @@ void SCIPintervalPowerScalarInverse(
    }
 }
 
-/** stores operand1 to the signed power of the scalar positive operand2 in resultant 
+/** stores operand1 to the signed power of the scalar positive operand2 in resultant
  * 
- * the signed power of x w.r.t. an exponent n >= 0 is given as sign(x) * abs(x)^n
+ * The signed power of x w.r.t. an exponent n &ge; 0 is given as \f$\mathrm{sign}(x) |x|^n\f$.
  *
  * @attention we assume correctly rounded sqrt(double) and pow(double) functions when rounding is to nearest
  */
@@ -2977,7 +2978,8 @@ void SCIPintervalEntropy(
 
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
  * 
- * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008) */
+ * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
+ */
 SCIP_Real SCIPintervalQuadUpperBound(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_Real             a,                  /**< coefficient of x^2 */
@@ -3188,7 +3190,7 @@ void SCIPintervalSolveUnivariateQuadExpressionNegative(
 
 /** computes positive solutions of a quadratic equation with scalar coefficients
  * 
- * Given scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$ within xbnds.
+ * Givens scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$ within xbnds.
  * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
  */
 void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
@@ -3393,7 +3395,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
 
 /** solves a quadratic equation with interval coefficients
  *
- * Given intervals a, b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$ within xbnds
+ * Given intervals a, b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$ within xbnds.
  */
 void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -3455,8 +3457,11 @@ void SCIPintervalSolveUnivariateQuadExpression(
 }
 
 /** stores range of bivariate quadratic term in resultant
- * given scalars ax, ay, axy, bx, and by and intervals for x and y, computes interval for \f$ ax x^2 + ay y^2 + axy x y + bx x + by y \f$
- * NOTE: the operations are not applied rounding-safe here
+ *
+ * Given scalars \f$a_x\f$, \f$a_y\f$, \f$a_{xy}\f$, \f$b_x\f$, and \f$b_y\f$ and intervals for \f$x\f$ and \f$y\f$,
+ * computes interval for \f$ a_x x^2 + a_y y^2 + a_{xy} x y + b_x x + b_y y \f$.
+ *
+ * \attention The operations are not applied rounding-safe here!
  */
 void SCIPintervalQuadBivar(
    SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
@@ -3713,9 +3718,11 @@ void SCIPintervalQuadBivar(
 }
 
 /** solves a bivariate quadratic equation for the first variable
- * given scalars ax, ay, axy, bx and by, and intervals for x, y, and rhs,
- * computes \f$ \{ x \in \mathbf{x} : \exists y \in \mathbf{y} : a_x x^2 + a_y y^2 + a_{xy} x y + b_x x + b_y y \in \mathbf{\mbox{rhs}} \} \f$
- * NOTE: the operations are not applied rounding-safe here
+ *
+ * Given scalars \f$a_x\f$, \f$a_y\f$, \f$a_{xy}\f$, \f$b_x\f$ and \f$b_y\f$, and intervals for \f$x\f$, \f$y\f$, and rhs,
+ * computes \f$ \{ x \in \mathbf{x} : \exists y \in \mathbf{y} : a_x x^2 + a_y y^2 + a_{xy} x y + b_x x + b_y y \in \mathbf{\mbox{rhs}} \} \f$.
+ *
+ * \attention the operations are not applied rounding-safe here
  */
 void SCIPintervalSolveBivariateQuadExpressionAllScalar(
    SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
@@ -4596,10 +4603,10 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
 /** propagates a weighted sum of intervals in a given interval
  *
- * Given constant + sum weights_i operands_i \f$\in\f$ rhs,
+ * Given \f$\text{constant} + \sum_i \text{weights}_i \text{operands}_i \in \text{rhs}\f$,
  * computes possibly tighter interval for each term.
  *
- * @attention valid values are returned in resultants only if any tightening has been found and no empty interval, that is, function returns with non-zero and *infeasible == FALSE
+ * @attention Valid values are returned in resultants only if any tightening has been found and no empty interval, that is, function returns with non-zero and `*infeasible` = FALSE.
  *
  * @return Number of terms for which resulting interval is smaller than operand interval.
  */
