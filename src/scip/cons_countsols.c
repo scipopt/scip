@@ -2475,14 +2475,13 @@ SCIP_RETCODE createCountDialog(
 {
    SCIP_DIALOG* root;
    SCIP_DIALOG* dialog;
-   SCIP_DIALOG* setmenu;
    SCIP_DIALOG* submenu;
 
-   /* includes or updates the default dialog menus in SCIP */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
-
    root = SCIPgetRootDialog(scip);
-   assert( root != NULL );
+
+   /* skip dialogs if they seem to be disabled */
+   if( root == NULL )
+      return SCIP_OKAY;
 
    /* add dialog entry for counting */
    if( !SCIPdialogHasEntry(root, "count") )
@@ -2518,14 +2517,6 @@ SCIP_RETCODE createCountDialog(
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-
-   /* search for the "set" sub menu to find the "emphasis" sub menu */
-   if( SCIPdialogFindEntry(root, "set", &setmenu) != 1 )
-   {
-      SCIPerrorMessage("set sub menu not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert(setmenu != NULL);
 
    return SCIP_OKAY;
 }

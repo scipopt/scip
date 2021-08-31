@@ -220,6 +220,7 @@ class SPxSCIP : public SoPlex
 {/*lint !e1790*/
    bool                  _lpinfo;
    bool                  _fromscratch;
+   bool                  _interrupt;
    char*                 _probname;
    DataArray<SPxSolver::VarStatus> _colStat;  /**< column basis status used for strong branching */
    DataArray<SPxSolver::VarStatus> _rowStat;  /**< row basis status used for strong branching */
@@ -320,6 +321,16 @@ public:
    void setFromScratch(bool fs)
    {
       _fromscratch = fs;
+   }
+
+   void setInterrupt(bool interrupt)
+   {
+      _interrupt = interrupt;
+   }
+
+   bool* getInterrupt()
+   {
+      return &_interrupt;
    }
 
    // @todo member variable?
@@ -472,7 +483,11 @@ public:
       try
       {
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+#if SOPLEX_APIVERSION > 11
+         (void) optimize(&_interrupt);
+#else
          (void) optimize();
+#endif
 #else
          (void) solve();
 #endif
@@ -1105,6 +1120,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
 
    {
+      (*lpi)->spx->setInterrupt(FALSE);
       SPxOut::Verbosity verbosity = (*lpi)->spx->spxout.getVerbosity();
       (*lpi)->spx->spxout.setVerbosity((SPxOut::Verbosity)((*lpi)->spx->getLpInfo() ? SOPLEX_VERBLEVEL : 0));
       (*lpi)->spx->printVersion();
@@ -2568,7 +2584,11 @@ SCIP_RETCODE lpiStrongbranch(
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+#if SOPLEX_APIVERSION > 11
+         status =  spx->optimize(spx->getInterrupt());
+#else
          status =  spx->optimize();
+#endif
 #else
          status = spx->solve();
 #endif
@@ -2663,9 +2683,13 @@ SCIP_RETCODE lpiStrongbranch(
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
-            status = spx->optimize();
+#if SOPLEX_APIVERSION > 11
+         status =  spx->optimize(spx->getInterrupt());
 #else
-            status = spx->solve();
+         status =  spx->optimize();
+#endif
+#else
+         status = spx->solve();
 #endif
             SCIPdebugMessage(" --> Terminate with status %d\n", status);
             switch( status )
@@ -4494,6 +4518,20 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** interrupts the currently ongoing lp solve or disables the interrupt */
+SCIP_RETCODE SCIPlpiInterrupt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   lpi->spx->setInterrupt(interrupt);
 
    return SCIP_OKAY;
 }
