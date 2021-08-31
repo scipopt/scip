@@ -438,7 +438,7 @@ char* SCIPdecompPrintStats(
             decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxlargestblock]);
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Smallest block: Block %d with %d constraints and %d variables\n",
-            decomp->nblocks == 0 ? 0 : decomp->labels[decomp->idxsmallestblock],
+            decomp->nblocks == 0 ? -1 : decomp->labels[decomp->idxsmallestblock],
             decomp->nblocks == 0 ? 0 : decomp->consssize[decomp->idxsmallestblock],
             decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxsmallestblock]);
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,

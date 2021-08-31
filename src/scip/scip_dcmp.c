@@ -1155,6 +1155,10 @@ SCIP_RETCODE SCIPcomputeDecompStats(
     */
    if( nvars == 0 || nconss == 0 )
    {
+      decomp->nblocks = 0;
+      decomp->varssize[0] = nvars;
+      decomp->consssize[0] = nconss;
+      decomp->labels[0] = SCIP_DECOMP_LINKVAR;
       return SCIP_OKAY;
    }
 
