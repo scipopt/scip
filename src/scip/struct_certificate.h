@@ -64,7 +64,6 @@ struct SCIP_MirInfo
    int                   nsplitvars;         /**< number of variables in the split */
    int                   ncontvars;         /**< number of variables in the split */
    SCIP_Real             rhs;                /**< rhs of the split disjunction */
-   SCIP_Real             frac;               /**< fractionality of rhs, i.e. original rhs - rounded rhs */
    SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */
 };
 

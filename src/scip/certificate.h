@@ -198,6 +198,18 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    );
 
 /** create a new node data structure for the current node */
+SCIP_RETCODE SCIPcertificateTransAggrrow(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_ROW*             row,                /**< the cut that we are attempting to prove */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows           /**< length of the arrays */
+   );
+
+/** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_PROB*            prob,               /**< SCIP problem data */

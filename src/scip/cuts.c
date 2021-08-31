@@ -192,8 +192,8 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
       val += row->vals[i] * scale;
 
       /* the value must not be exactly zero due to sparsity pattern */
-      /** @todo exip: does this pose a problem? */
-      val = NONZERO(val);
+      /** @todo exip: does this pose a problem? yes it does, can we disable it? */
+      //val = NONZERO(val);
 
       assert(val != 0.0);
       vals[probindex] = val;
@@ -275,7 +275,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
    SCIP_ROW*             row,                /**< row coefficients to add to variable vector */
    SCIP_Real             scale,              /**< scale for adding given row to variable vector */
    SCIP_Real*            rhschange,          /**< change in rhs due to variable conjugation */
-   SCIP_MIRINFO*       mirinfo,          /**< certificate split-information, NULL if not needed */
+   SCIP_MIRINFO*         mirinfo,          /**< certificate split-information, NULL if not needed */
    SCIP_Real             splitscale          /**< possible scaling for mirinfo of certificate */
    )
 {
@@ -314,25 +314,25 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
       SCIPintervalMulScalar(SCIPinfinity(scip), &valinterval, valinterval, scale);
       SCIPintervalAddScalar(SCIPinfinity(scip), &valinterval, valinterval, QUAD_TO_DBL(val));
 
-      if( SCIPvarGetLbLocal(var) > -SCIPinfinity(scip) && SCIPvarGetLbLocal(var) >= 0 )
+      if( SCIPvarGetLbGlobal(var) > -SCIPinfinity(scip) && SCIPvarGetLbGlobal(var) >= 0 )
       {
          QUAD_ASSIGN(val, SCIPintervalGetInf(valinterval));
       }
-      else if(SCIPvarGetUbLocal(var) < SCIPinfinity(scip) && SCIPvarGetUbLocal(var) <= 0 )
+      else if(SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) && SCIPvarGetUbGlobal(var) <= 0 )
       {
          QUAD_ASSIGN(val, SCIPintervalGetSup(valinterval));
       }
-      else if( SCIPvarGetLbLocal(var) > -SCIPinfinity(scip) )
+      else if( SCIPvarGetLbGlobal(var) > -SCIPinfinity(scip) )
       {
          QUAD_ASSIGN(val, SCIPintervalGetInf(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange += (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbLocal(var));
+         *rhschange += (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
       }
-      else if( SCIPvarGetUbLocal(var) < SCIPinfinity(scip) )
+      else if( SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) )
       {
          QUAD_ASSIGN(val, SCIPintervalGetSup(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange += (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbLocal(var));
+         *rhschange += (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
       }
       else
       {
@@ -340,9 +340,9 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
          return SCIP_INVALIDDATA;
       }
 
-      /* the value must not be exactly zero due to sparsity pattern */
-      QUAD_HI(val) = NONZERO(QUAD_HI(val));
-      assert(QUAD_HI(val) != 0.0);
+      /** @todo the value must not be exactly zero due to sparsity pattern, this poses a problem in exact mode, can we disable it? */
+      //QUAD_HI(val) = NONZERO(QUAD_HI(val));
+      //assert(QUAD_HI(val) != 0.0);
 
       QUAD_ARRAY_STORE(vals, probindex, val);
    }
@@ -3936,6 +3936,7 @@ SCIP_RETCODE cutsTransformMIR(
       {
          /** @todo exip: either change to quad-array or transform cutcoefs to double array */
          mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
+         mirinfo->rhs = QUAD_TO_DBL(*cutrhs);
          for( i = 0; i < *nnz; i++ )
          {
             SCIP_VAR* var;
@@ -3943,12 +3944,12 @@ SCIP_RETCODE cutsTransformMIR(
 
             v = cutinds[i];
             var = SCIPgetVars(scip)[v];
-            if( varsign[i] = -1 )
+            if( varsign[i] == -1 )
                mirinfo->contupperused[v] = TRUE;
             else
                mirinfo->contupperused[v] = FALSE;
 
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
                mirinfo->splitupperused[v] = mirinfo->contupperused[v];
          }
       }
@@ -4146,12 +4147,6 @@ SCIP_RETCODE cutsRoundMIR(
          }
 
          QUAD_SCALE(cutaj, varsign[i]);
-      }
-
-      if( SCIPisCertificateActive(scip) )
-      {
-         mirinfo->rhs = QUAD_TO_DBL(*cutrhs);
-         mirinfo->frac = QUAD_TO_DBL(f0);
       }
 
       /* remove zero cut coefficients from cut, only remove positive coefficients in exact solving mode */
