@@ -295,6 +295,56 @@ SCIP_Real SCIPdecompGetModularity(
    return decomp->modularity;
 }
 
+/** gets variable size for each block, sorted by increasing block label */
+SCIP_RETCODE SCIPdecompGetVarsSize(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int*                  varssize,           /**< array to store variable sizes of blocks*/
+   int                   nblocks             /**< length of variable sizes array */
+   )
+{
+   int i;
+   int nsizes;
+
+   assert(decomp != NULL);
+   assert(varssize != NULL);
+   assert(nblocks >= 0);
+
+   nsizes = MIN(nblocks, decomp->nblocks + 1);
+
+   /* store variable sizes */
+   for( i = 0; i < nsizes; ++i )
+   {
+      varssize[i] = decomp->varssize[i];
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets constraint size for each block, sorted by increasing block label */
+SCIP_RETCODE SCIPdecompGetConssSize(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int*                  consssize,          /**< array to store constraint sizes of blocks*/
+   int                   nblocks             /**< length of constraint sizes array */
+   )
+{
+   int i;
+   int nsizes;
+
+   assert(decomp != NULL);
+   assert(consssize != NULL);
+   assert(nblocks >= 0);
+
+   nsizes = MIN(nblocks, decomp->nblocks + 1);
+
+   /* store constraint sizes */
+   for( i = 0; i < nsizes; ++i )
+   {
+      consssize[i] = decomp->consssize[i];
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets number of border variables of this decomposition */
 int SCIPdecompGetNBorderVars(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
