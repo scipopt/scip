@@ -1600,12 +1600,18 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             SCIPerrorMessage("Ipopt returned with status \"Insufficient Memory\"\n");
             return SCIP_NOMEMORY;
 
+         // really bad ones that could be something very unexpected going wrong within Ipopt
+         case Unrecoverable_Exception:
+         case Internal_Error:
+            assert(problem->termstat == SCIP_NLPTERMSTAT_OTHER);
+            assert(problem->solstat == SCIP_NLPSOLSTAT_UNKNOWN);
+            SCIPerrorMessage("Ipopt returned with application return status %d\n", status);
+            break;
+
          // the really bad ones that indicate rather a programming error
          case Invalid_Problem_Definition:
          case Invalid_Option:
-         case Unrecoverable_Exception:
          case NonIpopt_Exception_Thrown:
-         case Internal_Error:
             assert(problem->termstat == SCIP_NLPTERMSTAT_OTHER);
             assert(problem->solstat == SCIP_NLPSOLSTAT_UNKNOWN);
             SCIPerrorMessage("Ipopt returned with application return status %d\n", status);
