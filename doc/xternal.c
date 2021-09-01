@@ -3713,6 +3713,205 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page EXPRHDLR How to add expression handlers
+ *
+ * Expression handlers provide functionality for basic expression types.
+ * In contrast, higher level nonlinear structures are handled by nonlinearity handlers, see \ref NLHDLR.
+ * \n
+ * A complete list of all expression handlers contained in this release can be found \ref EXPRHDLRS "here".
+ *
+ * We now explain how users can add their own expression handlers.
+ * Take the expression handler for exponential expressions (src/scip/expr_exp.c) as an example.
+ * As all other default plugins, it is written in C.
+ *
+ * Additional documentation for the callback methods of an expression handler, in particular for the input parameters,
+ * can be found in the file type_expr.h.
+ *
+ * Here is what you have to do to implement an expression handler:
+ * -# Copy the template files src/scip/expr_xyz.c and src/scip/expr_xyz.h into files "sepa_myexprhdlr.c"
+ *    and "sepa_myexprhdlr.h".
+      \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeExprhdlrMyexprhdlr() in order to include the expression handler into your SCIP instance,
+ *    e.g., in the main file of your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myexprhdlr".
+ * -# Adjust the properties of the expression handler (see \ref EXPRHDLR_PROPERTIES).
+ * -# Define the expression handler data (see \ref EXPRHDLR_DATA). This is optional.
+ * -# Implement the interface methods (see \ref EXPRHDLR_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref EXPRHDLR_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref EXPRHDLR_ADDITIONALCALLBACKS). This is optional.
+ *
+ *
+ * @section EXPRHDLR_PROPERTIES Properties of an Expression Handler
+ *
+ * At the top of the new file "exprhdlr_myexprhdlr.c", you can find the expression handler properties.
+ * These are given as compiler defines.
+ * The properties you have to set have the following meaning:
+ *
+ * \par EXPRHDLR_NAME: the name of the expression handler.
+ * This name is used in the interactive shell to address the expression handler.
+ * Additionally, if you are searching for an expression handler with SCIPfindExprhdlr(), this name is looked up.
+ * Names have to be unique: no two expression handlers may have the same name.
+ *
+ * \par EXPRHDLR_DESC: the description of the expression handler.
+ * This string is printed as a description of the expression handler in the interactive shell.
+ *
+ * \par EXPRHDLR_PRECEDENCE: the precedence of the expression handler.
+ * Precedence of the expression operation relative to other expressions.
+ *
+ * \par EXPRHDLR_HASHKEY: hash kay of the expression.
+ *
+ * @section EXPRHDLR_DATA Expression Handler Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_ExprhdlrData".
+ * In this data structure, you can store the data of your expression handler. For example, you should store the adjustable
+ * parameters of the expression handler in this data structure.
+ * \n
+ * Defining expression handler data is optional. You can leave the struct empty.
+ *
+ * TODO I have stopped here, the rest is just copied from SEPA.
+ *
+ * @section SEPA_INTERFACE Interface Methods
+ *
+ * At the bottom of "sepa_myseparator.c", you can find the interface method SCIPincludeSepaMyseparator(),
+ * which also appears in "sepa_myseparator.h"
+ * SCIPincludeSepaMyseparator() is called by the user, if (s)he wants to include the separator,
+ * i.e., if (s)he wants to use the separator in his/her application.
+ *
+ * This method only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the separator. For this, you can either call SCIPincludeSepa(),
+ * or SCIPincludeSepaBasic() since SCIP version 3.0. In the latter variant, \ref SEPA_ADDITIONALCALLBACKS "additional callbacks"
+ * must be added via setter functions as, e.g., SCIPsetSepaCopy(). We recommend this latter variant because
+ * it is more stable towards future SCIP versions which might have more callbacks, whereas source code using the first
+ * variant must be manually adjusted with every SCIP release containing new callbacks for separators in order to compile.
+ *
+ * If you are using separator data, you have to allocate the memory
+ * for the data at this point. You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
+ * \endcode
+ * You also have to initialize the fields in "struct SCIP_SepaData" afterwards. For freeing the
+ * separator data, see \ref SEPAFREE.
+ *
+ * You may also add user parameters for your separator, see \ref PARAM for how to add user parameters and
+ * the method SCIPincludeSepaGomory() in src/scip/sepa_gomory.c for an example.
+ *
+ *
+ * @section SEPA_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Separator
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed together with the separator itself to SCIP using SCIPincludeSepa() or SCIPincludeSepaBasic(),
+ * see @ref SEPA_INTERFACE.
+ *
+ * Separator plugins have two callbacks, @ref SEPAEXECLP and @ref SEPAEXECSOL, of which at least one must be implemented.
+ *
+ * Additional documentation for the callback methods, in particular to their input parameters,
+ * can be found in type_sepa.h.
+ *
+ * @subsection SEPAEXECLP
+ *
+ * The SEPAEXECLP callback is executed during the price-and-cut loop of the subproblem processing.
+ * It should try to generate general purpose cutting planes in order to separate the current LP solution.
+ * The method is called in the LP solution loop, which means that a valid LP solution exists.
+ *
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * In addition to LP rows, the callback may also produce domain reductions or add additional constraints.
+ *
+ * Overall, the SEPAEXECLP callback has the following options, which is indicated by the possible return values of
+ * the 'result' variable (see type_sepa.h):
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (result SCIP_CONSADDED)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *
+ * @subsection SEPAEXECSOL
+ *
+ * The SEPAEXECSOL callback is executed during the separation loop on arbitrary primal solutions.
+ * It should try to generate general purpose cutting planes in order to separate the given primal solution.
+ * The method is not called in the LP solution loop, which means that there is no valid LP solution.
+ *
+ * In the standard SCIP environment, the SEPAEXECSOL callback is not used because only LP solutions are
+ * separated. The SEPAEXECSOL callback provides means to support external relaxation handlers like semidefinite
+ * relaxations that want to separate an intermediate primal solution vector. Thus, if you do not want to support
+ * such external plugins, you do not need to implement this callback method.
+ *
+ * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
+ * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
+ * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
+ *
+ * Overall, the SEPAEXECSOL callback has the following options, which is indicated by the possible return values of
+ * the 'result' variable (see type_sepa.h):
+ *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - adding an additional constraint (result SCIP_CONSADDED)
+ *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result SCIP_DIDNOTFIND)
+ *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
+ *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *
+ *
+ * @section SEPA_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications, they can be used, for example, to initialize and free private data.
+ * Additional callbacks can either be passed directly with SCIPincludeSepa() to SCIP or via specific
+ * <b>setter functions</b> after a call of SCIPincludeSepaBasic(), see also @ref SEPA_INTERFACE.
+ *
+ * @subsection SEPAFREE
+ *
+ * If you are using separator data (see \ref SEPA_DATA and \ref SEPA_INTERFACE), you have to implement this method
+ * in order to free the separator data. This can be done by the following procedure:
+ *
+ * @refsnippet{src/scip/sepa_gomory.c,SnippetSepaFreeGomory}
+ *
+ * If you have allocated memory for fields in your separator data, remember to free this memory
+ * before freeing the separator data itself.
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection SEPACOPY
+ *
+ * The SEPACOPY callback is executed when a SCIP instance is copied, e.g. to
+ * solve a sub-SCIP. By
+ * defining this callback as
+ * <code>NULL</code> the user disables the execution of the specified
+ * separator for all copied SCIP instances. This may deteriorate the performance
+ * of primal heuristics using sub-SCIPs.
+ *
+ * @subsection SEPAINIT
+ *
+ * The SEPAINIT callback is executed after the problem is transformed.
+ * The separator may, e.g., use this call to initialize its separator data.
+ * The difference between the original and the transformed problem is explained in
+ * "What is this thing with the original and the transformed problem about?" on \ref FAQ.
+ *
+ * @subsection SEPAEXIT
+ *
+ * The SEPAEXIT callback is executed before the transformed problem is freed.
+ * In this method, the separator should free all resources that have been allocated for the solving process in SEPAINIT.
+ *
+ * @subsection SEPAINITSOL
+ *
+ * The SEPAINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin. The separator may use this call to initialize its branch-and-bound specific data.
+ *
+ * @subsection SEPAEXITSOL
+ *
+ * The SEPAEXITSOL callback is executed before the branch-and-bound process is freed. The separator should use this call
+ * to clean up its branch-and-bound data, in particular to release all LP rows that it has created or captured.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page DIVINGHEUR How to implement a diving heuristic
  *
  * Diving heuristics are an important addon to the branch-and-cut search. A diving heuristic explores a single probing
