@@ -127,6 +127,8 @@ Interface changes
   shall be ordered dynamically in propagation
 - new parameter "separating/filtercutpoolrel" to control whether cutpool uses
   a dynamic strategy to separate only cuts with high relative efficacy
+- new parameters "branching/inference/conflictprio" and "branching/inference/cutoffprio" that allow
+  using the different score criteria in inference branching hierarchically
 
 
 ### Data structures
