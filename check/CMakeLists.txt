@@ -130,10 +130,6 @@ set(settings_MINLP
     "nlpdiving4"
     "separating_aggressive"
 )
-set(settings_Bivariate
-    "minlp"
-    "bivariate"
-)
 
 set(settings_Bilinrelax
     "minlp"
@@ -157,6 +153,10 @@ set(settings_Symmetry_B
     "sst_leader-first_tiebreak-maxconflicts"
     "sst_leader-first_tiebreak-orbitmin"
     "sst_leader-maxconflicts_tiebreak-orbitmin"
+    )
+
+set(settings_Symmetry_MINLP
+    "checksym"
     )
 
 set(settings_sparsify
@@ -291,16 +291,12 @@ endif()
 #
 set(instances_MINLP
     "instances/MINLP/bip_cross_min.10.10.10.1.pip\;1"
-    "instances/MINLP/circle.cip\;4.57424778"
+    "instances/MINLP/circle.lp\;4.57424778"
     "instances/MINLP/ex1266.mps\;16.3"
     "instances/MINLP/m3.osil\;37.8"
     "instances/MINLP/parincQuadratic.osil\;49920.5564"
     "instances/MINLP/tltr.mps\;48.0666666667"
     )
-set(instances_Bivariate
-    "instances/Bivariate/st_qpk1.osil\;-3"
-    "instances/Bivariate/nvs01.osil\;12.4696688"
-   )
 set(instances_Bilinrelax
     "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
     "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
@@ -384,6 +380,15 @@ set(instances_Symmetry_A
 set(instances_Symmetry_B
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
+    )
+
+#
+# Symmetry MINLP instances
+#
+set(instances_Symmetry_MINLP
+    "instances/MINLP/gastrans.osil.gz\;89.0858400000"
+    "instances/MINLP/tln2.osil.gz\;5.3000000000"
+    "instances/MINLP/cvxnonsep_psig40r.osil.gz\;86.5450782341784"
     )
 
 #
@@ -537,7 +542,6 @@ add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
-add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
 add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
 add_instancetests(instances_sparsify settings_sparsify "Sparsify")
@@ -547,6 +551,7 @@ add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_SymmetryConss settings_default "SymmetryConss")
 add_instancetests(instances_Symmetry_A settings_Symmetry_A "Symmetry_A")
 add_instancetests(instances_Symmetry_B settings_Symmetry_B "Symmetry_B")
+add_instancetests(instances_Symmetry_MINLP settings_Symmetry_MINLP "Symmetry_MINLP")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")

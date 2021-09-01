@@ -8,7 +8,6 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Intel")
   add_subdirectory(STP EXCLUDE_FROM_ALL)
 endif()
 add_subdirectory(CycleClustering EXCLUDE_FROM_ALL)
-
 add_subdirectory(PolySCIP EXCLUDE_FROM_ALL)
 
 enable_testing()

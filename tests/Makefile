@@ -28,7 +28,7 @@ UNITTESTSSRC	=	$(shell find src/ -name *.c)
 
 # remove unittests in src/bugs if BUGS is not true
 ifneq ($(BUGS),true)
-	UNITTESTSSRC 	:= $(filter-out $(shell find src/bugs/ -name *.c),$(UNITTESTSSRC))
+	UNITTESTSSRC 	:= $(filter-out $(wildcard src/bugs/*.c),$(UNITTESTSSRC))
 endif
 
 # removes `src/` prefix and file.c postfix, then sorts, which removes duplicates!
@@ -212,7 +212,19 @@ clean:
 tags:
 		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
 
-$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(TPILIBFILE)
+.PHONY: depend
+depend:		$(SCIPDIR)
+		@- rm -f $(UNITTESTSDEP)
+		$(foreach src, $(UNITTESTSSRC), \
+			$(SHELL) -ec '$(DCC) $(FLAGS) $(src) \
+			$(DFLAGS) $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
+
+
+
+-include	$(UNITTESTSDEP)
+
+
+$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE)
 		@echo "-> linking $@"
 		$(LINKCXX) $< $(LINKCXXSCIPALL) \
 		$(LINKCXX_l)$(TPILIB) \
@@ -227,8 +239,6 @@ $(LPILIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) LPS=$(LPS))
 $(SCIPLIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED))
-$(NLPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) IPOPT=$(IPOPT))
 $(TPILIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) TPI=$(TPI))
 
@@ -252,5 +262,4 @@ Criterion:
 	cmake .. -DCMAKE_INSTALL_PREFIX=..; \
 	make; \
 	make install
-
 #---- EOF --------------------------------------------------------------------

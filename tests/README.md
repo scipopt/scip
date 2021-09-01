@@ -48,6 +48,10 @@ assume `SHARED=true` and `OPT=dbg`.
 This command will check for [Criterion](http://criterion.readthedocs.io/en/master/) in ./Criterion, download and install it if not found, and compile and run all tests in `src/`.
 If you already have installed Criterion on you system, execute `touch Criterion` or `mkdir Criterion` before calling make.
 
+**NOTE** It might happen that Criterion does not compile with the following error
+`<path/to/scip/tests/Criterion/src/io/output.c:3:19: fatal error: khash.h: No such file or directory`
+Go to `Criterion/dependencies/klib` and execute `git co cdb7e92` and then go to `Criterion/build` and run `make`
+
 **NOTE** Some tests might need to include c files from SCIP. For tests to be recompilied the included c file gets recompiled, run `make depend`.
 
 ## Run
