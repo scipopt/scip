@@ -756,7 +756,7 @@ SCIP_RETCODE reoptimize(
    /* disable expensive presolving but enable components presolver */
    SCIP_CALL( SCIPsetPresolving(scipcopy, SCIP_PARAMSETTING_FAST, TRUE) );
    SCIP_CALL( SCIPsetIntParam(scipcopy, "constraints/components/maxprerounds", 1) );
-   SCIP_CALL( SCIPsetLongintParam(scipcopy, "constraints/components/nodelimit", 0) );
+   SCIP_CALL( SCIPsetLongintParam(scipcopy, "constraints/components/nodelimit", 0LL) );
 
    /* disable expensive techniques */
    SCIP_CALL( SCIPsetIntParam(scipcopy, "misc/usesymmetry", 0) );
