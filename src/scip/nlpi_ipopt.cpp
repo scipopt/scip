@@ -1328,6 +1328,7 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
 
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, problem->oracle, idx, nvals, varidxs, vals) );
 
+   problem->samestructure = false;  // nonzero patterns may have changed; TODO SCIPnlpiOracleChgLinearCoefs() should let us know
    invalidateSolved(problem);
 
    return SCIP_OKAY;
