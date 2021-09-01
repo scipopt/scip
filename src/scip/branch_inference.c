@@ -62,8 +62,8 @@
 #define DEFAULT_FRACTIONALS        TRUE /**< should branching on LP solution be restricted to the fractional variables? */
 #define DEFAULT_USEWEIGHTEDSUM     TRUE /**< should a weighted sum of inference, conflict and cutoff weights be used? */
 
-#define DEFAULT_CONFLICTPRIO       10  /**< priority value for using conflict weights in lexicographic order */
-#define DEFAULT_CUTOFFPRIO         100 /**< priority value for using cutoff weights in lexicographic order */
+#define DEFAULT_CONFLICTPRIO         1  /**< priority value for using conflict weights in lex. order */
+#define DEFAULT_CUTOFFPRIO           1  /**< priority value for using cutoff weights in lex. order */
 
 /**@} */
 
@@ -452,7 +452,7 @@ SCIP_RETCODE performBranchingSol(
    }
    else if( conflictprio == cutoffprio )
    {
-      /* select the best candidates w.r.t. weighted sum of both criterion */
+      /* select the best candidates w.r.t. weighted sum of both criteria */
       selectBestCands(scip, cands, candsols, ncands, conflictweight, inferenceweight, cutoffweight, reliablescore,
             bestcands, &nbestcands);
    }
