@@ -59,7 +59,7 @@ Expressions:
 - Knapsack, linear, logicor, setppc, and varbound constraints now add themselves to the NLP relaxation, if enabled.
   And, linking constraints and bounddisjunctions in one variable are added to the NLP relaxation now.
 
-Constraint handler for NLP:
+Constraint handlers for NLP:
 - cons_nonlinear has been completely rewritten and now handles constraints of the form lhs <= expr <= rhs, where
   expr is an expression using the new expression type. A linear part of a nonlinear constraint is no longer distinguished.
 - Methods that work on a particular nonlinear structure are now implemented via nonlinearity handlers (nlhdlr).
@@ -311,7 +311,7 @@ Expressions:
 - replaced SCIPexprPrint() by SCIPprintExpr()
 - replaced SCIPexprParse() by SCIPparseExpr()
 
-Expression Tree:
+Expression tree:
 - removed SCIPexprtreeGetVars(), SCIPexprtreeSetVars(), SCIPexprtreeAddVars(), SCIPexprtreePrintWithNames(), SCIPexprtreeFindVar()
 - removed SCIPexprtreeGetRoot(), SCIPexprtreeGetNVars(), SCIPexprtreeGetNParams(), SCIPexprtreeGetParamVals(), SCIPexprtreeSetParamVal(), SCIPexprtreeHasParam()
 - removed SCIPexprtreeGetInterpreterData(), SCIPexprtreeSetInterpreterData(), SCIPexprtreeFreeInterpreterData()
@@ -329,7 +329,7 @@ Expression Tree:
 - removed SCIPexprtreeSubstituteVars(), use SCIPcopyExpr() instead
 - removed SCIPquadelemSort(), SCIPquadelemSortedFind(), SCIPquadelemSqueeze()
 
-Expression Graph:
+Expression graph:
 - removed SCIPexprgraphCaptureNode(), use SCIPcaptureExpr() instead
 - removed SCIPexprgraphIsNodeEnabled()
 - removed SCIPexprgraphGetNodeNChildren(), use SCIPexprGetNChildren() instead
@@ -370,7 +370,7 @@ Expression Graph:
 - removed SCIPexprgraphSimplify(), use SCIPsimplifyExpr() instead
 - removed SCIPexprgraphGetTree(), SCIPexprgraphGetSeparableTrees(), SCIPexprgraphGetSubtreeVarsUsage(), SCIPexprgraphGetSumTreesNSummands(), SCIPexprgraphGetSumTrees()
 
-Constraint handler for NLP:
+Constraint handlers for NLP:
 - removed SCIPincludeConshdlrAbspower()
 - deprecated SCIPcreateConsAbspower() and SCIPcreateConsBasicAbspower(), use SCIPcreateConsBasicSignpowerNonlinear() instead
 - deprecated SCIPgetNlRowAbspower(), use SCIPgetNlRowNonlinear() instead
@@ -512,7 +512,7 @@ Expression iterator:
 - added SCIPexpriterGetNext(), SCIPexpriterSkipDFS(), SCIPexpriterIsEnd()
 - added SCIPexprintHessianSparsity(), SCIPexprintHessian()
 
-Constraint handler for NLP:
+Constraint handlers for NLP:
 - added SCIPgetCurBoundsTagNonlinear(), SCIPgetLastBoundRelaxTagNonlinear(), SCIPincrementCurBoundsTagNonlinear()
 - added SCIPgetVarExprHashmapNonlinear()
 - added SCIPprocessRowprepNonlinear()
