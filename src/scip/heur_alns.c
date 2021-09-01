@@ -440,8 +440,9 @@ struct SCIP_HeurData
    int                   seed;               /**< initial random seed for bandit algorithms and random decisions by neighborhoods */
    int                   currneighborhood;   /**< index of currently selected neighborhood */
    int                   ndelayedcalls;      /**< the number of delayed calls */
-   int                   maxcallssamesol;    /**< number of allowed executions of the heuristic on the same incumbent solution (-1: no limit, 0: number of active neighborhoods) */
-   SCIP_Longint          firstcallthissol;  /**< counter for the number of calls on this incumbent */
+   int                   maxcallssamesol;    /**< number of allowed executions of the heuristic on the same incumbent solution
+                                              *   (-1: no limit, 0: number of active neighborhoods) */
+   SCIP_Longint          firstcallthissol;   /**< counter for the number of calls on this incumbent */
    char                  banditalgo;         /**< the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
    SCIP_Bool             useredcost;         /**< should reduced cost scores be used for variable prioritization? */
    SCIP_Bool             usedistances;       /**< should distances from fixed variables be used for variable prioritization */
@@ -2331,23 +2332,25 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       return SCIP_OKAY;
 
    /* we only allow to run multiple times at a node during the root */
-   if( (heurtiming & SCIP_HEURTIMING_DURINGLPLOOP)
-    && (SCIPgetDepth(scip) > 0 || !heurdata->initduringroot) )
-    return SCIP_OKAY;
+   if( (heurtiming & SCIP_HEURTIMING_DURINGLPLOOP) && (SCIPgetDepth(scip) > 0 || !heurdata->initduringroot) )
+      return SCIP_OKAY;
 
    /* update internal incumbent solution */
-   if (SCIPgetBestSol(scip) != heurdata->lastcallsol) {
+   if( SCIPgetBestSol(scip) != heurdata->lastcallsol )
+   {
       heurdata->lastcallsol = SCIPgetBestSol(scip);
       heurdata->firstcallthissol = SCIPheurGetNCalls(heur);
    }
 
    /* do not run more than a user-defined number of times on each incumbent (-1: no limit) */
-   if (heurdata->maxcallssamesol != -1) {
+   if( heurdata->maxcallssamesol != -1 )
+   {
       SCIP_Longint samesollimit = (heurdata->maxcallssamesol > 0) ?
          heurdata->maxcallssamesol :
          heurdata->nactiveneighborhoods;
 
-      if (SCIPheurGetNCalls(heur) - heurdata->firstcallthissol >= samesollimit) {
+      if( SCIPheurGetNCalls(heur) - heurdata->firstcallthissol >= samesollimit )
+      {
          SCIPdebugMsg(scip, "Heuristic already called %d times on current incumbent\n");
          return SCIP_OKAY;
       }
@@ -2715,15 +2718,14 @@ DECL_VARFIXINGS(varFixingsRens)
    int nintvars;
    SCIP_VAR** vars;
    int i;
-   assert(scip != NULL);
-   assert(varbuf != NULL);
-   assert(nfixings != NULL);
-   assert(valbuf != NULL);
-
    int *fracidx = NULL;
    SCIP_Real* frac = NULL;
    int nfracs;
 
+   assert(scip != NULL);
+   assert(varbuf != NULL);
+   assert(nfixings != NULL);
+   assert(valbuf != NULL);
 
    *result = SCIP_DELAYED;
 
@@ -2741,9 +2743,9 @@ DECL_VARFIXINGS(varFixingsRens)
    if( nbinvars + nintvars == 0 )
       return SCIP_OKAY;
 
-
    SCIP_CALL( SCIPallocBufferArray(scip, &fracidx, nbinvars + nintvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &frac, nbinvars + nintvars) );
+
    /* loop over binary and integer variables; determine those that should be fixed in the sub-SCIP */
    for( nfracs = 0, i = 0; i < nbinvars + nintvars; ++i )
    {
@@ -2752,9 +2754,12 @@ DECL_VARFIXINGS(varFixingsRens)
       assert((i < nbinvars && SCIPvarIsBinary(var)) || (i >= nbinvars && SCIPvarIsIntegral(var)));
 
       /* fix all binary and integer variables with integer LP solution value */
-      if( SCIPisFeasIntegral(scip, lpsolval) ) {
+      if( SCIPisFeasIntegral(scip, lpsolval) )
+      {
          tryAdd2variableBuffer(scip, var, lpsolval, varbuf, valbuf, nfixings, TRUE);
-      } else {
+      }
+      else
+      {
          frac[nfracs] = SCIPfrac(scip, lpsolval);
          frac[nfracs] = MIN(frac[nfracs], 1.0 - frac[nfracs]);
          fracidx[nfracs++] = i;
@@ -2762,11 +2767,12 @@ DECL_VARFIXINGS(varFixingsRens)
    }
 
    /* do some additional fixing */
-   if (*nfixings < neighborhood->fixingrate.targetfixingrate * (nbinvars + nintvars) && nfracs > 0) {
+   if( *nfixings < neighborhood->fixingrate.targetfixingrate * (nbinvars + nintvars) && nfracs > 0 )
+   {
       SCIPsortDownRealInt(frac, fracidx, nfracs);
 
       /* prefer variables that are almost integer */
-      for ( i = 0; i < nfracs && *nfixings < neighborhood->fixingrate.targetfixingrate * (nbinvars + nintvars); i++)
+      for( i = 0; i < nfracs && *nfixings < neighborhood->fixingrate.targetfixingrate * (nbinvars + nintvars); i++ )
       {
          tryAdd2variableBuffer(scip, vars[fracidx[i]], SCIPround(scip, SCIPvarGetLPSol(vars[fracidx[i]])), varbuf, valbuf, nfixings, TRUE);
       }
@@ -4045,8 +4051,8 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          &heurdata->exp3_beta, TRUE, DEFAULT_BETA, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/alpha",
-            "parameter to increase the confidence width in UCB",
-            &heurdata->ucb_alpha, TRUE, DEFAULT_ALPHA, 0.0, 100.0, NULL, NULL) );
+         "parameter to increase the confidence width in UCB",
+         &heurdata->ucb_alpha, TRUE, DEFAULT_ALPHA, 0.0, 100.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usedistances",
          "distances from fixed variables be used for variable prioritization",
@@ -4089,8 +4095,8 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          &heurdata->adjustminimprove, TRUE, DEFAULT_ADJUSTMINIMPROVE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjusttargetnodes",
-            "should the target nodes be dynamically adjusted?",
-            &heurdata->adjusttargetnodes, TRUE, DEFAULT_ADJUSTTARGETNODES, NULL, NULL) );
+         "should the target nodes be dynamically adjusted?",
+         &heurdata->adjusttargetnodes, TRUE, DEFAULT_ADJUSTTARGETNODES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/eps",
          "increase exploration in epsilon-greedy bandit algorithm",
@@ -4132,11 +4138,11 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          &heurdata->uselocalredcost, TRUE, DEFAULT_USELOCALREDCOST, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usepscost",
-            "should pseudo cost scores be used for variable priorization?",
-            &heurdata->usepscost, TRUE, DEFAULT_USEPSCOST, NULL, NULL) );
+         "should pseudo cost scores be used for variable priorization?",
+         &heurdata->usepscost, TRUE, DEFAULT_USEPSCOST, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/initduringroot",
-            "should the heuristic be executed multiple times during the root node?",
-            &heurdata->initduringroot, TRUE, DEFAULT_INITDURINGROOT, NULL, NULL) );
+         "should the heuristic be executed multiple times during the root node?",
+         &heurdata->initduringroot, TRUE, DEFAULT_INITDURINGROOT, NULL, NULL) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_NEIGHBORHOOD) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NEIGHBORHOOD, TABLE_DESC_NEIGHBORHOOD, TRUE,
