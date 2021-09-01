@@ -6010,7 +6010,7 @@ void addExprsViolScore(
    if( nexprs == 1 )
    {
       SCIPaddExprViolScoreNonlinear(scip, exprs[0], violscore);
-      SCIPdebug( var = SCIPgetExprAuxVarNonlinear(exprs[i]); )
+      SCIPdebug( var = SCIPgetExprAuxVarNonlinear(exprs[0]); )
       SCIPdebugMsg(scip, "add score %g to <%s>[%g,%g]\n", violscore,
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
       *success = TRUE;

@@ -2977,7 +2977,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          SCIP_Real rhs = 1.0;
          SCIP_Bool aggregated;
 
-         printf("aggr vars, clique %d\n", clique->id);
+         printf("aggr vars, clique %u\n", clique->id);
 
          if( SCIPvarGetType(clique->vars[0]) >= SCIPvarGetType(clique->vars[1]) )
          {
