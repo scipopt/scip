@@ -63,7 +63,7 @@
 #include "scip/type_nlp.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-#include "nlpi/type_exprinterpret.h"
+#include "scip/type_exprinterpret.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -121,7 +121,6 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
    SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
    SCIP_HASHMAP*         var2idx,            /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */

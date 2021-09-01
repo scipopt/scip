@@ -38,10 +38,6 @@ void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include quadratic and nonlinear conshdlr */
-   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
-   SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
-
    /* create a problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 
@@ -98,6 +94,7 @@ Test(projection, onerow, .init = setup, .fini=teardown,
    SCIP_Real ycoef;
    SCIP_Real constant;
    SCIP_Bool lperror;
+   int nnonzduals;
 
    /* construct LP */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
@@ -112,7 +109,8 @@ Test(projection, onerow, .init = setup, .fini=teardown,
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
    assert(!lperror);
 
-   SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1) );
+   SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 1);
    cr_expect(SCIPisEQ(scip, xcoef, 1.0));
    cr_expect(SCIPisEQ(scip, ycoef, 0.4));
    cr_expect(SCIPisEQ(scip, constant, 10.0));
@@ -129,6 +127,7 @@ Test(projection, tworows, .init = setup, .fini=teardown,
    SCIP_Real ycoef;
    SCIP_Real constant;
    SCIP_Bool lperror;
+   int nnonzduals;
 
    /* construct LP */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
@@ -146,10 +145,47 @@ Test(projection, tworows, .init = setup, .fini=teardown,
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
    assert(!lperror);
 
-   SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1) );
+   SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 1);
    cr_expect(SCIPisEQ(scip, xcoef, 1.0));
    cr_expect(SCIPisEQ(scip, ycoef, 0.7));
    cr_expect(SCIPisEQ(scip, constant, 5.0));
+
+   SCIP_CALL( SCIPendProbing(scip) );
+}
+
+Test(projection, transitivity, .init = setup, .fini=teardown,
+   .description = "example involving two rows that need to be combined together"
+   )
+{
+   SCIP_Bool infeasible;
+   SCIP_Real xcoef;
+   SCIP_Real zcoef;
+   SCIP_Real constant;
+   SCIP_Bool lperror;
+   int nnonzduals;
+
+   /* construct LP */
+   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
+   assert(!infeasible);
+
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* x <= y */
+   SCIP_CALL( addRowProbing(scip, x, y, 1.0, -1.0, -SCIPinfinity(scip), 0.0) );
+
+   /* y <= z */
+   SCIP_CALL( addRowProbing(scip, y, z, 1.0, -1.0, -SCIPinfinity(scip), 0.0) );
+
+   /* necessary to solve to probing LP before creating new probing nodes in solveBilinearLP() */
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
+   assert(!lperror);
+
+   SCIP_CALL( solveBilinearLP(scip, x, z, 0.0, 2.0, 10, 1.0, &xcoef, &zcoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 2);
+   cr_expect(SCIPisEQ(scip, xcoef, 1.0));
+   cr_expect(SCIPisEQ(scip, zcoef, 1.0));
+   cr_expect(SCIPisEQ(scip, constant, 0.0));
 
    SCIP_CALL( SCIPendProbing(scip) );
 }
@@ -164,6 +200,7 @@ Test(projection, threevars, .init = setup, .fini=teardown,
    SCIP_Real zcoef;
    SCIP_Real constant;
    SCIP_Bool lperror;
+   int nnonzduals;
 
    /* construct LP */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
@@ -182,18 +219,21 @@ Test(projection, threevars, .init = setup, .fini=teardown,
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
    assert(!lperror);
 
-   SCIP_CALL( solveBilinearLP(scip, x, z, -10, 3, 10, 1, &xcoef, &zcoef, &constant, -1) );
+   SCIP_CALL( solveBilinearLP(scip, x, z, -10, 3, 10, 1, &xcoef, &zcoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 1);
    cr_expect(SCIPisEQ(scip, xcoef, 1.0));
    cr_expect(SCIPisEQ(scip, zcoef, 1.2/2.2));
    cr_expect(SCIPisEQ(scip, constant, 1.0/2.2));
 
-   SCIP_CALL( solveBilinearLP(scip, z, y, 1, 5, 3, -5, &zcoef, &ycoef, &constant, -1) );
+   SCIP_CALL( solveBilinearLP(scip, z, y, 1, 5, 3, -5, &zcoef, &ycoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 1);
    cr_expect(SCIPisEQ(scip, zcoef, 1.0));
    cr_expect(SCIPisEQ(scip, ycoef, 2.0));
    cr_expect(SCIPisEQ(scip, constant, -5.0));
 
    /* the resulting inequality y >= 3 results in no useful inequality */
-   SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1) );
+   SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 0);
    cr_expect(xcoef == SCIP_INVALID);
    cr_expect(ycoef == SCIP_INVALID);
    cr_expect(constant == SCIP_INVALID);
@@ -210,6 +250,7 @@ Test(projection, fourrows, .init = setup, .fini=teardown,
    SCIP_Real ycoef;
    SCIP_Real constant;
    SCIP_Bool lperror;
+   int nnonzduals;
 
    /* construct LP */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
@@ -235,25 +276,29 @@ Test(projection, fourrows, .init = setup, .fini=teardown,
    assert(!lperror);
 
    /* TR */
-   SCIP_CALL( solveBilinearLP(scip, x, y, -10, -5, 10, 5, &xcoef, &ycoef, &constant, -1) );
+   SCIP_CALL( solveBilinearLP(scip, x, y, -10, -5, 10, 5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 1);
    cr_expect(SCIPisEQ(scip, xcoef, 1.0));
    cr_expect(SCIPisEQ(scip, ycoef, -5.0/3.0));
    cr_expect(SCIPisEQ(scip, constant, 10.0));
 
    /* TL */
-   SCIP_CALL( solveBilinearLP(scip, x, y, 10, -5, -10, 5, &xcoef, &ycoef, &constant, -1) );
+   SCIP_CALL( solveBilinearLP(scip, x, y, 10, -5, -10, 5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 1);
    cr_expect(SCIPisEQ(scip, xcoef, -1.0));
    cr_expect(SCIPisEQ(scip, ycoef, -0.5));
    cr_expect(SCIPisEQ(scip, constant, 10.0));
 
    /* BR */
-   SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1) );
+   SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 1);
    cr_expect(SCIPisEQ(scip, xcoef, 1.0));
    cr_expect(SCIPisEQ(scip, ycoef, 1.0));
    cr_expect(SCIPisEQ(scip, constant, 8.0));
 
    /* BL */
-   SCIP_CALL( solveBilinearLP(scip, x, y, 10, 5, -10, -5, &xcoef, &ycoef, &constant, -1) );
+   SCIP_CALL( solveBilinearLP(scip, x, y, 10, 5, -10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
+   cr_expect(nnonzduals == 1);
    cr_expect(SCIPisEQ(scip, xcoef, -1.0));
    cr_expect(SCIPisEQ(scip, ycoef, 5.0/3.0));
    cr_expect(SCIPisEQ(scip, constant, 40.0/3.0));
