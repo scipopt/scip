@@ -305,7 +305,7 @@ set(instances_branch
     "instances/MIP/egout.mps\;568.1007"
     "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/p0033.osil\;3089"
-    "instances/MINLP/circle.cip\;4.57424778"
+    "instances/MINLP/circle.lp\;4.57424778"
     "instances/MINLP/ex1266.mps\;16.3"
     )
 set(instances_Bilinrelax
