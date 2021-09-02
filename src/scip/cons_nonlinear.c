@@ -951,7 +951,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    expr = (SCIP_EXPR*) eventdata;
    assert(SCIPisExprVar(scip, expr));
 
-   SCIPdebugMsg(scip, "  exec event %#lx for variable <%s> (local [%g,%g], global [%g,%g])\n", eventtype,
+   SCIPdebugMsg(scip, "  exec event %" SCIP_EVENTTYPE_FORMAT " for variable <%s> (local [%g,%g], global [%g,%g])\n", eventtype,
          SCIPvarGetName(SCIPeventGetVar(event)),
          SCIPvarGetLbLocal(SCIPeventGetVar(event)), SCIPvarGetUbLocal(SCIPeventGetVar(event)),
          SCIPvarGetLbGlobal(SCIPeventGetVar(event)), SCIPvarGetUbGlobal(SCIPeventGetVar(event)));
