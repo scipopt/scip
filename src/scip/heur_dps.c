@@ -111,6 +111,8 @@ SCIP_DECL_HEUREXEC(heurExecDps)
 {  /*lint --e{715}*/
    SCIP_DECOMP** alldecomps;
    SCIP_DECOMP* decomp;
+   SCIP_VAR** vars;
+   SCIP_CONS** conss;
    SCIP_VAR** sortedvars;
    SCIP_CONS** sortedconss;
    SCIP_HEURDATA* heurdata;
@@ -155,14 +157,16 @@ SCIP_DECL_HEUREXEC(heurExecDps)
 
    /* estimate required memory for all blocks and terminate if not enough memory is available */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
-   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * (heurdata->nblocks/4 + 2) >= memory )
+   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * (heurdata->nblocks/4.0 + 2) >= memory )
    {
       SCIPdebugMsg(scip, "The estimated memory usage for %d blocks is too large.\n", heurdata->nblocks);
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedvars, SCIPgetVars(scip), nvars) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedconss, SCIPgetConss(scip), nconss) );
+   vars = SCIPgetVars(scip);
+   conss = SCIPgetConss(scip);
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedvars, vars, nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedconss, conss, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortedvarlabels, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortedconslabels, nconss) );
 
