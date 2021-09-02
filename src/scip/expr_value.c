@@ -31,6 +31,20 @@
 #define EXPRHDLR_PRECEDENCE      10000
 #define EXPRHDLR_HASHKEY         SCIPcalcFibHash(36787.0)
 
+/*
+ * Data structures
+ */
+
+/** expression data */
+struct SCIP_ExprData
+{
+   SCIP_Real             value;              /**< value that expression represents */
+};
+
+/*
+ * Callback methods of expression handler
+ */
+
 /** the order of two values is the real order */
 static
 SCIP_DECL_EXPRCOMPARE(compareValue)
@@ -38,8 +52,11 @@ SCIP_DECL_EXPRCOMPARE(compareValue)
    SCIP_Real val1;
    SCIP_Real val2;
 
-   val1 = SCIPgetValueExprValue(expr1);
-   val2 = SCIPgetValueExprValue(expr2);
+   assert(SCIPexprGetData(expr1) != NULL);
+   assert(SCIPexprGetData(expr2) != NULL);
+
+   val1 = SCIPexprGetData(expr1)->value;
+   val2 = SCIPexprGetData(expr2)->value;
 
    return val1 < val2 ? -1 : val1 == val2 ? 0 : 1; /*lint !e777*/
 }
@@ -60,7 +77,8 @@ SCIP_DECL_EXPRCOPYDATA(copydataValue)
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
 
-   *targetexprdata = SCIPexprGetData(sourceexpr);
+   SCIP_CALL( SCIPallocBlockMemory(targetscip, targetexprdata) );
+   (*targetexprdata)->value = SCIPexprGetData(sourceexpr)->value;
 
    return SCIP_OKAY;
 }
@@ -69,9 +87,14 @@ SCIP_DECL_EXPRCOPYDATA(copydataValue)
 static
 SCIP_DECL_EXPRFREEDATA(freedataValue)
 {  /*lint --e{715}*/
+   SCIP_EXPRDATA* exprdata;
+
    assert(expr != NULL);
 
-   /* nothing much to do, as currently the data is the pointer */
+   exprdata = SCIPexprGetData(expr);
+   assert(exprdata != NULL);
+
+   SCIPfreeBlockMemory(scip, &exprdata);
    SCIPexprSetData(expr, NULL);
 
    return SCIP_OKAY;
@@ -82,10 +105,11 @@ static
 SCIP_DECL_EXPRPRINT(printValue)
 {  /*lint --e{715}*/
    assert(expr != NULL);
+   assert(SCIPexprGetData(expr) != NULL);
 
    if( stage == SCIP_EXPRITER_ENTEREXPR )
    {
-      SCIP_Real v = SCIPgetValueExprValue(expr);
+      SCIP_Real v = SCIPexprGetData(expr)->value;
       if( v < 0.0 && EXPRHDLR_PRECEDENCE <= parentprecedence )
       {
          SCIPinfoMessage(scip, file, "(%g)", v);
@@ -103,12 +127,10 @@ SCIP_DECL_EXPRPRINT(printValue)
 static
 SCIP_DECL_EXPREVAL(evalValue)
 {  /*lint --e{715}*/
-   SCIP_EXPRDATA* exprdata;
-
    assert(expr != NULL);
+   assert(SCIPexprGetData(expr) != NULL);
 
-   exprdata = SCIPexprGetData(expr);
-   memcpy(val, &exprdata, sizeof(SCIP_Real)); /*lint !e857*/
+   *val = SCIPexprGetData(expr)->value;
 
    return SCIP_OKAY;
 }
@@ -144,15 +166,10 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffValue)
 static
 SCIP_DECL_EXPRINTEVAL(intevalValue)
 {  /*lint --e{715}*/
-   SCIP_EXPRDATA* exprdata;
-   SCIP_Real val;
-
    assert(expr != NULL);
+   assert(SCIPexprGetData(expr) != NULL);
 
-   exprdata = SCIPexprGetData(expr);
-   memcpy(&val, &exprdata, sizeof(SCIP_Real)); /*lint !e857*/
-
-   SCIPintervalSet(interval, val);
+   SCIPintervalSet(interval, SCIPexprGetData(expr)->value);
 
    return SCIP_OKAY;
 }
@@ -163,11 +180,12 @@ SCIP_DECL_EXPRHASH(hashValue)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
+   assert(SCIPexprGetData(expr) != NULL);
    assert(SCIPexprGetNChildren(expr) == 0);
    assert(hashkey != NULL);
 
    *hashkey = EXPRHDLR_HASHKEY;
-   *hashkey ^= SCIPcalcFibHash(SCIPgetValueExprValue(expr));
+   *hashkey ^= SCIPcalcFibHash(SCIPexprGetData(expr)->value);
 
    return SCIP_OKAY;
 }
@@ -207,8 +225,9 @@ SCIP_DECL_EXPRINTEGRALITY(integralityValue)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(isintegral != NULL);
+   assert(SCIPexprGetData(expr) != NULL);
 
-   *isintegral = EPSISINT(SCIPgetValueExprValue(expr), 0.0); /*lint !e835 !e666*/
+   *isintegral = EPSISINT(SCIPexprGetData(expr)->value, 0.0); /*lint !e835 !e666*/
 
    return SCIP_OKAY;
 }
@@ -252,8 +271,8 @@ SCIP_RETCODE SCIPcreateExprValue(
    assert(expr != NULL);
    assert(SCIPisFinite(value));
 
-   assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*)); /*lint !e506*/
-   memcpy(&exprdata, &value, sizeof(SCIP_Real)); /*lint !e857*/
+   SCIP_CALL( SCIPallocBlockMemory(scip, &exprdata) );
+   exprdata->value = value;
 
    SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrValue(scip), exprdata, 0, NULL, ownercreate, ownercreatedata) );
 
@@ -267,13 +286,8 @@ SCIP_Real SCIPgetValueExprValue(
    SCIP_EXPR*            expr                /**< sum expression */
    )
 {
-   SCIP_EXPRDATA* exprdata;
-   SCIP_Real v;
+   assert(expr != NULL);
+   assert(SCIPexprGetData(expr) != NULL);
 
-   assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*)); /*lint !e506*/
-
-   exprdata = SCIPexprGetData(expr);
-   memcpy(&v, &exprdata, sizeof(SCIP_Real));  /*lint !e857*/
-
-   return v;
+   return SCIPexprGetData(expr)->value;
 }
