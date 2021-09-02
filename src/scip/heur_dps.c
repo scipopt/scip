@@ -25,10 +25,16 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/heur_dps.h"
+#include "scip/pub_dcmp.h"
 #include "scip/pub_heur.h"
+#include "scip/pub_misc.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_dcmp.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_param.h"
+#include "scip/scip_prob.h"
 
 
 #define HEUR_NAME             "dps"
@@ -49,6 +55,7 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   int                   nblocks;            /**< number of blocks */
 };
 
 
@@ -102,8 +109,99 @@ SCIP_DECL_HEURFREE(heurFreeDps)
 static
 SCIP_DECL_HEUREXEC(heurExecDps)
 {  /*lint --e{715}*/
+   SCIP_DECOMP** alldecomps;
+   SCIP_DECOMP* decomp;
+   SCIP_VAR** sortedvars;
+   SCIP_CONS** sortedconss;
+   SCIP_HEURDATA* heurdata;
+   int* sortedvarlabels;
+   int* sortedconslabels;
+   SCIP_Real memory; /* in MB */
+   int ndecomps;
+   int nvars;
+   int nconss;
 
+   assert( heur != NULL );
+   assert( scip != NULL );
+   assert( result != NULL );
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* -------------------------------------------------------------------- */
    SCIPdebugMsg(scip, "initialize dps heuristic\n");
+
+   /* take the first transformed decomposition */
+   SCIPgetDecomps(scip, &alldecomps, &ndecomps, FALSE);
+   if( ndecomps == 0)
+      return SCIP_OKAY;
+
+   decomp = alldecomps[0];
+   assert(decomp != NULL);
+   SCIPdebugMsg(scip, "First transformed decomposition is selected\n");
+
+   heurdata->nblocks = SCIPdecompGetNBlocks(decomp);
+   nconss = SCIPgetNConss(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* if problem has no constraints, no variables or less than two blocks, return */
+   if( nconss == 0 || nvars == 0 || heurdata->nblocks <= 1 )
+   {
+      SCIPdebugMsg(scip, "problem has no constraints, no variables or less than two blocks\n");
+      return SCIP_OKAY;
+   }
+
+   /* estimate required memory for all blocks and terminate if not enough memory is available */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
+   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * (heurdata->nblocks/4 + 2) >= memory )
+   {
+      SCIPdebugMsg(scip, "The estimated memory usage for %d blocks is too large.\n", heurdata->nblocks);
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedvars, SCIPgetVars(scip), nvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedconss, SCIPgetConss(scip), nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortedvarlabels, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortedconslabels, nconss) );
+
+   /* get labels and sort in increasing order */
+   SCIPdecompGetVarsLabels(decomp, sortedvars, sortedvarlabels, nvars);
+   SCIPdecompGetConsLabels(decomp, sortedconss, sortedconslabels, nconss);
+   SCIPsortIntPtr(sortedvarlabels, (void**)sortedvars, nvars);
+   SCIPsortIntPtr(sortedconslabels, (void**)sortedconss, nconss);
+
+   if( sortedvarlabels[0] == SCIP_DECOMP_LINKVAR ||
+         sortedconslabels[0] != SCIP_DECOMP_LINKCONS ||
+         heurdata->nblocks <= 1 )
+   {
+      SCIPdebugMsg(scip, "Problem has linking variables or no linking constraints or less than two blocks\n");
+      goto TERMINATE;
+   }
+
+   /** ------------------------------------------------------------------------ */
+   /** free memory */
+TERMINATE:
+   if( sortedconslabels != NULL )
+   {
+      SCIPfreeBufferArray(scip, &sortedconslabels);
+   }
+
+   if( sortedvarlabels != NULL )
+   {
+      SCIPfreeBufferArray(scip, &sortedvarlabels);
+   }
+
+   if( sortedconss != NULL )
+   {
+      SCIPfreeBufferArray(scip, &sortedconss);
+   }
+
+   if( sortedvars != NULL )
+   {
+      SCIPfreeBufferArray(scip, &sortedvars);
+   }
 
    return SCIP_OKAY;
 }
