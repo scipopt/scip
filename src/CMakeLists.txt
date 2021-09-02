@@ -94,6 +94,7 @@ set(scipsources
     scip/heur_crossover.c
     scip/heur_dins.c
     scip/heur_distributiondiving.c
+    scip/heur_dps.c
     scip/heur_dualval.c
     scip/heur_farkasdiving.c
     scip/heur_feaspump.c
@@ -537,6 +538,7 @@ set(scipheaders
     scip/heur_crossover.h
     scip/heur_dins.h
     scip/heur_distributiondiving.h
+    scip/heur_dps.h
     scip/heur_dualval.h
     scip/heur_farkasdiving.h
     scip/heur_feaspump.h
