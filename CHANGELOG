@@ -587,7 +587,7 @@ NLPI:
 - removed constraints/quadratic/binreforminitial, constraints/quadratic/binreformbinaryonly, constraints/quadratic/binreformmaxcoef
 - removed constraints/quadratic/cutmaxrange, constraints/quadratic/mincurvcollectbilinterms, constraints/quadratic/linearizeheursol, constraints/quadratic/checkcurvature, constraints/quadratic/checkfactorable, constraints/quadratic/checkquadvarlocks, constraints/quadratic/linfeasshift
 - removed constraints/quadratic/maxdisaggrsize, constraints/quadratic/disaggrmergemethod, constraints/quadratic/maxproprounds, constraints/quadratic/maxproproundspresolve, constraints/quadratic/enfolplimit, constraints/quadratic/sepanlpmincont, constraints/quadratic/enfocutsremovable
-- removed constraints/quadratic/gaugecuts, constraints/quadratic/interiorcomputation, constraints/quadratic/projectedcuts, constraints/quadratic/branchscoring, constraints/quadratic/usebilinineqbranch, constraints/quadratic/bilinineqmaxseparounds, 
+- removed constraints/quadratic/gaugecuts, constraints/quadratic/interiorcomputation, constraints/quadratic/projectedcuts, constraints/quadratic/branchscoring, constraints/quadratic/usebilinineqbranch, constraints/quadratic/bilinineqmaxseparounds,
 - removed constraints/quadratic/minscorebilinterms, use nlhdlr/bilinear/enabled instead
 - removed constraints/quadratic/upgrade/linear, constraints/quadratic/upgrade/abspower, constraints/quadratic/upgrade/bivariate, constraints/quadratic/upgrade/bounddisjunction
 - removed constraints/quadratic/upgrade/soc, use nlhdlr/soc/enabled instead
@@ -673,6 +673,9 @@ NLPI:
 - heuristics/subnlp/iterinit, heuristics/subnlp/ninitsolves, heuristics/subnlp/successrateexp
 - heuristics/subnlp/expectinfeas, heuristics/subnlp/opttol, heuristics/subnlp/feastolfactor
 - heuristics/subnlp/presolveemphasis, heuristics/subnlp/setcutoff
+- new parameters "branching/inference/conflictprio" and "branching/inference/cutoffprio" that allow
+  using the different score criteria in inference branching hierarchically
+
 
 ### Data structures
 
