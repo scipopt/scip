@@ -36,6 +36,7 @@
 #include "scip/pub_lp.h"
 #include "scip/expr_pow.h"
 #include "scip/nlhdlr_bilinear.h"
+#include "scip/cutsel_hybrid.h"
 
 
 #define SEPA_NAME              "rlt"
@@ -2995,7 +2996,7 @@ SCIP_RETCODE separateRltCuts(
 
       assert(cuts != NULL);
 
-      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, sepadata->goodscore, sepadata->badscore, sepadata->goodmaxparall,
+      SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, NULL, NULL, sepadata->goodscore, sepadata->badscore, sepadata->goodmaxparall,
             sepadata->maxparall, sepadata->dircutoffdistweight, sepadata->efficacyweight, sepadata->objparalweight,
             0.0, ncuts, 0, sepadata->maxncuts == -1 ? ncuts : sepadata->maxncuts, &nselectedcuts) );
 
