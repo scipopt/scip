@@ -261,6 +261,31 @@ SCIP_RETCODE SCIPinterruptSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** indicates whether \SCIP has been informed that the solving process should be interrupted as soon as possible
+ *
+ *  This function returns whether SCIPinterruptSolve() has been called, which is different from SCIPinterrupted(),
+ *  which returns whether a SIGINT signal has been received by the SCIP signal handler.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note the \SCIP stage does not get changed
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisSolveInterrupted(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** informs SCIP that the solving process should be restarted as soon as possible (e.g., after the current node has
  *  been solved)
  *

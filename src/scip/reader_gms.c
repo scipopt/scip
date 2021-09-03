@@ -25,24 +25,26 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/pub_expr.h"
+#ifdef CLASSIC_NONLINEAR_CONSHDLR  /* TODO code disabled with this define needs to be update to work with new cons_nonlinear, see #3014 */
+#include "scip/pub_expr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_bivariate.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/cons_soc.h"
+#include "scip/pub_nlp.h"
+#endif
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_soc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_varbound.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/pub_nlp.h"
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_gms.h"
@@ -188,6 +190,7 @@ void appendLine(
       endLine(scip, file, linebuffer, linecnt);
 }
 
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
 /** appends extension to line and prints it to the give file stream if the
  *  line exceeded the length given in the define GMS_PRINTLEN
  *  indents the line by some spaces if it is a new line */
@@ -206,6 +209,7 @@ void appendLineWithIndent(
 
    appendLine(scip, file, linebuffer, linecnt, extension);
 }
+#endif
 
 /** checks string for occurences of bad symbols and replace those by '_' */
 static
@@ -584,7 +588,7 @@ SCIP_RETCODE printLinearCons(
    return SCIP_OKAY;
 }
 
-
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
 /* print quadratic row in GAMS format to file stream (performing retransformation to active variables) */
 static
 SCIP_RETCODE printQuadraticRow(
@@ -908,6 +912,7 @@ SCIP_RETCODE printSOCCons(
 
    return SCIP_OKAY;
 }
+#endif
 
 /* print indicator constraint in some GAMS format to file stream (performing retransformation to active variables)
  * The constraints are of the following form:
@@ -1099,6 +1104,7 @@ SCIP_RETCODE printSOSCons(
    return SCIP_OKAY;
 }
 
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
 /* print signpower row in GAMS format to file stream (performing retransformation to active variables) */
 static
 SCIP_RETCODE printSignpowerRow(
@@ -1880,6 +1886,7 @@ SCIP_RETCODE printNonlinearCons(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** method check if the variable names are not longer than GMS_MAX_NAMELEN */
 static
@@ -2000,11 +2007,17 @@ SCIP_RETCODE checkConsnames(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 )
       {
          SCIP_Real lhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetLhsQuadratic(scip, cons);
          SCIP_Real rhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetRhsQuadratic(scip, cons);
-
+#else
+      if( strcmp(conshdlrname, "linear") == 0 )
+      {
+         SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
+         SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
+#endif
          if( SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN )
          {
             SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
@@ -2148,9 +2161,11 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Real ub;
    SCIP_Bool freeints;
    SCIP_Bool nondefbounds;
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
    SCIP_Bool nlcons;
    SCIP_Bool nqcons;
    SCIP_Bool nsmooth;
+#endif
    SCIP_Bool discrete;
    SCIP_Bool rangedrow;
    SCIP_Bool indicatorsosdef;
@@ -2408,6 +2423,7 @@ SCIP_RETCODE SCIPwriteGms(
       rangedrow = strcmp(conshdlrname, "linear") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsLinear(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       rangedrow = rangedrow || (strcmp(conshdlrname, "quadratic") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons)));
@@ -2420,15 +2436,20 @@ SCIP_RETCODE SCIPwriteGms(
       rangedrow = rangedrow || (strcmp(conshdlrname, "bivariate") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsBivariate(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsBivariate(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsBivariate(scip, cons), SCIPgetRhsBivariate(scip, cons)));
+#endif
       rangedrow = rangedrow || (strcmp(conshdlrname, "varbound") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsVarbound(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsVarbound(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons)));
 
       /* we declare only those constraints which we can print in GAMS format */
       if( strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "setppc") != 0
-          && strcmp(conshdlrname, "linear") != 0 && strcmp(conshdlrname, "quadratic") != 0 && strcmp(conshdlrname, "varbound") != 0
+          && strcmp(conshdlrname, "linear") != 0 && strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
+          && strcmp(conshdlrname, "quadratic") != 0
           && strcmp(conshdlrname, "soc") != 0 && strcmp(conshdlrname, "abspower") != 0 && strcmp(conshdlrname, "bivariate") != 0
-          && strcmp(conshdlrname, "nonlinear") != 0 && strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0
+          && strcmp(conshdlrname, "nonlinear") != 0
+#endif
+          && strcmp(conshdlrname, "varbound") != 0
           && strcmp(conshdlrname, "indicator") != 0 )
       {
          SCIPwarningMessage(scip, "Constraint type <%s> not supported. Skip writing constraint <%s>.\n", conshdlrname, SCIPconsGetName(cons));
@@ -2492,9 +2513,11 @@ SCIP_RETCODE SCIPwriteGms(
    }
 
    /* print constraints */
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
    nlcons = FALSE;
    nqcons = FALSE;
    nsmooth = FALSE;
+#endif
    discrete = nbinvars > 0 || nintvars > 0;
    indicatorsosdef = FALSE;
    for( c = 0; c < nconss; ++c )
@@ -2542,6 +2565,7 @@ SCIP_RETCODE SCIPwriteGms(
                SCIPgetNVarsLogicor(scip, cons), SCIPgetVarsLogicor(scip, cons), NULL,
                1.0, SCIPinfinity(scip), transformed) );
       }
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       else if( strcmp(conshdlrname, "quadratic") == 0 )
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
@@ -2605,6 +2629,7 @@ SCIP_RETCODE SCIPwriteGms(
          if( exprdegree > 2)
             nqcons = TRUE;
       }
+#endif
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
          consvars = SCIPgetVarsSetppc(scip, cons);
@@ -2644,6 +2669,7 @@ SCIP_RETCODE SCIPwriteGms(
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
       }
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       else if( strcmp(conshdlrname, "soc") == 0 )
       {
          SCIP_CALL( printSOCCons(scip, file, consname,
@@ -2653,12 +2679,14 @@ SCIP_RETCODE SCIPwriteGms(
          nlcons = nlcons || !isGAMSprintableSOC(SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
             SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons));
       }
+#endif
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
          SCIP_CALL( printIndicatorCons(scip, file, consname,
             SCIPgetBinaryVarIndicator(cons), SCIPgetSlackVarIndicator(cons), &indicatorsosdef,
             transformed) );
       }
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       else if( strcmp(conshdlrname, "abspower") == 0 )
       {
          SCIP_CALL( printSignpowerCons(scip, file, consname,
@@ -2669,6 +2697,7 @@ SCIP_RETCODE SCIPwriteGms(
          nlcons = TRUE;
          nqcons = TRUE;
       }
+#endif
       else if( strcmp(conshdlrname, "SOS1") == 0 )
       {
          SCIP_CALL( printSOSCons(scip, file, consname,
@@ -2693,8 +2722,10 @@ SCIP_RETCODE SCIPwriteGms(
 
       SCIPinfoMessage(scip, file, "\n");
    }
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
    /* if at most quadratic, then cannot have nonsmooth functions */
    assert(nlcons || !nsmooth);
+#endif
 
    /* print model creation */
    SCIPinfoMessage(scip, file, "Model m / all /;\n\n");
@@ -2704,8 +2735,12 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "option limcol = 0;\n\n");
 
    /* print solve command */
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
          discrete ? "MI" : "", nlcons ? (nqcons ? ((nsmooth && !discrete) ? "DNLP" : "NLP") : "QCP") : (discrete > 0 ? "P" : "LP"));
+#else
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, discrete ? "MIP" : "LP");
+#endif
 
    if( objvar != NULL )
    {

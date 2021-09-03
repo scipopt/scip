@@ -1734,7 +1734,7 @@ SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to be processed */
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the node can be cut off */
-   int*                  nfixedvars         /**< pointer to add up the number of found domain reductions */
+   int*                  nfixedvars          /**< pointer to add up the number of found domain reductions */
    )
 {
    SCIP_CONSDATA* consdata;

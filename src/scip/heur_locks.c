@@ -937,17 +937,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       /* speed up sub-SCIP by not checking dual LP feasibility */
       SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
-      /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
-       * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-       * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-       * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
-       * made for the original SCIP
-       */
-      if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-      {
-         SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
-      }
-
       /* if there is already a solution, add an objective cutoff */
       if( SCIPgetNSols(scip) > 0 )
       {
