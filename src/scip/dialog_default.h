@@ -368,9 +368,9 @@ SCIP_RETCODE SCIPcreateRootDialog(
  * @{
  */
 
-/** includes or updates the default dialog menus in SCIP */
+/** includes or updates the default dialog menus in SCIP except for menus "fix" and "set" */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeDialogDefault(
+SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

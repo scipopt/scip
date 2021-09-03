@@ -1031,7 +1031,15 @@ SCIP_RETCODE consdataCreate(
    /* capture variables */
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
-      assert((*consdata)->vars[v] != NULL);
+      /* likely implies a deleted variable */
+      if( (*consdata)->vars[v] == NULL )
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
+         SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vals, (*consdata)->varssize);
+         SCIPfreeBlockMemory(scip, consdata);
+         return SCIP_INVALIDDATA;
+      }
+
       assert(!SCIPisZero(scip, (*consdata)->vals[v]));
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }

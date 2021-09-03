@@ -73,6 +73,7 @@
 #include "scip/scip_concurrent.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_general.h"
+#include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -2107,6 +2108,54 @@ SCIP_RETCODE freeTransform(
    return SCIP_OKAY;
 }
 
+/** free transformed problem in case an error occurs during transformation and return to SCIP_STAGE_PROBLEM */
+static
+SCIP_RETCODE freeTransforming(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->set->stage == SCIP_STAGE_TRANSFORMING);
+
+   /* switch stage to FREETRANS */
+   scip->set->stage = SCIP_STAGE_FREETRANS;
+
+   /* free transformed problem data structures */
+   SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
+   SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
+   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
+   SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue, scip->lp) );
+
+   /* free the debug solution which might live in transformed primal data structure */
+   SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
+   SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
+
+   SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
+   SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
+   SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPeventqueueFree(&scip->eventqueue) );
+
+   if( scip->set->misc_resetstat )
+   {
+      /* reset statistics to the point before the problem was transformed */
+      SCIPstatReset(scip->stat, scip->set, scip->transprob, scip->origprob);
+   }
+   else
+   {
+      /* even if statistics are not completely reset, a partial reset of the primal-dual integral is necessary */
+      SCIPstatResetPrimalDualIntegrals(scip->stat, scip->set, TRUE);
+   }
+
+   /* switch stage to PROBLEM */
+   scip->set->stage = SCIP_STAGE_PROBLEM;
+
+   return SCIP_OKAY;
+}
+
 /** displays most relevant statistics after problem was solved */
 static
 SCIP_RETCODE displayRelevantStats(
@@ -2398,6 +2447,7 @@ SCIP_RETCODE SCIPpresolve(
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
    SCIP_Bool vanished;
+   SCIP_RETCODE retcode;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -2411,12 +2461,19 @@ SCIP_RETCODE SCIPpresolve(
 
    /* reset the user interrupt flag */
    scip->stat->userinterrupt = FALSE;
+   SCIP_CALL( SCIPinterruptLP(scip, FALSE) );
 
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       /* initialize solving data structures and transform problem */
-      SCIP_CALL( SCIPtransformProb(scip) );
+      retcode =  SCIPtransformProb(scip);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIP_CALL( SCIPfreeTransform(scip) );
+         return retcode;
+      }
+
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
       /*lint -fallthrough*/
@@ -2608,6 +2665,7 @@ SCIP_RETCODE SCIPsolve(
 
    /* reset the user interrupt flag */
    scip->stat->userinterrupt = FALSE;
+   SCIP_CALL( SCIPinterruptLP(scip, FALSE) );
 
    /* automatic restarting loop */
    restart = scip->stat->userrestart;
@@ -3361,7 +3419,7 @@ SCIP_RETCODE SCIPfreeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPfreeTransform", TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPfreeTransform", TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* release variables and constraints captured by reoptimization */
    if( scip->reopt != NULL )
@@ -3405,6 +3463,12 @@ SCIP_RETCODE SCIPfreeTransform(
    case SCIP_STAGE_TRANSFORMED:
       /* free transformed problem data structures */
       SCIP_CALL( freeTransform(scip) );
+      assert(scip->set->stage == SCIP_STAGE_PROBLEM);
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+      assert(scip->set->stage == SCIP_STAGE_TRANSFORMING);
+      SCIP_CALL( freeTransforming(scip) );
       assert(scip->set->stage == SCIP_STAGE_PROBLEM);
       return SCIP_OKAY;
 

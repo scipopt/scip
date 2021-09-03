@@ -94,6 +94,34 @@ SCIP_Real SCIPdecompGetModularity(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
+/** gets variable size for each block, sorted by increasing block label */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdecompGetVarsSize(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int*                  varssize,           /**< array to store variable sizes of blocks*/
+   int                   nblocks             /**< length of variable sizes array */
+   );
+
+/** gets constraint size for each block, sorted by increasing block label */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdecompGetConssSize(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int*                  consssize,          /**< array to store constraint sizes of blocks*/
+   int                   nblocks             /**< length of constraint sizes array */
+   );
+
+/** gets number of border variables of this decomposition */
+SCIP_EXPORT
+int SCIPdecompGetNBorderVars(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
+/** gets number of border constraints of this decomposition */
+SCIP_EXPORT
+int SCIPdecompGetNBorderConss(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   );
+
 /** gets number of edges in the block-decomposition graph of this decomposition */
 SCIP_EXPORT
 int SCIPdecompGetNBlockGraphEdges(

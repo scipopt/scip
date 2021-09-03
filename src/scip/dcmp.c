@@ -295,6 +295,76 @@ SCIP_Real SCIPdecompGetModularity(
    return decomp->modularity;
 }
 
+/** gets variable size for each block, sorted by increasing block label */
+SCIP_RETCODE SCIPdecompGetVarsSize(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int*                  varssize,           /**< array to store variable sizes of blocks*/
+   int                   nblocks             /**< length of variable sizes array */
+   )
+{
+   int i;
+   int nsizes;
+
+   assert(decomp != NULL);
+   assert(varssize != NULL);
+   assert(nblocks >= 0);
+
+   nsizes = MIN(nblocks, decomp->nblocks + 1);
+
+   /* store variable sizes */
+   for( i = 0; i < nsizes; ++i )
+   {
+      varssize[i] = decomp->varssize[i];
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets constraint size for each block, sorted by increasing block label */
+SCIP_RETCODE SCIPdecompGetConssSize(
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   int*                  consssize,          /**< array to store constraint sizes of blocks*/
+   int                   nblocks             /**< length of constraint sizes array */
+   )
+{
+   int i;
+   int nsizes;
+
+   assert(decomp != NULL);
+   assert(consssize != NULL);
+   assert(nblocks >= 0);
+
+   nsizes = MIN(nblocks, decomp->nblocks + 1);
+
+   /* store constraint sizes */
+   for( i = 0; i < nsizes; ++i )
+   {
+      consssize[i] = decomp->consssize[i];
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets number of border variables of this decomposition */
+int SCIPdecompGetNBorderVars(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->labels[0] == SCIP_DECOMP_LINKVAR ? decomp->varssize[0] : 0;
+}
+
+/** gets number of border constraints of this decomposition */
+int SCIPdecompGetNBorderConss(
+   SCIP_DECOMP*          decomp              /**< decomposition data structure */
+   )
+{
+   assert(decomp != NULL);
+
+   return decomp->labels[0] == SCIP_DECOMP_LINKVAR ? decomp->consssize[0] : 0;
+}
+
 /** gets number of edges in the block-decomposition graph of this decomposition */
 int SCIPdecompGetNBlockGraphEdges(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
@@ -368,7 +438,7 @@ char* SCIPdecompPrintStats(
             decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxlargestblock]);
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
             "Smallest block: Block %d with %d constraints and %d variables\n",
-            decomp->nblocks == 0 ? 0 : decomp->labels[decomp->idxsmallestblock],
+            decomp->nblocks == 0 ? -1 : decomp->labels[decomp->idxsmallestblock],
             decomp->nblocks == 0 ? 0 : decomp->consssize[decomp->idxsmallestblock],
             decomp->nblocks == 0 ? 0 : decomp->varssize[decomp->idxsmallestblock]);
    ptr += SCIPsnprintf(ptr, SCIP_MAXSTRLEN,
