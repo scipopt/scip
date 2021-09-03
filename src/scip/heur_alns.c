@@ -207,13 +207,13 @@
 
 
 /** reward types of ALNS */
-typedef enum RewardType {
+enum RewardType {
    REWARDTYPE_TOTAL,                         /**< combination of the other rewards */
    REWARDTYPE_BESTSOL,                       /**< 1, if a new solution was found, 0 otherwise */
    REWARDTYPE_CLOSEDGAP,                           /**< 0 if no solution was found, closed gap otherwise */
    REWARDTYPE_NOSOLPENALTY,                  /**< 1 if a solution was found, otherwise between 0 and 1 depending on the effort spent  */
    NREWARDTYPES
-} REWARDTYPE;
+};
 
 /*
  * Data structures
@@ -2042,7 +2042,7 @@ SCIP_RETCODE getReward(
    SCIP_Real effort;
    int ndiscretevars;
 
-   memset(rewardptr, 0, sizeof(*rewardptr)*NREWARDTYPES);
+   memset(rewardptr, 0, sizeof(*rewardptr)*(int)NREWARDTYPES);
 
    assert(rewardptr != NULL);
    assert(runstats->usednodes >= 0);
@@ -2318,7 +2318,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    SCIP_Bool success;
    SCIP_Bool run;
    SCIP_Bool allrewardsmode;
-   SCIP_Real rewards[NNEIGHBORHOODS][NREWARDTYPES] = {0};
+   SCIP_Real rewards[NNEIGHBORHOODS][NREWARDTYPES] = {{0}};
    int banditidx;
 
    int i;
@@ -2351,7 +2351,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
 
       if( SCIPheurGetNCalls(heur) - heurdata->firstcallthissol >= samesollimit )
       {
-         SCIPdebugMsg(scip, "Heuristic already called %d times on current incumbent\n");
+         SCIPdebugMsg(scip, "Heuristic already called %d times on current incumbent\n", SCIPheurGetNCalls(heur) - heurdata->firstcallthissol);
          return SCIP_OKAY;
       }
    }
@@ -2700,7 +2700,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    if( allrewardsmode )
    {
       int j;
-      for( j = 0; j < NREWARDTYPES; j++ )
+      for( j = 0; j < (int)NREWARDTYPES; j++ )
          for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
             fprintf(heurdata->rewardfile, "%.4f,", rewards[i][j]);
 
