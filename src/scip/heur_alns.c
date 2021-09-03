@@ -2351,7 +2351,7 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
 
       if( SCIPheurGetNCalls(heur) - heurdata->firstcallthissol >= samesollimit )
       {
-         SCIPdebugMsg(scip, "Heuristic already called %d times on current incumbent\n", SCIPheurGetNCalls(heur) - heurdata->firstcallthissol);
+         SCIPdebugMsg(scip, "Heuristic already called %" SCIP_LONGINT_FORMAT " times on current incumbent\n", SCIPheurGetNCalls(heur) - heurdata->firstcallthissol);
          return SCIP_OKAY;
       }
    }
