@@ -1574,7 +1574,10 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    }
 #endif
 
-   /* create transformed constraint data */
+   /* create transformed constraint data
+    *
+    * do NOT call consdataCreate() again to avoid doing the packing-upgrade check twice
+    */
    nvars = sourcedata->nvars;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
@@ -1616,6 +1619,18 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
 
          consdata->ndescentpoints = sourcedata->ndescentpoints;
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->descentpoints, sourcedata->descentpoints, sourcedata->ndescentpoints) );
+      }
+
+      /* Make sure that all variables cannot be multiaggregated (cannot be handled by cons_symresack, since one cannot
+       * easily eliminate single variables from a symresack constraint.
+       *
+       * We need to call this again to ensure that multiaggregation is forbidden also if the constraint was part
+       * of the original problem.
+       */
+      for (i = 0; i < sourcedata->nvars; ++i)
+      {
+         SCIP_CALL( SCIPgetTransformedVar(scip, consdata->vars[i], &consdata->vars[i]) );
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->vars[i]) );
       }
    }
 
