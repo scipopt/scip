@@ -1076,7 +1076,6 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
 {
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* consdata = NULL;
-   int nrows;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
