@@ -777,7 +777,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          if( nunfixedcols > 0.5 * ncols )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-               "Heuristic " HEUR_NAME " solving LP from scratch with %.1f %% unfixed columns (%d of %d) . . .\n",
+               "Heuristic " HEUR_NAME " solving LP from scratch with %.1f %% unfixed columns (%d of %d) ...\n",
                100.0 * (nunfixedcols / (SCIP_Real)ncols), nunfixedcols, ncols);
          }
       }
