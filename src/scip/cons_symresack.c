@@ -1621,8 +1621,8 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->descentpoints, sourcedata->descentpoints, sourcedata->ndescentpoints) );
       }
 
-      /* Make sure that all variables cannot be multiaggregated (cannot be handled by cons_symresack, since one cannot
-       * easily eliminate single variables from a symresack constraint.
+      /* Make sure that all variables cannot be multiaggregated (this cannot be handled by cons_symresack, since one cannot
+       * easily eliminate single variables from a symresack constraint).
        *
        * We need to call this again to ensure that multiaggregation is forbidden also if the constraint was part
        * of the original problem.
