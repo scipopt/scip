@@ -18,6 +18,7 @@ Features
 - New separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint).
 - New parsing routines for cons_orbisack and cons_symresack.
 - Variables can now be marked to forbid aggregation
+- Heuristic PADM can now reoptimize found solution with original objective function
 
 Performance improvements
 ------------------------
@@ -98,6 +99,7 @@ Interface changes
 - deleted parameter "constraints/orbitope/usedynamicprop"
 - changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
 - deleted parameter "propagating/symmetry/disableofrestart"
+- parameter "heuristics/padm/original" is now an advanced parameter
 
 ### New parameters
 
