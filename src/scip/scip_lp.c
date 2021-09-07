@@ -543,7 +543,7 @@ int SCIPgetNUnfixedLPCols(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNUnfixedLPCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
-      return SCIPlpGetNUnfixedCols(scip->lp);
+      return SCIPlpGetNUnfixedCols(scip->lp, scip->set->num_epsilon);
    else
       return 0;
 }

@@ -17509,25 +17509,25 @@ int SCIPlpGetNCols(
 
 /** gets current number of unfixed columns in LP */
 int SCIPlpGetNUnfixedCols(
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             eps                 /**< numerical tolerance */
    )
 {
    SCIP_COL** lpcols;
-   SCIP_Real feastol;
    int nlpcols;
    int nunfixedcols;
    int c;
 
    assert(lp != NULL);
+   assert(eps > 0.0);
 
    lpcols = lp->cols;
-   feastol = lp->feastol;
    nlpcols = lp->ncols;
 
    nunfixedcols = 0;
    for( c = 0; c < nlpcols; ++c )
    {
-      if( lpcols[c]->ub - lpcols[c]->lb > feastol )
+      if( lpcols[c]->ub - lpcols[c]->lb > eps )
          ++nunfixedcols;
    }
 
