@@ -460,6 +460,7 @@ Constraint handlers for NLP:
 - added SCIPsetClockEnabled()
 - added SCIPisSolveInterrupted() to check whether SCIPinterruptSolve() has been called
 - added SCIPgetNPresolRounds()
+- added SCIPgetNUnfixedLPCols()
 
 Expression handler:
 - added SCIPincludeExprhdlr(), SCIPgetExprhdlrs(), SCIPgetNExprhdlrs(), SCIPfindExprhdlr()
