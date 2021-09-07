@@ -527,6 +527,27 @@ int SCIPgetNLPCols(
       return 0;
 }
 
+/** gets current number of unfixed LP columns
+ *
+ *  @return the current number of unfixed LP columns.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+int SCIPgetNUnfixedLPCols(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNUnfixedLPCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+      return SCIPlpGetNUnfixedCols(scip->lp);
+   else
+      return 0;
+}
+
 /** gets current LP rows along with the current number of LP rows
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

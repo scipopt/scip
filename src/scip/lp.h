@@ -1468,6 +1468,11 @@ int SCIPlpGetNCols(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** gets current number of unfixed columns in LP */
+int SCIPlpGetNUnfixedCols(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** gets array with rows of the LP */
 SCIP_ROW** SCIPlpGetRows(
    SCIP_LP*              lp                  /**< current LP data */
