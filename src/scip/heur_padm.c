@@ -477,7 +477,8 @@ static
 SCIP_RETCODE createAndSplitProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           sortedconss,        /**< array of (checked) constraints sorted by blocks */
-   int*                  blockstartsconss,   /**< start points of blocks in sortedconss array */
+   int                   nconss,             /**< number of constraints */
+   int*                  consssize,          /**< number of constraints per block (and border at index 0) */
    int                   nblocks,            /**< number of blocks */
    PROBLEM**             problem,            /**< pointer to store problem structure */
    SCIP_Bool             original,           /**< do we use the original problem? */
@@ -488,6 +489,7 @@ SCIP_RETCODE createAndSplitProblem(
    SCIP_HASHMAP* varmap;
    SCIP_HASHMAP* consmap;
    SCIP_CONS** blockconss;
+   int nhandledconss;
    int nblockconss;
    int b;
 
@@ -498,7 +500,7 @@ SCIP_RETCODE createAndSplitProblem(
    assert((*problem)->blocks != NULL);
 
    /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
-   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), blockstartsconss[nblocks]) );
+   SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), nconss) );
 
    for( b = 0; b < nblocks; b++ )
    {
@@ -506,6 +508,7 @@ SCIP_RETCODE createAndSplitProblem(
    }
 
    /* loop over all blocks and create subscips */
+   nhandledconss = 0;
    for( b = 0; b < nblocks; b++ )
    {
       block = &(*problem)->blocks[b];
@@ -513,13 +516,14 @@ SCIP_RETCODE createAndSplitProblem(
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
       /* get block constraints */
-      blockconss = &(sortedconss[blockstartsconss[b]]);
-      nblockconss = blockstartsconss[b + 1] - blockstartsconss[b];
+      blockconss = &(sortedconss[nhandledconss]);
+      nblockconss = consssize[b + 1];
 
       /* build subscip for block */
       SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, original, success) );
 
       SCIPhashmapFree(&varmap);
+      nhandledconss += nblockconss;
 
       if( !(*success) )
          break;
@@ -540,21 +544,17 @@ SCIP_RETCODE createAndSplitProblem(
 static
 SCIP_RETCODE assignLinking(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SCIP_DECOMP*    decomp,             /**< decomposition */
    SCIP_DECOMP*          newdecomp,          /**< decomposition with (partially) assigned linking constraints */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_CONS**           sortedconss,        /**< sorted array of constraints */
    int*                  varlabels,          /**< array of variable labels */
    int*                  conslabels,         /**< sorted array of constraint labels */
    int                   nvars,              /**< number of variables */
-   int                   nconss              /**< number of constraints */
+   int                   nconss,             /**< number of constraints */
+   int                   nlinkconss          /**< number of linking constraints */
    )
 {
-   int nlinkconss;
-   int c;
-
    assert(scip != NULL);
-   assert(decomp != NULL);
    assert(vars != NULL);
    assert(sortedconss != NULL);
    assert(varlabels != NULL);
@@ -563,15 +563,6 @@ SCIP_RETCODE assignLinking(
    /* copy the labels */
    SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, vars, varlabels, nvars) );
    SCIP_CALL( SCIPdecompSetConsLabels(newdecomp, sortedconss, conslabels, nconss) );
-
-   nlinkconss = 0;
-   for( c = 0; c < nconss; c++ )
-   {
-      if( conslabels[c] == SCIP_DECOMP_LINKCONS )
-         nlinkconss++;
-      else
-         break;
-   }
 
    SCIPdebugMsg(scip, "try to assign %d linking constraints\n", nlinkconss);
 
@@ -979,6 +970,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    PROBLEM* problem;
    SCIP_DECOMP** alldecomps;
    SCIP_DECOMP* decomp;
+   SCIP_DECOMP* assigneddecomp;
    SCIP_VAR** vars;
    SCIP_VAR** linkvars;
    SCIP_VAR** tmpcouplingvars;
@@ -990,7 +982,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_HASHTABLE* htable;
    int* varlabels;
    int* conslabels;
-   int* blockstartsconss;
+   int* consssize;
    int* alllinkvartoblocks; /* for efficient memory allocation */
    SCIP_Bool* varonlyobj;
    SCIP_Real* tmpcouplingcoef;
@@ -1031,10 +1023,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    *result = SCIP_DIDNOTRUN;
 
    problem = NULL;
+   assigneddecomp = NULL;
    sortedconss = NULL;
    varlabels = NULL;
    conslabels = NULL;
-   blockstartsconss = NULL;
+   consssize = NULL;
    alllinkvartoblocks = NULL;
    linkvars = NULL;
    linkvartoblocks = NULL;
@@ -1131,7 +1124,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varlabels, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conslabels, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &blockstartsconss, nconss + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consssize, nblocks + 1) );
 
    SCIPdecompGetConsLabels(decomp, conss, conslabels, nconss);
    SCIPdecompGetVarsLabels(decomp, vars, varlabels, nvars);
@@ -1143,31 +1136,24 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    if( heurdata->assignlinking && conslabels[0] == SCIP_DECOMP_LINKCONS )
    {
       /* create new decomposition; don't change the decompositions in the decompstore */
-      SCIP_DECOMP* newdecomp = NULL;
-      SCIP_CALL( SCIPcreateDecomp(scip, &newdecomp, nblocks, heurdata->original, SCIPdecompUseBendersLabels(decomp)) );
+      SCIP_CALL( SCIPcreateDecomp(scip, &assigneddecomp, nblocks, heurdata->original, SCIPdecompUseBendersLabels(decomp)) );
 
-      SCIP_CALL( assignLinking(scip, decomp, newdecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss) );
-      decomp = newdecomp;
+      SCIP_CALL( assignLinking(scip, assigneddecomp, vars, sortedconss, varlabels, conslabels, nvars, nconss, SCIPdecompGetNBorderConss(decomp)) );
+      assert(SCIPdecompGetNBlocks(decomp) >= SCIPdecompGetNBlocks(assigneddecomp));
+      decomp = assigneddecomp;
 
-      /* number of blocks can have changed */
+      /* number of blocks can get smaller */
       nblocks = SCIPdecompGetNBlocks(decomp);
-
-      /* new decomp can already be deleted here because we don't need it anymore */
-      SCIPfreeDecomp(scip, &newdecomp);
    }
 
-   if( conslabels[0] == SCIP_DECOMP_LINKCONS )
+   if( SCIPdecompGetNBorderConss(decomp) != 0 )
    {
       SCIPdebugMsg(scip, "No support for linking contraints\n");
       goto TERMINATE;
    }
 
-   /* count linking variables */
-   for( i = 0; i < nvars; i++ )
-   {
-      if( varlabels[i] == SCIP_DECOMP_LINKVAR )
-         numlinkvars++;
-   }
+   /* get number of linking variables */
+   numlinkvars = SCIPdecompGetNBorderVars(decomp);
    SCIPdebugMsg(scip, "%d linking variables\n", numlinkvars);
 
    if( numlinkvars == 0 )
@@ -1178,23 +1164,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* determine start indices of blocks in sorted conss array */
-   i = 0;
-   for( b = 0; b < nblocks + 1; ++b )
-   {
-      blockstartsconss[b] = i;
-      if( i == nconss )
-         break;
-
-      do
-      {
-         ++i;
-      }
-      while( i < nconss && conslabels[i] == conslabels[i-1] );
-   }
+   /* get for every block the number of constraints (first entry belongs to border) */
+   SCIP_CALL( SCIPdecompGetConssSize(decomp, consssize, nblocks + 1) );
 
    /* create blockproblems */
-   SCIP_CALL( createAndSplitProblem(scip, sortedconss, blockstartsconss, nblocks, &problem, heurdata->original, &success) );
+   SCIP_CALL( createAndSplitProblem(scip, sortedconss, nconss, consssize, nblocks, &problem, heurdata->original, &success) );
 
    if( !success )
    {
@@ -1968,8 +1942,11 @@ TERMINATE:
    if( linkvartoblocks != NULL )
       SCIPfreeBufferArray(scip, &linkvartoblocks);
 
-   if( blockstartsconss != NULL )
-      SCIPfreeBufferArray(scip, &blockstartsconss);
+   if( assigneddecomp != NULL )
+      SCIPfreeDecomp(scip, &assigneddecomp);
+
+   if( consssize != NULL )
+      SCIPfreeBufferArray(scip, &consssize);
 
    if( conslabels != NULL )
       SCIPfreeBufferArray(scip, &conslabels);
