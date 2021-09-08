@@ -297,7 +297,7 @@ SCIP_Real SCIPdecompGetModularity(
 
 /** gets variable size for each block, sorted by increasing block label
  *
- * To get all variable sizes, set nlabels to nblocks + 1.
+ * To get all variable sizes, set nlabels to SCIPdecompGetNBlocks() + 1.
  * The first entry corresponds to the number of border variables.
  *
  * @note Ensure that SCIPcomputeDecompStats() has been called before.
@@ -330,7 +330,7 @@ SCIP_RETCODE SCIPdecompGetVarsSize(
 
 /** gets constraint size for each block, sorted by increasing block label
  *
- * To get all constraint sizes, set nlabels to nblocks + 1.
+ * To get all constraint sizes, set nlabels to SCIPdecompGetNBlocks() + 1.
  * The first entry corresponds to the number of border constraints.
  *
  * @note Ensure that SCIPcomputeDecompStats() has been called before.
