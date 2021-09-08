@@ -63,7 +63,93 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+/** assigns linking variables to last block
+ *
+ * The labels are copied to newdecomp and the linking variables are assigned to the last block (i.e. highest block label).
+ * Constraint labels and statistics are recomputed.
+ */
+static
+SCIP_RETCODE assignLinking(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECOMP*          newdecomp,          /**< decomposition with assigned linking variables */
+   SCIP_VAR**            sortedvars,         /**< sorted array of variables */
+   SCIP_CONS**           sortedconss,        /**< sorted array of constraints */
+   int*                  sortedvarlabels,    /**< sorted array of variable labels */
+   int*                  sortedconslabels,   /**< sorted array of constraint labels */
+   int                   nvars,              /**< number of variables */
+   int                   nconss,             /**< number of constraints */
+   int                   nlinkvars           /**< number of linking variables */
+   )
+{
+   int newlabel;
+   int maxgraphedge;
+   int v;
+
+   assert(scip != NULL);
+   assert(newdecomp != NULL);
+   assert(sortedvars != NULL);
+   assert(sortedconss != NULL);
+   assert(sortedvarlabels != NULL);
+   assert(sortedconslabels != NULL);
+
+   /* we do not need the block decomposition graph of the statistics */
+   SCIP_CALL( SCIPgetIntParam(scip, "decomposition/maxgraphedge", &maxgraphedge) );
+   if( !SCIPisParamFixed(scip, "decomposition/maxgraphedge") )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", 0) );
+   }
+
+   /* copy the labels */
+   SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, sortedvars, sortedvarlabels, nvars) );
+   SCIP_CALL( SCIPdecompSetConsLabels(newdecomp, sortedconss, sortedconslabels, nconss) );
+
+   /* assign linking variables */
+   newlabel = sortedvarlabels[nvars - 1]; /* take always label of last block */
+   assert(newlabel >= 0);
+   for( v = 0; v < nlinkvars; v++ )
+   {
+      SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, &sortedvars[v], &newlabel, 1) );
+   }
+   SCIPdebugMsg(scip, "assigned %d linking variables\n", nlinkvars);
+
+   /* recompute constraint labels and statistics */
+   SCIP_CALL( SCIPcomputeDecompConsLabels(scip, newdecomp, sortedconss, nconss) );
+   SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp, TRUE) );
+   nlinkvars = SCIPdecompGetNBorderVars(newdecomp);
+
+   /* get new labels and sort */
+   SCIPdecompGetConsLabels(newdecomp, sortedconss, sortedconslabels, nconss);
+   SCIPdecompGetVarsLabels(newdecomp, sortedvars, sortedvarlabels, nvars);
+   SCIPsortIntPtr(sortedconslabels, (void**)sortedconss, nconss);
+   SCIPsortIntPtr(sortedvarlabels, (void**)sortedvars, nvars);
+
+   /* After assigning the linking variables, blocks can have zero constraints.
+    * So the remaining variables are labeled as linking in SCIPcomputeDecompStats().
+    * We assign this variables to the same label as above.
+    */
+   if( nlinkvars >= 1 )
+   {
+      assert(sortedvarlabels[0] == SCIP_DECOMP_LINKVAR);
+      SCIPdebugMsg(scip, "assign again %d linking variables\n", nlinkvars);
+
+      for( v = 0; v < nlinkvars; v++ )
+      {
+         SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, &sortedvars[v], &newlabel, 1) );
+      }
+      SCIP_CALL( SCIPcomputeDecompConsLabels(scip, newdecomp, sortedconss, nconss) );
+      SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp, TRUE) );
+
+      SCIPdecompGetConsLabels(newdecomp, sortedconss, sortedconslabels, nconss);
+      SCIPdecompGetVarsLabels(newdecomp, sortedvars, sortedvarlabels, nvars);
+      SCIPsortIntPtr(sortedconslabels, (void**)sortedconss, nconss);
+      SCIPsortIntPtr(sortedvarlabels, (void**)sortedvars, nvars);
+   }
+   assert(sortedvarlabels[0] != SCIP_DECOMP_LINKVAR);
+
+   SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", maxgraphedge) );
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -111,6 +197,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
 {  /*lint --e{715}*/
    SCIP_DECOMP** alldecomps;
    SCIP_DECOMP* decomp;
+   SCIP_DECOMP* assigneddecomp;
    SCIP_VAR** vars;
    SCIP_CONS** conss;
    SCIP_VAR** sortedvars;
@@ -129,6 +216,8 @@ SCIP_DECL_HEUREXEC(heurExecDps)
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   assigneddecomp = NULL;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -176,6 +265,24 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    SCIPsortIntPtr(sortedvarlabels, (void**)sortedvars, nvars);
    SCIPsortIntPtr(sortedconslabels, (void**)sortedconss, nconss);
 
+   if( sortedvarlabels[0] == SCIP_DECOMP_LINKVAR )
+   {
+      /* create new decomposition; don't change the decompositions in the decompstore */
+      SCIP_CALL( SCIPdecompCreate(&assigneddecomp, SCIPblkmem(scip), heurdata->nblocks, SCIPdecompIsOriginal(decomp), SCIPdecompUseBendersLabels(decomp)) );
+
+      SCIP_CALL( assignLinking(scip, assigneddecomp, sortedvars, sortedconss, sortedvarlabels, sortedconslabels, nvars, nconss, SCIPdecompGetNBorderVars(decomp)) );
+      assert(SCIPdecompGetNBlocks(decomp) >= SCIPdecompGetNBlocks(assigneddecomp));
+      decomp = assigneddecomp;
+
+      /* number of blocks can get smaller */
+      heurdata->nblocks = SCIPdecompGetNBlocks(decomp);
+   }
+
+#ifdef SCIP_DEBUG
+      char buffer[SCIP_MAXSTRLEN];
+      SCIPdebugMsg(scip, "DPS used decomposition:\n%s\n", SCIPdecompPrintStats(decomp, buffer));
+#endif
+
    if( sortedvarlabels[0] == SCIP_DECOMP_LINKVAR ||
          sortedconslabels[0] != SCIP_DECOMP_LINKCONS ||
          heurdata->nblocks <= 1 )
@@ -187,6 +294,11 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    /** ------------------------------------------------------------------------ */
    /** free memory */
 TERMINATE:
+   if( assigneddecomp != NULL )
+   {
+      SCIPdecompFree(&assigneddecomp, SCIPblkmem(scip));
+   }
+
    if( sortedconslabels != NULL )
    {
       SCIPfreeBufferArray(scip, &sortedconslabels);
