@@ -1076,7 +1076,6 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
 {
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* consdata = NULL;
-   int nrows;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1088,24 +1087,10 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
-   assert( sourcedata != NULL );
-   assert( sourcedata->nrows > 0 );
-   assert( sourcedata->vars1 != NULL );
-   assert( sourcedata->vars2 != NULL );
 
-   /* create transformed constraint data (copy data where necessary) */
-   nrows = sourcedata->nrows;
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
-
-   consdata->nrows = nrows;
-   consdata->ismodelcons = sourcedata->ismodelcons;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars1, nrows) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars2, nrows) );
-
-   SCIP_CALL( SCIPgetTransformedVars(scip, nrows, sourcedata->vars1, consdata->vars1) );
-   SCIP_CALL( SCIPgetTransformedVars(scip, nrows, sourcedata->vars2, consdata->vars2) );
+   /* create constraint data */
+   SCIP_CALL( consdataCreate(scip, &consdata, sourcedata->vars1, sourcedata->vars2,
+         sourcedata->nrows, sourcedata->ismodelcons) );
 
    /* create transformed constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, consdata,
