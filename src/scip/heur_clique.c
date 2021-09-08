@@ -723,7 +723,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    if( solvelp )
    {
       char strbuf[SCIP_MAXSTRLEN];
-      int nunfixedcols;
       int ncols;
 
       /* print message if relatively large LP is solved from scratch, since this could lead to a longer period during
