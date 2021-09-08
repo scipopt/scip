@@ -300,8 +300,8 @@ SCIP_Real SCIPdecompGetModularity(
  * To get all variable sizes, set nlabels to nblocks + 1.
  * The first entry corresponds to the number of border variables.
  *
- * @note: Ensure that SCIPcomputeDecompStats() has been called before.
- *        If the decomposition was read from a file, this was done automatically.
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
  */
 SCIP_RETCODE SCIPdecompGetVarsSize(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -333,8 +333,8 @@ SCIP_RETCODE SCIPdecompGetVarsSize(
  * To get all constraint sizes, set nlabels to nblocks + 1.
  * The first entry corresponds to the number of border constraints.
  *
- * @note: Ensure that SCIPcomputeDecompStats() has been called before.
- *        If the decomposition was read from a file, this was done automatically.
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
  */
 SCIP_RETCODE SCIPdecompGetConssSize(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -363,8 +363,8 @@ SCIP_RETCODE SCIPdecompGetConssSize(
 
 /** gets number of border variables of this decomposition
  *
- * @note: Ensure that SCIPcomputeDecompStats() has been called before.
- *        If the decomposition was read from a file, this was done automatically.
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
  */
 int SCIPdecompGetNBorderVars(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
@@ -378,8 +378,8 @@ int SCIPdecompGetNBorderVars(
 
 /** gets number of border constraints of this decomposition
  *
- * @note: Ensure that SCIPcomputeDecompStats() has been called before.
- *        If the decomposition was read from a file, this was done automatically.
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
  */
 int SCIPdecompGetNBorderConss(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
