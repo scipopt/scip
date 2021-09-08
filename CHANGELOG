@@ -897,6 +897,7 @@ Fixed bugs
 ----------
 
 - fixed domain propagation in presolving of abspower constraints
+- fixed handling of multi-aggregation in cons_symresack and cons_orbisack
 
 Miscellaneous
 -------------
