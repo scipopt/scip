@@ -897,6 +897,12 @@ SCIP_RETCODE SCIPlpFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
+/** interrupts the currently ongoing lp solve or disables the interrupt */
+SCIP_RETCODE SCIPlpInterrupt(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   );
+
 /** stores pricing norms into LP norms object */
 SCIP_RETCODE SCIPlpGetNorms(
    SCIP_LP*              lp,                 /**< LP data */
@@ -1393,6 +1399,12 @@ SCIP_COL** SCIPlpGetCols(
 /** gets current number of columns in LP */
 int SCIPlpGetNCols(
    SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** gets current number of unfixed columns in LP */
+int SCIPlpGetNUnfixedCols(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             eps                 /**< numerical tolerance */
    );
 
 /** gets array with rows of the LP */

@@ -10103,6 +10103,22 @@ SCIP_RETCODE SCIPlpFreeState(
    return SCIP_OKAY;
 }
 
+/** interrupts the currently ongoing lp solve, or disables the interrupt */
+SCIP_RETCODE SCIPlpInterrupt(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{
+   assert(lp != NULL);
+
+   if( lp->lpi == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPlpiInterrupt(lp->lpi, interrupt) );
+
+   return SCIP_OKAY;
+}
+
 /** stores pricing norms into LP norms object */
 SCIP_RETCODE SCIPlpGetNorms(
    SCIP_LP*              lp,                 /**< LP data */
@@ -13018,7 +13034,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
          /* make sure that we evaluate the time limit exactly in order to avoid erroneous warning */
          stat->nclockskipsleft = 0;
-         if( !SCIPsolveIsStopped(set, stat, FALSE) )
+         if( !stat->userinterrupt && !SCIPsolveIsStopped(set, stat, FALSE) )
          {
             SCIPmessagePrintWarning(messagehdlr, "LP solver reached time limit, but SCIP time limit is not exceeded yet; "
                "you might consider switching the clock type of SCIP\n");
@@ -17489,6 +17505,33 @@ int SCIPlpGetNCols(
    assert(lp != NULL);
 
    return lp->ncols;
+}
+
+/** gets current number of unfixed columns in LP */
+int SCIPlpGetNUnfixedCols(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             eps                 /**< numerical tolerance */
+   )
+{
+   SCIP_COL** lpcols;
+   int nlpcols;
+   int nunfixedcols;
+   int c;
+
+   assert(lp != NULL);
+   assert(eps > 0.0);
+
+   lpcols = lp->cols;
+   nlpcols = lp->ncols;
+
+   nunfixedcols = 0;
+   for( c = 0; c < nlpcols; ++c )
+   {
+      if( lpcols[c]->ub - lpcols[c]->lb > eps )
+         ++nunfixedcols;
+   }
+
+   return nunfixedcols;
 }
 
 /** gets array with rows of the LP */

@@ -25,7 +25,7 @@ git ls-files | xargs dirname | sort -u | xargs chmod 750
 git ls-files | xargs chmod 640
 git ls-files "*.sh" "scripts/split_scip/*.py" | xargs chmod 750
 
-chmod 750 scripts/* interfaces/ampl/get.ASL check/cmpres.awk cmake/Modules/asan-wrapper applications/PolySCIP/mult_zimpl/mult_zimpl_to_mop.py
+chmod 750 scripts/* check/cmpres.awk cmake/Modules/asan-wrapper applications/PolySCIP/mult_zimpl/mult_zimpl_to_mop.py
 
 # pack files tracked by git and append $NAME to the front
 echo "pack files"
@@ -59,7 +59,6 @@ tar --transform "s|^|${NAME}/|" -rf $NAME.tar \
     check/testset/stochastic.test \
     applications/*/check/testset/* \
     examples/*/check/testset/* \
-    interfaces/*/check/testset/* \
     src/scip/githash.c \
     scripts/trainEstimation/
 
