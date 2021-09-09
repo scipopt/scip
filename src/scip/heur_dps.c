@@ -62,6 +62,7 @@ struct SCIP_HeurData
    int                   nblocks;            /**< number of blocks */
 };
 
+/** data related to one block */
 struct Blockproblem
 {
    SCIP*                 blockscip;          /**< SCIP data structure */
@@ -76,6 +77,26 @@ struct Blockproblem
    SCIP_Real*            origobj;            /**< original objective coefficients */
 };
 typedef struct Blockproblem BLOCKPROBLEM;
+
+/** data related to one linking constraint */
+struct Linking
+{
+   SCIP_CONS*            linkingcons;        /**< corresponding linking constraint of original problem */
+   SCIP_CONS**           blockconss;         /**< linking constraints of the blocks */
+   SCIP_VAR**            slacks;             /**< slackvars of the blocks */
+   SCIP_Real*            minactivity;        /**< minimal activity of constraint for each block */
+   SCIP_Real*            maxactivity;        /**< maximal activity of constraint for each block */
+   SCIP_Real*            currentrhs;         /**< current partition of rhs */
+   SCIP_Real*            currentlhs;         /**< current partition of lhs */
+   int*                  blocknumbers;       /**< number of the blocks */
+   int                   nblocks;            /**< dimension of arrays */
+   int                   nslacks;            /**< number of slack variables */
+   int                   nslacksperblock;    /**< 2, if ranged constraint; 1, if only rhs or lhs */
+   int                   lastviolations;     /**< number of iterations in which the constraint was violated in succession */
+   SCIP_Bool             hasrhs;             /**< has linking constraint finite rigth hand side? */
+   SCIP_Bool             haslhs;             /**< has linking constraint finite left hand side? */
+};
+typedef struct Linking LINKING;
 
 /*
  * Local methods
@@ -269,6 +290,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    SCIP_CONS** sortedconss;
    SCIP_HEURDATA* heurdata;
    BLOCKPROBLEM** blockproblem;
+   LINKING** linkings;
    int* sortedvarlabels;
    int* sortedconslabels;
    SCIP_Real memory; /* in MB */
@@ -277,6 +299,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    int nconss;
    int nblocks;
    int b;
+   int c;
 
    assert( heur != NULL );
    assert( scip != NULL );
@@ -287,6 +310,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
 
    assigneddecomp = NULL;
    blockproblem = NULL;
+   linkings = NULL;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -382,9 +406,55 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       blockproblem[b]->nslackvars = 0;
    }
 
+   /* allocate memory for simplizes and initialize partially */
+   SCIP_CALL( SCIPallocBufferArray(scip, &linkings, heurdata->nlinking) );
+   for( c = 0; c < heurdata->nlinking; c++ )
+   {
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(linkings[c])) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->blockconss, heurdata->nblocks) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->slacks, heurdata->nblocks*2) ); /* maximum two slacks per block */
+      SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->blocknumbers, heurdata->nblocks) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->minactivity, heurdata->nblocks) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->maxactivity, heurdata->nblocks) );
+
+      linkings[c]->linkingcons = heurdata->linkingconss[c];
+      linkings[c]->currentrhs = NULL;
+      linkings[c]->currentlhs = NULL;
+      linkings[c]->nblocks = 0;
+      linkings[c]->nslacks = 0;
+      linkings[c]->nslacksperblock = 0;
+      linkings[c]->lastviolations = 0;
+      linkings[c]->hasrhs = FALSE;
+      linkings[c]->haslhs = FALSE;
+   }
+
    /** ------------------------------------------------------------------------ */
    /** free memory */
 TERMINATE:
+   if( linkings != NULL )
+   {
+      for( c = heurdata->nlinking - 1; c >= 0; c-- )
+      {
+         if( linkings[c]->currentlhs != NULL )
+            SCIPfreeBufferArray(scip, &(linkings[c])->currentlhs);
+
+         if( linkings[c]->currentrhs != NULL )
+            SCIPfreeBufferArray(scip, &(linkings[c])->currentrhs);
+      }
+
+      for( c = heurdata->nlinking - 1; c >= 0; c-- )
+      {
+         linkings[c]->linkingcons = NULL;
+         SCIPfreeBufferArray(scip, &(linkings[c])->maxactivity);
+         SCIPfreeBufferArray(scip, &(linkings[c])->minactivity);
+         SCIPfreeBufferArray(scip, &(linkings[c])->blocknumbers);
+         SCIPfreeBufferArray(scip, &(linkings[c])->slacks);
+         SCIPfreeBufferArray(scip, &(linkings[c])->blockconss);
+         SCIPfreeBlockMemory(scip, &(linkings[c]));
+      }
+      SCIPfreeBufferArray(scip, &linkings);
+   }
+
    if( blockproblem != NULL )
    {
       for( b = nblocks - 1; b >= 0; b-- )
