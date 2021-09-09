@@ -1046,7 +1046,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    alllinkvartoblocks = NULL;
    linkvars = NULL;
    linkvartoblocks = NULL;
-   numlinkvars = 0;
    blocktolinkvars = NULL;
    tmpcouplingvars = NULL;
    tmpcouplingcoef = NULL;
