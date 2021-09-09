@@ -1208,14 +1208,14 @@ SCIP_RETCODE addSymresackInequality(
  */
 static
 SCIP_RETCODE maximizeObjectiveSymresackStrict(
-   SCIP*                scip,                /**< SCIP pointer */
-   int                  nvars,               /**< number of variables in symresack */
-   SCIP_Real*           objective,           /**< the objective vector */
-   int*                 perm,                /**< the permutation (without fixed points) as an array */
-   int*                 invperm,             /**< the inverse permutation as an array */
-   int*                 maxcrit,             /**< pointer to the critical entry where optimality is found at */
-   SCIP_Real*           maxsoluval           /**< pointer to store the optimal objective value */
-)
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   nvars,              /**< number of variables in symresack */
+   SCIP_Real*            objective,          /**< the objective vector */
+   int*                  perm,               /**< the permutation (without fixed points) as an array */
+   int*                  invperm,            /**< the inverse permutation as an array */
+   int*                  maxcrit,            /**< pointer to the critical entry where optimality is found at */
+   SCIP_Real*            maxsoluval          /**< pointer to store the optimal objective value */
+   )
 {
    /* The maximal objective in every iteration. */
    SCIP_Real tmpobj;
@@ -1329,14 +1329,14 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
  */
 static
 SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
-   SCIP*                scip,                /**< SCIP pointer */
-   int                  nvars,               /**< number of variables in symresack */
-   SCIP_Real*           objective,           /**< the objective vector */
-   int*                 perm,                /**< the permutation (without fixed points) as an array */
-   int*                 invperm,             /**< the inverse permutation as an array */
-   int                  crit,                /**< critical entry where optimality is found at */
-   int*                 maxsolu              /**< pointer to the optimal objective array */
-)
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   nvars,              /**< number of variables in symresack */
+   SCIP_Real*            objective,          /**< the objective vector */
+   int*                  perm,               /**< the permutation (without fixed points) as an array */
+   int*                  invperm,            /**< the inverse permutation as an array */
+   int                   crit,               /**< critical entry where optimality is found at */
+   int*                  maxsolu             /**< pointer to the optimal objective array */
+   )
 {
    /* Compute to which components all entries belong. */
    int* entrycomponent;
@@ -1869,7 +1869,10 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
    }
 #endif
 
-   /* create transformed constraint data */
+   /* create transformed constraint data
+    *
+    * do NOT call consdataCreate() again to avoid doing the packing-upgrade check twice
+    */
    nvars = sourcedata->nvars;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
@@ -1911,6 +1914,18 @@ SCIP_DECL_CONSTRANS(consTransSymresack)
 
          consdata->ndescentpoints = sourcedata->ndescentpoints;
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->descentpoints, sourcedata->descentpoints, sourcedata->ndescentpoints) );
+      }
+
+      /* Make sure that all variables cannot be multiaggregated (this cannot be handled by cons_symresack, since one cannot
+       * easily eliminate single variables from a symresack constraint).
+       *
+       * We need to call this again to ensure that multiaggregation is forbidden also if the constraint was part
+       * of the original problem.
+       */
+      for (i = 0; i < sourcedata->nvars; ++i)
+      {
+         SCIP_CALL( SCIPgetTransformedVar(scip, consdata->vars[i], &consdata->vars[i]) );
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->vars[i]) );
       }
    }
 

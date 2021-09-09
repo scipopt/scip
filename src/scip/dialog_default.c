@@ -24,7 +24,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/nlpi.h"
 #include "scip/cons_linear.h"
 #include "scip/dialog_default.h"
 #include "scip/pub_benders.h"
@@ -34,6 +33,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_dialog.h"
 #include "scip/pub_disp.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -55,12 +55,14 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_dialog.h"
 #include "scip/scip_disp.h"
+#include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_nodesel.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
@@ -924,6 +926,36 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
          break;
       }
       SCIPdialogMessage(scip, NULL, "%s", SCIPdispGetDesc(disps[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display exprhdlrs command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs)
+{  /*lint --e{715}*/
+   SCIP_EXPRHDLR** exprhdlrs;
+   int nexprhdlrs;
+   int i;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   exprhdlrs = SCIPgetExprhdlrs(scip);
+   nexprhdlrs = SCIPgetNExprhdlrs(scip);
+
+   /* display list of expression handler */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " expression handler  precedence  description\n");
+   SCIPdialogMessage(scip, NULL, " ------------------  ----------  -----------\n");
+   for( i = 0; i < nexprhdlrs; ++i )
+   {
+      SCIPdialogMessage(scip, NULL, " %-18s ", SCIPexprhdlrGetName(exprhdlrs[i]));
+      SCIPdialogMessage(scip, NULL, " %10d ", SCIPexprhdlrGetPrecedence(exprhdlrs[i]));
+      SCIPdialogMessage(scip, NULL, " %s", SCIPexprhdlrGetDescription(exprhdlrs[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -4094,6 +4126,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* display exprhdlrs */
+   if( !SCIPdialogHasEntry(submenu, "exprhdlrs") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayExprhdlrs, NULL, NULL,
+            "exprhdlrs", "display expression handlers", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* display heuristics */
    if( !SCIPdialogHasEntry(submenu, "heuristics") )
    {
@@ -5182,6 +5225,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
 
+   /* set expr */
+   if( !SCIPdialogHasEntry(setmenu, "expr") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "expr", "change parameters for expression handlers", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
    /* set heuristics */
    if( !SCIPdialogHasEntry(setmenu, "heuristics") )
    {
@@ -5294,7 +5347,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
-            "nlp", "change parameters for nonlinear programming relaxations", TRUE, NULL) );
+            "nlp", "change parameters for nonlinear programming relaxation", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -5317,6 +5370,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
             "misc", "change parameters for miscellaneous stuff", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* set nlhdlr */
+   if( !SCIPdialogHasEntry(setmenu, "nlhdlr") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "nlhdlr", "change parameters for nonlinear handlers", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }

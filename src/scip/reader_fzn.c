@@ -30,13 +30,13 @@
 
 #include "blockmemshell/memory.h"
 #include <ctype.h>
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_and.h"
 #include "scip/cons_cumulative.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_or.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
@@ -1173,7 +1173,7 @@ SCIP_RETCODE fzninputAddConstarray(
    return SCIP_OKAY;
 }
 
-/** creates, adds, and releases a linear constraint */
+/** creates, adds, and releases a quadratic constraint */
 static
 SCIP_RETCODE createQuadraticCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1194,8 +1194,9 @@ SCIP_RETCODE createQuadraticCons(
 {
    SCIP_CONS* cons;
 
-   SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-         initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows) );
+   SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1,
+         quadvars2, quadcoefs, lhs, rhs, initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss,
+         dynamicrows) );
 
    SCIPdebugPrintCons(scip, cons, NULL);
 

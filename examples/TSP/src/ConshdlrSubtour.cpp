@@ -167,7 +167,7 @@ SCIP_RETCODE sepaSubtour(
          // create a new cutting plane for every suitable arc (representing a cut with value < 2) of the Gomory Hu Tree
          for(int i = 0; i < ncuts && *result != SCIP_CUTOFF; ++i)
          {
-            SCIP_ROW* row;
+            SCIP_ROW* row; 
             SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "subtour", 2.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );

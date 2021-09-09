@@ -20,7 +20,7 @@ instances/MIP/stein27.fzn
 instances/MIP/stein27_inf.lp
 instances/MIP/vpm2.fzn
 instances/MINLP/bip_cross_min.10.10.10.1.pip
-instances/MINLP/circle.cip
+instances/MINLP/circle.lp
 instances/MINLP/ex1224.osil
 instances/MINLP/ex1266.mps
 instances/MINLP/gastrans.cip
