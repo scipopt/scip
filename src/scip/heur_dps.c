@@ -393,8 +393,8 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    SCIP_CALL( SCIPallocBufferArray(scip, &blockproblem, nblocks) );
    for( b = 0; b < nblocks; b++ )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &blockproblem[b]) );
-      createSubscip(scip, &blockproblem[b]->blockscip);
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(blockproblem[b])) ); /*lint !e866*/
+      SCIP_CALL( createSubscip(scip, &blockproblem[b]->blockscip) );
 
       SCIP_CALL( SCIPallocBufferArray(scip, &blockproblem[b]->linkingconss, heurdata->nlinking) );
       SCIP_CALL( SCIPallocBufferArray(scip, &blockproblem[b]->linkingindices, heurdata->nlinking) );
@@ -410,7 +410,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    SCIP_CALL( SCIPallocBufferArray(scip, &linkings, heurdata->nlinking) );
    for( c = 0; c < heurdata->nlinking; c++ )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &(linkings[c])) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(linkings[c])) ); /*lint !e866*/
       SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->blockconss, heurdata->nblocks) );
       SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->slacks, heurdata->nblocks*2) ); /* maximum two slacks per block */
       SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->blocknumbers, heurdata->nblocks) );
@@ -450,7 +450,7 @@ TERMINATE:
          SCIPfreeBufferArray(scip, &(linkings[c])->blocknumbers);
          SCIPfreeBufferArray(scip, &(linkings[c])->slacks);
          SCIPfreeBufferArray(scip, &(linkings[c])->blockconss);
-         SCIPfreeBlockMemory(scip, &(linkings[c]));
+         SCIPfreeBlockMemory(scip, &(linkings[c])); /*lint !e866*/
       }
       SCIPfreeBufferArray(scip, &linkings);
    }
@@ -464,7 +464,7 @@ TERMINATE:
          SCIPfreeBufferArray(scip, &(blockproblem[b])->linkingindices);
          SCIPfreeBufferArray(scip, &(blockproblem[b])->linkingconss);
          SCIP_CALL( SCIPfree(&blockproblem[b]->blockscip) );
-         SCIPfreeBlockMemory(scip, &blockproblem[b]);
+         SCIPfreeBlockMemory(scip, &(blockproblem[b])); /*lint !e866*/
       }
       SCIPfreeBufferArray(scip, &blockproblem);
    }
