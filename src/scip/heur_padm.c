@@ -315,15 +315,30 @@ SCIP_RETCODE createSubscip(
    SCIP**                subscip             /**< pointer to store created sub-SCIP */
    )
 {
+   SCIP_Real infvalue;
+
    /* create a new SCIP instance */
    SCIP_CALL( SCIPcreate(subscip) );
 
    SCIP_CALL( SCIPincludeDefaultPlugins(*subscip) );
 
+   /* copy value for infinity */
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/infinity", &infvalue) );
+   SCIP_CALL( SCIPsetRealParam(*subscip, "numerics/infinity", infvalue) );
+
    SCIP_CALL( SCIPcopyLimits(scip, *subscip) );
 
    /* avoid recursive calls */
    SCIP_CALL( SCIPsetSubscipsOff(*subscip, TRUE) );
+
+   /* disable cutting plane separation */
+   SCIP_CALL( SCIPsetSeparating(*subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+   /* disable expensive presolving */
+   SCIP_CALL( SCIPsetPresolving(*subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+   /* disable expensive techniques */
+   SCIP_CALL( SCIPsetIntParam(*subscip, "misc/usesymmetry", 0) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/catchctrlc", FALSE) );
