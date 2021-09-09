@@ -1561,8 +1561,12 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                nnodes = MAX( heurdata->minnodes, nnodes );
                SCIP_CALL( SCIPsetLongintParam((problem->blocks[b]).subscip, "limits/nodes", nnodes) );
 
-               /* solve block */
-               SCIP_CALL( SCIPsolve((problem->blocks[b]).subscip) );
+               /* solve block
+                *
+                * errors in solving the subproblem should not kill the overall solving process;
+                * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+                */
+               SCIP_CALL_ABORT( SCIPsolve((problem->blocks[b]).subscip) );
                status = SCIPgetStatus((problem->blocks[b]).subscip);
 
                /* subtract used nodes from the total nodelimit */
