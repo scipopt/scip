@@ -29,6 +29,7 @@ doc/inc/faq/faq.inc
 doc/inc/parameters.set
 doc/**/*.tmp
 .cproject
+.clangd
 .project
 .vscode/
 .idea/
@@ -36,6 +37,7 @@ cmake-build-debug/
 .settings/
 hooks/
 build/
+build_*/
 examples/*/check/results/
 examples/*/check/*.sh
 examples/*/check/*.awk

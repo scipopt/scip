@@ -2689,7 +2689,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
-   SCIP_CALL( SCIPsetBoolParam(targetscip, "exact/enabled", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(targetscip, "exact/enabled", FALSE) ); //@TODO Why?
 
    /* restore original quiet state */
    SCIPsetMessagehdlrQuiet(targetscip, msghdlrquiet);

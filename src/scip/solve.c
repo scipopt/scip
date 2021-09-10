@@ -606,7 +606,7 @@ SCIP_RETCODE propagateDomains(
    *postpone = FALSE;
    propround = 0;
    propagain = TRUE;
-   while( propagain && !(*cutoff) && !(*postpone) && propround < maxproprounds && !SCIPsolveIsStopped(set, stat, FALSE) && !set->exact_enabled )
+   while( propagain && !(*cutoff) && !(*postpone) && propround < maxproprounds && !SCIPsolveIsStopped(set, stat, FALSE))
    {
       propround++;
 
