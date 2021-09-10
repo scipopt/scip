@@ -157,6 +157,7 @@ SCIP_Bool SCIPisExactSolve(
    return (scip->set->exact_enabled);
 }
 
+
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
  *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
  *  e'x'act neumaier and shcherbina, 'a'utomatic); only relevant for solving the problem provably correct
