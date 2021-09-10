@@ -76,7 +76,6 @@ Constraint handlers for NLP:
 - Added nlhdlr for second-order cones: detects second-order cone constraints (as ||x|| <= t or a quadratic that can written like that) and
   separates on a disaggregated reformulation (similar to cons_soc previously).
 - Removed constraint handlers abspower, bivariate, quadratic, and soc.
-- Removed adding linearization of convex abspower, quadratic, soc, and nonlinear constraints to cutpool when a new incumbent is found for now.
 - Removed simplification of duplicate abspower constraints for now.
   Removed simplification of abspower constraints with loose variables.
   Removed resolving of domain propagation (ConsResProp callback) and conflict analysis for abspower constraints.
@@ -651,6 +650,7 @@ NLPI:
 - constraints/nonlinear/reformbinprods, constraints/nonlinear/reformbinprodsand, constraints/nonlinear/reformbinprodsfac
 - constraints/nonlinear/tightenlpfeastol, constraints/nonlinear/propinenforce, constraints/nonlinear/weakcutthreshold, constraints/nonlinear/strongcutmaxcoef, constraints/nonlinear/strongcutefficacy, constraints/nonlinear/forcestrongcut, constraints/nonlinear/enfoauxviolfactor, constraints/nonlinear/weakcutminviolfactor
 - constraints/nonlinear/branching/aux, constraints/nonlinear/branching/external, constraints/nonlinear/branching/highviolfactor, constraints/nonlinear/branching/highscorefactor, constraints/nonlinear/branching/violweight, constraints/nonlinear/branching/dualweight, constraints/nonlinear/branching/pscostweight, constraints/nonlinear/branching/domainweight, constraints/nonlinear/branching/vartypeweight, constraints/nonlinear/branching/scoreagg, constraints/nonlinear/branching/violsplit, constraints/nonlinear/branching/pscostreliable
+- constraints/nonlinear/linearizeheursol
 - nlhdlr/default/enabled
 - nlhdlr/convex/enabled, nlhdlr/convex/detectsum, nlhdlr/convex/preferextended, nlhdlr/convex/cvxquadratic, nlhdlr/convex/cvxsignomial, nlhdlr/convex/cvxprodcomp, nlhdlr/convex/handletrivial
 - nlhdlr/concave/enabled, nlhdlr/concave/detectsum, nlhdlr/concave/cvxquadratic, nlhdlr/concave/cvxsignomial, nlhdlr/concave/cvxprodcomp, nlhdlr/concave/handletrivial
