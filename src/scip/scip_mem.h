@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -50,6 +50,8 @@ extern "C" {
 
 #define SCIPallocMemory(scip,ptr)               ( (BMSallocMemory((ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocClearMemory(scip,ptr)          ( (BMSallocClearMemory((ptr)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPallocMemoryArray(scip,ptr,num)      ( (BMSallocMemoryArray((ptr), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPallocClearMemoryArray(scip,ptr,num) ( (BMSallocClearMemoryArray((ptr), (num)) == NULL) \
@@ -76,6 +78,8 @@ extern "C" {
  */
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (BMSallocBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocClearBlockMemory(scip,ptr)     ( (BMSallocClearBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPallocBlockMemoryArray(scip,ptr,num) ( (BMSallocBlockMemoryArray(SCIPblkmem(scip), (ptr), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )

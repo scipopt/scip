@@ -17,7 +17,7 @@ set(instances
 # add a test that builds the application
 #
 add_test(NAME applications-scipstp-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scipstp
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target scipstp
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -45,4 +45,12 @@ foreach(instance ${instances})
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
                             DEPENDS applications-scipstp-build
                         )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties("applications-scipstp-${basename}"
+                PROPERTIES
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 endforeach()

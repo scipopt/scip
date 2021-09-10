@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -437,7 +437,7 @@ int SCIPgetNLPBranchCands(
 
    if( retcode != SCIP_OKAY )
    {
-      SCIPerrorMessage("Error <%u> during computation of the number of LP branching candidates\n", retcode);
+      SCIPerrorMessage("Error <%d> during computation of the number of LP branching candidates\n", retcode);
       SCIPABORT();
       return 0; /*lint !e527*/
    }
@@ -475,7 +475,7 @@ int SCIPgetNPrioLPBranchCands(
 
    if( retcode != SCIP_OKAY )
    {
-      SCIPerrorMessage("Error <%u> during computation of the number of LP branching candidates with maximal priority\n", retcode);
+      SCIPerrorMessage("Error <%d> during computation of the number of LP branching candidates with maximal priority\n", retcode);
       SCIPABORT();
       return 0; /*lint !e527*/
    }

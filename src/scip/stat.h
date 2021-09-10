@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -318,6 +318,9 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
 
 
 /** prints a debug message */
+#ifdef __GNUC__
+__attribute__((format(printf, 4, 5)))
+#endif
 SCIP_EXPORT
 void SCIPstatPrintDebugMessage(
    SCIP_STAT*            stat,               /**< SCIP statistics */
@@ -328,6 +331,9 @@ void SCIPstatPrintDebugMessage(
    );
 
 /** prints a debug message without precode */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPstatDebugMessagePrint(
    SCIP_STAT*            stat,               /**< SCIP statistics */

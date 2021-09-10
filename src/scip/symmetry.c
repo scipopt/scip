@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,6 +25,8 @@
 #include "scip/symmetry.h"
 #include "scip/scip.h"
 #include "scip/misc.h"
+#include "scip/cons_setppc.h"
+#include <symmetry/type_symmetry.h>
 
 
 /** compute non-trivial orbits of symmetry group
@@ -164,8 +166,8 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
                                               *   component i in components array */
    int*                  vartocomponent,     /**< array containing for each permvar the index of the component it is
                                               *   contained in (-1 if not affected) */
-   SCIP_Shortbool*       componentblocked,   /**< array to store whether a component is blocked to be considered by
-                                              *   further symmetry handling techniques */
+   unsigned*             componentblocked,   /**< array to store which symmetry methods have been used on a component
+                                              *   using the same bitset information as for misc/usesymmetry */
    int                   ncomponents,        /**< number of components of symmetry group */
    int                   nmovedpermvars      /**< number of variables moved by any permutation in a symmetry component
                                               *   that is handled by orbital fixing */
@@ -290,6 +292,102 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
    return SCIP_OKAY;
 }
 
+/** Compute orbit of a given variable and store it in @p orbit. The first entry of the orbit will
+ *  be the given variable index and the rest is filled with the remaining variables excluding
+ *  the ones specified in @p ignoredvars.
+ *
+ *  @pre orbit is an initialized array of size propdata->npermvars
+ *  @pre at least one of @p perms and @p permstrans should not be NULL
+ */
+SCIP_RETCODE SCIPcomputeOrbitVar(
+   SCIP*                 scip,               /**< SCIP instance */
+   int                   npermvars,          /**< number of variables in permvars */
+   int**                 perms,              /**< the generators of the permutation group (or NULL) */
+   int**                 permstrans,         /**< the transposed matrix of generators (or NULL) */
+   int*                  components,         /**< the components of the permutation group */
+   int*                  componentbegins,    /**< array containing the starting index of each component */
+   SCIP_Shortbool*       ignoredvars,        /**< array indicating which variables should be ignored */
+   SCIP_Shortbool*       varfound,           /**< bitmap to mark which variables have been added (or NULL) */
+   int                   varidx,             /**< index of variable for which the orbit is requested */
+   int                   component,          /**< component that var is in */
+   int*                  orbit,              /**< array in which the orbit should be stored */
+   int*                  orbitsize           /**< buffer to store the size of the orbit */
+   )
+{  /*lint --e{571}*/
+   SCIP_Shortbool* varadded;
+   int* varstotest;
+   int nvarstotest;
+   int j;
+   int p;
+
+   assert( scip != NULL );
+   assert( perms != NULL || permstrans != NULL );
+   assert( components != NULL );
+   assert( componentbegins != NULL );
+   assert( ignoredvars != NULL );
+   assert( orbit != NULL );
+   assert( orbitsize != NULL );
+   assert( 0 <= varidx && varidx < npermvars );
+   assert( component >= 0 );
+   assert( npermvars > 0 );
+
+   /* init data structures*/
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &varadded, npermvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &varstotest, npermvars) );
+
+   /* compute and store orbit if it is non-trivial */
+   orbit[0] = varidx;
+   varstotest[0] = varidx;
+   *orbitsize = 1;
+   nvarstotest = 1;
+   varadded[varidx] = TRUE;
+
+   if ( varfound != NULL )
+      varfound[varidx] = TRUE;
+
+   /* iterate over variables in orbit and compute their images */
+   j = 0;
+   while ( j < nvarstotest )
+   {
+      int currvar;
+
+      currvar = varstotest[j++];
+
+      for (p = componentbegins[component]; p < componentbegins[component+1]; ++p)
+      {
+         int image;
+         int comp;
+
+         comp = components[p];
+
+         if ( perms != NULL )
+            image = perms[comp][currvar]; /*lint !e613*/
+         else
+            image = permstrans[currvar][comp];
+
+         /* found new element of the orbit of varidx */
+         if ( ! varadded[image] )
+         {
+            varstotest[nvarstotest++] = image;
+            varadded[image] = TRUE;
+
+            if ( ! ignoredvars[image] )
+            {
+               orbit[(*orbitsize)++] = image;
+
+               if ( varfound != NULL )
+                  varfound[image] = TRUE;
+            }
+         }
+      }
+   }
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &varstotest);
+   SCIPfreeBufferArray(scip, &varadded);
+
+   return SCIP_OKAY;
+}
 
 /** compute non-trivial orbits of symmetry group
  *
@@ -420,14 +518,16 @@ SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
 }
 
 
-/** check whether a permutation is a composition of 2-cycles of binary variables and in this case determine the number of 2-cycles */
-SCIP_RETCODE SCIPgetPropertiesPerm(
+/** Checks whether a permutation is a composition of 2-cycles and in this case determines the number of overall
+ *  2-cycles and binary 2-cycles. It is a composition of 2-cycles iff @p ntwocyclesperm > 0 upon termination.
+ */
+SCIP_RETCODE SCIPisInvolutionPerm(
    int*                  perm,               /**< permutation */
    SCIP_VAR**            vars,               /**< array of variables perm is acting on */
    int                   nvars,              /**< number of variables */
-   SCIP_Bool*            iscompoftwocycles,  /**< pointer to store whether permutation is a composition of 2-cycles */
-   int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles */
-   SCIP_Bool*            allvarsbinary       /**< pointer to store whether perm is acting on binary variables only */
+   int*                  ntwocyclesperm,     /**< pointer to store number of 2-cycles or 0 if perm is not an involution */
+   int*                  nbincyclesperm,     /**< pointer to store number of binary cycles */
+   SCIP_Bool             earlytermination    /**< whether we terminate early if not all affected variables are binary */
    )
 {
    int ntwocycles = 0;
@@ -435,15 +535,15 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
 
    assert( perm != NULL );
    assert( vars != NULL );
-   assert( iscompoftwocycles != NULL );
    assert( ntwocyclesperm != NULL );
-   assert( allvarsbinary != NULL );
+   assert( nbincyclesperm != NULL );
 
-   *iscompoftwocycles = FALSE;
    *ntwocyclesperm = 0;
-   *allvarsbinary = TRUE;
+   *nbincyclesperm = 0;
    for (i = 0; i < nvars; ++i)
    {
+      assert( 0 <= perm[i] && perm[i] < nvars );
+
       /* skip fixed points and avoid treating the same 2-cycle twice */
       if ( perm[i] <= i )
          continue;
@@ -451,23 +551,20 @@ SCIP_RETCODE SCIPgetPropertiesPerm(
       if ( perm[perm[i]] == i )
       {
          if ( SCIPvarIsBinary(vars[i]) && SCIPvarIsBinary(vars[perm[i]]) )
-            ++ntwocycles;
-         else
-         {
-            /* at least one variable is not binary */
-            *allvarsbinary = FALSE;
+            ++(*nbincyclesperm);
+         else if ( earlytermination )
             return SCIP_OKAY;
-         }
+
+         ++ntwocycles;
       }
       else
       {
-         /* we do not have a 2-cycle */
+         /* we do not have only 2-cycles */
          return SCIP_OKAY;
       }
    }
 
-   /* at this point the permutation is a composition of 2-cycles on binary variables */
-   *iscompoftwocycles = TRUE;
+   /* at this point the permutation is a composition of 2-cycles */
    *ntwocyclesperm = ntwocycles;
 
    return SCIP_OKAY;
@@ -535,6 +632,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    int*                  perm,               /**< permutation */
    SCIP_Bool             leftextension,      /**< whether we extend the suborbitope to the left */
    int**                 nusedelems,         /**< pointer to array storing how often an element was used in the orbitope */
+   SCIP_VAR**            permvars,           /**< permutation vars array */
+   SCIP_Shortbool*       rowisbinary,        /**< array encoding whether variables in an orbitope row are binary (or NULL) */
    SCIP_Bool*            success,            /**< pointer to store whether extension was successful */
    SCIP_Bool*            infeasible          /**< pointer to store if the number of intersecting cycles is too small */
    )
@@ -550,6 +649,7 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    assert( coltoextend >= 0 );
    assert( perm != NULL );
    assert( nusedelems != NULL );
+   assert( permvars != NULL );
    assert( success != NULL );
    assert( infeasible != NULL );
 
@@ -575,11 +675,13 @@ SCIP_RETCODE SCIPextendSubOrbitope(
                suborbitope[row][0] = idx2;
                suborbitope[row][1] = idx1;
             }
+            assert( rowisbinary == NULL || rowisbinary[row] == SCIPvarIsBinary(permvars[perm[idx1]]) );
+
             suborbitope[row][2] = perm[idx1];
             ++nintersections;
 
-            (*nusedelems)[idx1] += 1;
-            (*nusedelems)[perm[idx1]] += 1;
+            ++(*nusedelems)[idx1];
+            ++(*nusedelems)[perm[idx1]];
 
             /* if an element appears too often in the orbitope matrix */
             if ( (*nusedelems)[idx1] > 2 || (*nusedelems)[perm[idx1]] > 2 )
@@ -596,11 +698,13 @@ SCIP_RETCODE SCIPextendSubOrbitope(
                suborbitope[row][0] = idx2;
                suborbitope[row][1] = idx1;
             }
+            assert( rowisbinary == NULL || rowisbinary[row] == SCIPvarIsBinary(permvars[perm[idx1]]) );
+
             suborbitope[row][2] = perm[idx2];
             ++nintersections;
 
-            (*nusedelems)[idx2] += 1;
-            (*nusedelems)[perm[idx2]] += 1;
+            ++(*nusedelems)[idx2];
+            ++(*nusedelems)[perm[idx2]];
 
             /* if an element appears too often in the orbitope matrix */
             if ( (*nusedelems)[idx2] > 2 || (*nusedelems)[perm[idx2]] > 2 )
@@ -621,11 +725,13 @@ SCIP_RETCODE SCIPextendSubOrbitope(
          /* if idx1 is affected by perm, we can extend the row of the orbitope */
          if ( idx1 != perm[idx1] )
          {
+            assert( rowisbinary == NULL || rowisbinary[row] == SCIPvarIsBinary(permvars[perm[idx1]]) );
+
             suborbitope[row][nfilledcols] = perm[idx1];
             ++nintersections;
 
-            (*nusedelems)[idx1] += 1;
-            (*nusedelems)[perm[idx1]] += 1;
+            ++(*nusedelems)[idx1];
+            ++(*nusedelems)[perm[idx1]];
 
             /* if an element appears to often in the orbitope matrix */
             if ( (*nusedelems)[idx1] > 2 || (*nusedelems)[perm[idx1]] > 2 )
@@ -661,8 +767,8 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
                                               *   component i in components array */
    int**                 vartocomponent,     /**< array containing for each permvar the index of the component it is
                                               *   contained in (-1 if not affected) */
-   SCIP_Shortbool**      componentblocked,   /**< array to store whether a component is blocked to be considered by
-                                              *   further symmetry handling techniques */
+   unsigned**            componentblocked,   /**< array to store which symmetry methods have been used on a component
+                                              *   using the same bitset information as for misc/usesymmetry */
    int*                  ncomponents         /**< pointer to store number of components of symmetry group */
    )
 {
@@ -825,7 +931,7 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
    /* init componentblocked */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, componentblocked, *ncomponents) );
    for (i = 0; i < *ncomponents; ++i)
-      (*componentblocked)[i] = FALSE;
+      (*componentblocked)[i] = 0;
 
    SCIPfreeBufferArray(scip, &permtocomponent);
    SCIPfreeBufferArray(scip, &permtovarcomp);
@@ -848,8 +954,12 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
 }
 
 
-/** generate variable matrix for orbitope constraint handler */
+/** generate variable matrix for orbitope constraint handler
+ *
+ * @pre if storelexorder is TRUE, then the permutations define an orbitope
+ */
 SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
+   SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR****          vars,               /**< pointer to matrix of orbitope variables */
    int                   nrows,              /**< number of rows of orbitope */
    int                   ncols,              /**< number of columns of orbitope */
@@ -858,12 +968,19 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    int**                 orbitopevaridx,     /**< permuted index table of variables in permvars that are contained in orbitope */
    int*                  columnorder,        /**< permutation to reorder column of orbitopevaridx */
    int*                  nusedelems,         /**< array storing how often an element was used in the orbitope */
-   SCIP_Bool*            infeasible          /**< pointer to store whether the potential orbitope is not an orbitope */
+   SCIP_Shortbool*       rowisbinary,        /**< array encoding whether a row contains only binary variables (or NULL) */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the potential orbitope is not an orbitope */
+   SCIP_Bool             storelexorder,      /**< whether the lexicographic order induced by the orbitope shall be stored */
+   int**                 lexorder,           /**< pointer to array storing the lexorder (or NULL) */
+   int*                  nvarsorder,         /**< pointer to store number of variables in lexorder (or NULL) */
+   int*                  maxnvarsorder       /**< pointer to store maximum number of variables in lexorder (or NULL) */
    )
 {
    int nfilledcols = 0;
    int curcolumn;
    int i;
+   int cnt;
+   int nvarsorderold = 0;
 
    assert( vars != NULL );
    assert( nrows > 0 );
@@ -874,25 +991,61 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    assert( columnorder != NULL );
    assert( nusedelems != NULL );
    assert( infeasible != NULL );
+   assert( ! storelexorder || lexorder != NULL );
+   assert( ! storelexorder || nvarsorder != NULL );
+   assert( ! storelexorder || maxnvarsorder != NULL );
+
+   /* possibly store lexicographic order defined by orbitope
+    *
+    * position (i,j) of orbitope has position nrows * j + i in lexicographic order
+    */
+   if ( storelexorder )
+   {
+      assert( *nvarsorder == *maxnvarsorder );
+      assert( lexorder != NULL );
+
+      *maxnvarsorder += nrows * ncols;
+      nvarsorderold = *nvarsorder;
+
+      if ( *lexorder == NULL )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
+      }
+   }
 
    curcolumn = ncols - 1;
 
    /* start filling vars matrix with the right-most column w.r.t. columnorder */
-   while ( curcolumn >= 0 && columnorder[curcolumn] >= 0 )
+   while ( curcolumn >= 0 && columnorder[curcolumn] >= 0 && ! *infeasible )
    {
+      cnt = 0;
       for (i = 0; i < nrows; ++i)
       {
-         assert( orbitopevaridx[i][curcolumn] < npermvars );
+         /* skip rows containing non-binary variables */
+         if ( rowisbinary != NULL && ! rowisbinary[i] )
+            continue;
+
+         assert( 0 <= orbitopevaridx[i][curcolumn] && orbitopevaridx[i][curcolumn] < npermvars );
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][curcolumn]]) );
 
          /* elements in first column of orbitope have to appear exactly once in the orbitope */
          if ( nfilledcols == 0 && nusedelems[orbitopevaridx[i][curcolumn]] > 1 )
          {
             *infeasible = TRUE;
+            assert( ! storelexorder );
             break;
          }
 
-         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+         if ( storelexorder )
+         {
+            (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][curcolumn];
+            ++(*nvarsorder);
+         }
+         (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
       }
       --curcolumn;
       ++nfilledcols;
@@ -906,25 +1059,45 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    /* Either we are in case 1) or case 3), or all columns should have been added to vars in case 2) */
    assert( curcolumn > 1 || (curcolumn < 0 && nfilledcols == ncols) );
 
-   if ( curcolumn > 1 )
+   if ( curcolumn > 1 && ! *infeasible )
    {
       /* add column with columnorder 1 to vars */
+      cnt = 0;
       for (i = 0; i < nrows; ++i)
       {
+         /* skip rows containing non-binary variables*/
+         if ( rowisbinary != NULL && ! rowisbinary[i] )
+            continue;
+
          assert( orbitopevaridx[i][1] < npermvars );
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][1]]) );
 
-         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][1]];
+         if ( storelexorder )
+         {
+            (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][1];
+            ++(*nvarsorder);
+         }
+         (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][1]];
       }
       ++nfilledcols;
 
       /* add column with columnorder 0 to vars */
+      cnt = 0;
       for (i = 0; i < nrows; ++i)
       {
+         /* skip rows containing non-binary variables*/
+         if ( rowisbinary != NULL && ! rowisbinary[i] )
+            continue;
+
          assert( orbitopevaridx[i][0] < npermvars );
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][0]]) );
 
-         (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][0]];
+         if ( storelexorder )
+         {
+            (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][0];
+            ++(*nvarsorder);
+         }
+         (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][0]];
       }
       ++nfilledcols;
 
@@ -934,12 +1107,17 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
          assert( ncols > 2 );
 
          curcolumn = 2;
-         while ( nfilledcols < ncols )
+         while ( nfilledcols < ncols && ! *infeasible )
          {
             assert( columnorder[curcolumn] < 0 );
 
+            cnt = 0;
             for (i = 0; i < nrows; ++i)
             {
+               /* skip rows containing non-binary variables*/
+               if ( rowisbinary != NULL && ! rowisbinary[i] )
+                  continue;
+
                assert( orbitopevaridx[i][curcolumn] < npermvars );
                assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][curcolumn]]) );
 
@@ -947,16 +1125,235 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
                if ( nfilledcols == ncols - 1 && nusedelems[orbitopevaridx[i][curcolumn]] > 1 )
                {
                   *infeasible = TRUE;
+                  assert( ! storelexorder );
                   break;
                }
 
-               (*vars)[i][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
+               if ( storelexorder )
+               {
+                  (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][curcolumn];
+                  ++(*nvarsorder);
+               }
+               (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
             }
             ++curcolumn;
             ++nfilledcols;
          }
       }
    }
+
+   return SCIP_OKAY;
+}
+
+
+/** checks whether an orbitope is a packing or partitioning orbitope; if npprows != NULL,
+ *  count how many rows are contained in packing/partitioning constraints
+ */
+SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
+   int                   nrows,              /**< pointer to number of rows of variable matrix */
+   int                   ncols,              /**< number of columns of variable matrix */
+   SCIP_Bool**           pprows,             /**< pointer to store which rows are are contained in
+                                              *   packing/partitioning constraints or NULL if not needed */
+   int*                  npprows,            /**< pointer to store how many rows are contained
+                                              *   in packing/partitioning constraints or NULL if not needed */
+   SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
+   )
+{
+   SCIP_CONSHDLR* setppcconshdlr;
+   SCIP_CONS** setppcconss;
+   int nsetppcconss;
+   int* covered;
+   int nprobvars;
+   int* rowidxvar;
+   int* rowcoveragesetppc;
+   int* rowsinsetppc;
+   int ncovered;
+   int ncoveredpart;
+   int i;
+   int j;
+   int c;
+
+   assert( scip != NULL );
+   assert( vars != NULL );
+   assert( vars != NULL );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
+   assert( type != NULL );
+
+   *type = SCIP_ORBITOPETYPE_FULL;
+   if ( npprows != NULL )
+      *npprows = 0;
+
+   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
+   if ( setppcconshdlr == NULL )
+      return SCIP_OKAY;
+
+   setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
+   nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
+
+   /* we can terminate early if there are not sufficiently many setppc conss
+    * (for orbitopes treating a full component, we might allow to remove rows
+    * not contained in setppc cons; for this reason we need the second check)
+    */
+   if ( nsetppcconss == 0 || (nsetppcconss < nrows && npprows == NULL ))
+      return SCIP_OKAY;
+   assert( setppcconss != NULL );
+
+   /* whether a row is contained in packing/partitioning constraint */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, nrows) );
+   ncovered = 0;
+   ncoveredpart = 0;
+
+   nprobvars = SCIPgetNTotalVars(scip);
+
+   /* array storing index of orbitope row a variable is contained in */
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowidxvar, nprobvars) );
+
+   for (i = 0; i < nprobvars; ++i)
+      rowidxvar[i] = -1;
+
+   for (i = 0; i < nrows; ++i)
+   {
+      for (j = 0; j < ncols; ++j)
+      {
+         assert( 0 <= SCIPvarGetIndex(vars[i][j]) && SCIPvarGetIndex(vars[i][j]) < nprobvars );
+         rowidxvar[SCIPvarGetIndex(vars[i][j])] = i;
+      }
+   }
+
+   /* storage for number of vars per row that are contained in current setppc cons and
+    * labels of rows intersecting with current setppc cons
+    */
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &rowcoveragesetppc, nrows) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &rowsinsetppc, nrows) );
+
+   /* iterate over set packing and partitioning constraints and check whether the constraint's
+    * support is a row r of the orbitope (covered[r] = 2) or contains row r (covered[r] = 1)
+    *
+    * @todo Check whether we can improve the following loop by using a hash value to check
+    * whether the setppccons intersects the orbitope matrix
+    */
+   for (c = 0; c < nsetppcconss && ncoveredpart < ncols; ++c)
+   {
+      int nsetppcvars;
+      SCIP_VAR** setppcvars;
+      int nrowintersect = 0;
+      int nvarsinorbitope;
+
+      /* skip covering constraints */
+      if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING )
+         continue;
+
+      /* get number of set packing/partitioning variables */
+      nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
+
+      /* constraint does not contain enough variables */
+      if ( nsetppcvars < ncols )
+         continue;
+
+      setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
+      assert( setppcvars != NULL );
+
+      /* upper bound on variables potentially contained in orbitope */
+      nvarsinorbitope = nsetppcvars;
+
+      /* for each setppc var, check whether it appears in a row of the orbitope and store
+       * for each row the number of such variables; can be terminated early, if less than
+       * ncols variables are contained in the orbitope
+       */
+      for (i = 0; i < nsetppcvars && nvarsinorbitope >= ncols; ++i)
+      {
+         SCIP_VAR* var;
+         int idx;
+         int rowidx;
+
+         var = setppcvars[i];
+         idx = SCIPvarGetIndex(var);
+
+         assert( 0 <= idx && idx < nprobvars );
+
+         rowidx = rowidxvar[idx];
+
+         /* skip variables not contained in the orbitope */
+         if ( rowidx < 0 )
+         {
+            --nvarsinorbitope;
+            continue;
+         }
+
+         /* skip variables corresponding to already treated rows */
+         if ( covered[rowidx] == 2 || (covered[rowidx] == 1 && (nsetppcvars > ncols || nrowintersect > 1)) )
+         {
+            --nvarsinorbitope;
+            continue;
+         }
+
+         /* store information which rows intersect the setppc cons's support */
+         if ( rowcoveragesetppc[rowidx] == 0 )
+            rowsinsetppc[nrowintersect++] = rowidx;
+         ++(rowcoveragesetppc[rowidx]);
+
+         /* we can stop early if not enough variables are left to completely cover one of the rows that
+          * intersect the setppc cons
+          */
+         if ( nsetppcvars - nrowintersect < ncols - 1 )
+            break;
+      }
+
+      /* store whether rows coincide with set partitioning cons's support or whether
+       * row is covered by a set packing/partitioning cons's support
+       */
+      if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING
+           && nrowintersect == 1 && rowcoveragesetppc[rowsinsetppc[0]] == ncols && nsetppcvars == ncols )
+      {
+         if ( covered[rowsinsetppc[0]] == 1 )
+            --ncovered;
+         covered[rowsinsetppc[0]] = 2;
+         ++ncoveredpart;
+         ++ncovered;
+      }
+      else
+      {
+         for (i = 0; i < nrowintersect; ++i)
+         {
+            if ( covered[rowsinsetppc[i]] == 0 && rowcoveragesetppc[rowsinsetppc[i]] >= ncols )
+            {
+               covered[rowsinsetppc[i]] = 1;
+               ++ncovered;
+            }
+         }
+      }
+
+      /* reset data */
+      for (i = 0; i < nrowintersect; ++i)
+         rowcoveragesetppc[rowsinsetppc[i]] = 0;
+   }
+
+   /* check type of orbitope */
+   if ( ncovered == nrows )
+   {
+      if ( ncoveredpart == nrows )
+         *type = SCIP_ORBITOPETYPE_PARTITIONING;
+      else
+         *type = SCIP_ORBITOPETYPE_PACKING;
+   }
+
+   if ( npprows != NULL )
+      *npprows = ncovered;
+
+   if ( pprows != NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, pprows, nrows) );
+      for (i = 0; i < nrows; ++i)
+         (*pprows)[i] = covered[i] > 0 ? 1 : 0;
+   }
+
+   SCIPfreeBufferArray(scip, &rowsinsetppc);
+   SCIPfreeCleanBufferArray(scip, &rowcoveragesetppc);
+   SCIPfreeBufferArray(scip, &rowidxvar);
+   SCIPfreeBufferArray(scip, &covered);
 
    return SCIP_OKAY;
 }

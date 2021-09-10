@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4278,7 +4278,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    SCIP_SEPADATA* sepadata;
    CGMIP_MIPDATA* mipdata;
 
-   int depth;
    int ncalls;
    int ncols;
    int nrows;
@@ -4295,8 +4294,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-
-   depth = SCIPgetDepth(scip);
 
    /* only call separator, if we are not close to terminating */
    if ( SCIPisStopped(scip) )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -590,6 +590,22 @@ SCIP_RETCODE SCIPsumLPRows(
    SCIP_REALARRAY*       sumcoef,            /**< array to store sum coefficients indexed by variables' probindex */
    SCIP_Real*            sumlhs,             /**< pointer to store the left hand side of the row summation */
    SCIP_Real*            sumrhs              /**< pointer to store the right hand side of the row summation */
+   );
+
+/** interrupts or disables the interrupt of the currently ongoing lp solve; if the lp is not currently constructed just returns with no effect
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPinterruptLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
    );
 
 /** writes current LP to a file
@@ -1758,16 +1774,17 @@ SCIP_Bool SCIPinDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** computes the changes to the problem when fixing to the optimal face
+/** computes two measures for dual degeneracy (dual degeneracy rate and variable-constraint ratio)
+ *  based on the changes applied when reducing the problem to the optimal face
  *
- *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
- *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ *  returns the dual degeneracy rate, i.e., the share of nonbasic variables with reduced cost 0
+ *  and the variable-constraint ratio, i.e., the number of unfixed variables in relation to the basis size
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetLPDegeneracy(
+SCIP_RETCODE SCIPgetLPDualDegeneracy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
-   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
+   SCIP_Real*            degeneracy,         /**< pointer to store the dual degeneracy rate */
+   SCIP_Real*            varconsratio        /**< pointer to store the variable constraint ratio */
    );
 
 /**@} */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -893,7 +893,7 @@ SCIP_RETCODE execRelpscost(
          SCIP_Real varconsratio;
 
          /* get LP degeneracy information */
-         SCIP_CALL( SCIPgetLPDegeneracy(scip, &degeneracy, &varconsratio) );
+         SCIP_CALL( SCIPgetLPDualDegeneracy(scip, &degeneracy, &varconsratio) );
 
          assert(degeneracy >= 0.0);
          assert(degeneracy <= 1.0);
@@ -1966,7 +1966,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMsg(scip, "Execlp method of relpscost branching in node %llu\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   SCIPdebugMsg(scip, "Execlp method of relpscost branching in node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {

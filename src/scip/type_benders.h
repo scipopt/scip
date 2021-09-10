@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -168,10 +168,11 @@ typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solvi
  *  it is possible to provide a NULL pointer to SCIPaddBendersSubproblem. This will ensure that no internal solving
  *  methods available within the Benders' decomposition core are invoked during the solving process.
  *
- *  If the user defines a subproblem solving method, then in BENDERSCREATESUB, the user must specify whether the
- *  subproblem is convex. This is necessary because the dual solutions from convex problems can be used to generate cuts.
- *  The classical Benders' optimality and feasibility cuts require that the subproblems are convex. If the subproblem is
- *  convex, then the user must call SCIPbendersSetSubproblemIsConvex()
+ *  If the user defines a subproblem solving method, then in BENDERSCREATESUB, the user must explicitly specify the
+ *  subproblem type. This is necessary because the dual solutions from convex problems can be used to generate cuts.
+ *  The classical Benders' optimality and feasibility cuts require that the subproblems are convex. The subproblem type
+ *  is specified by calling SCIPbendersSetSubproblemType. The available subproblem types are defined in
+ *  SCIP_BENDERSSUBTYPE.
  *
  *  If the user does NOT implement a subproblem solving method, then the convexity of the problem is determined
  *  internally.

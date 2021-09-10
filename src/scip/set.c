@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,7 +55,9 @@
 #include "scip/table.h"
 #include "scip/prop.h"
 #include "scip/benders.h"
-#include "nlpi/nlpi.h"
+#include "scip/expr.h"
+#include "scip/nlpi.h"
+#include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
 /*
@@ -291,8 +293,10 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         3 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
-                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing) */
+#define SCIP_DEFAULT_MISC_USESYMMETRY         7 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks)
+                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and
+                                                 *   orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital
+                                                 *   fixing, see type_symmetry.h */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -419,14 +423,15 @@
 #define SCIP_DEFAULT_SEPA_MINORTHO         0.90 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.90 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC       0.1 /**< factor to scale objective parallelism of cut in score calculation */
-#define SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC  0.5 /**< factor to scale directed cutoff distance of cut in score calculation */
-#define SCIP_DEFAULT_SEPA_EFFICACYFAC       0.6 /**< factor to scale efficacy of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC  0.0 /**< factor to scale directed cutoff distance of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_EFFICACYFAC       1.0 /**< factor to scale efficacy of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_INTSUPPORTFAC     0.1 /**< factor to scale integral support of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
                                                  *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_CUTSELRESTART     'a' /**< cut selection during restart ('a'ge, activity 'q'uotient) */
 #define SCIP_DEFAULT_SEPA_CUTSELSUBSCIP     'a' /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
+#define SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL TRUE /**< should cutpool separate only cuts with high relative efficacy? */
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS          -1 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -478,6 +483,7 @@
 #define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
 #define SCIP_DEFAULT_TIME_RARECLOCKCHECK  FALSE /**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
 #define SCIP_DEFAULT_TIME_STATISTICTIMING  TRUE /**< should timing for statistic output be enabled? */
+#define SCIP_DEFAULT_TIME_NLPIEVAL        FALSE /**< should time for evaluation in NLP solves be measured? */
 
 
 /* visualization output */
@@ -855,6 +861,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
+   SCIP_Bool             copyexprhdlrs,      /**< should the expression handlers be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins were validly copied */
    )
@@ -868,6 +875,16 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    assert(allvalid != NULL);
 
    *allvalid = TRUE;
+
+   /* copy all dialog plugins */
+   if( copydialogs && sourceset->dialogs != NULL )
+   {
+      for( p = sourceset->ndialogs - 1; p >= 0; --p )
+      {
+         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
+         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
+      }
+   }
 
    /* copy all reader plugins */
    if( copyreaders && sourceset->readers != NULL )
@@ -1010,16 +1027,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-   /* copy all dialog plugins */
-   if( copydialogs && sourceset->dialogs != NULL )
-   {
-      for( p = sourceset->ndialogs - 1; p >= 0; --p )
-      {
-         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
-         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
-      }
-   }
-
    /* copy all table plugins */
    if( copytables && sourceset->tables != NULL )
    {
@@ -1029,15 +1036,21 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all expression handlers */
+   if( copyexprhdlrs && sourceset->exprhdlrs != NULL )
+   {
+      for( p = sourceset->nexprhdlrs - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPexprhdlrCopyInclude(sourceset->exprhdlrs[p], targetset) );
+      }
+   }
+
    /* copy all NLP interfaces */
    if( copynlpis && sourceset->nlpis != NULL )
    {
       for( p = sourceset->nnlpis - 1; p >= 0; --p )
       {
-         SCIP_NLPI* nlpicopy;
-
-         SCIP_CALL_FINALLY( SCIPnlpiCopy(SCIPblkmem(targetset->scip), sourceset->nlpis[p], &nlpicopy), (void)SCIPnlpiFree(&nlpicopy) );
-         SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
+         SCIP_CALL( SCIPnlpiCopyInclude(sourceset->nlpis[p], targetset) );
       }
    }
 
@@ -1176,6 +1189,15 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->dialogs = NULL;
    (*set)->ndialogs = 0;
    (*set)->dialogssize = 0;
+   (*set)->exprhdlrs = NULL;
+   (*set)->exprhdlrvar = NULL;
+   (*set)->exprhdlrval = NULL;
+   (*set)->exprhdlrsum = NULL;
+   (*set)->exprhdlrproduct = NULL;
+   (*set)->exprhdlrpow = NULL;
+   (*set)->nexprhdlrs = 0;
+   (*set)->exprhdlrssize = 0;
+   (*set)->exprhdlrssorted = FALSE;
    (*set)->nlpis = NULL;
    (*set)->nnlpis = 0;
    (*set)->nlpissize = 0;
@@ -1988,8 +2010,10 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
          "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
-         " 2: orbital fixing; 3: orbitopes and orbital fixing), see type_symmetry.h.",
-         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 3,
+         " 2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and " \
+         "orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital " \
+         "fixing, see type_symmetry.h.",
+         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
          paramChgdUsesymmetry, NULL) );
 
    /* randomization parameters */
@@ -2423,6 +2447,11 @@ SCIP_RETCODE SCIPsetCreate(
          "cut selection for sub SCIPs  ('a'ge, activity 'q'uotient)",
          &(*set)->sepa_cutselsubscip, TRUE, SCIP_DEFAULT_SEPA_CUTSELSUBSCIP, "aq",
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "separating/filtercutpoolrel",
+         "should cutpool separate only cuts with high relative efficacy?",
+         &(*set)->sepa_filtercutpoolrel, TRUE, SCIP_DEFAULT_SEPA_FILTERCUTPOOLREL,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxruns",
          "maximal number of runs for which separation is enabled (-1: unlimited)",
@@ -2595,6 +2624,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should timing for statistic output be performed?",
          &(*set)->time_statistictiming, FALSE, SCIP_DEFAULT_TIME_STATISTICTIMING,
          paramChgdStatistictiming, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "timing/nlpieval",
+         "should time for evaluation in NLP solves be measured?",
+         &(*set)->time_nlpieval, FALSE, SCIP_DEFAULT_TIME_NLPIEVAL,
+         NULL, NULL) );
 
    /* visualization parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
@@ -2805,10 +2839,22 @@ SCIP_RETCODE SCIPsetFree(
    /* free dialogs */
    BMSfreeMemoryArrayNull(&(*set)->dialogs);
 
+   /* free expression handlers */
+   for( i = 0; i < (*set)->nexprhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPexprhdlrFree(&(*set)->exprhdlrs[i], *set, blkmem) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->exprhdlrs);
+   (*set)->exprhdlrvar = NULL;
+   (*set)->exprhdlrval = NULL;
+   (*set)->exprhdlrsum = NULL;
+   (*set)->exprhdlrproduct = NULL;
+   (*set)->exprhdlrpow = NULL;
+
    /* free NLPIs */
    for( i = 0; i < (*set)->nnlpis; ++i )
    {
-      SCIP_CALL( SCIPnlpiFree(&(*set)->nlpis[i]) );
+      SCIP_CALL( SCIPnlpiFree(&(*set)->nlpis[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
 
@@ -2837,6 +2883,9 @@ SCIP_RETCODE SCIPsetFree(
       SCIPbanditvtableFree(&(*set)->banditvtables[i]);
    }
    BMSfreeMemoryArrayNull(&(*set)->banditvtables);
+
+   /* free debugging data structure */
+   SCIP_CALL( SCIPdebugFree(*set) );
 
    BMSfreeMemory(set);
 
@@ -3108,21 +3157,6 @@ SCIP_RETCODE SCIPsetChgParamFixed(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetFix(set->paramset, name, fixed) );
-
-   return SCIP_OKAY;
-}
-
-/** changes the value of an existing parameter */
-SCIP_RETCODE SCIPsetSetParam(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
-   )
-{
-   assert(set != NULL);
-
-   SCIP_CALL( SCIPparamsetSet(set->paramset, set, messagehdlr, name, value) );
 
    return SCIP_OKAY;
 }
@@ -4909,6 +4943,72 @@ SCIP_Bool SCIPsetExistsDialog(
    return FALSE;
 }
 
+/** inserts expression handler in expression handler list */
+SCIP_RETCODE SCIPsetIncludeExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(set != NULL);
+   assert(exprhdlr != NULL);
+
+   if( set->nexprhdlrs >= set->exprhdlrssize )
+   {
+      set->exprhdlrssize = SCIPsetCalcMemGrowSize(set, set->nexprhdlrs+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->exprhdlrs, set->exprhdlrssize) );
+   }
+   assert(set->nexprhdlrs < set->exprhdlrssize);
+
+   set->exprhdlrs[set->nexprhdlrs] = exprhdlr;
+   set->nexprhdlrs++;
+   set->exprhdlrssorted = FALSE;
+
+   if( set->exprhdlrvar == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "var") == 0 )
+      set->exprhdlrvar = exprhdlr;
+   else if( set->exprhdlrval == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0 )
+      set->exprhdlrval = exprhdlr;
+   else if( set->exprhdlrsum == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0 )
+      set->exprhdlrsum = exprhdlr;
+   else if( set->exprhdlrproduct == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "prod") == 0 )
+      set->exprhdlrproduct = exprhdlr;
+   else if( set->exprhdlrpow == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "pow") == 0 )
+      set->exprhdlrpow = exprhdlr;
+
+   return SCIP_OKAY;
+}
+
+/** returns the expression handler of the given name, or NULL if not existing */
+SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of expression handler */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nexprhdlrs; ++i )
+      if( strcmp(SCIPexprhdlrGetName(set->exprhdlrs[i]), name) == 0 )
+         return set->exprhdlrs[i];
+
+   return NULL;
+}
+
+/** sorts expression handlers by name */
+void SCIPsetSortExprhdlrs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->exprhdlrssorted )
+   {
+      SCIPsortPtr((void**)set->exprhdlrs, SCIPexprhdlrComp, set->nexprhdlrs);
+      set->exprhdlrssorted = TRUE;
+   }
+}
+
 /** inserts NLPI in NLPI list */
 SCIP_RETCODE SCIPsetIncludeNlpi(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5115,6 +5215,14 @@ SCIP_RETCODE SCIPsetInitPlugins(
    {
       SCIP_CALL( SCIPtableInit(set->tables[i], set) );
    }
+
+   /* expression handlers */
+   for( i = 0; i < set->nexprhdlrs; ++i )
+      SCIPexprhdlrInit(set->exprhdlrs[i], set);
+
+   /* NLP solver interfaces */
+   for( i = 0; i < set->nnlpis; ++i )
+      SCIPnlpiInit(set->nlpis[i]);
 
    return SCIP_OKAY;
 }
@@ -7048,6 +7156,7 @@ void SCIPsetPrintDebugMessage(
    ...                                       /**< format arguments line in printf() function */
    )
 {
+   const char* filename;
    int subscipdepth = 0;
    SCIP* scip;
    va_list ap;
@@ -7058,13 +7167,24 @@ void SCIPsetPrintDebugMessage(
    scip = set->scip;
    assert( scip != NULL );
 
+   /* strip directory from filename */
+#if defined(_WIN32) || defined(_WIN64)
+   filename = strrchr(sourcefile, '\\');
+#else
+   filename = strrchr(sourcefile, '/');
+#endif
+   if ( filename == NULL )
+      filename = sourcefile;
+   else
+      ++filename;
+
    if ( scip->stat != NULL )
       subscipdepth = scip->stat->subscipdepth;
 
    if ( subscipdepth > 0 )
-      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, sourcefile, sourceline);
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, filename, sourceline);
    else
-      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", sourcefile, sourceline);
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);

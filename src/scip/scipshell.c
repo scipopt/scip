@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,6 +29,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
 #include "scip/message_default.h"
+#include "scip/reader_nl.h"
 
 /*
  * Message Handler
@@ -144,6 +145,74 @@ SCIP_RETCODE fromCommandLine(
    return SCIP_OKAY;
 }
 
+/** runs SCIP as if it was called by AMPL */
+static
+SCIP_RETCODE fromAmpl(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 nlfilename,         /**< name of .nl file, without the .nl */
+   const char*           defaultsetname      /**< name of default settings file */
+   )
+{
+#ifdef SCIP_WITH_AMPL
+   char fullnlfilename[SCIP_MAXSTRLEN];
+   char* logfile;
+   SCIP_Bool printstat;
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
+      "whether to print statistics on a solve",
+      &printstat, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "display/logfile",
+      "name of file to write SCIP log to (additionally to writing to stdout)",
+      NULL, FALSE, "", NULL, NULL) );
+
+   SCIPprintVersion(scip, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   SCIPprintExternalCodes(scip, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   if( defaultsetname != NULL )
+   {
+      SCIP_CALL( readParams(scip, defaultsetname) );
+      SCIPinfoMessage(scip, NULL, "\n");
+   }
+
+   SCIP_CALL( SCIPgetStringParam(scip, "display/logfile", &logfile) );
+   if( *logfile )
+      SCIPsetMessagehdlrLogfile(scip, logfile);
+
+   (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
+   SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
+   SCIPinfoMessage(scip, NULL, "============\n");
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
+
+   SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
+   SCIPinfoMessage(scip, NULL, "=============\n\n");
+
+   SCIP_CALL( SCIPsolve(scip) );
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "display/statistics", &printstat) );
+   if( printstat )
+   {
+      SCIPinfoMessage(scip, NULL, "\nStatistics\n");
+      SCIPinfoMessage(scip, NULL, "==========\n\n");
+
+      SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+   }
+
+   SCIP_CALL( SCIPwriteSolutionNl(scip) );
+
+   return SCIP_OKAY;
+
+#else /* SCIP_WITH_AMPL */
+   SCIPerrorMessage("SCIP has been compiled without AMPL support.\n");
+   return SCIP_PLUGINNOTFOUND;
+#endif
+}
+
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
 SCIP_RETCODE SCIPprocessShellArguments(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -170,6 +239,14 @@ SCIP_RETCODE SCIPprocessShellArguments(
    /********************
     * Parse parameters *
     ********************/
+
+   /* recognize and handle case where we were called from AMPL first */
+   if( argc >= 3 && strcmp(argv[2], "-AMPL") == 0 )
+   {
+      SCIP_CALL( fromAmpl(scip, argv[1], defaultsetname) );
+
+      return SCIP_OKAY;
+   }
 
    quiet = FALSE;
    paramerror = FALSE;
@@ -414,8 +491,12 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
          "  -r <randseed> : nonnegative integer to be used as random seed. "
          "Has priority over random seed specified through parameter settings (.set) file\n"
-         "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n\n",
+         "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n",
          argv[0]);
+#ifdef SCIP_WITH_AMPL
+      printf("\nas AMPL solver: %s <.nl-file without the .nl> -AMPL\n", argv[0]);
+#endif
+      printf("\n");
    }
 
    return SCIP_OKAY;
@@ -448,6 +529,7 @@ SCIP_RETCODE SCIPrunShell(
    /**********************************
     * Process command line arguments *
     **********************************/
+
    SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
 
    /********************

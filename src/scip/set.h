@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -83,6 +83,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
+   SCIP_Bool             copyexprhdlrs,      /**< should the expression handlers be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
    );
@@ -263,14 +264,6 @@ SCIP_RETCODE SCIPsetChgParamFixed(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< name of the parameter */
    SCIP_Bool             fixed               /**< new fixing status of the parameter */
-   );
-
-/** changes the value of an existing parameter */
-SCIP_RETCODE SCIPsetSetParam(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Bool parameter */
@@ -845,6 +838,23 @@ SCIP_RETCODE SCIPsetIncludeDialog(
 SCIP_Bool SCIPsetExistsDialog(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIALOG*          dialog              /**< dialog */
+   );
+
+/** inserts expression handler in expression handler list */
+SCIP_RETCODE SCIPsetIncludeExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** returns the expression handler of the given name, or NULL if not existing */
+SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of expression handler */
+   );
+
+/** sorts expression handlers by name */
+void SCIPsetSortExprhdlrs(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts NLPI in NLPI list */
@@ -1726,6 +1736,9 @@ SCIP_Bool SCIPsetGetSubscipsOff(
 
 
 /** prints a debug message */
+#ifdef __GNUC__
+__attribute__((format(printf, 4, 5)))
+#endif
 SCIP_EXPORT
 void SCIPsetPrintDebugMessage(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1736,6 +1749,9 @@ void SCIPsetPrintDebugMessage(
    );
 
 /** prints a debug message without precode */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPsetDebugMessagePrint(
    SCIP_SET*             set,                /**< global SCIP settings */

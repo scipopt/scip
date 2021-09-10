@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -58,20 +58,7 @@ struct SCIP_BendersData
  */
 
 /** copy method for benders plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_BENDERSCOPY(bendersCopyTest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of test Benders' decompostion not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   (*valid) = TRUE;
-
-   return SCIP_OKAY;
-}
-#else
 #define bendersCopyTest NULL
-#endif
 
 /** destructor of Benders' decomposition to free user data (called when SCIP is exiting) */
 static
@@ -91,33 +78,11 @@ SCIP_DECL_BENDERSFREE(bendersFreeTest)
 
 
 /** initialization method of Benders' decomposition (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_BENDERSINIT(bendersInitTest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of test Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define bendersInitTest NULL
-#endif
 
 
 /** deinitialization method of Benders' decomposition (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_BENDERSEXIT(bendersExitTest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of test Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define bendersExitTest NULL
-#endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin)
@@ -125,63 +90,19 @@ SCIP_DECL_BENDERSEXIT(bendersExitTest)
  *  This function is called immediately after the auxiliary variables are created in the master problem. The callback
  *  provides the user an opportunity to add variable data to the auxiliary variables.
  */
-#if 0
-static
-SCIP_DECL_BENDERSINITPRE(bendersInitpreTest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of test Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define bendersInitpreTest NULL
-#endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 0
-static
-SCIP_DECL_BENDERSEXITPRE(bendersExitpreTest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of test Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define bendersExitpreTest NULL
-#endif
 
 
 /** solving process initialization method of Benders' decomposition (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_BENDERSINITSOL(bendersInitsolTest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of test Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define bendersInitsolTest NULL
-#endif
 
 
 /** solving process deinitialization method of Benders' decomposition (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_BENDERSEXITSOL(bendersExitsolTest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of test Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define bendersExitsolTest NULL
-#endif
 
 
 /** mapping method between the master problem variables and the subproblem variables of Benders' decomposition */
@@ -209,22 +130,14 @@ SCIP_DECL_BENDERSCREATESUB(bendersCreatesubTest)
    /* adding NULL subproblems */
    SCIP_CALL( SCIPaddBendersSubproblem(scip, benders, NULL) );
 
+   /* specifying the subproblem type */
+   SCIPbendersSetSubproblemType(benders, probnumber, SCIP_BENDERSSUBTYPE_CONVEXCONT);
+
    return SCIP_OKAY;
 }
 
 /** called before the subproblem solve for Benders' decomposition */
-#if 0
-static
-SCIP_DECL_BENDERSPRESUBSOLVE(bendersPresubsolveTest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of test Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define bendersPresubsolveTest NULL
-#endif
 
 /** the solving method for a convex subproblem for Benders' decomposition. In this method the subproblem is setup with
  *  the given solution and then solved.
@@ -254,19 +167,7 @@ SCIP_DECL_BENDERSSOLVESUB(bendersSolvesubTest)
    return SCIP_OKAY;
 }
 
-#if 0
-/** the post-solve method for Benders' decomposition */
-static
-SCIP_DECL_BENDERSPOSTSOLVE(bendersPostsolveTest)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of test Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define bendersPostsolveTest NULL
-#endif
 
 
 /** the subproblem freeing method for Benders' decomposition. This is called between subproblem solves to clear the
@@ -325,19 +226,6 @@ SCIP_RETCODE SCIPincludeBendersTest(
    benders = NULL;
 
    /* include Benders' decomposition */
-#if 0
-   /* use SCIPincludeBenders() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
-    * new callbacks are added in future SCIP versions
-    */
-   SCIP_CALL( SCIPincludeBenders(scip, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, BENDERS_CUTLP, BENDERS_CUTPSEUDO,
-         BENDERS_CUTRELAX, bendersCopyTest, bendersFreeTest, bendersInitTest, bendersExitTest, bendersInitpreTest,
-         bendersExitpreTest, bendersInitsolTest, bendersExitsolTest, bendersGetvarTest, bendersPresubsolveTest,
-         bendersCreatesubTest, bendersSolvesubconvexTest, bendersSolvesubTest, bendersPostsolveTest, bendersFreesubTest,
-         bendersdata) );
-#else
-   /* use SCIPincludeBendersBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludeBendersBasic(scip, &benders, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, BENDERS_CUTLP,
          BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, BENDERS_SHAREAUXVARS, bendersGetvarTest, bendersCreatesubTest,
          bendersdata) );
@@ -356,11 +244,6 @@ SCIP_RETCODE SCIPincludeBendersTest(
    SCIP_CALL( SCIPsetBendersSolveAndFreesub(scip, benders, bendersSolvesubconvexTest, bendersSolvesubTest,
          bendersFreesubTest) );
    SCIP_CALL( SCIPsetBendersPostsolve(scip, benders, bendersPostsolveTest) );
-#endif
-
-#if 0
-   SCIP_CALL( SCIPincludeBendersDefaultCuts(scip, benders) );
-#endif
 
    return SCIP_OKAY;
 }

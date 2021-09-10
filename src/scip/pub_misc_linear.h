@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc_linear.h
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief  internal miscellaneous methods for linear constraints
  * @author Jakob Witzig
  */
@@ -89,6 +89,7 @@ void SCIPconsGetDualfarkas(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the dual solution
  */
+SCIP_EXPORT
 void SCIPconsGetDualsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left hand side for */
@@ -110,6 +111,7 @@ SCIP_ROW* SCIPconsGetRow(
  *  converted to an int. A warning is passed if the SCIP_Real is not an integer.
  *  TODO: Allow val to be a pointer.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPconsAddCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which row is queried */

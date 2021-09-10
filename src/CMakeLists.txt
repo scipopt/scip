@@ -1,5 +1,3 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 #
 # interface function for setting common library properties
 #
@@ -11,13 +9,18 @@ endfunction(setLibProperties)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
+set(CMAKE_C_EXTENSIONS OFF)
+
+if(NOT WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=600")
+endif()
 
 #configure the scipbuildflags.c source file for the build tree
 configure_file(${PROJECT_SOURCE_DIR}/src/scipbuildflags.c.in
-  "${CMAKE_BINARY_DIR}/scipbuildflag.c" @ONLY)
+  "${PROJECT_BINARY_DIR}/scipbuildflag.c" @ONLY)
 
 set(scipsources
-    ${CMAKE_BINARY_DIR}/scipbuildflag.c
+    ${PROJECT_BINARY_DIR}/scipbuildflag.c
     blockmemshell/memory.c
     scip/message.c
     scip/bitencode.c
@@ -39,12 +42,11 @@ set(scipsources
     scip/branch_random.c
     scip/branch_relpscost.c
     scip/branch_vanillafullstrong.c
-    scip/cons_abspower.c
     scip/compr_largestrepr.c
     scip/compr_weakcompr.c
     scip/concsolver_scip.c
+    scip/cons_abspower.c
     scip/cons_and.c
-    scip/cons_bivariate.c
     scip/cons_benders.c
     scip/cons_benderslp.c
     scip/cons_bounddisjunction.c
@@ -80,6 +82,19 @@ set(scipsources
     scip/event_estim.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
+    scip/expr_abs.c
+    scip/expr_entropy.c
+    scip/expr_erf.c
+    scip/expr_exp.c
+    scip/expr_log.c
+    scip/expr_pow.c
+    scip/expr_product.c
+    scip/expr_sum.c
+    scip/expr_trig.c
+    scip/expr_value.c
+    scip/expr_var.c
+    scip/expr_varidx.c
+    ${exprinterpret}
     scip/disp_default.c
     scip/heur_actconsdiving.c
     scip/heur_adaptivediving.c
@@ -140,6 +155,15 @@ set(scipsources
     scip/heur_zeroobj.c
     scip/heur_zirounding.c
     scip/message_default.c
+    scip/nlhdlr_bilinear.c
+    scip/nlhdlr_convex.c
+    scip/nlhdlr_default.c
+    scip/nlhdlr_perspective.c
+    scip/nlhdlr_quadratic.c
+    scip/nlhdlr_quotient.c
+    scip/nlhdlr_soc.c
+    scip/nlpi_all.c
+    ${nlpi}
     scip/nodesel_bfs.c
     scip/nodesel_breadthfirst.c
     scip/nodesel_dfs.c
@@ -174,6 +198,7 @@ set(scipsources
     scip/prop_rootredcost.c
     scip/prop_symmetry.c
     scip/prop_vbounds.c
+    scip/prop_symmetry.c
     scip/prop_sync.c
     scip/reader_bnd.c
     scip/reader_ccg.c
@@ -212,8 +237,11 @@ set(scipsources
     scip/sepa_impliedbounds.c
     scip/sepa_intobj.c
     scip/sepa_mcf.c
+    scip/sepa_minor.c
+    scip/sepa_mixing.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
+    scip/sepa_rlt.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
     scip/treemodel.c
@@ -241,6 +269,9 @@ set(scipsources
     scip/dialog.c
     scip/disp.c
     scip/event.c
+    scip/expr.c
+    scip/exprcurv.c
+    scip/expriter.c
     scip/fileio.c
     scip/heur.c
     scip/heuristics.c
@@ -254,8 +285,11 @@ set(scipsources
     scip/mem.c
     scip/misc.c
     scip/misc_linear.c
-    scip/misc_nonlinear.c
+    scip/misc_rowprep.c
+    scip/nlhdlr.c
     scip/nlp.c
+    scip/nlpi.c
+    scip/nlpioracle.c
     scip/nodesel.c
     scip/paramset.c
     scip/presol.c
@@ -291,8 +325,8 @@ set(scipsources
     scip/scip_mem.c
     scip/scip_message.c
     scip/scip_nlp.c
+    scip/scip_nlpi.c
     scip/scip_nodesel.c
-    scip/scip_nonlinear.c
     scip/scip_numerics.c
     scip/scip_param.c
     scip/scip_presol.c
@@ -335,6 +369,7 @@ set(scipsources
     tclique/tclique_graph.c
     dijkstra/dijkstra.c
     xml/xmlparse.c
+    ${amplsrc}
 )
 
 set(objscipsources
@@ -359,16 +394,6 @@ set(objscipsources
     objscip/objvardata.cpp
 )
 
-set(nlpisources
-    nlpi/nlpi.c
-    nlpi/nlpi_all.c
-    nlpi/nlpioracle.c
-    nlpi/expr.c
-    nlpi/intervalarithext.cpp
-    ${nlpi}
-    ${exprinterpret}
-)
-
 set(lpisources
    ${lpi}
    )
@@ -388,23 +413,6 @@ set(lpiheaders
 
 set(dijkstraheaders
     dijkstra/dijkstra.h
-)
-
-set(nlpiheaders
-    nlpi/exprinterpret.h
-    nlpi/intervalarithext.h
-    nlpi/nlpi_all.h
-    nlpi/nlpi.h
-    nlpi/nlpi_filtersqp.h
-    nlpi/nlpi_ipopt.h
-    nlpi/nlpi_worhp.h
-    nlpi/nlpioracle.h
-    nlpi/pub_expr.h
-    nlpi/struct_expr.h
-    nlpi/struct_nlpi.h
-    nlpi/type_expr.h
-    nlpi/type_exprinterpret.h
-    nlpi/type_nlpi.h
 )
 
 set(objscipheaders
@@ -479,7 +487,6 @@ set(scipheaders
     scip/cons_and.h
     scip/cons_benders.h
     scip/cons_benderslp.h
-    scip/cons_bivariate.h
     scip/cons_bounddisjunction.h
     scip/cons_cardinality.h
     scip/cons_components.h
@@ -523,6 +530,19 @@ set(scipheaders
     scip/event_estim.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
+    scip/expr_abs.h
+    scip/expr_entropy.h
+    scip/expr_erf.h
+    scip/expr_exp.h
+    scip/expr_log.h
+    scip/expr_pow.h
+    scip/expr_product.h
+    scip/expr_sum.h
+    scip/expr_trig.h
+    scip/expr_value.h
+    scip/expr_var.h
+    scip/expr_varidx.h
+    scip/exprinterpret.h
     scip/heur_actconsdiving.h
     scip/heur_adaptivediving.h
     scip/heur_bound.h
@@ -592,7 +612,20 @@ set(scipheaders
     scip/message_default.h
     scip/message.h
     scip/misc.h
+    scip/nlhdlr_bilinear.h
+    scip/nlhdlr_convex.h
+    scip/nlhdlr_default.h
+    scip/nlhdlr_perspective.h
+    scip/nlhdlr_quadratic.h
+    scip/nlhdlr_quotient.h
+    scip/nlhdlr_soc.h
     scip/nlp.h
+    scip/nlpi.h
+    scip/nlpioracle.h
+    scip/nlpi_all.h
+    scip/nlpi_filtersqp.h
+    scip/nlpi_ipopt.h
+    scip/nlpi_worhp.h
     scip/nodesel_bfs.h
     scip/nodesel_breadthfirst.h
     scip/nodesel_dfs.h
@@ -652,6 +685,7 @@ set(scipheaders
     scip/pub_dialog.h
     scip/pub_disp.h
     scip/pub_event.h
+    scip/pub_expr.h
     scip/pub_fileio.h
     scip/pub_heur.h
     scip/pub_history.h
@@ -661,10 +695,12 @@ set(scipheaders
     scip/pub_message.h
     scip/pub_misc.h
     scip/pub_misc_linear.h
-    scip/pub_misc_nonlinear.h
+    scip/pub_misc_rowprep.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
+    scip/pub_nlhdlr.h
     scip/pub_nlp.h
+    scip/pub_nlpi.h
     scip/pub_nodesel.h
     scip/pub_paramset.h
     scip/pub_presol.h
@@ -693,6 +729,7 @@ set(scipheaders
     scip/reader_lp.h
     scip/reader_mps.h
     scip/reader_mst.h
+    scip/reader_nl.h
     scip/reader_opb.h
     scip/reader_osil.h
     scip/reader_pbm.h
@@ -735,8 +772,8 @@ set(scipheaders
     scip/scip_mem.h
     scip/scip_message.h
     scip/scip_nlp.h
+    scip/scip_nlpi.h
     scip/scip_nodesel.h
-    scip/scip_nonlinear.h
     scip/scip_numerics.h
     scip/scip_param.h
     scip/scip_presol.h
@@ -771,8 +808,11 @@ set(scipheaders
     scip/sepa_impliedbounds.h
     scip/sepa_intobj.h
     scip/sepa_mcf.h
+    scip/sepa_minor.h
+    scip/sepa_mixing.h
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
+    scip/sepa_rlt.h
     scip/sepastore.h
     scip/sepa_strongcg.h
     scip/sepa_zerohalf.h
@@ -797,6 +837,7 @@ set(scipheaders
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
+    scip/struct_expr.h
     scip/struct_heur.h
     scip/struct_history.h
     scip/struct_implics.h
@@ -805,7 +846,9 @@ set(scipheaders
     scip/struct_mem.h
     scip/struct_message.h
     scip/struct_misc.h
+    scip/struct_nlhdlr.h
     scip/struct_nlp.h
+    scip/struct_nlpi.h
     scip/struct_nodesel.h
     scip/struct_paramset.h
     scip/struct_presol.h
@@ -851,6 +894,8 @@ set(scipheaders
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
+    scip/type_expr.h
+    scip/type_exprinterpret.h
     scip/type_heur.h
     scip/type_history.h
     scip/type_implics.h
@@ -860,7 +905,9 @@ set(scipheaders
     scip/type_mem.h
     scip/type_message.h
     scip/type_misc.h
+    scip/type_nlhdlr.h
     scip/type_nlp.h
+    scip/type_nlpi.h
     scip/type_nodesel.h
     scip/type_paramset.h
     scip/type_presol.h
@@ -924,7 +971,7 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${lpisources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
 
     # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -935,16 +982,6 @@ endif()
 add_library(libobjscip EXCLUDE_FROM_ALL ${objscipsources})
 setLibProperties(libobjscip "objscip")
 
-add_library(libnlpi EXCLUDE_FROM_ALL
-    ${nlpisources}
-    blockmemshell/memory.c
-    scip/misc.c
-    scip/intervalarith.c
-    scip/interrupt.c
-    scip/message.c)
-setLibProperties(libnlpi "nlpi")
-
-
 add_library(liblpi EXCLUDE_FROM_ALL
     ${lpisources}
     scip/bitencode.c
@@ -952,7 +989,8 @@ add_library(liblpi EXCLUDE_FROM_ALL
     scip/message.c)
 setLibProperties(liblpi "lpi")
 
-add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
+add_library(libscip ${scipsources} ${objscipsources} ${lpisources} ${tpisources} ${symsources})
+
 if(MSVC)
    # msvc otherwise is not smart enough and tries to link the scip.exe binary as a library
    setLibProperties(libscip "libscip")
@@ -960,8 +998,13 @@ else()
    setLibProperties(libscip "scip")
 endif()
 
+target_include_directories(libscip PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>)
+
 target_link_libraries(libscip PRIVATE
-    ${ZLIB_LIBRARIES}
+    $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
@@ -973,7 +1016,7 @@ if(SHARED)
     set(SOPLEX_NEEDED 0)
     set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
-    add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
+    add_executable(scip main.c ${scipsources} ${objscipsources} ${lpisources} ${tpisources} ${symsources})
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
@@ -982,8 +1025,11 @@ else()
     target_link_libraries(scip libscip)
 endif()
 
+add_executable(SCIP::SCIP ALIAS scip)
+add_library(SCIP::libscip ALIAS libscip)
+
 include(GenerateExportHeader)
-generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/scip/scip_export.h)
+generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/scip/scip_export.h)
 target_compile_definitions(scip PRIVATE SCIP_STATIC_DEFINE)
 
 if(CMAKE_BUILD_TYPE EQUAL "Debug")
@@ -991,8 +1037,16 @@ if(CMAKE_BUILD_TYPE EQUAL "Debug")
     add_sanitizers(scip)
 endif()
 
-target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES} ${PAPILO_IMPORTED_TARGETS})
+target_link_libraries(scip
+   $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
+   ${Readline_LIBRARY}
+   ${GMP_LIBRARIES}
+   ${ZIMPL_LIBRARIES}
+   ${LPS_LIBRARIES}
+   ${SYM_LIBRARIES}
+   ${THREAD_LIBRARIES}
+   ${NLPI_LIBRARIES}
+   ${PAPILO_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
@@ -1002,6 +1056,11 @@ set_target_properties(libscip PROPERTIES
     SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
     INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+target_include_directories(scip PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>)
+
 # set the install rpath to the installed destination
 set_target_properties(scip PROPERTIES
     INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
@@ -1010,9 +1069,8 @@ set_target_properties(scip PROPERTIES
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION include/lpi)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
-install(FILES ${nlpiheaders} DESTINATION include/nlpi)
 install(FILES ${objscipheaders} DESTINATION include/objscip)
-install(FILES ${scipheaders} ${CMAKE_BINARY_DIR}/scip/config.h ${CMAKE_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
+install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
 install(FILES ${tcliqueheaders} DESTINATION include/tclique)
 install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)
@@ -1029,7 +1087,7 @@ install(TARGETS scip libscip EXPORT scip-targets
 
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip
-  FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
+  FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 #make soplex and zimpl dir absolute for the config file
 if(SOPLEX_NEEDED)
@@ -1041,13 +1099,13 @@ if(ZIMPL_NEEDED)
 endif()
 
 #configure the config file for the build tree
-set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${PROJECT_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
-  "${CMAKE_BINARY_DIR}/scip-config.cmake" @ONLY)
+  "${PROJECT_BINARY_DIR}/scip-config.cmake" @ONLY)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-${CMAKE_BINARY_DIR}/scip-config-version.cmake
+${PROJECT_BINARY_DIR}/scip-config-version.cmake
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
     COMPATIBILITY SameMajorVersion
     )
@@ -1067,5 +1125,5 @@ configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
 # can link easily against scip
 install(EXPORT scip-targets DESTINATION lib/cmake/scip)
 install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
-              ${CMAKE_BINARY_DIR}/scip-config-version.cmake
+              ${PROJECT_BINARY_DIR}/scip-config-version.cmake
         DESTINATION lib/cmake/scip)

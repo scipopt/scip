@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -80,16 +80,23 @@ Test(cons, initlp)
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
+
    /* include test constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, "name", "test initlp",
             1, 1, -1, FALSE, consEnfolpTest, consEnfopsTest, consCheckTest,
             consLockTest, NULL) );
 
+   /* SCIP can go to SOLVED after presolving if there are no vars, cons, nor pricer; we add a pricer to avoid this;
+    * this pricer is defined in scip_test
+    */
+   SCIP_CALL( SCIPincludePricerBasic(scip, NULL, "pricerTest", "pricer to avoid SCIP skipping SOLVING", 0, FALSE,
+            pricerRedcostTest, NULL, NULL) );
+   SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, "pricerTest")) );
+
    /* set initlp callback */
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpTest) );
-
-   /* create problem */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 
    /* solve problem and expect it to be infeasible */
    SCIP_CALL( SCIPsolve(scip) );

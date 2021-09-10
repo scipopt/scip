@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -80,6 +80,9 @@ SCIP_Real SCIPsumepsilon(
  *  @return feasibility tolerance for constraints
  */
 SCIP_EXPORT
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -101,6 +104,9 @@ SCIP_Real SCIPlpfeastol(
  *  @return feasibility tolerance for reduced costs
  */
 SCIP_EXPORT
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPdualfeastol(
    SCIP*                 scip                /**< SCIP data structure */
    );

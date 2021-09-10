@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -270,25 +270,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPunfixParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of the parameter */
-   );
-
-/** changes the value of an existing parameter
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @attention This function is not working the way one would probably expect.
- *             Even if one finds out how to pass the parameter value via the void* argument, the function will fail
- *             to correctly set negative or fractional parameter values.
- *
- *  @deprecated Use SCIPsetBoolParam, SCIPsetIntParam, SCIPsetRealParam, etc., instead
- */
-SCIP_DEPRECATED
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetParam(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Bool parameter

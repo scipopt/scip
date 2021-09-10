@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -95,7 +95,8 @@ struct SCIP_Benders
    int                   numthreads;         /**< the number of threads to use when solving the subproblem */
    SCIP_Bool             execfeasphase;      /**< should a feasibility phase be executed during the root node, i.e.
                                                   adding slack variables to constraints to ensure feasibility */
-   SCIP_Real             slackvarcoef;       /**< the objective coefficient of the slack variables in the subproblem */
+   SCIP_Real             slackvarcoef;       /**< the initial objective coefficient of the slack variables in the subproblem */
+   SCIP_Real             maxslackvarcoef;    /**< the maximal objective coefficient of the slack variables in the subproblem */
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
 
    /* information for heuristics */

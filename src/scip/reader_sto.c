@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1986,12 +1986,6 @@ SCIP_RETCODE addScenarioVarsToProb(
       obj = SCIPvarGetObj(vars[i])*probability;
 
       vartype = SCIPvarGetType(vars[i]);
-#if 0
-      if( getScenarioStageNum(scip, scenario) == 0 )
-         vartype = SCIPvarGetType(vars[i]);
-      else
-         vartype = SCIP_VARTYPE_CONTINUOUS;
-#endif
 
       /* creating a variable as a copy of the original variable. */
       getScenarioEntityName(name, SCIPvarGetName(vars[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));

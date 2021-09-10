@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -114,6 +114,9 @@ struct SCIP_Stat
    SCIP_Longint          ninitconssadded;    /**< total number of initial constraints added during the solve */
    SCIP_Longint          nactiveconssadded;  /**< total number of active constraints added */
    SCIP_Longint          externmemestim;     /**< estimation of external memory usage, e.g., by LP solver */
+   SCIP_Longint          exprlastvisitedtag; /**< last used visited tag; used by expression iterators to identify expression that have been visited already */
+   SCIP_Longint          exprlastsoltag;     /**< last solution tag; used by expression evaluation to identify whether expression has been evaluated for given sol already */
+   SCIP_Longint          exprlastdifftag;    /**< last differentiation tag; used by expression differentiation to identify whether expression has been differentiated for given sol already */
    SCIP_Real             avgnnz;             /**< average number of nonzeros per constraint in presolved problem */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
@@ -261,6 +264,7 @@ struct SCIP_Stat
    int                   ncopies;            /**< counter how often SCIPcopy() was performed */
    int                   nreoptruns;         /**< number of reoptimization runs */
    int                   nclockskipsleft;    /**< how many times the timing should be skipped in SCIPsolveIsStopped() */
+   int                   nactiveexpriter;    /**< number of active expression iterators */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */

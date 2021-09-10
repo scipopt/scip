@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2161,7 +2161,8 @@ SCIP_RETCODE doSeparation(
    SCIP_SEPA*            sepa,
    SCIP_SOL*             sol,
    SCIP_RESULT*          result,
-   SCIP_Bool             allowlocal
+   SCIP_Bool             allowlocal,
+   int                   depth               /* current depth */
    )
 {
    int i;
@@ -2179,7 +2180,6 @@ SCIP_RETCODE doSeparation(
    assert(sepadata != NULL);
 
    {
-      int depth = SCIPgetDepth(scip);
       int ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
       /* only call the zerohalf cut separator a given number of times at each node */
@@ -2394,7 +2394,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( doSeparation(scip, sepa, NULL, result, allowlocal) );
+   SCIP_CALL( doSeparation(scip, sepa, NULL, result, allowlocal, depth) );
 
    return SCIP_OKAY;
 }
@@ -2413,7 +2413,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolZerohalf)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIP_CALL( doSeparation(scip, sepa, sol, result, allowlocal) );
+   SCIP_CALL( doSeparation(scip, sepa, sol, result, allowlocal, depth) );
 
    return SCIP_OKAY;
 }

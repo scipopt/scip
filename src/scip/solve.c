@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2341,7 +2341,6 @@ SCIP_RETCODE priceAndCutLoop(
       maxnsepastallrounds = INT_MAX;
 
    /* solve initial LP of price-and-cut loop */
-   /* @todo check if LP is always already solved, because of calling solveNodeInitialLP() in solveNodeLP()? */
    SCIPsetDebugMsg(set, "node: solve LP with price and cut\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem,  stat, eventqueue, eventfilter, transprob,
          set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
@@ -5258,7 +5257,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
    assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
-   SCIPsetDebugMsg(set, "Problem solving finished with status %u (restart=%u, userrestart=%u)\n", stat->status, *restart, stat->userrestart);
+   SCIPsetDebugMsg(set, "Problem solving finished with status %d (restart=%u, userrestart=%u)\n", stat->status, *restart, stat->userrestart);
 
    /* cuts off nodes with lower bound is not better than given cutoff bound, manually; this necessary to ensure that
     * SCIP terminates with a proper solve stage

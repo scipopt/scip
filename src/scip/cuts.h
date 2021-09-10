@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -384,7 +384,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
 /** calculates a lifted simple generalized flow cover cut out of the weighted sum of LP rows given by an aggregation row; the
  *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
- *  participate in an MIR cut.
+ *  participate in the cut.
  *  For further details we refer to:
  *
  *  Gu, Z., Nemhauser, G. L., & Savelsbergh, M. W. (1999). Lifted flow cover inequalities for mixed 0-1 integer programs.
@@ -404,6 +404,38 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute flow cover cut for */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
+   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
+   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
+   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
+   SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
+   SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
+   );
+
+/** calculates a lifted knapsack cover cut out of the weighted sum of LP rows given by an aggregation row; the
+ *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
+ *  participate in the cut.
+ *  For further details we refer to:
+ *
+ *  Letchford, A. N., & Souli, G. (2019). On lifted cover inequalities: A new lifting procedure with unusual properties.
+ *  Operations Research Letters, 47(2), 83-87.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcalcKnapsackCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute flow cover cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -312,6 +312,18 @@ SCIP_Bool SCIPvarHasBinaryImplic(
    SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
    SCIP_VAR*             implvar,            /**< variable y to search for */
    SCIP_Bool             implvarfixing       /**< value of the implied variable to search for */
+   );
+
+/** gets the values of b in implications x == varfixing -> y <= b or y >= b in the implication graph;
+ *  the values are set to SCIP_INVALID if there is no implied bound
+ */
+SCIP_EXPORT
+void SCIPvarGetImplicVarBounds(
+   SCIP_VAR*             var,                /**< problem variable x */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_Real*            lb,                 /**< buffer to store the value of the implied lower bound */
+   SCIP_Real*            ub                  /**< buffer to store the value of the implied upper bound */
    );
 
 /** returns whether there is a clique that contains both given variable/value pairs;
@@ -913,9 +925,12 @@ SCIP_Bool SCIPvarIsRelaxationOnly(
 
 /** marks that this variable has only been introduced to define a relaxation
  *
- * The variable must not have a coefficient in the objective.
+ * The variable must not have a coefficient in the objective and must be deletable.
+ * If it is not marked deletable, it will be marked as deletable, which is only possible
+ * before the variable is added to a problem.
  *
  * @see SCIPvarIsRelaxationOnly
+ * @see SCIPvarMarkDeletable
  */
 SCIP_EXPORT
 void SCIPvarMarkRelaxationOnly(

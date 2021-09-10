@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -787,7 +787,7 @@ SCIP_RETCODE checkExec(
       SCIP_Real degeneracy;
       SCIP_Real varconsratio;
 
-      SCIP_CALL( SCIPgetLPDegeneracy(scip, &degeneracy, &varconsratio) );
+      SCIP_CALL( SCIPgetLPDualDegeneracy(scip, &degeneracy, &varconsratio) );
 
       SCIPdebugMsg(scip, "degeneracy: %.2f ratio: %.2f\n", degeneracy, varconsratio);
 
@@ -856,6 +856,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( SCIPsepaGetNCallsAtNode(sepa) > 0 )
       return SCIP_OKAY;
 
+   /* the information deduced from rapid learning is globally valid only if we are at the root node; thus we can't use
+    * the depth argument of the callback
+    */
    global = (SCIPgetDepth(scip) <= SCIPgetEffectiveRootDepth(scip));
 
    /* check if rapid learning should be applied locally */

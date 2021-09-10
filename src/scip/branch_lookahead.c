@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2562,9 +2562,9 @@ SCIP_RETCODE branchOnVar(
    assert(SCIPisLT(scip, bestval, SCIPvarGetUbLocal(bestvar)));
    SCIP_CALL( SCIPbranchVarVal(scip, bestvar, bestval, &downchild, NULL, &upchild) );
 
-   SCIPdebugMsg(scip, "down child (node %d): branching bound change <%s> <= %g\n",
+   SCIPdebugMsg(scip, "down child (node %" SCIP_LONGINT_FORMAT "): branching bound change <%s> <= %g\n",
       SCIPnodeGetNumber(downchild), SCIPvarGetName(bestvar), SCIPfeasFloor(scip, bestval));
-   SCIPdebugMsg(scip, "up child (node %d): branching bound change <%s> >= %g\n",
+   SCIPdebugMsg(scip, "up child (node %" SCIP_LONGINT_FORMAT "): branching bound change <%s> >= %g\n",
       SCIPnodeGetNumber(upchild), SCIPvarGetName(bestvar), SCIPfeasCeil(scip, bestval));
 
    assert(downchild != NULL);
@@ -2617,7 +2617,7 @@ SCIP_RETCODE branchOnVar(
             {
                SCIP_CALL( SCIPchgVarLbNode(scip, downchild, var, newlb) );
 
-               SCIPdebugMsg(scip, "down child (node %d): add bound change <%s> >= %g\n",
+               SCIPdebugMsg(scip, "down child (node %" SCIP_LONGINT_FORMAT "): add bound change <%s> >= %g\n",
                   SCIPnodeGetNumber(downchild), SCIPvarGetName(var), newlb);
             }
 
@@ -2628,7 +2628,7 @@ SCIP_RETCODE branchOnVar(
             {
                SCIP_CALL( SCIPchgVarUbNode(scip, downchild, var, newub) );
 
-               SCIPdebugMsg(scip, "down child (node %d): add bound change <%s> <= %g\n",
+               SCIPdebugMsg(scip, "down child (node %" SCIP_LONGINT_FORMAT "): add bound change <%s> <= %g\n",
                   SCIPnodeGetNumber(downchild), SCIPvarGetName(var), newub);
             }
 
@@ -2642,7 +2642,7 @@ SCIP_RETCODE branchOnVar(
             {
                SCIP_CALL( SCIPchgVarLbNode(scip, upchild, var, newlb) );
 
-               SCIPdebugMsg(scip, "up child (node %d): add bound change <%s> >= %g\n",
+               SCIPdebugMsg(scip, "up child (node %" SCIP_LONGINT_FORMAT "): add bound change <%s> >= %g\n",
                   SCIPnodeGetNumber(upchild), SCIPvarGetName(var), newlb);
             }
 
@@ -2651,7 +2651,7 @@ SCIP_RETCODE branchOnVar(
             {
                SCIP_CALL( SCIPchgVarUbNode(scip, upchild, var, newub) );
 
-               SCIPdebugMsg(scip, "up child (node %d): add bound change <%s> <= %g\n",
+               SCIPdebugMsg(scip, "up child (node %" SCIP_LONGINT_FORMAT "): add bound change <%s> <= %g\n",
                   SCIPnodeGetNumber(upchild), SCIPvarGetName(var), newub);
             }
          }
@@ -2805,7 +2805,7 @@ SCIP_RETCODE executeBranching(
 
       if( ndomredsfound > 0 )
       {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %d domain reductions via propagation.\n", ndomredsfound);
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %" SCIP_LONGINT_FORMAT " domain reductions via propagation.\n", ndomredsfound);
 
          /* domreds != NULL iff config->usedomainreduction */
          if( domreds != NULL )

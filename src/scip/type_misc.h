@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -155,6 +155,13 @@ typedef struct SCIP_Regression SCIP_REGRESSION;
  */
 typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
 
+/** a linear inequality row in preparation to become a SCIP_ROW
+ *
+ * Used to assemble data that could eventually make a SCIP_ROW.
+ * @note Only one-sided rows are allowed here.
+ */
+typedef struct SCIP_RowPrep SCIP_ROWPREP;
+
 /** compares two element indices
  *  result:
  *    < 0: ind1 comes before (is better than) ind2
@@ -179,6 +186,14 @@ typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
 
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) uint64_t x (void* userptr, void* key)
+
+/** evaluates the real function at the given point, used for Newton Procedure
+ *  input:
+ *      point: the point where the function is evaluated
+ *      params: an array of parameters that the function depends on (e.g. f(x) = a*x + b)
+ *      nparams: the number of parameters stored in params
+ */
+#define SCIP_DECL_NEWTONEVAL(x) SCIP_Real x (SCIP_Real point, SCIP_Real* params, int nparams)
 
 /** callback to act on position change of @p elem in priority queue */
 #define SCIP_DECL_PQUEUEELEMCHGPOS(x) void x (void* elem, int oldpos, int newpos)
