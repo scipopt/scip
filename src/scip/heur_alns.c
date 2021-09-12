@@ -79,8 +79,8 @@
 /*
  * limit parameters for sub-SCIPs
  */
-#define DEFAULT_NODESQUOT        0.1
-#define DEFAULT_NODESQUOTMIN     0.0
+#define DEFAULT_NODESQUOT        0.5
+#define DEFAULT_NODESQUOTMIN     0.1
 #define DEFAULT_NODESOFFSET      500LL
 #define DEFAULT_NSOLSLIM         3
 #define DEFAULT_MINNODES         50LL
@@ -89,7 +89,8 @@
 #define DEFAULT_TARGETNODEFACTOR 1.05
 #define LRATEMIN                 0.01 /**<  lower bound for learning rate for target nodes and minimum improvement */
 #define LPLIMFAC                 4.0
-#define DEFAULT_INITDURINGROOT FALSE
+#define DEFAULT_INITDURINGROOT TRUE
+#define DEFAULT_MAXCALLSSAMESOL  0    /**< number of allowed executions of the heuristic on the same incumbent solution */
 
 /*
  * parameters for the minimum improvement
@@ -113,7 +114,7 @@
 #define DEFAULT_REWARDBASELINE 0.5  /**< the reward baseline to separate successful and failed calls */
 #define DEFAULT_FIXTOL         0.1  /**< tolerance by which the fixing rate may be missed without generic fixing */
 #define DEFAULT_UNFIXTOL       0.1  /**< tolerance by which the fixing rate may be exceeded without generic unfixing */
-#define DEFAULT_USELOCALREDCOST FALSE /**< should local reduced costs be used for generic (un)fixing? */
+#define DEFAULT_USELOCALREDCOST TRUE /**< should local reduced costs be used for generic (un)fixing? */
 #define DEFAULT_BETA           0.0  /**< default reward offset between 0 and 1 at every observation for exp3 */
 
 /*
@@ -4077,7 +4078,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          &heurdata->seed, FALSE, DEFAULT_SEED, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcallssamesol",
          "number of allowed executions of the heuristic on the same incumbent solution (-1: no limit, 0: number of active neighborhoods)",
-         &heurdata->maxcallssamesol, TRUE, -1, -1, 100, NULL, NULL) );
+         &heurdata->maxcallssamesol, TRUE, DEFAULT_MAXCALLSSAMESOL, -1, 100, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjustminimprove",
          "should the factor by which the minimum improvement is bound be dynamically updated?",
