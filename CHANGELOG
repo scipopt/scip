@@ -445,6 +445,8 @@ Constraint handlers for NLP:
   add an activeone argument to specify whether the indicator constraint should be activated on 0 or 1.
 - added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
 - added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
+- added SCIPdecompGetNBorderVars() and SCIPdecompGetNBorderConss() to get number of border variables/constraints
+- added SCIPdecompGetVarsSize() and SCIPdecompGetConssSize() to get variable/constraint size for each block of a decomposition
 - added SCIPincludeDialogDefaultBasic()
 - added SCIPintervalAreDisjointEps(), SCIPintervalIntersectEps()
 - added SCIPintervalEntropy()
@@ -460,6 +462,7 @@ Constraint handlers for NLP:
 - added SCIPsetClockEnabled()
 - added SCIPisSolveInterrupted() to check whether SCIPinterruptSolve() has been called
 - added SCIPgetNPresolRounds()
+- added SCIPgetNUnfixedLPCols()
 
 Expression handler:
 - added SCIPincludeExprhdlr(), SCIPgetExprhdlrs(), SCIPgetNExprhdlrs(), SCIPfindExprhdlr()
