@@ -635,8 +635,6 @@ SCIP_RETCODE createAndSplitProblem(
    LINKING**             linkings,           /**< array of linking data structures */
    SCIP_VAR**            sortedvars,         /**< sorted array of variables */
    SCIP_CONS**           sortedconss,        /**< sorted array of constraints */
-   int                   nvars,              /**< number of variables */
-   int                   nconss,             /**< number of constraints */
    SCIP_Bool*            success             /**< pointer to store whether splitting was successful */
    )
 {
@@ -867,8 +865,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       linkings[c]->haslhs = FALSE;
    }
 
-   SCIP_CALL( createAndSplitProblem(scip, heurdata, decomp, blockproblem, linkings,
-                                    sortedvars, sortedconss, nvars, nconss, &success) );
+   SCIP_CALL( createAndSplitProblem(scip, heurdata, decomp, blockproblem, linkings, sortedvars, sortedconss, &success) );
    if( !success )
    {
       SCIPdebugMsg(scip, "Create and split problem failed\n");
