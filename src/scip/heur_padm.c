@@ -1080,7 +1080,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       /* multiaggregation of variables has to be switched off */
       if( !SCIPdoNotMultaggr(scip) )
       {
-         SCIPwarningMessage(scip, "switch of multiaggregation to use the original problem in %s\n", HEUR_NAME);
+         SCIPwarningMessage(scip, "Heuristic %s does not support multiaggregation when the original problem is used.\nPlease turn multiaggregation off to use this feature.\n", HEUR_NAME);
          return SCIP_OKAY;
       }
 
@@ -1156,7 +1156,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       assert(SCIPdecompGetNBlocks(decomp) >= SCIPdecompGetNBlocks(assigneddecomp));
       decomp = assigneddecomp;
 
-      /* number of blocks can get smaller */
+      /* number of blocks can get smaller (since assigning constraints can lead to empty blocks) */
       nblocks = SCIPdecompGetNBlocks(decomp);
    }
 
@@ -1825,7 +1825,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       /* treat variables with no constraints; set value of variable to bound */
       for( i = 0; i < numlinkvars; i++ )
       {
-         if( varonlyobj[i] == TRUE )
+         if( varonlyobj[i] )
          {
             SCIP_Real fixedvalue;
             if( SCIPvarGetObj(linkvars[i]) < 0 )
@@ -1847,13 +1847,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIPdebugMsg(scip, "Objective value %.2f\n", SCIPgetSolOrigObj(scip, newsol));
 
       /* fix linking variables and reoptimize with original objective function */
-      if( heurdata->reoptimize == TRUE )
+      if( heurdata->reoptimize )
       {
          SCIP_SOL* improvedsol = NULL;
          SCIP_CALL( reoptimize(scip, heur, newsol, vars, nvars, linkvars, numlinkvars, &improvedsol, &success) );
          assert(improvedsol != NULL || success == FALSE);
 
-         if( success == TRUE )
+         if( success )
          {
             SCIP_CALL( SCIPtrySolFree(scip, &improvedsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
             if( !success )
@@ -1868,7 +1868,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
 
-      /* if reoptimizing found no solution, try first solution */
+      /* if reoptimizing is turned off or found no solution, try first solution */
       if( *result != SCIP_FOUNDSOL )
       {
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
