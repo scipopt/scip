@@ -66,8 +66,6 @@ struct SCIP_HeurData
 struct Blockproblem
 {
    SCIP*                 blockscip;          /**< SCIP data structure */
-   SCIP_VAR**            blockvars;          /**< block variables
-                                              *   blockvars[nblockvars] is first slack variable */
    SCIP_VAR**            slackvars;          /**< slack variables */
    SCIP_CONS**           linkingconss;       /**< linking constraints */
    int*                  linkingindices;     /**< indices of linking constraints in original problem */
@@ -89,7 +87,7 @@ struct Linking
    SCIP_Real*            currentrhs;         /**< current partition of rhs */
    SCIP_Real*            currentlhs;         /**< current partition of lhs */
    int*                  blocknumbers;       /**< number of the blocks */
-   int                   nblocks;            /**< dimension of arrays */
+   int                   nblocks;            /**< number of blocks in which this linking constraint participates; dimension of arrays */
    int                   nslacks;            /**< number of slack variables */
    int                   nslacksperblock;    /**< 2, if ranged constraint; 1, if only rhs or lhs */
    int                   lastviolations;     /**< number of iterations in which the constraint was violated in succession */
@@ -190,6 +188,7 @@ SCIP_RETCODE assignLinking(
    return SCIP_OKAY;
 }
 
+
 /** creates a sub-SCIP and sets parameters */
 static
 SCIP_RETCODE createSubscip(
@@ -237,6 +236,446 @@ SCIP_RETCODE createSubscip(
    return SCIP_OKAY;
 }
 
+
+/** copies the given variables and constraints to the given sub-SCIP */
+static
+SCIP_RETCODE copyToSubscip(
+   SCIP*                 scip,               /**< source SCIP */
+   SCIP*                 subscip,            /**< target SCIP */
+   const char*           name,               /**< name for copied problem */
+   SCIP_VAR**            vars,               /**< array of variables to copy */
+   SCIP_CONS**           conss,              /**< array of constraints to copy */
+   SCIP_HASHMAP*         varsmap,            /**< hashmap for copied variables */
+   SCIP_HASHMAP*         conssmap,           /**< hashmap for copied constraints */
+   int                   nvars,              /**< number of variables to copy */
+   int                   nconss,             /**< number of constraints to copy */
+   SCIP_Bool*            success             /**< was copying successful? */
+   )
+{
+   SCIP_CONS* newcons;
+   SCIP_VAR* newvar;
+   int i;
+
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(vars != NULL);
+   assert(conss != NULL);
+   assert(varsmap != NULL);
+   assert(conssmap != NULL);
+   assert(success != NULL);
+
+   SCIPdebugMsg(scip, "copyToSubscip\n");
+
+   /* create problem in sub-SCIP */
+   SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   /* copy variables */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_CALL( SCIPgetVarCopy(scip, subscip, vars[i], &newvar, varsmap, conssmap, FALSE, success) );
+      assert(success);
+
+      /* abort if variable was not successfully copied */
+      if( !(*success) )
+         return SCIP_OKAY;
+   }
+   assert(nvars == SCIPgetNOrigVars(subscip));
+
+   /* copy constraints */
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(conss[i] != NULL);
+      assert(!SCIPconsIsModifiable(conss[i]));
+      assert(SCIPconsIsActive(conss[i]));
+      assert(!SCIPconsIsDeleted(conss[i]));
+
+      /* copy the constraint */
+      SCIP_CALL( SCIPgetConsCopy(scip, subscip, conss[i], &newcons, SCIPconsGetHdlr(conss[i]), varsmap, conssmap, NULL,
+            SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]), SCIPconsIsEnforced(conss[i]),
+            SCIPconsIsChecked(conss[i]), SCIPconsIsPropagated(conss[i]), FALSE, FALSE,
+            SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]), FALSE, FALSE, success) );
+
+      /* abort if constraint was not successfully copied */
+      if( !(*success) )
+         return SCIP_OKAY;
+
+      SCIP_CALL( SCIPaddCons(subscip, newcons) );
+      SCIP_CALL( SCIPreleaseCons(subscip, &newcons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** creates the subscip for a given block */
+static
+SCIP_RETCODE createBlockproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BLOCKPROBLEM*         blockproblem,       /**< blockproblem that should be created */
+   LINKING**             linkings,           /**< linkings that will be (partially) initialized */
+   SCIP_CONS**           conss,              /**< sorted array of constraints of this block */
+   SCIP_VAR**            vars,               /**< sorted array of variables of this block */
+   int                   nconss,             /**< number of constraints of this block */
+   int                   nvars,              /**< number of variables of this block */
+   SCIP_CONS**           linkingconss,       /**< linking constraints in the original problem */
+   int                   nlinking,           /**< number of linking constraints in the original problem */
+   int                   blocknumber,        /**< number of block that should be created */
+   SCIP_Bool*            success             /**< pointer to store whether creation was successful */
+   )
+{
+   char name[SCIP_MAXSTRLEN];
+   SCIP_HASHMAP* varsmap;
+   SCIP_HASHMAP* conssmap;
+   SCIP_VAR** consvars; /* all vars in original linking cons */
+   SCIP_Real* consvals;
+   int nconsvars;
+   SCIP_VAR** blockvars; /* vars of current linking cons of current block */
+   SCIP_Real* blockvals;
+   int nblockvars;
+   SCIP_VAR** subvars; /* all vars of subscip */
+   int maxnconsvars; /* current size of arrays */
+   int c;
+   int v;
+
+   assert(scip != NULL);
+   assert(blockproblem != NULL);
+   assert(conss != NULL);
+   assert(vars != NULL);
+   assert(blockproblem->blockscip != NULL);
+
+   maxnconsvars = 20; /* start size; increase size if necessary */
+
+   SCIPdebugMsg(scip, "Create blockproblem %d\n", blocknumber);
+
+   /* create the variable/constraint mapping hash map */
+   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), nconss) );
+
+   /* get name of the original problem and add "comp_nr" */
+   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", SCIPgetProbName(scip), blocknumber);
+
+   SCIP_CALL( copyToSubscip(scip, blockproblem->blockscip, name, vars, conss, varsmap, conssmap,
+                            nvars, nconss, success) );
+   if( !(*success) )
+   {
+      SCIPdebugMsg(scip, "Copy to subscip failed\n");
+      SCIPhashmapFree(&conssmap);
+      SCIPhashmapFree(&varsmap);
+
+      return SCIP_OKAY;
+   }
+
+   /* save number of variables that have a corresponding variable in original problem*/
+   blockproblem->nblockvars = SCIPgetNVars(blockproblem->blockscip);
+   assert(blockproblem->nblockvars == nvars);
+
+   /* save original objective and set objective to zero */
+   subvars = SCIPgetVars(blockproblem->blockscip);
+   for( v = 0; v < nvars; v++ )
+   {
+      blockproblem->origobj[v] = SCIPvarGetObj(subvars[v]);
+      SCIP_CALL( SCIPchgVarObj(blockproblem->blockscip, subvars[v], 0.0) );
+   }
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(blockproblem->blockscip, &blockvars, nvars + 2) ); /* two entries for the slack variables */
+   SCIP_CALL( SCIPallocBufferArray(blockproblem->blockscip, &blockvals, nvars + 2) );
+   SCIP_CALL( SCIPallocBufferArray(blockproblem->blockscip, &consvars, maxnconsvars) );
+   SCIP_CALL( SCIPallocBufferArray(blockproblem->blockscip, &consvals, maxnconsvars) );
+
+   /* find and add parts of linking constraints */
+   SCIPdebugMsg(scip, "add parts of linking constraints\n");
+   for( c = 0; c < nlinking; c++ )
+   {
+      const char* conshdlrname;
+      char consname[SCIP_MAXSTRLEN];
+      SCIP_CONS* newcons;
+      SCIP_Real rhs;
+      SCIP_Real lhs;
+      SCIP_Real minact;
+      SCIP_Real maxact;
+      SCIP_Bool mininfinite;
+      SCIP_Bool maxinfinite;
+      SCIP_Bool found;
+
+      assert(linkingconss[c] != NULL);
+
+      newcons = NULL;
+
+#ifdef SCIP_MORE_DEBUG
+      SCIPdebugMsg(scip, "consider constraint %s\n", SCIPconsGetName(linkingconss[c]));
+      SCIPdebugPrintCons(scip, linkingconss[c], NULL);
+#endif
+
+      nblockvars = 0;
+
+      /* every constraint with linear representation is allowed */
+      conshdlrname = SCIPconshdlrGetName(SCIPconsGetHdlr(linkingconss[c]));
+      if( !( (strcmp(conshdlrname, "linear") == 0) || (strcmp(conshdlrname, "setppc") == 0)
+            || (strcmp(conshdlrname, "logicor") == 0) || (strcmp(conshdlrname, "knapsack") == 0)
+            || (strcmp(conshdlrname, "varbound") == 0) ) )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic %s cannot handle linking constraints of type %s\n", HEUR_NAME, conshdlrname);
+         /* TODO which other types can we handle/transform in a linear constraint? */
+
+         *success = FALSE;
+         break; /* releases memory and breaks heuristic */
+      }
+
+      SCIP_CALL( SCIPgetConsNVars(scip, linkingconss[c], &nconsvars, success) );
+
+      /* reallocate memory if we have more variables than maxnconsvars */
+      if( nconsvars > maxnconsvars )
+      {
+         /* free old memory */
+         SCIPfreeBufferArray(blockproblem->blockscip, &consvals);
+         SCIPfreeBufferArray(blockproblem->blockscip, &consvars);
+
+         /* calculate new size */
+         maxnconsvars = MAX(2 * maxnconsvars, nconsvars); /* at least double size */
+
+         /* allocate memory again */
+         SCIP_CALL( SCIPallocBufferArray(blockproblem->blockscip, &consvars, maxnconsvars) );
+         SCIP_CALL( SCIPallocBufferArray(blockproblem->blockscip, &consvals, maxnconsvars) );
+      }
+
+      SCIP_CALL( SCIPgetConsVars(scip, linkingconss[c], consvars, nconsvars, success) );
+      SCIP_CALL( SCIPgetConsVals(scip, linkingconss[c], consvals, nconsvars, success) );
+
+      if( !(*success) )
+      {
+         SCIPdebugMsg(scip, "Create blockproblem failed\n");
+         break; /* releases memory and breaks heuristic */
+      }
+
+      /* check if constraint contains variables of this block */
+      for( v = 0; v < nconsvars; v++ )
+      {
+         found = SCIPhashmapExists(varsmap, (void*)consvars[v]);
+         if( found )
+         {
+            blockvars[nblockvars] = SCIPhashmapGetImage(varsmap, (void*)consvars[v]);
+            blockvals[nblockvars] = consvals[v];
+            ++nblockvars;
+         }
+         /* handle negated variables*/
+         else if( SCIPvarGetStatus(consvars[v]) == SCIP_VARSTATUS_NEGATED)
+         {
+            found = SCIPhashmapExists(varsmap, (void*)SCIPvarGetNegationVar(consvars[v]));
+            if( found ) /* negation exists in this block */
+            {
+               /* save negated variable */
+               SCIP_VAR* origblockvar = SCIPhashmapGetImage(varsmap, (void*)SCIPvarGetNegationVar(consvars[v]));
+               SCIP_VAR* negblockvar = NULL;
+               SCIP_CALL( SCIPgetNegatedVar(blockproblem->blockscip, origblockvar, &negblockvar) );
+               blockvars[nblockvars] = negblockvar;
+               blockvals[nblockvars] = consvals[v];
+               ++nblockvars;
+            }
+         }
+      }
+
+      /* continue with next linking constraint if it has no part in current block */
+      if( nblockvars == 0 )
+         continue;
+
+      /* get rhs and/or lhs */
+      rhs = SCIPconsGetRhs(scip, linkingconss[c], success);
+      if( !(*success) )
+      {
+         SCIPdebugMsg(scip, "Create blockproblem failed\n");
+         return SCIP_OKAY;
+      }
+      lhs = SCIPconsGetLhs(scip, linkingconss[c], success);
+      if( !(*success) )
+      {
+         SCIPdebugMsg(scip, "Create blockproblem failed\n");
+         return SCIP_OKAY;
+      }
+      assert(!SCIPisInfinity(scip, rhs) || !SCIPisInfinity(scip, -lhs)); /* at least one side bounded */
+      assert(SCIPisLE(scip, lhs, rhs));
+
+      if( !SCIPisInfinity(scip, rhs) )
+         linkings[c]->hasrhs = TRUE;
+      if( !SCIPisInfinity(scip, -lhs) )
+         linkings[c]->haslhs = TRUE;
+      if( !SCIPisInfinity(scip, rhs) && !SCIPisInfinity(scip, -lhs))
+         linkings[c]->nslacksperblock = 2;
+      else
+         linkings[c]->nslacksperblock = 1;
+
+      /* add slack variable for rhs */
+      if( linkings[c]->hasrhs )
+      {
+         /* slack variable z_r >= 0 */
+         char varname[SCIP_MAXSTRLEN];
+         (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "z_r_%s", SCIPconsGetName(linkingconss[c]));
+         SCIP_CALL( SCIPcreateVarBasic(blockproblem->blockscip, &blockvars[nblockvars], varname,
+                                          0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+         blockvals[nblockvars] = -1.0;
+         SCIP_CALL( SCIPaddVar(blockproblem->blockscip, blockvars[nblockvars]) );
+#ifdef SCIP_MORE_DEBUG
+         SCIPdebugMsg(scip, "Add variable %s\n", SCIPvarGetName(blockvars[nblockvars]));
+#endif
+         linkings[c]->slacks[linkings[c]->nslacks] = blockvars[nblockvars];
+         blockproblem->slackvars[blockproblem->nslackvars] = blockvars[nblockvars];
+         ++blockproblem->nslackvars;
+         ++linkings[c]->nslacks;
+         ++nblockvars;
+      }
+
+      /* add slack variable for lhs */
+      if( linkings[c]->haslhs )
+      {
+         /* slack variable z_l >= 0 */
+         char varname[SCIP_MAXSTRLEN];
+         (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "z_l_%s", SCIPconsGetName(linkingconss[c]));
+         SCIP_CALL( SCIPcreateVarBasic(blockproblem->blockscip, &blockvars[nblockvars], varname,
+                                          0.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+         blockvals[nblockvars] = 1.0;
+         SCIP_CALL( SCIPaddVar(blockproblem->blockscip, blockvars[nblockvars]) );
+#ifdef SCIP_MORE_DEBUG
+         SCIPdebugMsg(scip, "Add variable %s\n", SCIPvarGetName(blockvars[nblockvars]));
+#endif
+         linkings[c]->slacks[linkings[c]->nslacks] = blockvars[nblockvars];
+         blockproblem->slackvars[blockproblem->nslackvars] = blockvars[nblockvars];
+         ++blockproblem->nslackvars;
+         ++linkings[c]->nslacks;
+         ++nblockvars;
+      }
+
+      /* add linking constraint with slackvariable */
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s", SCIPconsGetName(linkingconss[c]));
+      SCIP_CALL( SCIPcreateConsBasicLinear(blockproblem->blockscip, &newcons, consname, nblockvars, blockvars, blockvals, lhs, rhs) );
+      SCIP_CALL( SCIPaddCons(blockproblem->blockscip, newcons) );
+#ifdef SCIP_MORE_DEBUG
+      SCIPdebugMsg(blockproblem->blockscip, "add constraint %s\n", SCIPconsGetName(newcons));
+      SCIPdebugPrintCons(blockproblem->blockscip, newcons, NULL);
+#endif
+
+      blockproblem->linkingconss[blockproblem->nlinking] = newcons;
+      linkings[c]->blockconss[linkings[c]->nblocks] = newcons;
+      linkings[c]->blocknumbers[linkings[c]->nblocks] = blocknumber;
+      blockproblem->linkingindices[blockproblem->nlinking] = c;
+
+      /* calculate minimal und maximal activity (exclude slackvariables) */
+      minact = 0;
+      maxact = 0;
+      mininfinite = FALSE;
+      maxinfinite = FALSE;
+      for( v = 0; v < nblockvars - linkings[c]->nslacksperblock && (!mininfinite || !maxinfinite); v++ )
+      {
+         SCIP_Real lb;
+         SCIP_Real ub;
+         lb = SCIPvarGetLbGlobal(blockvars[v]);
+         ub = SCIPvarGetUbGlobal(blockvars[v]);
+
+         if( blockvals[v] >= 0.0 )
+         {
+            mininfinite = mininfinite || SCIPisInfinity(scip, -lb);
+            maxinfinite = maxinfinite || SCIPisInfinity(scip, ub);
+            if( !mininfinite )
+               minact += blockvals[v] * lb;
+            if( !maxinfinite )
+               maxact += blockvals[v] * ub;
+         }
+         else
+         {
+            mininfinite = mininfinite || SCIPisInfinity(scip, ub);
+            maxinfinite = maxinfinite || SCIPisInfinity(scip, -lb);
+            if( !mininfinite )
+               minact += blockvals[v] * ub;
+            if( !maxinfinite )
+               maxact += blockvals[v] * lb;
+         }
+      }
+
+      if( mininfinite )
+         linkings[c]->minactivity[linkings[c]->nblocks] = -SCIPinfinity(scip);
+      else
+         linkings[c]->minactivity[linkings[c]->nblocks] = minact;
+      if( maxinfinite )
+         linkings[c]->maxactivity[linkings[c]->nblocks] = SCIPinfinity(scip);
+      else
+         linkings[c]->maxactivity[linkings[c]->nblocks] = maxact;
+      assert(SCIPisLE(scip, linkings[c]->minactivity[linkings[c]->nblocks], linkings[c]->maxactivity[linkings[c]->nblocks]));
+
+      linkings[c]->nblocks++;
+      blockproblem->nlinking++;
+
+      for( v = 1; v <= linkings[c]->nslacksperblock; v++ )
+      {
+         SCIP_CALL( SCIPreleaseVar(blockproblem->blockscip, &blockvars[nblockvars - v]) );
+      }
+
+      SCIP_CALL( SCIPreleaseCons(blockproblem->blockscip, &newcons) );
+   }
+   assert(blockproblem->nlinking <= nlinking);
+
+   /* free memory */
+   SCIPfreeBufferArray(blockproblem->blockscip, &consvals);
+   SCIPfreeBufferArray(blockproblem->blockscip, &consvars);
+   SCIPfreeBufferArray(blockproblem->blockscip, &blockvals);
+   SCIPfreeBufferArray(blockproblem->blockscip, &blockvars);
+
+   SCIPhashmapFree(&conssmap);
+   SCIPhashmapFree(&varsmap);
+
+   return SCIP_OKAY;
+}
+
+
+/** creates data structures and splits problem into blocks */
+static
+SCIP_RETCODE createAndSplitProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_DECOMP*          decomp,             /**< decomposition data structure */
+   BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   LINKING**             linkings,           /**< array of linking data structures */
+   SCIP_VAR**            sortedvars,         /**< sorted array of variables */
+   SCIP_CONS**           sortedconss,        /**< sorted array of constraints */
+   int                   nvars,              /**< number of variables */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Bool*            success             /**< pointer to store whether splitting was successful */
+   )
+{
+   int* nconssblock;
+   int* nvarsblock;
+   int conssoffset;
+   int varsoffset;
+   int i;   /* blocknumber */
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(sortedvars != NULL);
+   assert(sortedconss != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nvarsblock, heurdata->nblocks + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nconssblock, heurdata->nblocks + 1) );
+   SCIP_CALL( SCIPdecompGetVarsSize(decomp, nvarsblock, heurdata->nblocks + 1) );
+   SCIP_CALL( SCIPdecompGetConssSize(decomp, nconssblock, heurdata->nblocks + 1) );
+   assert(0 == nvarsblock[0]);
+
+   varsoffset = 0;
+   conssoffset = 0;
+
+   for( i = 0; i < heurdata->nblocks; i++)
+   {
+      conssoffset += nconssblock[i];
+      varsoffset += nvarsblock[i];
+
+      SCIP_CALL( createBlockproblem(scip, blockproblem[i], linkings, &sortedconss[conssoffset], &sortedvars[varsoffset], nconssblock[i+1], nvarsblock[i+1],
+                                    heurdata->linkingconss, heurdata->nlinking, i, success) );
+      if( !(*success) )
+         break;
+   }
+
+   SCIPfreeBufferArray(scip, &nconssblock);
+   SCIPfreeBufferArray(scip, &nvarsblock);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of primal heuristic
@@ -298,6 +737,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    int nvars;
    int nconss;
    int nblocks;
+   SCIP_Bool success;
    int b;
    int c;
 
@@ -400,7 +840,6 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       SCIP_CALL( SCIPallocBufferArray(scip, &blockproblem[b]->linkingindices, heurdata->nlinking) );
       SCIP_CALL( SCIPallocBufferArray(scip, &blockproblem[b]->slackvars, heurdata->nlinking * 2) ); /* maximum two slacks per linking constraint */
       SCIP_CALL( SCIPallocBufferArray(scip, &blockproblem[b]->origobj, nvars) );
-      blockproblem[b]->blockvars = NULL;
       blockproblem[b]->nblockvars = 0;
       blockproblem[b]->nlinking = 0;
       blockproblem[b]->nslackvars = 0;
@@ -427,6 +866,32 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       linkings[c]->hasrhs = FALSE;
       linkings[c]->haslhs = FALSE;
    }
+
+   SCIP_CALL( createAndSplitProblem(scip, heurdata, decomp, blockproblem, linkings,
+                                    sortedvars, sortedconss, nvars, nconss, &success) );
+   if( !success )
+   {
+      SCIPdebugMsg(scip, "Create and split problem failed\n");
+      goto TERMINATE;
+   }
+
+   /* allocate memory for current partition*/
+   for( c = 0; c < heurdata->nlinking; c++ )
+   {
+      if( linkings[c]->hasrhs )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->currentrhs, linkings[c]->nblocks ) );
+      }
+
+      if( linkings[c]->haslhs )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &(linkings[c])->currentlhs, linkings[c]->nblocks ) );
+      }
+   }
+
+   /** ------------------------------------------------------------------------ */
+   SCIPdebugMsg(scip, "Start heuristik DPS\n");
+   *result = SCIP_DIDNOTFIND;
 
    /** ------------------------------------------------------------------------ */
    /** free memory */
