@@ -285,6 +285,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             forcestrongcut;     /**< whether to force "strong" cuts in enforcement */
    SCIP_Real             enfoauxviolfactor;  /**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
    SCIP_Real             weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
+   char                  rownotremovable;    /**< whether to make rows to be non-removable in the node where they are added (can prevent some cycling): 'o'ff, in 'e'nforcement only, 'a'lways */
    char                  violscale;          /**< method how to scale violations to make them comparable (not used for feasibility check) */
    char                  checkvarlocks;      /**< whether variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
    int                   branchauxmindepth;  /**< from which depth on to allow branching on auxiliary variables */
@@ -10879,6 +10880,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "retry enfo of constraint with weak cuts if violation is least this factor of maximal violated constraints",
          &conshdlrdata->weakcutminviolfactor, TRUE, 0.5, 0.0, 2.0, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/rownotremovable",
+         "whether to make rows to be non-removable in the node where they are added (can prevent some cycling): 'o'ff, in 'e'nforcement only, 'a'lways",
+         &conshdlrdata->rownotremovable, TRUE, 'o', "oea", NULL, NULL) );
+
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/violscale",
          "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side, norm of (g)radient",
          &conshdlrdata->violscale, TRUE, 'n', "nag", NULL, NULL) );
@@ -11559,11 +11564,9 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
           */
          SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && inenforcement, &infeasible) );
 
-#ifdef SCIP_CONSNONLINEAR_ROWNOTREMOVABLE
-         /* mark row as not removable from LP for current node, if in enforcement (this can prevent some cycling) */
-         if( inenforcement )
+         /* mark row as not removable from LP for current node (this can prevent some cycling) */
+         if( conshdlrdata->rownotremovable == 'a' || (conshdlrdata->rownotremovable == 'e' && inenforcement) )
             SCIPmarkRowNotRemovableLocal(scip, row);
-#endif
 
          if( infeasible )
          {
