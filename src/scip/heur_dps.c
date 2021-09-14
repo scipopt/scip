@@ -675,6 +675,275 @@ SCIP_RETCODE createAndSplitProblem(
    return SCIP_OKAY;
 }
 
+
+/** rounds partition for one linking constraint to integer value if variables and coefficients are integer
+ *
+ *  changes only currentrhs/currentlhs
+ */
+static
+SCIP_RETCODE roundPartition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LINKING*              linking,            /**< one linking data structure */
+   BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   SCIP_Bool             roundbyrhs          /**< round by right hand side? */
+   )
+{
+   SCIP_Real* fracPart;
+   int* sorting;
+   int* isinteger;
+   SCIP_Real sumbefor; /* includes value at index */
+   SCIP_Real sumafter;
+   SCIP_Real diff;
+   int nnonintblocks; /* number of non integer blocks */
+   int index;
+   int b;
+   int i;
+   int k;
+
+   assert(scip != NULL);
+   assert(linking != NULL);
+   assert(blockproblem != NULL);
+
+   nnonintblocks = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &fracPart, linking->nblocks) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sorting, linking->nblocks) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &isinteger, linking->nblocks) );
+
+   /* get integer blocks and fractional parts */
+   for( b = 0; b < linking->nblocks; b++ )
+   {
+      SCIP* subscip;
+      SCIP_CONS* blockcons;
+      SCIP_VAR** blockvars;
+      SCIP_Real* blockvals;
+      int nblockvars;
+      int length; /* number of block variables without slack variables */
+      SCIP_Bool success;
+
+      subscip = blockproblem[linking->blocknumbers[b]]->blockscip;
+      blockcons = linking->blockconss[b];
+      sorting[b] = b; /* store current sorting to sort back */
+
+      SCIP_CALL( SCIPgetConsNVars(subscip, blockcons, &nblockvars, &success) );
+      assert(success);
+      SCIP_CALL( SCIPallocBufferArray(scip, &blockvars, nblockvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &blockvals, nblockvars) );
+
+      SCIP_CALL( SCIPgetConsVars(subscip, blockcons, blockvars, nblockvars, &success) );
+      assert(success);
+      SCIP_CALL( SCIPgetConsVals(subscip, blockcons, blockvals, nblockvars, &success) );
+      assert(success);
+
+      /* get number of block variables in this constraint without slack variables */
+      length = nblockvars - linking->nslacksperblock;
+
+      /* get blocks with integer value */
+      isinteger[b] = 1;
+      for( i = 0; i < length; i++ )
+      {
+         if( SCIPvarGetType(blockvars[i]) == SCIP_VARTYPE_CONTINUOUS ||  !SCIPisIntegral(scip, blockvals[i]) )
+         {
+            isinteger[b] = 0;
+            nnonintblocks++;
+            break;
+         }
+      }
+
+      /* get fractional part of blockconstraints */
+      if( roundbyrhs )
+         fracPart[b] = SCIPfrac(scip, linking->currentrhs[b]);
+      else
+         fracPart[b] = SCIPfrac(scip, linking->currentlhs[b]);
+
+      SCIPfreeBufferArray(scip, &blockvals);
+      SCIPfreeBufferArray(scip, &blockvars);
+   }
+
+   /* sort non integer blocks to the front */
+   SCIPsortIntIntReal(isinteger, sorting, fracPart, linking->nblocks);
+
+   /* sort by fractional part */
+   SCIPsortRealInt(fracPart, sorting, nnonintblocks);
+   SCIPsortRealInt(&fracPart[nnonintblocks], &sorting[nnonintblocks], linking->nblocks - nnonintblocks);
+
+   /* detect blocks for rounding down and rounding up:
+    * integer blocks with small fractional parts are rounded down
+    * integer blocks with big fractional parts are rounded up
+    */
+
+   sumbefor = 0;
+   sumafter = 0;
+
+   for( i = 0; i < linking->nblocks - nnonintblocks; i++ )
+   {
+      sumafter += 1 - fracPart[nnonintblocks + i];
+   }
+
+   for( i = 0; i < linking->nblocks - nnonintblocks; i++ )
+   {
+      sumbefor += fracPart[nnonintblocks + i];
+      sumafter -= 1 - fracPart[nnonintblocks + i];
+
+      if( sumbefor >= sumafter )
+      {
+         for( k = 0; k <= i; k++ )
+         {
+            fracPart[nnonintblocks + k] = -fracPart[nnonintblocks + k];
+         }
+         for( k = i + 1; k < linking->nblocks - nnonintblocks; k++ )
+         {
+            fracPart[nnonintblocks + k] = 1 - fracPart[nnonintblocks + k];
+         }
+         index = i;
+         break;
+      }
+   }
+   diff = sumbefor - sumafter;
+   assert(SCIPisGE(scip, diff, 0.0));
+
+   /* add difference to last non integer block */
+   for( i = nnonintblocks - 1; i >= 0; i-- )
+   {
+      if( SCIPisGT(scip, diff, 0.0) )
+      {
+         fracPart[i] = diff;
+         diff = 0;
+      }
+      else
+         fracPart[i] = 0;
+   }
+
+   /* add difference to last rounded down block if no non integer block exists */
+   if( SCIPisGT(scip, diff, 0.0))
+   {
+      assert(nnonintblocks == 0);
+      fracPart[index] += diff;
+   }
+
+   /* sort back */
+   SCIPsortIntReal(sorting, fracPart, linking->nblocks);
+
+   /* round partition
+    * if we have a ranged constraint, both sides get rounded in the same way
+    */
+   for( b = 0; b < linking->nblocks; b++ )
+   {
+      if( linking->hasrhs )
+      {
+         linking->currentrhs[b] += fracPart[b];
+      }
+      if( linking->haslhs )
+      {
+         linking->currentlhs[b] += fracPart[b];
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &isinteger);
+   SCIPfreeBufferArray(scip, &sorting);
+   SCIPfreeBufferArray(scip, &fracPart);
+
+   return SCIP_OKAY;
+}
+
+
+/** calculates initial partition */
+static
+SCIP_RETCODE initCurrent(
+   SCIP*                 scip,               /**< SCIP data structure of main scip */
+   LINKING**             linkings,           /**< array of linking data structures */
+   BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   int                   nlinking,           /**< number of linking constraints */
+   SCIP_Bool*            success             /**< pointer to store whether initialization was successful */
+   )
+{
+   LINKING* linking;
+   SCIP_Real rhs;
+   SCIP_Real lhs;
+   SCIP_Real residualrhs;
+   SCIP_Real residuallhs;
+   SCIP_Real goalvalue;
+   int c;
+   int b;
+
+   assert(scip != NULL);
+   assert(linkings != NULL);
+   assert(blockproblem != NULL);
+   assert(nlinking > 0);
+
+   SCIPdebugMsg(scip, "initialize partition\n");
+
+   for( c = 0; c < nlinking; c++ )
+   {
+      linking = linkings[c];
+      rhs = SCIPconsGetRhs(scip, linking->linkingcons, success);
+      assert(*success);
+      lhs = SCIPconsGetLhs(scip, linking->linkingcons, success);
+      assert(*success);
+      residualrhs = rhs;
+      residuallhs = lhs;
+
+      /* equal parts for each block with respect to minimal/maximal activity */
+      if( linking->hasrhs || linking->haslhs )
+      {
+         if( linking->hasrhs )
+         {
+            for( b = 0; b < linking->nblocks; b++ )
+            {
+               goalvalue = residualrhs / (linking->nblocks - b);
+               linking->currentrhs[b] = MIN(MAX(goalvalue, linking->minactivity[b]), linking->maxactivity[b]);
+               residualrhs -= linking->currentrhs[b];
+            }
+            /* add residual partition to first block */
+            linking->currentrhs[0] += residualrhs;
+         }
+         if( linking->haslhs )
+         {
+            for( b = 0; b < linking->nblocks; b++ )
+            {
+               goalvalue = residuallhs / (linking->nblocks - b);
+               linking->currentlhs[b] = MIN(MAX(goalvalue, linking->minactivity[b]), linking->maxactivity[b]);
+               residuallhs -= linking->currentlhs[b];
+            }
+            /* add residual partition to first block */
+            linking->currentlhs[0] += residuallhs;
+         }
+      }
+      else
+      {
+         assert(linking->nblocks == 0 && !SCIPconsIsChecked(linking->linkingcons));
+      }
+
+      SCIP_CALL( roundPartition(scip, linking, blockproblem, linking->hasrhs) );
+
+      /* set sides in blockproblem at initial partition */
+      for( b = 0; b < linking->nblocks; b++ )
+      {
+         if( linking->hasrhs )
+         {
+            SCIP_CALL( SCIPchgRhsLinear(blockproblem[linking->blocknumbers[b]]->blockscip,
+                                       linking->blockconss[b], linking->currentrhs[b]) );
+#ifdef SCIP_MORE_DEBUG
+            SCIPdebugMsg(scip, "change rhs of %s in block %d to %f\n",
+                        SCIPconsGetName(simplizes[c]->linkingcons), simplizes[c]->blocknumbers[b], simplizes[c]->currentrhs[b]);
+#endif
+         }
+         if( linking->haslhs )
+         {
+            SCIP_CALL( SCIPchgLhsLinear(blockproblem[linking->blocknumbers[b]]->blockscip,
+                                       linking->blockconss[b], linking->currentlhs[b]) );
+#ifdef SCIP_MORE_DEBUG
+            SCIPdebugMsg(scip, "change lhs of %s in block %d to %f\n",
+                        SCIPconsGetName(simplizes[c]->linkingcons), simplizes[c]->blocknumbers[b], simplizes[c]->currentlhs[b]);
+#endif
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of primal heuristic
  */
@@ -886,6 +1155,9 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       }
    }
 
+   /* initialize partition */
+   SCIP_CALL( initCurrent(scip, linkings, blockproblem, heurdata->nlinking, &success) );
+
    /** ------------------------------------------------------------------------ */
    SCIPdebugMsg(scip, "Start heuristik DPS\n");
    *result = SCIP_DIDNOTFIND;
@@ -955,6 +1227,8 @@ TERMINATE:
    {
       SCIPfreeBufferArray(scip, &sortedvars);
    }
+
+   SCIPdebugMsg(scip, "Leave DPS heuristic\n");
 
    return SCIP_OKAY;
 }
