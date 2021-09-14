@@ -712,6 +712,7 @@ SCIP_RETCODE roundPartition(
    assert(blockproblem != NULL);
 
    nnonintblocks = 0;
+   index = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &fracPart, linking->nblocks) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sorting, linking->nblocks) );
@@ -1118,7 +1119,7 @@ SCIP_DECL_EVENTEXEC(eventExecDps)
 
    SCIPdebugMsg(scip, "dual bound: %0.2f\n", SCIPgetDualbound(scip));
 
-   if( SCIPisFeasGT(scip, SCIPgetDualbound(scip), 0) && SCIPgetNSols(scip) >= 1 )
+   if( SCIPisFeasGT(scip, SCIPgetDualbound(scip), 0.0) && SCIPgetNSols(scip) >= 1 )
    {
       SCIPdebugMsg(scip, "DPS: interrupt subscip\n");
       SCIP_CALL( SCIPinterruptSolve(scip) );
