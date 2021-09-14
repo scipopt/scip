@@ -7149,7 +7149,6 @@ SCIP_RETCODE tightenBounds(
 #endif
    int v;
    SCIP_Bool force;
-   SCIP_Bool easycase;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7263,8 +7262,7 @@ SCIP_RETCODE tightenBounds(
       RatFreeBuffer(SCIPbuffer(scip), &tmp);
    }
 
-   /* check if we can use fast implementation for easy and numerically well behaved cases */
-   easycase = FALSE;
+
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
@@ -7287,14 +7285,7 @@ SCIP_RETCODE tightenBounds(
       {
          oldnchgbds = *nchgbds;
 
-         if( easycase )
-         {
-            SCIP_CALL( tightenVarBoundsEasy(scip, cons, v, cutoff, nchgbds, force) );
-         }
-         else
-         {
-            SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
-         }
+         SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
 
          /* if there was no progress, skip the rest of the binary variables */
          if( *nchgbds > oldnchgbds )
