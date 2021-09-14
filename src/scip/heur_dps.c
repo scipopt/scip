@@ -66,6 +66,7 @@ struct SCIP_HeurData
    int                   nlinking;           /**< number of linking constraints */
    int                   nblocks;            /**< number of blocks */
    int                   maxit;              /**< maximal number of iterations */
+   SCIP_Bool             reoptimize;         /**< should the problem get reoptimized with the original objective function? */
 };
 
 /** data related to one block */
@@ -949,6 +950,156 @@ SCIP_RETCODE initCurrent(
    return SCIP_OKAY;
 }
 
+/** reoptimizes the heuristic solution with original objective function */
+static
+SCIP_RETCODE reoptimize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< pointer to heuristic */
+   SCIP_SOL*             sol,                /**< heuristic solution */
+   BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   int                   nblocks,            /**< number of blockproblems */
+   SCIP_SOL**            newsol,             /**< pointer to store improved solution */
+   SCIP_Bool*            success             /**< pointer to store whether reoptimization was successful */
+   )
+{
+   SCIP_Real time;
+   SCIP_Real timesubscip;
+   SCIP_Bool check;
+   int b;
+   int v;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(sol != NULL);
+   assert(blockproblem != NULL);
+
+   *success = FALSE;
+   check = FALSE;
+
+   /* for each blockproblem:
+    * - change back to original objective function
+    * - fix slack variables to zero
+    * - set limits and solve problem
+    */
+   for( b = 0; b < nblocks; b++ )
+   {
+      SCIP* subscip;
+      SCIP_VAR** blockvars;
+      int nvars;
+
+      subscip = blockproblem[b]->blockscip;
+      timesubscip = SCIPgetTotalTime(subscip);
+      blockvars = SCIPgetOrigVars(subscip);
+      nvars = SCIPgetNOrigVars(subscip);
+
+      /* in order to change objective function */
+      SCIP_CALL( SCIPfreeTransform(subscip) );
+
+      /* change back to original objective function */
+      for( v = 0; v < blockproblem[b]->nblockvars; v++ )
+      {
+         SCIP_CALL( SCIPchgVarObj(subscip, blockvars[v], blockproblem[b]->origobj[v]) );
+      }
+
+      /* fix slack variables to zero */
+      for( v = blockproblem[b]->nblockvars; v < nvars; v++ )
+      {
+         SCIP_CALL( SCIPchgVarUb(subscip, blockvars[v], 0.0) );
+         SCIP_CALL( SCIPchgVarLb(subscip, blockvars[v], 0.0) );
+      }
+
+      /* do not abort subproblem on CTRL-C */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+      /* forbid recursive call of heuristics and separators solving sub-SCIPs */
+      SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+
+#ifdef SCIP_DEBUG
+      /* for debugging, enable full output */
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+      /* disable statistic timing inside sub SCIP and output to console */
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
+
+      /* disable cutting plane separation */
+      SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+      /* disable expensive presolving */
+      SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+      /* disable expensive techniques */
+      SCIP_CALL( SCIPsetIntParam(subscip, "misc/usesymmetry", 0) );
+
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
+
+      /* set limits; do not use more time than the heuristic has already used for first solution */
+      SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
+      SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &time) );
+      if( timesubscip <  time - 1.0 )
+         SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timesubscip + 1.0) );
+      SCIP_CALL( SCIPtransformProb(subscip) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", SCIPgetNSols(subscip) + 1) );
+
+      /* reoptimize problem */
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+      if( SCIPgetNSols(subscip) == 0 )
+      {
+         /* we found no solution */
+         return SCIP_OKAY;
+      }
+      else if( SCIPgetStatus(subscip) == SCIP_STATUS_BESTSOLLIMIT || SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
+      {
+         check = TRUE;
+      }
+   }
+
+   if( !check )
+   {
+      /* we have no better solution */
+      return SCIP_OKAY;
+   }
+
+   /* create sol of main scip */
+   SCIP_CALL( SCIPcreateSol(scip, newsol, heur) );
+
+   /* copy solution to main scip */
+   for( b = 0; b < nblocks; b++ )
+   {
+      SCIP_SOL* blocksol;
+      SCIP_VAR** blockvars;
+      SCIP_Real* blocksolvals;
+      int nblockvars;
+
+      /* get solution of block variables (without slack variables) */
+      blocksol = SCIPgetBestSol(blockproblem[b]->blockscip);
+      blockvars = SCIPgetOrigVars(blockproblem[b]->blockscip);
+      nblockvars = blockproblem[b]->nblockvars;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &blocksolvals, nblockvars) );
+      SCIP_CALL( SCIPgetSolVals(blockproblem[b]->blockscip, blocksol, nblockvars, blockvars, blocksolvals) );
+
+      for( v = 0; v < nblockvars; v++ )
+      {
+         SCIP_VAR* origvar;
+
+         origvar = SCIPfindVar(scip, SCIPvarGetName(blockvars[v]));
+         SCIP_CALL( SCIPsetSolVal(scip, *newsol, origvar, blocksolvals[v]) );
+      }
+
+      SCIPfreeBufferArray(scip, &blocksolvals);
+   }
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 
 /* ---------------- Callback methods of event handler ---------------- */
 
@@ -1277,6 +1428,78 @@ SCIP_DECL_HEUREXEC(heurExecDps)
             goto TERMINATE;
          }
       }
+
+      /* all slackvariables are zero -> we found a feasible solution */
+      if( SCIPisZero(scip, allslacksval) )
+      {
+         SCIP_SOL* newsol;
+
+         SCIPdebugMsg(scip, "Feasible solution found after %i iterations\n", k);
+
+         /* create new solution */
+         SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
+         for( b = 0; b < heurdata->nblocks; b++ )
+         {
+            SCIP_SOL* blocksol;
+            SCIP_VAR** blockvars;
+            SCIP_Real* blocksolvals;
+            int nblockvars;
+
+            /* get solution of block variables (without slack variables) */
+            blocksol = SCIPgetBestSol(blockproblem[b]->blockscip);
+            blockvars = SCIPgetOrigVars(blockproblem[b]->blockscip);
+            nblockvars = blockproblem[b]->nblockvars;
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &blocksolvals, nblockvars) );
+            SCIP_CALL( SCIPgetSolVals(blockproblem[b]->blockscip, blocksol, nblockvars, blockvars, blocksolvals) );
+
+            for( c = 0; c < nblockvars; c++ )
+            {
+               SCIP_VAR* origvar;
+
+               origvar = SCIPfindVar(scip, SCIPvarGetName(blockvars[c]));
+               SCIP_CALL( SCIPsetSolVal(scip, newsol, origvar, blocksolvals[c]) );
+            }
+
+            SCIPfreeBufferArray(scip, &blocksolvals);
+         }
+
+         /* if reoptimization is activated, fix partition and reoptimize with original objective function */
+         if( heurdata->reoptimize )
+         {
+            SCIP_SOL* improvedsol = NULL;
+            SCIP_CALL( reoptimize(scip, heur, newsol, blockproblem, heurdata->nblocks, &improvedsol, &success) );
+            assert(improvedsol != NULL || success == FALSE);
+
+            if( success )
+            {
+               SCIP_CALL( SCIPtrySolFree(scip, &improvedsol, TRUE, FALSE, TRUE, TRUE, TRUE, &success) );
+               if( success )
+               {
+                  SCIPdebugMsg(scip, "Reoptimizing solution successful\n");
+                  *result = SCIP_FOUNDSOL;
+               }
+            }
+         }
+
+         /* if reoptimization is turned off or reoptimization found no solution, try initial solution */
+         if( *result != SCIP_FOUNDSOL )
+         {
+            SCIPdebugMsg(scip, "Solution has value: %0.2f\n", SCIPgetSolOrigObj(scip, newsol));
+            SCIP_CALL( SCIPtrySolFree(scip, &newsol, TRUE, FALSE, TRUE, TRUE, TRUE, &success) );
+            if( success )
+            {
+               SCIPdebugMsg(scip, "Solution copy successful\n");
+               *result = SCIP_FOUNDSOL;
+            }
+         }
+         else
+         {
+            SCIP_CALL( SCIPfreeSol(scip, &newsol) );
+         }
+
+         goto TERMINATE;
+      }
    }
    SCIPdebugMsg(scip, "maximum number of iterations reached\n");
 
@@ -1387,6 +1610,9 @@ SCIP_RETCODE SCIPincludeHeurDps(
    /* add dps primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxiterations",
    "maximal number of iterations", &heurdata->maxit, FALSE, DEFAULT_MAXIT, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/reoptimize",
+   "should the problem get reoptimized with the original objective function?", &heurdata->reoptimize, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
