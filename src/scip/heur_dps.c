@@ -1110,16 +1110,11 @@ SCIP_RETCODE reoptimize(
 static
 SCIP_DECL_EVENTEXEC(eventExecDps)
 {
-   SCIP_HEURDATA* heurdata;
-
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
-
-   heurdata = (SCIP_HEURDATA*)eventdata;
-   assert(heurdata != NULL);
 
    SCIPdebugMsg(scip, "dual bound: %0.2f\n", SCIPgetDualbound(scip));
 
