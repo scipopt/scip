@@ -49,6 +49,11 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
+#define DEFAULT_MAXIT         50    /**< maximum number of iterations */
+
+/* event handler properties */
+#define EVENTHDLR_NAME        "Dps"
+#define EVENTHDLR_DESC        "event handler for " HEUR_NAME " heuristic"
 
 /*
  * Data structures
@@ -60,6 +65,7 @@ struct SCIP_HeurData
    SCIP_CONS**           linkingconss;       /**< linking constraints */
    int                   nlinking;           /**< number of linking constraints */
    int                   nblocks;            /**< number of blocks */
+   int                   maxit;              /**< maximal number of iterations */
 };
 
 /** data related to one block */
@@ -944,6 +950,38 @@ SCIP_RETCODE initCurrent(
 }
 
 
+/* ---------------- Callback methods of event handler ---------------- */
+
+/* exec the event handler
+ *
+ * interrupt solution process of sub-SCIP if dual bound is greater than zero and a solution is available
+ */
+static
+SCIP_DECL_EVENTEXEC(eventExecDps)
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(eventhdlr != NULL);
+   assert(eventdata != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(event != NULL);
+   assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
+
+   heurdata = (SCIP_HEURDATA*)eventdata;
+   assert(heurdata != NULL);
+
+   SCIPdebugMsg(scip, "dual bound: %0.2f\n", SCIPgetDualbound(scip));
+
+   if( SCIPisFeasGT(scip, SCIPgetDualbound(scip), 0) && SCIPgetNSols(scip) >= 1 )
+   {
+      SCIPdebugMsg(scip, "DPS: interrupt subscip\n");
+      SCIP_CALL( SCIPinterruptSolve(scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of primal heuristic
  */
@@ -999,7 +1037,12 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    LINKING** linkings;
    int* sortedvarlabels;
    int* sortedconslabels;
+   SCIP_EVENTHDLR* eventhdlr; /* event handler */
    SCIP_Real memory; /* in MB */
+   SCIP_Real timelimit;
+   SCIP_Real allslacksval;
+   SCIP_Real blocksolval;
+   SCIP_STATUS status;
    int ndecomps;
    int nvars;
    int nconss;
@@ -1007,6 +1050,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    SCIP_Bool success;
    int b;
    int c;
+   int k;
 
    assert( heur != NULL );
    assert( scip != NULL );
@@ -1018,6 +1062,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    assigneddecomp = NULL;
    blockproblem = NULL;
    linkings = NULL;
+   eventhdlr = NULL;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1162,6 +1207,79 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    SCIPdebugMsg(scip, "Start heuristik DPS\n");
    *result = SCIP_DIDNOTFIND;
 
+   for( k = 0; k < heurdata->maxit; k++ )
+   {
+      /* do not exceed the timelimit */
+      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+      if( (timelimit - SCIPgetSolvingTime(scip)) <= 0 )
+      {
+         goto TERMINATE;
+      }
+
+      /* solve the subproblems */
+      allslacksval = 0.0;
+      for( b = 0; b < heurdata->nblocks; b++ )
+      {
+         SCIP* subscip;
+         subscip = blockproblem[b]->blockscip;
+
+         /* update time and memory limit of subproblem */
+         SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+
+         /* create event handler for LP events */
+         if( k==0 )
+         {
+            SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDps, NULL) );
+            if( eventhdlr == NULL )
+            {
+               SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
+               return SCIP_PLUGINNOTFOUND;
+            }
+         }
+
+         /* catch LP events of sub-SCIP */
+         SCIP_CALL( SCIPtransformProb(subscip) );
+         SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
+
+         SCIPdebugMsg(scip, "Solve blockproblem %d\n", b);
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+         /* drop LP events of sub-SCIP */
+         SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
+
+         /* get status and objective value if available */
+         status = SCIPgetStatus(subscip);
+         if( status == SCIP_STATUS_INFEASIBLE )
+         {
+            SCIPdebugMsg(scip, "Subproblem is infeasible\n");
+            goto TERMINATE;
+         }
+         else if( status == SCIP_STATUS_UNBOUNDED )
+         {
+            SCIPdebugMsg(scip, "Subproblem is unbounded\n");
+            goto TERMINATE;
+         }
+         else if( SCIPgetNSols(subscip) >= 1 )
+         {
+            blocksolval = SCIPgetPrimalbound(subscip);
+
+            if( status == SCIP_STATUS_TIMELIMIT && !SCIPisZero(scip, blocksolval) )
+            {
+               SCIPdebugMsg(scip, "Subproblem reached timelimit without optimal solution\n");
+               goto TERMINATE;
+            }
+            SCIPdebugMsg(scip, "Solution value: %f\n", blocksolval);
+            allslacksval += blocksolval;
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "No subproblem solution available\n");
+            goto TERMINATE;
+         }
+      }
+   }
+   SCIPdebugMsg(scip, "maximum number of iterations reached\n");
+
    /** ------------------------------------------------------------------------ */
    /** free memory */
 TERMINATE:
@@ -1267,7 +1385,8 @@ SCIP_RETCODE SCIPincludeHeurDps(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeDps) );
 
    /* add dps primal heuristic parameters */
-   /* TODO: (optional) add primal heuristic specific parameters with SCIPaddTypeParam() here */
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxiterations",
+   "maximal number of iterations", &heurdata->maxit, FALSE, DEFAULT_MAXIT, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
