@@ -107,33 +107,116 @@ void computeOnMarked_exec(
    assert(nodes_pred[startnode] == UNKNOWN);
 }
 
-#if 0
-/** update predecessors */
-static inline
-void computeOnMarked_computePredecessors(
-   const GRAPH*          g,                  /**< graph data structure */
-   MST*                  mst                 /**< MST data */
-)
-{
-   int* RESTRICT nodes_pred = mst->nodes_predEdge;
-   int* RESTRICT edgeid_csr = mst->csr->edge_id;
-   const int nnodes = graph_get_nNodes(g);
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( nodes_pred[i] != UNKNOWN )
-      {
-         assert(g->mark[i]);
-         nodes_pred[i] = edgeid_csr[nodes_pred[i]];
-      }
-   }
-}
-#endif
 
 
 /*
  * Interface methods
  */
+
+
+/** initializes */
+SCIP_RETCODE mst_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   MST**                 minspantree         /**< MST data */
+)
+{
+   MST* mst;
+   CSR* csr;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+
+   SCIP_CALL( SCIPallocMemory(scip, minspantree) );
+   mst = *minspantree;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mst->nodes_dist, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mst->nodes_predEdge, nnodes) );
+
+   SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &mst->dheap) );
+   SCIP_CALL( graph_csr_allocWithEdgeId(scip, nnodes, nedges, &csr) );
+   graph_csr_build(g, g->cost, csr);
+   mst->csr = csr;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+void mst_free(
+   SCIP*                 scip,               /**< SCIP data structure */
+   MST**                 minspantree         /**< MST data */
+)
+{
+   MST* mst;
+   CSR* csr;
+   assert(scip && minspantree);
+
+   mst = *minspantree;
+   /* :/ */
+   csr = (CSR*) mst->csr;
+
+   graph_csr_free(scip, &csr);
+   graph_heap_free(scip, TRUE, TRUE, &mst->dheap);
+   SCIPfreeMemoryArray(scip, &mst->nodes_predEdge);
+   SCIPfreeMemoryArray(scip, &mst->nodes_dist);
+
+   SCIPfreeMemory(scip, minspantree);
+}
+
+
+/** gets objective value of MST */
+SCIP_Real mst_getObj(
+   const GRAPH*          g,                  /**< graph data structure */
+   const MST*            mst                 /**< MST data */
+)
+{
+   SCIP_Real obj = 0.0;
+   const int nnodes = graph_get_nNodes(g);
+   const int* const nodes_pred = mst->nodes_predEdge;
+   const CSR* const csr = mst->csr;
+
+   assert(nodes_pred && csr);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( nodes_pred[i] != UNKNOWN )
+      {
+         assert(nodes_pred[i] >= 0);
+         assert(GE(csr->cost[nodes_pred[i]], 0.0) && LE(csr->cost[nodes_pred[i]], FARAWAY));
+
+         obj += csr->cost[nodes_pred[i]];
+      }
+   }
+
+   return obj;
+}
+
+
+/** gets solution edges */
+void mst_getSoledges(
+   const GRAPH*          g,                  /**< graph data structure */
+   const MST*            mst,                /**< MST data */
+   int* RESTRICT         soledges            /**< to be filled (CONNECT/UNKNOWN) */
+)
+{
+   const int* const nodes_pred = mst->nodes_predEdge;
+   const int* const edgeid_csr = mst->csr->edge_id;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+
+   for( int e = 0; e < nedges; e++ )
+      soledges[e] = UNKNOWN;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      const int edge_csr = nodes_pred[i];
+      if( edge_csr != UNKNOWN )
+      {
+         assert(soledges[edgeid_csr[edge_csr]] == UNKNOWN);
+         soledges[edgeid_csr[edge_csr]] = CONNECT;
+      }
+   }
+}
 
 
 /** computes MST on marked vertices */

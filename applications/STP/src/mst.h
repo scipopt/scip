@@ -49,7 +49,11 @@ struct minimum_spanning_tree
 } MST;
 
 
+extern SCIP_RETCODE mst_init(SCIP*, const GRAPH*, MST**);
+extern void mst_free(SCIP*, MST**);
 extern void mst_computeOnMarked(const GRAPH*, const STP_Bool*, int, MST*);
+extern SCIP_Real mst_getObj(const GRAPH*, const MST*);
+extern void mst_getSoledges(const GRAPH*, const MST*, int* RESTRICT);
 
 
 #ifdef __cplusplus
