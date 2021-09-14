@@ -33,6 +33,7 @@ doc/**/*.tmp
 .project
 .vscode/
 .idea/
+compile_commands.json
 cmake-build-debug/
 .settings/
 hooks/
