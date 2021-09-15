@@ -50,7 +50,7 @@
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXIT         50    /**< maximum number of iterations */
-#define DEFAULT_PENALTY       100   /**< multiplier for absolute increase of penalty parameters */
+#define DEFAULT_PENALTY       100.0 /**< multiplier for absolute increase of penalty parameters */
 
 /* event handler properties */
 #define EVENTHDLR_NAME        "Dps"
@@ -700,11 +700,11 @@ SCIP_RETCODE roundPartition(
    SCIP_Real* fracPart;
    int* sorting;
    int* isinteger;
-   SCIP_Real sumbefor; /* includes value at index */
+   SCIP_Real sumbefor; /* includes value at idx */
    SCIP_Real sumafter;
    SCIP_Real diff;
    int nnonintblocks; /* number of non integer blocks */
-   int index;
+   int idx;
    int b;
    int i;
    int k;
@@ -714,7 +714,7 @@ SCIP_RETCODE roundPartition(
    assert(blockproblem != NULL);
 
    nnonintblocks = 0;
-   index = 0;
+   idx = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &fracPart, linking->nblocks) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sorting, linking->nblocks) );
@@ -805,7 +805,7 @@ SCIP_RETCODE roundPartition(
          {
             fracPart[nnonintblocks + k] = 1 - fracPart[nnonintblocks + k];
          }
-         index = i;
+         idx = i;
          break;
       }
    }
@@ -828,7 +828,7 @@ SCIP_RETCODE roundPartition(
    if( SCIPisGT(scip, diff, 0.0))
    {
       assert(nnonintblocks == 0);
-      fracPart[index] += diff;
+      fracPart[idx] += diff;
    }
 
    /* sort back */
@@ -935,7 +935,7 @@ SCIP_RETCODE initCurrent(
                                        linking->blockconss[b], linking->currentrhs[b]) );
 #ifdef SCIP_MORE_DEBUG
             SCIPdebugMsg(scip, "change rhs of %s in block %d to %f\n",
-                        SCIPconsGetName(simplizes[c]->linkingcons), simplizes[c]->blocknumbers[b], simplizes[c]->currentrhs[b]);
+                        SCIPconsGetName(linking->linkingcons), linking->blocknumbers[b], linking->currentrhs[b]);
 #endif
          }
          if( linking->haslhs )
@@ -944,7 +944,7 @@ SCIP_RETCODE initCurrent(
                                        linking->blockconss[b], linking->currentlhs[b]) );
 #ifdef SCIP_MORE_DEBUG
             SCIPdebugMsg(scip, "change lhs of %s in block %d to %f\n",
-                        SCIPconsGetName(simplizes[c]->linkingcons), simplizes[c]->blocknumbers[b], simplizes[c]->currentlhs[b]);
+                        SCIPconsGetName(linking->linkingcons), linking->blocknumbers[b], linking->currentlhs[b]);
 #endif
          }
       }
@@ -1017,7 +1017,7 @@ SCIP_RETCODE updatePartition(
          }
          else
          {
-            nonviolatedblocksrhs[v - *nviolatedblocksrhs] = v;
+            nonviolatedblocksrhs[v - *nviolatedblocksrhs] = v; /*lint !e644*/
          }
       }
       if( linking->haslhs )
@@ -1034,7 +1034,7 @@ SCIP_RETCODE updatePartition(
          }
          else
          {
-            nonviolatedblockslhs[v - *nviolatedblockslhs] = v;
+            nonviolatedblockslhs[v - *nviolatedblockslhs] = v; /*lint !e644*/
          }
       }
    }
@@ -1580,7 +1580,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       blockproblem[b]->nslackvars = 0;
    }
 
-   /* allocate memory for simplizes and initialize partially */
+   /* allocate memory for linkings and initialize partially */
    SCIP_CALL( SCIPallocBufferArray(scip, &linkings, heurdata->nlinking) );
    for( c = 0; c < heurdata->nlinking; c++ )
    {
