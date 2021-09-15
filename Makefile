@@ -669,7 +669,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_rlt.o \
-			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
 

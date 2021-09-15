@@ -126,6 +126,8 @@ Performance improvements
 - No longer relax bounds of integral variables when computing bounds on activity in nonlinear constraints.
 - Revised and improved Ipopt interface.
 - Revised and improved subNLP primal heuristic, in particular choice of iteration limit and starting condition and reuse of subSCIP.
+- Merge strongcg into the gomory separator to avoid computing the same base equality twice. The files
+  sepa_strongcg.{h|c} have been removed.
 
 Examples and applications
 -------------------------
@@ -573,7 +575,7 @@ NLPI:
 
 ### Changed parameters
 
-- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 7
+- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 5
 - deleted parameter "constraints/orbitope/usedynamicprop"
 - changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
 - deleted parameter "propagating/symmetry/disableofrestart"
@@ -615,6 +617,9 @@ NLPI:
 - renamed heuristics/subnlp/iterquotient to heuristics/subnlp/nodesfactor
 - removed heuristics/subnlp/runalways, use heuristics/subnlp/nodesoffset=INT_MAX and heuristics/subnlp/successrateexp = 0.0 instead
 - removed heuristics/subnlp/minimprove, heuristics/multistart/nlpminimpr
+- Removed parameters for strongcg separator: separating/strongcg/..., i.e.,
+  maxrounds, maxroundsroot, maxsepacutsroot, maxsepacuts, dynamiccuts. One can control the
+  strongcg behavior throught the parameters of sepa_gomory.
 
 ### New parameters
 
