@@ -1711,7 +1711,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    SCIPcertificatePrintRow(certificate, rowexact);
 
-   SCIPcertificatePrintProofMessage(certificate, " { lin 2 ");
+   SCIPcertificatePrintProofMessage(certificate, " { lin weak 2 ");
 
    /* 1 * (\xi \le \lfloor \beta \rfloor) */
    SCIPcertificatePrintProofMessage(certificate, "%d ", leftdisjunctionindex);
@@ -1731,7 +1731,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    /* print the mir cut with prooef (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintRow(certificate, rowexact);
 
-   SCIPcertificatePrintProofMessage(certificate, " { lin 2 ");
+   SCIPcertificatePrintProofMessage(certificate, " { lin weak 2 ");
 
    /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
    SCIPcertificatePrintProofMessage(certificate, "%d ", rightdisjunctionindex);
@@ -1770,11 +1770,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    certificate->naggrinfos--;
 
    SCIPcertificatePrintProofMessage(certificate, FALSE, "\n");
-
-   if( FALSE )
-      certificate->indexcounter_ori++;
-   else
-      certificate->indexcounter++;
 
    RatFreeBuffer(set->buffer, &tmpval);
 
@@ -2682,7 +2677,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
    }
 
-   SCIPcertificatePrintProofMessage(certificate, " { lin %d", naggrrows);
+   SCIPcertificatePrintProofMessage(certificate, " { lin weak %d", naggrrows);
    for( i = 0; i < naggrrows; i++ )
    {
       size_t key;
