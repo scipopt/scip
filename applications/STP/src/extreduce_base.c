@@ -677,7 +677,6 @@ void generalStarSetUp(
 
          if( myhead != head )
          {
-          //  graph_edge_printInfo(graph, e);
             StpVecPushBack(scip, genstar->edges_tail, e);
          }
       }
@@ -688,7 +687,6 @@ void generalStarSetUp(
 
          if( myhead != tail )
          {
-          //  graph_edge_printInfo(graph, e);
             StpVecPushBack(scip, genstar->edges_head, e);
          }
       }
@@ -1048,7 +1046,7 @@ SCIP_Bool pseudodeleteBiasedIsPromising(
       int nprofits = 0;
       const int nnodes = graph_get_nNodes(g);
       const int nterms = g->terms;
-      // todo might also computde proper sd first..and give to routine
+      // todo might also compute proper sd first..and give to routine
       SCIP_CALL_ABORT( reduce_sdprofitInit1stOnly(scip, g, g->cost, &sdprofit));
 
       for( int i = 0; i < nnodes; i++ )
@@ -1211,7 +1209,6 @@ SCIP_RETCODE pseudodeleteDeleteComputeCutoffs(
 
             if( SCIPisEQ(scip, newedgecost, cutoffs[edgecount]) )
             {
-               //const SCIP_Real dist_dbg = extreduce_distComputeRestrictedDist(scip, graph, node, distdata, vert, vert2);
                cutoffs[edgecount] -= eps;
                assert(SCIPisGT(scip, newedgecost, cutoffs[edgecount]));
             }
@@ -1616,8 +1613,6 @@ SCIP_RETCODE extreduce_deleteEdges(
       int npathelims = 0;
       SCIP_CALL( reduce_pathreplaceExt(scip, graph, extperma, &npathelims) );
 
-      //printf("XXnpathelims=%d \n", npathelims);
-
       (*nelims) += npathelims;
    }
 
@@ -1653,13 +1648,10 @@ SCIP_RETCODE extreduce_deleteEdges(
 
    extperma->solIsValid = withSol;
 
-  // printf("number of extended edge eliminations=%d \n", *nelims);
-
    if( graph_typeIsSpgLike(graph) )
    {
       int sepanelims = 0;
       SCIP_CALL( reduce_termsepaDaWithExperma(scip, graph, extperma, NULL, &sepanelims) );
-   //   printf("sepanelims=%d \n", sepanelims);
       *nelims += sepanelims;
       graph_mark(graph);
 
@@ -1723,7 +1715,7 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
       assert(!extperma->distdata_biased);
       extperma->useSdBias = TRUE;
       extpseudo.deletionMode = delete_nonprofits;
-      // todo also just check 3 nearest terminals!
+
       SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, TRUE, TRUE, &(extperma->distdata_biased)) );
       extperma->distdata_biased->hasPathReplacement = extperma->distdata_default->hasPathReplacement;
       SCIP_CALL( extreduce_extPermaAddMLdistsbiased(scip, extperma) );
