@@ -5419,7 +5419,7 @@ SCIP_RETCODE presolveSingleLockedVars(
             }
          }
          /* fixing a variable x to one of its bounds is only valid for ... +x^p >= lhs or ... -x^p <= rhs if p = 2k
-          * for an integer k > 1
+          * for an integer k >= 1
           */
          else if( SCIPisExprPower(scip, child) )
          {
@@ -5533,8 +5533,12 @@ SCIP_RETCODE presolveImplint(
 
    *infeasible = FALSE;
 
-   /* nothing can be done if there are no integer variables available */
-   if( SCIPgetNIntVars(scip) == 0 )
+   /* nothing can be done if there are no binary and integer variables available */
+   if( SCIPgetNBinVars(scip) == 0 && SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* no continuous var can be made implicit-integer if there are no continuous variables */
+   if( SCIPgetNContVars(scip) == 0 )
       return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
@@ -5542,65 +5546,92 @@ SCIP_RETCODE presolveImplint(
       SCIP_CONSDATA* consdata;
       SCIP_EXPR** children;
       int nchildren;
+      SCIP_Real* coefs;
+      SCIP_EXPR* cand = NULL;
+      SCIP_Real candcoef = 0.0;
+      int i;
 
       assert(conss != NULL && conss[c] != NULL);
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
+      /* the constraint must be an equality constraint */
+      if( !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+         continue;
+
+      /* the root expression needs to be a sum expression */
+      if( !SCIPisExprSum(scip, consdata->expr) )
+         continue;
+
       children = SCIPexprGetChildren(consdata->expr);
       nchildren = SCIPexprGetNChildren(consdata->expr);
 
-      /* the constraint must be an equality constraint with an integer constraint side;
-       * also, the root expression needs to be a sum expression with at least two children
+      /* the sum expression must have at least two children
+       * (with one child, we would look for a coef*x = constant, which is presolved away anyway)
        */
-      if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) && SCIPisIntegral(scip, consdata->lhs)
-         && nchildren > 1 && SCIPisExprSum(scip, consdata->expr)
-         && SCIPisIntegral(scip, SCIPgetConstantExprSum(consdata->expr)) )
+      if( nchildren <= 1 )
+         continue;
+
+      coefs = SCIPgetCoefsExprSum(consdata->expr);
+
+      /* find first continuous variable and get value of its coefficient */
+      for( i = 0; i < nchildren; ++i )
       {
-         SCIP_Real* coefs;
-         SCIP_VAR* cand = NULL;
-         SCIP_Bool fail = FALSE;
-         int i;
+         if( !SCIPisExprVar(scip, children[i]) || SCIPvarIsIntegral(SCIPgetVarExprVar(children[i])) )
+            continue;
 
-         coefs = SCIPgetCoefsExprSum(consdata->expr);
+         candcoef = coefs[i];
+         assert(candcoef != 0.0);
 
-         /* find candidate variable and check whether all coefficients are integral */
-         for( i = 0; i < nchildren; ++i )
+         /* lhs/rhs - constant divided by candcoef must be integral
+          * if not, break with cand == NULL, so give up
+          */
+         if( SCIPisIntegral(scip, (consdata->lhs - SCIPgetConstantExprSum(consdata->expr)) / candcoef) )
+            cand = children[i];
+
+         break;
+      }
+
+      /* no suitable continuous variable found */
+      if( cand == NULL )
+         continue;
+
+      /* check whether all other coefficients are integral when diving by candcoef and all other children are integral */
+      for( i = 0; i < nchildren; ++i )
+      {
+         if( children[i] == cand )
+            continue;
+
+         /* child i must be integral */
+         if( !SCIPexprIsIntegral(children[i]) )
          {
-            /* check coefficient */
-            if( !SCIPisIntegral(scip, coefs[i]) )
-            {
-               fail = TRUE;
-               break;
-            }
-
-            if( !SCIPexprIsIntegral(children[i]) )
-            {
-               /* the child must be a variable expression and the first non-integral expression */
-               if( cand != NULL || !SCIPisExprVar(scip, children[i]) || !SCIPisEQ(scip, REALABS(coefs[i]), 1.0) )
-               {
-                  fail = TRUE;
-                  break;
-               }
-
-               /* store candidate variable */
-               cand = SCIPgetVarExprVar(children[i]);
-            }
+            cand = NULL;
+            break;
          }
 
-         if( !fail && cand != NULL )
+         /* coefficient of child i must be integral if diving by candcoef */
+         if( !SCIPisIntegral(scip, coefs[i] / candcoef) )  /*lint !e414*/
          {
-            SCIPdebugMsg(scip, "make variable <%s> implicit integer due to constraint <%s>\n",
-               SCIPvarGetName(cand), SCIPconsGetName(conss[c]));
-
-            /* change variable type */
-            SCIP_CALL( SCIPchgVarType(scip, cand, SCIP_VARTYPE_IMPLINT, infeasible) );
-
-            if( *infeasible )
-               return SCIP_OKAY;
+            cand = NULL;
+            break;
          }
       }
+
+      if( cand == NULL )
+         continue;
+
+      SCIPdebugMsg(scip, "make variable <%s> implicit integer due to constraint <%s>\n",
+         SCIPvarGetName(SCIPgetVarExprVar(cand)), SCIPconsGetName(conss[c]));
+
+      /* change variable type */
+      SCIP_CALL( SCIPchgVarType(scip, SCIPgetVarExprVar(cand), SCIP_VARTYPE_IMPLINT, infeasible) );
+
+      if( *infeasible )
+         return SCIP_OKAY;
+
+      /* mark expression as being integral (as would be done by expr_var.c in the next round of updating integrality info) */
+      SCIPexprSetIntegrality(cand, TRUE);
    }
 
    return SCIP_OKAY;
