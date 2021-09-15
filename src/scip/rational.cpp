@@ -768,7 +768,7 @@ void RatRelDiff(
 
    absval1 = abs(val1->val);
    absval2 = abs(val2->val);
-   quot = max(absval1, absval2);
+   quot = absval1 >= absval2 ? absval1 : absval2;
    if( quot < 1.0 )
       quot = 1.0;
 
@@ -1074,7 +1074,7 @@ void RatMIN(
    }
    else
    {
-      res->val = min(op1->val, op2->val);
+      res->val = op1->val < op2->val ? op1->val : op2->val;
       res->isinf = FALSE;
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
@@ -1106,7 +1106,7 @@ void RatMAX(
    }
    else
    {
-      res->val = max(op1->val, op2->val);
+      res->val = op1->val >= op2->val ? op1->val : op2->val;
       res->isinf = FALSE;
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
@@ -1922,7 +1922,11 @@ SCIP_Real RatApproxReal(
    if( rational->isinf )
       return (rational->val.sign() * infinity);
 
+#ifdef SCIP_WITH_GMP
+   retval = mpq_get_d(rational->val.backend().data()); // mpq_get_d is faster than the boost internal implementation
+#else
    retval = rational->val.convert_to<SCIP_Real>();
+#endif
 #endif
    return retval;
 }

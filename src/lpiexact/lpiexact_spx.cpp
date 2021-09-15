@@ -97,6 +97,7 @@
 #define SOPLEX_VERBLEVEL                5    /**< verbosity level for LPINFO */
 
 #include "scip/pub_message.h"
+#include "scip/struct_rational.h"
 
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
@@ -192,11 +193,9 @@ static void RsetSpxR(
    }
    else
    {
-#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST)
-      RatSetGMP(r, spxr.getMpqRef());
-#else
-      RatSetReal(r, spxr);
-#endif
+      r->val = spxr;
+      r->isinf = false;
+      r->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
 }
 
@@ -219,7 +218,7 @@ static void RsetSpxVector(
  * @todo exip: there seems to be something wrong with the = of spx rational */
 static void SpxRSetRat(
    SCIP_LPIEXACT*        lpi,                /**< exact LPI */
-   soplex::Rational&     spxr,               /**< SoPlex Rational*/
+   Rational&             spxr,               /**< SoPlex Rational*/
    SCIP_Rational*        src                 /**< SCIP_Rational */
 )
 {
@@ -348,7 +347,7 @@ public:
          if( lowerRational(i) > upperRational(i) )
          {
             SCIPerrorMessage("inconsistent bounds on column %d: lower=%s, upper=%s\n",
-               i, rationalToString(lowerRational(i), 32).c_str(), rationalToString(lowerRational(i), 32).c_str());
+               i, lowerRational(i).str().c_str(), upperRational(i).str().c_str());
             return false;
          }
       }
@@ -363,7 +362,7 @@ public:
          if( lhsRational(i) > rhsRational(i) )
          {
             SCIPerrorMessage("inconsistent sides on row %d: lhs=%s, rhs=%s\n",
-              i, rationalToString(lhsRational(i)).c_str(), rationalToString(rhsRational(i)).c_str());
+              i, lhsRational(i).str().c_str(), rhsRational(i).str().c_str());
             return false;
          }
       }
@@ -972,8 +971,8 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
       /* create empty rows with given sides */
       for( i = 0; i < nrows; ++i )
       {
-         soplex::Rational spxlhs;
-         soplex::Rational spxrhs;
+         Rational spxlhs;
+         Rational spxrhs;
          SpxRSetRat(lpi, spxlhs, lhs[i]);
          SpxRSetRat(lpi, spxlhs, rhs[i]);
          rows.add(spxlhs, emptyVector, spxrhs);
@@ -1343,8 +1342,8 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
 
    try
    {
-      soplex::Rational spxlb;
-      soplex::Rational spxub;
+      Rational spxlb;
+      Rational spxub;
 
       for( i = 0; i < ncols; ++i )
       {
@@ -1411,8 +1410,8 @@ SCIP_RETCODE SCIPlpiExactChgSides(
 
    try
    {
-      soplex::Rational spxlhs;
-      soplex::Rational spxrhs;
+      Rational spxlhs;
+      Rational spxrhs;
 
       for( i = 0; i < nrows; ++i )
       {
@@ -1448,7 +1447,7 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
    SCIP_Rational*        newval              /**< new value of coefficient */
    )
 {
-   soplex::Rational spxval;
+   Rational spxval;
 
    SCIPdebugMessage("calling SCIPlpiChgCoef()\n");
 
@@ -1510,7 +1509,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
 
    try
    {
-      soplex::Rational spxobj;
+      Rational spxobj;
 
       for( i = 0; i < ncols; ++i )
       {
