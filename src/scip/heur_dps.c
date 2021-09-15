@@ -951,6 +951,213 @@ SCIP_RETCODE initCurrent(
    return SCIP_OKAY;
 }
 
+
+/** update partition */
+static
+SCIP_RETCODE updatePartition(
+   SCIP*                 scip,               /**< SCIP data structure of main scip */
+   LINKING*              linking,            /**< one linking data structure */
+   BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   int*                  nviolatedblocksrhs, /**< pointer to store number of blocks which violate rhs */
+   int*                  nviolatedblockslhs, /**< pointer to store number of blocks which violate lhs */
+   int                   iteration           /**< number of iteration */
+   )
+{
+   SCIP_Real* shift; /* direction vector */
+   int* nonviolatedblocksrhs;
+   int* nonviolatedblockslhs;
+   SCIP_Real sumviols = 0.0;
+   int v;
+
+   assert(scip != NULL);
+   assert(linking != NULL);
+   assert(blockproblem != NULL);
+   assert(iteration >= 0);
+
+   *nviolatedblocksrhs = 0;
+   *nviolatedblockslhs = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &shift, linking->nblocks) );
+   BMSclearMemoryArray(shift, linking->nblocks);
+   if( linking->hasrhs )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &nonviolatedblocksrhs, linking->nblocks) );
+   }
+   if( linking->haslhs )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &nonviolatedblockslhs, linking->nblocks) );
+   }
+
+   /* get violated blocks and calculate shift */
+   for( v = 0; v < linking->nblocks; v++ )
+   {
+      SCIP* subscip;
+      SCIP_SOL* subsol;
+      SCIP_Real slackval;
+
+      subscip = blockproblem[linking->blocknumbers[v]]->blockscip;
+      subsol = SCIPgetBestSol(subscip);
+
+      /* if we have ranged constraints, the slack variables of the rhs are in front;
+       * get slack variable of block; save violated blocks
+       */
+      if( linking->hasrhs )
+      {
+         slackval = SCIPgetSolVal(subscip, subsol, linking->slacks[v * linking->nslacksperblock]);
+
+         /* block is violated */
+         if( SCIPisPositive(scip, slackval) )
+         {
+            (*nviolatedblocksrhs)++;
+
+            shift[v] += slackval;
+            sumviols += slackval;
+         }
+         else
+         {
+            nonviolatedblocksrhs[v - *nviolatedblocksrhs] = v;
+         }
+      }
+      if( linking->haslhs )
+      {
+         slackval = SCIPgetSolVal(subscip, subsol, linking->slacks[(v * linking->nslacksperblock) + linking->nslacksperblock - 1]);
+
+         /* block is violated */
+         if( SCIPisPositive(scip, slackval) )
+         {
+            (*nviolatedblockslhs)++;
+
+            shift[v] -= slackval;
+            sumviols -= slackval;
+         }
+         else
+         {
+            nonviolatedblockslhs[v - *nviolatedblockslhs] = v;
+         }
+      }
+   }
+
+   /* linking constraint is in no block violated or always violated -> do not update partition */
+   if( *nviolatedblocksrhs + *nviolatedblockslhs == 0 ||
+         linking->nblocks == *nviolatedblocksrhs || linking->nblocks == *nviolatedblockslhs )
+   {
+      /* free memory */
+      if( linking->haslhs )
+      {
+         SCIPfreeBufferArray(scip, &nonviolatedblockslhs);
+      }
+      if( linking->hasrhs )
+      {
+         SCIPfreeBufferArray(scip, &nonviolatedblocksrhs);
+      }
+      SCIPfreeBufferArray(scip, &shift);
+      return SCIP_OKAY;
+   }
+
+   /* set values of non violated blocks */
+   if( SCIPisPositive(scip, sumviols) )
+   {
+      SCIP_Real residual = sumviols;
+      SCIP_Real part;
+      SCIP_Real shift_tmp;
+
+      assert(linking->hasrhs);
+      assert(*nviolatedblocksrhs != 0);
+
+      for( v = 0; v < linking->nblocks - *nviolatedblocksrhs; v++ )
+      {
+         part = linking->currentrhs[nonviolatedblocksrhs[v]] - residual/(linking->nblocks - *nviolatedblocksrhs - v);
+         part = MIN(MAX(part, linking->minactivity[nonviolatedblocksrhs[v]]), linking->maxactivity[nonviolatedblocksrhs[v]]);
+         shift_tmp = part - linking->currentrhs[nonviolatedblocksrhs[v]];
+         residual += shift_tmp;
+         shift[nonviolatedblocksrhs[v]] += shift_tmp;
+      }
+      if( SCIPisZero(scip, residual) )
+      {
+         /* assign residual to first block */
+         shift[nonviolatedblocksrhs[0]] -= residual;
+      }
+   }
+   if( SCIPisNegative(scip, sumviols) )
+   {
+      SCIP_Real residual = sumviols;
+      SCIP_Real part;
+      SCIP_Real shift_tmp;
+
+      assert(linking->haslhs);
+      assert(*nviolatedblockslhs != 0);
+
+      for( v = 0; v < linking->nblocks - *nviolatedblockslhs; v++ )
+      {
+         part = linking->currentlhs[nonviolatedblockslhs[v]] - residual/(linking->nblocks - *nviolatedblockslhs - v);
+         part = MIN(MAX(part, linking->minactivity[nonviolatedblockslhs[v]]), linking->maxactivity[nonviolatedblockslhs[v]]);
+         shift_tmp = part - linking->currentlhs[nonviolatedblockslhs[v]];
+         residual += shift_tmp;
+         shift[nonviolatedblockslhs[v]] += shift_tmp;
+      }
+      if( SCIPisZero(scip, residual) )
+      {
+         /* assign residual to first block */
+         shift[nonviolatedblockslhs[0]] -= residual;
+      }
+   }
+
+#ifdef SCIP_DEBUG
+   SCIP_Real sum = 0.0;
+   /* check sum of shift; must be zero */
+   for( v = 0; v < linking->nblocks; v++ )
+   {
+      sum += shift[v];
+   }
+   assert(SCIPisZero(scip, sum));
+#endif
+
+   /* add shift to both sides */
+   for( v = 0; v < linking->nblocks; v++)
+   {
+      if( linking->hasrhs )
+      {
+         linking->currentrhs[v] += shift[v];
+      }
+      if( linking->haslhs )
+      {
+         linking->currentlhs[v] += shift[v];
+      }
+   }
+
+   SCIP_CALL( roundPartition(scip, linking, blockproblem, ((linking->hasrhs && (*nviolatedblocksrhs != 0)) || !linking->haslhs)) );
+
+   /* set sides in blockproblems to new partition */
+   for( v = 0; v < linking->nblocks; v++ )
+   {
+      SCIP* subscip;
+      subscip = blockproblem[linking->blocknumbers[v]]->blockscip;
+
+      if( linking->hasrhs )
+      {
+         SCIP_CALL( SCIPchgRhsLinear(subscip, linking->blockconss[v], linking->currentrhs[v]) );
+      }
+      if( linking->haslhs )
+      {
+         SCIP_CALL( SCIPchgLhsLinear(subscip, linking->blockconss[v], linking->currentlhs[v]) );
+      }
+   }
+
+   /* free memory */
+   if( linking->haslhs )
+   {
+      SCIPfreeBufferArray(scip, &nonviolatedblockslhs);
+   }
+   if( linking->hasrhs )
+   {
+      SCIPfreeBufferArray(scip, &nonviolatedblocksrhs);
+   }
+   SCIPfreeBufferArray(scip, &shift);
+
+   return SCIP_OKAY;
+}
+
+
 /** reoptimizes the heuristic solution with original objective function */
 static
 SCIP_RETCODE reoptimize(
@@ -1495,6 +1702,28 @@ SCIP_DECL_HEUREXEC(heurExecDps)
          }
 
          goto TERMINATE;
+      }
+      /* current partition is not feasible:
+       * - update partition
+       */
+      else
+      {
+         int* nviolatedblocksrhs; /* number of blocks which violate rhs for each linking constraint */
+         int* nviolatedblockslhs; /* number of blocks which violate lhs for each linking constraint */
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &nviolatedblocksrhs, heurdata->nlinking) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &nviolatedblockslhs, heurdata->nlinking) );
+         BMSclearMemoryArray(nviolatedblocksrhs, heurdata->nlinking);
+         BMSclearMemoryArray(nviolatedblockslhs, heurdata->nlinking);
+
+         SCIPdebugMsg(scip, "update partition\n");
+         for( c = 0; c < heurdata->nlinking; c++ )
+         {
+            SCIP_CALL( updatePartition(scip, linkings[c], blockproblem, &nviolatedblocksrhs[c], &nviolatedblockslhs[c], k) );
+         }
+
+         SCIPfreeBufferArray(scip, &nviolatedblockslhs);
+         SCIPfreeBufferArray(scip, &nviolatedblocksrhs);
       }
    }
    SCIPdebugMsg(scip, "maximum number of iterations reached\n");
