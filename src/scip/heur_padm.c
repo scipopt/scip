@@ -366,7 +366,7 @@ SCIP_RETCODE copyToSubscip(
    SCIP_HASHMAP*         varmap,             /**< hashmap used for the copy process of variables */
    SCIP_HASHMAP*         consmap,            /**< hashmap used for the copy process of constraints */
    int                   nconss,             /**< number of constraints to copy */
-   SCIP_Bool             original,           /**< do we use the original problem? */
+   SCIP_Bool             useorigprob,        /**< do we use the original problem? */
    SCIP_Bool*            success             /**< pointer to store whether copying was successful */
    )
 {
@@ -390,8 +390,10 @@ SCIP_RETCODE copyToSubscip(
    {
       assert(conss[i] != NULL);
 
-      /* do not check this if we use the original problem */
-      if( !original )
+      /* do not check this if we use the original problem
+       * Since constraints can be deleted etc. during presolving, these assertions would fail.
+       */
+      if( !useorigprob )
       {
          assert(!SCIPconsIsModifiable(conss[i]));
          assert(SCIPconsIsActive(conss[i]));
@@ -423,7 +425,7 @@ SCIP_RETCODE blockCreateSubscip(
    SCIP_HASHMAP*         consmap,            /**< constraint hashmap used to improve performance */
    SCIP_CONS**           conss,              /**< constraints contained in this block */
    int                   nconss,             /**< number of constraints contained in this block */
-   SCIP_Bool             original,           /**< do we use the original problem? */
+   SCIP_Bool             useorigprob,        /**< do we use the original problem? */
    SCIP_Bool*            success             /**< pointer to store whether the copying process was successful */
    )
 {
@@ -455,7 +457,7 @@ SCIP_RETCODE blockCreateSubscip(
       /* get name of the original problem and add "comp_nr" */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", problem->name, block->number);
 
-      SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, varmap, consmap, nconss, original, success) );
+      SCIP_CALL( copyToSubscip(scip, block->subscip, name, conss, varmap, consmap, nconss, useorigprob, success) );
 
       if( !(*success) )
       {
@@ -496,7 +498,7 @@ SCIP_RETCODE createAndSplitProblem(
    int*                  consssize,          /**< number of constraints per block (and border at index 0) */
    int                   nblocks,            /**< number of blocks */
    PROBLEM**             problem,            /**< pointer to store problem structure */
-   SCIP_Bool             original,           /**< do we use the original problem? */
+   SCIP_Bool             useorigprob,        /**< do we use the original problem? */
    SCIP_Bool*            success             /**< pointer to store whether the process was successful */
    )
 {
@@ -535,7 +537,7 @@ SCIP_RETCODE createAndSplitProblem(
       nblockconss = consssize[b + 1];
 
       /* build subscip for block */
-      SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, original, success) );
+      SCIP_CALL( blockCreateSubscip(block, varmap, consmap, blockconss, nblockconss, useorigprob, success) );
 
       SCIPhashmapFree(&varmap);
       nhandledconss += nblockconss;
@@ -689,7 +691,12 @@ SCIP_RETCODE reuseSolution(
    return SCIP_OKAY;
 }
 
-/** reoptimizes the heuristic solution with original objective function */
+/** reoptimizes the heuristic solution with original objective function
+ *
+ * Since the main algorithm of padm ignores the objective function, this method can be called to obtain better solutions.
+ * It copies the main scip, fixes the linking variables at the values of the already found solution
+ * and solves the new problem with small limits.
+ */
 static
 SCIP_RETCODE reoptimize(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1159,6 +1166,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       /* number of blocks can get smaller (since assigning constraints can lead to empty blocks) */
       nblocks = SCIPdecompGetNBlocks(decomp);
    }
+
+   /* @note the terms 'linking' and 'border' (constraints/variables) are used interchangeably */
 
    if( SCIPdecompGetNBorderConss(decomp) != 0 )
    {
@@ -1868,7 +1877,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
          }
       }
 
-      /* if reoptimizing is turned off or found no solution, try first solution */
+      /* if reoptimization is turned off or reoptimization found no solution, try initial solution */
       if( *result != SCIP_FOUNDSOL )
       {
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
