@@ -1376,6 +1376,13 @@ SCIP_Real SCIPgetLowerbound(
        */
       return -SCIPinfinity(scip);
    }
+   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
+   {
+      /* SCIPtreeGetLowerbound() should return +inf in the case of infeasibility, but when infeasibility is detected
+       * during presolving this does not seem to be the case; hence, we treat this case explicitly
+       */
+      return SCIPinfinity(scip);
+   }
    else
    {
       SCIP_Real treelowerbound;
