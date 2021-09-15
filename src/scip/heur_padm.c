@@ -713,6 +713,7 @@ SCIP_RETCODE reoptimize(
    SCIP* scipcopy;
    SCIP_SOL* startsol;
    SCIP_HASHMAP* varmap;
+   SCIP_VAR** subvars;
    SCIP_STATUS status;
    SCIP_Real* linkvals;
    SCIP_Real time;
@@ -725,6 +726,7 @@ SCIP_RETCODE reoptimize(
    assert(linkvars != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &linkvals, nlinkvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    SCIP_CALL( SCIPgetSolVals(scip, sol, nlinkvars, linkvars, linkvals) );
 
@@ -745,6 +747,10 @@ SCIP_RETCODE reoptimize(
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scipcopy), SCIPgetNVars(scip)) );
       SCIP_CALL( SCIPcopyConsCompression(scip, scipcopy, varmap, NULL, "reopt_padm", linkvars, linkvals, nlinkvars,
                TRUE, FALSE, FALSE, TRUE, success) );
+   }
+   for( v = 0; v < nvars; v++ )
+   {
+      subvars[v] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[v]);
    }
 
    /* do not abort subproblem on CTRL-C */
@@ -827,16 +833,7 @@ SCIP_RETCODE reoptimize(
       SCIP_SOL* solcopy;
 
       solcopy = SCIPgetBestSol(scipcopy);
-
-      /* create sol of main scip */
-      SCIP_CALL( SCIPcreateSol(scip, newsol, heur) );
-      for( v = 0; v < nvars; v++ )
-      {
-         SCIP_VAR* subvar;
-         subvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[v]);
-         if( subvar != NULL )
-            SCIP_CALL( SCIPsetSolVal(scip, *newsol, vars[v], SCIPgetSolVal(scipcopy, solcopy, subvar)) );
-      }
+      SCIP_CALL( SCIPtranslateSubSol(scip, scipcopy, solcopy, heur, subvars, newsol) );
 
       SCIPdebugMsg(scip, "Objective value of reoptimized solution %.2f\n", SCIPgetSolOrigObj(scip, *newsol));
       *success = TRUE;
@@ -849,6 +846,7 @@ SCIP_RETCODE reoptimize(
    /* free data */
    SCIPhashmapFree(&varmap);
    SCIP_CALL( SCIPfree(&scipcopy) );
+   SCIPfreeBufferArray(scip, &subvars);
    SCIPfreeBufferArray(scip, &linkvals);
 
    return SCIP_OKAY;
