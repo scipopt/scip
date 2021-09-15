@@ -224,6 +224,64 @@ Test(presolve, implint)
    checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
 }
 
+/* test for presolveImplint()
+ *
+ * consider 0.5 x + 0.5 yz - 1.5 z == 5 with x continuous, y and z binary
+ */
+Test(presolve, implint2)
+{
+   SCIP_Bool infeasible;
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/reformbinprods", FALSE) );
+
+   /* change bounds of x to be [-10,10] */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, x, 10.0) );
+
+   /* change variable types */
+   SCIP_CALL( SCIPchgVarType(scip, x, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, y, 0.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, y, 1.0) );
+   SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_BINARY, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, z, SCIP_VARTYPE_BINARY, &infeasible) );
+
+   /* add nonlinear constraint */
+   SCIP_CALL( addCons("0.5*<x> + 0.5*<y>*<z> - 1.5*<z>", 0.0, 0.0) );
+
+   /* apply presolving */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
+
+   /* check variable types */
+   checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_BINARY, SCIP_VARTYPE_BINARY);
+}
+
+/* test for presolveImplint()
+ *
+ * consider 2 x^2 + 0.3 * y - z == 5 with x integer, y continuous, and z binary
+ */
+Test(presolve, implint3)
+{
+   SCIP_Bool infeasible;
+
+   /* change bounds of x to be [-10,10] */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, x, 10.0) );
+
+   /* change variable types */
+   SCIP_CALL( SCIPchgVarType(scip, x, SCIP_VARTYPE_INTEGER, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, z, SCIP_VARTYPE_BINARY, &infeasible) );
+
+   /* add nonlinear constraint */
+   SCIP_CALL( addCons("2*<x>^2 + 0.3*<y> - <z>", 5.0, 5.0) );
+
+   /* apply presolving */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
+
+   /* check variable types */
+   checkTypes(SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
+}
+
 /* tests setppc upgrade */
 Test(presolve, setppcupg)
 {
