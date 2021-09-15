@@ -10942,7 +10942,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/linearizeheursol",
          "whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution)",
-         &conshdlrdata->linearizeheursol, FALSE, 'i', "oie", NULL, NULL) );
+         &conshdlrdata->linearizeheursol, FALSE, 'o', "oie", NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
