@@ -50,6 +50,7 @@
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXIT         50    /**< maximum number of iterations */
+#define DEFAULT_PENALTY       100   /**< multiplier for absolute increase of penalty parameters */
 
 /* event handler properties */
 #define EVENTHDLR_NAME        "Dps"
@@ -66,6 +67,7 @@ struct SCIP_HeurData
    int                   nlinking;           /**< number of linking constraints */
    int                   nblocks;            /**< number of blocks */
    int                   maxit;              /**< maximal number of iterations */
+   SCIP_Real             penalty;            /**< multiplier for absolute increase of penalty parameters */
    SCIP_Bool             reoptimize;         /**< should the problem get reoptimized with the original objective function? */
 };
 
@@ -1158,6 +1160,73 @@ SCIP_RETCODE updatePartition(
 }
 
 
+/** update lambda */
+static
+SCIP_RETCODE updateLambda(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   LINKING**             linkings,           /**< array of linking data structures */
+   BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   int*                  nviolatedblocksrhs, /**< number of blocks which violate rhs */
+   int*                  nviolatedblockslhs, /**< number of blocks which violate lhs */
+   int                   nlinking            /**< number of linking constraints */
+   )
+{
+   SCIP_VAR* slackvar;
+   SCIP_Real old_obj;
+   SCIP_Real new_obj;
+   int c;
+   int b;
+
+   assert(scip != NULL);
+   assert(linkings != NULL);
+   assert(blockproblem != NULL);
+
+   for( c = 0; c < nlinking; c++ )
+   {
+      assert(nviolatedblocksrhs[c] >= 0);
+      assert(nviolatedblockslhs[c] >= 0);
+
+      /* skip constraint if it is not violated */
+      if( nviolatedblocksrhs[c] + nviolatedblockslhs[c] == 0 )
+      {
+         linkings[c]->lastviolations = 0; /* reset flag */
+         continue;
+      }
+
+      /* add number of violated blocks multiplied with parameter "penalty" to lambda (initial value is 1) */
+      for( b = 0; b < linkings[c]->nblocks; b++ )
+      {
+         SCIP* subscip;
+         subscip = blockproblem[linkings[c]->blocknumbers[b]]->blockscip;
+         assert(subscip != NULL);
+
+         if( linkings[c]->hasrhs && (nviolatedblocksrhs[c] >= 1) && (linkings[c]->lastviolations >= 1) )
+         {
+            slackvar = linkings[c]->slacks[b * linkings[c]->nslacksperblock];
+            old_obj = SCIPvarGetObj(slackvar);
+            new_obj = old_obj + heurdata->penalty * nviolatedblocksrhs[c];
+
+            SCIP_CALL( SCIPchgVarObj(subscip, slackvar, new_obj) );
+         }
+         if( linkings[c]->haslhs && (nviolatedblockslhs[c] >= 1) && (linkings[c]->lastviolations >= 1) )
+         {
+            slackvar = linkings[c]->slacks[b * linkings[c]->nslacksperblock + linkings[c]->nslacksperblock - 1];
+            old_obj = SCIPvarGetObj(slackvar);
+            new_obj = old_obj + heurdata->penalty * nviolatedblockslhs[c];
+
+            SCIP_CALL( SCIPchgVarObj(subscip, slackvar, new_obj) );
+         }
+      }
+
+      /* update number of violations in the last iterations */
+      linkings[c]->lastviolations += 1;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** reoptimizes the heuristic solution with original objective function */
 static
 SCIP_RETCODE reoptimize(
@@ -1705,6 +1774,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       }
       /* current partition is not feasible:
        * - update partition
+       * - update penalty parameters lambda
        */
       else
       {
@@ -1721,6 +1791,15 @@ SCIP_DECL_HEUREXEC(heurExecDps)
          {
             SCIP_CALL( updatePartition(scip, linkings[c], blockproblem, &nviolatedblocksrhs[c], &nviolatedblockslhs[c], k) );
          }
+
+         /* in order to change objective function */
+         for( b = 0; b < heurdata->nblocks; b++ )
+         {
+            SCIP_CALL( SCIPfreeTransform(blockproblem[b]->blockscip) );
+         }
+
+         SCIPdebugMsg(scip, "update lambda\n");
+         SCIP_CALL( updateLambda(scip, heurdata, linkings, blockproblem, nviolatedblocksrhs, nviolatedblockslhs, heurdata->nlinking) );
 
          SCIPfreeBufferArray(scip, &nviolatedblockslhs);
          SCIPfreeBufferArray(scip, &nviolatedblocksrhs);
@@ -1835,6 +1914,10 @@ SCIP_RETCODE SCIPincludeHeurDps(
    /* add dps primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxiterations",
    "maximal number of iterations", &heurdata->maxit, FALSE, DEFAULT_MAXIT, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/penalty",
+   "multiplier for absolute increase of penalty parameters (0: no increase)",
+   &heurdata->penalty, FALSE, DEFAULT_PENALTY, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/reoptimize",
    "should the problem get reoptimized with the original objective function?", &heurdata->reoptimize, FALSE, FALSE, NULL, NULL) );
