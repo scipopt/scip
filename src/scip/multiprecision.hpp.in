@@ -18,8 +18,8 @@
    #if @SCIP_HAVE_GMP@
    #include <boost/multiprecision/gmp.hpp>
    using namespace boost::multiprecision;
-   using Rational = boost::multiprecision::number<gmp_rational, et_on>;
-   using Integer = mpz_int;
+   using Rational = boost::multiprecision::number<gmp_rational, et_off>;
+   using Integer = number<gmp_int, et_off>;
    #else
    #include <boost/multiprecision/cpp_int.hpp>
    using namespace boost::multiprecision;

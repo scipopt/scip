@@ -557,7 +557,7 @@ SCIP_RETCODE SCIPcertificateInit(
    {
       if( SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[j]) == SCIP_VARTYPE_INTEGER )
       {
-         SCIPcertificatePrintProblemMessage(certificate, TRUE, "%d \n", SCIPvarGetIndex(vars[j]));
+         SCIPcertificatePrintProblemMessage(certificate, TRUE, "%d \n", j);
       }
    }
 
@@ -733,18 +733,8 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
       {
          lb = SCIPgetLhsExactLinear(scip, cons);
          ub = SCIPgetRhsExactLinear(scip, cons);
-         /* if the constraint a singleton we count it as a bound constraint in the certificate */
-         if( SCIPgetNVarsExactLinear(scip, cons) == 1 )
-         {
-            SCIPdebugMessage("constraint counts as bound constraint \n");
 
-            if( !RatIsAbsInfinity(lb) )
-               nboundconss++;
-            if( !RatIsAbsInfinity(ub) )
-               nboundconss++;
-         }
-         /* else we check if it is a ranged row with 2 sides (then we count it twice). otherwise one line gets printed */
-         else if( !RatIsEqual(lb, ub) && !RatIsAbsInfinity(lb) && !RatIsAbsInfinity(ub) )
+         if( !RatIsEqual(lb, ub) && !RatIsAbsInfinity(lb) && !RatIsAbsInfinity(ub) )
          {
             SCIPdebugMessage("constraint is a ranged constraint \n");
             ncertcons += 2;
