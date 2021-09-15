@@ -1825,7 +1825,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
             origvar = SCIPfindVar(scip, SCIPvarGetName(blockvars[i]));
             solval = blocksolvals[i];
-            SCIP_CALL( SCIPsetSolVal(scip, newsol, origvar, solval) );
+            SCIP_CALL_ABORT( SCIPsetSolVal(scip, newsol, origvar, solval) );
          }
       }
 
@@ -1847,7 +1847,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                if( SCIPisInfinity(scip, fixedvalue) )
                   break; // todo: maybe we should return the status UNBOUNDED instead
             }
-            SCIP_CALL( SCIPsetSolVal(scip, newsol, linkvars[i], fixedvalue) );
+            SCIP_CALL_ABORT( SCIPsetSolVal(scip, newsol, linkvars[i], fixedvalue) );
          }
       }
 
