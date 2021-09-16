@@ -402,7 +402,7 @@ SCIP_RETCODE detectMinors(
       struct myarray* row;
 
       row = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
-      (void)SCIPsortInt(row->vals, row->nvals);
+      SCIPsortInt(row->vals, row->nvals);
    }
 
    /* store 2x2 minors */
