@@ -3576,13 +3576,12 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
    /* if cut looks good (numerics ok and cutting off solution), then turn into row and add to sepastore */
    if( success )
    {
+      SCIP_ROW* row;
+      SCIP_Bool infeasible;
+
       /* count number of bound cuts */
       if( nlhdlrdata->useboundsasrays )
          nlhdlrdata->nboundcuts += 1;
-
-      //printf("ADDED CUT SUCCESSFULLY! \n");
-      SCIP_ROW* row;
-      SCIP_Bool infeasible;
 
       (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%s_intersection_quadratic%p_lp%d",
          overestimate ? "over" : "under",
