@@ -3619,7 +3619,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
          {
             *result = SCIP_SEPARATED;
             nlhdlrdata->ncutsadded += 1;
-            nlhdlrdata->densitysum += (SCIP_Real) rowprep->nvars / (SCIP_Real) SCIPgetNVars(scip);
+            nlhdlrdata->densitysum += (SCIP_Real) SCIProwprepGetNVars(rowprep) / (SCIP_Real) SCIPgetNVars(scip);
          }
       }
       else
