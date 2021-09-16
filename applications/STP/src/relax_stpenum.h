@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   relax_stpdp.h
+/**@file   relax_stpenum.h
  * @ingroup RELAXATORS
- * @brief  Steiner tree dynamic programming relaxator
+ * @brief  Steiner tree enumeration relaxator
  * @author Daniel Rehfeldt
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_RELAX_STPDP_H__
-#define __SCIP_RELAX_STPDP_H__
+#ifndef __SCIP_RELAX_STPENUM_H__
+#define __SCIP_RELAX_STPENUM_H__
 
 
 #include "scip/scip.h"
@@ -34,31 +34,26 @@ extern "C" {
 
 /** creates the STP relaxator and includes it in SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeRelaxStpdp(
+SCIP_RETCODE SCIPincludeRelaxStpenum(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** is using the relaxator promising? */
 SCIP_EXPORT
-SCIP_Bool SCIPStpDpRelaxIsPromising(
+SCIP_Bool SCIPStpEnumRelaxIsPromising(
+   const GRAPH*          graph               /**< graph */
+   );
+
+
+/** Solve instance by enumeration. Only call when promising. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpEnumRelaxComputeSol(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph               /**< graph */
+   const GRAPH*          graph,              /**< graph data structure */
+   int* RESTRICT         edges_solstat       /**< solution edges */
    );
 
-
-/** activates */
-SCIP_EXPORT
-SCIP_RETCODE SCIPStpDpRelaxActivate(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-
-/** is active? */
-SCIP_EXPORT
-SCIP_Bool SCIPStpDpRelaxIsActive(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 #ifdef __cplusplus
 }

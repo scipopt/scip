@@ -29,6 +29,7 @@
 #include "scip/scipdefplugins.h"
 
 #include "relax_stp.h"
+#include "relax_stpenum.h"
 #include "relax_stpdp.h"
 #include "reader_stp.h"
 #include "reader_gr.h"
@@ -84,6 +85,8 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeConshdlrStpcomponents(scip) );
 
    SCIP_CALL( SCIPincludeRelaxStp(scip) );
+
+   SCIP_CALL( SCIPincludeRelaxStpenum(scip) );
 
    SCIP_CALL( SCIPincludeRelaxStpdp(scip) );
 

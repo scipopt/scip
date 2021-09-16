@@ -314,6 +314,20 @@ SCIP_RETCODE SCIPStpDpRelaxActivate(
 }
 
 
+/** is active? */
+SCIP_Bool SCIPStpDpRelaxIsActive(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_RELAX* relax = SCIPfindRelax(scip, "stpdp");
+   SCIP_RELAXDATA* relaxdata = SCIPrelaxGetData(relax);
+
+   assert(relaxdata);
+
+   return relaxdata->isActive;
+}
+
+
 /** creates the relaxator and includes it in SCIP */
 SCIP_RETCODE SCIPincludeRelaxStpdp(
    SCIP*                 scip                /**< SCIP data structure */

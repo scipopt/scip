@@ -62,6 +62,7 @@
 #include "prop_stp.h"
 #include "portab.h"
 #include "dpterms.h"
+#include "relax_stpenum.h"
 
 
 
@@ -2148,7 +2149,7 @@ SCIP_RETCODE redLoopStp(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
 
-         if( dpterms_isPromisingFully(g) && redparameters->userec )
+         if( redparameters->userec && (SCIPStpEnumRelaxIsPromising(g) || dpterms_isPromisingFully(g)) )
             break;
 
          assert(!rerun);
