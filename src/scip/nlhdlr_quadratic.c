@@ -2474,14 +2474,17 @@ SCIP_Bool isQuadConsViolated(
       SCIP_EXPR* expr;
       SCIP_Real quadlincoef;
       SCIP_Real sqrcoef;
+      SCIP_Real solval;
 
       SCIPexprGetQuadraticQuadTerm(qexpr, i, &expr, &quadlincoef, &sqrcoef, NULL, NULL, NULL);
 
+      solval = SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr));
+
       /* add square term */
-      val += sqrcoef * SQR(SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr)));
+      val += sqrcoef * SQR(solval);
 
       /* add linear term */
-      val += quadlincoef * SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr));
+      val += quadlincoef * solval;
    }
 
    /* go through bilinear terms */
