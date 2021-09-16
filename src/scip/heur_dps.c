@@ -69,6 +69,7 @@ struct SCIP_HeurData
    int                   maxit;              /**< maximal number of iterations */
    SCIP_Real             penalty;            /**< multiplier for absolute increase of penalty parameters */
    SCIP_Bool             reoptimize;         /**< should the problem get reoptimized with the original objective function? */
+   SCIP_Bool             reuse;              /**< should solutions get reused in subproblems? */
 };
 
 /** data related to one block */
@@ -1227,6 +1228,127 @@ SCIP_RETCODE updateLambda(
 }
 
 
+/** computes feasible solution from last stored solution for each block and adds it to the solution storage */
+static
+SCIP_RETCODE reuseSolution(
+   LINKING**             linkings,           /**< array of linking data structures */
+   BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   int                   nblocks             /**< number of blocks */
+   )
+{
+   SCIP_SOL** sols;
+   SCIP_SOL* sol; /* solution of block that will be repaired */
+   SCIP_SOL* newsol;
+   SCIP_VAR** blockvars;
+   SCIP_Real* blockvals;
+   int nsols;
+   int nvars;
+   int b;
+   int c;
+   int i;
+   SCIP_Bool success;
+
+   assert(linkings != NULL);
+   assert(blockproblem != NULL);
+
+   for( b = 0; b < nblocks; b++ )
+   {
+      SCIP* subscip;
+
+      subscip = blockproblem[b]->blockscip;
+      nsols = SCIPgetNSols(subscip);
+
+      /* no solution in solution candidate storage found */
+      if( nsols == 0 )
+         return SCIP_OKAY;
+
+      /* take last solution */
+      sols = SCIPgetSols(subscip);
+      sol = sols[nsols - 1];
+
+      /* copy the solution */
+      nvars = SCIPgetNVars(subscip);
+      blockvars = SCIPgetVars(subscip);
+      SCIP_CALL( SCIPallocBufferArray(subscip, &blockvals, nvars) );
+      SCIP_CALL( SCIPgetSolVals(subscip, sol, nvars, blockvars, blockvals) );
+      SCIP_CALL( SCIPcreateOrigSol(subscip, &newsol, NULL) );
+      SCIP_CALL( SCIPsetSolVals(subscip, newsol, nvars, blockvars, blockvals) );
+
+      /* correct each coupling constraint:
+      * lhs <= orig_var - z_r + z_l <= rhs
+      * adapt slack variables so that constraint is feasible
+      */
+      for( c = 0; c < blockproblem[b]->nlinking; c++ )
+      {
+         LINKING* linking; /* linking data structure of this constraint */
+         SCIP_VAR* rvar; /* slackvariable z_r */
+         SCIP_VAR* lvar; /* slackvariable z_l */
+         SCIP_Real rval; /* value of slackvariable z_r */
+         SCIP_Real lval; /* value of slackvariable z_l */
+         SCIP_Real activitycons; /* activity of constraint*/
+         SCIP_Real activity; /* activity of constraint without slack variables */
+         SCIP_Real rhs; /* current right hand side */
+         SCIP_Real lhs; /* current left hand side */
+
+         linking = linkings[blockproblem[b]->linkingindices[c]];
+         rhs = SCIPgetRhsLinear(subscip, blockproblem[b]->linkingconss[c]);
+         lhs = SCIPgetLhsLinear(subscip, blockproblem[b]->linkingconss[c]);
+         assert(SCIPisGE(subscip, rhs, lhs));
+
+         activitycons = SCIPgetActivityLinear(subscip, blockproblem[b]->linkingconss[c], sol);
+
+         /* get slack variables and subtract their value from the activity;
+          * calculate and set values of slack variables
+          */
+         for( i = 0; i < linking->nblocks; i++ )
+         {
+            if( linking->blocknumbers[i] == b )
+            {
+               if( linking->hasrhs && linking->haslhs )
+               {
+                  rvar = linking->slacks[2 * i];
+                  lvar = linking->slacks[2 * i + 1];
+                  rval = SCIPgetSolVal(subscip, sol, rvar);
+                  lval = SCIPgetSolVal(subscip, sol, lvar);
+                  activity = activitycons + rval - lval;
+                  SCIP_CALL( SCIPsetSolVal(subscip, newsol, rvar, MAX(0.0, activity - rhs)) );
+                  SCIP_CALL( SCIPsetSolVal(subscip, newsol, lvar, MAX(0.0, lhs - activity)) );
+               }
+               else if( linking->hasrhs )
+               {
+                  rvar = linking->slacks[i];
+                  rval = SCIPgetSolVal(subscip, sol, rvar);
+                  activity = activitycons + rval;
+                  SCIP_CALL( SCIPsetSolVal(subscip, newsol, rvar, MAX(0.0, activity - rhs)) );
+               }
+               else /* linking->haslhs */
+               {
+                  assert(linking->haslhs);
+                  lvar = linking->slacks[i];
+                  lval = SCIPgetSolVal(subscip, sol, lvar);
+                  activity = activitycons - lval;
+                  SCIP_CALL( SCIPsetSolVal(subscip, newsol, lvar, MAX(0.0, lhs - activity)) );
+               }
+               break;
+            }
+         }
+      }
+
+      SCIPdebugMsg(subscip, "Try adding solution with objective value %.2f\n", SCIPgetSolOrigObj(subscip, newsol));
+      SCIP_CALL( SCIPaddSolFree(subscip, &newsol, &success) );
+
+      if( !success )
+         SCIPdebugMsg(subscip, "Correcting solution failed\n"); /* maybe not better than old solutions */
+      else
+         SCIPdebugMsg(subscip, "Correcting solution successful\n");
+
+      SCIPfreeBufferArray(subscip, &blockvals);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** reoptimizes the heuristic solution with original objective function */
 static
 SCIP_RETCODE reoptimize(
@@ -1775,6 +1897,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       /* current partition is not feasible:
        * - update partition
        * - update penalty parameters lambda
+       * - reuse last solution
        */
       else
       {
@@ -1800,6 +1923,12 @@ SCIP_DECL_HEUREXEC(heurExecDps)
 
          SCIPdebugMsg(scip, "update lambda\n");
          SCIP_CALL( updateLambda(scip, heurdata, linkings, blockproblem, nviolatedblocksrhs, nviolatedblockslhs, heurdata->nlinking) );
+
+         if( heurdata->reuse )
+         {
+            /* reuse old solution in each block if available */
+            SCIP_CALL( reuseSolution(linkings, blockproblem, nblocks) );
+         }
 
          SCIPfreeBufferArray(scip, &nviolatedblockslhs);
          SCIPfreeBufferArray(scip, &nviolatedblocksrhs);
@@ -1921,6 +2050,9 @@ SCIP_RETCODE SCIPincludeHeurDps(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/reoptimize",
    "should the problem get reoptimized with the original objective function?", &heurdata->reoptimize, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/reuse",
+   "should solutions get reused in subproblems?", &heurdata->reuse, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
