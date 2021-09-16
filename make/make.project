@@ -214,13 +214,13 @@ ARFLAGS		=	cr
 DFLAGS		=	-MMD
 
 GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
-			-Wno-unknown-pragmas -Wno-unused-parameter \
+			-Wno-unknown-pragmas -Wno-unused-parameter -Wno-override-init \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wsign-compare -Wstrict-prototypes \
 			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
 # GCCWARN is not only used for GCC!
 ifeq ($(COMP),clang)
-GCCWARN += -Wno-unknown-warning-option
+GCCWARN += -Wno-unknown-warning-option -Wno-initializer-overrides
 endif
 ifeq ($(COMP),gnu)
 GCCWARN += -Wno-maybe-uninitialized
@@ -590,11 +590,11 @@ ifeq ($(IPOPT),true)
 LINKER		=	CPP
 # we require here Ipopt >= 3.10.0
 # check whether we can find Ipopt via pkg-config
-IPOPTPC := $(shell PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig pkg-config --exists ipopt && echo true)
+IPOPTPC := $(shell PKG_CONFIG_PATH=$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig:$PKG_CONFIG_PATH pkg-config --exists ipopt && echo true)
 ifeq ($(IPOPTPC),true)
   # use pkg-config to figure out compiler and linker flags
-  FLAGS += $(shell PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig pkg-config --cflags ipopt)
-  IPOPTLIBS := $(shell PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig pkg-config --libs ipopt)
+  FLAGS += $(shell PKG_CONFIG_PATH=$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig:$PKG_CONFIG_PATH pkg-config --cflags ipopt)
+  IPOPTLIBS := $(shell PKG_CONFIG_PATH=$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig:$PKG_CONFIG_PATH pkg-config --libs ipopt)
 else
   # fallback:
   # - assume header files in include/coin or include/coin-or

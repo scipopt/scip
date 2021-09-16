@@ -24,7 +24,7 @@
  *    \<variable name\> \<lower bound\> \<upper bound\>
  *
  * where infinite bounds can be written as inf, +inf or -inf.  Note that only a subset of the variables may appear in
- * the file.  Lines with unknown variable names are ignored.  The writing functionality is currently not supported.
+ * the file.  Lines with unknown variable names are ignored.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

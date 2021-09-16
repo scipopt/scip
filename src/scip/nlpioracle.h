@@ -14,11 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpioracle.h
- * @brief  methods to store an NLP and request function, gradient, and hessian values
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods to store an NLP and request function, gradient, and Hessian values
  * @author Stefan Vigerske
  *
- * Not a full NLPI, but implements a common part of many NLPIs that takes care
- * of the problem storage and function, gradient, and hessian evaluation.
+ * A common part of many NLPIs that takes care of the problem storage and function, gradient, and Hessian evaluation.
  */
 
 #ifndef __SCIP_NLPIORACLE_H__
@@ -26,6 +26,13 @@
 
 #include "scip/type_message.h"
 #include "scip/type_exprinterpret.h"
+
+/**@defgroup NLPIOracle NLPI Oracle
+ * @ingroup DataStructures
+ * @brief NLP representation used by various NLP solver interface implementations
+ *
+ *@{
+ */
 
 
 #ifdef __cplusplus
@@ -207,29 +214,27 @@ char** SCIPnlpiOracleGetVarNames(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
-/** Gives indicator whether variable appears in NLP and whether that is only linear or nonlinear.
- *
- * Degree is 0 if variable does not appear in objective or any constraint.
- * Degree is 1 if variable appears only linearly.
- * Degree is INT_MAX if variable appears nonlinear.
- */ 
+/** indicates whether variable appears nonlinear in any objective or constraint */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleGetVarDegree(
+SCIP_Bool SCIPnlpiOracleIsVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   varidx,             /**< the variable for which the degree is returned */
-   int*                  vardegree           /**< buffer to store variable degree */
+   int                   varidx              /**< the variable to check */
    );
 
-/** Gives indicator which variables appears in NLP and whether that is only linear or nonlinear.
- *
- * See @ref SCIPnlpiOracleGetVarDegree.
- */ 
+/** returns number of linear and nonlinear appearances of variables in objective and constraints */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleGetVarDegrees(
+void SCIPnlpiOracleGetVarCounts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int**                 vardegrees          /**< buffer to return pointer to array of variable degrees */
+   const int**           lincounts,          /**< buffer to return pointer to array of counts of linear appearances */
+   const int**           nlcounts            /**< buffer to return pointer to array of counts of nonlinear appearances */
+   );
+
+/** gives constant term of objective */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiOracleGetObjectiveConstant(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** gives left-hand side of a constraint */
@@ -253,16 +258,14 @@ char* SCIPnlpiOracleGetConstraintName(
    int                   considx             /**< constraint index */
    );
 
-/** gives maximum degree of a constraint or objective
- *  The degree is the maximal degree of all summands and is infinity for nonpolynomial terms.
- */ 
+/** indicates whether constraint is nonlinear */
 SCIP_EXPORT
-int SCIPnlpiOracleGetConstraintDegree(
+SCIP_Bool SCIPnlpiOracleIsConstraintNonlinear(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   considx             /**< index of constraint for which the degree is requested, or -1 for objective */
+   int                   considx             /**< index of constraint for which nonlinearity status is returned, or -1 for objective */
    );
 
-/** Gives the evaluation capabilities that are shared among all expressions in the problem. */
+/** gives the evaluation capabilities that are shared among all expressions in the problem */
 SCIP_EXPORT
 SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -340,12 +343,12 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
                                               *   offsets[nconss] gives length of col, can be NULL */
    );
 
-/** evaluates the Jacobi matrix in a given point
+/** evaluates the Jacobian matrix in a given point
  * 
- *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
- *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function.
+ *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity().
+ *  The user need to call SCIPnlpiOracleGetJacobianSparsity() at least ones before using this function.
  *
- *  @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
+ * @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
@@ -374,8 +377,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
 
 /** evaluates the Hessian matrix of the Lagrangian in a given point
  * 
- *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
- *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
+ *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity().
+ *  The user must call SCIPnlpiOracleGetHessianLagSparsity() at least ones before using this function.
  *  Only elements of the lower left triangle and the diagonal are computed.
  *
  * @return SCIP_INVALIDDATA, if the Hessian could not be evaluated (domain error, etc.)
@@ -385,10 +388,28 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
+   SCIP_Bool             isnewx_obj,         /**< has the point x changed since the last call to an objective evaluation function? */
+   SCIP_Bool             isnewx_cons,        /**< has the point x changed since the last call to the constraint evaluation function? */
    SCIP_Real             objfactor,          /**< weight for objective function */
    const SCIP_Real*      lambdas,            /**< array with weights (Lagrangian multipliers) for the constraints */ 
    SCIP_Real*            hessian             /**< pointer to store sparse hessian values */  
+   );
+
+/** resets clock that measures evaluation time */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpiOracleResetEvalTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   );
+
+/** gives time spend in evaluation since last reset of clock
+ *
+ * Gives 0 if the eval clock is disabled.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPnlpiOracleGetEvalTime(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** prints the problem to a file. */
@@ -400,6 +421,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    );
 
 /** prints the problem to a file in GAMS format
+ *
  * If there are variable (equation, resp.) names with more than 9 characters, then variable (equation, resp.) names are prefixed with an unique identifier.
  * This is to make it easier to identify variables solution output in the listing file.
  * Names with more than 64 characters are shorten to 64 letters due to GAMS limits.
@@ -411,6 +433,8 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_Real*            initval,            /**< starting point values for variables or NULL */
    FILE*                 file                /**< file to print to, or NULL for standard output */
    );
+
+/** @} */
 
 #ifdef __cplusplus
 }

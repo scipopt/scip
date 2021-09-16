@@ -921,7 +921,7 @@ SCIP_RETCODE createSubSCIP(
          currentconshdlr == conshdlrknapsack ||
          currentconshdlr == conshdlrlogicor ||
          currentconshdlr == conshdlrsetppc ||
-         currentconshdlr == conshdlrlin)
+         currentconshdlr == conshdlrlin )
       {
          continue;
       }
@@ -2182,16 +2182,14 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       /* don't need startpoint array anymore */
       SCIPfreeBufferArray( scip, &startpoint );
 
-      SCIP_CALL( SCIPsetNLPIntPar(heurdata->subscip, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
-
-      SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
+      SCIP_CALL( SCIPsolveNLP(heurdata->subscip, .verblevel = (unsigned short)heurdata->nlpverblevel) );  /*lint !e666*/
       assert(SCIPisNLPConstructed(heurdata->subscip));
 
       /* in this case there was an error in ipopt, we try to give another startpoint */
       if( SCIPgetNLPSolstat(heurdata->subscip) > SCIP_NLPSOLSTAT_FEASIBLE )
       {
          SCIP_CALL( SCIPsetNLPInitialGuess(heurdata->subscip, NULL) );
-         SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
+         SCIP_CALL( SCIPsolveNLP(heurdata->subscip, .verblevel = (unsigned short)heurdata->nlpverblevel) );  /*lint !e666*/
          assert(SCIPisNLPConstructed(heurdata->subscip));
       }
 

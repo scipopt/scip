@@ -153,32 +153,21 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
 #ifdef SCIP_DEBUG
    SCIP_NLPTERMSTAT nlptermstat;
 #endif
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(subproblem);  /*lint !e446*/
 #ifdef SCIP_MOREDEBUG
    SCIP_SOL* nlpsol;
 #endif
-   SCIP_Real feastol;
-   SCIP_Real objtol;
 
    assert(subproblem != NULL);
    assert(SCIPinProbing(subproblem));
 
    (*success) = FALSE;
 
-#ifdef SCIP_MOREDEBUG
-   SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_VERBLEVEL, 1) );
-#endif
+   /* reduce the default feasibility and optimality tolerance by given factor (typically 0.01) */
+   nlpparam.feastol *= multiplier;
+   nlpparam.relobjtol *= multiplier;
 
-   SCIP_CALL( SCIPsetNLPIntPar(subproblem, SCIP_NLPPAR_ITLIM, INT_MAX) );
-
-   /* getting the feasibility tolerance currently used for the NLP */
-   SCIP_CALL( SCIPgetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, &feastol) );
-   SCIP_CALL( SCIPgetNLPRealPar(subproblem, SCIP_NLPPAR_RELOBJTOL, &objtol) );
-
-   /* setting the feasibility tolerance to 0.01x the current tolerance */
-   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, feastol*multiplier) );
-   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_RELOBJTOL, objtol*multiplier) );
-
-   SCIP_CALL( SCIPsolveNLP(subproblem) );
+   SCIP_CALL( SCIPsolveNLPParam(subproblem, nlpparam) );
 
    nlpsolstat = SCIPgetNLPSolstat(subproblem);
 #ifdef SCIP_DEBUG
@@ -197,9 +186,6 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
 
       (*success) = TRUE;
    }
-
-   /* resetting the feasibility tolerance to 0.01x the current tolerance */
-   SCIP_CALL( SCIPsetNLPRealPar(subproblem, SCIP_NLPPAR_FEASTOL, feastol) );
 
    return SCIP_OKAY;
 }
@@ -511,40 +497,9 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
             -dualsol, primalvals, var2idx, &dirderiv, vars, vals, nvars, varssize) );
    }
 
-   /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
+   /* looping over sub- and fixed variables to compute checkobj */
    for( i = 0; i < nsubvars; i++ )
-   {
-      SCIP_VAR* var;
-      SCIP_VAR* mastervar;
-      SCIP_Real coef;
-
-      var = subvars[i];
-
-      (*checkobj) += SCIPvarGetObj(var) * getNlpVarSol(var, primalvals, var2idx);
-
-      /* retrieving the master problem variable for the given subproblem variable. */
-      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var, &mastervar) );
-
-      if( var2idx != NULL && varubdualvals != NULL && varlbdualvals != NULL )
-      {
-         assert(SCIPhashmapExists(var2idx, (void*)var) );
-         idx = SCIPhashmapGetImageInt(var2idx, (void*)var);
-         dualsol = varubdualvals[idx] - varlbdualvals[idx];
-      }
-      else
-         dualsol = SCIPgetNLPVarsUbDualsol(subproblem)[i] - SCIPgetNLPVarsLbDualsol(subproblem)[i];
-
-      /* checking whether the subproblem variable has a corresponding master variable. */
-      if( mastervar == NULL || dualsol == 0.0 )
-         continue;
-
-      coef = -dualsol;
-
-      /* adding the variable to the storage */
-      SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
-
-      dirderiv += coef * getNlpVarSol(var, primalvals, var2idx);
-   }
+      (*checkobj) += SCIPvarGetObj(subvars[i]) * getNlpVarSol(subvars[i], primalvals, var2idx);
 
    for( i = 0; i < nfixedvars; i++ )
       *checkobj += SCIPvarGetUnchangedObj(fixedvars[i]) * getNlpVarSol(fixedvars[i], primalvals, var2idx);
@@ -900,6 +855,12 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
          verifyobj += SCIPgetLhsLinear(masterprob, cons) - SCIPgetActivityLinear(masterprob, cons, sol);
       }
 
+      if( feasibilitycut && verifyobj < SCIPfeastol(masterprob) )
+      {
+         success = FALSE;
+         SCIPdebugMsg(masterprob, "The violation of the feasibility cut (%g) is too small. Skipping feasibility cut.\n", verifyobj);
+      }
+
       /* it is possible that numerics will cause the generated cut to be invalid. This cut should not be added to the
        * master problem, since its addition could cut off feasible solutions. The success flag is set of false, indicating
        * that the Benders' cut could not find a valid cut.
@@ -990,7 +951,7 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
       else
       {
          (*result) = SCIP_DIDNOTFIND;
-         SCIPdebugMsg(masterprob, "Error in generating Benders' optimality cut for problem %d.\n", probnumber);
+         SCIPdebugMsg(masterprob, "Error in generating Benders' %s cut for problem %d.\n", feasibilitycut ? "feasibility" : "optimality", probnumber);
       }
 
       /* releasing the row or constraint */

@@ -55,7 +55,7 @@ void teardown(void)
 static
 SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
 {
-   SCIP_NLPSTATISTICS* statistics;
+   SCIP_NLPSTATISTICS statistics;
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_Real* dualcons;
    SCIP_Real* duallb;
@@ -158,17 +158,14 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    SCIP_CALL( SCIPsetNlpiInitialGuess(scip, nlpi, nlpiprob, start, NULL, NULL, NULL) );
 
    /* solve NLP */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9) );
    cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
    /* collect statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &statistics) );
-   SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, statistics) );
-   cr_expect(SCIPnlpStatisticsGetNIterations(statistics) > 0);
-   cr_expect(SCIPnlpStatisticsGetTotalTime(statistics) >= 0.0);
-   SCIPnlpStatisticsFree(SCIPblkmem(scip), &statistics);
+   SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, &statistics) );
+   cr_expect(statistics.niterations > 0);
+   cr_expect(statistics.totaltime >= 0.0);
 
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
 
@@ -205,17 +202,14 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    SCIP_CALL( SCIPsetNlpiInitialGuess(scip, nlpi, nlpiprob, initguess, NULL, NULL, NULL) );
 
    /* solve NLP */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9) );
    cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
    /* collect statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &statistics) );
-   SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, statistics) );
-   cr_expect(SCIPnlpStatisticsGetNIterations(statistics) > 0);
-   cr_expect(SCIPnlpStatisticsGetTotalTime(statistics) >= 0.0);
-   SCIPnlpStatisticsFree(SCIPblkmem(scip), &statistics);
+   SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, &statistics) );
+   cr_expect(statistics.niterations > 0);
+   cr_expect(statistics.totaltime >= 0.0);
 
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
 
@@ -270,8 +264,8 @@ SCIP_RETCODE solveQP(
    SCIP_NLPTERMSTAT* nlptermstat
    )
 {
-   SCIP_NLPSTATISTICS* statistics;
    SCIP_NLPIPROBLEM* nlpiprob;
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_EXPR** varexprs;
    SCIP_EXPR* sumexpr;
@@ -343,25 +337,19 @@ SCIP_RETCODE solveQP(
    SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
 
    /* set parameters */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_TILIM, timelim) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_ITLIM, iterlim) );
-
+   nlpparam.timelimit = timelim;
+   nlpparam.iterlimit = iterlim;
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
+   nlpparam.verblevel = 1;
 #endif
 
    /* solve NLP */
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
+   SCIP_CALL( SCIPsolveNlpiParam(scip, nlpi, nlpiprob, nlpparam) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
 
    *solval = primal[n];
    *nlpsolstat = SCIPgetNlpiSolstat(scip, nlpi, nlpiprob);
    *nlptermstat = SCIPgetNlpiTermstat(scip, nlpi, nlpiprob);
-
-   /* collect statistics */
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &statistics) );
-   SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, statistics) );
-   SCIPnlpStatisticsFree(SCIPblkmem(scip), &statistics);
 
    /* free memory */
    SCIP_CALL( SCIPfreeNlpiProblem(scip, nlpi, &nlpiprob) );
@@ -460,22 +448,22 @@ Test(nlpi, workinglimits, .init = setup, .fini = teardown,
    {
       /* set a small iteration limit */
       SCIP_CALL( solveQP(worhpip, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 5, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_ITLIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
       SCIP_CALL( solveQP(worhpip, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_TILIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 
    if( worhpsqp != NULL )
    {
       /* set a small iteration limit */
       SCIP_CALL( solveQP(worhpsqp, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 5, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_ITLIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
       SCIP_CALL( solveQP(worhpsqp, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_TILIM);
+      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 }
 
@@ -496,7 +484,6 @@ SCIP_RETCODE resolveAfterFixingVars(
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
 
    SCIP_CALL( SCIPcreateNlpiProblem(scip, nlpi, &nlpiprob, "LP") );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-6) );
 
    /* add variables */
    SCIP_CALL( SCIPaddNlpiVars(scip, nlpi, nlpiprob, 2, lbs, ubs, varnames) );

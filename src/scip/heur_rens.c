@@ -173,30 +173,24 @@ SCIP_RETCODE computeFixingrate(
    if( (*startsol) == 'n' )
    {
       SCIP_NLPSOLSTAT stat;
-      SCIPdebug( int nlpverblevel; )
 
       /* only call this function if NLP relaxation is available */
       assert(SCIPisNLPConstructed(scip));
-
-      /* activate NLP solver output if we are in SCIP's debug mode */
-      SCIPdebug( SCIP_CALL( SCIPgetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, &nlpverblevel) ) );
-      SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, MAX(1,nlpverblevel)) ) );
 
       SCIPdebugMsg(scip, "try to solve NLP relaxation to obtain fixing values\n");
 
       /* set starting point to LP solution */
       SCIP_CALL( SCIPsetNLPInitialGuessSol(scip, NULL) );
 
-      /* solve NLP relaxation */
-      SCIP_CALL( SCIPsolveNLP(scip) );
+      /* solve NLP relaxation
+       * TODO pick some less arbitrary iterlimit
+       */
+      SCIP_CALL( SCIPsolveNLP(scip, .iterlimit = 3000) );  /*lint !e666*/
 
       /* get solution status of NLP solver */
       stat = SCIPgetNLPSolstat(scip);
       *success = (stat == SCIP_NLPSOLSTAT_GLOBOPT) || (stat == SCIP_NLPSOLSTAT_LOCOPT) || stat == (SCIP_NLPSOLSTAT_FEASIBLE);
       SCIPdebugMsg(scip, "solving NLP relaxation was %s successful (stat=%d)\n", *success ? "" : "not", stat);
-
-      /* reset NLP verblevel to the value it had before */
-      SCIPdebug( SCIP_CALL( SCIPsetNLPIntPar(scip, SCIP_NLPPAR_VERBLEVEL, nlpverblevel) ) );
 
       /* it the NLP was not successfully solved we stop the heuristic right away */
       if( !(*success) )

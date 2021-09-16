@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_expr.h
+ * @ingroup PUBLICCOREAPI
  * @brief  public functions to work with algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
@@ -32,7 +33,14 @@ extern "C" {
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
 
-/**@name Expression Handler Methods */
+/**@defgroup PublicExprMethods Expressions
+ * @ingroup DataStructures
+ * @brief an algebraic expression used for nonlinear constraints and NLPs
+ *
+ *@{
+ */
+
+/**@name Expression Handler */
 /**@{ */
 
 /** set the expression handler callbacks to copy and free an expression handler */
@@ -100,7 +108,7 @@ void SCIPexprhdlrSetCompare(
    SCIP_DECL_EXPRCOMPARE((*compare))         /**< compare callback (can be NULL) */
 );
 
-/** set derivative evaluation callbacks of an expression handler */
+/** set differentiation callbacks of an expression handler */
 SCIP_EXPORT
 void SCIPexprhdlrSetDiff(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -130,7 +138,7 @@ void SCIPexprhdlrSetReverseProp(
    SCIP_DECL_EXPRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
-/** set the and estimation callbacks of an expression handler */
+/** set the estimation callbacks of an expression handler */
 SCIP_EXPORT
 void SCIPexprhdlrSetEstimate(
    SCIP_EXPRHDLR*        exprhdlr,                /**< expression handler */
@@ -226,10 +234,18 @@ SCIP_Bool SCIPexprhdlrHasReverseProp(
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPexprhdlrComp);
 
-/**@name Statistics */
+/** @} */ /* expression handler methods */
+
+/**@name Expression Handler Statistics */
 /**@{ */
 
-/** gets number of times, the interval evaluation callback was called */
+/** gets number of times an expression has been created with given expression handler */
+SCIP_EXPORT
+unsigned int SCIPexprhdlrGetNCreated(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** gets number of times the interval evaluation callback was called */
 SCIP_EXPORT
 SCIP_Longint SCIPexprhdlrGetNIntevalCalls(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
@@ -241,7 +257,7 @@ SCIP_Real SCIPexprhdlrGetIntevalTime(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
-/** gets number of times, the reverse propagation callback was called */
+/** gets number of times the reverse propagation callback was called */
 SCIP_EXPORT
 SCIP_Longint SCIPexprhdlrGetNReversepropCalls(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
@@ -253,13 +269,13 @@ SCIP_Real SCIPexprhdlrGetReversepropTime(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
-/** gets number of times, an empty interval was found in reverse propagation */
+/** gets number of times an empty interval was found in reverse propagation */
 SCIP_EXPORT
 SCIP_Longint SCIPexprhdlrGetNCutoffs(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
-/** gets number of times, a bound reduction was found in reverse propagation (and accepted by caller) */
+/** gets number of times a bound reduction was found in reverse propagation (and accepted by caller) */
 SCIP_EXPORT
 SCIP_Longint SCIPexprhdlrGetNDomainReductions(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
@@ -272,7 +288,7 @@ void SCIPexprhdlrIncrementNDomainReductions(
    int                   nreductions         /**< number of reductions to add to counter */
    );
 
-/** gets number of times, the estimation callback was called */
+/** gets number of times the estimation callback was called */
 SCIP_EXPORT
 SCIP_Longint SCIPexprhdlrGetNEstimateCalls(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
@@ -284,9 +300,9 @@ SCIP_Real SCIPexprhdlrGetEstimateTime(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
-/** gets number of times, branching candidates reported by of this expression handler were used to assemble branching candidates
+/** gets number of times branching candidates reported by of this expression handler were used to assemble branching candidates
  *
- * that is, how often did we consider branching on a children of this expression
+ * that is, how often did we consider branching on a child of this expression
  */
 SCIP_EXPORT
 SCIP_Longint SCIPexprhdlrGetNBranchings(
@@ -299,7 +315,7 @@ void SCIPexprhdlrIncrementNBranchings(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
-/** gets number of times, the simplify callback was called */
+/** gets number of times the simplify callback was called */
 SCIP_EXPORT
 SCIP_Longint SCIPexprhdlrGetNSimplifyCalls(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
@@ -319,10 +335,8 @@ SCIP_Longint SCIPexprhdlrGetNSimplifications(
 
 /** @} */
 
-/** @} */ /* expression handler methods */
 
-
-/**@name Expression Methods */
+/**@name Expressions */
 /**@{ */
 
 /** gets the number of times the expression is currently captured */
@@ -376,28 +390,28 @@ SCIP_EXPR_OWNERDATA* SCIPexprGetOwnerData(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
+/** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error)
+ *
+ * @see SCIPevalExpr
+ */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetEvalValue(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/* TODO make private or remove */
-/** sets the evaluation value */
-SCIP_EXPORT
-void SCIPexprSetEvalValue(
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Real             value,              /**< value to set */
-   SCIP_Longint          tag                 /**< tag of solution that was evaluated, or 0 */
-   );
-
-/** gives the evaluation tag from the last evaluation, or 0 */
+/** gives the evaluation tag from the last evaluation, or 0
+ *
+ * @see SCIPevalExpr
+ */
 SCIP_EXPORT
 SCIP_Longint SCIPexprGetEvalTag(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
+/** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @see SCIPevalExprGradient
+ */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetDerivative(
    SCIP_EXPR*     expr              /**< expression */
@@ -405,6 +419,8 @@ SCIP_Real SCIPexprGetDerivative(
 
 /** gives the value of directional derivative from the last evaluation of a directional derivative of expression
  * (or SCIP_INVALID if there was an error)
+ *
+ * @see SCIPevalExprHessianDir
  */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetDot(
@@ -413,6 +429,8 @@ SCIP_Real SCIPexprGetDot(
 
 /** gives the value of directional derivative from the last evaluation of a directional derivative of derivative
  * of root (or SCIP_INVALID if there was an error)
+ *
+ * @see SCIPevalExprHessianDir
  */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetBardot(
@@ -422,6 +440,8 @@ SCIP_Real SCIPexprGetBardot(
 /** returns the difftag stored in an expression
  *
  * can be used to check whether partial derivative value is valid
+ *
+ * @see SCIPevalExprGradient
  */
 SCIP_EXPORT
 SCIP_Longint SCIPexprGetDiffTag(
@@ -430,7 +450,7 @@ SCIP_Longint SCIPexprGetDiffTag(
 
 /** returns the activity that is currently stored for an expression
  *
- * See also SCIPevalActivity().
+ * @see SCIPevalExprActivity
  */
 SCIP_EXPORT
 SCIP_INTERVAL SCIPexprGetActivity(
@@ -440,7 +460,9 @@ SCIP_INTERVAL SCIPexprGetActivity(
 /** returns the tag associated with the activity of the expression
  *
  * It can depend on the owner of the expression how to interpret this tag.
- * SCIPevalExprActivity() compares with stat->domchgcount.
+ * SCIPevalExprActivity() compares with `stat->domchgcount`.
+ *
+ * @see SCIPevalExprActivity
  */
 SCIP_EXPORT
 SCIP_Longint SCIPexprGetActivityTag(
@@ -457,7 +479,7 @@ void SCIPexprSetActivity(
 
 /** returns the curvature of an expression
  *
- *  @note Call SCIPcomputeExprCurvature before calling this function.
+ *  @note Call SCIPcomputeExprCurvature() before calling this function.
  */
 SCIP_EXPORT
 SCIP_EXPRCURV SCIPexprGetCurvature(
@@ -486,7 +508,7 @@ void SCIPexprSetIntegrality(
 
 /** @} */
 
-/**@name Quadratic expression functions */
+/**@name Quadratic Expressions */
 /**@{ */
 
 /** gives the coefficients and expressions that define a quadratic expression
@@ -498,12 +520,11 @@ void SCIPexprSetIntegrality(
  * Use SCIPexprGetQuadraticQuadTerm() and SCIPexprGetQuadraticBilinTerm()
  * to access the data for a quadratic or bilinear term.
  *
- * It can also return the eigenvalues and the eigenvectors of the matrix Q when the quadratic is written
- * as x^T Q x + b^T x + c^T y + d, where c^T y defines the purely linear part.
+ * It can also return the eigenvalues and the eigenvectors of the matrix \f$Q\f$ when the quadratic is written
+ * as \f$x^T Q x + b^T x + c^T y + d\f$, where \f$c^T y\f$ defines the purely linear part.
  * Note, however, that to have access to them one needs to call SCIPcomputeExprQuadraticCurvature()
- * with storeeigeninfo equals to TRUE. If the eigen infortmation was not stored or it failed to be computed,
- * eigenvalues and eigenvectors will be set to NULL.
- *
+ * with `storeeigeninfo=TRUE`. If the eigen information was not stored or it failed to be computed,
+ * `eigenvalues` and `eigenvectors` will be set to NULL.
  *
  * This function returns pointers to internal data in linexprs and lincoefs.
  * The user must not change this data.
@@ -523,8 +544,8 @@ void SCIPexprGetQuadraticData(
 
 /** gives the data of a quadratic expression term
  *
- * For a term a*expr^2 + b*expr + sum_i (c_i * expr * otherexpr_i), returns
- * expr, a, b, the number of summands, and indices of bilinear terms in the quadratic expressions bilinexprterms.
+ * For a term \f$a \cdot \text{expr}^2 + b \cdot \text{expr} + \sum_i (c_i \cdot \text{expr} \cdot \text{otherexpr}_i)\f$, returns
+ * `expr`, \f$a\f$, \f$b\f$, the number of summands, and indices of bilinear terms in the quadratic expressions `bilinexprterms`.
  *
  * This function returns pointers to internal data in adjbilin.
  * The user must not change this data.
@@ -543,8 +564,8 @@ void SCIPexprGetQuadraticQuadTerm(
 
 /** gives the data of a bilinear expression term
  *
- * For a term a*expr1*expr2, returns
- * expr1, expr2, a, and the position of the quadratic expression term that uses expr2 in the quadratic expressions quadexprterms.
+ * For a term a*expr1*expr2, returns expr1, expr2, a, and
+ * the position of the quadratic expression term that uses expr2 in the quadratic expressions `quadexprterms`.
  */
 SCIP_EXPORT
 void SCIPexprGetQuadraticBilinTerm(
@@ -557,9 +578,9 @@ void SCIPexprGetQuadraticBilinTerm(
    SCIP_EXPR**           prodexpr            /**< buffer to store pointer to expression that is product if first and second factor, or NULL */
    );
 
-/** returns whether all expressions that are used in a quadratic expression are variable expression
+/** returns whether all expressions that are used in a quadratic expression are variable expressions
  *
- * @return TRUE iff all linexprs and quadexprterms[.].expr are variable expressions
+ * @return TRUE iff all `linexprs` and `quadexprterms[.].expr` are variable expressions
  */
 SCIP_EXPORT
 SCIP_Bool SCIPexprAreQuadraticExprsVariables(
@@ -568,43 +589,43 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 
 /** @} */
 
-/**@name Expression Getter Methods of core plugins */
+/**@name Core Expression Handlers */
 /**@{ */
 /* these are here to have them accessible also in the expr core
  * so these cannot make use of SCIP pointer
  */
 
-/** gives the variable for a var-expression */
+/** gets the variable of a variable expression */
 SCIP_EXPORT
 SCIP_VAR* SCIPgetVarExprVar(
    SCIP_EXPR*            expr                /**< var expression */
    );
 
-/** gives the value for a value-expression */
+/** gets the value of a constant value expression */
 SCIP_EXPORT
 SCIP_Real SCIPgetValueExprValue(
    SCIP_EXPR*            expr                /**< value expression */
    );
 
-/** gives the coefficients of a sum-expression */
+/** gets the coefficients of a summation expression */
 SCIP_EXPORT
 SCIP_Real* SCIPgetCoefsExprSum(
    SCIP_EXPR*            expr                /**< sum expression */
    );
 
-/** gives the constant of a sum-expression */
+/** gets the constant of a summation expression */
 SCIP_EXPORT
 SCIP_Real SCIPgetConstantExprSum(
    SCIP_EXPR*            expr                /**< sum expression */
    );
 
-/** gives the constant coefficient of a product-expression */
+/** gets the constant coefficient of a product expression */
 SCIP_EXPORT
 SCIP_Real SCIPgetCoefExprProduct(
    SCIP_EXPR*            expr                /**< product expression */
    );
 
-/** gives the exponent of a power- or signed-power-expression */
+/** gets the exponent of a power or signed power expression */
 SCIP_EXPORT
 SCIP_Real SCIPgetExponentExprPow(
    SCIP_EXPR*            expr                /**< (signed) power expression */
@@ -613,26 +634,12 @@ SCIP_Real SCIPgetExponentExprPow(
 /**@} */
 
 
-/**@name Expression Iterator Methods */
-/**@{ */
-
-/** returns whether expression iterator is current initialized */
-SCIP_EXPORT
-SCIP_Bool SCIPexpriterIsInit(
-   SCIP_EXPRITER*        iterator            /**< expression iterator */
-   );
-
-/** initializes an expression iterator
+/**@name Expression Iterator
  *
- * @note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
- *
- * @note If expr is NULL, then iterator will be ended (SCIPexpriterIsEnd() is TRUE). Useful if following with SCIPexpriterRestartDFS().
- *
- * If type is DFS, then stopstages will be set to ENTEREXPR. Use SCIPexpriterSetStagesDFS to change this.
- *
+ * @anchor SCIP_EXPRITER_DFS
  * More details on the DFS mode:
  * Many algorithms over expression trees need to traverse the tree in depth-first manner and a
- * natural way of implementing this algorithms is using recursion.
+ * natural way of implementing these algorithms is by using recursion.
  * In general, a function which traverses the tree in depth-first looks like
  * <pre>
  * fun( expr )
@@ -661,57 +668,73 @@ SCIP_Bool SCIPexpriterIsInit(
  * </pre>
  * (where [x] and [y] are actually the same expression).
  *
- * If given a pointer to the [+] expression is given as root to this expression, it will iterate
+ * If a pointer to the [+] expression is given as root to this expression, it will iterate
  * the graph in a depth-first manner and stop at various stages.
- * - When entering an expression, it stops in the enterexpr stage.
+ * - When entering an expression, it stops in the \ref SCIP_EXPRITER_ENTEREXPR stage.
  *   The SCIPexpriterGetParentDFS() function indicates from where the expression has been entered (NULL for the root expression).
- * - Before visiting a child of an expression, it stops in the visitingchild stage.
+ * - Before visiting a child of an expression, it stops in the \ref SCIP_EXPRITER_VISITINGCHILD stage.
  *   The SCIPexpriterGetChildIdxDFS() function returns which child will be visited (as an index in the current expr's children array).
  *   Use SCIPexpriterGetChildExprDFS() to obtain the corresponding expression.
- * - When returning from visiting a child of an expression, it stops in the visitedchild stage.
+ * - When returning from visiting a child of an expression, it stops in the \ref SCIP_EXPRITER_VISITEDCHILD stage.
  *   Again the SCIPexpriterGetChildExprDFS() function returns which child has been visited.
- * - When leaving an expression, it stops in the leaveexpr stage.
+ * - When leaving an expression, it stops in the \ref SCIP_EXPRITER_LEAVEEXPR stage.
  *
  * Thus, for the above expression, the expression are visited in the following order and stages:
- * - enterexpr([+])
- * - visitingchild([+])  currentchild == 0
- * - enterexpr([*])
- * - visitingchild([*])  currentchild == 0
- * - enterexpr([x])
- * - leaveexpr([x])
- * - visitedchild([*])   currentchild == 0
- * - visitingchild([*])  currentchild == 1
- * - enterexpr([y])
- * - leaveexpr([y])
- * - visitedchild([*])   currentchild == 1
- * - leaveexpr([*])
- * - visitedchild([+])   currentchild == 0
- * - visitingchild([+])  currentchild == 1
- * - enterexpr([z])
- * - leaveexpr([z])
- * - visitedchild([+])   currentchild == 1
- * - visitingchild([+])  currentchild == 2
- * - enterexpr([log])
- * - visitingchild([log]) currentchild == 0
- * - enterexpr([-])
- * - visitingchild([-])  currentchild == 0
- * - enterexpr([x])
- * - leaveexpr([x])
- * - visitedchild([-])   currentchild == 0
- * - visitingchild([-])  currentchild == 1
- * - enterexpr([y])
- * - leaveexpr([y])
- * - visitedchild([-])   currentchild == 1
- * - leaveexpr([-])
- * - visitedchild([log]) currentchild == 0
- * - leaveexpr([log])
- * - visitedchild([+])   currentchild == 2
- * - leaveexpr([+])
+ * - `enterexpr([+])`
+ * - `visitingchild([+])`, currentchild = 0
+ * - `enterexpr([*])`
+ * - `visitingchild([*])`, currentchild = 0
+ * - `enterexpr([x])`
+ * - `leaveexpr([x])`
+ * - `visitedchild([*])`, currentchild = 0
+ * - `visitingchild([*])`, currentchild = 1
+ * - `enterexpr([y])`
+ * - `leaveexpr([y])`
+ * - `visitedchild([*])`, currentchild = 1
+ * - `leaveexpr([*])`
+ * - `visitedchild([+])`, currentchild = 0
+ * - `visitingchild([+])`, currentchild = 1
+ * - `enterexpr([z])`
+ * - `leaveexpr([z])`
+ * - `visitedchild([+])`, currentchild = 1
+ * - `visitingchild([+])`, currentchild = 2
+ * - `enterexpr([log])`
+ * - `visitingchild([log])`, currentchild = 0
+ * - `enterexpr([-])`
+ * - `visitingchild([-])`,  currentchild = 0
+ * - `enterexpr([x])`
+ * - `leaveexpr([x])`
+ * - `visitedchild([-])`, currentchild = 0
+ * - `visitingchild([-])`, currentchild = 1
+ * - `enterexpr([y])`
+ * - `leaveexpr([y])`
+ * - `visitedchild([-])`, currentchild = 1
+ * - `leaveexpr([-])`
+ * - `visitedchild([log])`, currentchild = 0
+ * - `leaveexpr([log])`
+ * - `visitedchild([+])` currentchild = 2
+ * - `leaveexpr([+])`
  *
  * The caller can direct the iterator to skip parts of the tree:
- * If calling SCIPexpriterSkipDFS() in enterexpr stage, all children of that expression will be skipped. The leaveexpr stage will still be next.
- * If calling SCIPexpriterSkipDFS() in visitingchild stage, visiting the current child will be skipped.
- * If calling SCIPexpriterSkipDFS() in visitedchild child, visiting the remaining children will be skipped.
+ * - If calling SCIPexpriterSkipDFS() in SCIP_EXPRITER_ENTEREXPR stage, all children of that expression will be skipped. The SCIP_EXPRITER_LEAVEEXPR stage will still be next.
+ * - If calling SCIPexpriterSkipDFS() in SCIP_EXPRITER_VISITINGCHILD stage, visiting the current child will be skipped.
+ * - If calling SCIPexpriterSkipDFS() in SCIP_EXPRITER_VISITEDCHILD child, visiting the remaining children will be skipped.
+ *
+ * @{
+ */
+
+/** returns whether expression iterator is currently initialized */
+SCIP_EXPORT
+SCIP_Bool SCIPexpriterIsInit(
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
+   );
+
+/** initializes an expression iterator
+ *
+ * @note If `expr` is NULL, then iterator will be set into ended-state (SCIPexpriterIsEnd() is TRUE). Useful if following with SCIPexpriterRestartDFS().
+ *
+ * If type is DFS, then `stopstages` will be set to \ref SCIP_EXPRITER_ENTEREXPR.
+ * Use `SCIPexpriterSetStagesDFS` to change this.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexpriterInit(
@@ -724,14 +747,14 @@ SCIP_RETCODE SCIPexpriterInit(
 /** restarts an already initialized expression iterator in DFS mode
  *
  * The expression iterator will continue from the given expression, not revisiting expressions that
- * this iterator has already been visited (if initialized with allowrevisit==FALSE) and giving access
+ * this iterator has already been visited (if initialized with `allowrevisit=FALSE`) and giving access
  * to the same iterator specified expression data that may have been set already.
  * Also the stop-stages are not reset.
  *
  * If revisiting is forbidden and given expr has already been visited, then the iterator will behave
- * as on the end of iteration (IsEnd() is TRUE).
+ * as on the end of iteration (SCIPexpriterIsEnd() is TRUE).
  * If the enterexpr stage is not one of the stop stages, then the iterator will be moved forward
- * (GetNext() is called).
+ * (SCIPexpriterGetNext() is called).
  *
  * @return The current expression.
  */
@@ -743,9 +766,9 @@ SCIP_EXPR* SCIPexpriterRestartDFS(
 
 /** specifies in which stages to stop a DFS iterator
  *
- * @param stopstages should be a bitwise OR of different SCIP_EXPRITER_STAGE values
+ * Parameter `stopstages` should be a bitwise OR of different \ref SCIP_EXPRITER_STAGE values
  *
- * If the current stage is not one of the stopstages, then the iterator will be moved on.
+ * If the current stage is not one of the `stopstages`, then the iterator will be moved on.
  */
 SCIP_EXPORT
 void SCIPexpriterSetStagesDFS(
@@ -761,20 +784,20 @@ SCIP_EXPR* SCIPexpriterGetCurrent(
 
 /** gets the current stage that the expression iterator is in when using DFS
  *
- * If the iterator has finished (IsEnd() is TRUE), then the stage is undefined.
+ * If the iterator has finished (SCIPexpriterIsEnd() is TRUE), then the stage is undefined.
  */
 SCIP_EXPORT
 SCIP_EXPRITER_STAGE SCIPexpriterGetStageDFS(
    SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
-/** gets the child index that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
+/** gets the index of the child that the expression iterator considers when in DFS mode and stage \ref SCIP_EXPRITER_VISITINGCHILD or \ref SCIP_EXPRITER_VISITEDCHILD */
 SCIP_EXPORT
 int SCIPexpriterGetChildIdxDFS(
    SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
-/** gets the child expression that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
+/** gets the child expression that the expression iterator considers when in DFS mode and stage \ref SCIP_EXPRITER_VISITINGCHILD or \ref SCIP_EXPRITER_VISITEDCHILD */
 SCIP_EXPORT
 SCIP_EXPR* SCIPexpriterGetChildExprDFS(
    SCIP_EXPRITER*        iterator            /**< expression iterator */
@@ -800,7 +823,7 @@ SCIP_EXPRITER_USERDATA SCIPexpriterGetCurrentUserData(
 
 /** gives the iterator specific user data of the current expressions current child
  *
- * @note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
+ * @note The expression iterator mode must be in DFS mode and stage \ref SCIP_EXPRITER_VISITINGCHILD or \ref SCIP_EXPRITER_VISITEDCHILD
  */
 SCIP_EXPORT
 SCIP_EXPRITER_USERDATA SCIPexpriterGetChildUserDataDFS(
@@ -838,10 +861,9 @@ void SCIPexpriterSetExprUserData(
    SCIP_EXPRITER_USERDATA userdata           /**< data to be stored in current child */
    );
 
-
 /** sets the iterator specific user data of the current expressions current child
  *
- * @note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
+ * @note The expression iterator mode must be in DFS mode and stage \ref SCIP_EXPRITER_VISITINGCHILD or \ref SCIP_EXPRITER_VISITEDCHILD
  */
 SCIP_EXPORT
 void SCIPexpriterSetChildUserData(
@@ -860,11 +882,11 @@ SCIP_EXPR* SCIPexpriterGetNext(
 
 /** moves a DFS iterator to one of the next expressions
  *
- * If in ENTEREXPR stage, then all children of that expression will be skipped.
- *   If LEAVEEXPR is one of the stopstages, then it will be the next stage. Otherwise, the iterator will move further on (go the parent, etc).
- * If in VISITINGCHILD stage, then the child that was going to be visited next will be skipped and the iterator will be moved on to the next child (if any).
- * If in VISITEDCHILD stage, then all remaining children will be skipped and we move on to the LEAVEEXPR stage (if a stop stage, otherwise further on).
- * It is not allowed to call this function when in LEAVEEXPR stage.
+ * - If in \ref SCIP_EXPRITER_ENTEREXPR stage, then all children of that expression will be skipped.
+ *   If \ref SCIP_EXPRITER_LEAVEEXPR is one of the `stopstages`, then it will be the next stage. Otherwise, the iterator will move further on (go to the parent, etc).
+ * - If in \ref SCIP_EXPRITER_VISITINGCHILD stage, then the child that was going to be visited next will be skipped and the iterator will be moved on to the next child (if any).
+ * - If in \ref SCIP_EXPRITER_VISITEDCHILD stage, then all remaining children will be skipped and we move on to the \ref SCIP_EXPRITER_LEAVEEXPR stage (if a stop stage, otherwise further on).
+ * - It is not allowed to call this function when in \ref SCIP_EXPRITER_LEAVEEXPR stage.
  *
  * @return the next expression, if any, and NULL otherwise
  */
@@ -881,7 +903,7 @@ SCIP_Bool SCIPexpriterIsEnd(
 
 /** @} */
 
-/**@name Expression Curvature methods */
+/**@name Function Curvature */
 /**@{ */
 
 /** gives curvature for a sum of two functions with given curvature */
@@ -917,6 +939,7 @@ SCIP_EXPRCURV SCIPexprcurvPower(
    );
 
 /** gives required curvature for base so that base^exponent has given curvature under given bounds on base and constant exponent
+ *
  * returns curvature unknown if expected curvature cannot be obtained
  */
 SCIP_EXPORT
@@ -926,7 +949,13 @@ SCIP_EXPRCURV SCIPexprcurvPowerInv(
    SCIP_EXPRCURV         powercurv           /**< expected curvature for power */
    );
 
-/** gives curvature for a monomial with given curvatures and bounds for each factor */
+/** gives curvature for a monomial with given curvatures and bounds for each factor
+ *
+ *  See Maranas and Floudas, Finding All Solutions of Nonlinearly Constrained Systems of Equations, JOGO 7, 1995
+ *  for the categorization in the case that all factors are linear.
+ *
+ *  Exponents can also be negative or rational.
+ */
 SCIP_EXPORT
 SCIP_EXPRCURV SCIPexprcurvMonomial(
    int                   nfactors,           /**< number of factors in monomial */
@@ -938,7 +967,7 @@ SCIP_EXPRCURV SCIPexprcurvMonomial(
 
 /** for a monomial with given bounds for each factor, gives condition on the curvature of each factor, so that monomial has a requested curvature, if possible
  *
- * @return whether monomialcurv can be achieved
+ * @return whether `monomialcurv` can be achieved
  */
 SCIP_EXPORT
 SCIP_Bool SCIPexprcurvMonomialInv(
@@ -954,6 +983,8 @@ SCIP_EXPORT
 const char* SCIPexprcurvGetName(
    SCIP_EXPRCURV         curv                /**< curvature */
    );
+
+/**@} */
 
 /**@} */
 

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_perspective.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  perspective nonlinear handler
  * @author Ksenia Bestuzheva
  */

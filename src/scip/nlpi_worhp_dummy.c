@@ -14,9 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_worhp_dummy.c
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   dummy WORHP NLP interface
  * @author  Benjamin Mueller
+ *
+ * This file contains dummy implementations of the interface methods for the Worhp interface.
+ * It is used when SCIP is build without Worhp.
  */
 
 #include "scip/nlpi_worhp.h"

@@ -36,11 +36,11 @@ extern "C" {
  *
  * @{
  *
- * @name Exponential value expression.
+ * @name Exponential value expression
  *
  * This expression handler provides the exponential function, that is,
  * \f[
- *   x \mapsto \exp(x)
+ *   x \mapsto \exp(x).
  * \f]
  *
  * @{
@@ -72,7 +72,7 @@ SCIP_Bool SCIPisExprExp(
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrExp(
+SCIP_RETCODE SCIPincludeExprhdlrExp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_all.c
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   NLP interface that uses all available NLP interfaces
  * @author  Benjamin Mueller
  */
@@ -24,17 +24,13 @@
 #include "scip/nlpi_all.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
-#include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
-#ifdef SCIP_STATISTIC
-#include "scip/struct_nlpi.h"
-#endif
 
 #include <string.h>
 
-#define NLPI_NAME              "all"                       /* short concise name of solver */
-#define NLPI_DESC              "NLP interface that uses all available NLP interfaces" /* description of solver */
-#define NLPI_PRIORITY          -3000                       /* priority of NLP solver */
+#define NLPI_NAME              "all"                       /**< short concise name of solver */
+#define NLPI_DESC              "NLP interface that uses all available NLP interfaces" /**< description of solver */
+#define NLPI_PRIORITY          -3000                       /**< priority of NLP solver */
 
 /*
  * Data structures
@@ -90,15 +86,6 @@ SCIP_DECL_NLPIFREE(nlpiFreeAll)
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** gets pointer for NLP solver */
-static
-SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerAll)
-{
-   assert(nlpi != NULL);
-
-   return NULL;  /*lint !e527*/
-}  /*lint !e715*/
-
 /** creates a problem instance */
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemAll)
@@ -151,16 +138,6 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemAll)
    SCIPfreeBlockMemory(scip, problem);
 
    return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets pointer to solver-internal problem instance */
-static
-SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerAll)
-{
-   assert(nlpi    != NULL);
-   assert(problem != NULL);
-
-   return NULL;
 }  /*lint !e715*/
 
 /** add variables */
@@ -467,7 +444,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveAll)
       assert(problem->nlpiproblems[i] != NULL);
 
       /* solve NLP */
-      SCIP_CALL( SCIPsolveNlpi(scip, nlpidata->nlpis[i], problem->nlpiproblems[i]) );
+      SCIP_CALL( SCIPsolveNlpiParam(scip, nlpidata->nlpis[i], problem->nlpiproblems[i], param) );
 
       termstat = SCIPgetNlpiTermstat(scip, nlpidata->nlpis[i], problem->nlpiproblems[i]);
       solstat = SCIPgetNlpiSolstat(scip, nlpidata->nlpis[i], problem->nlpiproblems[i]);
@@ -511,9 +488,13 @@ SCIP_DECL_NLPISOLVE(nlpiSolveAll)
 
          SCIPstatisticMessage("%d solver %s termstat %d solstat %d solval %e iters %d time %g\n",
             _nnlps, SCIPnlpiGetName(nlpidata->nlpis[i]), termstat, solstat, solval,
-            SCIPnlpStatisticsGetNIterations(&stats), SCIPnlpStatisticsGetTotalTime(&stats));
+            stats.niterations, stats.totaltime);
       }
 #endif
+
+      /* don't try more NLP solvers if allowed time is exceeded or SCIP is asked to interrupt */
+      if( termstat == SCIP_NLPTERMSTAT_TIMELIMIT || termstat == SCIP_NLPTERMSTAT_INTERRUPT )
+         break;
    }
 
 #ifdef SCIP_STATISTIC
@@ -597,152 +578,13 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsAll)
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gives required size of a buffer to store a warmstart object */
-static
-SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeAll)
-{
-   SCIPerrorMessage("method of NLP solver is not implemented\n");
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** stores warmstart information in buffer */
-static
-SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoAll)
-{
-   SCIPerrorMessage("method of NLP solver is not implemented\n");
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** sets warmstart information in solver */
-static
-SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoAll)
-{
-   SCIPerrorMessage("method of NLP solver is not implemented\n");
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets integer parameter of NLP */
-static
-SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParAll)
-{
-   SCIP_NLPIDATA* nlpidata;
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
-   assert(nlpidata->nlpis != NULL);
-   assert(nlpidata->nlpis[0] != NULL);
-
-   /* take the first nlpi */
-   SCIP_CALL( SCIPgetNlpiIntPar(scip, nlpidata->nlpis[0], problem->nlpiproblems[0], type, ival) );
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** sets integer parameter of NLP */
-static
-SCIP_DECL_NLPISETINTPAR(nlpiSetIntParAll)
-{
-   SCIP_NLPIDATA* nlpidata;
-   int i;
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
-
-   for( i = 0; i < nlpidata->nnlpis; ++i )
-   {
-      assert(nlpidata->nlpis[i] != NULL);
-      assert(problem->nlpiproblems[i] != NULL);
-
-      SCIP_CALL( SCIPsetNlpiIntPar(scip, nlpidata->nlpis[i], problem->nlpiproblems[i], type, ival) );
-   }
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets floating point parameter of NLP */
-static
-SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParAll)
-{
-   SCIP_NLPIDATA* nlpidata;
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
-   assert(nlpidata->nlpis != NULL);
-   assert(nlpidata->nlpis[0] != NULL);
-
-   /* take the first nlpi */
-   SCIP_CALL( SCIPgetNlpiRealPar(scip, nlpidata->nlpis[0], problem->nlpiproblems[0], type, dval) );
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** sets floating point parameter of NLP */
-static
-SCIP_DECL_NLPISETREALPAR(nlpiSetRealParAll)
-{
-   SCIP_NLPIDATA* nlpidata;
-   int i;
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
-
-   for( i = 0; i < nlpidata->nnlpis; ++i )
-   {
-      assert(nlpidata->nlpis[i] != NULL);
-      assert(problem->nlpiproblems != NULL);
-      assert(problem->nlpiproblems[i] != NULL);
-
-      SCIP_CALL( SCIPsetNlpiRealPar(scip, nlpidata->nlpis[i], problem->nlpiproblems[i], type, dval) );
-   }
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets string parameter of NLP */
-static
-SCIP_DECL_NLPIGETSTRINGPAR(nlpiGetStringParAll)
-{
-   SCIP_NLPIDATA* nlpidata;
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
-   assert(nlpidata->nlpis != NULL);
-   assert(nlpidata->nlpis[0] != NULL);
-
-   /* take the first nlpi */
-   SCIP_CALL( SCIPgetNlpiStringPar(scip, nlpidata->nlpis[0], problem->nlpiproblems[0], type, sval) );
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** sets string parameter of NLP */
-static
-SCIP_DECL_NLPISETSTRINGPAR(nlpiSetStringParAll)
-{
-   SCIP_NLPIDATA* nlpidata;
-   int i;
-
-   nlpidata = SCIPnlpiGetData(nlpi);
-   assert(nlpidata != NULL);
-
-   for( i = 0; i < nlpidata->nnlpis; ++i )
-   {
-      assert(nlpidata->nlpis[i] != NULL);
-      assert(problem->nlpiproblems[i] != NULL);
-
-      SCIP_CALL( SCIPsetNlpiStringPar(scip, nlpidata->nlpis[i], problem->nlpiproblems[i], type, sval) );
-   }
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
 /*
  * NLP solver interface specific interface methods
  */
 
-/** create solver interface for All solver and includes it into SCIP, if at least 2 NLPIs have already been included
+/** create solver interface for the solver "All" and includes it into SCIP, if at least 2 NLPIs have already been included
  *
- * this should be called after all other NLP solver interfaces have been included
+ * This method should be called after all other NLP solver interfaces have been included.
  */
 SCIP_RETCODE SCIPincludeNlpSolverAll(
    SCIP*                 scip                /**< SCIP data structure */
@@ -770,15 +612,13 @@ SCIP_RETCODE SCIPincludeNlpSolverAll(
    /* create solver interface */
    SCIP_CALL( SCIPincludeNlpi(scip,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
-         nlpiCopyAll, nlpiFreeAll, nlpiGetSolverPointerAll,
-         nlpiCreateProblemAll, nlpiFreeProblemAll, nlpiGetProblemPointerAll,
+         nlpiCopyAll, nlpiFreeAll, NULL,
+         nlpiCreateProblemAll, nlpiFreeProblemAll, NULL,
          nlpiAddVarsAll, nlpiAddConstraintsAll, nlpiSetObjectiveAll,
          nlpiChgVarBoundsAll, nlpiChgConsSidesAll, nlpiDelVarSetAll, nlpiDelConstraintSetAll,
          nlpiChgLinearCoefsAll, nlpiChgExprAll,
          nlpiChgObjConstantAll, nlpiSetInitialGuessAll, nlpiSolveAll, nlpiGetSolstatAll, nlpiGetTermstatAll,
          nlpiGetSolutionAll, nlpiGetStatisticsAll,
-         nlpiGetWarmstartSizeAll, nlpiGetWarmstartMemoAll, nlpiSetWarmstartMemoAll,
-         nlpiGetIntParAll, nlpiSetIntParAll, nlpiGetRealParAll, nlpiSetRealParAll, nlpiGetStringParAll, nlpiSetStringParAll,
          nlpidata) );
 
    return SCIP_OKAY;

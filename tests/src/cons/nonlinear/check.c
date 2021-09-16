@@ -220,7 +220,7 @@ Test(conshdlr, relviol_n,
 }
 
 Test(conshdlr, relviol_a,
-   .description = "test relative constraint violation of the cons_expr constraint handler for violscale=a."
+   .description = "test relative constraint violation of the nonlinear constraint handler for violscale=a."
    )
 {
    SCIP_CONS* cons;
@@ -290,7 +290,7 @@ Test(conshdlr, relviol_a,
 }
 
 Test(conshdlr, relviol_g,
-   .description = "test relative constraint violation of the cons_expr constraint handler for violscale=g."
+   .description = "test relative constraint violation of the nonlinear constraint handler for violscale=g."
    )
 {
    SCIP_CONS* cons;
@@ -363,7 +363,7 @@ Test(conshdlr, relviol_g,
 }
 
 Test(conshdlr, relviol_g2,
-   .description = "test relative constraint violation of the cons_expr constraint handler for violscale=g."
+   .description = "test relative constraint violation of the nonlinear constraint handler for violscale=g."
    )
 {
    SCIP_CONS* cons;

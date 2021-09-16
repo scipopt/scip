@@ -36,7 +36,7 @@ Test(separation, entropy, .init = setup, .fini = teardown,
    SCIP_INTERVAL globalbounds;
    SCIP_Real refpoint;
 
-   SCIP_CALL( SCIPincludeExprHdlrEntropy(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrEntropy(scip) );
 
    SCIP_CALL( SCIPcreateExprEntropy(scip, &expr, zexpr, NULL, NULL) );
 

@@ -105,7 +105,7 @@ typedef struct SCIP_ConsNonlinear_BilinTerm SCIP_CONSNONLINEAR_BILINTERM; /**< b
 
 /** upgrading method for nonlinear constraints into more specific constraints
  *
- * the method might upgrade an nonlinear constraint into a set of upgrade constraints
+ * the method might upgrade a nonlinear constraint into a set of upgrade constraints
  * the caller provided an array upgdconss to store upgrade constraints
  * the length of upgdconss is given by upgdconsssize
  * if an upgrade is not possible, set *nupgdconss to zero
@@ -125,6 +125,9 @@ typedef struct SCIP_ConsNonlinear_BilinTerm SCIP_CONSNONLINEAR_BILINTERM; /**< b
 #define SCIP_DECL_NONLINCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, int nvarexprs, \
       int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize)
 
+/** @} */
+/** @} */
+
 /** creates the handler for nonlinear constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
@@ -133,6 +136,15 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Nonlinear Constraints
+ *
+ * @{
+ */
 
 /**@name Nonlinear Constraint Handler Methods */
 /**@{ */
@@ -537,7 +549,7 @@ SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** returns representation of the expression of the given expression constraint as quadratic form, if possible
+/** checks whether expression of constraint can be represented as quadratic form
  *
  * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
  * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and

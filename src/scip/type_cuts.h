@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   type_cuts.h
- * @ingroup PUBLICCOREAPI
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for cuts
  * @author Leona Gottwald
  *

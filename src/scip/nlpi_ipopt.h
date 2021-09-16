@@ -31,16 +31,19 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLPIS
+/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available
  *
- * @{
+ * @ingroup NLPIIncludes
  */
-
-/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlpSolverIpopt(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
 
 /** gets string that identifies Ipopt (version number) */
 SCIP_EXPORT
@@ -54,34 +57,18 @@ const char* SCIPgetSolverDescIpopt(void);
 SCIP_EXPORT
 SCIP_Bool SCIPisIpoptAvailableIpopt(void);
 
-/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
-SCIP_EXPORT
-void* SCIPgetIpoptApplicationPointerIpopt(
-   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
-   );
-
 /** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */
 SCIP_EXPORT
 void* SCIPgetNlpiOracleIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    );
 
-/** sets modified default settings that are used when setting up an Ipopt problem
- *
- * Do not forget to add a newline after the last option in optionsstring.
- */
-SCIP_EXPORT
-void SCIPsetModifiedDefaultSettingsIpopt(
-   SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
-   const char*           optionsstring,      /**< string with options as in Ipopt options file */
-   SCIP_Bool             append              /**< whether to append to modified default settings or to overwrite */
-   );
-
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
- * It's here, because Ipopt is linked against Lapack.
+ *
+ * It's here, because we use Ipopt's C interface to Lapack.
  */
 SCIP_EXPORT
-SCIP_RETCODE LapackDsyev(
+SCIP_RETCODE SCIPcallLapackDsyevIpopt(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
    int                   N,                  /**< dimension */
    SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
@@ -90,12 +77,13 @@ SCIP_RETCODE LapackDsyev(
 
 /** solves a linear problem of the form Ax = b for a regular matrix A
  *
- *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
+ *  Calls Lapacks DGETRF routine to calculate a LU factorization and uses this factorization to solve
  *  the linear problem Ax = b.
- *  It's here, because Ipopt is linked against Lapack.
+ *
+ * It's here, because we use Ipopt's C interface to Lapack.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPsolveLinearProb(
+SCIP_RETCODE SCIPsolveLinearEquationsIpopt(
    int                   N,                  /**< dimension */
    SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */

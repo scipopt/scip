@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_filtersqp.c
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   filterSQP NLP interface
  * @author  Stefan Vigerske
  *
@@ -45,24 +45,21 @@
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
-#include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_randnumgen.h"
+#include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
 
-#define NLPI_NAME              "filtersqp"                 /* short concise name of solver */
-#define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /* description of solver */
-#define NLPI_PRIORITY          -1000                       /* priority of NLP solver */
+#define NLPI_NAME              "filtersqp"                 /**< short concise name of solver */
+#define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /**< description of solver */
+#define NLPI_PRIORITY          -1000                       /**< priority of NLP solver */
 
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
 #define MAXNRUNS               3             /**< maximal number of FilterSQP calls per NLP solve (several calls if increasing workspace or decreasing eps) */
-#define WORKSPACEGROWTHFACTOR  2             /**< factor by which to increase worksapce */
+#define WORKSPACEGROWTHFACTOR  2             /**< factor by which to increase workspace */
 #define MINEPS                 1e-14         /**< minimal FilterSQP epsilon */
 #define OPTTOLFACTOR           0.5           /**< factor to apply to optimality tolerance, because FilterSQP do scaling */
-#define DEFAULT_LOBJLIM        (real)(-1e100) /**< default lower objective limit (should mean "unlimited") */
-#define DEFAULT_FEASOPTTOL     1e-6          /**< default feasibility and optimality tolerance */
-#define DEFAULT_MAXITER        3000          /**< default iteration limit */
 
 /*
  * Data structures
@@ -106,15 +103,10 @@ struct SCIP_NlpiProblem
    SCIP_Real                   solvetime;    /**< time spend for last NLP solve */
    int                         niterations;  /**< number of iterations for last NLP solve */
 
-   SCIP_Bool                   fromscratch;  /**< value of fromscratch parameter */
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
    real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
-   real                        feastol;      /**< user-given feasibility tolerance */
-   real                        opttol;       /**< user-given optimality tolerance */
    real                        fmin;         /**< lower bound on objective value */
    SCIP_Real                   maxtime;      /**< time limit */
-   fint                        maxiter;      /**< iteration limit */
-   fint                        iprint;       /**< print verbosity level */
 
    /* cached FilterSQP data */
    real*                       x;            /**< variable values, size varssize */
@@ -315,7 +307,7 @@ SCIP_Bool timelimitreached(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLPI problem */
    )
 {
-   if( nlpiproblem->maxtime == DBL_MAX )  /*lint !e777 */
+   if( nlpiproblem->maxtime == SCIP_REAL_MAX )  /*lint !e777 */
       return FALSE;
 
    return timeelapsed(nlpidata) >= nlpiproblem->maxtime;
@@ -337,9 +329,9 @@ void F77_FUNC(objfun,OBJFUN)(
    problem = (SCIP_NLPIPROBLEM*)(void*)iuser;
    assert(problem != NULL);
 
-   if( timelimitreached((SCIP_NLPIDATA*)(void*)user, problem) )
+   if( SCIPisSolveInterrupted(problem->scip) || timelimitreached((SCIP_NLPIDATA*)(void*)user, problem) )
    {
-      SCIPdebugMsg(problem->scip, "timelimit reached, issuing arithmetic exception in objfun\n");
+      SCIPdebugMsg(problem->scip, "interrupted or timelimit reached, issuing arithmetic exception in objfun\n");
       *errflag = 1;
       return;
    }
@@ -458,6 +450,7 @@ void F77_FUNC(objgrad,OBJGRAD)(void)
 /** Hessian of the Lagrangian evaluation
  *
  * phase = 1 : Hessian of the Lagrangian without objective Hessian
+ *
  * phase = 2 : Hessian of the Lagrangian (including objective Hessian)
  *
  * \note If an arithmetic exception occurred, then the Hessian must not be modified.
@@ -497,7 +490,7 @@ F77_FUNC(hessian,HESSIAN)(
    for( i = 0; i < *m; ++i )
       lambda[i] = -lam[*n+i];
 
-   if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, x, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, problem->evalbuffer) == SCIP_OKAY )
+   if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, x, TRUE, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, problem->evalbuffer) == SCIP_OKAY )
    {
       *l_hess = nnz;
 
@@ -739,12 +732,37 @@ void invalidateSolution(
    problem->termstat = SCIP_NLPTERMSTAT_OTHER;
 }
 
+/** store NLP solve parameters in nlpiproblem */
+static
+SCIP_RETCODE handleNlpParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIPROBLEM*     nlpiproblem,        /**< NLP */
+   const SCIP_NLPPARAM   param               /**< solve parameters */
+   )
+{
+   assert(scip != NULL);
+   assert(nlpiproblem != NULL);
+
+   if( param.fastfail )
+   {
+      SCIPdebugMsg(scip, "fast fail parameter not supported by FilterSQP interface yet. Ignored.\n");
+   }
+
+   nlpiproblem->fmin = param.lobjlimit;
+
+   nlpiproblem->maxtime = param.timelimit;
+
+   return SCIP_OKAY;
+}
+
 /** processes results from FilterSQP call */
 static
 SCIP_RETCODE processSolveOutcome(
    SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
    SCIP_NLPIPROBLEM*     problem,            /**< NLPI problem */
    fint                  ifail,              /**< fail flag from FilterSQP call */
+   SCIP_Real             feastol,            /**< feasibility tolerance */
+   SCIP_Real             opttol,             /**< optimality tolerance */
    real*                 x,                  /**< primal solution values from FilterSQP call, or NULL if stopped before filtersqp got called */
    real*                 lam                 /**< dual solution values from FilterSQP call, or NULL if stopped before filtersqp got called */
    )
@@ -806,63 +824,65 @@ SCIP_RETCODE processSolveOutcome(
    switch( ifail )
    {
       case 0: /* successful run, solution found */
-         assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
-         problem->solstat = (problem->rstat[0] <= problem->opttol ? SCIP_NLPSOLSTAT_LOCOPT : SCIP_NLPSOLSTAT_FEASIBLE);
+         assert(problem->rstat[4] <= feastol); /* should be feasible */
+         problem->solstat = (problem->rstat[0] <= opttol ? SCIP_NLPSOLSTAT_LOCOPT : SCIP_NLPSOLSTAT_FEASIBLE);
          problem->termstat = SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
          break;
       case 1: /* unbounded, feasible point with f(x) <= fmin */
-         assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
+         assert(problem->rstat[4] <= feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_UNBOUNDED;
-         if( problem->fmin == DEFAULT_LOBJLIM )  /*lint !e777*/
+         if( problem->fmin == SCIP_REAL_MIN )  /*lint !e777*/
             problem->termstat = SCIP_NLPTERMSTAT_OKAY;  /* fmin was not set */
          else
-            problem->termstat = SCIP_NLPTERMSTAT_LOBJLIM;
+            problem->termstat = SCIP_NLPTERMSTAT_LOBJLIMIT;
          break;
       case 2: /* linear constraints are inconsistent */
          problem->solstat = SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          break;
       case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
-         /* problem->solstat = (problem->rstat[0] <= problem->opttol ? SCIP_NLPSOLSTAT_LOCINFEASIBLE : SCIP_NLPSOLSTAT_UNKNOWN); */
+         /* problem->solstat = (problem->rstat[0] <= opttol ? SCIP_NLPSOLSTAT_LOCINFEASIBLE : SCIP_NLPSOLSTAT_UNKNOWN); */
          problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO FilterSQP does not set rstat[0] in this case, assuming local infeasibility is valid */
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
         break;
       case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
-         assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
+         assert(problem->rstat[4] <= feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
-         problem->termstat =  SCIP_NLPTERMSTAT_NUMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_NUMERICERROR;
          problem->warmstart = TRUE;
          break;
       case 5: /* termination with rho < eps (trust region radius below epsilon) */
-         if( problem->rstat[4] <= problem->feastol )
+         if( problem->rstat[4] <= feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_NUMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_NUMERICERROR;
          problem->warmstart = TRUE;
          break;
       case 6: /* termination with iter > max_iter */
-         if( problem->rstat[4] <= problem->feastol )
+         if( problem->rstat[4] <= feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_ITLIM;
+         problem->termstat =  SCIP_NLPTERMSTAT_ITERLIMIT;
          problem->warmstart = TRUE;
          break;
-      case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached */
+      case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached, or interrupted */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
          if( problem->solvetime >= problem->maxtime )
          {
-            problem->termstat =  SCIP_NLPTERMSTAT_TILIM;
+            problem->termstat =  SCIP_NLPTERMSTAT_TIMELIMIT;
             problem->warmstart = TRUE;
          }
+         else if( SCIPisSolveInterrupted(problem->scip) )
+            problem->termstat =  SCIP_NLPTERMSTAT_INTERRUPT;
          else
-            problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
+            problem->termstat =  SCIP_NLPTERMSTAT_EVALERROR;
          break;
       case 8: /* unexpect ifail from QP solver */
-         if( problem->rstat[4] <= problem->feastol )
+         if( problem->rstat[4] <= feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -870,11 +890,11 @@ SCIP_RETCODE processSolveOutcome(
          break;
       case 9: /* not enough REAL workspace */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_MEMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_OUTOFMEMORY;
          break;
       case 10: /* not enough INTEGER workspace */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_MEMERR;
+         problem->termstat =  SCIP_NLPTERMSTAT_OUTOFMEMORY;
          break;
       default:
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -918,13 +938,6 @@ SCIP_DECL_NLPIFREE(nlpiFreeFilterSQP)
    return SCIP_OKAY;
 }
 
-/** gets pointer for NLP solver */
-static
-SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerFilterSQP)
-{
-   return NULL;  /*lint !e527*/
-}  /*lint !e715*/
-
 /** creates a problem instance */
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
@@ -938,12 +951,8 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    SCIP_CALL( SCIPnlpiOracleCreate(scip, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName(scip, (*problem)->oracle, name) );
 
-   (*problem)->feastol = DEFAULT_FEASOPTTOL;
-   (*problem)->opttol = DEFAULT_FEASOPTTOL;
-   (*problem)->fmin = DEFAULT_LOBJLIM;
-   (*problem)->maxtime = DBL_MAX;
-   (*problem)->maxiter = DEFAULT_MAXITER;
-   (*problem)->iprint = 0;
+   (*problem)->fmin = SCIP_REAL_MIN;
+   (*problem)->maxtime = SCIP_REAL_MAX;
 
    invalidateSolution(*problem);
 
@@ -986,13 +995,6 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    assert(*problem == NULL);
 
    return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets pointer to solver-internal problem instance */
-static
-SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerFilterSQP)
-{
-   return NULL;  /*lint !e527*/
 }  /*lint !e715*/
 
 /** add variables */
@@ -1160,7 +1162,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsFilterSQP)
       {
          problem->bl[nvars+oldnconss+i] = lhss[i];
          problem->bu[nvars+oldnconss+i] = rhss[i];
-         problem->cstype[oldnconss+i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, oldnconss+i) <= 1 ? 'L' : 'N';
+         problem->cstype[oldnconss+i] = SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, oldnconss+i) ? 'N' : 'L';
       }
    }
 
@@ -1347,7 +1349,7 @@ SCIP_DECL_NLPICHGEXPR(nlpiChgExprFilterSQP)
 
    /* update constraint linearity in FilterSQP data, as we might have changed from linear to nonlinear now */
    if( problem->cstype != NULL && idxcons >= 0 )
-      problem->cstype[idxcons] = (SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons) <= 1 ? 'L' : 'N');
+      problem->cstype[idxcons] = expr != NULL ? 'N' : 'L';
 
    /* gradients information (la,a) may have changed */
    SCIPfreeBlockMemoryArrayNull(scip, &problem->a, problem->la != NULL ? problem->la[0]-1 : 0);
@@ -1415,6 +1417,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    fint nout;
    fint ifail;
    fint maxiter;
+   fint iprint;
    real rho;
    real f;
    real* user;
@@ -1425,14 +1428,33 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    int nruns;
    int i;
 
+   SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
+
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
+
+   SCIP_CALL( SCIPnlpiOracleResetEvalTime(scip, problem->oracle) );
+
+   if( param.timelimit == 0.0 )
+   {
+      /* there is nothing we can do if we are not given any time */
+      problem->niterations = 0;
+      problem->solvetime = 0.0;
+      problem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
+      problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+
+      return SCIP_OKAY;
+   }
 
    /* start measuring time */
    data->starttime = gettime();
 
-   /* if fromscratch parameter is set, then we will not warmstart */
-   if( problem->fromscratch )
+   SCIP_CALL( handleNlpParam(scip, problem, param) );
+
+   iprint = param.verblevel;
+
+   /* if warmstart parameter is disabled, then we will not warmstart */
+   if( !param.warmstart )
       problem->warmstart = FALSE;
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);
@@ -1508,7 +1530,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       {
          problem->bl[n+i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
          problem->bu[n+i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
-         problem->cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
+         problem->cstype[i] = SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, i) ? 'N' : 'L';
       }
    }
 
@@ -1520,7 +1542,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    if( !success )
    {
       /* FilterSQP would crash if starting point cannot be evaluated, so give up */
-      SCIP_CALL( processSolveOutcome(data, problem, 7, NULL, NULL) );
+      SCIP_CALL( processSolveOutcome(data, problem, 7, param.feastol, param.relobjtol, NULL, NULL) );
       return SCIP_OKAY;
    }
 
@@ -1554,7 +1576,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
    /* initialize global variables from filtersqp */
    /* FilterSQP eps is tolerance for both feasibility and optimality, and also for trust-region radius, etc. */
-   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(problem->feastol, problem->opttol * OPTTOLFACTOR);
+   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(param.feastol, param.relobjtol * OPTTOLFACTOR);
    F77_FUNC(nlp_eps_inf,NLP_EPS_INF).infty = SCIPinfinity(scip);
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
@@ -1562,12 +1584,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
    for( nruns = 1; ; ++nruns )
    {
-      maxiter = problem->maxiter - problem->niterations;
+      maxiter = param.iterlimit - problem->niterations;
 
       F77_FUNC(filtersqp,FILTERSQP)(
          &n, &m, &kmax, &maxa,
          &maxf, &mlp, &problem->mxwk, &problem->mxiwk,
-         &problem->iprint, &nout, &ifail, &rho,
+         &iprint, &nout, &ifail, &rho,
          problem->x, problem->c, &f, &problem->fmin, problem->bl,
          problem->bu, problem->s, problem->a, problem->la, problem->ws,
          problem->lws, problem->lam, problem->cstype, user,
@@ -1580,20 +1602,20 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       /* if ifail >= 8 (probably the workspace was too small), then retry with larger workspace
        * if ifail == 0 (local optimal), but absolute violation of KKT too large, then retry with small eps
        */
-      if( ifail < 8 && (ifail != 0 || problem->rstat[0] <= problem->opttol) )
+      if( ifail < 8 && (ifail != 0 || problem->rstat[0] <= param.relobjtol) )
          break;
 
-      if( problem->iprint > 0 )
+      if( param.verblevel > 0 )
       {
          SCIPinfoMessage(scip, NULL, "FilterSQP terminated with status %d in run %d, absolute KKT violation is %g\n", ifail, nruns, problem->rstat[0]);
       }
 
-      /* if iteration or time limit exceeded, then don't retry */
-      if( problem->niterations >= problem->maxiter || timelimitreached(data, problem) )
+      /* if iteration or time limit exceeded or solve is interrupted, then don't retry */
+      if( problem->niterations >= param.iterlimit || SCIPisSolveInterrupted(scip) || timelimitreached(data, problem) )
       {
-         if( problem->iprint > 0 )
+         if( param.verblevel > 0 )
          {
-            SCIPinfoMessage(scip, NULL, "Time or iteration limit reached, not retrying\n");
+            SCIPinfoMessage(scip, NULL, "Time or iteration limit reached or interrupted, not retrying\n");
          }
          break;
       }
@@ -1601,7 +1623,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       /* if maximal number of runs reached, then stop */
       if( nruns >= MAXNRUNS )
       {
-         if( problem->iprint > 0 )
+         if( param.verblevel > 0 )
          {
             SCIPinfoMessage(scip, NULL, "Run limit reached, not retrying\n");
          }
@@ -1614,19 +1636,19 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
 
          if( F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps <= MINEPS )
          {
-            if( problem->iprint > 0 )
+            if( param.verblevel > 0 )
             {
                SCIPinfoMessage(scip, NULL, "Already reached minimal epsilon, not retrying\n");
             }
             break;
          }
 
-         epsfactor = problem->opttol / problem->rstat[0];
+         epsfactor = param.relobjtol / problem->rstat[0];
          assert(epsfactor < 1.0); /* because of the if's above */
          epsfactor *= OPTTOLFACTOR;
 
          F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MAX(MINEPS, F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps * epsfactor);
-         if( problem->iprint > 0 )
+         if( param.verblevel > 0 )
          {
             SCIPinfoMessage(scip, NULL, "Continue with eps = %g\n", F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps);
          }
@@ -1676,7 +1698,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    (void) pthread_mutex_unlock(&filtersqpmutex);
 #endif
 
-   SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );
+   SCIP_CALL( processSolveOutcome(data, problem, ifail, param.feastol, param.relobjtol, problem->x, problem->lam) );
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1752,533 +1774,13 @@ static
 SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsFilterSQP)
 {
    assert(problem != NULL);
+   assert(statistics != NULL);
 
-   SCIPnlpStatisticsSetNIterations(statistics, problem->niterations);
-   SCIPnlpStatisticsSetTotalTime(statistics, problem->solvetime);
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** gives required size of a buffer to store a warmstart object */
-static
-SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeFilterSQP)
-{
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   statistics->niterations = problem->niterations;
+   statistics->totaltime = problem->solvetime;
+   statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
 
    return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** stores warmstart information in buffer */
-static
-SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoFilterSQP)
-{
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets warmstart information in solver */
-static
-SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoFilterSQP)
-{
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** gets integer parameter of NLP */
-static
-SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParFilterSQP)
-{
-   assert(nlpi != NULL);
-   assert(ival != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      *ival = problem->fromscratch ? 1 : 0;
-      break;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      *ival = problem->iprint;
-      break;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      *ival = problem->maxiter;
-      break;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("optfile parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      *ival = 0;
-      break;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** sets integer parameter of NLP */
-static
-SCIP_DECL_NLPISETINTPAR(nlpiSetIntParFilterSQP)
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      if( ival == 0 || ival == 1 )
-      {
-         problem->fromscratch = (SCIP_Bool)ival;
-      }
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter from scratch out of range {0, 1}\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      if( ival >= 0 )
-      {
-         problem->iprint = ival;
-      }
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter from verbosity level out of range\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      if( ival >= 0 )
-      {
-         problem->maxiter = ival;
-      }
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter iteration limit is negative\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("optfile parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      if( ival == 0 || ival == 1 )
-      {
-         SCIPdebugMsg(scip, "fast fail parameter not supported by FilterSQP interface yet. Ignored.\n");
-      }
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter fastfail out of range {0, 1}\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to FilterSQP interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets floating point parameter of NLP */
-static
-SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParFilterSQP)
-{
-   assert(nlpi != NULL);
-   assert(dval != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      SCIPerrorMessage("from scratch parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      SCIPerrorMessage("verbosity level parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      *dval = problem->feastol;
-      break;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      *dval = problem->opttol;
-      break;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      *dval = problem->fmin;
-      break;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      SCIPerrorMessage("iteration limit parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      *dval = problem->maxtime;
-      break;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("option file parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      SCIPerrorMessage("fastfail parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to FilterSQP interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** sets floating point parameter of NLP */
-static
-SCIP_DECL_NLPISETREALPAR(nlpiSetRealParFilterSQP)
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      SCIPerrorMessage("from scratch parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      SCIPerrorMessage("verbosity level parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      if( dval >= 0 )
-      {
-         problem->feastol = dval;
-      }
-      else
-      {
-         SCIPerrorMessage("Value %g for parameter feasibility tolerance is negative\n", dval);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      if( dval >= 0 )
-      {
-         problem->opttol = dval;
-      }
-      else
-      {
-         SCIPerrorMessage("Value %g for parameter relative objective tolerance is negative\n", dval);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      problem->fmin = dval;
-      break;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      SCIPerrorMessage("iteration limit parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      if( dval >= 0 )
-      {
-         problem->maxtime = dval;
-      }
-      else
-      {
-         SCIPerrorMessage("Value %g for parameter time limit is negative\n", dval);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("option file parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      SCIPerrorMessage("fastfail parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to FilterSQP interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets string parameter of NLP */
-static
-SCIP_DECL_NLPIGETSTRINGPAR(nlpiGetStringParFilterSQP)
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      SCIPerrorMessage("from scratch parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      SCIPerrorMessage("verbosity level parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      SCIPerrorMessage("iteration limit parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      *sval = NULL;
-      return SCIP_OKAY;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      SCIPerrorMessage("fastfail parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to FilterSQP interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-}  /*lint !e715*/
-
-/** sets string parameter of NLP */
-static
-SCIP_DECL_NLPISETSTRINGPAR(nlpiSetStringParFilterSQP)
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      SCIPerrorMessage("from scratch parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      SCIPerrorMessage("verbosity level parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      SCIPerrorMessage("iteration limit parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPwarningMessage(scip, "Parameter optfile not supported by FilterSQP interface. Ignored.\n");
-      return SCIP_OKAY;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      SCIPerrorMessage("fastfail parameter is of type int.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
 }  /*lint !e715*/
 
 /*
@@ -2298,15 +1800,13 @@ SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
    /* create solver interface */
    SCIP_CALL( SCIPincludeNlpi(scip,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
-         nlpiCopyFilterSQP, nlpiFreeFilterSQP, nlpiGetSolverPointerFilterSQP,
-         nlpiCreateProblemFilterSQP, nlpiFreeProblemFilterSQP, nlpiGetProblemPointerFilterSQP,
+         nlpiCopyFilterSQP, nlpiFreeFilterSQP, NULL,
+         nlpiCreateProblemFilterSQP, nlpiFreeProblemFilterSQP, NULL,
          nlpiAddVarsFilterSQP, nlpiAddConstraintsFilterSQP, nlpiSetObjectiveFilterSQP,
          nlpiChgVarBoundsFilterSQP, nlpiChgConsSidesFilterSQP, nlpiDelVarSetFilterSQP, nlpiDelConstraintSetFilterSQP,
          nlpiChgLinearCoefsFilterSQP, nlpiChgExprFilterSQP,
          nlpiChgObjConstantFilterSQP, nlpiSetInitialGuessFilterSQP, nlpiSolveFilterSQP, nlpiGetSolstatFilterSQP, nlpiGetTermstatFilterSQP,
          nlpiGetSolutionFilterSQP, nlpiGetStatisticsFilterSQP,
-         nlpiGetWarmstartSizeFilterSQP, nlpiGetWarmstartMemoFilterSQP, nlpiSetWarmstartMemoFilterSQP,
-         nlpiGetIntParFilterSQP, nlpiSetIntParFilterSQP, nlpiGetRealParFilterSQP, nlpiSetRealParFilterSQP, nlpiGetStringParFilterSQP, nlpiSetStringParFilterSQP,
          nlpidata) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP()) );
@@ -2314,7 +1814,7 @@ SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
    return SCIP_OKAY;
 }
 
-/** gets string that identifies filterSQP (version number) */
+/** gets string that identifies filterSQP */
 const char* SCIPgetSolverNameFilterSQP(
    void
    )

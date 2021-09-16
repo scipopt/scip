@@ -188,8 +188,7 @@
 /* default parameters for orbital fixing */
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
 #define DEFAULT_PERFORMPRESOLVING   FALSE    /**< Run orbital fixing during presolving? */
-#define DEFAULT_RECOMPUTERESTART    FALSE    /**< Recompute symmetries after a restart has occurred? */
-#define DEFAULT_DISABLEOFRESTART    FALSE    /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
+#define DEFAULT_RECOMPUTERESTART        0    /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if OF found reduction) */
 
 /* default parameters for Schreier Sims constraints */
 #define DEFAULT_SSTTIEBREAKRULE   1          /**< index of tie break rule for selecting orbit for Schreier Sims constraints? */
@@ -315,14 +314,13 @@ struct SCIP_PropData
    int*                  permvarsevents;     /**< stores events caught for permvars */
    SCIP_Shortbool*       inactiveperms;      /**< array to store whether permutations are inactive */
    SCIP_Bool             performpresolving;  /**< Run orbital fixing during presolving? */
-   SCIP_Bool             recomputerestart;   /**< Recompute symmetries after a restart has occured? */
+   int                   recomputerestart;   /**< Recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if OF found reduction) */
    int                   ofsymcomptiming;    /**< timing of orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
    int                   nfixedzero;         /**< number of variables fixed to 0 */
    int                   nfixedone;          /**< number of variables fixed to 1 */
    SCIP_Longint          nodenumber;         /**< number of node where propagation has been last applied */
    SCIP_Bool             offoundreduction;   /**< whether orbital fixing has found a reduction since the last time computing symmetries */
-   SCIP_Bool             disableofrestart;   /**< whether OF shall be disabled if OF has found a reduction and a restart occurs */
 
    /* data necessary for Schreier Sims constraints */
    SCIP_Bool             sstenabled;         /**< Use Schreier Sims constraints? */
@@ -2594,7 +2592,6 @@ SCIP_RETCODE determineSymmetry(
    SYM_SPEC              symspecrequirefixed /**< symmetry specification of variables which must be fixed by symmetries */
    )
 { /*lint --e{641}*/
-   SCIP_CONSHDLR* conshdlr;
    SCIP_Bool successful;
    int maxgenerators;
    int nhandleconss;
@@ -2716,21 +2713,16 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
-   /* if a restart occured, either disable orbital fixing... */
-   if ( propdata->offoundreduction && propdata->disableofrestart  && SCIPgetNRuns(scip) > propdata->lastrestart )
-      propdata->ofenabled = FALSE;
-   /* ... or free symmetries after a restart to recompute them later */
-   else if ( (propdata->offoundreduction || propdata->recomputerestart)
-      && propdata->nperms > 0 && SCIPgetNRuns(scip) > propdata->lastrestart )
+   /* if a restart occured, possibly prepare symmetry data to be recomputed */
+   if ( SCIPgetNRuns(scip) > propdata->lastrestart && (propdata->recomputerestart == SCIP_RECOMPUTESYM_ALWAYS ||
+         (propdata->recomputerestart == SCIP_RECOMPUTESYM_OFFOUNDRED && propdata->offoundreduction)) )
    {
-      assert( propdata->npermvars > 0 );
-      assert( propdata->permvars != NULL );
-      assert( ! propdata->ofenabled || propdata->permvarmap != NULL );
-      assert( ! propdata->ofenabled || propdata->bg0list != NULL );
-
       /* reset symmetry information */
       SCIP_CALL( delSymConss(scip, propdata) );
       SCIP_CALL( freeSymmetryData(scip, propdata) );
+
+      propdata->lastrestart = SCIPgetNRuns(scip);
+      propdata->offoundreduction = FALSE;
    }
 
    /* skip computation if symmetry has already been computed */
@@ -2780,10 +2772,6 @@ SCIP_RETCODE determineSymmetry(
    /* determine maximal number of generators depending on the number of variables */
    maxgenerators = propdata->maxgenerators;
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / nvars);
-
-   /* store whether problem is linear */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   propdata->islinearproblem = (conshdlr == NULL) || (SCIPconshdlrGetNConss(conshdlr) == 0);
 
    /* actually compute (global) symmetry */
    SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, propdata->compresssymmetries, propdata->compressthreshold,
@@ -2972,8 +2960,8 @@ SCIP_RETCODE determineSymmetry(
       assert( propdata->nbg1 == 0 );
    }
 
-   /* set up data for Schreier Sims constraints */
-   if ( propdata->sstenabled && ! propdata->ofenabled )
+   /* set up data for Schreier Sims constraints or subgroup detection */
+   if ( (propdata->sstenabled || propdata->detectsubgroups) && ! propdata->ofenabled )
    {
       int v;
 
@@ -4365,7 +4353,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int nusedperms;
       int ntrivialcolors = 0;
       int j;
-      SCIP_Bool useorbitope;
       int* lexorder = NULL;
       int nvarslexorder = 0;
       int maxnvarslexorder = 0;
@@ -4526,6 +4513,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          int k;
          SCIP_Bool isorbitope = TRUE;
          SCIP_Bool orbitopeadded = FALSE;
+         SCIP_Bool useorbitope;
 #ifdef SCIP_DEBUG
          SCIP_Bool binaffected = FALSE;
          SCIP_Bool intaffected = FALSE;
@@ -6938,6 +6926,7 @@ static
 SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   SCIP_CONSHDLR* nlconshdlr;
 
    assert( scip != NULL );
    assert( prop != NULL );
@@ -6965,6 +6954,10 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
       else
          propdata->sstenabled = FALSE;
    }
+
+   /* store whether problem is linear */
+   nlconshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   propdata->islinearproblem = (nlconshdlr == NULL) || (SCIPconshdlrGetNConss(nlconshdlr) == 0);
 
    /* add symmetry handling constraints if required  */
    if ( (propdata->symconsenabled || propdata->sstenabled) && propdata->addconsstiming == 0 )
@@ -7522,10 +7515,10 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "run orbital fixing during presolving?",
          &propdata->performpresolving, TRUE, DEFAULT_PERFORMPRESOLVING, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
+   SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/recomputerestart",
-         "recompute symmetries after a restart has occured?",
-         &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, NULL, NULL) );
+         "recompute symmetries after a restart has occured? (0 = never, 1 = always, 2 = if OF found reduction)",
+         &propdata->recomputerestart, TRUE, DEFAULT_RECOMPUTERESTART, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/compresssymmetries",
@@ -7587,11 +7580,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/sstmixedcomponents",
          "Should Schreier Sims constraints be added if a symmetry component contains variables of different types?",
          &propdata->sstmixedcomponents, TRUE, DEFAULT_SSTMIXEDCOMPONENTS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/disableofrestart",
-         "Shall orbital fixing be disabled if orbital fixing has found a reduction and a restart occurs?",
-         &propdata->disableofrestart, TRUE, DEFAULT_DISABLEOFRESTART, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/symfixnonbinaryvars",

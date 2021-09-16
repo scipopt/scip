@@ -13,17 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   expr_cos.h
+/**@file   expr_trig.h
  * @ingroup EXPRHDLRS
- * @brief  handler for cosine expressions
+ * @brief  handler for sin expressions
  * @author Fabian Wegscheider
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_EXPR_COS_H__
-#define __SCIP_EXPR_COS_H__
-
+#ifndef __SCIP_EXPR_TRIG_H__
+#define __SCIP_EXPR_TRIG_H__
 
 #include "scip/scip.h"
 #include "scip/type_expr.h"
@@ -32,12 +31,21 @@
 extern "C" {
 #endif
 
-/** creates the handler for cos expressions and includes it into the expression constraint handler
+/** creates the handler for sin expressions and includes it into SCIP
  *
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrCos(
+SCIP_RETCODE SCIPincludeExprhdlrSin(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** creates the handler for cos expressions and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeExprhdlrCos(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -45,15 +53,29 @@ SCIP_RETCODE SCIPincludeExprHdlrCos(
  *
  * @{
  *
- * @name Cosine expression.
+ * @name Sine and Cosine expression
  *
- * This expression handler provides the cosine function, that is,
+ * These expression handler provide the sine and cosine functions, that is,
  * \f[
- *   x \mapsto cos(x)
+ *   x \mapsto \sin(x)
+ * \f]
+ * and
+ * \f[
+ *   x \mapsto \cos(x).
  * \f]
  *
  * @{
  */
+
+/** creates a sin expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateExprSin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPR*            child,              /**< single child */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
+   );
 
 /** creates a cos expression */
 SCIP_EXPORT
@@ -73,4 +95,4 @@ SCIP_RETCODE SCIPcreateExprCos(
 }
 #endif
 
-#endif /* __SCIP_EXPR_COS_H__ */
+#endif /* __SCIP_EXPR_TRIG_H__ */

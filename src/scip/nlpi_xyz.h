@@ -13,6 +13,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* This is a TEMPLATE for a NLPI. Use this as starting point to implement your own NLPI.
+ * Copy the file, rename it, and replace all occurences of XYZ by the name of your NLP solver.
+ */
+
 /**@file    nlpi_xyz.h
  * @brief   XYZ NLP interface
  * @ingroup NLPIS
@@ -30,15 +34,18 @@
 extern "C" {
 #endif
 
+/** create solver interface for Xyz solver and includes it into SCIP
+ *
+ * @ingroup NLPIIncludes
+ */
+SCIP_RETCODE SCIPincludeNlpSolverXyz(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@addtogroup NLPIS
  *
  * @{
  */
-
-/** create solver interface for Xyz solver and includes it into SCIP */
-SCIP_RETCODE SCIPincludeNlpSolverXyz(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** @} */
 

@@ -42,7 +42,6 @@
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
-#include "scip/scip_nonlinear.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -143,10 +142,9 @@ SCIP_RETCODE createNLP(
          SCIPgetUpperbound(scip));
    }
 
-   SCIP_CALL( SCIPcreateNlpiProblem(scip, heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPcreateNlpiProb(scip, heurdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-         heurdata->nlpiprob, heurdata->var2idx, NULL, NULL, cutoff, TRUE, FALSE) );
+   SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp", SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+         heurdata->var2idx, NULL, NULL, cutoff, TRUE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -173,7 +171,7 @@ SCIP_RETCODE freeNLP(
    return SCIP_OKAY;
 }
 
-/** add or updates the regularization constraints to the NLP; for a given parameter theta we add for each non-fixed
+/** adds or updates the regularization constraints to the NLP; for a given parameter theta we add for each non-fixed
  *  binary variable z the constraint z*(1-z) <= theta; if these constraint are already present we update the theta on
  *  the right-hand side
  */
@@ -223,7 +221,7 @@ SCIP_RETCODE addRegularScholtes(
          SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
       }
 
-      SCIP_CALL( SCIPaddNlpiProbNlRows(scip, heurdata->nlpi, heurdata->nlpiprob, heurdata->var2idx, nlrows, nbinvars) );
+      SCIP_CALL( SCIPaddNlpiProblemNlRows(scip, heurdata->nlpi, heurdata->nlpiprob, heurdata->var2idx, nlrows, nbinvars) );
 
       for( i = nbinvars-1; i >= 0; --i )
       {
@@ -280,28 +278,6 @@ int getExprSize(
    return 1 + sum;
 }
 
-
-/** returns the available time limit that is left */
-static
-SCIP_RETCODE getTimeLeft(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            timeleft            /**< pointer to store the remaining time limit */
-   )
-{
-   SCIP_Real timelim;
-
-   assert(timeleft != NULL);
-
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
-
-   if( SCIPisInfinity(scip, timelim) )
-      *timeleft = timelim - SCIPgetSolvingTime(scip);
-   else
-      *timeleft = SCIPinfinity(scip);
-
-   return SCIP_OKAY;
-}
-
 /** main execution function of the MPEC heuristic */
 static
 SCIP_RETCODE heurExec(
@@ -311,7 +287,8 @@ SCIP_RETCODE heurExec(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
-   SCIP_NLPSTATISTICS* nlpstatistics = NULL;
+   SCIP_NLPSTATISTICS nlpstatistics;
+   SCIP_NLPPARAM nlpparam = SCIP_NLPPARAM_DEFAULT(scip);  /*lint !e446*/
    SCIP_VAR** binvars = NULL;
    SCIP_Real* initguess = NULL;
    SCIP_Real* ubs = NULL;
@@ -332,7 +309,6 @@ SCIP_RETCODE heurExec(
    assert(result != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &binvars, SCIPgetNBinVars(scip)) );
-   SCIP_CALL( SCIPnlpStatisticsCreate(SCIPblkmem(scip), &nlpstatistics) );
 
    /* collect all non-fixed binary variables */
    for( i = 0; i < SCIPgetNBinVars(scip); ++i )
@@ -376,17 +352,14 @@ SCIP_RETCODE heurExec(
    SCIP_CALL( SCIPsetNlpiInitialGuess(scip, heurdata->nlpi, heurdata->nlpiprob, initguess, NULL, NULL, NULL) );
 
    /* set parameters of NLP solver */
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
-         SCIPfeastol(scip) / 10.0) );
-   SCIP_CALL( SCIPsetNlpiRealPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
-         SCIPdualfeastol(scip) / 10.0) );
-   SCIP_CALL( SCIPsetNlpiIntPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 0) );
+   nlpparam.feastol /= 10.0;
+   nlpparam.relobjtol /= 10.0;
+   nlpparam.iterlimit = heurdata->maxnlpiter;
 
    /* main loop */
    for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL && nlpcostleft > 0.0 && !SCIPisStopped(scip); ++i )
    {
       SCIP_Real* primal = NULL;
-      SCIP_Real timeleft = SCIPinfinity(scip);
       SCIP_Bool binaryfeasible;
       SCIP_Bool regularfeasible;
       SCIP_NLPSOLSTAT solstat;
@@ -397,19 +370,8 @@ SCIP_RETCODE heurExec(
       /* add or update regularization */
       SCIP_CALL( addRegularScholtes(scip, heurdata, binvars, nbinvars, theta, i > 0) );
 
-      /* set working limits */
-      SCIP_CALL( getTimeLeft(scip, &timeleft) );
-      if( timeleft <= 0.0 )
-      {
-         SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
-         break;
-      }
-
-      SCIP_CALL( SCIPsetNlpiRealPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, timeleft) );
-      SCIP_CALL( SCIPsetNlpiIntPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_ITLIM, heurdata->maxnlpiter) );
-
       /* solve NLP */
-      SCIP_CALL( SCIPsolveNlpi(scip, heurdata->nlpi, heurdata->nlpiprob) );
+      SCIP_CALL( SCIPsolveNlpiParam(scip, heurdata->nlpi, heurdata->nlpiprob, nlpparam) );
       solstat = SCIPgetNlpiSolstat(scip, heurdata->nlpi, heurdata->nlpiprob);
 
       /* give up if an error occurred or no primal values are accessible */
@@ -420,8 +382,8 @@ SCIP_RETCODE heurExec(
       }
 
       /* update nlpcostleft */
-      SCIP_CALL( SCIPgetNlpiStatistics(scip, heurdata->nlpi, heurdata->nlpiprob, nlpstatistics) );
-      nlpcostleft -= SCIPnlpStatisticsGetNIterations(nlpstatistics) * nlpcostperiter * nbinvars;
+      SCIP_CALL( SCIPgetNlpiStatistics(scip, heurdata->nlpi, heurdata->nlpiprob, &nlpstatistics) );
+      nlpcostleft -= nlpstatistics.niterations * nlpcostperiter * nbinvars;
       SCIPdebugMsg(scip, "nlpcostleft = %e\n", nlpcostleft);
 
       SCIP_CALL( SCIPgetNlpiSolution(scip, heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
@@ -461,8 +423,7 @@ SCIP_RETCODE heurExec(
             SCIP_CALL( SCIPsetSolVal(scip, refpoint, var, val) );
          }
 
-         SCIP_CALL( getTimeLeft(scip, &timeleft) );
-         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, -1LL, timeleft,
+         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, -1LL,
                heurdata->minimprove, NULL,
                NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
@@ -606,7 +567,6 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &ubs);
    SCIPfreeBufferArrayNull(scip, &lbs);
    SCIPfreeBufferArrayNull(scip, &initguess);
-   SCIPnlpStatisticsFree(SCIPblkmem(scip), &nlpstatistics);
    SCIPfreeBufferArray(scip, &binvars);
 
    return SCIP_OKAY;
@@ -678,7 +638,6 @@ static
 SCIP_DECL_HEUREXEC(heurExecMpec)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
-   SCIP_CONSHDLR* andhdlr = SCIPfindConshdlr(scip, "and");
    SCIP_CONSHDLR* sosonehdlr = SCIPfindConshdlr(scip, "SOS1");
    SCIP_CONSHDLR* sostwohdlr = SCIPfindConshdlr(scip, "SOS2");
 
@@ -693,8 +652,7 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
       return SCIP_OKAY;
 
    /* skip heuristic if constraints without a nonlinear representation are present */
-   if( (andhdlr != NULL && SCIPconshdlrGetNConss(andhdlr) > 0) ||
-      (sosonehdlr != NULL && SCIPconshdlrGetNConss(sosonehdlr) > 0) ||
+   if( (sosonehdlr != NULL && SCIPconshdlrGetNConss(sosonehdlr) > 0) ||
       (sostwohdlr != NULL && SCIPconshdlrGetNConss(sostwohdlr) > 0) )
    {
       return SCIP_OKAY;

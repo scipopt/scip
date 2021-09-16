@@ -143,7 +143,7 @@ Test(estimation, secant, .description = "test computation of secant")
 
    /* do one more test where cancellation is likely
     * cancellation when computing slope occurs, e.g., when xub^exponent - xlb^exponent is too small
-    * in double precision, with xlb = 1 and xub = 1 + 2*SCIPepsilon (computeSecant forbids SCIPisEQ(xlb,xub)), this means
+    * in double precision, with xlb = 1 and xub = 1 + 2*SCIPepsilon, this means
     *     (1+2*SCIPepsilon)^exponent - 1 < DBL_EPSILON
     * <-> 1+2*SCIPepsilon < (1+DBL_EPSILON)^(1/exponent)
     * <-> log(1+2*SCIPepsilon) < 1/exponent * log(1+DBL_EPSILON)
@@ -163,6 +163,24 @@ Test(estimation, secant, .description = "test computation of secant")
    /* computeSecant should either fail or produce a positive slope */
    cr_assert(!success || (slope > 0.0));
 
+
+   /* do one more test where cancellation is even more likely, but is circumvented in computeSecant
+    * similar to above, but with xlb = 1 and xub = 1 + 0.5*SCIPepsilon  (computeSecant() checks SCIPisEQ(xlb,xub))
+    */
+   xlb = 1.0;
+   xub = 1.0 + 0.5 * SCIPepsilon(scip);
+   exponent = log(1+DBL_EPSILON) / log(xub) / 2.0;
+   cr_assert(exponent > 0.0);
+   cr_assert(xlb < xub);
+
+   computeSecant(scip, FALSE, exponent, xlb, xub, &constant, &slope, &success);
+
+   /* in double precision, xlb^exponent looks the same as xub^exponent */
+   cr_assert_eq(pow(xlb, exponent), pow(xub, exponent)); /* assert fails only on some architectures? */
+
+   /* computeSecant should not fail but produce a positive slope */
+   cr_assert(slope > 0.0);
+   cr_assert(SCIPisEQ(scip, constant, pow(xlb, exponent) - slope * xlb));
 
    SCIP_CALL( SCIPfree(&scip) );
 }

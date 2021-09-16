@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_worhp.c
- * @ingroup NLPIS
+ * @ingroup DEFPLUGINS_NLPI
  * @brief   Worhp NLP interface
  * @author  Benjamin Mueller
  * @author  Renke Kuhlmann
@@ -29,13 +29,13 @@
 #include "scip/nlpioracle.h"
 #include "scip/exprinterpret.h"
 #include "scip/interrupt.h"
-#include "scip/scip_nlp.h"
 #include "scip/scip_nlpi.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_randnumgen.h"
+#include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
 
 #include <stdio.h>
@@ -53,7 +53,6 @@
 
 #define DEFAULT_VERBLEVEL      0                            /**< default verbosity level (0: normal 1: full 2: debug >2: more debug) */
 #define DEFAULT_SCALEDKKT      TRUE                         /**< default whether KKT conditions are allowed to be scaled in the solver */
-#define DEFAULT_MAXITER        3000                         /**< default iteration limit for Worhp */
 #define DEFAULT_RANDSEED       107                          /**< initial random seed */
 
 #define MAXPERTURB             0.01                         /**< maximal perturbation of bounds in starting point heuristic */
@@ -94,16 +93,6 @@ struct SCIP_NlpiProblem
    Workspace*                  wsp;          /**< Worhp working space */
    Params*                     par;          /**< Worhp parameters */
    Control*                    cnt;          /**< Worhp control */
-
-   /* parameters */
-   SCIP_Real                   feastol;      /**< feasibility tolerance for primal variables and slacks */
-   SCIP_Real                   relobjtol;    /**< relative objective tolerance */
-   SCIP_Real                   lobjlim;      /**< lower objective limit (cutoff) */
-   SCIP_Real                   timelim;      /**< NLP time limit */
-   int                         fromscratch;  /**< solver should start from scratch at next call?: 0 no, 1 yes */
-   int                         verblevel;    /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
-   int                         itlim;        /**< NLP iteration limit */
-   int                         fastfail;     /**< should the NLP solver stop early if convergence is slow?: 0 no, 1 yes */
 };
 
 /*
@@ -155,7 +144,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of initialization error!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
       break;
    }
 
@@ -175,7 +164,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPerrorMessage("Worhp failed because of license error!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_LICERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_LICENSEERROR;
       break;
    }
 
@@ -185,7 +174,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of a NaN value in an evaluation!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERROR;
       break;
    }
 
@@ -198,7 +187,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of a numerical error during optimization!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
    }
 
@@ -209,7 +198,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because maximal number of calls or iterations is reached!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_ITERLIMIT;
       break;
    }
 
@@ -219,7 +208,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because time limit is reached!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
       break;
    }
 
@@ -230,7 +219,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of diverging iterates!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
    }
 
@@ -261,7 +250,7 @@ SCIP_RETCODE evaluateWorhpRun(
       SCIPdebugMsg(scip, "Worhp failed because of regularization of Hessian matrix failed!\n");
       invalidateSolution(scip, problem);
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
       break;
    }
 
@@ -599,7 +588,7 @@ SCIP_RETCODE userHM(
 
    /* evaluate hessian */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &hessianvals, problem->wsp->HM.nnz) );
-   retcode = SCIPnlpiOracleEvalHessianLag(scip, problem->oracle, problem->opt->X, TRUE, problem->wsp->ScaleObj,
+   retcode = SCIPnlpiOracleEvalHessianLag(scip, problem->oracle, problem->opt->X, TRUE, TRUE, problem->wsp->ScaleObj,
          problem->opt->Mu, hessianvals);
 
    if( retcode == SCIP_OKAY )
@@ -899,6 +888,60 @@ SCIP_RETCODE freeWorhp(
    return SCIP_OKAY;
 }
 
+/** pass NLP solve parameters to Ipopt */
+static
+SCIP_RETCODE handleNlpParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< Worhp interface */
+   Params*               par,                /**< Worhp parameters */
+   const SCIP_NLPPARAM   nlpparam            /**< NLP solve parameters */
+   )
+{
+   SCIP_NLPIDATA* nlpidata;
+
+   assert(par != NULL);
+   assert(nlpi != NULL);
+
+   nlpidata = SCIPnlpiGetData(nlpi);
+   assert(nlpidata != NULL);
+
+   par->Algorithm = nlpidata->useip ? 2 : 1;
+   par->ScaledKKT = DEFAULT_SCALEDKKT;
+   par->sKKTOnlyAcceptable = DEFAULT_SCALEDKKT;
+   par->Infty = SCIPinfinity(scip);
+
+   if( nlpparam.warmstart )
+   {
+      SCIPdebugMsg(scip, "warmstart parameter not supported by Worhp interface yet. Ignored.\n");
+   }
+
+   if( nlpparam.lobjlimit > -SCIP_REAL_MAX )
+   {
+      SCIPwarningMessage(scip, "lobjlimit parameter not supported by Worhp interface yet. Ignored.\n");
+   }
+
+   if( nlpparam.fastfail )
+   {
+      SCIPdebugMsg(scip, "fastfail parameter not supported by Worhp interface yet. Ignored.\n");
+   }
+
+   par->TolFeas = nlpparam.feastol;
+   par->TolOpti = nlpparam.relobjtol;
+   par->TolComp = nlpparam.relobjtol;
+   par->Timeout = nlpparam.timelimit;
+   par->MaxIter = nlpparam.iterlimit;
+   par->NLPprint = nlpparam.verblevel - 1; /* Worhp verbosity levels: -1 = off, 0 = normal, 1 = debug, >1 = more debug */
+
+#ifdef CHECKFUNVALUES
+   /* activate gradient and hessian check */
+   par->CheckValuesDF = TRUE;
+   par->CheckValuesDG = TRUE;
+   par->CheckValuesHM = TRUE;
+#endif
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of NLP solver interface
  */
@@ -933,15 +976,6 @@ SCIP_DECL_NLPIFREE(nlpiFreeWorhp)
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** gets pointer for NLP solver */
-static
-SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerWorhp)
-{
-   assert(nlpi != NULL);
-
-   return NULL;
-}  /*lint !e715*/
-
 /** creates a problem instance */
 static
 SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
@@ -963,16 +997,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    SCIP_CALL( SCIPallocBlockMemory(scip, &(*problem)->par) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &(*problem)->cnt) );
    WorhpPreInit((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt);
-
-   /* set default parameters */
-   (*problem)->feastol = SCIP_DEFAULT_FEASTOL;
-   (*problem)->relobjtol = SCIP_DEFAULT_FEASTOL;
-   (*problem)->lobjlim = SCIP_INVALID;
-   (*problem)->timelim = SCIP_DEFAULT_INFINITY;
-   (*problem)->fromscratch = 0;
-   (*problem)->verblevel = DEFAULT_VERBLEVEL;
-   (*problem)->itlim = DEFAULT_MAXITER;
-   (*problem)->fastfail = 0;
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &(*problem)->randnumgen, DEFAULT_RANDSEED, TRUE) );
@@ -1016,16 +1040,6 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
    *problem = NULL;
 
    return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets pointer to solver-internal problem instance */
-static
-SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerWorhp)
-{
-   assert(nlpi    != NULL);
-   assert(problem != NULL);
-
-   return NULL;
 }  /*lint !e715*/
 
 /** add variables */
@@ -1078,7 +1092,7 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveWorhp)
     * sparsity pattern of the Hessian of the Lagrangian may change.  Thus, reset Worhp if the objective was and/or
     * becomes nonlinear, but leave firstrun untouched if it was and stays linear.
     */
-   if( expr != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+   if( expr != NULL || SCIPnlpiOracleIsConstraintNonlinear(problem->oracle, -1) )
       problem->firstrun = TRUE;
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, problem->oracle,
@@ -1270,7 +1284,6 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessWorhp)
 static
 SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
 {
-   SCIP_NLPIDATA* nlpidata = SCIPnlpiGetData(nlpi);
    Workspace* wsp = problem->wsp;
    Control* cnt = problem->cnt;
    OptVar* opt = problem->opt;
@@ -1278,10 +1291,25 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
    int status;
    int i;
 
+   SCIPdebugMsg(scip, "solve with parameters " SCIP_NLPPARAM_PRINT(param));
+
+   SCIP_CALL( SCIPnlpiOracleResetEvalTime(scip, problem->oracle) );
+
+   if( param.timelimit == 0.0 )
+   {
+      /* there is nothing we can do if we are not given any time */
+      problem->lastniter = 0;
+      problem->lasttime = 0.0;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_TIMELIMIT;
+      problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
+
+      return SCIP_OKAY;
+   }
+
    problem->lastniter = -1;
    problem->lasttime  = -1.0;
 
-   if( problem->verblevel == 0 )
+   if( param.verblevel == 0 )
    {
       SetWorhpPrint(noprint);
    }
@@ -1311,24 +1339,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
    if( status != OK )
       return SCIP_INVALIDCALL;
 
-   par->Algorithm = nlpidata->useip ? 2 : 1;
-   par->ScaledKKT = DEFAULT_SCALEDKKT;
-   par->sKKTOnlyAcceptable = DEFAULT_SCALEDKKT;
-
-   par->Infty = SCIPinfinity(scip);
-   par->TolFeas = problem->feastol;
-   par->TolOpti = problem->relobjtol;
-   par->TolComp = problem->relobjtol;
-   par->Timeout = problem->timelim;
-   par->MaxIter = problem->itlim;
-   par->NLPprint = problem->verblevel - 1; /* Worhp verbosity levels: -1 = off, 0 = normal, 1 = debug, >1 = more debug */
-
-#ifdef CHECKFUNVALUES
-   /* activate gradient and hessian check */
-   par->CheckValuesDF = TRUE;
-   par->CheckValuesDG = TRUE;
-   par->CheckValuesHM = TRUE;
-#endif
+   SCIP_CALL( handleNlpParam(scip, nlpi, par, param) );
 
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPnlpiOraclePrintProblem(problem->oracle, nlpidata->messagehdlr, NULL) );
@@ -1378,7 +1389,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
     * Make sure to reset the requested user action afterwards by calling
     * DoneUserAction, except for 'callWorhp' and 'fidif'.
     */
-   while( cnt->status < TerminateSuccess && cnt->status > TerminateError )
+   while( cnt->status < TerminateSuccess && cnt->status > TerminateError && !SCIPisSolveInterrupted(scip) )
    {
       /*
        * Worhp's main routine.
@@ -1467,11 +1478,16 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
    }
 
    /* interpret Worhp result */
-   if( cnt->status < TerminateSuccess && cnt->status > TerminateError )
+   if( SCIPisSolveInterrupted(scip) )
+   {
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_INTERRUPT;
+   }
+   else if( cnt->status < TerminateSuccess && cnt->status > TerminateError )
    {
       SCIPwarningMessage(scip, "Worhp failed because of an invalid function evaluation!\n");
       problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERICERROR;
    }
    else
    {
@@ -1546,382 +1562,13 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsWorhp)
 {
    assert(nlpi != NULL);
    assert(problem != NULL);
+   assert(statistics != NULL);
 
-   SCIPnlpStatisticsSetNIterations(statistics, problem->lastniter);
-   SCIPnlpStatisticsSetTotalTime(statistics, problem->lasttime);
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gives required size of a buffer to store a warmstart object */
-static
-SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeWorhp)
-{
-   /* TODO */
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** stores warmstart information in buffer */
-static
-SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoWorhp)
-{
-   /* TODO */
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets warmstart information in solver */
-static
-SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoWorhp)
-{
-   /* TODO */
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** gets integer parameter of NLP */
-static
-SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParWorhp)
-{
-   assert(nlpi != NULL);
-   assert(ival != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      *ival = 1;
-      break;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      *ival = problem->verblevel;
-      break;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      *ival = problem->itlim;
-      break;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("optfile parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      *ival = problem->fastfail ? 1 : 0;
-      break;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Worhp interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
+   statistics->niterations = problem->lastniter;
+   statistics->totaltime = problem->lasttime;
+   statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
 
    return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** sets integer parameter of NLP */
-static
-SCIP_DECL_NLPISETINTPAR(nlpiSetIntParWorhp)
-{
-   assert(nlpi != NULL);
-   assert(problem != NULL);
-
-   switch( type )
-   {
-   case SCIP_NLPPAR_FROMSCRATCH:
-   {
-      if( ival == 0 || ival == 1 )
-      {
-         SCIPdebugMsg(scip, "from scratch parameter not supported by Worhp interface yet. Ignored.\n");
-      }
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter from scratch out of range {0, 1}\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_VERBLEVEL:
-   {
-      assert(ival >= 0);
-      problem->verblevel = ival;
-      break;
-   }
-
-   case SCIP_NLPPAR_FEASTOL:
-   {
-      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_RELOBJTOL:
-   {
-      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_LOBJLIM:
-   {
-      SCIPerrorMessage("objective limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_ITLIM:
-   {
-      if( ival >= 0 )
-         problem->itlim = ival;
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter iteration limit is negative\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   case SCIP_NLPPAR_TILIM:
-   {
-      SCIPerrorMessage("time limit parameter is of type real.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_OPTFILE:
-   {
-      SCIPerrorMessage("optfile parameter is of type string.\n");
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   case SCIP_NLPPAR_FASTFAIL:
-   {
-      if( ival == 0 || ival == 1 )
-      {
-         problem->fastfail = ival;
-      }
-      else
-      {
-         SCIPerrorMessage("Value %d for parameter fastfail out of range {0, 1}\n", ival);
-         return SCIP_PARAMETERWRONGVAL;
-      }
-      break;
-   }
-
-   default:
-   {
-      SCIPerrorMessage("Parameter %d not known to Worhp interface.\n", type);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   }
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
-/** gets floating point parameter of NLP */
-static
-SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParWorhp)
-{
-   assert(dval != NULL);
-
-   switch( type )
-   {
-      case SCIP_NLPPAR_FROMSCRATCH:
-      {
-         SCIPerrorMessage("fromscratch parameter is of type int.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      case SCIP_NLPPAR_VERBLEVEL:
-      {
-         SCIPerrorMessage("verblevel parameter is of type int.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      case SCIP_NLPPAR_FEASTOL:
-      {
-         *dval = problem->feastol;
-         break;
-      }
-
-      case SCIP_NLPPAR_RELOBJTOL:
-      {
-         *dval = problem->relobjtol;
-         break;
-      }
-
-      case SCIP_NLPPAR_LOBJLIM:
-      {
-         *dval = problem->lobjlim;
-         break;
-      }
-
-      case SCIP_NLPPAR_ITLIM:
-      {
-         SCIPerrorMessage("itlim parameter is of type int.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      case SCIP_NLPPAR_TILIM:
-      {
-         *dval = problem->timelim;
-         break;
-      }
-
-      case SCIP_NLPPAR_OPTFILE:
-      {
-         SCIPerrorMessage("optfile parameter is of type string.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      case SCIP_NLPPAR_FASTFAIL:
-      {
-         SCIPerrorMessage("fastfail parameter is of type int.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      default:
-      {
-         break;
-      }
-   }
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets floating point parameter of NLP */
-static
-SCIP_DECL_NLPISETREALPAR(nlpiSetRealParWorhp)
-{
-   switch( type )
-   {
-      case SCIP_NLPPAR_FROMSCRATCH:
-      {
-         SCIPerrorMessage("fromscratch parameter is of type real.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      case SCIP_NLPPAR_VERBLEVEL:
-      {
-         SCIPerrorMessage("verblevel parameter is of type real.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      case SCIP_NLPPAR_FEASTOL:
-      {
-         problem->feastol = dval;
-         break;
-      }
-
-      case SCIP_NLPPAR_RELOBJTOL:
-      {
-         problem->relobjtol = dval;
-         break;
-      }
-
-      case SCIP_NLPPAR_LOBJLIM:
-      {
-         problem->lobjlim = dval;
-         break;
-      }
-
-      case SCIP_NLPPAR_ITLIM:
-      {
-         SCIPerrorMessage("itlim parameter is of type real.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      case SCIP_NLPPAR_TILIM:
-      {
-         problem->timelim = dval;
-         break;
-      }
-
-      case SCIP_NLPPAR_OPTFILE:
-      {
-         SCIPerrorMessage("optfile parameter is of type string.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      case SCIP_NLPPAR_FASTFAIL:
-      {
-         SCIPerrorMessage("optfile parameter is of type int.\n");
-         return SCIP_PARAMETERWRONGTYPE;
-      }
-
-      default:
-      {
-         break;
-      }
-   }
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** gets string parameter of NLP */
-static
-SCIP_DECL_NLPIGETSTRINGPAR(nlpiGetStringParWorhp)
-{
-   if( type == SCIP_NLPPAR_OPTFILE )
-   {
-      SCIPwarningMessage(scip, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
-   }
-   else
-   {
-      SCIPerrorMessage("parameter %d is not of type string.\n", type);
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   return SCIP_OKAY;  /*lint !e527*/
-}  /*lint !e715*/
-
-/** sets string parameter of NLP */
-static
-SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParWorhp )
-{
-   if( type == SCIP_NLPPAR_OPTFILE )
-   {
-      SCIPwarningMessage(scip, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
-   }
-   else
-   {
-      SCIPerrorMessage("parameter %d is not of type string.\n", type);
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
 /*
@@ -1967,15 +1614,13 @@ SCIP_RETCODE SCIPincludeNlpSolverWorhp(
 
    SCIP_CALL( SCIPincludeNlpi(scip,
          name, NLPI_DESC, priority,
-         nlpiCopyWorhp, nlpiFreeWorhp, nlpiGetSolverPointerWorhp,
-         nlpiCreateProblemWorhp, nlpiFreeProblemWorhp, nlpiGetProblemPointerWorhp,
+         nlpiCopyWorhp, nlpiFreeWorhp, NULL,
+         nlpiCreateProblemWorhp, nlpiFreeProblemWorhp, NULL,
          nlpiAddVarsWorhp, nlpiAddConstraintsWorhp, nlpiSetObjectiveWorhp,
          nlpiChgVarBoundsWorhp, nlpiChgConsSidesWorhp, nlpiDelVarSetWorhp, nlpiDelConstraintSetWorhp,
          nlpiChgLinearCoefsWorhp, nlpiChgExprWorhp,
          nlpiChgObjConstantWorhp, nlpiSetInitialGuessWorhp, nlpiSolveWorhp, nlpiGetSolstatWorhp, nlpiGetTermstatWorhp,
          nlpiGetSolutionWorhp, nlpiGetStatisticsWorhp,
-         nlpiGetWarmstartSizeWorhp, nlpiGetWarmstartMemoWorhp, nlpiSetWarmstartMemoWorhp,
-         nlpiGetIntParWorhp, nlpiSetIntParWorhp, nlpiGetRealParWorhp, nlpiSetRealParWorhp, nlpiGetStringParWorhp, nlpiSetStringParWorhp,
          nlpidata) );
 
    if( useip )  /* TODO lookup whether Worhp info has already been included instead of assuming that worhp-up will be included */

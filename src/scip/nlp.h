@@ -440,7 +440,7 @@ SCIP_RETCODE SCIPnlpFlush(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
-/** solves the NLP */
+/** solves the NLP or diving NLP */
 SCIP_RETCODE SCIPnlpSolve(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -448,7 +448,8 @@ SCIP_RETCODE SCIPnlpSolve(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NLPPARAM*        nlpparam            /**< NLP solve parameters */
    );
 
 /** gets objective value of current NLP */
@@ -566,17 +567,6 @@ SCIP_Bool SCIPnlpIsDivingObjChanged(
    SCIP_NLP*             nlp                 /**< current NLP data */
    );
 
-/** solves diving NLP */
-SCIP_RETCODE SCIPnlpSolveDive(
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree                /**< branch and bound tree */
-   );
-
 /** gets array with variables of the NLP */
 SCIP_VAR** SCIPnlpGetVars(
    SCIP_NLP*             nlp                 /**< current NLP data */
@@ -660,58 +650,13 @@ SCIP_RETCODE SCIPnlpGetStatistics(
    SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
    );
 
-/** indicates whether a feasible solution for the current NLP is available
- * thus, returns whether the solution status <= feasible  */
+/** indicates whether a solution for the current NLP is available
+ *
+ * The solution may be optimal, feasible, or infeasible.
+ * Thus, returns whether the NLP solution status is at most locinfeasible.
+ */
 SCIP_Bool SCIPnlpHasSolution(
    SCIP_NLP*             nlp                 /**< current NLP data */
-   );
-
-/** gets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpGetIntPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int*                  ival                /**< pointer to store the parameter value */
-   );
-
-/** sets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpSetIntPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int                   ival                /**< parameter value */
-   );
-
-/** gets floating point parameter of NLP */
-SCIP_RETCODE SCIPnlpGetRealPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real*            dval                /**< pointer to store the parameter value */
-   );
-
-/** sets floating point parameter of NLP */
-SCIP_RETCODE SCIPnlpSetRealPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real             dval                /**< parameter value */
-   );
-
-/** gets string parameter of NLP */
-SCIP_RETCODE SCIPnlpGetStringPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char**          sval                /**< pointer to store the parameter value */
-   );
-
-/** sets string parameter of NLP */
-SCIP_RETCODE SCIPnlpSetStringPar(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char*           sval                /**< parameter value */
    );
 
 /**@} */

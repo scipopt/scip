@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_quadratic.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  nonlinear handler to handle quadratic expressions
  * @author Felipe Serrano
  * @author Antonia Chmiela
@@ -59,7 +60,7 @@
 #define NLHDLR_ENFOPRIORITY            100
 
 /* properties of the quadratic nlhdlr statistics table */
-#define TABLE_NAME_QUADRATIC           "quadratic_nlhdlr_table"
+#define TABLE_NAME_QUADRATIC           "nlhdlr_quadratic"
 #define TABLE_DESC_QUADRATIC           "quadratic nlhdlr statistics table"
 #define TABLE_POSITION_QUADRATIC       14700                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_QUADRATIC SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -2957,7 +2958,7 @@ void computeRangeForBilinearProp(
    SCIPintervalSetBounds(range, min, max);
 }
 
-/** reverse propagates coef_i expr_i + constant \in rhs */
+/** reverse propagates coef_i expr_i + constant \f$\in\f$ rhs */
 static
 SCIP_RETCODE reversePropagateLinearExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3122,7 +3123,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectQuadratic)
    SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
 
    /* not quadratic -> nothing for us */
-   if( ! isquadratic )
+   if( !isquadratic )
    {
       SCIPdebugMsg(scip, "expr %p is not quadratic -> abort detect\n", (void*)expr);
       return SCIP_OKAY;
@@ -3137,11 +3138,10 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectQuadratic)
       return SCIP_OKAY;
    }
 
-   /* If we do not use intersection cuts, then we only generate cut for convex quadratics; however, if a convex
-    * quadratic is not propagable, we do not want to handle it; otherwise, we need to check the curvature to decide if
-    * we want to handle it or not.
+   /* if we do not use intersection cuts and are not propagable, then we do not want to handle it at all;
+    * if not propagable, then we need to check the curvature to decide if we want to generate intersection cuts
     */
-   if( ! propagable && ! nlhdlrdata->useintersectioncuts )
+   if( !propagable && !nlhdlrdata->useintersectioncuts )
    {
       SCIPdebugMsg(scip, "expr %p is not propagable -> abort detect\n", (void*)expr);
       return SCIP_OKAY;
@@ -3648,13 +3648,12 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
  * Interval arithmetic suffices when no variable appears twice, however this is seldom the case, so we try
  * to take care of the dependency problem to some extent:
  * Let P_l = \{i : expr_l expr_i is a bilinear expr\}.
- * 1. partition the quadratic expression as sum of quadratic functions
- * \sum_l q_l
- * where q_l = a_l expr_l^2 + c_l expr_l + \sum_{i \in P_l} b_il expr_i expr_l
+ * 1. partition the quadratic expression as sum of quadratic functions \f$\sum_l q_l\f$
+ *    where \f$q_l = a_l expr_l^2 + c_l expr_l + \sum_{i \in P_l} b_il expr_i expr_l\f$
  * 2. build interval quadratic functions, i.e, a x^2 + b x where b is an interval, i.e.,
- * a_l expr_l^2 + [\sum_{i \in P_l} b_il expr_i + c_l] expr_l
- * 3. compute \min and \max { a x^2 + b x : x \in [x] } for each interval quadratic, i.e.,
- * \min and \max a_l expr_l^2 + expr_l [\sum_{i \in P_l} b_il expr_i + c_l] : expr_l \in [expr_l]
+ *    \f$a_l expr_l^2 + \[\sum_{i \in P_l} b_il expr_i + c_l\] expr_l\f$
+ * 3. compute min and max { a x^2 + b x : x \f$\in\f$ [x] } for each interval quadratic, i.e.,
+ *    \f$\min/\max a_l expr_l^2 + expr_l \[\sum_{i \in P_l} b_il expr_i + c_l\] : expr_l \in \[expr_l\]\f$
  *
  * Notes:
  * 1. The l-th quadratic expr (expressions that appear quadratically) is associated with q_l
@@ -4352,7 +4351,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, TRUE,
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputQuadratic,
          NULL, TABLE_POSITION_QUADRATIC, TABLE_EARLIEST_STAGE_QUADRATIC) );
    return SCIP_OKAY;

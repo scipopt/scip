@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_soc.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  nonlinear handler for second order cone constraints
 
  * @author Benjamin Mueller
@@ -267,9 +268,9 @@ SCIP_RETCODE freeDisaggrVars(
 }
 
 /** helper method to create the disaggregation row:
- * disvars_i <= v_{n+1}^T x + \beta_{n+1}
+ * \f$disvars_i <= v_{n+1}^T x + \beta_{n+1}\f$
  * In SCIP we create it like:
- * disvars_i - v_{n+1}^T x <= \beta_{n+1}
+ * \f$disvars_i - v_{n+1}^T x <= \beta_{n+1}\f$
  */
 static
 SCIP_RETCODE createDisaggrRow(
@@ -1998,7 +1999,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    /* compute eigenvalues and vectors, A = PDP^t
     * note: eigvecmatrix stores P^t, i.e., P^t_{i,j} = eigvecmatrix[i*nvars+j]
     */
-   if( LapackDsyev(TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
+   if( SCIPcallLapackDsyevIpopt(TRUE, nvars, eigvecmatrix, eigvals) != SCIP_OKAY )
    {
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors for expression:\n");
 
@@ -2692,7 +2693,7 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
  * where \f$n+1 = nterms\f$ and the inequality type is given by sidetype (SCIP_SIDETYPE_RIGHT if inequality
  * is \f$\leq\f$, SCIP_SIDETYPE_LEFT if \f$\geq\f$).
  *
- * For each term (i.e. for each i in the above notation as well as n+1), the constant $\beta_i$ is given by the
+ * For each term (i.e. for each i in the above notation as well as n+1), the constant \f$\beta_i\f$ is given by the
  * corresponding element offsets[i-1], and termbegins[i-1] is the starting position of the term in arrays
  * transcoefs and transcoefsidx. The overall number of nonzeros is termbegins[nterms].
  *

@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_nlhdlr.h
+ * @ingroup INTERNALAPI
  * @brief  structure definitions related to nonlinear handlers of nonlinear constraints
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
@@ -29,7 +30,7 @@
 #include "scip/type_nlhdlr.h"
 #include "scip/type_clock.h"
 
-/** generic data and callback methods of an nonlinear handler */
+/** generic data and callback methods of a nonlinear handler */
 struct SCIP_Nlhdlr
 {
    char*                 name;               /**< nonlinearity handler name */

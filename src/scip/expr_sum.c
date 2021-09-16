@@ -14,13 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_sum.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  sum expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  * @author Felipe Serrano
- *
- * Implementation of the sum expression, representing a summation of a constant
- * and the arguments, each multiplied by a coefficients, i.e., sum_i a_i*x_i + constant.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -369,7 +367,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(SCIPexprGetHdlr(expr) == SCIPgetExprHdlrSum(scip));
+   assert(SCIPexprGetHdlr(expr) == SCIPgetExprhdlrSum(scip));
 
    changed = FALSE;
 
@@ -529,13 +527,18 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** the order of two sum expressions is a lexicographical order on the terms.
+/** compares two sum expressions.
+ *
+ *  The order of two sum expressions is a lexicographical order on the terms.
+ *
  *  Starting from the *last*, we find the first child where they differ, say, the i-th.
  *  Then u < v <=> u_i < v_i.
- *  If there are no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v)
- *  If there are no such children and they have the same number of children, then u < v <=> const(u) < const(v)
- *  Otherwise, they are the same
+ *  If there are no such children and they have different number of children, then u < v <=> nchildren(u) < nchildren(v).
+ *  If there are no such children and they have the same number of children, then u < v <=> const(u) < const(v).
+ *  Otherwise, they are the same.
+ *
  *  Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
+ *
  *  Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
  */
 static
@@ -608,7 +611,7 @@ SCIP_DECL_EXPRCOMPARE(compareSum)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrSum)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
 
    return SCIP_OKAY;
 }
@@ -1030,13 +1033,13 @@ SCIP_DECL_EXPRINTEGRALITY(integralitySum)
 }
 
 /** creates the handler for sum expressions and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrSum(
+SCIP_RETCODE SCIPincludeExprhdlrSum(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalSum, NULL) );
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalSum, NULL) );
    assert(exprhdlr != NULL);
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrSum, NULL);
@@ -1072,7 +1075,7 @@ SCIP_RETCODE SCIPcreateExprSum(
 
    SCIP_CALL( createData(scip, &exprdata, nchildren, coefficients, constant) );
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrSum(scip), exprdata, nchildren, children, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrSum(scip), exprdata, nchildren, children, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

@@ -13,12 +13,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   expr_sin.c
- * @brief  handler for sine expressions
+/**@file   expr_trig.c
+ * @ingroup DEFPLUGINS_EXPR
+ * @brief  handler for sine and cosine expressions
  * @author Fabian Wegscheider
  *
  * The estimator/separator code always computes underestimators for sin(x).
- * For overestimator or cos(x), we first reduce to underestimators of sin(x).
+ * For overestimators of cos(x), we first reduce to underestimators of sin(x).
  *
  * Overestimator for sin(x):
  *   Assume that a*y+b <= sin(y) for y in [-ub,-lb].
@@ -42,32 +43,30 @@
 
 #include <string.h>
 #include <math.h>
-#include "scip/expr_sin.h"
+#include "scip/expr_trig.h"
 #include "scip/expr_value.h"
 
-#ifndef M_PI
-#define M_PI           3.14159265358979323846
-#endif
-#ifndef M_PI_2
-#define M_PI_2         1.57079632679489661923
-#endif
-#ifndef M_PI_4
-#define M_PI_4         0.785398163397448309616
-#endif
-
 /* fundamental expression handler properties */
-#define EXPRHDLR_NAME         "sin"
-#define EXPRHDLR_DESC         "sine expression"
-#define EXPRHDLR_PRECEDENCE   91000
-#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(82457.0)
+#define SINEXPRHDLR_NAME         "sin"
+#define SINEXPRHDLR_DESC         "sine expression"
+#define SINEXPRHDLR_PRECEDENCE   91000
+#define SINEXPRHDLR_HASHKEY      SCIPcalcFibHash(82457.0)
+
+#define COSEXPRHDLR_NAME         "cos"
+#define COSEXPRHDLR_DESC         "cosine expression"
+#define COSEXPRHDLR_PRECEDENCE   92000
+#define COSEXPRHDLR_HASHKEY      SCIPcalcFibHash(82463.0)
 
 #define MAXCHILDABSVAL        1e+6                       /**< maximum absolute value that is accepted for propagation */
+#define NEWTON_NITERATIONS    100
+#define NEWTON_PRECISION      1e-12
 
 /*
  * Local methods
  */
 
 /** evaluates the function a*x + b - sin(x) for some coefficient a and constant b at a given point p
+ *
  *  the constants a and b are expected to be stored in that order in params
  */
 static
@@ -80,6 +79,7 @@ SCIP_DECL_NEWTONEVAL(function1)
 }
 
 /** evaluates the derivative of a*x + b - sin(x) for some coefficient a and constant b at a given point p
+ *
  *  the constants a and b are expected to be stored in that order in params
  */
 static
@@ -92,6 +92,7 @@ SCIP_DECL_NEWTONEVAL(derivative1)
 }
 
 /** evaluates the function sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
+ *
  *  the constant alpha is expected to be stored in params
  */
 static
@@ -104,6 +105,7 @@ SCIP_DECL_NEWTONEVAL(function2)
 }
 
 /** evaluates the derivative of sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
+ *
  *  the constant alpha is expected to be stored in params
  */
 static
@@ -116,6 +118,7 @@ SCIP_DECL_NEWTONEVAL(derivative2)
 }
 
 /** helper function to compute the secant if it is a valid underestimator
+ *
  *  returns true if the estimator was computed successfully
  */
 static
@@ -147,6 +150,7 @@ SCIP_Bool computeSecantSin(
 }
 
 /** helper function to compute the tangent at lower bound if it is underestimating
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -179,6 +183,7 @@ SCIP_Bool computeLeftTangentSin(
  * right now, this function is only checking whether the tangent underestimates independenly of the lower bound!
  */
 /** helper function to compute the tangent at upper bound if it is an underestimator
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -207,6 +212,7 @@ SCIP_Bool computeRightTangentSin(
 }
 
 /** helper function to compute the tangent at solution point if it is an underestimator
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -281,6 +287,7 @@ SCIP_Bool computeSolTangentSin(
 }
 
 /** helper function to compute the secant between lower bound and some point of the graph such that it underestimates
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -362,6 +369,7 @@ SCIP_Bool computeLeftSecantSin(
 }
 
 /** helper function to compute the secant between upper bound and some point of the graph such that it underestimates
+ *
  *  returns true if the underestimator was computed successfully
  */
 static
@@ -441,7 +449,8 @@ SCIP_Bool computeRightSecantSin(
 }
 
 /** helper function to compute the new interval for child in reverse propagation */
-SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
+static
+SCIP_RETCODE computeRevPropIntervalSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_INTERVAL         parentbounds,       /**< bounds for sine expression */
    SCIP_INTERVAL         childbounds,        /**< bounds for child expression */
@@ -534,9 +543,10 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
  *  - right secant: secant between upper bound and some point of the graph
  *
  *  They are ordered such that a successful computation for one of them cannot be improved by following ones in terms
- *  of value at the reference point
+ *  of value at the reference point.
  */
-SCIP_Bool SCIPcomputeEstimatorsTrig(
+static
+SCIP_Bool computeEstimatorsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< sin or cos expression */
    SCIP_Real*            lincoef,            /**< buffer to store the linear coefficient */
@@ -615,7 +625,8 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
  *  - left/right secant: secant between lower/upper bound and some point of the graph
  *  - left/right tangent: tangents at the lower/upper bounds
  */
-SCIP_RETCODE SCIPcomputeInitialCutsTrig(
+static
+SCIP_RETCODE computeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< sin or cos expression */
    SCIP_Real             childlb,            /**< lower bound of child variable */
@@ -699,7 +710,8 @@ SCIP_RETCODE SCIPcomputeInitialCutsTrig(
 }
 
 /* helper function that computes the curvature of a sine expression for given bounds and curvature of child */
-SCIP_EXPRCURV SCIPcomputeCurvatureSin(
+static
+SCIP_EXPRCURV computeCurvatureSin(
    SCIP_EXPRCURV         childcurvature,     /**< curvature of child */
    SCIP_Real             lb,                 /**< lower bound of child */
    SCIP_Real             ub                  /**< upper bound of child */
@@ -756,13 +768,15 @@ SCIP_EXPRCURV SCIPcomputeCurvatureSin(
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrSin)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
 
    return SCIP_OKAY;
 }
 
-/** simplifies a sin expression
- * Evaluates the sine value function when its child is a value expression
+/** simplifies a sine expression
+ *
+ * Evaluates the sine value function when its child is a value expression.
+ *
  * TODO: add further simplifications
  */
 static
@@ -851,10 +865,9 @@ SCIP_DECL_EXPRBWDIFF(bwdiffSin)
    return SCIP_OKAY;
 }
 
-/** derivative evaluation callback:
- * computes <gradient, children.dot>
- * if expr is SIN(child), then computes
- * COS(child) dot(child)
+/** derivative evaluation callback
+ *
+ * Computes <gradient, children.dot>, that is, cos(child) dot(child).
  */
 static
 SCIP_DECL_EXPRFWDIFF(fwdiffSin)
@@ -875,10 +888,9 @@ SCIP_DECL_EXPRFWDIFF(fwdiffSin)
 }
 
 /** expression backward forward derivative evaluation callback
- * computes partial/partial child ( <gradient, children.dot> )
- * if expr is SIN(child), then computes
- * -SIN(child) dot(child)
- * */
+ *
+ * Computes partial/partial child ( <gradient, children.dot> ), that is, -sin(child) dot(child).
+ */
 static
 SCIP_DECL_EXPRBWFWDIFF(bwfwdiffSin)
 {  /*lint --e{715}*/
@@ -932,7 +944,7 @@ SCIP_DECL_EXPRINITESTIMATES(initEstimatesSin)
       return SCIP_OKAY;
 
    /* compute cuts */
-   SCIP_CALL(SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, ! overestimate, coefs, constant, nreturned) );
+   SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, ! overestimate, coefs, constant, nreturned) );
 
    return SCIP_OKAY;
 }
@@ -944,7 +956,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSin)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SINEXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
@@ -952,7 +964,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSin)
    assert(*branchcand == TRUE);
    assert(success != NULL);
 
-   *success = SCIPcomputeEstimatorsTrig(scip, expr, coefs, constant, refpoint[0], localbounds[0].inf,
+   *success = computeEstimatorsTrig(scip, expr, coefs, constant, refpoint[0], localbounds[0].inf,
          localbounds[0].sup, ! overestimate);
    *islocal = TRUE;  /* TODO there are cases where cuts would be globally valid */
 
@@ -970,12 +982,12 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropSin)
    assert(SCIPintervalGetSup(bounds) <= 1.0);
 
    /* compute the new child interval */
-   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, bounds, childrenbounds[0], childrenbounds) );
+   SCIP_CALL( computeRevPropIntervalSin(scip, bounds, childrenbounds[0], childrenbounds) );
 
    return SCIP_OKAY;
 }
 
-/** sin hash callback */
+/** sine hash callback */
 static
 SCIP_DECL_EXPRHASH(hashSin)
 {  /*lint --e{715}*/
@@ -985,7 +997,7 @@ SCIP_DECL_EXPRHASH(hashSin)
    assert(hashkey != NULL);
    assert(childrenhashes != NULL);
 
-   *hashkey = EXPRHDLR_HASHKEY;
+   *hashkey = SINEXPRHDLR_HASHKEY;
    *hashkey ^= childrenhashes[0];
 
    return SCIP_OKAY;
@@ -1011,11 +1023,11 @@ SCIP_DECL_EXPRCURVATURE(curvatureSin)
 
    /* TODO rewrite SCIPcomputeCurvatureSin so it provides the reverse operation */
    *success = TRUE;
-   if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONVEX, childinterval.inf, childinterval.sup) == exprcurvature )
+   if( computeCurvatureSin(SCIP_EXPRCURV_CONVEX, childinterval.inf, childinterval.sup) == exprcurvature )
       *childcurv = SCIP_EXPRCURV_CONVEX;
-   else if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_CONCAVE, childinterval.inf, childinterval.sup) == exprcurvature )
+   else if( computeCurvatureSin(SCIP_EXPRCURV_CONCAVE, childinterval.inf, childinterval.sup) == exprcurvature )
       *childcurv = SCIP_EXPRCURV_CONCAVE;
-   if( SCIPcomputeCurvatureSin(SCIP_EXPRCURV_LINEAR, childinterval.inf, childinterval.sup) == exprcurvature )
+   if( computeCurvatureSin(SCIP_EXPRCURV_LINEAR, childinterval.inf, childinterval.sup) == exprcurvature )
       *childcurv = SCIP_EXPRCURV_LINEAR;
    else
       *success = FALSE;
@@ -1061,15 +1073,299 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySin)
    return SCIP_OKAY;
 }
 
-/** creates the handler for sin expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprHdlrSin(
+
+/** expression handler copy callback */
+static
+SCIP_DECL_EXPRCOPYHDLR(copyhdlrCos)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** simplifies a cosine expression
+ *
+ * Evaluates the cosine value function when its child is a value expression.
+ *
+ * TODO: add further simplifications
+ */
+static
+SCIP_DECL_EXPRSIMPLIFY(simplifyCos)
+{  /*lint --e{715}*/
+   SCIP_EXPR* child;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(simplifiedexpr != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+
+   child = SCIPexprGetChildren(expr)[0];
+   assert(child != NULL);
+
+   /* check for value expression */
+   if( SCIPisExprValue(scip, child) )
+   {
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, cos(SCIPgetValueExprValue(child)), ownercreate,
+               ownercreatedata) );
+   }
+   else
+   {
+      *simplifiedexpr = expr;
+
+      /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
+      SCIPcaptureExpr(*simplifiedexpr);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression parse callback */
+static
+SCIP_DECL_EXPRPARSE(parseCos)
+{  /*lint --e{715}*/
+   SCIP_EXPR* childexpr;
+
+   assert(expr != NULL);
+
+   /* parse child expression from remaining string */
+   SCIP_CALL( SCIPparseExpr(scip, &childexpr, string, endstring, ownercreate, ownercreatedata) );
+   assert(childexpr != NULL);
+
+   /* create cosine expression */
+   SCIP_CALL( SCIPcreateExprCos(scip, expr, childexpr, ownercreate, ownercreatedata) );
+   assert(*expr != NULL);
+
+   /* release child expression since it has been captured by the cosine expression */
+   SCIP_CALL( SCIPreleaseExpr(scip, &childexpr) );
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** expression (point-) evaluation callback */
+static
+SCIP_DECL_EXPREVAL(evalCos)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
+
+   *val = cos(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]));
+
+   return SCIP_OKAY;
+}
+
+/** expression derivative evaluation callback */
+static
+SCIP_DECL_EXPRBWDIFF(bwdiffCos)
+{  /*lint --e{715}*/
+   SCIP_EXPR* child;
+
+   assert(expr != NULL);
+   assert(childidx == 0);
+   assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID); /*lint !e777*/
+
+   child = SCIPexprGetChildren(expr)[0];
+   assert(child != NULL);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(child)), "val") != 0);
+
+   *val = -sin(SCIPexprGetEvalValue(child));
+
+   return SCIP_OKAY;
+}
+
+/** expression interval evaluation callback */
+static
+SCIP_DECL_EXPRINTEVAL(intevalCos)
+{  /*lint --e{715}*/
+   SCIP_INTERVAL childinterval;
+
+   assert(expr != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+
+   childinterval = SCIPexprGetActivity(SCIPexprGetChildren(expr)[0]);
+
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
+      SCIPintervalSetEmpty(interval);
+   else
+      SCIPintervalCos(SCIP_INTERVAL_INFINITY, interval, childinterval);
+
+   return SCIP_OKAY;
+}
+
+/** separation initialization callback */
+static
+SCIP_DECL_EXPRINITESTIMATES(initEstimatesCos)
+{
+   SCIP_Real childlb;
+   SCIP_Real childub;
+
+   childlb = bounds[0].inf;
+   childub = bounds[0].sup;
+
+   /* no need for cut if child is fixed */
+   if( SCIPisRelEQ(scip, childlb, childub) )
+      return SCIP_OKAY;
+
+   /* compute cuts */
+   SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, ! overestimate, coefs, constant, nreturned) );
+
+   return SCIP_OKAY;
+}
+
+/** expression estimator callback */
+static
+SCIP_DECL_EXPRESTIMATE(estimateCos)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), COSEXPRHDLR_NAME) == 0);
+   assert(coefs != NULL);
+   assert(constant != NULL);
+   assert(islocal != NULL);
+   assert(branchcand != NULL);
+   assert(*branchcand == TRUE);
+   assert(success != NULL);
+
+   *success = computeEstimatorsTrig(scip, expr, coefs, constant, refpoint[0], localbounds[0].inf,
+         localbounds[0].sup, ! overestimate);
+   *islocal = TRUE;  /* TODO there are cases where cuts would be globally valid */
+
+   return SCIP_OKAY;
+}
+
+/** expression reverse propagation callback */
+static
+SCIP_DECL_EXPRREVERSEPROP(reversepropCos)
+{  /*lint --e{715}*/
+   SCIP_INTERVAL newbounds;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   /* bounds should have been intersected with activity, which is within [-1,1] */
+   assert(SCIPintervalGetInf(bounds) >= -1.0);
+   assert(SCIPintervalGetSup(bounds) <= 1.0);
+
+   /* get the child interval */
+   newbounds = childrenbounds[0];
+
+   /* shift child interval to match sine */
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &newbounds, newbounds, M_PI_2);  /* TODO use bounds on Pi/2 instead of approximation of Pi/2 */
+
+   /* compute the new child interval */
+   SCIP_CALL( computeRevPropIntervalSin(scip, bounds, newbounds, &newbounds) );
+
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* shift the new interval back */
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &childrenbounds[0], newbounds, -M_PI_2);  /* TODO use bounds on Pi/2 instead of approximation of Pi/2 */
+
+   return SCIP_OKAY;
+}
+
+/** cosine hash callback */
+static
+SCIP_DECL_EXPRHASH(hashCos)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(hashkey != NULL);
+   assert(childrenhashes != NULL);
+
+   *hashkey = COSEXPRHDLR_HASHKEY;
+   *hashkey ^= childrenhashes[0];
+
+   return SCIP_OKAY;
+}
+
+/** expression curvature detection callback */
+static
+SCIP_DECL_EXPRCURVATURE(curvatureCos)
+{  /*lint --e{715}*/
+   SCIP_EXPR* child;
+   SCIP_INTERVAL childinterval;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(exprcurvature != SCIP_EXPRCURV_UNKNOWN);
+   assert(childcurv != NULL);
+   assert(success != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+
+   child = SCIPexprGetChildren(expr)[0];
+   assert(child != NULL);
+   SCIP_CALL( SCIPevalExprActivity(scip, child) );
+   childinterval = SCIPexprGetActivity(child);
+
+   /* TODO rewrite SCIPcomputeCurvatureSin so it provides the reverse operation */
+   *success = TRUE;
+   if( computeCurvatureSin(SCIP_EXPRCURV_CONCAVE, childinterval.inf + M_PI_2, childinterval.sup + M_PI_2) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONCAVE;
+   else if( computeCurvatureSin(SCIP_EXPRCURV_CONVEX, childinterval.inf + M_PI_2, childinterval.sup + M_PI_2) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_CONVEX;
+   else if( computeCurvatureSin(SCIP_EXPRCURV_LINEAR, childinterval.inf + M_PI_2, childinterval.sup + M_PI_2) == exprcurvature )
+      *childcurv = SCIP_EXPRCURV_LINEAR;
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** expression monotonicity detection callback */
+static
+SCIP_DECL_EXPRMONOTONICITY(monotonicityCos)
+{  /*lint --e{715}*/
+   SCIP_INTERVAL interval;
+   SCIP_Real inf;
+   SCIP_Real sup;
+   int k;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(childidx == 0);
+
+   assert(SCIPexprGetChildren(expr)[0] != NULL);
+   SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(expr)[0]) );
+   interval = SCIPexprGetActivity(SCIPexprGetChildren(expr)[0]);
+
+   *result = SCIP_MONOTONE_UNKNOWN;
+   inf = SCIPintervalGetInf(interval);
+   sup = SCIPintervalGetSup(interval);
+
+   /* expression is not monotone because the interval is too large */
+   if( sup - inf > M_PI )
+      return SCIP_OKAY;
+
+   /* compute k s.t. PI * k <= interval.inf <= PI * (k+1) */
+   k = (int)floor(inf/M_PI);
+   assert(M_PI * k <= inf);
+   assert(M_PI * (k+1) >= inf);
+
+   /* check whether [inf,sup] are contained in an interval for which the cosine function is monotone */
+   if( sup <= M_PI * (k+1) )
+      *result = ((k % 2 + 2) % 2) == 0 ? SCIP_MONOTONE_DEC : SCIP_MONOTONE_INC;
+
+   return SCIP_OKAY;
+}
+
+/** creates the handler for sin expressions and includes it into SCIP */
+SCIP_RETCODE SCIPincludeExprhdlrSin(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalSin, NULL) );
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, SINEXPRHDLR_NAME, SINEXPRHDLR_DESC, SINEXPRHDLR_PRECEDENCE, evalSin, NULL) );
    assert(exprhdlr != NULL);
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrSin, NULL);
@@ -1086,6 +1382,31 @@ SCIP_RETCODE SCIPincludeExprHdlrSin(
    return SCIP_OKAY;
 }
 
+/** creates the handler for cos expressions and includes it SCIP */
+SCIP_RETCODE SCIPincludeExprhdlrCos(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_EXPRHDLR* exprhdlr;
+
+   /* include expression handler */
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, COSEXPRHDLR_NAME, COSEXPRHDLR_DESC, COSEXPRHDLR_PRECEDENCE, evalCos, NULL) );
+   assert(exprhdlr != NULL);
+
+   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrCos, NULL);
+   SCIPexprhdlrSetSimplify(exprhdlr, simplifyCos);
+   SCIPexprhdlrSetParse(exprhdlr, parseCos);
+   SCIPexprhdlrSetIntEval(exprhdlr, intevalCos);
+   SCIPexprhdlrSetEstimate(exprhdlr, initEstimatesCos, estimateCos);
+   SCIPexprhdlrSetReverseProp(exprhdlr, reversepropCos);
+   SCIPexprhdlrSetHash(exprhdlr, hashCos);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffCos, NULL, NULL);
+   SCIPexprhdlrSetCurvature(exprhdlr, curvatureCos);
+   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityCos);
+
+   return SCIP_OKAY;
+}
+
 /** creates a sin expression */
 SCIP_RETCODE SCIPcreateExprSin(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1097,9 +1418,29 @@ SCIP_RETCODE SCIPcreateExprSin(
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindExprHdlr(scip, EXPRHDLR_NAME) != NULL);
+   assert(SCIPfindExprhdlr(scip, SINEXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate,
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, SINEXPRHDLR_NAME), NULL, 1, &child, ownercreate,
+            ownercreatedata) );
+
+   return SCIP_OKAY;
+}
+
+
+/** creates a cos expression */
+SCIP_RETCODE SCIPcreateExprCos(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPR*            child,              /**< single child */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
+   )
+{
+   assert(expr != NULL);
+   assert(child != NULL);
+   assert(SCIPfindExprhdlr(scip, COSEXPRHDLR_NAME) != NULL);
+
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, COSEXPRHDLR_NAME), NULL, 1, &child, ownercreate,
             ownercreatedata) );
 
    return SCIP_OKAY;

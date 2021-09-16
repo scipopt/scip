@@ -37,7 +37,7 @@ extern "C" {
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrXyz(
+SCIP_RETCODE SCIPincludeExprhdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -45,11 +45,11 @@ SCIP_RETCODE SCIPincludeExprHdlrXyz(
  *
  * @{
  *
- * @name Xyz expression.
+ * @name Xyz expression
  *
  * This expression handler provides the xyz function, that is,
  * \f[
- *   x \mapsto xyz(x)
+ *   x \mapsto xyz(x).
  * \f]
  *
  * @{

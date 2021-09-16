@@ -39,6 +39,8 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
+#include "scip/expr_product.h"
+#include "scip/expr_var.h"
 #include "scip/debug.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
@@ -52,10 +54,12 @@
 #include "scip/scip_copy.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_event.h"
+#include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -112,6 +116,7 @@ struct SCIP_ConsData
    SCIP_VAR*             resvar;             /**< resultant variable */
    SCIP_ROW**            rows;               /**< rows for linear relaxation of AND-constraint */
    SCIP_ROW*             aggrrow;            /**< aggregated row for linear relaxation of AND-constraint */
+   SCIP_NLROW*           nlrow;              /**< row for representation in nonlinear relaxation */
    int                   nvars;              /**< number of variables in AND-constraint */
    int                   varssize;           /**< size of vars array */
    int                   nrows;              /**< number of rows for linear relaxation of AND-constraint */
@@ -439,6 +444,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->resvar = resvar;
    (*consdata)->rows = NULL;
    (*consdata)->aggrrow = NULL;
+   (*consdata)->nlrow = NULL;
    (*consdata)->nvars = nvars;
    (*consdata)->varssize = nvars;
    (*consdata)->nrows = 0;
@@ -553,6 +559,12 @@ SCIP_RETCODE consdataFree(
 
    /* release and free the rows */
    SCIP_CALL( consdataFreeRows(scip, *consdata) );
+
+   /* release the nlrow */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
+   }
 
    /* release vars */
    for( v = 0; v < (*consdata)->nvars; v++ )
@@ -999,6 +1011,59 @@ SCIP_RETCODE addRelaxation(
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->rows[0], FALSE, infeasible) );
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< and constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->resvar != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_EXPR* expr;
+      SCIP_EXPR** varexprs;
+      SCIP_Real minusone = -1.0;
+      int i;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, consdata->nvars) );
+      for( i = 0; i < consdata->nvars; ++i )
+      {
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[i], consdata->vars[i], NULL, NULL) );
+      }
+      SCIP_CALL( SCIPcreateExprProduct(scip, &expr, consdata->nvars, varexprs, 1.0, NULL, NULL) );
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+         0.0, 1, &consdata->resvar, &minusone, expr, 0.0, 0.0, SCIP_EXPRCURV_UNKNOWN) );
+      assert(consdata->nlrow != NULL);
+
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+      for( i = 0; i < consdata->nvars; ++i )
+      {
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
+      }
+      SCIPfreeBufferArray(scip, &varexprs);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -4058,6 +4123,23 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
 }
 #endif
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolAnd)
+{  /*lint --e{715}*/
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolAnd)
@@ -4065,13 +4147,18 @@ SCIP_DECL_CONSEXITSOL(consExitsolAnd)
    SCIP_CONSDATA* consdata;
    int c;
 
-   /* release and free the rows of all constraints */
+   /* release and free the rows and nlrow of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
       SCIP_CALL( consdataFreeRows(scip, consdata) );
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+      }
    }
 
    return SCIP_OKAY;
@@ -4537,6 +4624,40 @@ SCIP_DECL_CONSLOCK(consLockAnd)
    return SCIP_OKAY;
 }
 
+/** constraint activation notification method of constraint handler */
+static
+SCIP_DECL_CONSACTIVE(consActiveAnd)
+{  /*lint --e{715}*/
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveAnd)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** constraint display method of constraint handler */
 static
@@ -4815,10 +4936,13 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyAnd, consCopyAnd) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveAnd) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveAnd) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteAnd) );
 #ifdef GMLGATEPRINTING
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreAnd) );
 #endif
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolAnd) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolAnd) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeAnd) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsAnd) );

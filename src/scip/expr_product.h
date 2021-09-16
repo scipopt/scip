@@ -38,7 +38,7 @@ extern "C" {
  * @ingroup ExprhdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprHdlrProduct(
+SCIP_RETCODE SCIPincludeExprhdlrProduct(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -46,11 +46,11 @@ SCIP_RETCODE SCIPincludeExprHdlrProduct(
  *
  * @{
  *
- * @name Product expression.
+ * @name Product expression
  *
  * This expression handler provides the product function, that is,
  * \f[
- *   x \mapsto c\,\Prod_{i=1}^n x_i
+ *   x \mapsto c\,\prod_{i=1}^n x_i
  * \f]
  * for some constant coefficient c.
  * @{

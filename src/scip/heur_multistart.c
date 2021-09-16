@@ -638,7 +638,6 @@ SCIP_RETCODE solveNLP(
    SCIP_SOL**            points,             /**< array containing improved points */
    int                   npoints,            /**< total number of points */
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver */
-   SCIP_Real             timelimit,          /**< time limit for NLP solver */
    SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
    SCIP_Bool*            success             /**< pointer to store if we could find a solution */
    )
@@ -704,7 +703,7 @@ SCIP_RETCODE solveNLP(
    }
 
    /* call sub-NLP heuristic */
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove,
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, minimprove,
          NULL, NULL) );
    SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
 
@@ -853,7 +852,6 @@ SCIP_RETCODE applyHeur(
    start = 0;
    while( start < nusefulpoints && clusteridx[start] != INT_MAX && !SCIPisStopped(scip) )
    {
-      SCIP_Real timelimit;
       SCIP_Bool success;
       int end;
 
@@ -863,19 +861,8 @@ SCIP_RETCODE applyHeur(
 
       assert(end - start > 0);
 
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-      if( !SCIPisInfinity(scip, timelimit) )
-         timelimit -= SCIPgetSolvingTime(scip);
-
-      /* try to solve sub-NLP if we have enough time left */
-      if( timelimit <= 1.0 )
-      {
-         SCIPdebugMsg(scip, "not enough time left! (%g)\n", timelimit);
-         break;
-      }
-
       /* call sub-NLP heuristic */
-      SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start, -1LL, timelimit,
+      SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start, -1LL,
             heurdata->nlpminimpr, &success) );
       SCIPdebugMsg(scip, "solveNLP result = %u\n", success);
 

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlhdlr_bilinear.c
+ * @ingroup DEFPLUGINS_NLHDLR
  * @brief  bilinear nonlinear handler
  * @author Benjamin Mueller
  */
@@ -56,7 +57,7 @@ struct SCIP_NlhdlrExprData
    SCIP_Real             overineqs[6];       /**< inequalities for overestimation */
    int                   noverineqs;         /**< total number of inequalities for overestimation */
    SCIP_Longint          lastnodeid;         /**< id of the last node that has been used for separation */
-   int                   nseparoundslastnode;      /**< number of separation calls of the last node */
+   int                   nseparoundslastnode; /**< number of separation calls of the last node */
 };
 
 /** nonlinear handler data */
@@ -229,7 +230,8 @@ void updateBilinearRelaxation(
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval))
+             || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
@@ -249,11 +251,13 @@ void updateBilinearRelaxation(
       if( update )
       {
          SCIP_Real val = xcoef * refx + ycoef * refy + constant;
-         SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4) / (REALABS(mccormickval - bilincoef * refx * refy) + 1e-4);
+         SCIP_Real relimpr = 1.0 - (REALABS(val - bilincoef * refx * refy) + 1e-4)
+               / (REALABS(mccormickval - bilincoef * refx * refy) + 1e-4);
          SCIP_Real absimpr = REALABS(val - (*bestval));
 
          /* update relaxation if possible */
-         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval)) || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
+         if( relimpr > 0.05 && absimpr > 1e-3 && ((overestimate && SCIPisRelLT(scip, val, *bestval))
+             || (!overestimate && SCIPisRelGT(scip, val, *bestval))) )
          {
             *bestcoefx = xcoef;
             *bestcoefy = ycoef;
@@ -389,7 +393,8 @@ void getFeasiblePointsBilinear(
       boundsy = SCIPgetExprBoundsNonlinear(scip, child2);
 
       /* if children bounds are empty, then returning with *npoints==0 is the way to go */
-      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsx) || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsy) )
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsx)
+          || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsy) )
          return;
    }
    lbx = boundsx.inf;
@@ -628,7 +633,8 @@ SCIP_INTERVAL intevalBilinear(
    }
 
    /* compute all feasible points (since we use levelset == FALSE, the value of interval doesn't matter) */
-   getFeasiblePointsBilinear(scip, NULL, expr, interval, underineqs, nunderineqs, overineqs, noverineqs, FALSE, xs, ys, &npoints);
+   getFeasiblePointsBilinear(scip, NULL, expr, interval, underineqs, nunderineqs, overineqs,
+         noverineqs, FALSE, xs, ys, &npoints);
 
    /* no feasible point left -> return an empty interval */
    if( npoints == 0 )
@@ -696,7 +702,8 @@ void reversePropBilinear(
    SCIPintervalSetEmpty(intervaly);
 
    /* compute feasible points */
-   getFeasiblePointsBilinear(scip, conshdlr, expr, exprbounds, underineqs, nunderineqs, overineqs, noverineqs, TRUE, xs, ys, &npoints);
+   getFeasiblePointsBilinear(scip, conshdlr, expr, exprbounds, underineqs, nunderineqs, overineqs,
+         noverineqs, TRUE, xs, ys, &npoints);
 
    /* no feasible points left -> problem is infeasible */
    if( npoints == 0 )
@@ -725,7 +732,7 @@ void reversePropBilinear(
 
       /* only accept points for which the value of x*y is in the interval of the product expression
        *
-       * NOTE in order to consider all relevant points, we are a bit conservative here and relax the interval of
+       * NOTE: in order to consider all relevant points, we are a bit conservative here and relax the interval of
        *      the expression by SCIPfeastol()
        */
       if( SCIPisRelGE(scip, val, exprinf - SCIPfeastol(scip)) && SCIPisRelLE(scip, val, exprsup + SCIPfeastol(scip)) )
@@ -749,6 +756,182 @@ void reversePropBilinear(
    }
 }
 
+/** helper function to compute the convex envelope of a bilinear term when two linear inequalities are given; we
+ *  use the same notation and formulas as in Locatelli 2016
+ */
+static
+void computeBilinEnvelope2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             x,                  /**< reference point for x */
+   SCIP_Real             y,                  /**< reference point for y */
+   SCIP_Real             mi,                 /**< coefficient of x in the first linear inequality */
+   SCIP_Real             qi,                 /**< constant in the first linear inequality */
+   SCIP_Real             mj,                 /**< coefficient of x in the second linear inequality */
+   SCIP_Real             qj,                 /**< constant in the second linear inequality */
+   SCIP_Real* RESTRICT   xi,                 /**< buffer to store x coordinate of the first point */
+   SCIP_Real* RESTRICT   yi,                 /**< buffer to store y coordinate of the first point */
+   SCIP_Real* RESTRICT   xj,                 /**< buffer to store x coordinate of the second point */
+   SCIP_Real* RESTRICT   yj,                 /**< buffer to store y coordinate of the second point */
+   SCIP_Real* RESTRICT   xcoef,              /**< buffer to store the x coefficient of the envelope */
+   SCIP_Real* RESTRICT   ycoef,              /**< buffer to store the y coefficient of the envelope */
+   SCIP_Real* RESTRICT   constant            /**< buffer to store the constant of the envelope */
+   )
+{
+   SCIP_Real QUAD(xiq);
+   SCIP_Real QUAD(yiq);
+   SCIP_Real QUAD(xjq);
+   SCIP_Real QUAD(yjq);
+   SCIP_Real QUAD(xcoefq);
+   SCIP_Real QUAD(ycoefq);
+   SCIP_Real QUAD(constantq);
+   SCIP_Real QUAD(tmpq);
+
+   assert(xi != NULL);
+   assert(yi != NULL);
+   assert(xj != NULL);
+   assert(yj != NULL);
+   assert(xcoef != NULL);
+   assert(ycoef != NULL);
+   assert(constant != NULL);
+
+   if( SCIPisEQ(scip, mi, mj) )
+   {
+      /* xi = (x + mi * y - qi) / (2.0*mi) */
+      SCIPquadprecProdDD(xiq, mi, y);
+      SCIPquadprecSumQD(xiq, xiq, x);
+      SCIPquadprecSumQD(xiq, xiq, -qi);
+      SCIPquadprecDivQD(xiq, xiq, 2.0 * mi);
+      assert(EPSEQ((x + mi * y - qi) / (2.0*mi), QUAD_TO_DBL(xiq), 1e-3));
+
+      /* yi = mi*(*xi) + qi */
+      SCIPquadprecProdQD(yiq, xiq, mi);
+      SCIPquadprecSumQD(yiq, yiq, qi);
+      assert(EPSEQ(mi*QUAD_TO_DBL(xiq) + qi, QUAD_TO_DBL(yiq), 1e-3));
+
+      /* xj = (*xi) + (qi - qj)/ (2.0*mi) */
+      SCIPquadprecSumDD(xjq, qi, -qj);
+      SCIPquadprecDivQD(xjq, xjq, 2.0 * mi);
+      SCIPquadprecSumQQ(xjq, xjq, xiq);
+      assert(EPSEQ(QUAD_TO_DBL(xiq) + (qi - qj)/ (2.0*mi), QUAD_TO_DBL(xjq), 1e-3));
+
+      /* yj = mj * (*xj) + qj */
+      SCIPquadprecProdQD(yjq, xjq, mj);
+      SCIPquadprecSumQD(yjq, yjq, qj);
+      assert(EPSEQ(mj * QUAD_TO_DBL(xjq) + qj, QUAD_TO_DBL(yjq), 1e-3));
+
+      /* ycoef = (*xi) + (qi - qj) / (4.0*mi) note that this is wrong in Locatelli 2016 */
+      SCIPquadprecSumDD(ycoefq, qi, -qj);
+      SCIPquadprecDivQD(ycoefq, ycoefq, 4.0 * mi);
+      SCIPquadprecSumQQ(ycoefq, ycoefq, xiq);
+      assert(EPSEQ(QUAD_TO_DBL(xiq) + (qi - qj) / (4.0*mi), QUAD_TO_DBL(ycoefq), 1e-3));
+
+      /* xcoef = 2.0*mi*(*xi) - mi * (*ycoef) + qi */
+      SCIPquadprecProdQD(xcoefq, xiq, 2.0 * mi);
+      SCIPquadprecProdQD(tmpq, ycoefq, -mi);
+      SCIPquadprecSumQQ(xcoefq, xcoefq, tmpq);
+      SCIPquadprecSumQD(xcoefq, xcoefq, qi);
+      assert(EPSEQ(2.0*mi*QUAD_TO_DBL(xiq) - mi * QUAD_TO_DBL(ycoefq) + qi, QUAD_TO_DBL(xcoefq), 1e-3));
+
+      /* constant = -mj*SQR(*xj) - (*ycoef) * qj */
+      SCIPquadprecSquareQ(constantq, xjq);
+      SCIPquadprecProdQD(constantq, constantq, -mj);
+      SCIPquadprecProdQD(tmpq, ycoefq, -qj);
+      SCIPquadprecSumQQ(constantq, constantq, tmpq);
+      /* assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3)); */
+
+      *xi = QUAD_TO_DBL(xiq);
+      *yi = QUAD_TO_DBL(yiq);
+      *xj = QUAD_TO_DBL(xjq);
+      *yj = QUAD_TO_DBL(yjq);
+      *ycoef = QUAD_TO_DBL(ycoefq);
+      *xcoef = QUAD_TO_DBL(xcoefq);
+      *constant = QUAD_TO_DBL(constantq);
+   }
+   else if( mi > 0.0 )
+   {
+      assert(mj > 0.0);
+
+      /* xi = (y + SQRT(mi*mj)*x - qi) / (REALABS(mi) + SQRT(mi*mj)) */
+      SCIPquadprecProdDD(xiq, mi, mj);
+      SCIPquadprecSqrtQ(xiq, xiq);
+      SCIPquadprecProdQD(xiq, xiq, x);
+      SCIPquadprecSumQD(xiq, xiq, y);
+      SCIPquadprecSumQD(xiq, xiq, -qi); /* (y + SQRT(mi*mj)*x - qi) */
+      SCIPquadprecProdDD(tmpq, mi, mj);
+      SCIPquadprecSqrtQ(tmpq, tmpq);
+      SCIPquadprecSumQD(tmpq, tmpq, REALABS(mi)); /* REALABS(mi) + SQRT(mi*mj) */
+      SCIPquadprecDivQQ(xiq, xiq, tmpq);
+      assert(EPSEQ((y + SQRT(mi*mj)*x - qi) / (REALABS(mi) + SQRT(mi*mj)), QUAD_TO_DBL(xiq), 1e-3));
+
+      /* yi = mi*(*xi) + qi */
+      SCIPquadprecProdQD(yiq, xiq, mi);
+      SCIPquadprecSumQD(yiq, yiq, qi);
+      assert(EPSEQ(mi*(QUAD_TO_DBL(xiq)) + qi, QUAD_TO_DBL(yiq), 1e-3));
+
+      /* xj = (y + SQRT(mi*mj)*x - qj) / (REALABS(mj) + SQRT(mi*mj)) */
+      SCIPquadprecProdDD(xjq, mi, mj);
+      SCIPquadprecSqrtQ(xjq, xjq);
+      SCIPquadprecProdQD(xjq, xjq, x);
+      SCIPquadprecSumQD(xjq, xjq, y);
+      SCIPquadprecSumQD(xjq, xjq, -qj); /* (y + SQRT(mi*mj)*x - qj) */
+      SCIPquadprecProdDD(tmpq, mi, mj);
+      SCIPquadprecSqrtQ(tmpq, tmpq);
+      SCIPquadprecSumQD(tmpq, tmpq, REALABS(mj)); /* REALABS(mj) + SQRT(mi*mj) */
+      SCIPquadprecDivQQ(xjq, xjq, tmpq);
+      assert(EPSEQ((y + SQRT(mi*mj)*x - qj) / (REALABS(mj) + SQRT(mi*mj)), QUAD_TO_DBL(xjq), 1e-3));
+
+      /* yj = mj*(*xj) + qj */
+      SCIPquadprecProdQD(yjq, xjq, mj);
+      SCIPquadprecSumQD(yjq, yjq, qj);
+      assert(EPSEQ(mj*QUAD_TO_DBL(xjq) + qj, QUAD_TO_DBL(yjq), 1e-3));
+
+      /* ycoef = (2.0*mj*(*xj) + qj - 2.0*mi*(*xi) - qi) / (mj - mi) */
+      SCIPquadprecProdQD(ycoefq, xjq, 2.0 * mj);
+      SCIPquadprecSumQD(ycoefq, ycoefq, qj);
+      SCIPquadprecProdQD(tmpq, xiq, -2.0 * mi);
+      SCIPquadprecSumQQ(ycoefq, ycoefq, tmpq);
+      SCIPquadprecSumQD(ycoefq, ycoefq, -qi);
+      SCIPquadprecSumDD(tmpq, mj, -mi);
+      SCIPquadprecDivQQ(ycoefq, ycoefq, tmpq);
+      assert(EPSEQ((2.0*mj*QUAD_TO_DBL(xjq) + qj - 2.0*mi*QUAD_TO_DBL(xiq) - qi) / (mj - mi), QUAD_TO_DBL(ycoefq), 1e-3));
+
+      /* xcoef = 2.0*mj*(*xj) + qj - mj*(*ycoef) */
+      SCIPquadprecProdQD(xcoefq, xjq, 2.0 * mj);
+      SCIPquadprecSumQD(xcoefq, xcoefq, qj);
+      SCIPquadprecProdQD(tmpq, ycoefq, -mj);
+      SCIPquadprecSumQQ(xcoefq, xcoefq, tmpq);
+      assert(EPSEQ(2.0*mj*QUAD_TO_DBL(xjq) + qj - mj*QUAD_TO_DBL(ycoefq), QUAD_TO_DBL(xcoefq), 1e-3));
+
+      /* constant = -mj*SQR(*xj) - (*ycoef) * qj */
+      SCIPquadprecSquareQ(constantq, xjq);
+      SCIPquadprecProdQD(constantq, constantq, -mj);
+      SCIPquadprecProdQD(tmpq, ycoefq, -qj);
+      SCIPquadprecSumQQ(constantq, constantq, tmpq);
+      /* assert(EPSEQ(-mj*SQR(QUAD_TO_DBL(xjq)) - QUAD_TO_DBL(ycoefq) * qj, QUAD_TO_DBL(constantq), 1e-3)); */
+
+      *xi = QUAD_TO_DBL(xiq);
+      *yi = QUAD_TO_DBL(yiq);
+      *xj = QUAD_TO_DBL(xjq);
+      *yj = QUAD_TO_DBL(yjq);
+      *ycoef = QUAD_TO_DBL(ycoefq);
+      *xcoef = QUAD_TO_DBL(xcoefq);
+      *constant = QUAD_TO_DBL(constantq);
+   }
+   else
+   {
+      assert(mi < 0.0 && mj < 0.0);
+
+      /* apply variable transformation x = -x in case for overestimation */
+      computeBilinEnvelope2(scip, -x, y, -mi, qi, -mj, qj, xi, yi, xj, yj, xcoef, ycoef, constant);
+
+      /* revert transformation; multiply cut by -1 and change -x by x */
+      *xi = -(*xi);
+      *xj = -(*xj);
+      *ycoef = -(*ycoef);
+      *constant = -(*constant);
+   }
+}
+
 #ifdef SCIP_STATISTIC
 /** output method of statistics table to output file stream 'file' */
 static
@@ -763,7 +946,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
    int restotal = 0;
    int c;
 
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(conshdlr != NULL);
    nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, NLHDLR_NAME);
    assert(nlhdlr != NULL);
@@ -772,7 +955,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
 
    /* allocate memory */
    SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nlhdlrdata->nexprs) );
-   SCIP_CALL( SCIPcreateExpriter(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
 
    for( c = 0; c < nlhdlrdata->nexprs; ++c )
    {
@@ -786,7 +969,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
       SCIP_CONS* cons = SCIPconshdlrGetConss(conshdlr)[c];
       SCIP_EXPR* expr;
 
-      SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprNonlinear(scip, cons), SCIP_EXPRITER_DFS, FALSE) );
+      SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprNonlinear(cons), SCIP_EXPRITER_DFS, FALSE) );
 
       for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
@@ -847,7 +1030,6 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrBilinear)
    return SCIP_OKAY;
 }
 
-
 /** callback to free data of handler */
 static
 SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataBilinear)
@@ -866,7 +1048,6 @@ SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataBilinear)
 
    return SCIP_OKAY;
 }
-
 
 /** callback to free expression specific data */
 static
@@ -911,20 +1092,8 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataBilinear)
    return SCIP_OKAY;
 }
 
-
 /** callback to be called in initialization */
-#if 0
-static
-SCIP_DECL_NLHDLRINIT(nlhdlrInitBilinear)
-{  /*lint --e{715}*/
-   /* TODO */
-
-   return SCIP_OKAY;
-}
-#else
 #define nlhdlrInitBilinear NULL
-#endif
-
 
 /** callback to be called in deinitialization */
 static
@@ -935,7 +1104,6 @@ SCIP_DECL_NLHDLREXIT(nlhdlrExitBilinear)
 
    return SCIP_OKAY;
 }
-
 
 /** callback to detect structure in expression tree */
 static
@@ -964,7 +1132,8 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectBilinear)
       children = SCIPexprGetChildren(expr);
       assert(children != NULL);
 
-      /* detection is only successful if both children will have auxiliary variable or are variables that are not binary variables */
+      /* detection is only successful if both children will have auxiliary variable or are variables
+       * that are not binary variables */
       valid = TRUE;
       for( c = 0; c < 2; ++c )
       {
@@ -1015,8 +1184,10 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectBilinear)
          ++nlhdlrdata->nexprs;
 
          /* tell children that we will use their auxvar and use its activity for both estimate and domain propagation */
-         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[0], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE, TRUE) );
-         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[1], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE, TRUE) );
+         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[0], TRUE, nlhdlrdata->useinteval
+               || nlhdlrdata->usereverseprop, TRUE, TRUE) );
+         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[1], TRUE, nlhdlrdata->useinteval
+               || nlhdlrdata->usereverseprop, TRUE, TRUE) );
       }
    }
 
@@ -1040,7 +1211,6 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectBilinear)
    return SCIP_OKAY;
 }
 
-
 /** auxiliary evaluation callback of nonlinear handler */
 static
 SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxBilinear)
@@ -1063,51 +1233,14 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxBilinear)
    return SCIP_OKAY;
 }
 
-
 /** separation initialization method of a nonlinear handler (called during CONSINITLP) */
-#if 0
-static
-SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaBilinear)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of bilinear nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define nlhdlrInitSepaBilinear NULL
-#endif
-
 
 /** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
-#if 0
-static
-SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaBilinear)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of bilinear nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define nlhdlrExitSepaBilinear NULL
-#endif
-
 
 /** nonlinear handler separation callback */
-#if 0
-static
-SCIP_DECL_NLHDLRENFO(nlhdlrEnfoBilinear)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of bilinear nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define nlhdlrEnfoBilinear NULL
-#endif
-
 
 /** nonlinear handler under/overestimation callback */
 static
@@ -1239,7 +1372,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateBilinear)
    return SCIP_OKAY;
 }
 
-
 /** nonlinear handler interval evaluation callback */
 static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalBilinear)
@@ -1262,7 +1394,6 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalBilinear)
 
    return SCIP_OKAY;
 }
-
 
 /** nonlinear handler callback for reverse propagation */
 static
@@ -1299,7 +1430,8 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
          SCIPgetExprBoundsNonlinear(scip, childx).inf, SCIPgetExprBoundsNonlinear(scip, childx).sup,
          intervalx.inf, intervalx.sup);
 
-      SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[0], intervalx, infeasible, nreductions) );
+      SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[0], intervalx, infeasible,
+         nreductions) );
 
       if( !(*infeasible) )
       {
@@ -1307,13 +1439,13 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
          SCIPdebugMsg(scip, "try to tighten bounds of y: [%g,%g] -> [%g,%g]\n",
             SCIPgetExprBoundsNonlinear(scip, childy).inf, SCIPgetExprBoundsNonlinear(scip, childy).sup,
             intervaly.inf, intervaly.sup);
-         SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[1], intervaly, infeasible, nreductions) );
+         SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[1], intervaly,
+            infeasible, nreductions) );
       }
    }
 
    return SCIP_OKAY;
 }
-
 
 /*
  * nonlinear handler specific interface methods
@@ -1351,7 +1483,9 @@ int SCIPgetNlhdlrBilinearNExprs(
    return nlhdlrdata->nexprs;
 }
 
-/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant to a product expression of the form x*y */
+/** adds a globally valid inequality of the form xcoef x <= ycoef y + constant to a product expression
+ * of the form x*y
+ */
 SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
@@ -1389,7 +1523,8 @@ SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
 
    if( nlhdlrexprdata == NULL )
    {
-      SCIPwarningMessage(scip, "nonlinear expression data has not been found. Skip SCIPaddConsExprExprProductBilinearIneq()\n");
+      SCIPwarningMessage(scip, "nonlinear expression data has not been found. "
+            "Skip SCIPaddConsExprExprProductBilinearIneq()\n");
       return SCIP_OKAY;
    }
 
@@ -1560,4 +1695,613 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
 #endif
 
    return SCIP_OKAY;
+}
+
+/** computes coefficients of linearization of a bilinear term in a reference point */
+void SCIPaddBilinLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             refpointx,          /**< point where to linearize first  variable */
+   SCIP_Real             refpointy,          /**< point where to linearize second variable */
+   SCIP_Real*            lincoefx,           /**< buffer to add coefficient of first  variable in linearization */
+   SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   )
+{
+   SCIP_Real constant;
+
+   assert(scip != NULL);
+   assert(lincoefx != NULL);
+   assert(lincoefy != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( bilincoef == 0.0 )
+      return;
+
+   if( SCIPisInfinity(scip, REALABS(refpointx)) || SCIPisInfinity(scip, REALABS(refpointy)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   /* bilincoef * x * y ->  bilincoef * (refpointx * refpointy + refpointy * (x - refpointx) + refpointx * (y - refpointy))
+    *                    = -bilincoef * refpointx * refpointy + bilincoef * refpointy * x + bilincoef * refpointx * y
+    */
+
+   constant = -bilincoef * refpointx * refpointy;
+
+   if( SCIPisInfinity(scip, REALABS(bilincoef * refpointx)) || SCIPisInfinity(scip, REALABS(bilincoef * refpointy))
+      || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoefx    += bilincoef * refpointy;
+   *lincoefy    += bilincoef * refpointx;
+   *linconstant += constant;
+}
+
+/** computes coefficients of McCormick under- or overestimation of a bilinear term */
+void SCIPaddBilinMcCormick(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real*            lincoefx,           /**< buffer to add coefficient of first  variable in linearization */
+   SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   )
+{
+   SCIP_Real constant;
+   SCIP_Real coefx;
+   SCIP_Real coefy;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lbx));
+   assert(!SCIPisInfinity(scip, -ubx));
+   assert(!SCIPisInfinity(scip,  lby));
+   assert(!SCIPisInfinity(scip, -uby));
+   assert(SCIPisInfinity(scip,  -lbx) || SCIPisLE(scip, lbx, ubx));
+   assert(SCIPisInfinity(scip,  -lby) || SCIPisLE(scip, lby, uby));
+   assert(SCIPisInfinity(scip,  -lbx) || SCIPisLE(scip, lbx, refpointx));
+   assert(SCIPisInfinity(scip,  -lby) || SCIPisLE(scip, lby, refpointy));
+   assert(SCIPisInfinity(scip,  ubx) || SCIPisGE(scip, ubx, refpointx));
+   assert(SCIPisInfinity(scip,  uby) || SCIPisGE(scip, uby, refpointy));
+   assert(lincoefx != NULL);
+   assert(lincoefy != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( bilincoef == 0.0 )
+      return;
+
+   if( overestimate )
+      bilincoef = -bilincoef;
+
+   if( SCIPisRelEQ(scip, lbx, ubx) && SCIPisRelEQ(scip, lby, uby) )
+   {
+      /* both x and y are mostly fixed */
+      SCIP_Real cand1;
+      SCIP_Real cand2;
+      SCIP_Real cand3;
+      SCIP_Real cand4;
+
+      coefx = 0.0;
+      coefy = 0.0;
+
+      /* estimate x * y by constant */
+      cand1 = lbx * lby;
+      cand2 = lbx * uby;
+      cand3 = ubx * lby;
+      cand4 = ubx * uby;
+
+      /* take most conservative value for underestimator */
+      if( bilincoef < 0.0 )
+         constant = bilincoef * MAX( MAX(cand1, cand2), MAX(cand3, cand4) );
+      else
+         constant = bilincoef * MIN( MIN(cand1, cand2), MIN(cand3, cand4) );
+   }
+   else if( bilincoef > 0.0 )
+   {
+      /* either x or y is not fixed and coef > 0.0 */
+      if( !SCIPisInfinity(scip, -lbx) && !SCIPisInfinity(scip, -lby) &&
+         (SCIPisInfinity(scip,  ubx) || SCIPisInfinity(scip,  uby)
+            || (uby - refpointy) * (ubx - refpointx) >= (refpointy - lby) * (refpointx - lbx)) )
+      {
+         if( SCIPisRelEQ(scip, lbx, ubx) )
+         {
+            /* x*y = lbx * y + (x-lbx) * y >= lbx * y + (x-lbx) * lby >= lbx * y + min{(ubx-lbx) * lby, 0 * lby} */
+            coefx    =  0.0;
+            coefy    =  bilincoef * lbx;
+            constant =  bilincoef * (lby < 0.0 ? (ubx-lbx) * lby : 0.0);
+         }
+         else if( SCIPisRelEQ(scip, lby, uby) )
+         {
+            /* x*y = lby * x + (y-lby) * x >= lby * x + (y-lby) * lbx >= lby * x + min{(uby-lby) * lbx, 0 * lbx} */
+            coefx    =  bilincoef * lby;
+            coefy    =  0.0;
+            constant =  bilincoef * (lbx < 0.0 ? (uby-lby) * lbx : 0.0);
+         }
+         else
+         {
+            coefx    =  bilincoef * lby;
+            coefy    =  bilincoef * lbx;
+            constant = -bilincoef * lbx * lby;
+         }
+      }
+      else if( !SCIPisInfinity(scip, ubx) && !SCIPisInfinity(scip, uby) )
+      {
+         if( SCIPisRelEQ(scip, lbx, ubx) )
+         {
+            /* x*y = ubx * y + (x-ubx) * y >= ubx * y + (x-ubx) * uby >= ubx * y + min{(lbx-ubx) * uby, 0 * uby} */
+            coefx    =  0.0;
+            coefy    =  bilincoef * ubx;
+            constant =  bilincoef * (uby > 0.0 ? (lbx - ubx) * uby : 0.0);
+         }
+         else if( SCIPisRelEQ(scip, lby, uby) )
+         {
+            /* x*y = uby * x + (y-uby) * x >= uby * x + (y-uby) * ubx >= uby * x + min{(lby-uby) * ubx, 0 * ubx} */
+            coefx    =  bilincoef * uby;
+            coefy    =  0.0;
+            constant =  bilincoef * (ubx > 0.0 ? (lby - uby) * ubx : 0.0);
+         }
+         else
+         {
+            coefx    =  bilincoef * uby;
+            coefy    =  bilincoef * ubx;
+            constant = -bilincoef * ubx * uby;
+         }
+      }
+      else
+      {
+         *success = FALSE;
+         return;
+      }
+   }
+   else
+   {
+      /* either x or y is not fixed and coef < 0.0 */
+      if( !SCIPisInfinity(scip,  ubx) && !SCIPisInfinity(scip, -lby) &&
+         (SCIPisInfinity(scip, -lbx) || SCIPisInfinity(scip,  uby)
+            || (ubx - lbx) * (refpointy - lby) <= (uby - lby) * (refpointx - lbx)) )
+      {
+         if( SCIPisRelEQ(scip, lbx, ubx) )
+         {
+            /* x*y = ubx * y + (x-ubx) * y <= ubx * y + (x-ubx) * lby <= ubx * y + max{(lbx-ubx) * lby, 0 * lby} */
+            coefx    =  0.0;
+            coefy    =  bilincoef * ubx;
+            constant =  bilincoef * (lby < 0.0 ? (lbx - ubx) * lby : 0.0);
+         }
+         else if( SCIPisRelEQ(scip, lby, uby) )
+         {
+            /* x*y = lby * x + (y-lby) * x <= lby * x + (y-lby) * ubx <= lby * x + max{(uby-lby) * ubx, 0 * ubx} */
+            coefx    =  bilincoef * lby;
+            coefy    =  0.0;
+            constant =  bilincoef * (ubx > 0.0 ? (uby - lby) * ubx : 0.0);
+         }
+         else
+         {
+            coefx    =  bilincoef * lby;
+            coefy    =  bilincoef * ubx;
+            constant = -bilincoef * ubx * lby;
+         }
+      }
+      else if( !SCIPisInfinity(scip, -lbx) && !SCIPisInfinity(scip, uby) )
+      {
+         if( SCIPisRelEQ(scip, lbx, ubx) )
+         {
+            /* x*y = lbx * y + (x-lbx) * y <= lbx * y + (x-lbx) * uby <= lbx * y + max{(ubx-lbx) * uby, 0 * uby} */
+            coefx    =  0.0;
+            coefy    =  bilincoef * lbx;
+            constant =  bilincoef * (uby > 0.0 ? (ubx - lbx) * uby : 0.0);
+         }
+         else if( SCIPisRelEQ(scip, lby, uby) )
+         {
+            /* x*y = uby * x + (y-uby) * x <= uby * x + (y-uby) * lbx <= uby * x + max{(lby-uby) * lbx, 0 * lbx} */
+            coefx    =  bilincoef * uby;
+            coefy    =  0.0;
+            constant =  bilincoef * (lbx < 0.0 ? (lby - uby) * lbx : 0.0);
+         }
+         else
+         {
+            coefx    =  bilincoef * uby;
+            coefy    =  bilincoef * lbx;
+            constant = -bilincoef * lbx * uby;
+         }
+      }
+      else
+      {
+         *success = FALSE;
+         return;
+      }
+   }
+
+   if( SCIPisInfinity(scip, REALABS(coefx)) || SCIPisInfinity(scip, REALABS(coefy))
+      || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   if( overestimate )
+   {
+      coefx    = -coefx;
+      coefy    = -coefy;
+      constant = -constant;
+   }
+
+   SCIPdebugMsg(scip, "%.15g * x[%.15g,%.15g] * y[%.15g,%.15g] %c= %.15g * x %+.15g * y %+.15g\n", bilincoef, lbx, ubx,
+      lby, uby, overestimate ? '<' : '>', coefx, coefy, constant);
+
+   *lincoefx    += coefx;
+   *lincoefy    += coefy;
+   *linconstant += constant;
+}
+
+/** computes coefficients of linearization of a bilinear term in a reference point when given a linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ */
+void SCIPcomputeBilinEnvelope1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             xcoef,              /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef,              /**< y coefficient of linear inequality */
+   SCIP_Real             constant,           /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
+   )
+{
+   SCIP_Real xs[2] = {lbx, ubx};
+   SCIP_Real ys[2] = {lby, uby};
+   SCIP_Real minx;
+   SCIP_Real maxx;
+   SCIP_Real miny;
+   SCIP_Real maxy;
+   SCIP_Real QUAD(lincoefyq);
+   SCIP_Real QUAD(lincoefxq);
+   SCIP_Real QUAD(linconstantq);
+   SCIP_Real QUAD(denomq);
+   SCIP_Real QUAD(mjq);
+   SCIP_Real QUAD(qjq);
+   SCIP_Real QUAD(xjq);
+   SCIP_Real QUAD(yjq);
+   SCIP_Real QUAD(tmpq);
+   SCIP_Real vx;
+   SCIP_Real vy;
+   int n;
+   int i;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lbx));
+   assert(!SCIPisInfinity(scip, -ubx));
+   assert(!SCIPisInfinity(scip,  lby));
+   assert(!SCIPisInfinity(scip, -uby));
+   assert(SCIPisLE(scip, lbx, ubx));
+   assert(SCIPisLE(scip, lby, uby));
+   assert(SCIPisLE(scip, lbx, refpointx));
+   assert(SCIPisGE(scip, ubx, refpointx));
+   assert(SCIPisLE(scip, lby, refpointy));
+   assert(SCIPisGE(scip, uby, refpointy));
+   assert(lincoefx != NULL);
+   assert(lincoefy != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+   assert(xcoef == 0.0 || xcoef == -1.0 || xcoef == 1.0); /*lint !e777*/
+   assert(ycoef != SCIP_INVALID && ycoef != 0.0); /*lint !e777*/
+   assert(constant != SCIP_INVALID); /*lint !e777*/
+
+   *success = FALSE;
+   *lincoefx = SCIP_INVALID;
+   *lincoefy = SCIP_INVALID;
+   *linconstant = SCIP_INVALID;
+
+   /* reference point does not satisfy linear inequality */
+   if( SCIPisFeasGT(scip, xcoef * refpointx - ycoef * refpointy - constant, 0.0) )
+      return;
+
+   /* compute minimal and maximal bounds on x and y for accepting the reference point */
+   minx = lbx + 0.01 * (ubx-lbx);
+   maxx = ubx - 0.01 * (ubx-lbx);
+   miny = lby + 0.01 * (uby-lby);
+   maxy = uby - 0.01 * (uby-lby);
+
+   /* check whether the reference point is in [minx,maxx]x[miny,maxy] */
+   if( SCIPisLE(scip, refpointx, minx) || SCIPisGE(scip, refpointx, maxx)
+      || SCIPisLE(scip, refpointy, miny) || SCIPisGE(scip, refpointy, maxy) )
+      return;
+
+   /* always consider xy without the bilinear coefficient */
+   if( bilincoef < 0.0 )
+      overestimate = !overestimate;
+
+   /* we use same notation as in "Convex envelopes of bivariate functions through the solution of KKT systems", 2016 */
+   /* mj = xcoef / ycoef */
+   SCIPquadprecDivDD(mjq, xcoef, ycoef);
+
+   /* qj = -constant / ycoef */
+   SCIPquadprecDivDD(qjq, -constant, ycoef);
+
+   /* mj > 0 => underestimate; mj < 0 => overestimate */
+   if( SCIPisNegative(scip, QUAD_TO_DBL(mjq)) != overestimate )
+      return;
+
+   /* get the corner point that satisfies the linear inequality xcoef*x <= ycoef*y + constant */
+   if( !overestimate )
+   {
+      ys[0] = uby;
+      ys[1] = lby;
+   }
+
+   vx = SCIP_INVALID;
+   vy = SCIP_INVALID;
+   n = 0;
+   for( i = 0; i < 2; ++i )
+   {
+      SCIP_Real activity = xcoef * xs[i] - ycoef * ys[i] - constant;
+      if( SCIPisLE(scip, activity, 0.0) )
+      {
+         /* corner point is satisfies inequality */
+         vx = xs[i];
+         vy = ys[i];
+      }
+      else if( SCIPisFeasGT(scip, activity, 0.0) )
+         /* corner point is clearly cut off */
+         ++n;
+   }
+
+   /* skip if no corner point satisfies the inequality or if no corner point is cut off
+    * (that is, all corner points satisfy the inequality almost [1e-9..1e-6]) */
+   if( n != 1 || vx == SCIP_INVALID || vy == SCIP_INVALID ) /*lint !e777*/
+      return;
+
+   /* denom = mj*(refpointx - vx) + vy - refpointy */
+   SCIPquadprecSumDD(denomq, refpointx, -vx); /* refpoint - vx */
+   SCIPquadprecProdQQ(denomq, denomq, mjq); /* mj * (refpoint - vx) */
+   SCIPquadprecSumQD(denomq, denomq, vy); /* mj * (refpoint - vx) + vy */
+   SCIPquadprecSumQD(denomq, denomq, -refpointy); /* mj * (refpoint - vx) + vy - refpointy */
+
+   if( SCIPisZero(scip, QUAD_TO_DBL(denomq)) )
+      return;
+
+   /* (xj,yj) is the projection onto the line xcoef*x = ycoef*y + constant */
+   /* xj = (refpointx*(vy - qj) - vx*(refpointy - qj)) / denom */
+   SCIPquadprecProdQD(xjq, qjq, -1.0); /* - qj */
+   SCIPquadprecSumQD(xjq, xjq, vy); /* vy - qj */
+   SCIPquadprecProdQD(xjq, xjq, refpointx); /* refpointx * (vy - qj) */
+   SCIPquadprecProdQD(tmpq, qjq, -1.0); /* - qj */
+   SCIPquadprecSumQD(tmpq, tmpq, refpointy); /* refpointy - qj */
+   SCIPquadprecProdQD(tmpq, tmpq, -vx); /* - vx * (refpointy - qj) */
+   SCIPquadprecSumQQ(xjq, xjq, tmpq); /* refpointx * (vy - qj) - vx * (refpointy - qj) */
+   SCIPquadprecDivQQ(xjq, xjq, denomq); /* (refpointx * (vy - qj) - vx * (refpointy - qj)) / denom */
+
+   /* yj = mj * xj + qj */
+   SCIPquadprecProdQQ(yjq, mjq, xjq);
+   SCIPquadprecSumQQ(yjq, yjq, qjq);
+
+   assert(SCIPisFeasEQ(scip, xcoef*QUAD_TO_DBL(xjq) - ycoef*QUAD_TO_DBL(yjq) - constant, 0.0));
+
+   /* check whether the projection is in [minx,maxx] x [miny,maxy]; this avoids numerical difficulties when the
+    * projection is close to the variable bounds
+    */
+   if( SCIPisLE(scip, QUAD_TO_DBL(xjq), minx) || SCIPisGE(scip, QUAD_TO_DBL(xjq), maxx)
+      || SCIPisLE(scip, QUAD_TO_DBL(yjq), miny) || SCIPisGE(scip, QUAD_TO_DBL(yjq), maxy) )
+      return;
+
+   assert(vy - QUAD_TO_DBL(mjq)*vx - QUAD_TO_DBL(qjq) != 0.0);
+
+   /* lincoefy = (mj*SQR(xj) - 2.0*mj*vx*xj - qj*vx + vx*vy) / (vy - mj*vx - qj) */
+   SCIPquadprecSquareQ(lincoefyq, xjq); /* xj^2 */
+   SCIPquadprecProdQQ(lincoefyq, lincoefyq, mjq); /* mj * xj^2 */
+   SCIPquadprecProdQQ(tmpq, mjq, xjq); /* mj * xj */
+   SCIPquadprecProdQD(tmpq, tmpq, -2.0 * vx); /* -2 * vx * mj * xj */
+   SCIPquadprecSumQQ(lincoefyq, lincoefyq, tmpq); /* mj * xj^2 -2 * vx * mj * xj */
+   SCIPquadprecProdQD(tmpq, qjq, -vx); /* -qj * vx */
+   SCIPquadprecSumQQ(lincoefyq, lincoefyq, tmpq); /* mj * xj^2 -2 * vx * mj * xj -qj * vx */
+   SCIPquadprecProdDD(tmpq, vx, vy); /* vx * vy */
+   SCIPquadprecSumQQ(lincoefyq, lincoefyq, tmpq); /* mj * xj^2 -2 * vx * mj * xj -qj * vx + vx * vy */
+   SCIPquadprecProdQD(tmpq, mjq, vx); /* mj * vx */
+   SCIPquadprecSumQD(tmpq, tmpq, -vy); /* -vy + mj * vx */
+   SCIPquadprecSumQQ(tmpq, tmpq, qjq); /* -vy + mj * vx + qj */
+   QUAD_SCALE(tmpq, -1.0); /* vy - mj * vx - qj */
+   SCIPquadprecDivQQ(lincoefyq, lincoefyq, tmpq); /* (mj * xj^2 -2 * vx * mj * xj -qj * vx + vx * vy) / (vy - mj * vx - qj) */
+
+   /* lincoefx = 2.0*mj*xj + qj - mj*(*lincoefy) */
+   SCIPquadprecProdQQ(lincoefxq, mjq, xjq); /* mj * xj */
+   QUAD_SCALE(lincoefxq, 2.0); /* 2 * mj * xj */
+   SCIPquadprecSumQQ(lincoefxq, lincoefxq, qjq); /* 2 * mj * xj + qj */
+   SCIPquadprecProdQQ(tmpq, mjq, lincoefyq); /* mj * lincoefy */
+   QUAD_SCALE(tmpq, -1.0); /* - mj * lincoefy */
+   SCIPquadprecSumQQ(lincoefxq, lincoefxq, tmpq); /* 2 * mj * xj + qj - mj * lincoefy */
+
+   /* linconstant = -mj*SQR(xj) - (*lincoefy)*qj */
+   SCIPquadprecSquareQ(linconstantq, xjq); /* xj^2 */
+   SCIPquadprecProdQQ(linconstantq, linconstantq, mjq); /* mj * xj^2 */
+   QUAD_SCALE(linconstantq, -1.0); /* - mj * xj^2 */
+   SCIPquadprecProdQQ(tmpq, lincoefyq, qjq); /* lincoefy * qj */
+   QUAD_SCALE(tmpq, -1.0); /* - lincoefy * qj */
+   SCIPquadprecSumQQ(linconstantq, linconstantq, tmpq); /* - mj * xj^2 - lincoefy * qj */
+
+   /* consider the bilinear coefficient */
+   SCIPquadprecProdQD(lincoefxq, lincoefxq, bilincoef);
+   SCIPquadprecProdQD(lincoefyq, lincoefyq, bilincoef);
+   SCIPquadprecProdQD(linconstantq, linconstantq, bilincoef);
+   *lincoefx = QUAD_TO_DBL(lincoefxq);
+   *lincoefy = QUAD_TO_DBL(lincoefyq);
+   *linconstant = QUAD_TO_DBL(linconstantq);
+
+   /* cut needs to be tight at (vx,vy) and (xj,yj); otherwise we consider the cut to be numerically bad */
+   *success = SCIPisFeasEQ(scip, (*lincoefx)*vx + (*lincoefy)*vy + (*linconstant), bilincoef*vx*vy)
+      && SCIPisFeasEQ(scip, (*lincoefx)*QUAD_TO_DBL(xjq) + (*lincoefy)*QUAD_TO_DBL(yjq) + (*linconstant),
+      bilincoef*QUAD_TO_DBL(xjq)*QUAD_TO_DBL(yjq));
+
+#ifndef NDEBUG
+   {
+      SCIP_Real activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
+
+      /* cut needs to under- or overestimate the bilinear term at the reference point */
+      if( bilincoef < 0.0 )
+         overestimate = !overestimate;
+
+      if( overestimate )
+         assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
+      else
+         assert(SCIPisFeasLE(scip, activity, bilincoef*refpointx*refpointy));
+   }
+#endif
+}
+
+/** computes coefficients of linearization of a bilinear term in a reference point when given two linear inequality
+ *  involving only the variables of the bilinear term
+ *
+ *  @note the formulas are extracted from "Convex envelopes of bivariate functions through the solution of KKT systems"
+ *        by Marco Locatelli
+ *
+ */
+void SCIPcomputeBilinEnvelope2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real             xcoef1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef1,             /**< y coefficient of linear inequality */
+   SCIP_Real             constant1,          /**< constant of linear inequality */
+   SCIP_Real             xcoef2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef2,             /**< y coefficient of linear inequality */
+   SCIP_Real             constant2,          /**< constant of linear inequality */
+   SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
+   SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
+   SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */
+   SCIP_Bool* RESTRICT   success             /**< buffer to store whether linearization was successful */
+   )
+{
+   SCIP_Real mi, mj, qi, qj, xi, xj, yi, yj;
+   SCIP_Real xcoef, ycoef, constant;
+   SCIP_Real minx, maxx, miny, maxy;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lbx));
+   assert(!SCIPisInfinity(scip, -ubx));
+   assert(!SCIPisInfinity(scip,  lby));
+   assert(!SCIPisInfinity(scip, -uby));
+   assert(SCIPisLE(scip, lbx, ubx));
+   assert(SCIPisLE(scip, lby, uby));
+   assert(SCIPisLE(scip, lbx, refpointx));
+   assert(SCIPisGE(scip, ubx, refpointx));
+   assert(SCIPisLE(scip, lby, refpointy));
+   assert(SCIPisGE(scip, uby, refpointy));
+   assert(lincoefx != NULL);
+   assert(lincoefy != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+   assert(xcoef1 != 0.0 && xcoef1 != SCIP_INVALID); /*lint !e777*/
+   assert(ycoef1 != SCIP_INVALID && ycoef1 != 0.0); /*lint !e777*/
+   assert(constant1 != SCIP_INVALID); /*lint !e777*/
+   assert(xcoef2 != 0.0 && xcoef2 != SCIP_INVALID); /*lint !e777*/
+   assert(ycoef2 != SCIP_INVALID && ycoef2 != 0.0); /*lint !e777*/
+   assert(constant2 != SCIP_INVALID); /*lint !e777*/
+
+   *success = FALSE;
+   *lincoefx = SCIP_INVALID;
+   *lincoefy = SCIP_INVALID;
+   *linconstant = SCIP_INVALID;
+
+   /* reference point does not satisfy linear inequalities */
+   if( SCIPisFeasGT(scip, xcoef1 * refpointx - ycoef1 * refpointy - constant1, 0.0)
+      || SCIPisFeasGT(scip, xcoef2 * refpointx - ycoef2 * refpointy - constant2, 0.0) )
+      return;
+
+   /* compute minimal and maximal bounds on x and y for accepting the reference point */
+   minx = lbx + 0.01 * (ubx-lbx);
+   maxx = ubx - 0.01 * (ubx-lbx);
+   miny = lby + 0.01 * (uby-lby);
+   maxy = uby - 0.01 * (uby-lby);
+
+   /* check the reference point is in the interior of the domain */
+   if( SCIPisLE(scip, refpointx, minx) || SCIPisGE(scip, refpointx, maxx)
+      || SCIPisLE(scip, refpointy, miny) || SCIPisFeasGE(scip, refpointy, maxy) )
+      return;
+
+   /* the sign of the x-coefficients of the two inequalities must be different; otherwise the convex or concave
+    * envelope can be computed via SCIPcomputeBilinEnvelope1 for each inequality separately
+    */
+   if( (xcoef1 > 0) == (xcoef2 > 0) )
+      return;
+
+   /* always consider xy without the bilinear coefficient */
+   if( bilincoef < 0.0 )
+      overestimate = !overestimate;
+
+   /* we use same notation as in "Convex envelopes of bivariate functions through the solution of KKT systems", 2016 */
+   mi = xcoef1 / ycoef1;
+   qi = -constant1 / ycoef1;
+   mj = xcoef2 / ycoef2;
+   qj = -constant2 / ycoef2;
+
+   /* mi, mj > 0 => underestimate; mi, mj < 0 => overestimate */
+   if( SCIPisNegative(scip, mi) != overestimate || SCIPisNegative(scip, mj) != overestimate )
+      return;
+
+   /* compute cut according to Locatelli 2016 */
+   computeBilinEnvelope2(scip, refpointx, refpointy, mi, qi, mj, qj, &xi, &yi, &xj, &yj, &xcoef, &ycoef, &constant);
+   assert(SCIPisRelEQ(scip, mi*xi + qi, yi));
+   assert(SCIPisRelEQ(scip, mj*xj + qj, yj));
+
+   /* it might happen that (xi,yi) = (xj,yj) if the two lines intersect */
+   if( SCIPisEQ(scip, xi, xj) && SCIPisEQ(scip, yi, yj) )
+      return;
+
+   /* check whether projected points are in the interior */
+   if( SCIPisLE(scip, xi, minx) || SCIPisGE(scip, xi, maxx) || SCIPisLE(scip, yi, miny) || SCIPisGE(scip, yi, maxy) )
+      return;
+   if( SCIPisLE(scip, xj, minx) || SCIPisGE(scip, xj, maxx) || SCIPisLE(scip, yj, miny) || SCIPisGE(scip, yj, maxy) )
+      return;
+
+   *lincoefx = bilincoef * xcoef;
+   *lincoefy = bilincoef * ycoef;
+   *linconstant = bilincoef * constant;
+
+   /* cut needs to be tight at (vx,vy) and (xj,yj) */
+   *success = SCIPisFeasEQ(scip, (*lincoefx)*xi + (*lincoefy)*yi + (*linconstant), bilincoef*xi*yi)
+      && SCIPisFeasEQ(scip, (*lincoefx)*xj + (*lincoefy)*yj + (*linconstant), bilincoef*xj*yj);
+
+#ifndef NDEBUG
+   {
+      SCIP_Real activity = (*lincoefx)*refpointx + (*lincoefy)*refpointy + (*linconstant);
+
+      /* cut needs to under- or overestimate the bilinear term at the reference point */
+      if( bilincoef < 0.0 )
+         overestimate = !overestimate;
+
+      if( overestimate )
+         assert(SCIPisFeasGE(scip, activity, bilincoef*refpointx*refpointy));
+      else
+         assert(SCIPisFeasLE(scip, activity, bilincoef*refpointx*refpointy));
+   }
+#endif
 }

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_pow.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  power expression handler
  * @author Benjamin Mueller
  * @author Ksenia Bestuzheva
@@ -80,7 +81,7 @@ SCIP_Real signpow_roots[SIGNPOW_ROOTS_KNOWN+1] = {
 };
 
 /** expression handler data */
-struct SCIP_ExprHdlrData
+struct SCIP_ExprhdlrData
 {
    SCIP_Real             minzerodistance;    /**< minimal distance from zero to enforce for child in bound tightening */
    SCIP_Bool             warnedonpole;       /**< whether we warned on enforcing a minimal distance from zero for child */
@@ -314,14 +315,16 @@ void computeSecant(
    if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
       return;
 
-   /* usually taken care of in separatePointPow already, but we might be called with different bounds here,
-    * e.g., when handling odd or signed power
-    */
-   if( SCIPisEQ(scip, xlb, xub) )
-      return;
-
    /* first handle some special cases */
-   if( EPSISINT(exponent / 2.0, 0.0) && !signpower && xub > 0.1 && SCIPisFeasEQ(scip, xlb, -xub) )
+   if( xlb == xub )
+   {
+      /* usually taken care of in separatePointPow already, but we might be called with different bounds here,
+       * e.g., when handling odd or signed power
+       */
+      *slope = 0.0;
+      *constant = pow(xlb, exponent);
+   }
+   else if( EPSISINT(exponent / 2.0, 0.0) && !signpower && xub > 0.1 && SCIPisFeasEQ(scip, xlb, -xub) )
    {
       /* for normal power with even exponents with xlb ~ -xub the slope would be very close to 0
        * since xub^n - xlb^n is prone to cancellation here, we omit computing this secant (it's probably useless)
@@ -356,6 +359,51 @@ void computeSecant(
          *slope = pow(xlb, exponent-1.0);
       *constant = 0.0;
    }
+   else if( SCIPisEQ(scip, xlb, xub) && (!signpower || xlb >= 0.0 || xub <= 0.0) )
+   {
+      /* Computing the slope as (xub^n - xlb^n)/(xub-xlb) can lead to cancellation.
+       * To avoid this, we replace xub^n by a Taylor expansion of pow at xlb:
+       *   xub^n = xlb^n + n xlb^(n-1) (xub-xlb) + 0.5 n*(n-1) xlb^(n-2) (xub-xlb)^2 + 1/6 n*(n-1)*(n-2) xi^(n-3) (xub-xlb)^3  for some xlb < xi < xub
+       * Dropping the last term, the slope is  (with an error of O((xub-xlb)^2) = 1e-18)
+       *   n*xlb^(n-1) + 0.5 n*(n-1) xlb^(n-2)*(xub-xlb)
+       * = n*xlb^(n-1) (1 - 0.5*(n-1)) + 0.5 n*(n-1) xlb^(n-2)*xub
+       * = 0.5*n*((3-n)*xlb^(n-1) + (n-1) xlb^(n-2)*xub)
+       *
+       * test n=2: 0.5*2*((3-2)*xlb + (2-1) 1*xub) = xlb + xub    ok
+       *      n=3: 0.5*3*((3-3)*xlb + (3-1) xlb*xub) = 3*xlb*xub ~ xlb^2 + xlb*xub + xub^2  ok
+       *
+       * The constant is
+       *   xlb^n - 0.5*n*((3-n) xlb^(n-1) + (n-1) xlb^(n-2)*xub) * xlb
+       * = xlb^n - 0.5*n*(3-n) xlb^n - 0.5*n*(n-1) xlb^(n-1)*xub
+       * = (1-0.5*n*(3-n)) xlb^n - 0.5 n*(n-1) xlb^(n-1) xub
+       *
+       * test n=2: (1-0.5*2*(3-2)) xlb^2 - 0.5 2*(2-1) xlb xub = -xlb*xub
+       *           old formula: xlb^2 - (xlb+xub) * xlb = -xlb*xub  ok
+       *
+       * For signpower with xub <= 0, we can negate xlb and xub:
+       *   slope: (sign(xub)|xub|^n - sign(xlb)*|xlb|^n) / (xub-xlb) = -((-xub)^n - (-xlb)^n) / (xub - xlb) = ((-xub)^n - (-xlb)^n) / (-xub - (-xlb))
+       *   constant: sign(xlb)|xlb|^n + slope * (xub - xlb) = -((-xlb)^n - slope * (xub - xlb)) = -((-xlb)^n + slope * ((-xub) - (-xlb)))
+       */
+      SCIP_Real xlb_n;   /* xlb^n */
+      SCIP_Real xlb_n1;  /* xlb^(n-1) */
+      SCIP_Real xlb_n2;  /* xlb^(n-2) */
+
+      if( signpower && xub <= 0.0 )
+      {
+         xlb *= -1.0;
+         xub *= -1.0;
+      }
+
+      xlb_n = pow(xlb, exponent);
+      xlb_n1 = pow(xlb, exponent - 1.0);
+      xlb_n2 = pow(xlb, exponent - 2.0);
+
+      *slope = 0.5*exponent * ((3.0-exponent) * xlb_n1 + (exponent-1.0) * xlb_n2 * xub);
+      *constant = (1.0 - 0.5*exponent*(3.0-exponent)) * xlb_n - 0.5*exponent*(exponent-1.0) * xlb_n1 * xub;
+
+      if( signpower && xub <= 0.0 )
+         *constant *= -1.0;
+   }
    else
    {
       SCIP_Real lbval;
@@ -375,10 +423,8 @@ void computeSecant(
       if( !SCIPisFinite(ubval) )
          return;
 
-      /* this can have bad numerics when xlb^exponent and xub^exponent are very close
+      /* we still can have bad numerics when xlb^exponent and xub^exponent are very close, but xlb and xub are not
        * for now, only check that things did not cancel out completely
-       * - the secant would be ok, if SCIPisEQ(xlb, xub), but this is already excluded above
-       * - the secant would be ok, if SCIPisEQ(xlb, -xub) and the exponent is even, but this is already handled above
        */
       if( lbval == ubval )
          return;
@@ -398,7 +444,7 @@ void computeSecant(
  *
  * - even positive powers: x^2, x^4, x^6 with x arbitrary, or
  * - positive powers > 1: x^1.5, x^2.5 with x >= 0
-
+ <pre>
   100 +--------------------------------------------------------------------+
       |*               +                 +                +               *|
    90 |**                                                     x**2 ********|
@@ -421,7 +467,7 @@ void computeSecant(
       |                +       *****     +    *****       +                |
     0 +--------------------------------------------------------------------+
      -10              -5                 0                5                10
-
+ </pre>
  */
 static
 void estimateParabola(
@@ -464,7 +510,7 @@ void estimateParabola(
  * - odd positive powers, x^3, x^5, x^7
  * - sign(x)|x|^n for n > 1
  * - lower bound on x is negative (otherwise one should use separation for parabola)
-
+ <pre>
   100 +--------------------------------------------------------------------+
       |                +                 +                +              **|
       |                                                   x*abs(x) ******* |
@@ -487,7 +533,7 @@ void estimateParabola(
       |**              +                 +                +                |
  -100 +--------------------------------------------------------------------+
      -10              -5                 0                5                10
-
+ </pre>
  */
 static
 void estimateSignedpower(
@@ -612,7 +658,7 @@ void estimateSignedpower(
  *
  * - x^-2, x^-4 with x arbitrary
  * - x^-0.5, x^-1, x^-1.5, x^-3, x^-5 with x >= 0
-
+ <pre>
   5 +----------------------------------------------------------------------+
     |                 +               * +*               +                 |
     |                                 *  *                 x**(-2) ******* |
@@ -635,7 +681,7 @@ void estimateSignedpower(
     |                 +                 +                +                 |
  -1 +----------------------------------------------------------------------+
    -10               -5                 0                5                 10
-
+ </pre>
  */
 static
 void estimateHyperbolaPositive(
@@ -825,7 +871,7 @@ void estimateHyperbolaPositive(
 /** Separation for mixed-sign hyperbola
  *
  * - x^-1, x^-3, x^-5 without x >= 0 (either x arbitrary or x negative)
-
+ <pre>
     +----------------------------------------------------------------------+
     |                 +                 *                +                 |
   4 |-+                                  *                 x**(-1) *******-|
@@ -848,7 +894,7 @@ void estimateHyperbolaPositive(
     |                 +                *+                +                 |
     +----------------------------------------------------------------------+
    -10               -5                 0                5                 10
-
+ </pre>
  */
 static
 void estimateHyperbolaMixed(
@@ -930,7 +976,7 @@ void estimateHyperbolaMixed(
 /** Separation for roots with exponent in [0,1]
  *
  * - x^0.5 with x >= 0
-
+ <pre>
   8 +----------------------------------------------------------------------+
     |             +             +              +             +             |
   7 |-+                                                     x**0.5 ********|
@@ -953,7 +999,7 @@ void estimateHyperbolaMixed(
     |*            +             +              +             +             |
   0 +----------------------------------------------------------------------+
     0             10            20             30            40            50
-
+ </pre>
  */
 static
 void estimateRoot(
@@ -1180,10 +1226,9 @@ void addTangentRefpoints(
    refpoints[2] = (lb + 7.0 * ub) / 8.0;
 }
 
-/** fills an array of reference points for sign(x)*abs(x)^n or x^n (n odd),
- *  where x has mixed signs
+/** fills an array of reference points for sign(x)*abs(x)^n or x^n (n odd), where x has mixed signs
  *
- *  the reference points are: the lower and upper bounds (one for secant and one for tangent);
+ *  The reference points are: the lower and upper bounds (one for secant and one for tangent);
  *  and for the second tangent, the point on the convex part of the function between the point
  *  deciding between tangent and secant, and the corresponding bound
  */
@@ -1665,7 +1710,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       baseexponent = SCIPgetExponentExprPow(base);
       newexponent = baseexponent * exponent;
 
-      /* some checks (see POW8 definition in cons_expr.c) to make sure we don't loose an
+      /* some checks (see POW8 definition in scip_expr.h) to make sure we don't loose an
        * implicit SCIPexprGetChildren(base)[0] >= 0 constraint
        *
        * if newexponent is fractional, then we will still need expr >= 0
@@ -1721,7 +1766,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrPow)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
 
    return SCIP_OKAY;
 }
@@ -1842,7 +1887,8 @@ SCIP_DECL_EXPREVAL(evalPow)
    return SCIP_OKAY;
 }
 
-/** derivative evaluation callback:
+/** derivative evaluation callback
+ *
  * computes <gradient, children.dot>
  * if expr is child^p, then computes
  * p child^(p-1) dot(child)
@@ -1875,10 +1921,11 @@ SCIP_DECL_EXPRFWDIFF(fwdiffPow)
 }
 
 /** expression backward forward derivative evaluation callback
+ *
  * computes partial/partial child ( <gradient, children.dot> )
  * if expr is child^n, then computes
  * n * (n - 1) child^(n-2) dot(child)
- * */
+ */
 static
 SCIP_DECL_EXPRBWFWDIFF(bwfwdiffPow)
 {  /*lint --e{715}*/
@@ -2049,16 +2096,22 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    childlb = localbounds[0].inf;
    childub = localbounds[0].sup;
 
-   /* if child is essentially constant, then there should be no point in separation */
-   if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
-   {
-      SCIPdebugMsg(scip, "skip estimate as child seems essentially fixed [%.15g,%.15g]\n", childlb, childub);
-      return SCIP_OKAY;
-   }
-
    exprdata = SCIPexprGetData(expr);
    exponent = exprdata->exponent;
    assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
+
+   /* if child is constant, then return a constant estimator
+    * this can help with small infeasibilities if boundtightening is relaxing bounds too much
+    */
+   if( childlb == childub )
+   {
+      *coefs = 0.0;
+      *constant = pow(childlb, exponent);
+      *success = TRUE;
+      *islocal = globalbounds[0].inf != globalbounds[0].sup;
+      *branchcand = FALSE;
+      return SCIP_OKAY;
+   }
 
    isinteger = EPSISINT(exponent, 0.0);
 
@@ -2582,7 +2635,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrSignpower)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeExprHdlrSignpower(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSignpower(scip) );
 
    return SCIP_OKAY;
 }
@@ -2777,16 +2830,25 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
    childlb = localbounds[0].inf;
    childub = localbounds[0].sup;
 
-   /* if child is essentially constant, then there should be no point in separation */
-   if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
-      return SCIP_OKAY;
-
    childglb = globalbounds[0].inf;
    childgub = globalbounds[0].sup;
 
    exprdata = SCIPexprGetData(expr);
    exponent = exprdata->exponent;
    assert(exponent > 1.0); /* exponent == 1 should have been simplified */
+
+   /* if child is constant, then return a constant estimator
+    * this can help with small infeasibilities if boundtightening is relaxing bounds too much
+    */
+   if( childlb == childub )
+   {
+      *coefs = 0.0;
+      *constant = SIGN(childlb)*pow(REALABS(childlb), exponent);
+      *success = TRUE;
+      *islocal = childglb != childgub;
+      *branchcand = FALSE;
+      return SCIP_OKAY;
+   }
 
    if( childlb >= 0.0 )
    {
@@ -3030,7 +3092,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySignpower)
 }
 
 /** creates the handler for power expression and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrPow(
+SCIP_RETCODE SCIPincludeExprhdlrPow(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -3039,7 +3101,7 @@ SCIP_RETCODE SCIPincludeExprHdlrPow(
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprhdlrdata) );
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, POWEXPRHDLR_NAME, POWEXPRHDLR_DESC, POWEXPRHDLR_PRECEDENCE,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, POWEXPRHDLR_NAME, POWEXPRHDLR_DESC, POWEXPRHDLR_PRECEDENCE,
               evalPow, exprhdlrdata) );
    assert(exprhdlr != NULL);
 
@@ -3065,13 +3127,13 @@ SCIP_RETCODE SCIPincludeExprHdlrPow(
 }
 
 /** creates the handler for signed power expression and includes it into SCIP */
-SCIP_RETCODE SCIPincludeExprHdlrSignpower(
+SCIP_RETCODE SCIPincludeExprhdlrSignpower(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, SIGNPOWEXPRHDLR_NAME, SIGNPOWEXPRHDLR_DESC,
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, SIGNPOWEXPRHDLR_NAME, SIGNPOWEXPRHDLR_DESC,
               SIGNPOWEXPRHDLR_PRECEDENCE, evalSignpower, NULL) );
    assert(exprhdlr != NULL);
 
@@ -3111,7 +3173,7 @@ SCIP_RETCODE SCIPcreateExprPow(
    SCIP_CALL( createData(scip, &exprdata, exponent) );
    assert(exprdata != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrPower(scip), exprdata, 1, &child, ownercreate,
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrPower(scip), exprdata, 1, &child, ownercreate,
               ownercreatedata) );
 
    return SCIP_OKAY;
@@ -3131,12 +3193,12 @@ SCIP_RETCODE SCIPcreateExprSignpower(
 
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindExprHdlr(scip, SIGNPOWEXPRHDLR_NAME) != NULL);
+   assert(SCIPfindExprhdlr(scip, SIGNPOWEXPRHDLR_NAME) != NULL);
 
    SCIP_CALL( createData(scip, &exprdata, exponent) );
    assert(exprdata != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, SIGNPOWEXPRHDLR_NAME), exprdata, 1, &child,
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprhdlr(scip, SIGNPOWEXPRHDLR_NAME), exprdata, 1, &child,
               ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
@@ -3151,6 +3213,121 @@ SCIP_Bool SCIPisExprSignpower(
    assert(expr != NULL);
 
    return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME) == 0;
+}
+
+/** computes coefficients of linearization of a square term in a reference point */
+void SCIPaddSquareLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             refpoint,           /**< point where to linearize */
+   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   )
+{
+   assert(scip != NULL);
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( sqrcoef == 0.0 )
+      return;
+
+   if( SCIPisInfinity(scip, REALABS(refpoint)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   if( !isint || SCIPisIntegral(scip, refpoint) )
+   {
+      SCIP_Real tmp;
+
+      /* sqrcoef * x^2  ->  tangent in refpoint = sqrcoef * 2 * refpoint * (x - refpoint) */
+
+      tmp = sqrcoef * refpoint;
+
+      if( SCIPisInfinity(scip, 2.0 * REALABS(tmp)) )
+      {
+         *success = FALSE;
+         return;
+      }
+
+      *lincoef += 2.0 * tmp;
+      tmp *= refpoint;
+      *linconstant -= tmp;
+   }
+   else
+   {
+      /* sqrcoef * x^2 -> secant between f=floor(refpoint) and f+1 = sqrcoef * (f^2 + ((f+1)^2 - f^2) * (x-f))
+       * = sqrcoef * (-f*(f+1) + (2*f+1)*x)
+       */
+      SCIP_Real f;
+      SCIP_Real coef;
+      SCIP_Real constant;
+
+      f = SCIPfloor(scip, refpoint);
+
+      coef     =  sqrcoef * (2.0 * f + 1.0);
+      constant = -sqrcoef * f * (f + 1.0);
+
+      if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+      {
+         *success = FALSE;
+         return;
+      }
+
+      *lincoef     += coef;
+      *linconstant += constant;
+   }
+}
+
+/** computes coefficients of secant of a square term */
+void SCIPaddSquareSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             lb,                 /**< lower bound on variable */
+   SCIP_Real             ub,                 /**< upper bound on variable */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   )
+{
+   SCIP_Real coef;
+   SCIP_Real constant;
+
+   assert(scip != NULL);
+   assert(!SCIPisInfinity(scip,  lb));
+   assert(!SCIPisInfinity(scip, -ub));
+   assert(SCIPisLE(scip, lb, ub));
+   assert(lincoef != NULL);
+   assert(linconstant != NULL);
+   assert(success != NULL);
+
+   if( sqrcoef == 0.0 )
+      return;
+
+   if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+   {
+      /* unboundedness */
+      *success = FALSE;
+      return;
+   }
+
+   /* sqrcoef * x^2 -> sqrcoef * (lb * lb + (ub*ub - lb*lb)/(ub-lb) * (x-lb)) = sqrcoef * (lb*lb + (ub+lb)*(x-lb))
+    *  = sqrcoef * ((lb+ub)*x - lb*ub)
+    */
+   coef     =  sqrcoef * (lb + ub);
+   constant = -sqrcoef * lb * ub;
+   if( SCIPisInfinity(scip, REALABS(coef)) || SCIPisInfinity(scip, REALABS(constant)) )
+   {
+      *success = FALSE;
+      return;
+   }
+
+   *lincoef     += coef;
+   *linconstant += constant;
 }
 
 /* from pub_expr.h */

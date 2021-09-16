@@ -72,7 +72,7 @@ void teardown(void)
 /* define test test suite */
 TestSuite(bilinhash, .init = setup, .fini = teardown);
 
-/* tests the creating and release of the hash table using non-API methods from cons_expr.c */
+/* tests the creating and release of the hash table using non-API methods from cons_nonlinear.c */
 Test(bilinhash, createInsert)
 {
    SCIP_CONSNONLINEAR_BILINTERM* bilinterms;

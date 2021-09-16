@@ -297,7 +297,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
 
    cr_expect(changed);
    cr_assert_not(infeasible);
-   cr_expect(SCIPexprGetHdlr(expr3) == SCIPgetExprHdlrValue(scip));
+   cr_expect(SCIPexprGetHdlr(expr3) == SCIPgetExprhdlrValue(scip));
    cr_expect(SCIPisFeasEQ(scip, SCIPexprGetEvalValue(expr2), -5.0 * log(5.0)));
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr3) );
@@ -312,12 +312,12 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
 
    cr_expect(changed);
    cr_assert_not(infeasible);
-   cr_expect(SCIPexprGetHdlr(expr1) == SCIPgetExprHdlrSum(scip));
+   cr_expect(SCIPexprGetHdlr(expr1) == SCIPgetExprhdlrSum(scip));
    cr_expect(SCIPexprGetNChildren(expr1) == 1);
    cr_expect(SCIPgetCoefsExprSum(expr1)[0] == -1.0);
 
    expr2 = SCIPexprGetChildren(expr1)[0];
-   cr_expect(SCIPexprGetHdlr(expr2) == SCIPfindExprHdlr(scip, "entropy"));
+   cr_expect(SCIPexprGetHdlr(expr2) == SCIPfindExprhdlr(scip, "entropy"));
    cr_expect(SCIPexprGetNChildren(expr2) == 1);
    cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(expr2)[0]));
    cr_expect(SCIPgetVarExprVar(SCIPexprGetChildren(expr2)[0]) == x);
@@ -333,7 +333,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
 
    cr_expect(changed);
    cr_assert_not(infeasible);
-   cr_expect(SCIPexprGetHdlr(expr1) == SCIPfindExprHdlr(scip, "entropy"));
+   cr_expect(SCIPexprGetHdlr(expr1) == SCIPfindExprhdlr(scip, "entropy"));
    cr_expect(SCIPexprGetNChildren(expr1) == 1);
    cr_expect(SCIPgetVarExprVar(SCIPexprGetChildren(expr1)[0]) == x);
 
