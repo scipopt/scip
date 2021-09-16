@@ -297,7 +297,7 @@ struct SCIP_PropData
    SCIP_Bool             addstrongsbcs;      /**< Should we add strong SBCs for enclosing orbit of symmetric subgroups if orbitopes are not used? */
    int                   norbitopes;         /**< number of orbitope constraints */
    SCIP_Bool*            isnonlinvar;        /**< array indicating whether variables apper non-linearly */
-   SCIP_Bool             islinearproblem;    /**< whether the whole problem is linear */
+   SCIP_CONSHDLR*        conshdlr_nonlinear; /**< nonlinear constraint handler */
    int                   maxnconsssubgroup;  /**< maximum number of constraints up to which subgroup structures are detected */
    SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
    SCIP_Bool             preferlessrows;     /**< Shall orbitopes with less rows be preferred in detection? */
@@ -1599,7 +1599,8 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 /** returns the number of active constraints that can be handled by symmetry */
 static
 int getNSymhandableConss(
-   SCIP*                 scip                /**< SCIP instance */
+   SCIP*                 scip,               /**< SCIP instance */
+   SCIP_CONSHDLR*        conshdlr_nonlinear  /**< nonlinear constraint handler, if included */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -1627,13 +1628,22 @@ int getNSymhandableConss(
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   if( conshdlr != NULL )
-      nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   if( conshdlr_nonlinear != NULL )
+      nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr_nonlinear);
 
    return nhandleconss;
 }
 
+/** returns whether there are any active nonlinear constraints */
+static
+SCIP_Bool hasNonlinearConstraints(
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+   )
+{
+   assert(propdata != NULL);
+
+   return propdata->conshdlr_nonlinear != NULL && SCIPconshdlrGetNActiveConss(propdata->conshdlr_nonlinear) > 0;
+}
 
 /** set symmetry data */
 static
@@ -1778,6 +1788,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_Bool             local,              /**< Use local variable bounds? */
    SCIP_Bool             checksymmetries,    /**< Should all symmetries be checked after computation? */
    SCIP_Bool             usecolumnsparsity,  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
+   SCIP_CONSHDLR*        conshdlr_nonlinear, /**< Nonlinear constraint handler, if included */
    int*                  npermvars,          /**< pointer to store number of variables for permutations */
    int*                  nbinpermvars,       /**< pointer to store number of binary variables for permutations */
    SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
@@ -1793,7 +1804,6 @@ SCIP_RETCODE computeSymmetryGroup(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLR* nlconshdlr;
    SYM_MATRIXDATA matrixdata;
    SYM_EXPRDATA exprdata;
    SCIP_HASHTABLE* vartypemap;
@@ -1863,11 +1873,9 @@ SCIP_RETCODE computeSymmetryGroup(
    conss = SCIPgetConss(scip);
    assert( conss != NULL );
 
-   nlconshdlr = SCIPfindConshdlr(scip, "nonlinear");
-
    /* compute the number of active constraints */
    nactiveconss = SCIPgetNActiveConss(scip);
-   nnlconss = nlconshdlr != NULL ? SCIPconshdlrGetNActiveConss(nlconshdlr) : 0;
+   nnlconss = conshdlr_nonlinear != NULL ? SCIPconshdlrGetNActiveConss(conshdlr_nonlinear) : 0;
 
    /* exit if no active constraints are available */
    if ( nactiveconss == 0 )
@@ -1877,7 +1885,7 @@ SCIP_RETCODE computeSymmetryGroup(
    }
 
    /* before we set up the matrix, check whether we can handle all constraints */
-   nhandleconss = getNSymhandableConss(scip);
+   nhandleconss = getNSymhandableConss(scip, conshdlr_nonlinear);
    assert( nhandleconss <= nactiveconss );
    if ( nhandleconss < nactiveconss )
    {
@@ -1936,7 +1944,7 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvars, nallvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consvals, nallvars) );
 
-   /* create hashset for auxvars and iterator for expression constraints */
+   /* create hashset for auxvars and iterator for nonlinear constraints */
    if( nnlconss > 0 )
    {
       SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, isnonlinvar, nvars) );
@@ -2264,7 +2272,7 @@ SCIP_RETCODE computeSymmetryGroup(
          rootexpr = SCIPgetExprNonlinear(cons);
          assert(rootexpr != NULL);
 
-         /* for expression constraints, only collect auxiliary variables for now */
+         /* for nonlinear constraints, only collect auxiliary variables for now */
          SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
          SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
 
@@ -2632,7 +2640,7 @@ SCIP_RETCODE determineSymmetry(
       propdata->sstenabled = FALSE;
 
       nconss = SCIPgetNActiveConss(scip);
-      nhandleconss = getNSymhandableConss(scip);
+      nhandleconss = getNSymhandableConss(scip, propdata->conshdlr_nonlinear);
 
       /* print verbMessage only if problem consists of symmetry handable constraints */
       assert( nhandleconss <=  nconss );
@@ -2731,7 +2739,7 @@ SCIP_RETCODE determineSymmetry(
 
    /* skip symmetry computation if there are constraints that cannot be handled by symmetry */
    nconss = SCIPgetNActiveConss(scip);
-   nhandleconss = getNSymhandableConss(scip);
+   nhandleconss = getNSymhandableConss(scip, propdata->conshdlr_nonlinear);
    if ( nhandleconss < nconss )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
@@ -2775,7 +2783,7 @@ SCIP_RETCODE determineSymmetry(
 
    /* actually compute (global) symmetry */
    SCIP_CALL( computeSymmetryGroup(scip, propdata->doubleequations, propdata->compresssymmetries, propdata->compressthreshold,
-	 maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries, propdata->usecolumnsparsity,
+	 maxgenerators, symspecrequirefixed, FALSE, propdata->checksymmetries, propdata->usecolumnsparsity, propdata->conshdlr_nonlinear,
          &propdata->npermvars, &propdata->nbinpermvars, &propdata->permvars, &propdata->nperms, &propdata->nmaxperms,
          &propdata->perms, &propdata->log10groupsize, &propdata->nmovedvars, &propdata->isnonlinvar,
          &propdata->binvaraffected, &propdata->compressed, &successful) );
@@ -6309,7 +6317,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       /* in the nonlinear case, all non-binary variables have to be fixed
          (fix non-binary potential branching variables)
       */
-      if ( ! propdata->islinearproblem || propdata->symfixnonbinaryvars )
+      if ( hasNonlinearConstraints(propdata) || propdata->symfixnonbinaryvars )
       {
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
       }
@@ -6344,7 +6352,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       propdata->symconsenabled = FALSE;
    }
    assert( propdata->nperms > 0 );
-   assert( !propdata->islinearproblem || propdata->binvaraffected || propdata->sstenabled );
+   assert( hasNonlinearConstraints(propdata) || propdata->binvaraffected || propdata->sstenabled );
 
    propdata->triedaddconss = TRUE;
 
@@ -6697,7 +6705,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    *nprop = 0;
 
    /* possibly compute symmetry; fix non-binary potential branching variables */
-   if ( ! propdata->islinearproblem || propdata->symfixnonbinaryvars )
+   if ( hasNonlinearConstraints(propdata) || propdata->symfixnonbinaryvars )
    {
       SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
    }
@@ -6705,7 +6713,7 @@ SCIP_RETCODE propagateOrbitalFixing(
    {
       SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
    }
-   assert( ! propdata->islinearproblem || propdata->binvaraffected || ! propdata->ofenabled );
+   assert( hasNonlinearConstraints(propdata) || propdata->binvaraffected || ! propdata->ofenabled );
 
    /* return if there is no symmetry available */
    nperms = propdata->nperms;
@@ -6926,13 +6934,15 @@ static
 SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
-   SCIP_CONSHDLR* nlconshdlr;
 
    assert( scip != NULL );
    assert( prop != NULL );
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+
+   /* get nonlinear conshdlr for future checks on whether there are nonlinear constraints */
+   propdata->conshdlr_nonlinear = SCIPfindConshdlr(scip, "nonlinear");
 
    /* check whether we should run */
    if ( propdata->usesymmetry < 0 )
@@ -6955,10 +6965,6 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
          propdata->sstenabled = FALSE;
    }
 
-   /* store whether problem is linear */
-   nlconshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   propdata->islinearproblem = (nlconshdlr == NULL) || (SCIPconshdlrGetNConss(nlconshdlr) == 0);
-
    /* add symmetry handling constraints if required  */
    if ( (propdata->symconsenabled || propdata->sstenabled) && propdata->addconsstiming == 0 )
    {
@@ -6971,7 +6977,7 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
 
       /* otherwise compute symmetry if timing requests it; fix non-binary potential branching variables */
-      if ( ! propdata->islinearproblem || propdata->symfixnonbinaryvars )
+      if ( hasNonlinearConstraints(propdata) || propdata->symfixnonbinaryvars )
       {
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
       }
@@ -7013,7 +7019,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    if ( propdata->ofenabled && propdata->ofsymcomptiming <= 1 && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
       /* fix non-binary potential branching variables */
-      if ( ! propdata->islinearproblem || propdata->symfixnonbinaryvars )
+      if ( hasNonlinearConstraints(propdata) || propdata->symfixnonbinaryvars )
       {
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
       }
@@ -7169,7 +7175,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    else if ( propdata->ofenabled && propdata->ofsymcomptiming == SYM_COMPUTETIMING_DURINGPRESOL )
    {
       /* otherwise compute symmetry early if timing requests it; fix non-binary potential branching variables */
-      if ( ! propdata->islinearproblem || propdata->symfixnonbinaryvars )
+      if ( hasNonlinearConstraints(propdata) || propdata->symfixnonbinaryvars )
       {
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
       }
@@ -7385,7 +7391,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nmovedvars = -1;
    propdata->binvaraffected = FALSE;
    propdata->computedsymmetry = FALSE;
-   propdata->islinearproblem = FALSE;
+   propdata->conshdlr_nonlinear = NULL;
 
    propdata->usesymmetry = -1;
    propdata->symconsenabled = FALSE;

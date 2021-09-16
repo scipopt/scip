@@ -17,6 +17,7 @@
  * @ingroup OTHER_CFILES
  * @brief  public methods for NLP interfaces
  * @author Stefan Vigerske
+ * @author Thorsten Gellermann
  *
  * @todo check SCIP_STAGE_* switches
  * @todo allow for optional callbacks

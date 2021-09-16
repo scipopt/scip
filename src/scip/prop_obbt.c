@@ -2634,7 +2634,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    /* initialize nccounts to zero */
    BMSclearMemoryArray(nccounts, nvars);
 
-   /* get expression constraint handler */
+   /* get nonlinear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    if( conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0 )
       return SCIP_OKAY;
@@ -2777,7 +2777,7 @@ SCIP_RETCODE initBounds(
 
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
 
-   /* get all product expressions from expression constraint handler */
+   /* get all product expressions from nonlinear constraint handler */
    if( propdata->nbounds > 0 && conshdlr != NULL && propdata->createbilinineqs )
    {
       SCIP_NLHDLR* bilinnlhdlr;
@@ -2788,7 +2788,7 @@ SCIP_RETCODE initBounds(
       bilinnlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, "bilinear");
       assert(bilinnlhdlr != NULL);
 
-      /* collect all bilinear product in all expression constraints */
+      /* collect all bilinear product in all nonlinear constraints */
       exprs = SCIPgetNlhdlrBilinearExprs(bilinnlhdlr);
       nexprs = SCIPgetNlhdlrBilinearNExprs(bilinnlhdlr);
 

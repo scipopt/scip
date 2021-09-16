@@ -23,14 +23,11 @@
  *
  * This is a nonlinear handler for second order cone constraints of the form
  *
- * \f$\sqrt{\sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}\f$,
+ * \f[\sqrt{\sum_{i=1}^{n} (v_i^T x + \beta_i)^2} \leq v_{n+1}^T x + \beta_{n+1}.\f]
  *
- * Note that v_i, for i <= n, could be 0, thus allowing a positive constant term inside the root.
+ * Note that \f$v_i\f$, for \f$i \leq n\f$, could be 0, thus allowing a positive constant term inside the root.
  *
- * @note: this nlhdlr does not handle constraints of the form \f$\sqrt{ \sum_i (a_i x_i + b_i)^2} \leq a_n x_n+ b_n\f$
- * as the default nlhdlr will do an extended formulation.
- *
- * @todo: test if it makes sense to only disaggregate when nterms > some parameter
+ * @todo test if it makes sense to only disaggregate when nterms > some parameter
  *
  */
 
@@ -51,8 +48,8 @@
 #define NLHDLR_DESC               "nonlinear handler for second-order cone structures"
 #define NLHDLR_DETECTPRIORITY       100 /**< priority of the nonlinear handler for detection */
 #define NLHDLR_ENFOPRIORITY         100 /**< priority of the nonlinear handler for enforcement */
-#define DEFAULT_MINCUTEFFICACY     1e-5 /** default value for parameter mincutefficacy */
-#define DEFAULT_COMPEIGENVALUES    TRUE /** default value for parameter compeigenvalues */
+#define DEFAULT_MINCUTEFFICACY     1e-5 /**< default value for parameter mincutefficacy */
+#define DEFAULT_COMPEIGENVALUES    TRUE /**< default value for parameter compeigenvalues */
 
 /*
  * Data structures
@@ -267,11 +264,7 @@ SCIP_RETCODE freeDisaggrVars(
    return SCIP_OKAY;
 }
 
-/** helper method to create the disaggregation row:
- * \f$disvars_i <= v_{n+1}^T x + \beta_{n+1}\f$
- * In SCIP we create it like:
- * \f$disvars_i - v_{n+1}^T x <= \beta_{n+1}\f$
- */
+/** helper method to create the disaggregation row \f$\text{disvars}_i \leq v_{n+1}^T x + \beta_{n+1}\f$ */
 static
 SCIP_RETCODE createDisaggrRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -328,13 +321,13 @@ SCIP_RETCODE createDisaggrRow(
 static
 SCIP_RETCODE createNlhdlrExprData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR**           vars,               /**< expressions which variables appear on both sides (x) */
-   SCIP_Real*            offsets,            /**< offsets of bot sides (beta_i) */
-   SCIP_Real*            transcoefs,         /**< non-zeroes of linear transformation vectors (v_i) */
+   SCIP_EXPR**           vars,               /**< expressions which variables appear on both sides (\f$x\f$) */
+   SCIP_Real*            offsets,            /**< offsets of bot sides (\f$beta_i\f$) */
+   SCIP_Real*            transcoefs,         /**< non-zeroes of linear transformation vectors (\f$v_i\f$) */
    int*                  transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
    int*                  termbegins,         /**< starting indices of transcoefs for each term */
    int                   nvars,              /**< total number of variables appearing */
-   int                   nterms,             /**< number of summands in the SQRT +1 for RHS */
+   int                   nterms,             /**< number of summands in the SQRT, +1 for RHS */
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata      /**< pointer to store nonlinear handler expression data */
    )
 {
@@ -424,7 +417,9 @@ SCIP_Real evalSingleTerm(
    return result;
 }
 
-/** computes gradient cut for a 2D or 3D SOC. A 3D SOC looks like
+/** computes gradient cut for a 2D or 3D SOC
+ *
+ *  A 3D SOC looks like
  *  \f[
  *    \sqrt{ (v_1^T x + \beta_1)^2 + (v_2^T x + \beta_2)^2 } \leq v_3^T x + \beta_3
  *  \f]
@@ -561,24 +556,21 @@ SCIP_RETCODE generateCutSolSOC(
 
 /** helper method to compute and add a gradient cut for the k-th cone disaggregation
  *
- *  After the soc constraint \f$\sqrt{\sum_{i = 0}^{n-1} (v_i^T x + \beta_i)^2} \leq v_n^T x + \beta_n\f$
- *  is disggregated into the row \f$\sum_{i = 0}^{n-1} y_i \leq v_n^T x + \beta_n\f$ and the smaller soc constraints
- *
+ *  After the SOC constraint \f$\sqrt{\sum_{i = 0}^{n-1} (v_i^T x + \beta_i)^2} \leq v_n^T x + \beta_n\f$
+ *  has been disaggregated into the row \f$\sum_{i = 0}^{n-1} y_i \leq v_n^T x + \beta_n\f$ and the smaller SOC constraints
  *  \f[
- *    (v_i^T x + \beta_i)^2 \leq (v_n^T x + \beta_n) y_i \text{ for } i \in \{0, \ldots, n -1\}
+ *    (v_i^T x + \beta_i)^2 \leq (v_n^T x + \beta_n) y_i \text{ for } i \in \{0, \ldots, n -1\},
  *  \f]
- *
- *  Now we want to separate one of the small rotated cones. We first transform it into standard form:
+ *  we want to separate one of the small rotated cones.
+ *  We first transform it into standard form:
  *  \f[
  *    \sqrt{4(v_i^T x + \beta_i)^2 + (v_n^T x + \beta_n - y_i)^2} - v_n^T x - \beta_n - y_i \leq 0.
  *  \f]
- *
  *  Let \f$f(x,y)\f$ be the left-hand-side. We now compute the gradient by
  *  \f{align*}{
- *    \frac{\delta f}{\delta x_j} &= \frac{(v_i)_j(4v_i^T x + 4\beta_i) + (v_n})_j(v_n^T x + \beta_n - y_i)}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_n^T x + \beta_n - y_i)^2}} - (v_n)_j \\
+ *    \frac{\delta f}{\delta x_j} &= \frac{(v_i)_j(4v_i^T x + 4\beta_i) + (v_n)_j(v_n^T x + \beta_n - y_i)}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_n^T x + \beta_n - y_i)^2}} - (v_n)_j \\
  *    \frac{\delta f}{\delta y_i} &= \frac{y_i - v_n^T x -\beta_n}{\sqrt{4(v_i^T x + \beta_i)^2 + (v_n^T x + \beta_n - y_i)^2}} - 1
  *  \f}
- *
  *  and the gradient cut is then \f$f(x^*, y^*) + \nabla f(x^*,y^*)((x,y) - (x^*, y^*)) \leq 0\f$.
  */
 static
@@ -722,11 +714,11 @@ SCIP_RETCODE generateCutSolDisagg(
    return SCIP_OKAY;
 }
 
-/** checks if an expression is quadratic and to collect all occurring expressions
+/** checks if an expression is quadratic and collects all occurring expressions
  *
- * @pre @param expr2idx and @param occurringexprs need to be initialized with capacity 2 * nchildren
+ * @pre `expr2idx` and `occurringexprs` need to be initialized with capacity 2 * nchildren
  *
- * @note: We assume that a linear term always appears before its corresponding
+ * @note We assume that a linear term always appears before its corresponding
  * quadratic term in quadexpr; this should be ensured by canonicalize
  */
 static
@@ -842,7 +834,7 @@ SCIP_RETCODE checkAndCollectQuadratic(
 
 /* builds the constraint defining matrix and vector of a quadratic expression
  *
- * @pre @param quadmatrix and @param linvector need to be initialized with size @param nexprs^2 or @param nexprs, resp.
+ * @pre `quadmatrix` and `linvector` need to be initialized with size `nexprs`^2 and `nexprs`, resp.
  */
 static
 void buildQuadExprMatrix(
@@ -921,8 +913,9 @@ void buildQuadExprMatrix(
    }
 }
 
-/* tries to fill the nlhdlrexprdata for a potential quadratic SOC expression.
- * We say try because the expression might still turn out not to be an SOC at this point.
+/** tries to fill the nlhdlrexprdata for a potential quadratic SOC expression
+ *
+ * We say "try" because the expression might still turn out not to be a SOC at this point.
  */
 static
 SCIP_RETCODE tryFillNlhdlrExprDataQuad(
@@ -1147,8 +1140,9 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
    return SCIP_OKAY;
 }
 
-/** detects if expr <= auxvar is of the form SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) <= auxvar
- * @note if a user inputs the above expression with const = -epsilon, then const is going to be set to 0.
+/** detects if expr &le; auxvar is of the form SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) &le; auxvar
+ *
+ * @note if a user inputs the above expression with `const` = -epsilon, then `const` is going to be set to 0.
  */
 static
 SCIP_RETCODE detectSocNorm(
@@ -1426,10 +1420,10 @@ SCIP_RETCODE detectSocNorm(
    return SCIP_OKAY;
 }
 
-/** helper method to detect c + sum_i coef_i expr_i^2 - coef_k expr_k^2 <= 0
- *  and c + sum_i coef_i expr_i^2 - coef_k expr_k expr_l <= 0
+/** helper method to detect c + sum_i coef_i expr_i^2 - coef_k expr_k^2 &le; 0
+ *  and c + sum_i coef_i expr_i^2 - coef_k expr_k expr_l &le; 0
  *
- *  binary linear variables are interpreted as quadratic terms.
+ *  binary linear variables are interpreted as quadratic terms
  *
  *  @todo: extend this function to detect  c + sum_i coef_i (expr_i + const_i)^2 - ...
  *  this would probably share a lot of code with detectSocNorm
@@ -1879,26 +1873,26 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** detects complex quadratic expressions that can be represented by soc constraints.
+/** detects complex quadratic expressions that can be represented as SOC constraints
  *
  *  These are quadratic expressions with either exactly one positive or exactly one negative eigenvalue,
  *  in addition to some extra conditions. One needs to write the quadratic as
- *  sum eigval_i (eigvec_i . x)^2 + c <= -eigval_k (eigvec_k . x)^2, where eigval_k is the negative eigenvalue,
+ *  sum eigval_i (eigvec_i . x)^2 + c &le; -eigval_k (eigvec_k . x)^2, where eigval_k is the negative eigenvalue,
  *  and c must be positive and (eigvec_k . x) must not change sign.
- *  This is described in more details in:
+ *  This is described in more details in
+ *  Mahajan, Ashutosh & Munson, Todd, Exploiting Second-Order Cone Structure for Global Optimization, 2010.
  *
- *  Mahajan, Ashutosh & Munson, Todd. (2010). Exploiting Second-Order Cone Structure for Global Optimization.
+ *  The eigen-decomposition is computed using Lapack.
+ *  Binary linear variables are interpreted as quadratic terms.
  *
- *  The eigen-decomposition is computed using Lapack. Binary linear variables are interpreted as quadratic terms.
- *
- * @todo: In the case -b <= a + x^2 - y^2 <= b, it is possible to represent both sides by soc, Currently, the
- * datastructure can only handle one soc. If this should appear more often, it could be worth to extend it,
+ * @todo: In the case -b <= a + x^2 - y^2 <= b, it is possible to represent both sides by SOC. Currently, the
+ * datastructure can only handle one SOC. If this should appear more often, it could be worth to extend it,
  * such that both sides can be handled (see e.g. instance chp_partload).
- * FS: this shouldn't be possible. for a <= b + x^2 - y^2 <= c to be SOC representable on both sides, we would need
+ * FS: this shouldn't be possible. For a <= b + x^2 - y^2 <= c to be SOC representable on both sides, we would need
  * that a - b >= 0 and b -c >= 0, but this implies that a >= c and assuming the constraint is not trivially infeasible,
  * a <= b. Thus, a = b = c and the constraint is x^2 == y^2.
  *
- * @todo: Since cons nonlinear multiplies as many terms out as possible during presolving, some soc-representable
+ * @todo: Since cons_nonlinear multiplies as many terms out as possible during presolving, some SOC-representable
  * structures cannot be detected, (see e.g. instances bearing or wager). There is currently no obvious way
  * to handle this.
  */
@@ -2145,26 +2139,30 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** helper method to detect SOC structures. The detection runs in 3 steps:
+/** helper method to detect SOC structures
  *
- *  1. check if expression is a norm of the form SQRT(sum_i (sqrcoef_i expr_i^2 + lincoef_i expr_i) + c)
- *  which can be transformed to the form SQRT(sum_i (coef_i expr_i + const_i)^2 + c*) with c* >= 0.
- *    -> this results in the SOC     expr <= auxvar(expr)
+ * The detection runs in 3 steps:
+ *  1. check if expression is a norm of the form \f$\sqrt{\sum_i (\text{sqrcoef}_i\, \text{expr}_i^2 + \text{lincoef}_i\, \text{expr}_i) + c}\f$
+ *  which can be transformed to the form \f$\sqrt{\sum_i (\text{coef}_i \text{expr}_i + \text{const}_i)^2 + c^*}\f$ with \f$c^* \geq 0\f$.\n
+ *    -> this results in the SOC     expr &le; auxvar(expr)
  *
  *  2. check if expression represents a quadratic function of one of the following forms (all coefs > 0)
- *     (sum_i coef_i expr_i^2) - coef_k expr_k^2      <= RHS or (sum_i - coef_i expr_i^2) + coef_k expr_k^2      >= LHS
- *  or (sum_i coef_i expr_i^2) - coef_k expr_k expr_l <= RHS or (sum_i - coef_i expr_i^2) + coef_k expr_k expr_l >= LHS
- *  where RHS >=0 or LHS <= 0, respectively. For LHS and RHS we use either the constraint sides if it is a root expr
- *  or the bounds of the auxiliary variable, otherwise.
- *  The cases in the second line above are called hyperbolic or rotated second order cone.
- *    -> this results in the SOC     SQRT((sum_i coef_i expr_i^2) - RHS) <= SQRT(coef_k) expr_k
- *                            or     SQRT(4*(sum_i coef_i expr_i^2) - 4*RHS + (expr_k - expr_l)^2) <= expr_k + expr_l
+ *     1. \f$(\sum_i   \text{coef}_i \text{expr}_i^2) - \text{coef}_k \text{expr}_k^2 \leq \text{RHS}\f$ or
+ *     2. \f$(\sum_i - \text{coef}_i \text{expr}_i^2) + \text{coef}_k \text{expr}_k^2 \geq \text{LHS}\f$ or
+ *     3. \f$(\sum_i   \text{coef}_i \text{expr}_i^2) - \text{coef}_k \text{expr}_k \text{expr}_l \leq \text{RHS}\f$ or
+ *     4. \f$(\sum_i - \text{coef}_i \text{expr}_i^2) + \text{coef}_k \text{expr}_k \text{expr}_l \geq \text{LHS}\f$,
+ *
+ *     where RHS &ge; 0 or LHS &le; 0, respectively. For LHS and RHS we use the constraint sides if it is a root expr
+ *     and the bounds of the auxiliary variable otherwise.
+ *     The last two cases are called hyperbolic or rotated second order cone.\n
+ *     -> this results in the SOC \f$\sqrt{(\sum_i \text{coef}_i \text{expr}_i^2) - \text{RHS}} \leq \sqrt{\text{coef}_k} \text{expr}_k\f$
+ *                            or  \f$\sqrt{4(\sum_i \text{coef}_i \text{expr}_i^2) - 4\text{RHS} + (\text{expr}_k - \text{expr}_l)^2)} \leq \text{expr}_k + \text{expr}_l\f$.
  *                            (analogously for the LHS cases)
  *
- *  3. check if expression represents a quadratic inequality of the form f(x) = x^TAx + b^Tx + c <= 0 such that f(x)
- *  has exactly one negative eigenvalue plus some extra conditions, see detectSocQuadraticComplex()
+ *  3. check if expression represents a quadratic inequality of the form \f$f(x) = x^TAx + b^Tx + c \leq 0\f$ such that \f$f(x)\f$
+ *  has exactly one negative eigenvalue plus some extra conditions, see detectSocQuadraticComplex().
  *
- *  Note that step 3 is only performed if paramter compeigenvalues is set to TRUE.
+ *  Note that step 3 is only performed if parameter `compeigenvalues` is set to TRUE.
  */
 static
 SCIP_RETCODE detectSOC(
@@ -2685,25 +2683,24 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    return SCIP_OKAY;
 }
 
-/** checks whether constraint is SOC representable in original variables and if yes, returns the SOC
- * representation
+/** checks whether constraint is SOC representable in original variables and returns the SOC representation
  *
  * The SOC representation has the form:
  * \f$\sqrt{\sum_{i=1}^{n} (v_i^T x + \beta_i)^2} - v_{n+1}^T x - \beta_{n+1} \lessgtr 0\f$,
- * where \f$n+1 = nterms\f$ and the inequality type is given by sidetype (SCIP_SIDETYPE_RIGHT if inequality
- * is \f$\leq\f$, SCIP_SIDETYPE_LEFT if \f$\geq\f$).
+ * where \f$n+1 = \text{nterms}\f$ and the inequality type is given by sidetype (`SCIP_SIDETYPE_RIGHT` if inequality
+ * is \f$\leq\f$, `SCIP_SIDETYPE_LEFT` if \f$\geq\f$).
  *
- * For each term (i.e. for each i in the above notation as well as n+1), the constant \f$\beta_i\f$ is given by the
- * corresponding element offsets[i-1], and termbegins[i-1] is the starting position of the term in arrays
- * transcoefs and transcoefsidx. The overall number of nonzeros is termbegins[nterms].
+ * For each term (i.e. for each \f$i\f$ in the above notation as well as \f$n+1\f$), the constant \f$\beta_i\f$ is given by the
+ * corresponding element `offsets[i-1]` and `termbegins[i-1]` is the starting position of the term in arrays
+ * `transcoefs` and `transcoefsidx`. The overall number of nonzeros is `termbegins[nterms]`.
  *
- * Arrays transcoefs and transcoefsidx have size termbegins[nterms] and define the linear expressions \f$v_i^T x\f$
- * for each term. For a term i in the above notation, the nonzeroes are given by elements
- * termbegins[i-1]...termbegins[i] of transcoefs and transcoefsidx. There may be no nonzeroes for some term (i.e.,
- * constant terms are possible). transcoefs contains the coefficients v_i and transcoefsidx contains positions of
- * variables in the vars array.
+ * Arrays `transcoefs` and `transcoefsidx` have size `termbegins[nterms]` and define the linear expressions \f$v_i^T x\f$
+ * for each term. For a term \f$i\f$ in the above notation, the nonzeroes are given by elements
+ * `termbegins[i-1]...termbegins[i]` of `transcoefs` and `transcoefsidx`. There may be no nonzeroes for some term (i.e.,
+ * constant terms are possible). `transcoefs` contains the coefficients \f$v_i\f$ and `transcoefsidx` contains positions of
+ * variables in the `vars` array.
  *
- * The vars array has size nvars and contains \f$x\f$ variables; each variable is included at most once.
+ * The `vars` array has size `nvars` and contains \f$x\f$ variables; each variable is included at most once.
  *
  * The arrays should be freed by calling SCIPfreeSOCArraysNonlinear().
  *

@@ -30,11 +30,19 @@
 extern "C" {
 #endif
 
-/**@addtogroup NLHDLRS
+/** includes default nonlinear handler in nonlinear constraint handler
  *
+ * @ingroup NlhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeNlhdlrDefault(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup NLHDLRS
  * @{
  *
- * @name Default nonlinear handler.
+ * @name Default nonlinear handler
  *
  * This nonlinear handler is used when no other nonlinear handler enforces an expression and accesses expression handler methods.
  *
@@ -44,15 +52,6 @@ extern "C" {
 /** @}
   * @}
   */
-
-/** includes default nonlinear handler in nonlinear constraint handler
- *
- * @ingroup NlhdlrIncludes
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeNlhdlrDefault(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 #ifdef __cplusplus
 }

@@ -34,7 +34,6 @@ extern "C" {
 #include "scip/type_nlhdlr.h"
 
 /**@addtogroup PublicNlhdlrInterfaceMethods
- *
  * @{
  */
 

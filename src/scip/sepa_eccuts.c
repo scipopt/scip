@@ -66,7 +66,7 @@
 #define ADJUSTFACETTOL             1e-6 /**< adjust resulting facets in checkRikun() up to a violation of this value */
 #define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
 
-/** first values for 2^n */
+/** first values for \f$2^n\f$ */
 static const int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
 
 /*
@@ -161,7 +161,7 @@ struct SCIP_SepaData
  * Local methods
  */
 
-/** creates and empty edge-concave aggregation (without bilinear terms) */
+/** creates an empty edge-concave aggregation (without bilinear terms) */
 static
 SCIP_RETCODE ecaggrCreateEmpty(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -191,7 +191,7 @@ SCIP_RETCODE ecaggrCreateEmpty(
    return SCIP_OKAY;
 }
 
-/** frees and edge-concave aggregation */
+/** frees an edge-concave aggregation */
 static
 SCIP_RETCODE ecaggrFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -849,10 +849,12 @@ SCIP_Real phi(
    return MIN(ub - val, val - lb) / (ub - lb);
 }
 
-/** creates an MIP to search for cycles with an odd number of positive edges in the graph representation of a nonlinear
- *  row; the model uses directed binary arc flow variables; we introduce for all quadratic elements a forward and
- *  backward edge; if the term is quadratic (e.g., loop in the graph) we fix the corresponding variables to zero; this
- *  leads to an easy mapping of quadratic elements and the variables of the MIP
+/** creates an MIP to search for cycles with an odd number of positive edges in the graph representation of a nonlinear row
+ *
+ *  The model uses directed binary arc flow variables.
+ *  We introduce for all quadratic elements a forward and backward edge.
+ *  If the term is quadratic (e.g., loop in the graph) we fix the corresponding variables to zero.
+ *  This leads to an easy mapping between quadratic elements and the variables of the MIP.
  */
 static
 SCIP_RETCODE createMIP(
@@ -1230,7 +1232,7 @@ SCIP_RETCODE storeAggrFromMIP(
    return SCIP_OKAY;
 }
 
-/** searches for edge-concave aggregations with an MIP model based on binary flow variables */
+/** searches for edge-concave aggregations with a MIP model based on binary flow variables */
 static
 SCIP_RETCODE searchEcAggrWithMIP(
    SCIP*                 subscip,            /**< SCIP data structure */
@@ -1384,6 +1386,7 @@ SCIP_RETCODE createTcliqueGraph(
 }
 
 /** searches for edge-concave aggregations by computing cliques in the graph representation of a given nonlinear row
+ *
  *  update graph, compute clique, store clique; after computing a clique we heuristically check if the clique contains
  *  at least one good cycle
  */
@@ -1722,11 +1725,10 @@ TERMINATE:
    return retcode;
 }
 
-/** computes a partitioning into edge-concave aggregations for a given (quadratic) nonlinear row; each aggregation has
- *  to contain a cycle with an odd number of positive weighted edges (good cycles) in the corresponding graph representation
+/** computes a partitioning into edge-concave aggregations for a given (quadratic) nonlinear row
  *
+ *  Each aggregation has to contain a cycle with an odd number of positive weighted edges (good cycles) in the corresponding graph representation.
  *  For this we use the following algorithm:
- *
  *  -# use a MIP model based on binary flow variables to compute good cycles and store the implied subgraphs as an e.c. aggr.
  *    -# if we find a good cycle, store the implied subgraph, delete it from the graph representation and go to 1)
  *    -# if the MIP model is infeasible (there are no good cycles), STOP
@@ -1762,8 +1764,10 @@ SCIP_RETCODE searchEcAggr(
 }
 
 /** returns whether a given nonlinear row can be used to compute edge-concave aggregations for which their convex
- *  envelope could dominate the termwise bilinear relaxation; this is the case if there exists at least one cycle with
- *  an odd number of positive edges in the corresponding graph representation of the nonlinear row
+ *  envelope could dominate the termwise bilinear relaxation
+ *
+ *  This is the case if there exists at least one cycle with
+ *  an odd number of positive edges in the corresponding graph representation of the nonlinear row.
  */
 static
 SCIP_RETCODE isCandidate(
@@ -1996,9 +2000,10 @@ void printFacet(
 }
 #endif
 
-/** checks if a facet is really an underestimate for all corners of the domain [l,u]; because of numerics it can happen
- *  that a facet violates a corner of the domain; to make the facet valid we subtract the maximum violation from the
- *  constant part of the facet; its a good excersise to write a comment describing the gray code...
+/** checks if a facet is really an underestimate for all corners of the domain [l,u]
+ *
+ *  Because of numerics it can happen that a facet violates a corner of the domain.
+ *  To make the facet valid we subtract the maximum violation from the constant part of the facet.
  */
 static
 SCIP_Bool checkRikun(
@@ -2248,26 +2253,25 @@ SCIP_Real transformValue(
 /** computes a facet of the convex envelope of an edge concave aggregation
  *
  *  The algorithm solves the following LP:
- *  \f{eqnarray}{
- *      min   & \sum_i \lambda_i f(v_i)\\
+ *  \f{align}{
+ *      \min  & \sum_i \lambda_i f(v_i)\\
  *      s.t.  & \sum_i \lambda_i v_i = x\\
  *            & \sum_i \lambda_i     = 1\\
- *            & \lambda_i \geq 0
+ *            & \lambda \geq 0
  *  \f}
- *  where f is an edge concave function, \f$x\f$ in \f$[l,u]\f$ is a solution of the current relaxation, and \f$v_i\f$ are the vertices
- *  of \f$[l,u]\f$; the method transforms the problem to the domain \f$[0,1]^n\f$, computes a facet, and transforms this facet to the
- *  original space; the dual solution of the LP above are the coefficients of the facet
+ *  where \f$f\f$ is an edge concave function, \f$x\in [l,u]\f$ is a solution of the current relaxation, and \f$v_i\f$ are the vertices of \f$[l,u]\f$.
+ *  The method transforms the problem to the domain \f$[0,1]^n\f$, computes a facet, and transforms this facet to the
+ *  original space. The dual solution of the LP above are the coefficients of the facet.
  *
  *  The complete algorithm works as follows:
- *
- *  -# compute f(v_i) for each corner v_i of [l,u]
+ *  -# compute \f$f(v_i)\f$ for each corner \f$v_i\f$ of \f$[l,u]\f$
  *  -# set up the described LP for the transformed space
  *  -# solve the LP and store the resulting facet for the transformed space
  *  -# transform the facet to original space
  *  -# adjust and check facet with the algorithm of Rikun et al.
  */
 static
-SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
+SCIP_RETCODE computeConvexEnvelopeFacet(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separation data */
    SCIP_SOL*             sol,                /**< solution (might be NULL) */
@@ -2531,7 +2535,7 @@ SCIP_RETCODE addFacetToCut(
    return SCIP_OKAY;
 }
 
-/** method to add an linear term to a given cut */
+/** method to add a linear term to a given cut */
 static
 SCIP_RETCODE addLinearTermToCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2691,9 +2695,11 @@ SCIP_RETCODE addBilinearTermToCut(
    return SCIP_OKAY;
 }
 
-/** method to compute and and a cut for a nonlinear row aggregation and a given solution; we compute for each edge
- *  concave aggregation one facet; the remaining bilinear terms will be underestimated with McCormick, secants or
- *  linearizations; constant and linear terms will be added to the cut directly
+/** method to compute and add a cut for a nonlinear row aggregation and a given solution
+ *
+ *  we compute for each edge concave aggregation one facet;
+ *  the remaining bilinear terms will be underestimated with McCormick, secants or linearizations;
+ *  constant and linear terms will be added to the cut directly
  */
 static
 SCIP_RETCODE computeCut(
@@ -2764,7 +2770,7 @@ SCIP_RETCODE computeCut(
       assert(ecaggr != NULL);
 
       /* compute a facet of the convex envelope */
-      SCIP_CALL( SCIPcomputeConvexEnvelopeFacet(scip, sepadata, sol, ecaggr, bestfacet, &bestfacetval, &found) );
+      SCIP_CALL( computeConvexEnvelopeFacet(scip, sepadata, sol, ecaggr, bestfacet, &bestfacetval, &found) );
 
       SCIPdebugMsg(scip, "found facet for edge-concave aggregation %d/%d ? %s\n", i, nlrowaggr->necaggr,
          found ? "yes" : "no");
@@ -3112,7 +3118,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
  * separator specific interface methods
  */
 
-/** creates the edge concave separator and includes it in SCIP */
+/** creates the edge-concave separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 SCIP_RETCODE SCIPincludeSepaEccuts(
    SCIP*                 scip                /**< SCIP data structure */
    )

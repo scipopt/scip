@@ -165,7 +165,7 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
 
    /* reduce the default feasibility and optimality tolerance by given factor (typically 0.01) */
    nlpparam.feastol *= multiplier;
-   nlpparam.relobjtol *= multiplier;
+   nlpparam.opttol *= multiplier;
 
    SCIP_CALL( SCIPsolveNLPParam(subproblem, nlpparam) );
 

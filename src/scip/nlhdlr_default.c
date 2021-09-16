@@ -33,7 +33,7 @@
 
 /** translate from one value of infinity to another
  *
- *  if val is >= infty1, then give infty2, else give val
+ *  if val is &ge; infty1, then give infty2, else give val
  */
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 

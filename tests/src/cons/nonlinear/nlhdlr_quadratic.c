@@ -61,7 +61,7 @@ static RAYS* myrays = NULL;
 
 #define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
 
-/* creates scip, problem, includes expression constraint handler, creates and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
 {
@@ -232,7 +232,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    enforcingexpected = SCIP_NLHDLR_METHOD_ACTIVITY;
    cr_expect_eq(enforcing, enforcingexpected, "enforcing expecting %d got %d\n", enforcingexpected, enforcing);
 
-   nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata);
+   nlhdlrFreeexprdataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata);
 
    checkNQuad(expr, 0, 1, 0);
    checkQuadTerm(expr, 0, NULL, x, 1.0, 1.0);
@@ -291,7 +291,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(participating, participatingexpected, "part expecting %d got %d\n", participatingexpected, participating);
    cr_expect_eq(enforcing, enforcingexpected, "enfo expecting %d got %d\n", enforcingexpected, enforcing);
 
-   nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata);
+   nlhdlrFreeexprdataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata);
 
    checkNQuad(expr, 0, 2, 1);
 
@@ -523,7 +523,7 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
 
    checkNQuad(expr, 0, 3, 1);
 
-   SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrFreeexprdataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -765,7 +765,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    }
 
 
-   SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata) );
+   SCIP_CALL( nlhdlrFreeexprdataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 

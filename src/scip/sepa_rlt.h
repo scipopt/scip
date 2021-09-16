@@ -17,9 +17,10 @@
  * @ingroup SEPARATORS
  * @brief  reformulation-linearization technique separator
  * @author Fabian Wegscheider
+ * @author Ksenia Bestuzheva
  *
  *
- * This seperator generates a collection of cuts constructed by the reformulation-linearization technique (RLT).
+ * This separator generates a collection of cuts constructed by the reformulation-linearization technique (RLT).
  * For an LP row L and a variable x in [lb,ub], L is multiplied either with (ub-x) or with (x-lb). All known terms that
  * appear in the product are replaced by their respective auxiliary variable and all unknown terms are replaced by a
  * suitable linear relaxation, e.g., McCormick. In general, the separator computes four different cuts for a row with

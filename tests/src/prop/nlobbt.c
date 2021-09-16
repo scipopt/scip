@@ -218,7 +218,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    objinds[1] = 1;
    SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .relobjtol = SCIPfeastol(scip) * 0.01) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .opttol = SCIPfeastol(scip) * 0.01) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_assert(SCIPisFeasEQ(scip, primal[0], -2.60064056606068e-01));
 
@@ -229,7 +229,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    objinds[1] = 1;
    SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .relobjtol = SCIPfeastol(scip) * 0.01) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .opttol = SCIPfeastol(scip) * 0.01) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_assert(SCIPisFeasEQ(scip, primal[0], 5.90606671174385e-01));
 
@@ -240,7 +240,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    objinds[1] = 1;
    SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .relobjtol = SCIPfeastol(scip) * 0.01) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .opttol = SCIPfeastol(scip) * 0.01) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_assert(SCIPisFeasEQ(scip, primal[1], -1.39009603494603e+00));
 
@@ -251,7 +251,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    objinds[1] = 1;
    SCIP_CALL( SCIPsetNlpiObjective(scip, nlpi, nlpiprob, 2, objinds, objcoefs, NULL, 0.0) );
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
-   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .relobjtol = SCIPfeastol(scip) * 0.01) );
+   SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .opttol = SCIPfeastol(scip) * 0.01) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
    cr_assert(SCIPisFeasEQ(scip, primal[1], -5.90909090909091e-01));
 

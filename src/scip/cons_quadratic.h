@@ -15,7 +15,7 @@
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
- * @brief  some API functions of removed constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
+ * @brief  some API functions of removed constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j} a_{i,j} x_ix_j + \sum_i b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  *
  */
@@ -40,7 +40,7 @@ extern "C" {
  *
  * @{
  *
- * @name Nonlinear Constraints
+ * @name Quadratic Constraints (deprecated)
  *
  * @{
  */
@@ -55,7 +55,7 @@ extern "C" {
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  *
- *  @deprecated Use SCIPcreateConsQuadraticNonlinear instead.
+ *  @deprecated Use SCIPcreateConsQuadraticNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -95,8 +95,8 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    );
 
 /** creates and captures a quadratic nonlinear constraint
- *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
- *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *  in its most basic variant, i.e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME()
  *
  *  The constraint should be given in the form
  *  \f[
@@ -129,7 +129,7 @@ SCIP_RETCODE SCIPcreateConsBasicQuadratic(
 
 /** Adds a constant to the constraint function, that is, subtracts a constant from both sides
  *
- * @deprecated Use SCIPchgLhsNonlinear and SCIPchgRhsNonlinear instead.
+ * @deprecated Use SCIPchgLhsNonlinear() and SCIPchgRhsNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -141,7 +141,7 @@ void SCIPaddConstantQuadratic(
 
 /** Adds a linear variable with coefficient to a quadratic constraint.
  *
- * @deprecated Use SCIPaddLinearVarNonlinear instead.
+ * @deprecated Use SCIPaddLinearVarNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPaddLinearVarQuadratic(
 
 /** Adds a quadratic variable with linear and square coefficient to a quadratic constraint.
  *
- * @deprecated Use SCIPaddLinearVarNonlinear and SCIPaddExprNonlinear instead.
+ * @deprecated Use SCIPaddLinearVarNonlinear() and SCIPaddExprNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -170,7 +170,7 @@ SCIP_RETCODE SCIPaddQuadVarQuadratic(
  *
  * Variable will be added with square coefficient 0.0 if not existing yet.
  *
- * @deprecated Use SCIPaddLinearVarNonlinear instead.
+ * @deprecated Use SCIPaddLinearVarNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -185,7 +185,7 @@ SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
  *
  * Variable will be added with linear coefficient 0.0 if not existing yet.
  *
- * @deprecated Use SCIPaddExprNonlinear instead.
+ * @deprecated Use SCIPaddExprNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -201,7 +201,7 @@ SCIP_RETCODE SCIPaddSquareCoefQuadratic(
  * Variables will be added with linear and square coefficient 0.0 if not existing yet.
  * If variables are equal, only the square coefficient of the variable is updated.
  *
- * @deprecated Use SCIPaddExprNonlinear instead.
+ * @deprecated Use SCIPaddExprNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -215,7 +215,7 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
 
 /** Gets the quadratic constraint as a nonlinear row representation.
  *
- * @deprecated Use SCIPgetNlRowNonlinear instead.
+ * @deprecated Use SCIPgetNlRowNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -229,7 +229,7 @@ SCIP_RETCODE SCIPgetNlRowQuadratic(
  *
  *  @note This method may only be called during problem creation stage for an original constraint.
  *
- *  @deprecated Use SCIPchgLhsNonlinear instead.
+ *  @deprecated Use SCIPchgLhsNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
@@ -243,7 +243,7 @@ SCIP_RETCODE SCIPchgLhsQuadratic(
  *
  *  @note This method may only be called during problem creation stage for an original constraint.
  *
- *  @deprecated Use SCIPchgRhsNonlinear instead.
+ *  @deprecated Use SCIPchgRhsNonlinear() instead.
  */
 SCIP_EXPORT
 SCIP_DEPRECATED

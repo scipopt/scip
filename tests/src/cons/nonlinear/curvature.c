@@ -81,7 +81,7 @@ Test(curvature, cons_and_nlrows)
    /* disable presolving */
    SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
-   /* create, add, and release expression constraints */
+   /* create, add, and release nonlinear constraints */
    for( i = 0; i < ninputs; ++i )
    {
       SCIP_CONS* cons;

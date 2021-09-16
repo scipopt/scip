@@ -795,8 +795,9 @@ SCIP_RETCODE hashExpr(
  * public functions
  */
 
-/**@name Expression Handler Methods */
-/**@{ */
+/**@addtogroup PublicExprHandlerMethods
+ * @{
+ */
 
 /** creates the handler for an expression handler and includes it into SCIP */
 SCIP_EXPORT

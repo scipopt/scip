@@ -297,8 +297,8 @@ SCVARDATA* getSCVarDataInd(
 
 /** checks if a variable is semicontinuous and, if needed, updates the scvars hashmap
  *
- * A variable x is semicontinuous if its bounds depend on at least one binary variable called the indicator,
- * and indicator == 0 => x == x^0 for some real constant x^0.
+ * A variable \f$x\f$ is semicontinuous if its bounds depend on at least one binary variable called the indicator,
+ * and indicator = 0 &rArr; \f$x = x^0\f$ for some real constant \f$x^0\f$.
  */
 static
 SCIP_RETCODE varIsSemicontinuous(
@@ -885,14 +885,17 @@ SCIP_RETCODE startProbing(
    return SCIP_OKAY;
 }
 
-/** analyse on/off bounds on a variable for: 1) tightening bounds in probing for indicator = 1,
-  * 2) fixing indicator / detecting cutoff if one or both states are infeasible,
-  * 3) tightening local bounds if indicator is fixed.
-  *
-  * probinglb and probingub are only set if doprobing is TRUE.
-  * They are either set to bounds that should be used in probing or to SCIP_INVALID if bounds on
-  * var shouldn't be changed in probing.
-  */
+/** analyse on/off bounds on a variable
+ *
+ * analyses for
+ * 1. tightening bounds in probing for indicator = 1,
+ * 2. fixing indicator / detecting cutoff if one or both states are infeasible,
+ * 3. tightening local bounds if indicator is fixed.
+ *
+ * `probinglb` and `probingub` are only set if `doprobing` is TRUE.
+ * They are either set to bounds that should be used in probing or to `SCIP_INVALID` if bounds on
+ * `var` shouldn't be changed in probing.
+ */
 static
 SCIP_RETCODE analyseVarOnoffBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1039,13 +1042,13 @@ SCIP_RETCODE analyseVarOnoffBounds(
 
 /** looks for bound tightenings to be applied either in the current node or in probing
  *
- * Loops through both possible values of indicator and calls analyseVarOnoffBounds. Might update the *doprobing
- * flag by setting it to FALSE if:
+ * Loops through both possible values of indicator and calls analyseVarOnoffBounds().
+ * Might update the `*doprobing` flag by setting it to `FALSE` if:
  * - indicator is fixed or
- * - analyseVarOnoffBounds hasn't found a sufficient improvement at indicator==1.
+ * - analyseVarOnoffBounds() hasn't found a sufficient improvement at indicator==1.
  *
- * If *doprobing==TRUE, stores bounds suggested by analyseVarOnoffBounds in order to apply them in probing together
- * with the fixing indicator=1.
+ * If `*doprobing==TRUE`, stores bounds suggested by analyseVarOnoffBounds() in order to apply them in probing together
+ * with the fixing `indicator=1`.
  */
 static
 SCIP_RETCODE analyseOnoffBounds(
@@ -1142,7 +1145,7 @@ SCIP_RETCODE analyseOnoffBounds(
 
 /** saves local bounds on all expression variables, including auxiliary variables, obtained from propagating
  * indicator == 1 to the corresponding SCVARDATA (should only be used in the root node)
- * */
+ */
 static
 SCIP_RETCODE tightenOnBounds(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
@@ -1466,8 +1469,8 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaPerspective)
 }
 
 
-/** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
 #if 0
+/** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
 static
 SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
 { /*lint --e{715}*/
@@ -1480,10 +1483,12 @@ SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
 
 /** nonlinear handler enforcement callback
  *
- * "Perspectivies" cuts produced by other handlers. Suppose that we want to separate x from the set g(x) <= 0.
- * If g(x) = g0 if indicator z = 0, and a cut is given by sum aixi + c <= aux, where xi = xi0 if z = 0 for all i,
- * then the "perspectivied" cut is sum aixi + c + (1 - z)*(g0 - c - sum aix0i) <= aux. This ensures that at z = 1,
- * the new cut is equivalent to the given cut, and at z = 0 it reduces to g0 <= aux.
+ * "Perspectivies" cuts produced by other nonlinear handlers.
+ *
+ * Suppose that we want to separate \f$x\f$ from the set \f$\{ x : g(x) \leq 0\}\f$.
+ * If \f$g(x) = g^0\f$ if indicator \f$z = 0\f$, and a cut is given by \f$\sum_i a_ix_i + c \leq \text{aux}\f$, where \f$x_i = x_i^0\f$ if \f$z = 0\f$ for all \f$i\f$,
+ * then the "perspectivied" cut is \f[\sum_i a_ix_i + c + (1 - z)\,(g^0 - c - \sum_i a_ix_i^0) \leq \text{aux}.\f]
+ * This ensures that at \f$z = 1\f$, the new cut is equivalent to the given cut, and at \f$z = 0\f$ it reduces to \f$g^0 \leq \text{aux}\f$.
  */
 static
 SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
@@ -1732,7 +1737,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          /* ask the nonlinear handler for an estimator */
          SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr, nlhdlr2exprdata, solcopy, nlhdlr2auxvalue,
-               overestimate, SCIPgetSolVal(scip, solcopy, auxvar), rowpreps2, &success2, FALSE, &addedbranchscores2j) );
+               overestimate, SCIPgetSolVal(scip, solcopy, auxvar), FALSE, rowpreps2, &success2, &addedbranchscores2j) );
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
          maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps2);
@@ -1888,7 +1893,7 @@ TERMINATE:
  * nonlinear handler specific interface methods
  */
 
-/** includes perspective nonlinear handler nonlinear constraint handler */
+/** includes perspective nonlinear handler in nonlinear constraint handler */
 SCIP_RETCODE SCIPincludeNlhdlrPerspective(
    SCIP*                 scip                /**< SCIP data structure */
    )

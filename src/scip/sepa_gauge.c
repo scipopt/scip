@@ -63,14 +63,15 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define VIOLATIONFAC                100 /* constraints regarded as violated when violation > VIOLATIONFAC*SCIPfeastol */
-#define MAX_ITER                     75 /* maximum number of iterations for the line search */
+#define VIOLATIONFAC                100 /**< constraints regarded as violated when violation > VIOLATIONFAC*SCIPfeastol */
+#define MAX_ITER                     75 /**< maximum number of iterations for the line search */
 
 #define DEFAULT_NLPITERLIM         1000 /**< default NLP iteration limit */
 
 #define NLPFEASFAC                  1e-1/**< NLP feasibility tolerance = NLPFEASFAC * SCIP's feasibility tolerance */
 
 #define INTERIOROBJVARLB           -100 /**< lower bound of the objective variable when computing interior point */
+
 /*
  * Data structures
  */
@@ -169,7 +170,9 @@ SCIP_RETCODE storeNonlinearConvexNlrows(
    return SCIP_OKAY;
 }
 
-/** computes an interior point of a convex NLP relaxation; builds the convex relaxation, modifies it to find an interior
+/** computes an interior point of a convex NLP relaxation
+ *
+ * builds the convex relaxation, modifies it to find an interior
  * point, solves it and frees it; more details in @ref sepa_gauge.h
  *
  * @note the method also counts the number of nonlinear convex constraints and if there are < 2, then the convex
@@ -256,7 +259,7 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob,
       .iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX,
       .feastol = NLPFEASFAC * SCIPfeastol(scip),
-      .relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );   /*lint !e666*/
+      .opttol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );   /*lint !e666*/
    SCIPdebugMsg(scip, "finish interior point computation\n");
 
 #ifdef SCIP_DEBUG
@@ -321,9 +324,10 @@ CLEANUP:
 }
 
 
-/** find whether point is in the interior, at the boundary or in the exterior of the region described by the
- * intersection of nlrows[i] <= rhs if convexsides[i] = RHS or lhs <= nlrows[i] if convexsides[i] = LHS
- * @note: point corresponds to a convex combination between the lp solution and the interior point
+/** find whether point is in the interior, at the boundary, or in the exterior of the region described by the
+ * intersection of `nlrows[i]` &le; rhs if `convexsides[i]` = RHS or lhs &le; `nlrows[i]` if `convexsides[i]` = LHS
+ *
+ * @note point corresponds to a convex combination between the LP solution and the interior point
  */
 static
 SCIP_RETCODE findPointPosition(
@@ -400,7 +404,8 @@ SCIP_RETCODE findPointPosition(
 
 
 /** returns, in convexcomb, the convex combination
- * \f$ \lambda \f$ endpoint + (1 - \f$ lambda \f$) startpoint = startpoint + \f$ \lambda \f$ (endpoint - tosepasol) */
+ * \f$ \lambda\, \text{endpoint} + (1 - \lambda) \text{startpoint} = \text{startpoint} + \lambda (\text{endpoint} - \text{startpoint})\f$
+ */
 static
 SCIP_RETCODE buildConvexCombination(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -444,9 +449,9 @@ SCIP_RETCODE buildConvexCombination(
 }
 
 
-/** performs binary search to find the point belonging to the segment [intsol, tosepasol] that intersects the boundary
- * of the region described by the intersection of nlrows[i] <= rhs if convexsides[i] = RHS or lhs <= nlrows[i] if not,
- * for i in nlrowsidx
+/** performs binary search to find the point belonging to the segment [`intsol`, `tosepasol`] that intersects the boundary
+ * of the region described by the intersection of `nlrows[i]` &le; rhs if `convexsides[i] = RHS` or lhs &le; `nlrows[i]` if not,
+ * for i in `nlrowsidx`
  */
 static
 SCIP_RETCODE findBoundaryPoint(
@@ -604,10 +609,11 @@ SCIP_RETCODE generateCut(
    return SCIP_OKAY;
 }
 
-/** tries to generate gradient cuts at the point on the segment [intsol, tosepasol] that intersecs the boundary of the
+/** tries to generate gradient cuts at the point on the segment [`intsol`, `tosepasol`] that intersecs the boundary of the
  * convex relaxation
+ *
  * -# checks that the relative interior of the segment actually intersects the boundary
- *    (this check is needed since intsol is not necessarily an interior point)
+ *    (this check is needed since `intsol` is not necessarily an interior point)
  * -# finds point on the boundary
  * -# generates gradient cut at point on the boundary
  */

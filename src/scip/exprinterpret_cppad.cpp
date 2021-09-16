@@ -917,7 +917,7 @@ private:
       assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
       assert(n >= 1);
 
-      SCIPdebugMsg(scip, "expr_%s:forward, q=%ld, p=%ld\n", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), q, p);
+      SCIPdebugMsg(scip, "expr_%s:forward, q=%zd, p=%zd\n", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), q, p);
 
       if( vx.size() > 0 )
       {

@@ -33,12 +33,9 @@ extern "C" {
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
 
-/**@addtogroup PublicExprMethods
+/**@addtogroup PublicExprHandlerMethods
  * @{
  */
-
-/**@name Expression Handler */
-/**@{ */
 
 /** creates the handler for an expression handler and includes it into SCIP */
 SCIP_EXPORT
@@ -102,6 +99,10 @@ SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
    );
 
 /** @} */
+
+/**@addtogroup PublicExprMethods
+ * @{
+ */
 
 /**@name Expressions */
 /**@{ */
@@ -664,7 +665,7 @@ SCIP_RETCODE SCIPhashExpr(
  * - TODO? the exponent of an exponential is always 1
  *
  * \par Ordering Rules (see SCIPexprCompare())
- *
+ * \anchor EXPR_ORDER
  * These rules define a total order on *simplified* expressions.
  * There are two groups of rules, when comparing equal type expressions and different type expressions.
  *

@@ -29,6 +29,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   /* include some default dialogs, since other plugins require that at least the root dialog is available */
+   SCIP_CALL( SCIPincludeDialogDefaultBasic(scip) );
+
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear constraint handler must be before linear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );

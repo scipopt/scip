@@ -39,7 +39,7 @@ extern "C" {
  *
  * @{
  *
- * @name Nonlinear Constraints
+ * @name SOC Constraints (deprecated)
  *
  * @{
  */
@@ -88,7 +88,7 @@ SCIP_RETCODE SCIPcreateConsSOC(
 
 /** creates and captures a second order cone nonlinear constraint
  *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
- *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *  afterwards using SCIPsetConsFLAGNAME()
  *
  *  @see SCIPcreateConsSOC() for the default constraint flag configuration
  *

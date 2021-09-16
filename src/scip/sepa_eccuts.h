@@ -24,21 +24,16 @@
  * Since the convex envelope of an edge-concave function is a polytope, the value of the convex envelope for a
  * \f$ x \in [\ell,u] \f$ can be obtained by solving the following LP:
  *
- * \f[
- *              \min \, \sum_i \lambda_i f(v_i)
- * \f]
- * \f[
-       s.t. \; \sum_i \lambda_i v_i = x
- * \f]
- * \f[
- *             \sum_i \lambda_i = 1
- * \f]
- *
+ * \f{align}{
+ *     \min \, & \sum_i \lambda_i f(v_i)  \\
+ *     s.t. \, & \sum_i \lambda_i v_i = x \\
+ *             & \sum_i \lambda_i = 1
+ * \f}
  * where \f$ \{ v_i \} \f$ are the vertices of the domain \f$ [\ell,u] \f$. Let \f$ (\alpha, \alpha_0) \f$ be the dual
  * solution of this LP. It can be shown that \f$ \alpha' x + \alpha_0 \f$ is a facet of the convex envelope of \f$ f \f$
  * if \f$ x \f$ is in the interior of \f$ [\ell,u] \f$.
  *
- * We use this as follows:  We transform the problem to the unit box \f$ [0,1]^n \f$ by using an linear affine
+ * We use this as follows:  We transform the problem to the unit box \f$ [0,1]^n \f$ by using a linear affine
  * transformation \f$ T(x) = Ax + b \f$ and perturb \f$ T(x) \f$ if it is not an interior point.
  * This has the advantage that we do not have to update the matrix of the LP for different edge-concave functions.
  *
@@ -58,12 +53,12 @@
  * \f]
  *
  * We solve auxiliary MIP problems to identify good edge-concave aggregations. From the literature it is known that the
- * convex envelope of an bilinear edge-concave function \f$ f_i \f$ differs from McCormick iff in the graph
+ * convex envelope of a bilinear edge-concave function \f$ f_i \f$ differs from McCormick iff in the graph
  * representation of \f$ f_i \f$ there exist a cycle with an odd number of positive weighted edges. We look for a
  * subgraph of the graph representation of the quadratic function \f$ g(x) \f$ with the previous property using a model
  * based on binary flow arc variables.
  *
- * This callback is currently disabled by default. It requires additional
+ * This separator is currently disabled by default. It requires additional
  * tuning to be enabled by default. However, it may be useful to enable
  * it on instances with nonconvex quadratic constraints, in particular boxQPs.
  */

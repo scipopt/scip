@@ -58,7 +58,8 @@ struct SCIP_NlpParam
 {
    SCIP_Real             lobjlimit;          /**< lower objective limit (cutoff) */
    SCIP_Real             feastol;            /**< feasibility tolerance (maximal allowed absolute violation of constraints and variable bounds) */
-   SCIP_Real             relobjtol;          /**< relative objective tolerance */
+   SCIP_Real             opttol;             /**< optimality tolerance (maximal allowed absolute violation of optimality conditions) */
+   SCIP_Real             solvertol;          /**< solver-specific tolerance on accuracy, e.g., maximal violation of feasibility and optimality in scaled problem (0.0: use solver default) */
    SCIP_Real             timelimit;          /**< time limit in seconds: use SCIP_REAL_MAX to use remaining time available for SCIP solve (limits/time - currenttime) */
    int                   iterlimit;          /**< iteration limit */
    unsigned short        verblevel;          /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
@@ -92,7 +93,8 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #define SCIP_NLPPARAM_DEFAULT_INITS(scip)              \
    .lobjlimit   = SCIP_REAL_MIN,                       \
    .feastol     = SCIPfeastol(scip),                   \
-   .relobjtol   = SCIPdualfeastol(scip),               \
+   .opttol      = SCIPdualfeastol(scip),               \
+   .solvertol   = 0.0,                                 \
    .timelimit   = SCIP_REAL_MAX,                       \
    .iterlimit   = INT_MAX,                             \
    .verblevel   = SCIP_NLPPARAM_DEFAULT_VERBLEVEL,     \
@@ -117,7 +119,7 @@ typedef struct SCIP_NlpParam SCIP_NLPPARAM;
 #else
 /** default NLP parameters with static initialization; required for SCIPsolveNlpi macro with ancient MSVC */
 static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
-   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE, FALSE, FALSE, __FILE__
+   SCIP_REAL_MIN, SCIP_DEFAULT_FEASTOL, SCIP_DEFAULT_DUALFEASTOL, 0.0, SCIP_REAL_MAX, INT_MAX, SCIP_NLPPARAM_DEFAULT_VERBLEVEL, SCIP_NLPPARAM_FASTFAIL_CONSERVATIVE, FALSE, FALSE, __FILE__
 };
 #define SCIP_NLPPARAM_DEFAULT(scip) SCIP_NLPPARAM_DEFAULT_STATIC
 #endif
@@ -129,17 +131,19 @@ static const SCIP_NLPPARAM SCIP_NLPPARAM_DEFAULT_STATIC = {
  *     SCIPdebugMsg(scip, "calling NLP solver with parameters " SCIP_NLPPARAM_PRINT(param));
  */
 #define SCIP_NLPPARAM_PRINT(param) \
-  "lobjlimit = %g, "  \
-  "feastol = %g, "    \
-  "relobjtol = %g, "  \
-  "timelimit = %g, "  \
-  "iterlimit = %d, "  \
-  "verblevel = %hd, " \
-  "fastfail = %d, "   \
-  "warmstart = %d, "  \
-  "called by %s\n",   \
-  (param).lobjlimit, (param).feastol, (param).relobjtol, (param).timelimit, (param).iterlimit, \
-  (param).verblevel, (param).fastfail, (param).warmstart, (param).caller != NULL ? (param).caller : "unknown"
+  "lobjlimit = %g, "    \
+  "feastol = %g, "      \
+  "opttol = %g, "       \
+  "solvertol = %g, "    \
+  "timelimit = %g, "    \
+  "iterlimit = %d, "    \
+  "verblevel = %hd, "   \
+  "fastfail = %d, "     \
+  "expectinfeas = %d, " \
+  "warmstart = %d, "    \
+  "called by %s\n",     \
+  (param).lobjlimit, (param).feastol, (param).opttol, (param).solvertol, (param).timelimit, (param).iterlimit, \
+  (param).verblevel, (param).fastfail, (param).expectinfeas, (param).warmstart, (param).caller != NULL ? (param).caller : "unknown"
 
 /** NLP solution status */
 enum SCIP_NlpSolStat
@@ -168,6 +172,7 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_LICENSEERROR  = 8,    /**< problems with license of NLP solver */
    SCIP_NLPTERMSTAT_OTHER         = 9     /**< other error (= this should never happen) */
 #ifndef _MSC_VER  /* MS __declspec(deprecated) not allowed within enums */
+#if ! defined(__GNUC__) || GCC_VERSION >= 600  /* _attribute__ ((deprecated)) within enums not allowed for older GCCs */
    ,/* for some backward compatibility */
    SCIP_NLPTERMSTAT_TILIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_TIMELIMIT,
    SCIP_NLPTERMSTAT_ITLIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_ITERLIMIT,
@@ -176,6 +181,7 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_EVALERR SCIP_DEPRECATED = SCIP_NLPTERMSTAT_EVALERROR,
    SCIP_NLPTERMSTAT_MEMERR  SCIP_DEPRECATED = SCIP_NLPTERMSTAT_OUTOFMEMORY,
    SCIP_NLPTERMSTAT_LICERR  SCIP_DEPRECATED = SCIP_NLPTERMSTAT_LICENSEERROR
+#endif
 #endif
 };
 typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /**< NLP solver termination status */
@@ -186,6 +192,9 @@ struct SCIP_NlpStatistics
    int                   niterations;        /**< number of iterations the NLP solver spend in the last solve command */
    SCIP_Real             totaltime;          /**< total time in CPU sections the NLP solver spend in the last solve command */
    SCIP_Real             evaltime;           /**< time spend in evaluation of functions and their derivatives (only measured if timing/nlpieval = TRUE) */
+
+   SCIP_Real             consviol;           /**< maximal absolute constraint violation in current solution, or SCIP_INVALID if not available */
+   SCIP_Real             boundviol;          /**< maximal absolute variable bound violation in current solution, or SCIP_INVALID if not available */
 };
 typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics */
 

@@ -96,7 +96,7 @@ SCIP_RETCODE createAndDetect(
  * tests
  */
 
-/* creates and adds two expression constraints and check output of SCIPgetBilinearExprsExpr */
+/* creates and adds two nonlinear constraints and check output of SCIPgetBilinearExprsExpr */
 Test(nlhdlrbilinear, collect_product_expressions)
 {
    SCIP_CONS* conss[2];
@@ -324,7 +324,7 @@ Test(nlhdlrbilinear, separation_single)
    overestimate = FALSE;
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
    SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol,
-            0.0, overestimate, 0.0, rowpreps, &success, FALSE, &dummy) );
+            0.0, overestimate, 0.0, FALSE, rowpreps, &success, &dummy) );
    cr_expect(!success);
    cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) > SCIPgetPtrarrayMaxIdx(scip, rowpreps));
    SCIP_CALL( SCIPclearPtrarray(scip, rowpreps) );
@@ -333,7 +333,7 @@ Test(nlhdlrbilinear, separation_single)
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr), -1.23) );
    overestimate = FALSE;
    SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol,
-            0.0, overestimate, 0.0, rowpreps, &success, FALSE, &dummy) );
+            0.0, overestimate, 0.0, FALSE, rowpreps, &success, &dummy) );
    cr_expect(success);
    cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
    cr_expect(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 0);
@@ -398,7 +398,7 @@ Test(nlhdlrbilinear, separation_two)
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr), -0.1) );
    overestimate = FALSE;
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
-   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowpreps, &success, FALSE, &dummy) );
+   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol, 0.0, overestimate, 0.0, FALSE, rowpreps, &success, &dummy) );
    cr_expect(!success);
    cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) > SCIPgetPtrarrayMaxIdx(scip, rowpreps));
    SCIP_CALL( SCIPclearPtrarray(scip, rowpreps) );
@@ -406,7 +406,7 @@ Test(nlhdlrbilinear, separation_two)
    /* auxvar = 0.1 => both inequalities needs to be used */
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr), 0.1) );
    overestimate = FALSE;
-   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol, 0.0, overestimate, 0.0, rowpreps, &success, FALSE, &dummy) );
+   SCIP_CALL( nlhdlrEstimateBilinear(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol, 0.0, overestimate, 0.0, FALSE, rowpreps, &success, &dummy) );
    cr_expect(success);
    cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
    cr_expect(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 0);
@@ -517,7 +517,7 @@ Test(nlhdlrbilinear, inteval_three_lines)
    /* transform problem */
    TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[0], SCIPvarGetTransVar(x), NULL, NULL) );
    SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[1], SCIPvarGetTransVar(y), NULL, NULL) );
    SCIP_CALL( SCIPcreateExprProduct(scip, &expr, 2, varexprs, -2.0, NULL, NULL) );

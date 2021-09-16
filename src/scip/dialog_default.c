@@ -323,8 +323,10 @@ SCIP_DECL_DIALOGCOPY(dialogCopyDefault)
    assert(scip != NULL);
    assert(dialog != NULL);
 
-   /* call inclusion method of dialog */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
+   /* call inclusion method of basic dialog entries
+    * "set" and "fix" dialog entries will be added when SCIPstartInteraction() is called on target SCIP
+    */
+   SCIP_CALL( SCIPincludeDialogDefaultBasic(scip) );
 
    return SCIP_OKAY;
 }
@@ -3955,8 +3957,8 @@ SCIP_RETCODE SCIPcreateRootDialog(
 }
 
 
-/** includes or updates the default dialog menus in SCIP */
-SCIP_RETCODE SCIPincludeDialogDefault(
+/** includes or updates the default dialog menus in SCIP except for menus "fix" and "set" */
+SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -4521,12 +4523,6 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-
-   /* set */
-   SCIP_CALL( SCIPincludeDialogDefaultSet(scip) );
-
-   /* fix */
-   SCIP_CALL( SCIPincludeDialogDefaultFix(scip) );
 
    /* write */
    if( !SCIPdialogHasEntry(root, "write") )

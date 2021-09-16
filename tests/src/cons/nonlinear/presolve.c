@@ -117,7 +117,7 @@ Test(presolve, mergeconss)
    }
 }
 
-/** helper method to create, add, and release an expression constraint */
+/** helper method to create, add, and release a nonlinear constraint */
 static
 SCIP_RETCODE addCons(
    const char*           exprstr,            /**< string with the expr to parse */
@@ -214,7 +214,7 @@ Test(presolve, implint)
    SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_INTEGER, &infeasible) );
    SCIP_CALL( SCIPchgVarType(scip, z, SCIP_VARTYPE_BINARY, &infeasible) );
 
-   /* add expression constraint */
+   /* add nonlinear constraint */
    SCIP_CALL( addCons("<x> + 2*<y>^2 - 3*<y>^3 - 4*<z>", 5.0, 5.0) );
 
    /* apply presolving */
@@ -222,6 +222,64 @@ Test(presolve, implint)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
+}
+
+/* test for presolveImplint()
+ *
+ * consider 0.5 x + 0.5 yz - 1.5 z == 5 with x continuous, y and z binary
+ */
+Test(presolve, implint2)
+{
+   SCIP_Bool infeasible;
+
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/reformbinprods", FALSE) );
+
+   /* change bounds of x to be [-10,10] */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, x, 10.0) );
+
+   /* change variable types */
+   SCIP_CALL( SCIPchgVarType(scip, x, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, y, 0.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, y, 1.0) );
+   SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_BINARY, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, z, SCIP_VARTYPE_BINARY, &infeasible) );
+
+   /* add nonlinear constraint */
+   SCIP_CALL( addCons("0.5*<x> + 0.5*<y>*<z> - 1.5*<z>", 0.0, 0.0) );
+
+   /* apply presolving */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
+
+   /* check variable types */
+   checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_BINARY, SCIP_VARTYPE_BINARY);
+}
+
+/* test for presolveImplint()
+ *
+ * consider 2 x^2 + 0.3 * y - z == 5 with x integer, y continuous, and z binary
+ */
+Test(presolve, implint3)
+{
+   SCIP_Bool infeasible;
+
+   /* change bounds of x to be [-10,10] */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, x, -10.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, x, 10.0) );
+
+   /* change variable types */
+   SCIP_CALL( SCIPchgVarType(scip, x, SCIP_VARTYPE_INTEGER, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+   SCIP_CALL( SCIPchgVarType(scip, z, SCIP_VARTYPE_BINARY, &infeasible) );
+
+   /* add nonlinear constraint */
+   SCIP_CALL( addCons("2*<x>^2 + 0.3*<y> - <z>", 5.0, 5.0) );
+
+   /* apply presolving */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
+
+   /* check variable types */
+   checkTypes(SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
 }
 
 /* tests setppc upgrade */
@@ -241,7 +299,7 @@ Test(presolve, setppcupg)
    SCIP_CALL( SCIPchgVarType(scip, x, SCIP_VARTYPE_BINARY, &infeasible) );
    SCIP_CALL( SCIPchgVarType(scip, y, SCIP_VARTYPE_BINARY, &infeasible) );
 
-   /* add expression constraint -2xy + 2x + 2y -6 = -4, which is equivalent to (x-1)(y-1) = 0 */
+   /* add nonlinear constraint -2xy + 2x + 2y -6 = -4, which is equivalent to (x-1)(y-1) = 0 */
    SCIP_CALL( addCons("-2 * <x> * <y> + 2 * <x> + 2 * <y> - 6", -4.0, -4.0) );
 
    /* apply presolving */

@@ -44,7 +44,7 @@ static SCIP_VAR* x_3;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_NLHDLR* nlhdlr = NULL;
 
-/* creates scip, problem, includes expression constraint handler, creates and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
 {
@@ -317,7 +317,7 @@ SCIP_RETCODE estimate(
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
    SCIP_CALL( nlhdlrEvalAuxConvexConcave(scip, nlhdlr, expr, nlhdlrexprdata, &auxvalue, sol) );
    SCIP_CALL( nlhdlrEstimateConvex(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, enforceabove,
-         targetvalue, rowpreps, &success, FALSE, &addedbranchscores) );
+         targetvalue, FALSE, rowpreps, &success, &addedbranchscores) );
 
    cr_assert(success);
    cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);

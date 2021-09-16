@@ -15,18 +15,9 @@
 
 /**@file   scip_nlp.c
  * @ingroup OTHER_CFILES
- * @brief  public methods for nonlinear relaxations
- * @author Tobias Achterberg
- * @author Timo Berthold
- * @author Gerald Gamrath
- * @author Leona Gottwald
- * @author Stefan Heinz
- * @author Gregor Hendel
- * @author Thorsten Koch
- * @author Alexander Martin
- * @author Marc Pfetsch
- * @author Michael Winkler
- * @author Kati Wolter
+ * @brief  public methods for nonlinear relaxation
+ * @author Thorsten Gellermann
+ * @author Stefan Vigerske
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
@@ -51,6 +42,10 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_var.h"
+
+/**@addtogroup PublicNLPMethods
+ * @{
+ */
 
 /** returns whether the NLP relaxation has been enabled
  *
@@ -210,7 +205,7 @@ int SCIPgetNNLPVars(
    return SCIPnlpGetNVars(scip->nlp);
 }
 
-/** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var
+/** computes for each variables the number of NLP rows in which the variable appears in the nonlinear part
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -374,7 +369,9 @@ SCIP_RETCODE SCIPaddNlRow(
    return SCIP_OKAY;
 }
 
-/** removes a nonlinear row from the NLP.
+/** removes a nonlinear row from the NLP
+ *
+ *  This row is released in the NLP.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -482,7 +479,19 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
    return SCIP_OKAY;
 }
 
-/** solves the current NLP
+/** solves the current NLP (or diving NLP if in diving mode) with given parameters
+ *
+ *  Typical use is
+ *
+ *      SCIP_NLPPARAM nlparam = { SCIP_NLPPARAM_DEFAULT(scip); }
+ *      nlpparam.iterlimit = 42;
+ *      SCIP_CALL( SCIPsolveNLPParam(scip, nlpparam) );
+ *
+ *  or, in one line:
+ *
+ *      SCIP_CALL( SCIPsolveNLPParam(scip, (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT(scip), .iterlimit = 42 }) );
+ *
+ *  To get the latter, also \ref SCIPsolveNLP can be used.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -611,7 +620,7 @@ SCIP_Real SCIPgetNLPObjval(
 /** indicates whether a solution for the current NLP is available
  *
  * The solution may be optimal, feasible, or infeasible.
- * Thus, returns whether the NLP solution status is at most locinfeasible.
+ * Thus, returns whether the NLP solution status is at most \ref SCIP_NLPSOLSTAT_LOCINFEASIBLE.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -691,14 +700,14 @@ SCIP_RETCODE SCIPwriteNLP(
    return SCIP_OKAY;
 }
 
-/** gets the NLP interface and problem used by the SCIP NLP;
- *  with the NLPI and its problem you can use all of the methods defined in scip/scip_nlpi.h;
+/** gets the NLP interface and problem used by the SCIP NLP
  *
- *  @warning You have to make sure, that the full internal state of the NLPI does not change or is recovered completely
- *           after the end of the method that uses the NLPI. In particular, if you manipulate the NLP or its solution
- *           (e.g. by calling one of the SCIPaddNlpi...() or the SCIPsolveNlpi() method), you have to check in advance
- *           whether the NLP is currently solved.  If this is the case, you have to make sure, the internal solution
- *           status is recovered completely at the end of your method. Additionally you have to resolve the NLP with
+ *  @warning With the NLPI and its problem, all methods defined in \ref scip_nlpi.h and \ref pub_nlpi.h can be used.
+ *           It needs to be ensured that the full internal state of the NLPI does not change or is recovered completely
+ *           after the end of the method that uses the NLPI. In particular, if the NLP or its solution is manipulated
+ *           (e.g. by calling one of the SCIPaddNlpi...() or the SCIPsolveNlpi() method), one has to check in advance
+ *           whether the NLP is currently solved.  If this is the case, one has to make sure that the internal solution
+ *           status is recovered completely again. Additionally one has to resolve the NLP with
  *           SCIPsolveNlpi() in order to reinstall the internal solution status.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -731,16 +740,14 @@ SCIP_RETCODE SCIPgetNLPI(
    return SCIP_OKAY;
 }
 
+/** @} */
 
-/*
- * NLP diving methods
- */
+/**@addtogroup PublicNLPDiveMethods
+ * @{ */
 
-/**@name NLP Diving Methods */
-/**@{ */
-
-/** initiates NLP diving making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP() and SCIPchgVarsBoundsDiveNLP() available
+/** initiates NLP diving
  *
+ *  Makes functions SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP() and SCIPchgVarsBoundsDiveNLP() available.
  *  Further, SCIPsolveNLP() can be used to solve the diving NLP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -886,14 +893,13 @@ SCIP_RETCODE SCIPchgVarsBoundsDiveNLP(
    return SCIP_OKAY;
 }
 
-/**@} */
+/** @} */
 
-
-/*
- * NLP nonlinear row methods
+/**@addtogroup PublicNLRowMethods
+ * @{
  */
 
-/** creates and captures an NLP row
+/** creates and captures a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -925,7 +931,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    return SCIP_OKAY;
 }
 
-/** creates and captures an NLP nonlinear row without any coefficients
+/** creates and captures a nonlinear row without any coefficients
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -951,7 +957,7 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
    return SCIP_OKAY;
 }
 
-/** creates and captures an NLP row from a linear row
+/** creates and captures a nonlinear row from a linear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -974,7 +980,7 @@ SCIP_RETCODE SCIPcreateNlRowFromRow(
    return SCIP_OKAY;
 }
 
-/** increases usage counter of NLP nonlinear row
+/** increases usage counter of a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -996,7 +1002,7 @@ SCIP_RETCODE SCIPcaptureNlRow(
    return SCIP_OKAY;
 }
 
-/** decreases usage counter of NLP nonlinear row, and frees memory if necessary
+/** decreases usage counter of a nonlinear row, and frees memory if necessary
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1019,7 +1025,7 @@ SCIP_RETCODE SCIPreleaseNlRow(
    return SCIP_OKAY;
 }
 
-/** changes left hand side of NLP nonlinear row
+/** changes left hand side of a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1042,7 +1048,7 @@ SCIP_RETCODE SCIPchgNlRowLhs(
    return SCIP_OKAY;
 }
 
-/** changes right hand side of NLP nonlinear row
+/** changes right hand side of a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1065,7 +1071,7 @@ SCIP_RETCODE SCIPchgNlRowRhs(
    return SCIP_OKAY;
 }
 
-/** changes constant of NLP nonlinear row
+/** changes constant of a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1088,7 +1094,7 @@ SCIP_RETCODE SCIPchgNlRowConstant(
    return SCIP_OKAY;
 }
 
-/** adds variable with a linear coefficient to the nonlinear row
+/** adds variable with a linear coefficient to a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1112,7 +1118,7 @@ SCIP_RETCODE SCIPaddLinearCoefToNlRow(
    return SCIP_OKAY;
 }
 
-/** adds variables with linear coefficients to the row
+/** adds variables with linear coefficients to a row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1146,10 +1152,10 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    return SCIP_OKAY;
 }
 
-/** changes linear coefficient of a variables in a row
+/** changes linear coefficient of a variables in a nonlinear row
  *
- *  Setting the coefficient to 0.0 means that it is removed from the row
- *  the variable does not need to exists before.
+ *  Setting the coefficient to 0.0 means that it is removed from the row.
+ *  The variable does not need to exists before.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1175,7 +1181,7 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
    return SCIP_OKAY;
 }
 
-/** sets or deletes expression in the nonlinear row
+/** sets or deletes expression in a nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1528,7 +1534,7 @@ SCIP_RETCODE SCIPgetNlRowActivityBounds(
    return SCIP_OKAY;
 }
 
-/** output nonlinear row to file stream
+/** prints a nonlinear row to file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1552,3 +1558,5 @@ SCIP_RETCODE SCIPprintNlRow(
 
    return SCIP_OKAY;
 }
+
+/** @} */

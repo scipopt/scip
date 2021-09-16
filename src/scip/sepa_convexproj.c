@@ -64,10 +64,10 @@
 #define SEPA_USESSUBSCIP          FALSE      /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                 TRUE      /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXDEPTH             -1      /* maximum depth at which the separator is applied; -1 means no limit */
+#define DEFAULT_MAXDEPTH             -1      /**< maximum depth at which the separator is applied; -1 means no limit */
 #define DEFAULT_NLPITERLIM          250      /**< default NLP iteration limit */
 
-#define VIOLATIONFAC                100      /* points regarded violated if max violation > VIOLATIONFAC*SCIPfeastol */
+#define VIOLATIONFAC                100      /**< points regarded violated if max violation > VIOLATIONFAC*SCIPfeastol() */
 
 /*
  * Data structures
@@ -249,9 +249,11 @@ SCIP_RETCODE generateCut(
    return SCIP_OKAY;
 }
 
-/** set quadratic part of objective function: \f$ \sum_i x_i^2 \f$; the objective function is \f$ ||x - x_0||^2 \f$,
+/** set quadratic part of objective function: \f$ \sum_i x_i^2 \f$
+ *
+ * the objective function is \f$ ||x - x_0||^2 \f$,
  * where \f$ x_0 \f$ is the point to separate; the only part that changes is the term \f$ -2 \langle x_0, x \rangle \f$
- * which is linear and is set every time we want to separate a point, see separateCuts
+ * which is linear and is set every time we want to separate a point, see separateCuts()
  */
 static
 SCIP_RETCODE setQuadraticObj(
@@ -301,6 +303,7 @@ SCIP_RETCODE setQuadraticObj(
 }
 
 /** projects sol onto convex relaxation (stored in sepadata) and tries to generate gradient cuts at the projection
+ *
  * it generates cuts only for the constraints that were violated by the LP solution and are now active or still
  * violated (in case we don't solve to optimality).
  * @todo: store a feasible solution if one is found to use as warmstart
@@ -371,7 +374,7 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPsolveNlpi(scip, sepadata->nlpi, sepadata->nlpiprob,
       .iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX,
       .feastol = SCIPfeastol(scip) / 10.0, /* use tighter tolerances for the NLP solver */
-      .relobjtol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
+      .opttol = MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /*lint !e666*/
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, sepadata->nlpi, sepadata->nlpiprob));
 
    /* if solution is feasible, add cuts */

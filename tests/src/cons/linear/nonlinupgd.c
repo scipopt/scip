@@ -74,7 +74,7 @@ Test(nonlinupgd, linear)
 
    const char* input = "1.0 * <x> + 2.0 * <y> - 3.0 * <z> + 0.5";
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL) );
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "test", simplified, -2.0, 2.0) );
@@ -108,7 +108,7 @@ Test(nonlinupgd, linear)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-/* tries to upgrade a quadratic expression constraint to a linear constraint, which should fail */
+/* tries to upgrade a quadratic nonlinear constraint to a linear constraint, which should fail */
 Test(nonlinupgd, quadratic)
 {
    SCIP_EXPR* expr;
@@ -121,7 +121,7 @@ Test(nonlinupgd, quadratic)
 
    const char* input = "<x>^2 + <y>";
 
-   /* create expression constraint */
+   /* create nonlinear constraint */
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL) );
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "test", simplified, -2.0, 2.0) );

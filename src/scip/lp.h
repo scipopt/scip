@@ -964,6 +964,12 @@ SCIP_RETCODE SCIPlpFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
+/** interrupts the currently ongoing lp solve or disables the interrupt */
+SCIP_RETCODE SCIPlpInterrupt(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   );
+
 /** stores pricing norms into LP norms object */
 SCIP_RETCODE SCIPlpGetNorms(
    SCIP_LP*              lp,                 /**< LP data */

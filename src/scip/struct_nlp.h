@@ -19,21 +19,12 @@
  * @author Thorsten Gellermann
  * @author Stefan Vigerske
  *
- *  In SCIP, the NLP is defined as follows:
- *
- *   min         const + obj * x + f(x)
- *        lhs <= const + A   * x        <= rhs
+ *  In SCIP, the NLP relaxation is defined as follows:
+ *  <pre>
+ *   min         const + obj * x
  *        lhs <= const + A   * x + f(x) <= rhs
  *        lb  <=               x        <= ub
- *
- *  where the linear rows and variable bounds are managed by the LP
- *  and the nonlinear rows are managed by the NLP.
- *
- *  The row activities are defined as
- *     activity = A * x + const
- *  for a linear row and as
- *     activity = f(x) + A * x + const
- *  for a nonlinear row.
+ *  </pre>
  *
  *  The main datastructures for storing an NLP are the nonlinear rows.
  *  A nonlinear row can live on its own (if it was created by a separator),
@@ -108,7 +99,6 @@ struct SCIP_Nlp
    int                   nunflushedvardel;   /**< number of variable deletions not flushed to NLPI problem yet */
    int                   nunflushednlrowadd; /**< number of nonlinear row additions not flushed to NLPI problem yet */
    int                   nunflushednlrowdel; /**< number of nonlinear row deletions not flushed to NLPI problem yet */
-   SCIP_Bool             isrelax;            /**< is the current NLP a relaxation of a SCIP problem? */
    SCIP_Bool             indiving;           /**< are we currently in diving mode? */
 
    /* variables in problem */
@@ -120,7 +110,7 @@ struct SCIP_Nlp
    int                   nvars_solver;       /**< number of variables in NLPI problem */
    int                   sizevars_solver;    /**< allocated space for variables in NLPI problem */
    int*                  varmap_nlp2nlpi;    /**< index of variables in NLPI problem, or -1 if variable has not been added to NLPI problem yet */
-   int*                  varmap_nlpi2nlp;    /**< index of a NLPI problem variable in NLP (varmap_nlp2nlpi[varmap_nlpi2nlp[i]] == i for i = 0..nvarssolver-1), or -1 if variable has been deleted from NLP */
+   int*                  varmap_nlpi2nlp;    /**< index of a NLPI problem variable in NLP (`varmap_nlp2nlpi[varmap_nlpi2nlp[i]] == i` for `i = 0..nvars_solver-1`), or -1 if variable has been deleted from NLP */
 
    /* nonlinear rows in problem */
    int                   nnlrows;            /**< number of nonlinear rows */
@@ -129,7 +119,7 @@ struct SCIP_Nlp
    /* nonlinear rows in NLPI problem */
    int                   nnlrows_solver;     /**< number of nonlinear rows in solver */
    int                   sizenlrows_solver;  /**< allocated space for nonlinear rows in solver */
-   int*                  nlrowmap_nlpi2nlp;  /**< index of a NLPI row in NLP (nlrows[nlrowmap_nlpi2nlp[i]]->nlpiidx == i for i = 0..nnlrows_solver-1), or -1 if row has been deleted from NLP */
+   int*                  nlrowmap_nlpi2nlp;  /**< index of a NLPI row in NLP (`nlrows[nlrowmap_nlpi2nlp[i]]->nlpiidx == i` for `i = 0..nnlrows_solver-1`), or -1 if row has been deleted from NLP */
 
    /* objective function */
    SCIP_Bool             objflushed;         /**< is the objective in the NLPI up to date? */
@@ -156,7 +146,7 @@ struct SCIP_Nlp
    SCIP_Real*            fracvarsfrac;       /**< fractionality of the fractional variables  */
    int                   nfracvars;          /**< number of fractional variables */
    int                   npriofracvars;      /**< number of fractional variables with highest branching priority */
-   int                   fracvarssize;       /**< size of fracvars* arrays */
+   int                   fracvarssize;       /**< size of fracvars arrays */
    SCIP_Longint          validfracvars;      /**< the NLP solve for which the fractional variables are valid, or -1 if never setup */
 
    /* miscellaneous */

@@ -29,7 +29,7 @@ static SCIP_VAR* y;
 static SCIP_VAR* z;
 static SCIP_SOL* sol;
 
-/* creates scip, problem, includes expression constraint handler, creates  and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates  and adds variables */
 static
 void setup(void)
 {

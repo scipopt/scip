@@ -926,8 +926,8 @@ SCIP_RETCODE handleNlpParam(
    }
 
    par->TolFeas = nlpparam.feastol;
-   par->TolOpti = nlpparam.relobjtol;
-   par->TolComp = nlpparam.relobjtol;
+   par->TolOpti = nlpparam.opttol;
+   par->TolComp = nlpparam.opttol;
    par->Timeout = nlpparam.timelimit;
    par->MaxIter = nlpparam.iterlimit;
    par->NLPprint = nlpparam.verblevel - 1; /* Worhp verbosity levels: -1 = off, 0 = normal, 1 = debug, >1 = more debug */
@@ -1567,6 +1567,8 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsWorhp)
    statistics->niterations = problem->lastniter;
    statistics->totaltime = problem->lasttime;
    statistics->evaltime = SCIPnlpiOracleGetEvalTime(scip, problem->oracle);
+   statistics->consviol = problem->wsp->FeasOrigMax;
+   statistics->boundviol = 0.0;
 
    return SCIP_OKAY;
 }  /*lint !e715*/

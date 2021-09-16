@@ -167,6 +167,12 @@ SCIP_RETCODE SCIPsetPresolPriority(
    int                   priority            /**< new priority of the presolver */
    );
 
+/** returns the number of presolve rounds (current or last presolve) */
+SCIP_EXPORT
+int SCIPgetNPresolRounds(
+   SCIP*                 scip                /**< SCIP data structure */
+);
+
 /** @} */
 
 #ifdef __cplusplus

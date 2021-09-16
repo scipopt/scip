@@ -273,7 +273,7 @@ struct SCIP_DisjointSet
    int                   componentcount;     /**< counter for the number of connected components of the graph */
 };
 
-/** a linear inequality row in preparation */
+/** a linear inequality row in preparation to become a SCIP_ROW */
 struct SCIP_RowPrep
 {
    SCIP_VAR**            vars;               /**< variables */
@@ -288,7 +288,7 @@ struct SCIP_RowPrep
    SCIP_Bool             recordmodifications;/**< whether to remember variables which coefficients were modified during cleanup */
    SCIP_VAR**            modifiedvars;       /**< variables which coefficient were modified by cleanup */
    int                   nmodifiedvars;      /**< number of variables which coefficient was modified */
-   int                   modifiedvarssize;   /**< length of modifiedvars array */
+   int                   modifiedvarssize;   /**< length of `modifiedvars` array */
    SCIP_Bool             modifiedside;       /**< whether the side was modified (relaxed) by cleanup */
 };
 

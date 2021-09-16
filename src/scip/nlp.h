@@ -49,6 +49,7 @@ extern "C" {
 /**@{ */
 
 /** create a new nonlinear row
+ *
  * the new row is already captured
  */
 SCIP_RETCODE SCIPnlrowCreate(
@@ -68,6 +69,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    );
 
 /** create a nonlinear row that is a copy of a given row
+ *
  * the new row is already captured
  */
 SCIP_RETCODE SCIPnlrowCreateCopy(
@@ -79,6 +81,7 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
    );
 
 /** create a new nonlinear row from a linear row
+ *
  * the new row is already captured
  */
 SCIP_RETCODE SCIPnlrowCreateFromRow(
@@ -99,12 +102,12 @@ SCIP_RETCODE SCIPnlrowPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-/** increases usage counter of NLP nonlinear row */
+/** increases usage counter of nonlinear row */
 void SCIPnlrowCapture(
    SCIP_NLROW*           nlrow               /**< nonlinear row to capture */
    );
 
-/** decreases usage counter of NLP nonlinear row */
+/** decreases usage counter of nonlinear row */
 SCIP_RETCODE SCIPnlrowRelease(
    SCIP_NLROW**          nlrow,              /**< nonlinear row to free */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -120,7 +123,7 @@ SCIP_RETCODE SCIPnlrowEnsureLinearSize(
    int                   num                 /**< minimum number of entries to store */
    );
 
-/** adds a previously non existing linear coefficient to an NLP nonlinear row */
+/** adds a previously non existing linear coefficient to a nonlinear row */
 SCIP_RETCODE SCIPnlrowAddLinearCoef(
    SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -151,7 +154,7 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    SCIP_Real             coef                /**< new value of coefficient */
    );
 
-/** replaces or deletes an expression in nonlinear row */
+/** replaces or deletes an expression in a nonlinear row */
 SCIP_RETCODE SCIPnlrowChgExpr(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -402,7 +405,9 @@ SCIP_RETCODE SCIPnlpEnsureNlRowsSize(
    );
 
 /** adds a nonlinear row to the NLP and captures it
- * all variables of the row need to be present in the NLP */
+ *
+ * all variables of the row need to be present in the NLP
+ */
 SCIP_RETCODE SCIPnlpAddNlRow(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -412,7 +417,9 @@ SCIP_RETCODE SCIPnlpAddNlRow(
    );
 
 /** adds nonlinear rows to the NLP and captures them
- * all variables of the row need to be present in the NLP */
+ *
+ * all variables of the row need to be present in the NLP
+ */
 SCIP_RETCODE SCIPnlpAddNlRows(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -423,7 +430,9 @@ SCIP_RETCODE SCIPnlpAddNlRows(
    );
 
 /** deletes a nonlinear row from the NLP
- * does nothing if nonlinear row is not in NLP */
+ *
+ * does nothing if nonlinear row is not in NLP
+ */
 SCIP_RETCODE SCIPnlpDelNlRow(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -653,7 +662,7 @@ SCIP_RETCODE SCIPnlpGetStatistics(
 /** indicates whether a solution for the current NLP is available
  *
  * The solution may be optimal, feasible, or infeasible.
- * Thus, returns whether the NLP solution status is at most locinfeasible.
+ * Thus, returns whether the NLP solution status is at most \ref SCIP_NLPSOLSTAT_LOCINFEASIBLE.
  */
 SCIP_Bool SCIPnlpHasSolution(
    SCIP_NLP*             nlp                 /**< current NLP data */

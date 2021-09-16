@@ -243,9 +243,6 @@ SCIP_RETCODE evalAndDiff(
  * Public methods
  */
 
-/**@name Expression Handler Methods */
-/**@{ */
-
 /** create expression handler */
 SCIP_RETCODE SCIPexprhdlrCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -306,6 +303,10 @@ SCIP_RETCODE SCIPexprhdlrFree(
 
    return SCIP_OKAY;
 }
+
+/**@addtogroup PublicExprHandlerMethods
+ * @{
+ */
 
 /** set the expression handler callbacks to copy and free an expression handler */
 void SCIPexprhdlrSetCopyFreeHdlr(
@@ -774,6 +775,8 @@ SCIP_Longint SCIPexprhdlrGetNSimplifications(
 
    return exprhdlr->nsimplified;
 }
+
+/** @} */
 
 /** copies the given expression handler to a new scip */
 SCIP_RETCODE SCIPexprhdlrCopyInclude(
@@ -1634,8 +1637,6 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 
    return SCIP_OKAY;
 }
-
-/**@} */
 
 /**@name Expression Methods */
 /**@{ */
