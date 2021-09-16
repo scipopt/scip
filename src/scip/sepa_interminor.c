@@ -1264,12 +1264,12 @@ SCIP_RETCODE addRows(
       israynonzero = FALSE;
       for( v = 0; v < 4; ++v )
       {
-         int index;
+         int idx;
 
-         index = ncols + i;
+         idx = ncols + i;
 
          if( tableaurows[v] != NULL )
-            rays[(*nrays) * 4 + v] = factor * (SCIPisZero(scip, tableaurows[v][index]) ? 0.0 : tableaurows[v][index]);
+            rays[(*nrays) * 4 + v] = factor * (SCIPisZero(scip, tableaurows[v][idx]) ? 0.0 : tableaurows[v][idx]);
          else
          {
             /* TODO: We assume that slack variables can never occure in the minor. This is correct, right? */
@@ -1677,7 +1677,6 @@ SCIP_RETCODE separatePoint(
    SCIP_SEPADATA* sepadata;
    SCIP_HASHMAP* tableau;
    int* basicvarpos2tableaurow; /* map between basic var and its tableau row */
-   int nrows;
    int ncols;
    int i;
 
@@ -1695,7 +1694,6 @@ SCIP_RETCODE separatePoint(
 
    *result = SCIP_DIDNOTFIND;
 
-   nrows = SCIPgetNLPRows(scip);
    ncols = SCIPgetNLPCols(scip);
 
    /* allocate memory */
@@ -1721,7 +1719,6 @@ SCIP_RETCODE separatePoint(
       SCIP_Real solxjk;
       SCIP_Real solxjl;
       SCIP_Real det;
-      SCIP_Real ad[4];
 
       /* get variables of the i-th minor */
       SCIP_CALL( getMinorVars(sepadata, i, &auxvarxik, &auxvarxil, &auxvarxjk, &auxvarxjl, &isauxvarxikdiag,
