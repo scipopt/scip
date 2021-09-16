@@ -465,7 +465,7 @@ SCIP_RETCODE createBlockproblem(
          found = SCIPhashmapExists(varsmap, (void*)consvars[v]);
          if( found )
          {
-            blockvars[nblockvars] = SCIPhashmapGetImage(varsmap, (void*)consvars[v]);
+            blockvars[nblockvars] = (SCIP_VAR*) SCIPhashmapGetImage(varsmap, (void*)consvars[v]);
             blockvals[nblockvars] = consvals[v];
             ++nblockvars;
          }
@@ -476,7 +476,7 @@ SCIP_RETCODE createBlockproblem(
             if( found ) /* negation exists in this block */
             {
                /* save negated variable */
-               SCIP_VAR* origblockvar = SCIPhashmapGetImage(varsmap, (void*)SCIPvarGetNegationVar(consvars[v]));
+               SCIP_VAR* origblockvar = (SCIP_VAR*) SCIPhashmapGetImage(varsmap, (void*)SCIPvarGetNegationVar(consvars[v]));
                SCIP_VAR* negblockvar = NULL;
                SCIP_CALL( SCIPgetNegatedVar(blockproblem->blockscip, origblockvar, &negblockvar) );
                blockvars[nblockvars] = negblockvar;
