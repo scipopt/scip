@@ -50,6 +50,7 @@
 #include "scip/expr_sum.h"
 #include "scip/expr_var.h"
 #include "scip/expr_product.h"
+#include "scip/pub_misc_rowprep.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME                    "quadratic"
@@ -4331,7 +4332,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "nlhdlr/" NLHDLR_NAME "/minviolation",
          "minimal violation the constraint must fulfill such that a cut is generated",
-         &nlhdlrdata->mincutviolation, FALSE, 1e-4, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &nlhdlrdata->mincutviolation, FALSE, INTERCUTS_MINVIOL, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/atwhichnodes",
          "determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n",

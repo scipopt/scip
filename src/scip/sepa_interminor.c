@@ -441,8 +441,8 @@ SCIP_RETCODE detectMinors(
                   SCIP_VAR* auxvaril;
                   SCIP_VAR* auxvarjk;
                   SCIP_VAR* auxvarjl;
-                  int i;
-                  int j;
+                  int ii;
+                  int jj;
                   int k;
                   int l;
                   SCIP_Bool isauxvarikdiag = FALSE;
@@ -450,8 +450,8 @@ SCIP_RETCODE detectMinors(
                   SCIP_Bool isauxvarjkdiag = FALSE;
                   SCIP_Bool isauxvarjldiag = FALSE;
 
-                  i = rowi->rowidx;
-                  j = rowj->rowidx;
+                  ii = rowi->rowidx;
+                  jj = rowj->rowidx;
                   k = intersection[p];
                   l = intersection[q];
 
@@ -466,13 +466,13 @@ SCIP_RETCODE detectMinors(
                   auxvarjk = SCIPhashmapGetImage(rowjcols, colk);
                   auxvarjl = SCIPhashmapGetImage(rowjcols, coll);
 
-                  if( i == k )
+                  if( ii == k )
                      isauxvarikdiag = TRUE;
-                  else if( i == l )
+                  else if( ii == l )
                      isauxvarildiag = TRUE;
-                  if( j == k )
+                  if( jj == k )
                      isauxvarjkdiag = TRUE;
-                  else if( j == l )
+                  else if( jj == l )
                      isauxvarjldiag = TRUE;
 
                   SCIP_CALL( sepadataAddMinor(scip, sepadata, auxvarik, auxvaril, auxvarjk, auxvarjl,
@@ -1155,12 +1155,8 @@ SCIP_RETCODE addCols(
       israynonzero = FALSE;
       for( v = 0; v < 4; ++v )
       {
-         int index;
-
-         index = i;
-
          if( tableaurows[v] != NULL )
-            rays[(*nrays) * 4 + v] = factor * (SCIPisZero(scip, tableaurows[v][index]) ? 0.0 : tableaurows[v][index]);
+            rays[(*nrays) * 4 + v] = factor * (SCIPisZero(scip, tableaurows[v][i]) ? 0.0 : tableaurows[v][i]);
          else
          {
             if( col == SCIPvarGetCol(vars[v]) )
