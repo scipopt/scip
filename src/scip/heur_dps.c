@@ -67,6 +67,7 @@ struct SCIP_HeurData
    int                   nlinking;           /**< number of linking constraints */
    int                   nblocks;            /**< number of blocks */
    int                   maxit;              /**< maximal number of iterations */
+   SCIP_Real             maxlinkscore;       /**< maximal linking score of used decomposition (equivalent to percentage of linking constraints) */
    SCIP_Real             penalty;            /**< multiplier for absolute increase of penalty parameters */
    SCIP_Bool             reoptimize;         /**< should the problem get reoptimized with the original objective function? */
    SCIP_Bool             reuse;              /**< should solutions get reused in subproblems? */
@@ -1673,6 +1674,23 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       SCIPdebugMsg(scip, "DPS used decomposition:\n%s\n", SCIPdecompPrintStats(decomp, buffer));
 #endif
 
+   /* check properties of used decomposition */
+   if( heurdata->maxlinkscore != 1.0 )
+   {
+      SCIP_Real linkscore;
+      int nlinkconss;
+
+      nlinkconss = SCIPdecompGetNBorderConss(decomp);
+
+      linkscore = (SCIP_Real)nlinkconss / (SCIP_Real)nconss;
+
+      if( linkscore > heurdata->maxlinkscore )
+      {
+         SCIPdebugMsg(scip, "decomposition has not the required properties\n");
+         goto TERMINATE;
+      }
+   }
+
    if( sortedvarlabels[0] == SCIP_DECOMP_LINKVAR ||
          sortedconslabels[0] != SCIP_DECOMP_LINKCONS ||
          nblocks <= 1 )
@@ -2043,6 +2061,10 @@ SCIP_RETCODE SCIPincludeHeurDps(
    /* add dps primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxiterations",
    "maximal number of iterations", &heurdata->maxit, FALSE, DEFAULT_MAXIT, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxlinkscore",
+   "maximal linking score of used decomposition (equivalent to percentage of linking constraints)",
+   &heurdata->maxlinkscore, FALSE, 1.0, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/penalty",
    "multiplier for absolute increase of penalty parameters (0: no increase)",
