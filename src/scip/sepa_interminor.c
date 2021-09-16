@@ -688,27 +688,27 @@ SCIP_RETCODE computeRestrictionToRay(
          max = absval;
       if( absval != 0.0 && absval < min )
          min = absval;
-    }
+   }
 
-    if( SCIPisHugeValue(scip, max / min) )
-    {
+   if( SCIPisHugeValue(scip, max / min) )
+   {
 #ifdef DEBUG_INTERSECTIONCUT
       printf("Bad numerics: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min);
 #endif
       *success = FALSE;
       return SCIP_OKAY;
-    }
+   }
 
-    /* some sanity checks */
-    assert(*c >= 0); /* radicand at zero */
-    assert(SQRT( *c ) - *e < 0); /* the function at 0 must be negative */
-    assert(*a >= 0); /* the function inside the root is convex */
+   /* some sanity checks */
+   assert(*c >= 0); /* radicand at zero */
+   assert(SQRT( *c ) - *e < 0); /* the function at 0 must be negative */
+   assert(*a >= 0); /* the function inside the root is convex */
 
 #ifdef DEBUG_INTERSECTIONCUT
-    SCIPinfoMessage(scip, NULL, "Restriction yields: a,b,c,d,e %g %g %g %g %g\n", coefs[0], coefs[1], coefs[2], coefs[3], coefs[4]);
+   SCIPinfoMessage(scip, NULL, "Restriction yields: a,b,c,d,e %g %g %g %g %g\n", coefs[0], coefs[1], coefs[2], coefs[3], coefs[4]);
 #endif
 
-    return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /** returns phi(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E) */
