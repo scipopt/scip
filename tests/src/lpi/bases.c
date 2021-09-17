@@ -329,9 +329,9 @@ Test(complex, test1)
       cr_assert( ninds == 2 );
       for (entry = 0; entry < ninds; ++entry)
       {
-         idx = coef[entry];
+         idx = inds[entry];
          cr_assert( 0 <= idx && idx < 3 );
-         cr_expect_float_eq(coef[entry], binvrow[idx], EPS);
+         cr_expect_float_eq(coef[idx], binvrow[idx], EPS);
       }
    }
 
@@ -378,9 +378,9 @@ Test(complex, test1)
       cr_assert( ninds == 1 );
       for (entry = 0; entry < ninds; ++entry)
       {
-         idx = coef[entry];
+         idx = inds[entry];
          cr_assert( 0 <= idx && idx < 3 );
-         cr_expect_float_eq(coeftwo[entry], coef[idx], EPS);
+         cr_expect_float_eq(coeftwo[idx], coef[idx], EPS);
       }
    }
 
