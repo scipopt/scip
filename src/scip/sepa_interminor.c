@@ -13,12 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sepa_minor.c
+/**@file   sepa_interminor.c
  * @ingroup DEFPLUGINS_SEPA
- * @brief  principal minor separator
- * @author Dr. Benjamin Mueller
+ * @brief  minor separator with intersection cuts
+ * @author Felipe Serrano
+ * @author Antonia Chmiela
  *
- * @todo detect non-principal minors and use them to derive split cuts
+ * This separator detects quadratic constraints of the form
+ * x_i * x_j - x_l * x_k = 0
+ * that appear implicitly (i.e., minors) and enforces them via intersection cuts.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1121,10 +1124,10 @@ SCIP_RETCODE addCols(
    SCIP_ROWPREP*         rowprep,            /**< store cut */
    SCIP_Real*            rays,               /**< buffer to store rays */
    int*                  nrays,              /**< pointer to store number of nonzero rays */
-   int*                  rayslppos,           /**< buffer to store lppos of nonzero rays */
+   int*                  rayslppos,          /**< buffer to store lppos of nonzero rays */
    SCIP_Real*            interpoints,        /**< buffer to store intersection points or NULL if not needed */
-   SCIP_Bool             usebounds,
-   SCIP_Real*            ad,
+   SCIP_Bool             usebounds,          /**< TRUE if we want to separate non-negative bound */
+   SCIP_Real*            ad,                 /**< coefs a and d for the hyperplane aTx + dTy <= 0 */
    SCIP_Bool*            success             /**< pointer to store whether the generation of cutcoefs was successful */
    )
 {
@@ -1227,10 +1230,10 @@ SCIP_RETCODE addRows(
    SCIP_ROWPREP*         rowprep,            /**< store cut */
    SCIP_Real*            rays,               /**< buffer to store rays */
    int*                  nrays,              /**< pointer to store number of nonzero rays */
-   int*                  rayslppos,           /**< buffer to store lppos of nonzero rays */
+   int*                  rayslppos,          /**< buffer to store lppos of nonzero rays */
    SCIP_Real*            interpoints,        /**< buffer to store intersection points or NULL if not needed */
-   SCIP_Bool             usebounds,
-   SCIP_Real*            ad,
+   SCIP_Bool             usebounds,          /**< TRUE if we want to separate non-negative bound */
+   SCIP_Real*            ad,                 /**< coefs a and d for the hyperplane aTx + dTy <= 0 */
    SCIP_Bool*            success             /**< pointer to store whether the generation of cutcoefs was successful */
    )
 {
@@ -1364,6 +1367,9 @@ SCIP_Bool raysAreDependent(
    return TRUE;
 }
 
+/** finds the smallest negative steplength for the current ray r_idx such that the combination
+ * of r_idx with all rays not in the recession cone is in the recession cone
+ */
 static
 SCIP_RETCODE findRho(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1465,6 +1471,9 @@ SCIP_RETCODE findRho(
    return SCIP_OKAY;
 }
 
+/** computes negative steplengths for the rays that are in the recession cone of the S-free set, i.e.,
+ * which have an infinite intersection point.
+ */
 static
 SCIP_RETCODE computeNegCutcoefs(
    SCIP*                 scip,               /**< SCIP data structure */
