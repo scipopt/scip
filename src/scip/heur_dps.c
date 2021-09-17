@@ -207,7 +207,6 @@ SCIP_RETCODE assignLinking(
    return SCIP_OKAY;
 }
 
-
 /** creates a sub-SCIP and sets parameters */
 static
 SCIP_RETCODE createSubscip(
@@ -254,7 +253,6 @@ SCIP_RETCODE createSubscip(
 
    return SCIP_OKAY;
 }
-
 
 /** copies the given variables and constraints to the given sub-SCIP */
 static
@@ -324,7 +322,6 @@ SCIP_RETCODE copyToSubscip(
 
    return SCIP_OKAY;
 }
-
 
 /** creates the subscip for a given block */
 static
@@ -591,8 +588,8 @@ SCIP_RETCODE createBlockproblem(
 
          if( blockvals[v] >= 0.0 )
          {
-            mininfinite = mininfinite || SCIPisInfinity(scip, -lb);
-            maxinfinite = maxinfinite || SCIPisInfinity(scip, ub);
+            mininfinite = (mininfinite || SCIPisInfinity(scip, -lb));
+            maxinfinite = (maxinfinite || SCIPisInfinity(scip, ub));
             if( !mininfinite )
                minact += blockvals[v] * lb;
             if( !maxinfinite )
@@ -600,8 +597,8 @@ SCIP_RETCODE createBlockproblem(
          }
          else
          {
-            mininfinite = mininfinite || SCIPisInfinity(scip, ub);
-            maxinfinite = maxinfinite || SCIPisInfinity(scip, -lb);
+            mininfinite = (mininfinite || SCIPisInfinity(scip, ub));
+            maxinfinite = (maxinfinite || SCIPisInfinity(scip, -lb));
             if( !mininfinite )
                minact += blockvals[v] * ub;
             if( !maxinfinite )
@@ -642,7 +639,6 @@ SCIP_RETCODE createBlockproblem(
 
    return SCIP_OKAY;
 }
-
 
 /** creates data structures and splits problem into blocks */
 static
@@ -693,7 +689,6 @@ SCIP_RETCODE createAndSplitProblem(
 
    return SCIP_OKAY;
 }
-
 
 /** rounds partition for one linking constraint to integer value if variables and coefficients are integer
  *
@@ -796,9 +791,7 @@ SCIP_RETCODE roundPartition(
    sumafter = 0;
 
    for( i = 0; i < linking->nblocks - nnonintblocks; i++ )
-   {
       sumafter += 1 - fracPart[nnonintblocks + i];
-   }
 
    for( i = 0; i < linking->nblocks - nnonintblocks; i++ )
    {
@@ -808,13 +801,11 @@ SCIP_RETCODE roundPartition(
       if( sumbefor >= sumafter )
       {
          for( k = 0; k <= i; k++ )
-         {
             fracPart[nnonintblocks + k] = -fracPart[nnonintblocks + k];
-         }
+
          for( k = i + 1; k < linking->nblocks - nnonintblocks; k++ )
-         {
             fracPart[nnonintblocks + k] = 1 - fracPart[nnonintblocks + k];
-         }
+
          idx = i;
          break;
       }
@@ -850,13 +841,10 @@ SCIP_RETCODE roundPartition(
    for( b = 0; b < linking->nblocks; b++ )
    {
       if( linking->hasrhs )
-      {
          linking->currentrhs[b] += fracPart[b];
-      }
+
       if( linking->haslhs )
-      {
          linking->currentlhs[b] += fracPart[b];
-      }
    }
 
    SCIPfreeBufferArray(scip, &isinteger);
@@ -865,7 +853,6 @@ SCIP_RETCODE roundPartition(
 
    return SCIP_OKAY;
 }
-
 
 /** calculates initial partition */
 static
@@ -963,7 +950,6 @@ SCIP_RETCODE initCurrent(
    return SCIP_OKAY;
 }
 
-
 /** update partition */
 static
 SCIP_RETCODE updatePartition(
@@ -1055,13 +1041,9 @@ SCIP_RETCODE updatePartition(
    {
       /* free memory */
       if( linking->haslhs )
-      {
          SCIPfreeBufferArray(scip, &nonviolatedblockslhs);
-      }
       if( linking->hasrhs )
-      {
          SCIPfreeBufferArray(scip, &nonviolatedblocksrhs);
-      }
       SCIPfreeBufferArray(scip, &shift);
       return SCIP_OKAY;
    }
@@ -1118,9 +1100,7 @@ SCIP_RETCODE updatePartition(
    SCIP_Real sum = 0.0;
    /* check sum of shift; must be zero */
    for( v = 0; v < linking->nblocks; v++ )
-   {
       sum += shift[v];
-   }
    assert(SCIPisZero(scip, sum));
 #endif
 
@@ -1128,13 +1108,10 @@ SCIP_RETCODE updatePartition(
    for( v = 0; v < linking->nblocks; v++)
    {
       if( linking->hasrhs )
-      {
          linking->currentrhs[v] += shift[v];
-      }
+
       if( linking->haslhs )
-      {
          linking->currentlhs[v] += shift[v];
-      }
    }
 
    SCIP_CALL( roundPartition(scip, linking, blockproblem, ((linking->hasrhs && (*nviolatedblocksrhs != 0)) || !linking->haslhs)) );
@@ -1157,18 +1134,13 @@ SCIP_RETCODE updatePartition(
 
    /* free memory */
    if( linking->haslhs )
-   {
       SCIPfreeBufferArray(scip, &nonviolatedblockslhs);
-   }
    if( linking->hasrhs )
-   {
       SCIPfreeBufferArray(scip, &nonviolatedblocksrhs);
-   }
    SCIPfreeBufferArray(scip, &shift);
 
    return SCIP_OKAY;
 }
-
 
 /** update lambda */
 static
@@ -1235,7 +1207,6 @@ SCIP_RETCODE updateLambda(
 
    return SCIP_OKAY;
 }
-
 
 /** computes feasible solution from last stored solution for each block and adds it to the solution storage */
 static
@@ -1357,7 +1328,6 @@ SCIP_RETCODE reuseSolution(
    return SCIP_OKAY;
 }
 
-
 /** reoptimizes the heuristic solution with original objective function */
 static
 SCIP_RETCODE reoptimize(
@@ -1449,7 +1419,9 @@ SCIP_RETCODE reoptimize(
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
       SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &time) );
       if( timesubscip <  time - 1.0 )
+      {
          SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timesubscip + 1.0) );
+      }
       SCIP_CALL( SCIPtransformProb(subscip) );
       SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", SCIPgetNSols(subscip) + 1) );
 
@@ -1554,7 +1526,6 @@ SCIP_DECL_HEURCOPY(heurCopyDps)
    return SCIP_OKAY;
 }
 
-
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeDps)
@@ -1573,7 +1544,6 @@ SCIP_DECL_HEURFREE(heurFreeDps)
 
    return SCIP_OKAY;
 }
-
 
 /** execution method of primal heuristic */
 static
@@ -1783,9 +1753,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       /* do not exceed the timelimit */
       SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
       if( (timelimit - SCIPgetSolvingTime(scip)) <= 0 )
-      {
          goto TERMINATE;
-      }
 
       /* solve the subproblems */
       allslacksval = 0.0;
@@ -1798,7 +1766,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
          SCIP_CALL( SCIPcopyLimits(scip, subscip) );
 
          /* create event handler for LP events */
-         if( k==0 )
+         if( k == 0 )
          {
             SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDps, NULL) );
             if( eventhdlr == NULL )
@@ -2004,29 +1972,19 @@ TERMINATE:
    }
 
    if( assigneddecomp != NULL )
-   {
       SCIPdecompFree(&assigneddecomp, SCIPblkmem(scip));
-   }
 
    if( sortedconslabels != NULL )
-   {
       SCIPfreeBufferArray(scip, &sortedconslabels);
-   }
 
    if( sortedvarlabels != NULL )
-   {
       SCIPfreeBufferArray(scip, &sortedvarlabels);
-   }
 
    if( sortedconss != NULL )
-   {
       SCIPfreeBufferArray(scip, &sortedconss);
-   }
 
    if( sortedvars != NULL )
-   {
       SCIPfreeBufferArray(scip, &sortedvars);
-   }
 
    SCIPdebugMsg(scip, "Leave DPS heuristic\n");
 
