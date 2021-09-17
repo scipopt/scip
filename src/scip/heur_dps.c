@@ -412,7 +412,6 @@ SCIP_RETCODE createBlockproblem(
       SCIP_Real maxact;
       SCIP_Bool mininfinite;
       SCIP_Bool maxinfinite;
-      SCIP_Bool found;
 
       assert(linkingconss[c] != NULL);
 
@@ -467,8 +466,7 @@ SCIP_RETCODE createBlockproblem(
       /* check if constraint contains variables of this block */
       for( v = 0; v < nconsvars; v++ )
       {
-         found = SCIPhashmapExists(varsmap, (void*)consvars[v]);
-         if( found )
+         if( SCIPhashmapExists(varsmap, (void*)consvars[v]) )
          {
             blockvars[nblockvars] = (SCIP_VAR*) SCIPhashmapGetImage(varsmap, (void*)consvars[v]);
             blockvals[nblockvars] = consvals[v];
@@ -477,8 +475,7 @@ SCIP_RETCODE createBlockproblem(
          /* handle negated variables*/
          else if( SCIPvarGetStatus(consvars[v]) == SCIP_VARSTATUS_NEGATED)
          {
-            found = SCIPhashmapExists(varsmap, (void*)SCIPvarGetNegationVar(consvars[v]));
-            if( found ) /* negation exists in this block */
+            if( SCIPhashmapExists(varsmap, (void*)SCIPvarGetNegationVar(consvars[v])) ) /* negation exists in this block */
             {
                /* save negated variable */
                SCIP_VAR* origblockvar = (SCIP_VAR*) SCIPhashmapGetImage(varsmap, (void*)SCIPvarGetNegationVar(consvars[v]));
