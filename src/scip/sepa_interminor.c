@@ -1332,8 +1332,8 @@ SCIP_Bool raysAreDependent(
    for( i = 0; i < 4; ++i )
    {
       /* rays cannot be dependent if one ray has zero entry and the other one doesn't */
-      if( SCIPisZero(scip, ray1[i]) && ! SCIPisZero(scip, ray2[i]) ||
-         ! SCIPisZero(scip, ray1[i]) && SCIPisZero(scip, ray2[i]) )
+      if( (SCIPisZero(scip, ray1[i]) && ! SCIPisZero(scip, ray2[i])) ||
+         (! SCIPisZero(scip, ray1[i]) && SCIPisZero(scip, ray2[i])) )
       {
          return FALSE;
       }
