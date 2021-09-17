@@ -110,8 +110,8 @@ struct Linking
    int                   nslacks;            /**< number of slack variables */
    int                   nslacksperblock;    /**< 2, if ranged constraint; 1, if only rhs or lhs */
    int                   lastviolations;     /**< number of iterations in which the constraint was violated in succession */
-   SCIP_Bool             hasrhs;             /**< has linking constraint finite rigth hand side? */
-   SCIP_Bool             haslhs;             /**< has linking constraint finite left hand side? */
+   SCIP_Bool             hasrhs;             /**< has linking constraint finite right-hand side? */
+   SCIP_Bool             haslhs;             /**< has linking constraint finite left-hand side? */
 };
 typedef struct Linking LINKING;
 
