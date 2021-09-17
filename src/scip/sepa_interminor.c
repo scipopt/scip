@@ -84,8 +84,8 @@ struct myarray
 {
    int*                  vals;               /**< index of the column */
    int                   rowidx;             /**< index corresponding to variable of that row */
-   int                   nvals;
-   int                   valssize;
+   int                   nvals;              /**< number of nonzero entries in column */
+   int                   valssize;           /**< size of the array that is currently allocated */
    SCIP_HASHMAP*         auxvars;            /**< entry of the matrix */
 };
 
@@ -215,22 +215,23 @@ SCIP_RETCODE getMinorVars(
 }
 
 
-/**
+/** adds a new entry (i.e., auxvar) of in (row, col) of matrix M.
+ *
  * we have a matrix, M, indexed by the variables
  * M(xi, xk) is the auxiliary variable of xi * xk if it exists
  * We store, for each row of the matrix, the indices of the nonzero column entries (assoc with the given row) and the auxiliary variable for xi * xk
- * The nonzero column entries are stores as an array (struct myarray)
- * So we have a hasmap mapping each variable (row of the matrix) with its array representing the nonzero entries of the row.
+ * The nonzero column entries are stored as an array (struct myarray)
+ * So we have a hashmap mapping each variable (row of the matrix) with its array representing the nonzero entries of the row.
  */
 static
 SCIP_RETCODE insertIndex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HASHMAP*         rowmap,
-   SCIP_VAR*             row,
-   SCIP_VAR*             col,
-   SCIP_VAR*             auxvar,
-   int*                  rowindices,
-   int*                  nrows
+   SCIP_HASHMAP*         rowmap,             /**< hashmap of the rows of the matrix */
+   SCIP_VAR*             row,                /**< variable corresponding to row of new entry */
+   SCIP_VAR*             col,                /**< variable corresponding to column of new entry */
+   SCIP_VAR*             auxvar,             /**< auxvar to insert into the matrix */
+   int*                  rowindices,         /**< array of indices of all variables corresponding to a row */
+   int*                  nrows               /**< number of rows */
    )
 {
    SCIPdebugMsg(scip, "inserting %s in row %s and col %s \n", SCIPvarGetName(auxvar), SCIPvarGetName(row), SCIPvarGetName(col));
@@ -555,9 +556,9 @@ SCIP_RETCODE computeRestrictionToRay(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            ray,                /**< coefficients of ray */
    SCIP_VAR**            vars,               /**< variables */
-   SCIP_Real*            coefs,              /**< buffer to store A, B, C, D, and E */
-   SCIP_Real*            coefs4b,
-   SCIP_Real*            coefscondition,
+   SCIP_Real*            coefs,              /**< buffer to store A, B, C, D, and E of cases 1, 2, 3, or 4a*/
+   SCIP_Real*            coefs4b,            /**< buffer to store A, B, C, D, and E of case 4b */
+   SCIP_Real*            coefscondition,     /**< buffer to store coefs for checking whether we are in case 4a or 4b */
    SCIP_Bool             usebounds,          /**< TRUE if we want to separate non-negative bound */
    SCIP_Real*            ad,                 /**< coefs a and d for the hyperplane aTx + dTy <= 0 */
    SCIP_Bool*            success             /**< FALSE if we need to abort generation because of numerics */
@@ -714,6 +715,7 @@ SCIP_RETCODE computeRestrictionToRay(
 /** returns phi(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E) */
 static
 SCIP_Real evalPhiAtRay(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             t,                  /**< argument of phi restricted to ray */
    SCIP_Real             a,                  /**< value of A */
    SCIP_Real             b,                  /**< value of B */
@@ -808,6 +810,9 @@ void doBinarySearch(
 
 }
 
+/** checks if we are in case 4a, i.e., if
+ * (num(xhat_{r+1}(zlp)) / E) * SQRT(A * tsol^2 + B * tsol + C) + w(ray) * tsol + num(yhat_{s+1}(zlp)) <= 0
+ */
 static
 SCIP_Real isCase4a(
    SCIP_Real             tsol,               /**< t in the above formula */
@@ -890,6 +895,30 @@ SCIP_Real computeRoot(
    return sol;
 }
 
+/** The maximal S-free set is gamma(z) <= 0; we find the intersection point of the ray `ray` starting from zlp with the
+ * boundary of the S-free set.
+ * That is, we find t >= 0 such that gamma(zlp + t * ray) = 0.
+ *
+ * In cases 1,2, and 3, gamma is of the form
+ *    gamma(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E)
+ *
+ * In the case 4 gamma is of the form
+ *    gamma(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E)          if some condition holds
+ *                           SQRT(A' t^2 + B' t + C') - (D' t + E')     otherwise
+ *
+ * It can be shown (given the special properties of gamma) that the smallest positive root of each function of the form
+ * SQRT(a t^2 + b t + c) - (d t + e)
+ * is the same as the smallest positive root of the quadratic equation:
+ *       (SQRT(a t^2 + b t + c) - (d t + e)) * (SQRT(a t^2 + b t + c) + (d t + e)) = 0
+ *  <==> (a - d^2) t^2 + (b - 2 d*e) t + (c - e^2) = 0
+ *
+ * So, in cases 1, 2, and 3, this function just returns the solution of the above equation.
+ * In case 4, it first solves the equation assuming we are in the first piece.
+ * If there is no solution, then the second piece can't have a solution (first piece >= second piece for all t)
+ * Then we check if the solution satisfies the condition.
+ * If it doesn't then we solve the equation for the second piece.
+ * If it has a solution, then it _has_ to be the solution.
+ */
 static
 SCIP_Real computeIntersectionPoint(
    SCIP*                 scip,               /**< SCIP data structure */
