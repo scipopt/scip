@@ -775,7 +775,7 @@ SCIP_RETCODE roundPartition(
       SCIPfreeBufferArray(scip, &blockvars);
    }
 
-   /* sort non integer blocks to the front */
+   /* sort non-integer blocks to the front */
    SCIPsortIntIntReal(isinteger, sorting, fracPart, linking->nblocks);
 
    /* sort by fractional part */
