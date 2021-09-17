@@ -121,7 +121,7 @@ typedef struct Linking LINKING;
 
 /** assigns linking variables to last block
  *
- * The labels are copied to newdecomp and the linking variables are assigned to the last block (i.e. highest block label).
+ * The labels are copied to newdecomp and the linking variables are assigned to the last block (i.e., highest block label).
  * Constraint labels and statistics are recomputed.
  */
 static
