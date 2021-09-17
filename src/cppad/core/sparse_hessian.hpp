@@ -453,7 +453,8 @@ size_t ADFun<Base>::SparseHessianCompute(
 
 
 	// Point at which we are evaluating the Hessian
-	Forward(0, x);
+	// SV took this out, as exprinterpret_cppad ensures that Forward has been called if necessary before eval the Hessian
+	// SV Forward(0, x);
 
 	// check for case where nothing (except Forward above) to do
 	if( K == 0 )

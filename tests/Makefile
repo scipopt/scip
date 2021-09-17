@@ -28,7 +28,7 @@ UNITTESTSSRC	=	$(shell find src/ -name *.c)
 
 # remove unittests in src/bugs if BUGS is not true
 ifneq ($(BUGS),true)
-	UNITTESTSSRC 	:= $(filter-out $(shell find src/bugs/ -name *.c),$(UNITTESTSSRC))
+	UNITTESTSSRC 	:= $(filter-out $(wildcard src/bugs/*.c),$(UNITTESTSSRC))
 endif
 
 # removes `src/` prefix and file.c postfix, then sorts, which removes duplicates!
@@ -51,7 +51,6 @@ SCIPVERSION		:=$(shell $(SCIPDIR)/bin/scip -v | sed -e 's/$$/@/')
 override ARCH		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ARCH=\([^@]*\).*/\1/')
 override COMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* COMP=\([^@]*\).*/\1/')
 override EXPRINT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* EXPRINT=\([^@]*\).*/\1/')
-override GAMS		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GAMS=\([^@]*\).*/\1/')
 override GMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GMP=\([^@]*\).*/\1/')
 override SYM		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SYM=\([^@]*\).*/\1/')
 override IPOPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* IPOPT=\([^@]*\).*/\1/')
@@ -64,7 +63,7 @@ override NOBLKMEM	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* NOBLKMEM=\([^@]
 override NOBUFMEM	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* NOBUFMEM=\([^@]*\).*/\1/')
 override OPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OPT=\([^@]*\).*/\1/')
 override OSTYPE		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OSTYPE=\([^@]*\).*/\1/')
-override PARASCIP	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* PARASCIP=\([^@]*\).*/\1/')
+override THREADSAFE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* THREADSAFE=\([^@]*\).*/\1/')
 override READLINE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* READLINE=\([^@]*\).*/\1/')
 override SANITIZE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SANITIZE=\([^@]*\).*/\1/')
 override SHARED		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SHARED=\([^@]*\).*/\1/')
@@ -213,7 +212,19 @@ clean:
 tags:
 		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
 
-$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(TPILIBFILE)
+.PHONY: depend
+depend:		$(SCIPDIR)
+		@- rm -f $(UNITTESTSDEP)
+		$(foreach src, $(UNITTESTSSRC), \
+			$(SHELL) -ec '$(DCC) $(FLAGS) $(src) \
+			$(DFLAGS) $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
+
+
+
+-include	$(UNITTESTSDEP)
+
+
+$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE)
 		@echo "-> linking $@"
 		$(LINKCXX) $< $(LINKCXXSCIPALL) \
 		$(LINKCXX_l)$(TPILIB) \
@@ -228,8 +239,6 @@ $(LPILIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) LPS=$(LPS))
 $(SCIPLIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED))
-$(NLPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) IPOPT=$(IPOPT))
 $(TPILIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) TPI=$(TPI))
 
@@ -253,5 +262,4 @@ Criterion:
 	cmake .. -DCMAKE_INSTALL_PREFIX=..; \
 	make; \
 	make install
-
 #---- EOF --------------------------------------------------------------------

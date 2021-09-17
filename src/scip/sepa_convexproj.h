@@ -21,19 +21,17 @@
  * This separator receives a point \f$ x_0 \f$ to separate, projects it onto a convex relaxation
  * of the current problem and then generates gradient cuts at the projection.
  *
- * In more detail, the separators builds and stores a convex relaxation of the problem
+ * In more detail, the separator builds and stores a convex relaxation of the problem
  * \f[
  *      C = \{ x \colon g_j(x) \le 0 \, \forall j=1,\ldots,m \}
  * \f]
  * where each \f$ g_j \f$ is a convex function and computes the projection by solving
- * \f[
- *      \min || x - x_0 ||^2 \\
- * \f]
- * \f[
- *      s.t. \; g_j(x) \le 0 \, \forall j=1,\ldots,m \\
- * \f]
+ * \f{align}{
+ *      \min \; & || x - x_0 ||^2 \\
+ *      s.t. \; & g_j(x) \le 0 & \forall j=1,\ldots,m.
+ * \f}
  *
- * By default, the separator runs only if the convex relaxation has at least one nonlinear convex function
+ * By default, if enabled, the separator runs only if the convex relaxation has at least one nonlinear convex function.
  *
  * The separator generates cuts for constraints which were violated by the solution we want to separate and active
  * at the projection. If the projection problem is not solved to optimality, it still tries to add a cut at the
@@ -42,21 +40,21 @@
  * \f[
  *      \langle x - z, z - x_0 \rangle \ge 0 \, \forall x \in C \\
  * \f]
- * This inequality is violated by for \f$ x = x_0 \f$. On the other hand, one of the optimality conditions of the
+ * This inequality is violated for \f$ x = x_0 \f$. On the other hand, one of the optimality conditions of the
  * projection problem at the optimum looks like
  * \f[
- *      2 (z - x_0) + \sum_j \lambda_j \nabla g_j(z) = 0
+ *      2 (z - x_0) + \sum_j \lambda_j \nabla g_j(z) = 0.
  * \f]
  * Now suppose that the no gradient cut at \f$ z \f$ separates \f$ x_0 \f$, i.e.,
  * \f[
- *      g_j(z) + \langle \nabla g_j(z), x_0 - z \rangle \le 0
+ *      g_j(z) + \langle \nabla g_j(z), x_0 - z \rangle \le 0.
  * \f]
  * Multiplying each inequality with \f$ \lambda_j \ge 0 \f$ and summing up, we get the following contradiction:
  * \f[
- *      \langle -2(z - x_0), x_0 - z \rangle \le 0
+ *      \langle -2(z - x_0), x_0 - z \rangle \le 0.
  * \f]
  *
- * This callback is currently disabled by default. It requires additional
+ * This separator is currently disabled by default. It requires additional
  * tuning to be enabled by default. However, it may be useful to enable
  * it on instances with convex nonlinear constraints if SCIP spends
  * many iterations in the separation loop without doing sufficient progress.

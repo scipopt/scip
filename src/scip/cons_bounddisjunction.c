@@ -26,8 +26,9 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_var.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
@@ -40,9 +41,11 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_event.h"
+#include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -72,8 +75,6 @@
 
 #define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_FAST
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
-
-#define QUADCONSUPGD_PRIORITY    500000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
 /**@} */
 
@@ -1947,412 +1948,6 @@ SCIP_RETCODE enforceConstraint(
 
 /**@} */
 
-/**@name Upgrading methods for special quadratic constraint
- *
- * @{
- */
-
-/** upgrades quadratic complementarity constraints into a bounddisjunction constraint
- * If constraint is of form (x - a) * (y - b) = 0 with x >= a and y >= b for some a and b,
- * then upgrade to bounddisjunction constraint "x <= a or y <= b".
- * If constraint is of form (x - a) * (y - b) >= 0,
- * then upgrade to bounddisjunction constraints "x >= a or y <= b" and "x <= a or y >= b".
- */
-static
-SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
-{  /*lint --e{715}*/
-   char name[SCIP_MAXSTRLEN];
-   SCIP_BOUNDTYPE boundtypes[2];
-   SCIP_Real bounds[2];
-   SCIP_VAR* xy[2];
-   SCIP_QUADVARTERM* quadvarterms;
-   SCIP_Real coefxy;
-   SCIP_Real coefx;
-   SCIP_Real coefy;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   SCIP_Real a;
-   SCIP_Real b;
-   SCIP_VAR* x;
-   SCIP_VAR* y;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(nupgdconss != NULL);
-   assert(upgdconss  != NULL);
-
-   *nupgdconss = 0;
-
-   SCIPdebugMsg(scip, "upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebugPrintCons(scip, cons, NULL);
-
-   if( SCIPgetNLinearVarsQuadratic(scip, cons) != 0 )
-      return SCIP_OKAY;
-   if( SCIPgetNQuadVarTermsQuadratic(scip, cons) != 2 )
-      return SCIP_OKAY;
-   if( SCIPgetNBilinTermsQuadratic(scip, cons) != 1 )
-      return SCIP_OKAY;
-   /* do not upgrade x*y <=/== rhs with x (or y) binary
-    * the reformulation for such terms in cons_quadratic should handle this better
-    */
-   if( nbinquad > 0 )
-      return SCIP_OKAY;
-
-   lhs = SCIPgetLhsQuadratic(scip, cons);
-   rhs = SCIPgetRhsQuadratic(scip, cons);
-
-   /* we don't want a free constraint */
-   if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
-      return SCIP_OKAY;
-
-   /* we currently don't want a ranged constraint (could upgrade at most one side) */
-   if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
-      return SCIP_OKAY;
-
-   quadvarterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
-
-   /* we don't want square terms */
-   if( !SCIPisZero(scip, quadvarterms[0].sqrcoef) || !SCIPisZero(scip, quadvarterms[1].sqrcoef) )
-      return SCIP_OKAY;
-
-   x = quadvarterms[0].var;
-   y = quadvarterms[1].var;
-   assert(x != y);
-
-   coefx = quadvarterms[0].lincoef;
-   coefy = quadvarterms[1].lincoef;
-
-   coefxy = SCIPgetBilinTermsQuadratic(scip, cons)[0].coef;
-   assert(SCIPgetBilinTermsQuadratic(scip, cons)[0].var1 == x || SCIPgetBilinTermsQuadratic(scip, cons)[0].var1 == y);
-   assert(SCIPgetBilinTermsQuadratic(scip, cons)[0].var2 == x || SCIPgetBilinTermsQuadratic(scip, cons)[0].var2 == y);
-   assert(!SCIPisZero(scip, coefxy));
-
-   /* divide by coefxy */
-   coefx /= coefxy;
-   coefy /= coefxy;
-   if( coefxy > 0.0 )
-   {
-      if( !SCIPisInfinity(scip, -lhs) )
-         lhs /= coefxy;
-      if( !SCIPisInfinity(scip,  rhs) )
-         rhs /= coefxy;
-   }
-   else
-   {
-      SCIP_Real tmp;
-
-      if( !SCIPisInfinity(scip,  rhs) )
-         tmp = rhs / coefxy;
-      else
-         tmp = -SCIPinfinity(scip);
-      if( !SCIPisInfinity(scip, -lhs) )
-         rhs = lhs / coefxy;
-      else
-         rhs = SCIPinfinity(scip);
-      lhs = tmp;
-   }
-
-   /* now have form lhs <= x*y + coefx x + coefy y <= rhs
-    *   <-> lhs + coefx * coefy <= (x + coefy) * (y + coefx) <= rhs + coefx * coefy
-    */
-
-   /* handle case (x + coefy) * (y + coefx) == rhs + coefx * coefy */
-   if( SCIPisEQ(scip, lhs, rhs) )
-   {
-      /* check whether rhs + coefx * coefy == 0 */
-      if( !SCIPisZero(scip, rhs + coefx * coefy) )
-         return SCIP_OKAY;
-
-      a = -coefy;
-      b = -coefx;
-
-      /* now have complementarity form x = a or y = b */
-
-      /* we can write this as up to four bounddisjunction constraint:
-       *   (x >= a or y >= b) and (x <= a or y >= b) and (x >= a or y <= b) and (x <= a or y <= b)
-       *
-       * count whether we need to create 1, 2, or 4 constraints
-       */
-      if( !SCIPisGE(scip, SCIPvarGetLbGlobal(x), a) && !SCIPisLE(scip, SCIPvarGetUbGlobal(x), a) )
-         *nupgdconss = 2;
-      else
-         *nupgdconss = 1;
-
-      if( !SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) && !SCIPisLE(scip, SCIPvarGetUbGlobal(y), b) )
-         *nupgdconss *= 2;
-
-      if( upgdconsssize < *nupgdconss )
-      {
-         /* signal that we need more memory */
-         *nupgdconss = -*nupgdconss;
-         return SCIP_OKAY;
-      }
-
-      xy[0] = x;
-      xy[1] = y;
-      bounds[0] = a;
-      bounds[1] = b;
-      if( *nupgdconss == 1 )
-      {
-         boundtypes[0] = SCIPisGE(scip, SCIPvarGetLbGlobal(x), a) ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
-         boundtypes[1] = SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[0], SCIPconsGetName(cons),
-            2, xy, boundtypes, bounds,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-
-         SCIPdebugMsg(scip, "created bounddisjunction constraint:\n");
-         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
-
-         return SCIP_OKAY;
-      }
-      else if( SCIPisGE(scip, SCIPvarGetLbGlobal(x), a) || SCIPisLE(scip, SCIPvarGetUbGlobal(x), a) )
-      {
-         assert(!SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) && !SCIPisLE(scip, SCIPvarGetUbGlobal(y), b));
-         assert(*nupgdconss == 2);
-
-         boundtypes[0] = SCIPisGE(scip, SCIPvarGetLbGlobal(x), a) ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
-
-         /* create constraint with y >= b */
-         boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lower", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[0], name,
-            2, xy, boundtypes, bounds,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-
-         /* create constraint with y <= b */
-         boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upper", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[1], name,
-            2, xy, boundtypes, bounds,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-
-         SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
-         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
-         SCIPdebugPrintCons(scip, upgdconss[1], NULL);
-      }
-      else if( SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) || SCIPisLE(scip, SCIPvarGetUbGlobal(y), b) )
-      {
-         assert(!SCIPisEQ(scip, SCIPvarGetLbGlobal(x), a) && !SCIPisEQ(scip, SCIPvarGetUbGlobal(x), a));
-         assert(*nupgdconss == 2);
-
-         boundtypes[1] = SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
-
-         /* create constraint with x >= a */
-         boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lower", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[0], name,
-            2, xy, boundtypes, bounds,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-
-         /* create constraint with x <= a */
-         boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lower", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[1], name,
-            2, xy, boundtypes, bounds,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-
-         SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
-         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
-         SCIPdebugPrintCons(scip, upgdconss[1], NULL);
-      }
-      else
-      {
-         assert(!SCIPisGE(scip, SCIPvarGetLbGlobal(x), a) && !SCIPisLE(scip, SCIPvarGetUbGlobal(x), a));
-         assert(!SCIPisGE(scip, SCIPvarGetLbGlobal(y), b) && !SCIPisLE(scip, SCIPvarGetUbGlobal(y), b));
-         assert(*nupgdconss == 4);
-
-         /* create constraint x >= a or y >= a */
-         boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
-         boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lower_lower", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[0], name,
-            2, xy, boundtypes, bounds,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-
-         /* create constraint x >= a or y <= a */
-         boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
-         boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lower_upper", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[1], name,
-            2, xy, boundtypes, bounds,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-
-         /* create constraint x <= a or y >= a */
-         boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
-         boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upper_lower", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[2], name,
-            2, xy, boundtypes, bounds,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-
-         /* create constraint x <= a or y <= a */
-         boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
-         boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upper_upper", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[3], name,
-            2, xy, boundtypes, bounds,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-
-         SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
-         SCIPdebugPrintCons(scip, upgdconss[0], NULL);
-         SCIPdebugPrintCons(scip, upgdconss[1], NULL);
-         SCIPdebugPrintCons(scip, upgdconss[2], NULL);
-         SCIPdebugPrintCons(scip, upgdconss[3], NULL);
-      }
-
-      return SCIP_OKAY;
-   }
-
-   /* handle case (x + coefy) * (y + coefx) <= rhs + coefx * coefy */
-   if( !SCIPisInfinity(scip, rhs) )
-   {
-      assert(SCIPisInfinity(scip, -lhs));
-
-      /* check whether rhs + coefx * coefy == 0 */
-      if( !SCIPisZero(scip, rhs + coefx * coefy) )
-         return SCIP_OKAY;
-
-      a = -coefy;
-      b = -coefx;
-
-      /* now have form (x >= a and y <= b) or (x <= a and y >= b)
-       * which is equivalent to (x >= a or y >= b) and (x <= a or y <= b)
-       * the latter can be represented as two bound disjunction constraints
-       */
-
-      if( upgdconsssize < 2 )
-      {
-         /* signal that we need more memory */
-         *nupgdconss = -2;
-         return SCIP_OKAY;
-      }
-
-      xy[0] = x;
-      xy[1] = y;
-      bounds[0] = a;
-      bounds[1] = b;
-
-      /* create constraint x >= a or y >= b */
-      boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
-      boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lower", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[0], name,
-         2, xy, boundtypes, bounds,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-         SCIPconsIsStickingAtNode(cons)) );
-
-      /* create constraint x <= a or y <= b */
-      boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
-      boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upper", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[1], name,
-         2, xy, boundtypes, bounds,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-         SCIPconsIsStickingAtNode(cons)) );
-
-      SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
-      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
-      SCIPdebugPrintCons(scip, upgdconss[1], NULL);
-
-      *nupgdconss = 2;
-
-      return SCIP_OKAY;
-   }
-
-   /* handle remaining case (x + coefy) * (y + coefx) >= lhs + coefx * coefy */
-   {
-      assert(!SCIPisInfinity(scip, -lhs));
-      assert( SCIPisInfinity(scip,  rhs));
-
-      /* check whether lhs + coefx * coefy == 0 */
-      if( !SCIPisZero(scip, lhs + coefx * coefy) )
-         return SCIP_OKAY;
-
-      a = -coefy;
-      b = -coefx;
-
-      /* now have form (x >= a and y >= b) or (x <= a and y <= b)
-       * which is equivalent to (x >= a or y <= b) and (x <= a or y >= b)
-       * the latter can be represented as two bound disjunction constraints
-       */
-
-      if( upgdconsssize < 2 )
-      {
-         /* signal that we need more memory */
-         *nupgdconss = -2;
-         return SCIP_OKAY;
-      }
-
-      xy[0] = x;
-      xy[1] = y;
-      bounds[0] = a;
-      bounds[1] = b;
-
-      /* create constraint x >= a or y <= b */
-      boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
-      boundtypes[1] = SCIP_BOUNDTYPE_UPPER;
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lower", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[0], name,
-         2, xy, boundtypes, bounds,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-         SCIPconsIsStickingAtNode(cons)) );
-
-      /* create constraint x <= a or y >= b */
-      boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
-      boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upper", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &upgdconss[1], name,
-         2, xy, boundtypes, bounds,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-         SCIPconsIsStickingAtNode(cons)) );
-
-      SCIPdebugMsg(scip, "created bounddisjunction constraints:\n");
-      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
-      SCIPdebugPrintCons(scip, upgdconss[1], NULL);
-
-      *nupgdconss = 2;
-   }
-
-   return SCIP_OKAY;
-}
-
-/**@} */
-
 /**@name Callback methods of constraint handler
  *
  * @{
@@ -2442,6 +2037,81 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolBounddisjunction)
+{  /*lint --e{715}*/
+   /* add nlrow representation to NLP, if NLP had been constructed and disjunction is simple enough */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_NLROW* nlrow;
+      SCIP_EXPR* expr;
+      SCIP_EXPR* exprvar;
+      SCIP_Real lincoef;
+      SCIP_Real a, b;
+      int c;
+
+      for( c = 0; c < nconss; ++c )
+      {
+         /* skip deactivated or redundant constraints */
+         if( !SCIPconsIsActive(conss[c]) || !SCIPconsIsChecked(conss[c]) )
+            return SCIP_OKAY;
+
+         assert(!SCIPconsIsLocal(conss[c]));  /* we are at the root node (or short before) */
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
+         /* look for a bounddisjunction of the form
+          *    x <= a  or  x >= b   with a < b
+          * only one of the inequalities can be strictly satisfied, so we can reformulate as
+          *    (x-a)*(b-x) <= 0
+          * this should be sufficient to get bounddisjunction constraints that represent semi-continuous variables into the NLP
+          */
+
+         if( consdata->nvars != 2 )
+            continue;
+
+         if( consdata->vars[0] != consdata->vars[1] )
+            continue;
+
+         if( consdata->boundtypes[0] == SCIP_BOUNDTYPE_UPPER && consdata->boundtypes[1] == SCIP_BOUNDTYPE_LOWER )
+         {
+            a = consdata->bounds[0];
+            b = consdata->bounds[1];
+         }
+         else if( consdata->boundtypes[0] == SCIP_BOUNDTYPE_LOWER && consdata->boundtypes[1] == SCIP_BOUNDTYPE_UPPER )
+         {
+            a = consdata->bounds[1];
+            b = consdata->bounds[0];
+         }
+         else
+         {
+            continue;
+         }
+
+         if( a >= b )
+            continue;
+
+         SCIP_CALL( SCIPcreateExprVar(scip, &exprvar, consdata->vars[0], NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &expr, exprvar, 2.0, NULL, NULL) );
+
+         /* add xb-xx-ab+ax <= 0 as -ab <= -(a+b)x + x^2 */
+         lincoef = -a - b;
+         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]),
+            0.0, 1, consdata->vars, &lincoef, expr, -a*b, SCIPinfinity(scip), SCIP_EXPRCURV_CONVEX) );
+
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &exprvar) );
+
+         SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
+         SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** frees specific constraint data */
 static
@@ -3425,11 +3095,6 @@ SCIP_DECL_CONFLICTFREE(conflictFreeBounddisjunction)
 
 /**@} */
 
-/**@name Interface methods
- *
- * @{
- */
-
 /** creates the handler for bound disjunction constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP*                 scip                /**< SCIP data structure */
@@ -3476,6 +3141,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBounddisjunction) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBounddisjunction) );
@@ -3488,12 +3154,6 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBounddisjunction) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBounddisjunction) );
-
-   /* register upgrade of quadratic complementarity constraints in cons_quadratic */
-   if( SCIPfindConshdlr(scip, "quadratic") )
-   {
-      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
-   }
 
    return SCIP_OKAY;
 }
@@ -3770,5 +3430,3 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
 
    return consdata->bounds;
 }
-
-/**@} */

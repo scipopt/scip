@@ -1036,6 +1036,13 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    SCIP_Real             dval                /**< parameter value */
    );
 
+/** interrupts the currently ongoing lp solve or disables the interrupt */
+SCIP_EXPORT
+SCIP_RETCODE SCIPlpiInterrupt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   );
+
 /**@} */
 
 

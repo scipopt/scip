@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPincludeDialog(
    assert(scip != NULL);
    assert(dialog != NULL);
 
-   /* check whether display column is already present */
+   /* check whether dialog is already present */
    if( dialogcopy != NULL && SCIPexistsDialog(scip, *dialog) )
    {
       SCIPerrorMessage("dialog <%s> already included.\n", name);
@@ -236,8 +236,9 @@ SCIP_RETCODE SCIPstartInteraction(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPstartInteraction", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
-   /* includes or updates the default dialog menus in SCIP */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
+   /* includes dialog menus for "set" and "fix" in SCIP */
+   SCIP_CALL( SCIPincludeDialogDefaultSet(scip) );
+   SCIP_CALL( SCIPincludeDialogDefaultFix(scip) );
 
    SCIP_CALL( SCIPdialoghdlrExec(scip->dialoghdlr, scip->set) );
 

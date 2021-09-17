@@ -40,6 +40,10 @@
 
 -function(exit,__assertfail)
 
+// make sure lint knows which functions are thread protected
+-sem(nlpiSolveFilterSQP, thread_protected)
+
+
 // turn off all errors for va_* functions:
 -emacro((*),va_*)
 
@@ -85,6 +89,10 @@
 -emacro(506,SCIPdebugCheckRow)    // Constant value Boolean
 -emacro(506,SCIPdebugCheckImplic) // Constant value Boolean
 -emacro(506,assert)               // Constant value Boolean
+-emacro(446,SCIPsolveNlpi)        // side effect in initializer (which is not true)
+-emacro(485,SCIPsolveNlpi)        // Duplicate initialization of object element
+-emacro(446,SCIPsolveNLP)         // side effect in initializer (which is not true)
+-emacro(485,SCIPsolveNLP)         // Duplicate initialization of object element
 
 -emacro(506,isfinite)       // turn off all messages for isfinite
 -emacro(686,isfinite)       // turn off all messages for isfinite

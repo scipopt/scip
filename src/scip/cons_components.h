@@ -37,7 +37,7 @@ extern "C" {
 /** creates the components constraint handler and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
- * */
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP*                 scip                /**< SCIP data structure */

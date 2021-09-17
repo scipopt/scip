@@ -27,7 +27,7 @@ TSTNAME="${1}"       # name of the test set
 SOLUFILE=""
 for f in "${TSTNAME}" ${TSTNAME%%_*} ${TSTNAME%%-*} all
 do
-    for d in instancedata/testsets testset
+    for d in testset instancedata/testsets
     do
         if test -f "${d}/${f}.solu"
         then

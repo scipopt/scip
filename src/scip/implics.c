@@ -903,6 +903,23 @@ void SCIPimplicsGetVarImplics(
    *hasupperimplic = (posupper >= 0);
 }  /*lint !e438*/
 
+/** returns which implications on given variable y are contained in implications for x == 0 or x == 1 */
+void SCIPimplicsGetVarImplicPoss(
+   SCIP_IMPLICS*         implics,            /**< implications data structure */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   int*                  lowerimplicpos,     /**< pointer to store the position of an implication y >= l */
+   int*                  upperimplicpos      /**< pointer to store the position of an implication y <= u */
+   )
+{
+   int posadd;
+
+   assert(lowerimplicpos != NULL);
+   assert(upperimplicpos != NULL);
+
+   implicsSearchVar(implics, varfixing, implvar, lowerimplicpos, upperimplicpos, &posadd);
+}
+
 /** returns whether an implication y <= b or y >= b is contained in implications for x == 0 or x == 1 */
 SCIP_Bool SCIPimplicsContainsImpl(
    SCIP_IMPLICS*         implics,            /**< implications data structure */
@@ -2960,7 +2977,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          SCIP_Real rhs = 1.0;
          SCIP_Bool aggregated;
 
-         printf("aggr vars, clique %d\n", clique->id);
+         printf("aggr vars, clique %u\n", clique->id);
 
          if( SCIPvarGetType(clique->vars[0]) >= SCIPvarGetType(clique->vars[1]) )
          {

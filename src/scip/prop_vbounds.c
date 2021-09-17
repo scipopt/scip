@@ -3109,10 +3109,6 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
 
 /**@} */
 
-/**@name Interface methods
- *
- * @{
- */
 
 /** creates the vbounds propagator and includes it in SCIP */
 SCIP_RETCODE SCIPincludePropVbounds(
@@ -3217,5 +3213,3 @@ SCIP_RETCODE SCIPexecPropVbounds(
 
    return SCIP_OKAY;
 }
-
-/**@} */

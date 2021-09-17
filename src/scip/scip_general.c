@@ -35,7 +35,7 @@
 
 #include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
+#include "scip/exprinterpret.h"
 #include "scip/clock.h"
 #include "scip/debug.h"
 #include "scip/dialog.h"
@@ -413,7 +413,14 @@ SCIP_RETCODE SCIPprintStage(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "presolving is being exited");
       break;
    case SCIP_STAGE_PRESOLVED:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "problem is presolved");
+      if( SCIPsolveIsStopped(scip->set, scip->stat, TRUE) )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "solving was interrupted [");
+         SCIP_CALL( SCIPprintStatus(scip, file) );
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "]");
+      }
+      else
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "problem is presolved");
       break;
    case SCIP_STAGE_INITSOLVE:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "solving process initialization");

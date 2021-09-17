@@ -38,9 +38,9 @@ endif()
 
 set(SCIP_VERSION_MAJOR 7)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 4)
-set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 68)
+set(SCIP_VERSION_PATCH 3)
+set(SCIP_VERSION_SUB 5)
+set(SCIP_VERSION_API 100)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -89,9 +89,12 @@ option(GMP "should gmp be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
 option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
+option(AMPL "should ampl interface be compiled" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
-option(PARASCIP "should scip be compiled thread safe" OFF)
+# for backward compability
+option(PARASCIP "should scip be compiled thread safe (deprecated, use THREADSAFE)" OFF)
+option(THREADSAFE "should scip be compiled thread safe" ON)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode (spx1 interface)" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
@@ -106,7 +109,6 @@ option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
-option(AMPL "Enable AMPL support" OFF)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -163,16 +165,16 @@ endif()
 
 #set expression interpreter file that should be used
 if(EXPRINT STREQUAL "cppad")
-    set(exprinterpret nlpi/exprinterpret_cppad.cpp)
+    set(exprinterpret scip/exprinterpret_cppad.cpp)
 elseif(EXPRINT STREQUAL "none")
-    set(exprinterpret nlpi/exprinterpret_none.c)
+    set(exprinterpret scip/exprinterpret_none.c)
 else()
     message(FATAL_ERROR "EXPRINT option has wrong value")
 endif()
 
-#if tpi is not none force parascip to on
+# if tpi is not none force THREADSAFE to on
 if(NOT (TPI STREQUAL "none"))
-   set(PARASCIP ON FORCE)
+   set(THREADSAFE ON FORCE)
 endif()
 
 #set sources files, libraries and defines for tpi
@@ -196,9 +198,14 @@ else()
     message(FATAL_ERROR "TPI option has wrong value")
 endif()
 
-#set nparascip define if parascip is off
-if(NOT PARASCIP)
-    set(NPARASCIP on)
+# PARASCIP is deprecated, use THREADSAFE
+if(PARASCIP)
+  set(THREADSAFE ON FORCE)
+endif()
+
+#set SCIP_THREADSAFE define
+if(THREADSAFE)
+    set(SCIP_THREADSAFE on)
 endif()
 
 set(NEWLINE "\\\\n")
@@ -491,6 +498,15 @@ else()
     set(SCIP_WITH_ZIMPL OFF)
 endif()
 
+if(AMPL)
+    set(SCIP_WITH_AMPL ON)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/amplmp/include)
+    set(amplsrc scip/reader_nl.cpp amplmp/src/format.cpp amplmp/src/expr-info.cpp amplmp/src/nl-reader.cpp amplmp/src/os.cpp amplmp/src/posix.cpp)
+else()
+    message(STATUS "Support AMPL: OFF")
+    set(SCIP_WITH_AMPL OFF)
+endif()
+
 # IPOPT
 if(IPOPT)
     message(STATUS "Finding IPOPT")
@@ -500,10 +516,10 @@ if(IPOPT)
     #on debian IPOPT package needs this definition to work
     set(HAVE_CSTDDEF on)
     set(NLPI_LIBRARIES ${IPOPT_LIBRARIES})
-    set(nlpi nlpi/nlpi_ipopt.cpp)
+    set(nlpi scip/nlpi_ipopt.cpp)
 else()
     message(STATUS "Support IPOPT: OFF")
-    set(nlpi nlpi/nlpi_ipopt_dummy.c)
+    set(nlpi scip/nlpi_ipopt_dummy.c)
 endif()
 
 # WORHP
@@ -512,15 +528,15 @@ if(WORHP)
     find_package(WORHP REQUIRED)
     message(STATUS "Finding WORHP - found")
     include_directories(${WORHP_INCLUDE_DIRS})
-    set(nlpi ${nlpi} nlpi/nlpi_worhp.c)
+    set(nlpi ${nlpi} scip/nlpi_worhp.c)
     set(NLPI_LIBRARIES ${NLPI_LIBRARIES} ${WORHP_LIBRARIES})
 else()
     message(STATUS "Support WORHP: OFF")
-    set(nlpi ${nlpi} nlpi/nlpi_worhp_dummy.c)
+    set(nlpi ${nlpi} scip/nlpi_worhp_dummy.c)
 endif()
 
 # FilterSQP (with CMake, nlpi_filtersqp doesn't build anyway)
-set(nlpi ${nlpi} nlpi/nlpi_filtersqp_dummy.c)
+set(nlpi ${nlpi} scip/nlpi_filtersqp_dummy.c)
 
 # run checks to figure out how the rounding mode can be set
 include(CheckSymbolExists)
@@ -588,16 +604,6 @@ if(BUILD_TESTING)
     add_subdirectory(applications)
 
     add_custom_target(all_executables DEPENDS scip unittests examples applications)
-endif()
-
-if(AMPL)
-    #
-    # add AMPL interface
-    #
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
-    add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
-else()
-    message(STATUS "Support AMPL: OFF")
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})

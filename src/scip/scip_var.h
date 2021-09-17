@@ -240,7 +240,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
    SCIP_Bool             type                /**< should the variable type be also posted */
    );
 
-/** print the given monomials as polynomial in the following form
+/** print the given terms as signomial in the following form
  *  c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...
  *
  *  This string can be parsed by the method SCIPparseVarsPolynomial().
@@ -401,7 +401,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    );
 
-/** parse the given string as polynomial of variables and coefficients
+/** parse the given string as signomial of variables and coefficients
  *  (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
  *  (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
  *
@@ -438,7 +438,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    );
 
-/** frees memory allocated when parsing a polynomial from a string
+/** frees memory allocated when parsing a signomial from a string
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2969,6 +2969,13 @@ SCIP_Bool SCIPdoNotMultaggr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether variable is not allowed to be aggregated */
+SCIP_EXPORT
+SCIP_Bool SCIPdoNotAggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable x to aggregate */
+   );
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_EXPORT
 SCIP_Bool SCIPdoNotMultaggrVar(
@@ -3015,6 +3022,29 @@ SCIP_Bool SCIPallowObjProp(
 SCIP_EXPORT
 SCIP_Bool SCIPallowWeakDualReds(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** marks the variable that it must not be aggregated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *
+ *  @note There exists no "unmark" method since it has to be ensured that if a plugin requires that a variable is not
+ *        aggregated that this is will be the case.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPmarkDoNotAggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to delete */
    );
 
 /** marks the variable that it must not be multi-aggregated

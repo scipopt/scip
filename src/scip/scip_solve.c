@@ -73,6 +73,7 @@
 #include "scip/scip_concurrent.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_general.h"
+#include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -556,15 +557,8 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->misc_estimexternmem )
    {
-      if( scip->set->limit_memory < (SCIP_Real)SCIP_MEM_NOLIMIT )
-      {
-         SCIP_Longint memused = SCIPgetMemUsed(scip);
-
-         /* if the memory limit is set, we take 1% as the minimum external memory storage */
-         scip->stat->externmemestim = MAX(memused, (SCIP_Longint) (0.01 * scip->set->limit_memory * 1048576.0));
-      }
-      else
-         scip->stat->externmemestim = SCIPgetMemUsed(scip);
+      /* the following formula was estimated empirically using linear regression */
+      scip->stat->externmemestim = (SCIP_Longint) (MAX(1, 8.5e-04 * SCIPgetNConss(scip) + 7.6e-04 * SCIPgetNVars(scip) + 3.5e-05 * scip->stat->nnz) * 1048576.0); /*lint !e666*/
       SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->stat->externmemestim);
    }
 
@@ -1631,6 +1625,14 @@ SCIP_RETCODE initSolve(
       assert(scip->nlp != NULL);
 
       SCIP_CALL( SCIPnlpAddVars(scip->nlp, scip->mem->probmem, scip->set, scip->transprob->nvars, scip->transprob->vars) );
+
+      /* Adjust estimation of external memory: SCIPtransformProb() estimated the memory used for the LP-solver. As a
+       * very crude approximation just double this number. Only do this once in the first run. */
+      if( scip->set->misc_estimexternmem && scip->stat->nruns <= 1 )
+      {
+         scip->stat->externmemestim *= 2;
+         SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->stat->externmemestim);
+      }
    }
 
    /* possibly create visualization output file */
@@ -1770,7 +1772,7 @@ SCIP_RETCODE freeSolve(
    /* free the NLP, if there is one, and reset the flags indicating nonlinearity */
    if( scip->nlp != NULL )
    {
-      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
+      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    }
    scip->transprob->nlpenabled = FALSE;
 
@@ -1870,7 +1872,7 @@ SCIP_RETCODE freeReoptSolve(
    /* free the NLP, if there is one, and reset the flags indicating nonlinearity */
    if( scip->nlp != NULL )
    {
-      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
+      SCIP_CALL( SCIPnlpFree(&scip->nlp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    }
    scip->transprob->nlpenabled = FALSE;
 
@@ -2459,6 +2461,7 @@ SCIP_RETCODE SCIPpresolve(
 
    /* reset the user interrupt flag */
    scip->stat->userinterrupt = FALSE;
+   SCIP_CALL( SCIPinterruptLP(scip, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -2662,6 +2665,7 @@ SCIP_RETCODE SCIPsolve(
 
    /* reset the user interrupt flag */
    scip->stat->userinterrupt = FALSE;
+   SCIP_CALL( SCIPinterruptLP(scip, FALSE) );
 
    /* automatic restarting loop */
    restart = scip->stat->userrestart;
@@ -2709,6 +2713,8 @@ SCIP_RETCODE SCIPsolve(
             break;
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
+         if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
+            break;
          /*lint -fallthrough*/
 
       case SCIP_STAGE_PRESOLVED:
@@ -3503,6 +3509,35 @@ SCIP_RETCODE SCIPinterruptSolve(
    scip->stat->userinterrupt = TRUE;
 
    return SCIP_OKAY;
+}
+
+/** indicates whether \SCIP has been informed that the solving process should be interrupted as soon as possible
+ *
+ *  This function returns whether SCIPinterruptSolve() has been called, which is different from SCIPinterrupted(),
+ *  which returns whether a SIGINT signal has been received by the SCIP signal handler.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note the \SCIP stage does not get changed
+ */
+SCIP_Bool SCIPisSolveInterrupted(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPisSolveInterrupted", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->userinterrupt;
 }
 
 /** informs SCIP that the solving process should be restarted as soon as possible (e.g., after the current node has
