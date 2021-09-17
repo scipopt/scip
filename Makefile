@@ -662,6 +662,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_gauge.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
+			scip/sepa_interminor.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
 			scip/sepa_minor.o \
