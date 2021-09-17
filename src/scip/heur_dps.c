@@ -128,10 +128,10 @@ static
 SCIP_RETCODE assignLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          newdecomp,          /**< decomposition with assigned linking variables */
-   SCIP_VAR**            sortedvars,         /**< sorted array of variables */
-   SCIP_CONS**           sortedconss,        /**< sorted array of constraints */
-   int*                  sortedvarlabels,    /**< sorted array of variable labels */
-   int*                  sortedconslabels,   /**< sorted array of constraint labels */
+   SCIP_VAR**            vars,               /**< sorted array of variables */
+   SCIP_CONS**           conss,              /**< sorted array of constraints */
+   int*                  varlabels,          /**< sorted array of variable labels */
+   int*                  conslabels,         /**< sorted array of constraint labels */
    int                   nvars,              /**< number of variables */
    int                   nconss,             /**< number of constraints */
    int                   nlinkvars           /**< number of linking variables */
@@ -143,10 +143,10 @@ SCIP_RETCODE assignLinking(
 
    assert(scip != NULL);
    assert(newdecomp != NULL);
-   assert(sortedvars != NULL);
-   assert(sortedconss != NULL);
-   assert(sortedvarlabels != NULL);
-   assert(sortedconslabels != NULL);
+   assert(vars != NULL);
+   assert(conss != NULL);
+   assert(varlabels != NULL);
+   assert(conslabels != NULL);
 
    /* we do not need the block decomposition graph of the statistics */
    SCIP_CALL( SCIPgetIntParam(scip, "decomposition/maxgraphedge", &maxgraphedge) );
@@ -156,28 +156,28 @@ SCIP_RETCODE assignLinking(
    }
 
    /* copy the labels */
-   SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, sortedvars, sortedvarlabels, nvars) );
-   SCIP_CALL( SCIPdecompSetConsLabels(newdecomp, sortedconss, sortedconslabels, nconss) );
+   SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, vars, varlabels, nvars) );
+   SCIP_CALL( SCIPdecompSetConsLabels(newdecomp, conss, conslabels, nconss) );
 
    /* assign linking variables */
-   newlabel = sortedvarlabels[nvars - 1]; /* take always label of last block */
+   newlabel = varlabels[nvars - 1]; /* take always label of last block */
    assert(newlabel >= 0);
    for( v = 0; v < nlinkvars; v++ )
    {
-      SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, &sortedvars[v], &newlabel, 1) );
+      SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, &vars[v], &newlabel, 1) );
    }
    SCIPdebugMsg(scip, "assigned %d linking variables\n", nlinkvars);
 
    /* recompute constraint labels and statistics */
-   SCIP_CALL( SCIPcomputeDecompConsLabels(scip, newdecomp, sortedconss, nconss) );
+   SCIP_CALL( SCIPcomputeDecompConsLabels(scip, newdecomp, conss, nconss) );
    SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp, TRUE) );
    nlinkvars = SCIPdecompGetNBorderVars(newdecomp);
 
    /* get new labels and sort */
-   SCIPdecompGetConsLabels(newdecomp, sortedconss, sortedconslabels, nconss);
-   SCIPdecompGetVarsLabels(newdecomp, sortedvars, sortedvarlabels, nvars);
-   SCIPsortIntPtr(sortedconslabels, (void**)sortedconss, nconss);
-   SCIPsortIntPtr(sortedvarlabels, (void**)sortedvars, nvars);
+   SCIPdecompGetConsLabels(newdecomp, conss, conslabels, nconss);
+   SCIPdecompGetVarsLabels(newdecomp, vars, varlabels, nvars);
+   SCIPsortIntPtr(conslabels, (void**)conss, nconss);
+   SCIPsortIntPtr(varlabels, (void**)vars, nvars);
 
    /* After assigning the linking variables, blocks can have zero constraints.
     * So the remaining variables are labeled as linking in SCIPcomputeDecompStats().
@@ -185,22 +185,22 @@ SCIP_RETCODE assignLinking(
     */
    if( nlinkvars >= 1 )
    {
-      assert(sortedvarlabels[0] == SCIP_DECOMP_LINKVAR);
+      assert(varlabels[0] == SCIP_DECOMP_LINKVAR);
       SCIPdebugMsg(scip, "assign again %d linking variables\n", nlinkvars);
 
       for( v = 0; v < nlinkvars; v++ )
       {
-         SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, &sortedvars[v], &newlabel, 1) );
+         SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, &vars[v], &newlabel, 1) );
       }
-      SCIP_CALL( SCIPcomputeDecompConsLabels(scip, newdecomp, sortedconss, nconss) );
+      SCIP_CALL( SCIPcomputeDecompConsLabels(scip, newdecomp, conss, nconss) );
       SCIP_CALL( SCIPcomputeDecompStats(scip, newdecomp, TRUE) );
 
-      SCIPdecompGetConsLabels(newdecomp, sortedconss, sortedconslabels, nconss);
-      SCIPdecompGetVarsLabels(newdecomp, sortedvars, sortedvarlabels, nvars);
-      SCIPsortIntPtr(sortedconslabels, (void**)sortedconss, nconss);
-      SCIPsortIntPtr(sortedvarlabels, (void**)sortedvars, nvars);
+      SCIPdecompGetConsLabels(newdecomp, conss, conslabels, nconss);
+      SCIPdecompGetVarsLabels(newdecomp, vars, varlabels, nvars);
+      SCIPsortIntPtr(conslabels, (void**)conss, nconss);
+      SCIPsortIntPtr(varlabels, (void**)vars, nvars);
    }
-   assert(sortedvarlabels[0] != SCIP_DECOMP_LINKVAR);
+   assert(varlabels[0] != SCIP_DECOMP_LINKVAR);
 
    SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", maxgraphedge) );
 
@@ -652,8 +652,8 @@ SCIP_RETCODE createAndSplitProblem(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
    LINKING**             linkings,           /**< array of linking data structures */
-   SCIP_VAR**            sortedvars,         /**< sorted array of variables */
-   SCIP_CONS**           sortedconss,        /**< sorted array of constraints */
+   SCIP_VAR**            vars,               /**< sorted array of variables */
+   SCIP_CONS**           conss,              /**< sorted array of constraints */
    SCIP_Bool*            success             /**< pointer to store whether splitting was successful */
    )
 {
@@ -665,8 +665,8 @@ SCIP_RETCODE createAndSplitProblem(
 
    assert(scip != NULL);
    assert(heurdata != NULL);
-   assert(sortedvars != NULL);
-   assert(sortedconss != NULL);
+   assert(vars != NULL);
+   assert(conss != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nvarsblock, heurdata->nblocks + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nconssblock, heurdata->nblocks + 1) );
@@ -682,7 +682,7 @@ SCIP_RETCODE createAndSplitProblem(
       conssoffset += nconssblock[i];
       varsoffset += nvarsblock[i];
 
-      SCIP_CALL( createBlockproblem(scip, blockproblem[i], linkings, &sortedconss[conssoffset], &sortedvars[varsoffset], nconssblock[i+1], nvarsblock[i+1],
+      SCIP_CALL( createBlockproblem(scip, blockproblem[i], linkings, &conss[conssoffset], &vars[varsoffset], nconssblock[i+1], nvarsblock[i+1],
                                     heurdata->linkingconss, heurdata->nlinking, i, success) );
       if( !(*success) )
          break;
