@@ -2519,7 +2519,7 @@ Test(interCuts, testBoundRays1)
    SCIP_SOL* vertex;
 
    /* simplify and detect quadratic structure in: 6xy + 2x^2 -2z^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
 
    /*
     * build LP
@@ -2582,9 +2582,9 @@ Test(interCuts, testBoundRays1)
          cr_expect_float_eq(myrays->rays[i], expectedrayscoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
             expectedrayscoefs[i], myrays->rays[i]);
       }
-      //cr_expect_arr_eq(myrays->raysidx, expectedraysidx, expectednnonz * sizeof(int));
-      //cr_expect_arr_eq(myrays->lpposray, expectedlppos, expectednrays * sizeof(int));
-      //cr_expect_arr_eq(myrays->raysbegin, expectedbegin, (expectednrays + 1) * sizeof(int));
+      /* cr_expect_arr_eq(myrays->raysidx, expectedraysidx, expectednnonz * sizeof(int));
+      cr_expect_arr_eq(myrays->lpposray, expectedlppos, expectednrays * sizeof(int));
+      cr_expect_arr_eq(myrays->raysbegin, expectedbegin, (expectednrays + 1) * sizeof(int)); */
    }
 
    /* end probing mode */

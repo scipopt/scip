@@ -43,15 +43,6 @@ SCIP_RETCODE SCIPincludeSepaInterminor(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/**@addtogroup SEPARATORS
- *
- * @{
- */
-
-/* TODO place other public methods in this group to facilitate navigation through the documentation */
-
-/* @} */
-
 #ifdef __cplusplus
 }
 #endif

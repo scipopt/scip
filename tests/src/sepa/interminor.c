@@ -45,8 +45,8 @@ void setup(void)
    /* include minor separator */
    SCIP_CALL( SCIPincludeSepaInterminor(scip) );
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(conshdlr != NULL);
 
    /* create problem */
@@ -81,8 +81,8 @@ void teardown(void)
 Test(interminor, detect, .init = setup, .fini = teardown)
 {
    #define NCONSS 3
-   const char* inputs[NCONSS] = {"[expr] <c1>: 1<= <x> * <x> + <y> * <y> <= 2",
-      "[expr] <c2>: -0.5 <= <x> * <y> + <y> * <z> <= 0.5", "[expr] <c3>: -0.5 <= <x> * <z> <= 0.5"};
+   const char* inputs[NCONSS] = {"[nonlinear] <c1>: 1<= <x> * <x> + <y> * <y> <= 2",
+      "[nonlinear] <c2>: -0.5 <= <x> * <y> + <y> * <z> <= 0.5", "[nonlinear] <c3>: -0.5 <= <x> * <z> <= 0.5"};
    SCIP_SEPA* sepa;
    SCIP_SEPADATA* sepadata;
    SCIP_CONS* cons;

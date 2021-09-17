@@ -460,10 +460,10 @@ SCIP_RETCODE detectMinors(
                   colk = SCIPgetVars(scip)[k];
                   coll = SCIPgetVars(scip)[l];
 
-                  auxvarik = SCIPhashmapGetImage(rowicols, colk);
-                  auxvaril = SCIPhashmapGetImage(rowicols, coll);
-                  auxvarjk = SCIPhashmapGetImage(rowjcols, colk);
-                  auxvarjl = SCIPhashmapGetImage(rowjcols, coll);
+                  auxvarik = (SCIP_VAR*) SCIPhashmapGetImage(rowicols, colk);
+                  auxvaril = (SCIP_VAR*) SCIPhashmapGetImage(rowicols, coll);
+                  auxvarjk = (SCIP_VAR*) SCIPhashmapGetImage(rowjcols, colk);
+                  auxvarjl = (SCIP_VAR*) SCIPhashmapGetImage(rowjcols, coll);
 
                   if( ii == k )
                      isauxvarikdiag = TRUE;
@@ -975,8 +975,9 @@ SCIP_RETCODE addColToCut(
 }
 
 /** adds cutcoef * (slack - slack*) to rowprep
+  *
   * row is lhs <= <coefs, vars> + constant <= rhs, thus slack is defined by
-  * slack + <coefs.vars> + constant = side
+  * slack + <coefs, vars> + constant = side
   * If row (slack) is at upper, it means that <coefs,vars*> + constant = rhs, and so
   * slack* = side - rhs --> slack - slack* = rhs - <coefs, vars> - constant.
   * If row (slack) is at lower, then <coefs,vars*> + constant = lhs, and so
@@ -987,8 +988,8 @@ SCIP_RETCODE addRowToCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to store intersection cut */
    SCIP_Real             cutcoef,            /**< cut coefficient */
-   SCIP_ROW*             row,                /**< row, whose slack we are ading to rowprep */
-   SCIP_Bool*            success             /**< if the row is nonbasic enough */
+   SCIP_ROW*             row,                /**< row, whose slack we are adding to rowprep */
+   SCIP_Bool*            success             /**< buffer to store whether the row is nonbasic enough */
    )
 {
    int i;
@@ -1050,7 +1051,7 @@ SCIP_RETCODE getTableauRows(
    int*                  basicvarpos2tableaurow,/**< map between basic var and its tableau row */
    SCIP_HASHMAP*         tableau,            /**< map between var an its tableau row */
    SCIP_Real**           tableaurows,        /**< buffer to store tableau row */
-   SCIP_Bool*            success             /**< TRUE if no vatriable had basisstat = ZERO */
+   SCIP_Bool*            success             /**< set to TRUE if no variable had basisstat = ZERO */
    )
 {
    int v;
@@ -1517,7 +1518,7 @@ SCIP_RETCODE computeNegCutcoefs(
                SCIP_BASESTAT_UPPER);
 
          SCIP_CALL( addRowToCut(scip, rowprep, SCIProwGetBasisStatus(rows[lppos]) == SCIP_BASESTAT_UPPER ? cutcoef :
-                  -cutcoef, rows[lppos], success) ); /* rows have flipper base status! */
+                  -cutcoef, rows[lppos], success) ); /* rows have flipped base status! */
 
          if( ! *success )
             return SCIP_OKAY;
