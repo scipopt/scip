@@ -75,7 +75,7 @@
 #define CYC_CONS_LIMIT 10000         /**< maximum number of symmetry inequalities for PCSPG */
 
 #define CUT_MINREDUCTION_RATIO 0.95
-#define MINREDUCTION_RATIO_STP 0.95
+#define MINREDUCTION_RATIO_STP 0.90
 #define MINREDUCTION_RATIO_PCMW 0.85
 #define CUT_MAXNTERMINALS 500
 #define CUT_MAXNEDGES     10000
