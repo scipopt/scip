@@ -506,7 +506,6 @@ SCIP_RETCODE detectMinors(
 }
 
 /** constructs map between lp position of a basic variable and its row in the tableau */
-/* TODO for Antonia: maybe think of making things nicer to avoid code duplication */
 static
 SCIP_RETCODE constructBasicVars2TableauRowMap(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -838,8 +837,6 @@ SCIP_Real computeRoot(
    {
       sol = SCIPinfinity(scip);
 
-      /* if SQRT(a) <= d, but a > d * d --> numerics are weird and phi might not evalate negative at infinity */
-      //assert(a > d * d || evalPhiAtRay(scip, sol, a, b, c, d, e) <= 0);
       return sol;
    }
 
@@ -1077,7 +1074,6 @@ SCIP_RETCODE getTableauRows(
          col = SCIPvarGetCol(vars[v]);
 
          /* if variable is basic, then get its tableau row and insert it in the hashmap */
-         /* TODO: if this gets too nasty, Antonia will fix it */
          if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_BASIC )
          {
             int lppos;
@@ -1097,11 +1093,9 @@ SCIP_RETCODE getTableauRows(
          {
             *success = FALSE;
             return SCIP_OKAY; /* don't even bother */
-            /* TODO: please Antonia, could you be so nice to make sure that we are releasing all the memory that we allocated if any */
          }
          else
          {
-            /* if variable is non-basic, then ???? (= TODO antonia) */
             SCIP_CALL( SCIPhashmapInsert(tableau, (void*)vars[v], (void *)NULL) );
          }
 
