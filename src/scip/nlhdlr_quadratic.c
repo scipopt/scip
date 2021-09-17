@@ -116,7 +116,7 @@ struct SCIP_NlhdlrData
    /* parameter */
    SCIP_Bool             useintersectioncuts; /**< whether to use intersection cuts for quadratic constraints or not */
    SCIP_Bool             usestrengthening;   /**< whether the strengthening should be used */
-   SCIP_Bool             useboundsasrays;    /**<use bounds of variables in quadratic as rays for intersection cuts */
+   SCIP_Bool             useboundsasrays;    /**< use bounds of variables in quadratic as rays for intersection cuts */
    int                   ncutslimit;         /**< limit for number of cuts generated consecutively */
    int                   ncutslimitroot;     /**< limit for number of cuts generated at root node */
    int                   maxrank;            /**< maximal rank a slackvar can have */
@@ -127,7 +127,7 @@ struct SCIP_NlhdlrData
    int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
    SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
    SCIP_Bool             ignorebadrayrestriction; /**< should cut be generated even with bad numerics when restricting to ray? */
-   SCIP_Bool             ignorehighre;      /**< should cut be added even when range / efficacy is large? */
+   SCIP_Bool             ignorehighre;       /**< should cut be added even when range / efficacy is large? */
 
    /* statistics */
    int                   ncouldimprovedcoef; /**< number of times a coefficient could improve but didn't because of numerics */
@@ -1755,12 +1755,13 @@ SCIP_Bool areCoefsNumericsGood(
    /* maybe we want to avoid a large dynamism between A, B and C */
    if( nlhdlrdata->ignorebadrayrestriction )
    {
-      max = 0.0; min = SCIPinfinity(scip);
+      max = 0.0;
+      min = SCIPinfinity(scip);
       for( j = 0; j < 3; ++j )
       {
          SCIP_Real absval;
 
-         absval = ABS(coefs1234a[j]);
+         absval = REALABS(coefs1234a[j]);
          if( max < absval )
             max = absval;
          if( absval != 0.0 && absval < min )
@@ -1776,7 +1777,8 @@ SCIP_Bool areCoefsNumericsGood(
 
       if( iscase4 )
       {
-         max = 0.0; min = SCIPinfinity(scip);
+         max = 0.0;
+         min = SCIPinfinity(scip);
          for( j = 0; j < 3; ++j )
          {
             SCIP_Real absval;
@@ -2356,14 +2358,16 @@ SCIP_RETCODE setVarToNearestBound(
 }
 
 /** This function finds vertex (w.r.t. bounds of variables appearing in the quadratic) that is closest to the current
- * solution we want to separate. Furtheremore, we store the rays corresponding to the unit vectors, i.e.,
+ * solution we want to separate.
+ *
+ * Furthermore, we store the rays corresponding to the unit vectors, i.e.,
  *    - if x_i is at its lower bound in vertex --> r_i =  e_i
- *    - if x_i is at its upper bound in vertex -_> r_i = -e_i
+ *    - if x_i is at its upper bound in vertex --> r_i = -e_i
  */
 static
 SCIP_RETCODE findVertexAndGetRays(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,      /**< nlhdlr expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,      /**< nlhdlr expression data */
    SCIP_SOL*             sol,                /**< solution to separate */
    SCIP_SOL*             vertex,             /**< new 'vertex' (w.r.t. bounds) solution to separate */
    SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
@@ -2446,7 +2450,7 @@ SCIP_RETCODE findVertexAndGetRays(
 static
 SCIP_Bool isQuadConsViolated(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,      /**< nlhdlr expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
    SCIP_SOL*             sol,                /**< solution to check feasibility for */
    SCIP_Real             sidefactor          /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
@@ -2685,7 +2689,6 @@ SCIP_RETCODE generateIntercut(
    return SCIP_OKAY;
 }
 
-/** @todo is "propagatable" meant here? or is it a new word that means something else? */
 /** returns whether a quadratic form is "propagable"
  *
  * It is propagable, if a variable (aka child expr) appears at least twice, which is the case if at least two of the following hold:
@@ -3590,7 +3593,6 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
-      /** @todo remove printf or turn into debugmessage */
       /*printf("## New cut\n");
       printf(" -> found maxquad-free cut <%s>: act=%f, lhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n\n",
             SCIProwGetName(row), SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row), SCIProwGetNorm(row),
@@ -4327,11 +4329,11 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
          "limit for number of rays we do the strengthening for",
          &nlhdlrdata->nstrengthlimit, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ignorebadrayrestriction",
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/ignorebadrayrestriction",
          "should cut be generated even with bad numerics when restricting to ray?",
          &nlhdlrdata->ignorebadrayrestriction, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ignorenhighre",
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/ignorenhighre",
          "should cut be added even when range / efficacy is large?",
          &nlhdlrdata->ignorehighre, FALSE, TRUE, NULL, NULL) );
 

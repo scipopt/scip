@@ -236,7 +236,7 @@ SCIP_RETCODE insertIndex(
 {
    SCIPdebugMsg(scip, "inserting %s in row %s and col %s \n", SCIPvarGetName(auxvar), SCIPvarGetName(row), SCIPvarGetName(col));
 
-   /* check whether variables has an array associated to it */
+   /* check whether variable has an array associated to it */
    if( SCIPhashmapExists(rowmap, (void*)row) )
    {
       struct myarray* arr;
@@ -297,7 +297,6 @@ SCIP_RETCODE detectMinors(
    SCIP_EXPRITER* it;
    SCIP_HASHMAP* rowmap;
    int* rowvars = NULL;
-   int* perm = NULL;
    int* intersection;
    int nrowvars = 0;
    int c;
@@ -316,11 +315,11 @@ SCIP_RETCODE detectMinors(
    assert(sepadata->minors == NULL);
    assert(sepadata->nminors == 0);
 
-   /* we assume that the auxiliary variables in the expression constraint handler have been already generated */
+   /* we assume that the auxiliary variables in the nonlinear constraint handler have been already generated */
    sepadata->detectedminors = TRUE;
 
-   /* check whether there are expression constraints available */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* check whether there are nonlinear constraints available */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    if( conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0 )
       return SCIP_OKAY;
 
@@ -334,7 +333,6 @@ SCIP_RETCODE detectMinors(
 
    /* initialize iterator */
    SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
 
    for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
    {
@@ -487,26 +485,10 @@ SCIP_RETCODE detectMinors(
       SCIPfreeBufferArrayNull(scip, &rowi);
    }
 
-   ///* permute bilinear terms if there are too many of them; the motivation for this is that we don't want to
-   // * prioritize variables because of the order in the bilinear terms where they appear; however, variables that
-   // * appear more often in bilinear terms might be more important than others so the corresponding bilinear terms
-   // * are more likely to be chosen
-   // */
-   //if( maxminors < nbilinterms && maxminors < SQR(nquadterms) )
-   //{
-   //   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nbilinterms) );
-
-   //   for( i = 0; i < nbilinterms; ++i )
-   //      perm[i] = i;
-
-   //   /* permute array */
-   //   SCIPrandomPermuteIntArray(sepadata->randnumgen, perm, 0, nbilinterms);
-   //}
 
    SCIPdebugMsg(scip, "found %d principal minors in total\n", sepadata->nminors);
 
    /* free memory */
-   SCIPfreeBufferArrayNull(scip, &perm);
    SCIPfreeBufferArray(scip, &intersection);
    SCIPfreeBufferArray(scip, &rowvars);
    SCIPhashmapFree(&rowmap);
@@ -827,6 +809,7 @@ SCIP_Real isCase4a(
 
 /**  finds smallest positive root phi by finding the smallest positive root of
  * (A - D^2) t^2 + (B - 2 D*E) t + (C - E^2) = 0
+ *
  * However, we are conservative and want a solution such that phi is negative, but close to 0;
  * thus we correct the result with a binary search
  */
