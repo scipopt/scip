@@ -47,15 +47,11 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXMINORSCONST     3000 /**< default constant for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
-#define DEFAULT_MAXMINORSFAC       10.0 /**< default factor for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
 #define DEFAULT_MINCUTVIOL         1e-4 /**< default minimum required violation of a cut */
 #define DEFAULT_RANDSEED            157 /**< default random seed */
 #define DEFAULT_MAXROUNDS            10 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_IGNOREPACKINGCONSS TRUE /**< default for ignoring circle packing constraints during minor detection */
 #define BINSEARCH_MAXITERS          120 /**< default iteration limit for binary search */
-#define INTERCUTS_MINVIOL          1e-4 /**< minimal violation the cut needs to have to be added */
 #define DEFAULT_USESTRENGTHENING  FALSE /**< default for using strengthend intersection cuts to separate */
 #define DEFAULT_USEBOUNDS         FALSE /**< default for using nonnegativity bounds when separating */
 
@@ -70,8 +66,6 @@ struct SCIP_SepaData
    SCIP_Bool*            isdiagonal;         /**< bool array determining if the variables appearing in the minor are diagonal */
    int                   nminors;            /**< total number of minors */
    int                   minorssize;         /**< size of minors array */
-   int                   maxminorsconst;     /**< constant for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
-   SCIP_Real             maxminorsfac;       /**< factor for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             detectedminors;     /**< has minor detection be called? */
@@ -79,7 +73,6 @@ struct SCIP_SepaData
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
    SCIP_Bool             usestrengthening;   /**< whether to use strengthened intersection cuts to separate minors */
    SCIP_Bool             usebounds;          /**< whether to also enforce nonegativity bounds of principle minors */
-   SCIP_Bool             ignorepackingconss; /**< whether to ignore circle packing constraints during minor detection */
 };
 
 /* these represent a row */
@@ -1648,7 +1641,7 @@ SCIP_RETCODE separateDeterminant(
    /* merge coefficients that belong to same variable */
    SCIPmergeRowprepTerms(scip, rowprep);
 
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, INTERCUTS_MINVIOL, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, sepadata->mincutviol, NULL, &success) );
 
    /* if cleanup was successfull, create row out of rowprep and add it */
    if( success )
@@ -1764,7 +1757,6 @@ SCIP_RETCODE separatePoint(
    }
 
    /* free memory */
-
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
       if( SCIPhashmapExists(tableau, (void*)SCIPgetVars(scip)[i]) )
@@ -1960,16 +1952,6 @@ SCIP_RETCODE SCIPincludeSepaInterminor(
          "whether to also enforce nonegativity bounds of principle minors",
          &sepadata->usebounds, FALSE, DEFAULT_USEBOUNDS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/" SEPA_NAME "/maxminorsconst",
-         "constant for the maximum number of minors, i.e., max(const, fac * # quadratic terms)",
-         &sepadata->maxminorsconst, FALSE, DEFAULT_MAXMINORSCONST, 0, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "separating/" SEPA_NAME "/maxminorsfac",
-         "factor for the maximum number of minors, i.e., max(const, fac * # quadratic terms)",
-         &sepadata->maxminorsfac, FALSE, DEFAULT_MAXMINORSFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/" SEPA_NAME "/mincutviol",
          "minimum required violation of a cut",
@@ -1984,11 +1966,6 @@ SCIP_RETCODE SCIPincludeSepaInterminor(
          "separating/" SEPA_NAME "/maxroundsroot",
          "maximal number of separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/" SEPA_NAME "/ignorepackingconss",
-         "whether to ignore circle packing constraints during minor detection",
-         &sepadata->ignorepackingconss, FALSE, DEFAULT_IGNOREPACKINGCONSS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
