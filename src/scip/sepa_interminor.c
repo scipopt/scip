@@ -761,7 +761,7 @@ SCIP_Real evalPhiAtRay(
    QUAD_SCALE(lin, -1.0);
    SCIPquadprecSumQQ(tmp, root, lin);
 
-   assert(t != 1e20 || QUAD_TO_DBL(tmp) <= 0);
+   assert(!SCIPisInfinity(scip, t) || QUAD_TO_DBL(tmp) <= 0);
 
    return  QUAD_TO_DBL(tmp);
 #else
@@ -791,9 +791,9 @@ void doBinarySearch(
       SCIP_Real phival;
 
       curr = (lb + ub) / 2.0;
-      phival = evalPhiAtRay(curr, a, b, c, d, e);
+      phival = evalPhiAtRay(scip, curr, a, b, c, d, e);
 #ifdef INTERCUT_MOREDEBUG
-      printf("%d: lb,ub %.10f, %.10f. curr = %g -> phi at curr %g -> phi at lb %g \n", i, lb, ub, curr, phival, evalPhiAtRay(lb, a, b, c, d, e));
+      printf("%d: lb,ub %.10f, %.10f. curr = %g -> phi at curr %g -> phi at lb %g \n", i, lb, ub, curr, phival, evalPhiAtRay(scip, lb, a, b, c, d, e));
 #endif
 
       if( phival <= 0.0 )
@@ -853,7 +853,7 @@ SCIP_Real computeRoot(
       sol = SCIPinfinity(scip);
 
       /* if SQRT(a) <= d, but a > d * d --> numerics are weird and phi might not evalate negative at infinity */
-      //assert(a > d * d || evalPhiAtRay(sol, a, b, c, d, e) <= 0);
+      //assert(a > d * d || evalPhiAtRay(scip, sol, a, b, c, d, e) <= 0);
       return sol;
    }
 
@@ -874,7 +874,7 @@ SCIP_Real computeRoot(
     * one obtained from the function above. Thus, it might fail to satisfy the condition of case 4b in some cases, e.g.,
     * ex8_3_1, bchoco05, etc
     */
-   if( evalPhiAtRay(sol, a, b, c, d, e) <= 1e-10 )
+   if( evalPhiAtRay(scip, sol, a, b, c, d, e) <= 1e-10 )
    {
 #ifdef INTERCUT_MOREDEBUG
       printf("interval solution returned %g -> phival = %g, believe it\n", sol, evalPhiAtRay(sol, a, b, c, d, e));
@@ -887,7 +887,7 @@ SCIP_Real computeRoot(
    {
       /* perform a binary search to make it negative: this might correct a wrong infinity (e.g. crudeoil_lee1_05) */
 #ifdef INTERCUT_MOREDEBUG
-      printf("do bin search because phival is %g\n", evalPhiAtRay(sol, a, b, c, d, e));
+      printf("do bin search because phival is %g\n", evalPhiAtRay(scip, sol, a, b, c, d, e));
 #endif
       doBinarySearch(scip, a, b, c, d, e, &sol);
    }

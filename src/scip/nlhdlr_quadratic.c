@@ -188,8 +188,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nbadnonbasic);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nstrengthenings);
    SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->nstrengthenings > 0 ? nlhdlrdata->cutcoefsum / nlhdlrdata->nstrengthenings : 0.0);
-   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->densitysum / nlhdlrdata->ncutsadded);
-   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->nboundcuts / nlhdlrdata->ncalls);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncutsadded > 0 ? nlhdlrdata->densitysum / nlhdlrdata->ncutsadded : 0.0);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncalls > 0 ? nlhdlrdata->nboundcuts / nlhdlrdata->ncalls : 0.0);
    SCIPinfoMessage(scip, file, "\n");
 
    return SCIP_OKAY;
