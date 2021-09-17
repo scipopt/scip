@@ -787,8 +787,8 @@ SCIP_RETCODE roundPartition(
     * integer blocks with big fractional parts are rounded up
     */
 
-   sumbefor = 0;
-   sumafter = 0;
+   sumbefor = 0.0;
+   sumafter = 0.0;
 
    for( i = 0; i < linking->nblocks - nnonintblocks; i++ )
       sumafter += 1 - fracPart[nnonintblocks + i];
