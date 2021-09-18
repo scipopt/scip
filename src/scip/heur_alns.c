@@ -4087,7 +4087,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          &heurdata->seed, FALSE, DEFAULT_SEED, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcallssamesol",
          "number of allowed executions of the heuristic on the same incumbent solution (-1: no limit, 0: number of active neighborhoods)",
-         &heurdata->maxcallssamesol, TRUE, -1, -1, 100, NULL, NULL) );
+         &heurdata->maxcallssamesol, TRUE, DEFAULT_MAXCALLSSAMESOL, -1, 100, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjustminimprove",
          "should the factor by which the minimum improvement is bound be dynamically updated?",
