@@ -128,6 +128,7 @@ Performance improvements
 - Revised and improved subNLP primal heuristic, in particular choice of iteration limit and starting condition and reuse of subSCIP.
 - Merge strongcg into the gomory separator to avoid computing the same base equality twice. The files
   sepa_strongcg.{h|c} have been removed.
+- The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
 
 Examples and applications
 -------------------------
@@ -684,7 +685,8 @@ NLPI:
 - heuristics/subnlp/presolveemphasis, heuristics/subnlp/setcutoff
 - new parameters "branching/inference/conflictprio" and "branching/inference/cutoffprio" that allow
   using the different score criteria in inference branching hierarchically
-
+- new parameters "heuristics/alns/nodesquotmin", "heuristics/alns/maxcallssamesol" and "heuristics/alns/initduringroot"
+  to control neighborhoods in ALNS
 
 ### Data structures
 
