@@ -76,7 +76,6 @@ Constraint handlers for NLP:
 - Added nlhdlr for second-order cones: detects second-order cone constraints (as ||x|| <= t or a quadratic that can written like that) and
   separates on a disaggregated reformulation (similar to cons_soc previously).
 - Removed constraint handlers abspower, bivariate, quadratic, and soc.
-- Removed adding linearization of convex abspower, quadratic, soc, and nonlinear constraints to cutpool when a new incumbent is found for now.
 - Removed simplification of duplicate abspower constraints for now.
   Removed simplification of abspower constraints with loose variables.
   Removed resolving of domain propagation (ConsResProp callback) and conflict analysis for abspower constraints.
@@ -127,6 +126,8 @@ Performance improvements
 - No longer relax bounds of integral variables when computing bounds on activity in nonlinear constraints.
 - Revised and improved Ipopt interface.
 - Revised and improved subNLP primal heuristic, in particular choice of iteration limit and starting condition and reuse of subSCIP.
+- Merge strongcg into the gomory separator to avoid computing the same base equality twice. The files
+  sepa_strongcg.{h|c} have been removed.
 - The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
 
 Examples and applications
@@ -575,16 +576,17 @@ NLPI:
 
 ### Changed parameters
 
-- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 7
+- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 5
 - deleted parameter "constraints/orbitope/usedynamicprop"
 - changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
 - deleted parameter "propagating/symmetry/disableofrestart"
-- removed constraints/nonlinear/cutmaxrange, constraints/nonlinear/linfeasshift, constraints/nonlinear/assumeconvex, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont, constraints/nonlinear/enfocutsremovable
+- removed constraints/nonlinear/cutmaxrange, constraints/nonlinear/linfeasshift, constraints/nonlinear/assumeconvex, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont
 - removed constraints/nonlinear/upgrade/abspower
 - removed constraints/nonlinear/upgrade/and, use constraints/nonlinear/reformbinprodsand instead
 - removed constraints/nonlinear/upgrade/bivariate
 - removed constraints/nonlinear/upgrade/quadratic, use nlhdlr/quadratic/enabled instead
 - changed default of constraints/nonlinear/maxproprounds from 1 to 10
+- replaced constraints/nonlinear/enfocutsremovable by constraints/nonlinear/rownotremovable
 - removed constraints/quadratic/sepafreq, constraints/quadratic/propfreq, constraints/quadratic/proptiming, constraints/quadratic/eagerfreq, constraints/quadratic/maxprerounds, constraints/quadratic/delaysepa, constraints/quadratic/delayprop, constraints/quadratic/presoltiming
 - removed constraints/quadratic/replacebinaryprod, use constraints/nonlinear/reformbinprodsfac instead
 - removed constraints/quadratic/empathy4and, use constraints/nonlinear/reformbinprodsand instead
@@ -616,6 +618,9 @@ NLPI:
 - renamed heuristics/subnlp/iterquotient to heuristics/subnlp/nodesfactor
 - removed heuristics/subnlp/runalways, use heuristics/subnlp/nodesoffset=INT_MAX and heuristics/subnlp/successrateexp = 0.0 instead
 - removed heuristics/subnlp/minimprove, heuristics/multistart/nlpminimpr
+- Removed parameters for strongcg separator: separating/strongcg/..., i.e.,
+  maxrounds, maxroundsroot, maxsepacutsroot, maxsepacuts, dynamiccuts. One can control the
+  strongcg behavior throught the parameters of sepa_gomory.
 
 ### New parameters
 
@@ -655,6 +660,7 @@ NLPI:
 - constraints/nonlinear/reformbinprods, constraints/nonlinear/reformbinprodsand, constraints/nonlinear/reformbinprodsfac
 - constraints/nonlinear/tightenlpfeastol, constraints/nonlinear/propinenforce, constraints/nonlinear/weakcutthreshold, constraints/nonlinear/strongcutmaxcoef, constraints/nonlinear/strongcutefficacy, constraints/nonlinear/forcestrongcut, constraints/nonlinear/enfoauxviolfactor, constraints/nonlinear/weakcutminviolfactor
 - constraints/nonlinear/branching/aux, constraints/nonlinear/branching/external, constraints/nonlinear/branching/highviolfactor, constraints/nonlinear/branching/highscorefactor, constraints/nonlinear/branching/violweight, constraints/nonlinear/branching/dualweight, constraints/nonlinear/branching/pscostweight, constraints/nonlinear/branching/domainweight, constraints/nonlinear/branching/vartypeweight, constraints/nonlinear/branching/scoreagg, constraints/nonlinear/branching/violsplit, constraints/nonlinear/branching/pscostreliable
+- constraints/nonlinear/linearizeheursol
 - nlhdlr/default/enabled
 - nlhdlr/convex/enabled, nlhdlr/convex/detectsum, nlhdlr/convex/preferextended, nlhdlr/convex/cvxquadratic, nlhdlr/convex/cvxsignomial, nlhdlr/convex/cvxprodcomp, nlhdlr/convex/handletrivial
 - nlhdlr/concave/enabled, nlhdlr/concave/detectsum, nlhdlr/concave/cvxquadratic, nlhdlr/concave/cvxsignomial, nlhdlr/concave/cvxprodcomp, nlhdlr/concave/handletrivial
@@ -903,6 +909,7 @@ Fixed bugs
 
 - fixed domain propagation in presolving of abspower constraints
 - fixed handling of multi-aggregation in cons_symresack and cons_orbisack
+- SCIPgetLowerbound() now consistently returns infinity when status is infeasible
 
 Miscellaneous
 -------------
