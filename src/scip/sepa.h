@@ -169,6 +169,17 @@ void SCIPsepaSetExitsol(
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
    );
 
+/** sets whether separator is a parent separator */
+void SCIPsepaSetIsParentsepa(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** sets the parent separator */
+void SCIPsepaSetParentsepa(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPA*            parentsepa          /**< parent separator */
+   );
+
 /** enables or disables all clocks of \p sepa, depending on the value of the flag */
 void SCIPsepaEnableOrDisableClocks(
    SCIP_SEPA*            sepa,               /**< the separator for which all clocks should be enabled or disabled */
