@@ -12108,6 +12108,13 @@ SCIP_RETCODE lpSolve(
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
       assert(!lpCutoffDisabled(set));
+
+#ifndef NDEBUG
+      /* the LP solution objective should exceed the limit in this case */
+      SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
+      assert(SCIPsetIsGE(set, lp->lpobjval, lp->lpiobjlim));
+#endif
+
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
       lp->lpobjval = SCIPsetInfinity(set);
    }
