@@ -128,42 +128,42 @@ Test(interminor, detect, .init = setup, .fini = teardown)
 /** tests the detection of principal minors that are defined by auxiliary variables; the test uses the following
  *  nonlinear constraint form sin(x)^2 + sin(x)*sin(y) + sin(y)^2 <= 0
  */
-//Test(minor, detect_aux, .init = setup, .fini = teardown)
-//{
-//   const char* input = {"[expr] <c1>: 1 <= sin(<x>)^2 + sin(<x>)*sin(<y>) + sin(<y>)^2 <= 2"};
-//   SCIP_SEPA* sepa;
-//   SCIP_SEPADATA* sepadata;
-//   SCIP_CONS* cons;
-//   SCIP_Bool infeasible;
-//   SCIP_Bool success;
+Test(minor, detect_aux, .init = setup, .fini = teardown, .disabled = TRUE)
+{
+   const char* input = {"[nonlinear] <c1>: 1 <= sin(<x>)^2 + sin(<x>)*sin(<y>) + sin(<y>)^2 <= 2"};
+   SCIP_SEPA* sepa;
+   SCIP_SEPADATA* sepadata;
+   SCIP_CONS* cons;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
 
-//   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
-//      &success) );
-//   cr_assert(success);
+   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
+      &success) );
+   cr_assert(success);
 
    /* add and release constraint */
-//   SCIP_CALL( SCIPaddCons(scip, cons) );
-//   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* go to solving stage */
-//   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-//   cr_assert(SCIPgetNConss(scip) == 1);
-//   cr_assert(SCIPconshdlrGetNConss(conshdlr) == 1);
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
+   cr_assert(SCIPgetNConss(scip) == 1);
+   cr_assert(SCIPconshdlrGetNConss(conshdlr) == 1);
 
    /* make sure INITLP has been run to get auxiliary variables */
-//   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
-//   cr_assert(!infeasible);
+   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
+   cr_assert(!infeasible);
 
    /* get separator data */
-//   sepa = SCIPfindSepa(scip, SEPA_NAME);
-//   cr_assert(sepa != NULL);
-//   sepadata = SCIPsepaGetData(sepa);
-//   cr_assert(sepadata != NULL);
+   sepa = SCIPfindSepa(scip, SEPA_NAME);
+   cr_assert(sepa != NULL);
+   sepadata = SCIPsepaGetData(sepa);
+   cr_assert(sepadata != NULL);
 
    /* call minor detection */
-//   cr_expect(!sepadata->detectedminors);
-//   cr_expect(sepadata->nminors == 0);
-//   SCIP_CALL( detectMinors(scip, sepadata) );
-//   cr_expect(sepadata->detectedminors);
-//   cr_expect(sepadata->nminors == 1, "nminors = %d (expected 1)", sepadata->nminors);
-//}
+   cr_expect(!sepadata->detectedminors);
+   cr_expect(sepadata->nminors == 0);
+   SCIP_CALL( detectMinors(scip, sepadata) );
+   cr_expect(sepadata->detectedminors);
+   cr_expect(sepadata->nminors == 1, "nminors = %d (expected 1)", sepadata->nminors);
+}
