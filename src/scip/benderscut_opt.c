@@ -37,7 +37,7 @@
 
 #define BENDERSCUT_NAME             "optimality"
 #define BENDERSCUT_DESC             "Standard Benders' decomposition optimality cut"
-#define BENDERSCUT_PRIORITY      5000
+#define BENDERSCUT_PRIORITY         5000
 #define BENDERSCUT_LPCUT            TRUE
 
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
@@ -51,6 +51,7 @@
 struct SCIP_BenderscutData
 {
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
+   SCIP_Bool             calcmir;            /**< should the mixed integer rounding procedure be applied to cuts */
 };
 
 
@@ -805,6 +806,12 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
          "should cuts be generated and added to the cutpool instead of global constraints directly added to the problem.",
          &benderscutdata->addcuts, FALSE, SCIP_DEFAULT_ADDCUTS, NULL, NULL) );
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/mir",
+      SCIPbendersGetName(benders), BENDERSCUT_NAME);
+   SCIP_CALL( SCIPaddBoolParam(scip, paramname,
+         "should the mixed integer rounding procedure be applied to cuts",
+         &benderscutdata->calcmir, FALSE, SCIP_DEFAULT_CALCMIR, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -869,7 +876,7 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
    row = NULL;
    cons = NULL;
 
-   calcmir = SCIPgetStage(masterprob) >= SCIP_STAGE_INITSOLVE && SCIPgetSubscipDepth(masterprob) == 0;
+   calcmir = SCIPbenderscutGetData(benderscut)->calcmir && SCIPgetStage(masterprob) >= SCIP_STAGE_INITSOLVE && SCIPgetSubscipDepth(masterprob) == 0;
    success = FALSE;
    mirsuccess = FALSE;
 

@@ -688,6 +688,7 @@ NLPI:
   using the different score criteria in inference branching hierarchically
 - new parameters "heuristics/alns/nodesquotmin", "heuristics/alns/maxcallssamesol" and "heuristics/alns/initduringroot"
   to control neighborhoods in ALNS
+- new parameter "benders/default/benderscut/optimality/mir" to control whether mixed-integer rounding procedure is applied to Benders optimality cuts
 
 ### Data structures
 
