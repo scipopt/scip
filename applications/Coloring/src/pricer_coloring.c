@@ -794,7 +794,7 @@ SCIP_DECL_PARAMCHGD(paramChgdMaxvarsround)
    assert(paramdata != NULL);
    pricerdata = (SCIP_PRICERDATA*) paramdata;
 
-   if(  pricerdata->maxvarsround == pricerdata->oldmaxvarsround )
+   if( pricerdata->maxvarsround == pricerdata->oldmaxvarsround )
       return SCIP_OKAY;
 
    if ( pricerdata->maxvarsround <= 1 )
