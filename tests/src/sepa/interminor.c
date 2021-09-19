@@ -20,6 +20,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
+#include "scip/scipdefplugins.h"
 #include "scip/nlpi_ipopt.h"
 
 #include "scip/sepa_interminor.c"
@@ -39,11 +40,10 @@ void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* include minor separator */
-   SCIP_CALL( SCIPincludeSepaInterminor(scip) );
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* get nonlinear conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
