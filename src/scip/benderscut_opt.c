@@ -37,10 +37,11 @@
 
 #define BENDERSCUT_NAME             "optimality"
 #define BENDERSCUT_DESC             "Standard Benders' decomposition optimality cut"
-#define BENDERSCUT_PRIORITY      5000
+#define BENDERSCUT_PRIORITY         5000
 #define BENDERSCUT_LPCUT            TRUE
 
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
+#define SCIP_DEFAULT_CALCMIR             TRUE   /** Should the mixed integer rounding procedure be used for the cut */
 
 /*
  * Data structures
@@ -50,6 +51,7 @@
 struct SCIP_BenderscutData
 {
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
+   SCIP_Bool             calcmir;            /**< should the mixed integer rounding procedure be applied to cuts */
 };
 
 
@@ -250,6 +252,89 @@ SCIP_Real getNlpVarSol(
       varsol = SCIPvarGetNLPSol(var);
 
    return varsol;
+}
+
+/** calculates a MIR cut from the coefficients of the standard optimality cut */
+static
+SCIP_RETCODE computeMIRForOptimalityCut(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_VAR**            vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real*            vals,               /**< pointer to array of coefficients of the variables in the generated cut */
+   SCIP_Real             lhs,                /**< the left hand side of the cut */
+   SCIP_Real             rhs,                /**< the right hand side of the cut */
+   int                   nvars,              /**< the number of variables in the cut */
+   SCIP_Real*            cutcoefs,           /**< the coefficients of the MIR cut */
+   int*                  cutinds,            /**< the variable indices of the MIR cut */
+   SCIP_Real*            cutrhs,             /**< the RHS of the MIR cut */
+   int*                  cutnnz,             /**< the number of non-zeros in the cut */
+   SCIP_Bool*            success             /**< was the MIR cut successfully computed? */
+   )
+{
+   SCIP_AGGRROW* aggrrow;
+   SCIP_Real* rowvals;
+   int* rowinds;
+
+   SCIP_Real cutefficacy;
+   int cutrank;
+   SCIP_Bool cutislocal;
+
+   SCIP_Bool cutsuccess;
+
+   int i;
+
+   /* creating the aggregation row. There will be only a single row in this aggregation, since it is only used to
+    * compute the MIR coefficients
+    */
+   SCIP_CALL( SCIPaggrRowCreate(masterprob, &aggrrow) );
+
+   /* retrieving the indices for the variables in the optimality cut. All of the values must be negated, since the
+    * aggregation row requires a RHS, where the optimality cut is computed with an LHS
+    */
+   SCIP_CALL( SCIPallocBufferArray(masterprob, &rowvals, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(masterprob, &rowinds, nvars) );
+
+   assert(SCIPisInfinity(masterprob, rhs));
+   assert(!SCIPisInfinity(masterprob, lhs));
+   for( i = 0; i < nvars; i++ )
+   {
+      rowinds[i] = SCIPvarGetProbindex(vars[i]);
+      rowvals[i] = -vals[i];
+   }
+
+   /* adding the optimality cut to the aggregation row */
+   SCIP_CALL( SCIPaggrRowAddCustomCons(masterprob, aggrrow, rowinds, rowvals, nvars, -lhs, 1.0, 1, FALSE) );
+
+   /* calculating a flow cover for the optimality cut */
+   SCIP_CALL( SCIPcalcFlowCover(masterprob, sol, TRUE, 0.9999, FALSE, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz,
+         &cutefficacy, NULL, &cutislocal, &cutsuccess) );
+   (*success) = cutsuccess;
+
+   /* calculating the MIR coefficients for the optimality cut */
+   SCIP_CALL( SCIPcalcMIR(masterprob, sol, TRUE, 0.9999, TRUE, FALSE, FALSE, NULL, NULL, 0.001, 0.999, 1.0, aggrrow,
+         cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, &cutrank, &cutislocal, &cutsuccess) );
+   (*success) = ((*success) || cutsuccess);
+
+   /* the cut is only successful if the efficacy is high enough */
+   (*success) = (*success) && SCIPisEfficacious(masterprob, cutefficacy);
+
+   /* try to tighten the coefficients of the cut */
+   if( (*success) )
+   {
+      SCIP_Bool redundant;
+      int nchgcoefs;
+
+      redundant = SCIPcutsTightenCoefficients(masterprob, FALSE, cutcoefs, cutrhs, cutinds, cutnnz, &nchgcoefs);
+
+      (*success) = !redundant;
+   }
+
+   /* freeing the local memory */
+   SCIPfreeBufferArray(masterprob, &rowinds);
+   SCIPfreeBufferArray(masterprob, &rowvals);
+   SCIPaggrRowFree(masterprob, &aggrrow);
+
+   return SCIP_OKAY;
 }
 
 /** computes a standard Benders' optimality cut from the dual solutions of the LP */
@@ -640,7 +725,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
       {
          SCIP_Bool success;
 
-         SCIPdebugMsg(scip, "Numerical trouble generating optimality cut for subproblem %d.", probnumber);
+         SCIPdebugMsg(scip, "Numerical trouble generating optimality cut for subproblem %d.\n", probnumber);
 
          if( !nlprelaxation )
          {
@@ -721,11 +806,21 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
          "should cuts be generated and added to the cutpool instead of global constraints directly added to the problem.",
          &benderscutdata->addcuts, FALSE, SCIP_DEFAULT_ADDCUTS, NULL, NULL) );
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/mir",
+      SCIPbendersGetName(benders), BENDERSCUT_NAME);
+   SCIP_CALL( SCIPaddBoolParam(scip, paramname,
+         "should the mixed integer rounding procedure be applied to cuts",
+         &benderscutdata->calcmir, FALSE, SCIP_DEFAULT_CALCMIR, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
 /** Generates a classical Benders' optimality cut using the dual solutions from the subproblem or the input arrays. If
  *  the dual solutions are input as arrays, then a mapping between the array indices and the rows/variables is required.
+ *  As a cut strengthening approach, when an optimality cut is being generated (i.e. not for feasibility cuts) a MIR
+ *  procedure is performed on the row. This procedure attempts to find a stronger constraint, if this doesn't happen,
+ *  then the original constraint is added to SCIP.
+ *
  *  This method can also be used to generate a feasibility cut, if a problem to minimise the infeasibilities has been solved
  *  to generate the dual solutions
  */
@@ -760,8 +855,10 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
    int nvars;
    int varssize;
    int nmastervars;
+   SCIP_Bool calcmir;
    SCIP_Bool optimal;
    SCIP_Bool success;
+   SCIP_Bool mirsuccess;
 
    SCIP_Real checkobj;
    SCIP_Real verifyobj;
@@ -778,6 +875,10 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
 
    row = NULL;
    cons = NULL;
+
+   calcmir = SCIPbenderscutGetData(benderscut)->calcmir && SCIPgetStage(masterprob) >= SCIP_STAGE_INITSOLVE && SCIPgetSubscipDepth(masterprob) == 0;
+   success = FALSE;
+   mirsuccess = FALSE;
 
    /* retrieving the Benders' decomposition constraint handler */
    consbenders = SCIPfindConshdlr(masterprob, "benders");
@@ -831,7 +932,10 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
    }
    else
    {
-      /* creating an empty row or constraint for the Benders' cut */
+      /* initially a row/constraint is created for the optimality cut using the master variables and coefficients
+       * computed in computeStandardLPOptimalityCut. At this stage, the auxiliary variable is not added since the
+       * activity of the row/constraint in its current form is used to determine the validity of the optimality cut.
+       */
       if( addcut )
       {
          SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname, lhs, rhs, FALSE, FALSE, TRUE) );
@@ -900,10 +1004,75 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
 
       if( success )
       {
-         /* adding the auxiliary variable to the optimality cut */
+         /* adding the auxiliary variable to the optimality cut. The auxiliary variable is added to the vars and vals
+          * arrays prior to the execution of the MIR procedure. This is necessary because the MIR procedure must be
+          * executed on the complete cut, not just the row/constraint without the auxiliary variable.
+          */
          if( !feasibilitycut )
          {
             SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, vars, vals, &nvars, probnumber) );
+         }
+
+         /* performing the MIR procedure. If the procedure is successful, then the vars and vals arrays are no longer
+          * needed for creating the optimality cut. These are superseeded with the cutcoefs and cutinds arrays. In the
+          * case that the MIR procedure is successful, the row/constraint that has been created previously is destroyed
+          * and the MIR cut is added in its place
+          */
+         if( calcmir )
+         {
+            SCIP_Real* cutcoefs;
+            int* cutinds;
+            SCIP_Real cutrhs;
+            int cutnnz;
+
+            /* allocating memory to compute the MIR cut */
+            SCIP_CALL( SCIPallocBufferArray(masterprob, &cutcoefs, nvars) );
+            SCIP_CALL( SCIPallocBufferArray(masterprob, &cutinds, nvars) );
+
+            SCIP_CALL( computeMIRForOptimalityCut(masterprob, sol, vars, vals, lhs, rhs, nvars, cutcoefs,
+                  cutinds, &cutrhs, &cutnnz, &mirsuccess) );
+
+            /* if the MIR cut was computed successfully, then the current row/constraint needs to be destroyed and
+             * replaced with the updated coefficients
+             */
+            if( mirsuccess )
+            {
+               SCIP_VAR** mastervars;
+               int i;
+
+               mastervars = SCIPgetVars(masterprob);
+
+               if( addcut )
+               {
+                  SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
+
+                  SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname,
+                        -SCIPinfinity(masterprob), cutrhs, FALSE, FALSE, TRUE) );
+
+                  for( i = 0; i < cutnnz; i++)
+                  {
+                     SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervars[cutinds[i]], cutcoefs[i]) );
+                  }
+               }
+               else
+               {
+                  SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
+
+                  SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cons, cutname, 0, NULL, NULL,
+                        -SCIPinfinity(masterprob), cutrhs) );
+                  SCIP_CALL( SCIPsetConsDynamic(masterprob, cons, TRUE) );
+                  SCIP_CALL( SCIPsetConsRemovable(masterprob, cons, TRUE) );
+
+                  for( i = 0; i < cutnnz; i++ )
+                  {
+                     SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervars[cutinds[i]], cutcoefs[i]) );
+                  }
+               }
+            }
+
+            /* freeing the memory required to compute the MIR cut */
+            SCIPfreeBufferArray(masterprob, &cutinds);
+            SCIPfreeBufferArray(masterprob, &cutcoefs);
          }
 
          /* adding the constraint to the master problem */
@@ -911,8 +1080,11 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
          {
             SCIP_Bool infeasible;
 
-            /* adding the auxiliary variable coefficient to the row */
-            if( !feasibilitycut )
+            /* adding the auxiliary variable coefficient to the row. This is only added if the MIR procedure is not
+             * successful. If the MIR procedure was successful, then the auxiliary variable is already included in the
+             * row
+             */
+            if( !feasibilitycut && !mirsuccess )
             {
                SCIP_CALL( SCIPaddVarToRow(masterprob, row, vars[nvars - 1], vals[nvars - 1]) );
             }
@@ -932,8 +1104,11 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
          }
          else
          {
-            /* adding the auxiliary variable coefficient to the constraint */
-            if( !feasibilitycut )
+            /* adding the auxiliary variable coefficient to the row. This is only added if the MIR procedure is not
+             * successful. If the MIR procedure was successful, then the auxiliary variable is already included in the
+             * constraint.
+             */
+            if( !feasibilitycut && !mirsuccess )
             {
                SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, vars[nvars - 1], vals[nvars - 1]) );
             }
