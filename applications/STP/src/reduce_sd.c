@@ -3715,28 +3715,20 @@ SCIP_RETCODE reduce_sdStarPc2(
                {
                   assert(star_base[starbase] != SDSTAR_BASE_UNSET);
 
-                  /* path still valid?   */
-                  if( 1 ) //star_base[starbase] != SDSTAR_BASE_KILLED || !EQ(dist[starnode], dcsr->cost[e]) )
-                  {
-                     if( !usestrongreds && EQ(dist[starnode], dcsr->cost[e]) )
-                        continue;
+                  if( !usestrongreds && EQ(dist[starnode], dcsr->cost[e]) )
+                     continue;
 
-                     star_base[starnode] = SDSTAR_BASE_KILLED;
-                     edge_deletable[edgeid_csr[e] / 2] = TRUE;
+                  star_base[starnode] = SDSTAR_BASE_KILLED;
+                  edge_deletable[edgeid_csr[e] / 2] = TRUE;
 
-                     dcsr->cost = cost_dcsr_org;
-                     dcsr->cost2 = cost_dcsr_biased;
-                     graph_dcsr_deleteEdgeBi(scip, dcsr, e);
-                     dcsr->cost = cost_dcsr_biased;
-                     dcsr->cost2 = NULL;
+                  dcsr->cost = cost_dcsr_org;
+                  dcsr->cost2 = cost_dcsr_biased;
+                  graph_dcsr_deleteEdgeBi(scip, dcsr, e);
+                  dcsr->cost = cost_dcsr_biased;
+                  dcsr->cost2 = NULL;
 
-                     (*nelims)++;
-                     enext--;
-                  }
-                  else
-                  {
-                     runloop = TRUE;
-                  }
+                  (*nelims)++;
+                  enext--;
                }
             } /* traverse star nodes */
          } /* if success */
