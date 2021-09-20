@@ -118,7 +118,6 @@ set(settings_fastMIP
     "../../../scripts/trainEstimation/periodic_report"
   )
 set(settings_MINLP
-#    "emphasis_numerics"
     "default"
     "undercover1"
     "undercover2"
@@ -129,6 +128,7 @@ set(settings_MINLP
     "nlpdivingsolvesubmip"
     "nlpdiving4"
     "separating_aggressive"
+    "emphasis_numerics"
 )
 
 set(settings_Bilinrelax
