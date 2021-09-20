@@ -1546,7 +1546,8 @@ SCIP_RETCODE separateDeterminant(
    SCIP_Bool*            isxjkdiag,          /**< is X_jk diagonal? (i.e. j = k) */
    SCIP_Bool*            isxjldiag,          /**< is X_jl diagonal? (i.e. j = l) */
    int*                  basicvarpos2tableaurow,/**< map between basic var and its tableau row */
-   SCIP_HASHMAP*         tableau,            /**< map between var an its tableau row */
+   int*                  basicvarpos2tableaurow,/**< map from basic var to its tableau row */
+   SCIP_HASHMAP*         tableau,            /**< map from var to its tableau row */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
