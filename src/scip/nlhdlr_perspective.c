@@ -801,8 +801,8 @@ SCIP_RETCODE computeOffValues(
 
    SCIPfreeExpriter(&it);
    SCIPhashmapFree(&auxvarmap);
-   SCIPfreeBufferArray(scip, &origvals0);
    SCIPfreeBufferArray(scip, &origvars);
+   SCIPfreeBufferArray(scip, &origvals0);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    return SCIP_OKAY;

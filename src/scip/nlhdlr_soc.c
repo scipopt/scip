@@ -2132,8 +2132,8 @@ CLEANUP:
    SCIPfreeBufferArrayNull(scip, &bp);
    SCIPfreeBufferArray(scip, &eigvals);
    SCIPfreeBufferArray(scip, &lincoefs);
-   SCIPfreeBufferArray(scip, &occurringexprs);
    SCIPfreeBufferArray(scip, &eigvecmatrix);
+   SCIPfreeBufferArray(scip, &occurringexprs);
    SCIPhashmapFree(&expr2idx);
 
    return SCIP_OKAY;
