@@ -432,16 +432,14 @@ SCIP_RETCODE createBlockproblem(
       /* reallocate memory if we have more variables than maxnconsvars */
       if( nconsvars > maxnconsvars )
       {
-         /* free old memory */
-         SCIPfreeBufferArray(blockproblem->blockscip, &consvals);
-         SCIPfreeBufferArray(blockproblem->blockscip, &consvars);
+         int newsize;
 
          /* calculate new size */
-         maxnconsvars = MAX(2 * maxnconsvars, nconsvars); /* at least double size */
+         newsize = SCIPcalcMemGrowSize(scip, MAX(2 * maxnconsvars, nconsvars)); /* at least double size */
 
-         /* allocate memory again */
-         SCIP_CALL( SCIPallocBufferArray(blockproblem->blockscip, &consvars, maxnconsvars) );
-         SCIP_CALL( SCIPallocBufferArray(blockproblem->blockscip, &consvals, maxnconsvars) );
+         SCIP_CALL( SCIPreallocBufferArray(blockproblem->blockscip, &consvars, newsize) );
+         SCIP_CALL( SCIPreallocBufferArray(blockproblem->blockscip, &consvals, newsize) );
+         maxnconsvars = newsize;
       }
 
       SCIP_CALL( SCIPgetConsVars(scip, linkingconss[c], consvars, nconsvars, success) );
