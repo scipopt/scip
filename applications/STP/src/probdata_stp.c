@@ -3442,6 +3442,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    int  nsoledges;
    STP_Bool* orgedges;
    STP_Bool* orgnodes;
+   int stp_type;
 
 #ifdef WITH_UG
    if( getUgRank() != 0 )
@@ -3459,6 +3460,10 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    assert(graph != NULL);
    sol = SCIPgetBestSol(scip);
    assert(sol);
+
+   stp_type = graph->stp_type;
+   if( graph->stp_type == STP_SPG && graph->pcancestors != NULL )
+      graph->stp_type = STP_RPCSPG;
 
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_SAP ||graph->stp_type == STP_DCSTP
       || graph->stp_type == STP_NWSPG || graph->stp_type == STP_DHCSTP || graph->stp_type == STP_GSTP
@@ -3637,6 +3642,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 
       solhistory_free(scip, &solhistory);
    }
+
+   graph->stp_type = stp_type;
 
    return SCIP_OKAY;
 }
