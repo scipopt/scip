@@ -63,7 +63,7 @@
 #include "relax_stpdp.h"
 
 
-#define VERSION_SCIPJACK "1.3"
+#define VERSION_SCIPJACK "2.0"
 
 #define STP_SYM_PRIZE
 #define STP_AGG_SYM
