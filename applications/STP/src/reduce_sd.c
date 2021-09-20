@@ -229,23 +229,15 @@ SCIP_RETCODE sdStarBiasedProcessNode(
             {
                assert(star_base[starbase] != SDSTAR_BASE_UNSET);
 
-               /* path still valid? todo check */
-               if( 1 ) // star_base[starbase] != SDSTAR_BASE_KILLED )
-               {
-                  if( !usestrongreds && SCIPisEQ(scip, dijkdata->node_distance[starnode], dcsr->cost[e]) )
-                     continue;
+               if( !usestrongreds && SCIPisEQ(scip, dijkdata->node_distance[starnode], dcsr->cost[e]) )
+                  continue;
 
-                  star_base[starnode] = SDSTAR_BASE_KILLED;
-                  edge_deletable[edgeid_csr[e] / 2] = TRUE;
-                  graph_dcsr_deleteEdgeBi(scip, dcsr, e);
+               star_base[starnode] = SDSTAR_BASE_KILLED;
+               edge_deletable[edgeid_csr[e] / 2] = TRUE;
+               graph_dcsr_deleteEdgeBi(scip, dcsr, e);
 
-                  (*nelims)++;
-                  enext--;
-               }
-               else
-               {
-                  runloop = TRUE;
-               }
+               (*nelims)++;
+               enext--;
             }
          } /* traverse star nodes */
       } /* if success */
