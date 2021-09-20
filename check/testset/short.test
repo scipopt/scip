@@ -16,6 +16,7 @@ instances/MIP/misc03.mps
 instances/MIP/p0033.osil
 instances/MIP/p0548.mps
 instances/MIP/rgn.mps
+instances/MIP/semicon1.mps
 instances/MIP/stein27.fzn
 instances/MIP/stein27_inf.lp
 instances/MIP/vpm2.fzn
@@ -25,6 +26,7 @@ instances/MINLP/ex1266.nl
 instances/MINLP/ex1266.mps
 instances/MINLP/gastrans.nl
 instances/MINLP/meanvarx.nl
+instances/MINLP/meanvarxsc.lp
 instances/MINLP/m3.osil
 instances/MINLP/parincQuadratic.osil
 instances/MINLP/tltr.mps
@@ -36,8 +38,6 @@ instances/PseudoBoolean/normalized-mds_50_25_5.opb
 instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb
 instances/PseudoBoolean/normalized-t2001.13queen13.1110976730--soft-33-100-0.wbo
 instances/PseudoBoolean/wheel010.lap.opb.pre.cip
-instances/Semicontinuous/meanvarxsc.lp
-instances/Semicontinuous/semicon1.mps
 instances/SAT/bart10.shuffled.cnf
 instances/SOS/findRoot.lp
 instances/SOS/pcu_0.01.lp

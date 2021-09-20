@@ -261,7 +261,8 @@ void SCIPmergeRowprepTerms(
 
 /** Cleans up and attempts to improve rowprep
  *
- * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the row.
+ * Drops small or large coefficients if their ratio is beyond separating/maxcoefratiofacrowprep / numerics/feastol,
+ * if this can be done by relaxing the row.
  * Scales coefficients up to reach minimal violation, if possible.
  * Scaling is omitted if violation is very small (\ref ROWPREP_SCALEUP_VIOLNONZERO) or
  * maximal coefficient would become huge (\ref ROWPREP_SCALEUP_MAXMAXCOEF).
@@ -270,10 +271,10 @@ void SCIPmergeRowprepTerms(
  * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the row least.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
- * Thus, the coefrange can be obtained via `REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1])` (if nvars>0).
+ * Thus, the coefratio can be obtained via `REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1])` (if nvars>0).
  *
  * `success` is set to TRUE if and only if the rowprep satisfies the following:
- * - the coefrange is below `maxcoefrange`
+ * - the coefratio is below separating/maxcoefratiofacrowprep / numerics/feastol
  * - the violation is at least `minviol`
  * - the violation is reliable or `minviol` = 0
  * - the absolute value of coefficients are below SCIPinfinity()
@@ -284,7 +285,6 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
-   SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
    SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
    SCIP_Real*            viol,               /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
    SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
@@ -292,16 +292,17 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
 /** Cleans up and attempts to improve rowprep without regard for violation
  *
- * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the row.
+ * Drops small or large coefficients if their ratio is beyond separating/maxcoefratiofacrowprep / numerics/feastol,
+ * if this can be done by relaxing the row.
  * Scales coefficients and side to have maximal coefficient in `[1/maxcoefbound,maxcoefbound]`.
  * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the row.
  * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the row least.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
- * Thus, the coefrange can be obtained via `REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1])` (if nvars>0).
+ * Thus, the coefratio can be obtained via `REALABS(rowprep->coefs[0]) / REALABS(rowprep->coefs[rowprep->nvars-1])` (if nvars>0).
  *
  * `success` is set to TRUE if and only if the rowprep satisfies the following:
- * - the coefrange is below `maxcoefrange`
+ * - the coefratio is below separating/maxcoefratiofacrowprep / numerics/feastol
  * - the absolute value of coefficients are below SCIPinfinity()
  * - the absolute value of the side is below SCIPinfinity()
  *
@@ -312,7 +313,6 @@ SCIP_RETCODE SCIPcleanupRowprep2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
-   SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
    SCIP_Real             maxcoefbound,       /**< bound on absolute value of largest coefficient */
    SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
    );

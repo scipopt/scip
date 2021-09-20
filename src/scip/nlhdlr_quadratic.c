@@ -3285,8 +3285,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
       /* merge coefficients that belong to same variable */
       SCIPmergeRowprepTerms(scip, rowprep);
 
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, nlhdlrdata->mincutviolation,
-               &violation, &success) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, nlhdlrdata->mincutviolation, &violation, &success) );
       INTERLOG(if( !success) printf("Clean up failed\n"); )
    }
 
