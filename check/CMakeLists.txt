@@ -322,8 +322,8 @@ set(instances_sparsify
 # Semicontinuous instances
 #
 set(instances_Semicontinuous
-    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
-    "instances/Semicontinuous/semicon1.mps\;1.1"
+    "instances/MINLP/meanvarxsc.lp\;14.36918"
+    "instances/MIP/semicon1.mps\;1.1"
     )
 #
 # SAT instance(s)
