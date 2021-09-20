@@ -119,7 +119,7 @@ set(settings_fastMIP
   )
 set(settings_MINLP
 #    "emphasis_numerics"
-    "minlp"
+    "default"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -132,7 +132,7 @@ set(settings_MINLP
 )
 
 set(settings_Bilinrelax
-    "minlp"
+    "default"
     "bilinrelax"
   )
 
