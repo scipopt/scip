@@ -340,7 +340,7 @@ SCIP_RETCODE contractEdgeNoFixedEnd(
 
    if( Is_term(g->term[t]) )
    {
-      if( graph_pc_evalTermIsNonLeaf(scip, g, t) )
+      if( graph_pc_evalTermIsNonLeaf(scip, g, t) || g->grad[t] == 0 )
       {
          if( g->term2edge[t] != TERM2EDGE_NONLEAFTERM )
          {
