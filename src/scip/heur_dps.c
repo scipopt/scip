@@ -138,7 +138,6 @@ SCIP_RETCODE assignLinking(
    )
 {
    int newlabel;
-   int maxgraphedge;
    int v;
 
    assert(scip != NULL);
@@ -147,13 +146,6 @@ SCIP_RETCODE assignLinking(
    assert(conss != NULL);
    assert(varlabels != NULL);
    assert(conslabels != NULL);
-
-   /* we do not need the block decomposition graph of the statistics */
-   SCIP_CALL( SCIPgetIntParam(scip, "decomposition/maxgraphedge", &maxgraphedge) );
-   if( !SCIPisParamFixed(scip, "decomposition/maxgraphedge") )
-   {
-      SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", 0) );
-   }
 
    /* copy the labels */
    SCIP_CALL( SCIPdecompSetVarsLabels(newdecomp, vars, varlabels, nvars) );
@@ -201,8 +193,6 @@ SCIP_RETCODE assignLinking(
       SCIPsortIntPtr(varlabels, (void**)vars, nvars);
    }
    assert(varlabels[0] != SCIP_DECOMP_LINKVAR);
-
-   SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", maxgraphedge) );
 
    return SCIP_OKAY;
 }
@@ -1564,6 +1554,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    SCIP_Real allslacksval;
    SCIP_Real blocksolval;
    SCIP_STATUS status;
+   int maxgraphedge;
    int ndecomps;
    int nvars;
    int nconss;
@@ -1618,6 +1609,13 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       return SCIP_OKAY;
    }
 
+   /* we do not need the block decomposition graph of the statistics */
+   SCIP_CALL( SCIPgetIntParam(scip, "decomposition/maxgraphedge", &maxgraphedge) );
+   if( !SCIPisParamFixed(scip, "decomposition/maxgraphedge") )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", 0) );
+   }
+
    vars = SCIPgetVars(scip);
    conss = SCIPgetConss(scip);
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedvars, vars, nvars) );
@@ -1643,6 +1641,18 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       /* number of blocks can get smaller */
       nblocks = SCIPdecompGetNBlocks(decomp);
    }
+   else
+   {
+      /* The decomposition statistics were computed during transformation of the decomposition store.
+       * Since propagators can have changed the number of constraints/variables,
+       * the statistics are no longer up-to-date and have to be recomputed.
+       */
+      SCIPcomputeDecompStats(scip, decomp, TRUE);
+      nblocks = SCIPdecompGetNBlocks(decomp);
+   }
+
+   /* reset parameter */
+   SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", maxgraphedge) );
 
 #ifdef SCIP_DEBUG
       char buffer[SCIP_MAXSTRLEN];
