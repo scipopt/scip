@@ -76,7 +76,7 @@ struct SCIP_SepaData
 };
 
 /* these represent a row */
-struct myarray
+struct rowdata
 {
    int*                  vals;               /**< index of the column */
    int                   rowidx;             /**< index corresponding to variable of that row */
@@ -216,7 +216,7 @@ SCIP_RETCODE getMinorVars(
  * we have a matrix, M, indexed by the variables
  * M(xi, xk) is the auxiliary variable of xi * xk if it exists
  * We store, for each row of the matrix, the indices of the nonzero column entries (assoc with the given row) and the auxiliary variable for xi * xk
- * The nonzero column entries are stored as an array (struct myarray)
+ * The nonzero column entries are stored as an array (struct rowdata)
  * So we have a hashmap mapping each variable (row of the matrix) with its array representing the nonzero entries of the row.
  */
 static
@@ -235,9 +235,9 @@ SCIP_RETCODE insertIndex(
    /* check whether variable has an array associated to it */
    if( SCIPhashmapExists(rowmap, (void*)row) )
    {
-      struct myarray* arr;
+      struct rowdata* arr;
 
-      arr = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)row);
+      arr = (struct rowdata*)SCIPhashmapGetImage(rowmap, (void *)row);
 
       /* reallocate if necessary */
       if( arr->valssize < arr->nvals + 1 )
@@ -256,7 +256,7 @@ SCIP_RETCODE insertIndex(
    }
    else
    {
-      struct myarray* arr;
+      struct rowdata* arr;
 
       /* create index array */
       SCIP_CALL( SCIPallocBuffer(scip, &arr) );
@@ -394,9 +394,9 @@ SCIP_RETCODE detectMinors(
    /* sort the column entries */
    for( i = 0; i < nrowvars; ++i )
    {
-      struct myarray* row;
+      struct rowdata* row;
 
-      row = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
+      row = (struct rowdata*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
       SCIPsortInt(row->vals, row->nvals);
    }
 
@@ -405,16 +405,16 @@ SCIP_RETCODE detectMinors(
    for( i = 0; i < nrowvars; ++i )
    {
       int j;
-      struct myarray* rowi;
+      struct rowdata* rowi;
 
-      rowi = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
+      rowi = (struct rowdata*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
 
       for( j = i + 1; j < nrowvars; ++j )
       {
-         struct myarray* rowj;
+         struct rowdata* rowj;
          int ninter;
 
-         rowj = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[j]]);
+         rowj = (struct rowdata*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[j]]);
 
          SCIPcomputeArraysIntersectionInt(rowi->vals, rowi->nvals, rowj->vals, rowj->nvals, intersection, &ninter);
 
