@@ -1223,7 +1223,7 @@ SCIP_RETCODE reduceStp(
 
    assert(scip && redsol);
 
-   if( SCIPisLE(scip, (double) nterms / (double) nnodes, STP_BND_THRESHOLD) )
+   if( SCIPisLE(scip, (SCIP_Real) nterms / (SCIP_Real) nnodes, STP_BND_THRESHOLD) )
       bred = TRUE;
 
    /* allocate memory */
@@ -1324,11 +1324,11 @@ SCIP_RETCODE reducePc(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
 
-   if( SCIPisLE(scip, (double) nterms / (double) nnodes, STP_BND_THRESHOLD) )
+   if( SCIPisLE(scip, (SCIP_Real) nterms / (SCIP_Real) nnodes, STP_BND_THRESHOLD) )
    {
       bred = TRUE;
 
-      if( SCIPisGT(scip, (double) (nterms + graph_pc_nNonLeafTerms(g)) / (double) nnodes, STP_BND_THRESHOLD ) )
+      if( SCIPisGT(scip, (SCIP_Real) (nterms + graph_pc_nNonLeafTerms(g)) / (SCIP_Real) nnodes, STP_BND_THRESHOLD ) )
          bred = FALSE;
    }
 
@@ -1381,7 +1381,7 @@ SCIP_RETCODE reduceMw(
    assert(scip != NULL);
    assert(redsol != NULL);
 
-   if( SCIPisLE(scip, (double) nterms / (double) nnodes, 0.1) )
+   if( SCIPisLE(scip, (SCIP_Real) nterms / (SCIP_Real) nnodes, 0.1) )
       bred = TRUE;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes + 1) );
