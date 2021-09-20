@@ -547,7 +547,7 @@ SCIP_RETCODE createBlockproblem(
          ++nblockvars;
       }
 
-      /* add linking constraint with slackvariable */
+      /* add linking constraint with slack variable */
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s", SCIPconsGetName(linkingconss[c]));
       SCIP_CALL( SCIPcreateConsBasicLinear(blockproblem->blockscip, &newcons, consname, nblockvars, blockvars, blockvals, lhs, rhs) );
       SCIP_CALL( SCIPaddCons(blockproblem->blockscip, newcons) );
@@ -561,7 +561,7 @@ SCIP_RETCODE createBlockproblem(
       linkings[c]->blocknumbers[linkings[c]->nblocks] = blocknumber;
       blockproblem->linkingindices[blockproblem->nlinking] = c;
 
-      /* calculate minimal und maximal activity (exclude slackvariables) */
+      /* calculate minimal und maximal activity (exclude slack variables) */
       minact = 0;
       maxact = 0;
       mininfinite = FALSE;
@@ -841,7 +841,7 @@ SCIP_RETCODE roundPartition(
    return SCIP_OKAY;
 }
 
-/** calculates initial partition */
+/** calculates initial partition and sets rhs/lhs in blockproblems */
 static
 SCIP_RETCODE initCurrent(
    SCIP*                 scip,               /**< SCIP data structure of main scip */
@@ -867,6 +867,7 @@ SCIP_RETCODE initCurrent(
 
    SCIPdebugMsg(scip, "initialize partition\n");
 
+   /* for each linking constraint the rhs/lhs is split between the blocks */
    for( c = 0; c < nlinking; c++ )
    {
       linking = linkings[c];
@@ -1038,6 +1039,7 @@ SCIP_RETCODE updatePartition(
    /* set values of non violated blocks */
    if( SCIPisPositive(scip, sumviols) )
    {
+      /* rhs of original linking constraint is violated */
       SCIP_Real residual = sumviols;
       SCIP_Real part;
       SCIP_Real shift_tmp;
@@ -1045,6 +1047,9 @@ SCIP_RETCODE updatePartition(
       assert(linking->hasrhs);
       assert(*nviolatedblocksrhs != 0);
 
+      /* substract from each non violated block the same amount with respect to minimal/maximal activity,
+       * so that the shift is zero in sum
+       */
       for( v = 0; v < linking->nblocks - *nviolatedblocksrhs; v++ )
       {
          part = linking->currentrhs[nonviolatedblocksrhs[v]] - residual/(linking->nblocks - *nviolatedblocksrhs - v);
@@ -1061,6 +1066,7 @@ SCIP_RETCODE updatePartition(
    }
    if( SCIPisNegative(scip, sumviols) )
    {
+      /* lhs of original linking constraint is violated */
       SCIP_Real residual = sumviols;
       SCIP_Real part;
       SCIP_Real shift_tmp;
@@ -1068,6 +1074,9 @@ SCIP_RETCODE updatePartition(
       assert(linking->haslhs);
       assert(*nviolatedblockslhs != 0);
 
+      /* add to each non violated block the same amount with respect to minimal/maximal activity,
+       * so that the shift is zero in sum
+       */
       for( v = 0; v < linking->nblocks - *nviolatedblockslhs; v++ )
       {
          part = linking->currentlhs[nonviolatedblockslhs[v]] - residual/(linking->nblocks - *nviolatedblockslhs - v);
@@ -1129,7 +1138,10 @@ SCIP_RETCODE updatePartition(
    return SCIP_OKAY;
 }
 
-/** update lambda */
+/** update penalty parameters lambda
+ *
+ * if a linking constraint is violated two times in succession, the corresponding penalty parameter is increased in each block
+ */
 static
 SCIP_RETCODE updateLambda(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1248,10 +1260,10 @@ SCIP_RETCODE reuseSolution(
       for( c = 0; c < blockproblem[b]->nlinking; c++ )
       {
          LINKING* linking; /* linking data structure of this constraint */
-         SCIP_VAR* rvar; /* slackvariable z_r */
-         SCIP_VAR* lvar; /* slackvariable z_l */
-         SCIP_Real rval; /* value of slackvariable z_r */
-         SCIP_Real lval; /* value of slackvariable z_l */
+         SCIP_VAR* rvar; /* slack variable z_r */
+         SCIP_VAR* lvar; /* slack variable z_l */
+         SCIP_Real rval; /* value of slack variable z_r */
+         SCIP_Real lval; /* value of slack variable z_l */
          SCIP_Real activitycons; /* activity of constraint*/
          SCIP_Real activity; /* activity of constraint without slack variables */
          SCIP_Real rhs; /* current right hand side */
@@ -1824,7 +1836,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
          }
       }
 
-      /* all slackvariables are zero -> we found a feasible solution */
+      /* all slack variables are zero -> we found a feasible solution */
       if( SCIPisZero(scip, allslacksval) )
       {
          SCIP_SOL* newsol;
