@@ -260,15 +260,19 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
    solfile = fopen(solfilename, "r");
    cr_assert_not_null(solfile);
 
-   /* get name of reference solution file to compare solfile with */
-   strcpy(refsolfilename, __FILE__);
-   dirname(refsolfilename);
-   strcat(refsolfilename, "/lp1.refsol");
+   /* dual solution is not unique; the one we compare with seems to be the one given by CPLEX and SoPlex at the moment (2021) */
+   if( strncmp(SCIPlpiGetSolverName(), "CPLEX", 5) == 0 || strncmp(SCIPlpiGetSolverName(), "SoPlex", 6) == 0 )
+   {
+      /* get name of reference solution file to compare solfile with */
+      strcpy(refsolfilename, __FILE__);
+      dirname(refsolfilename);
+      strcat(refsolfilename, "/lp1.refsol");
 
-   /* open reference solfile */
-   refsolfile = fopen(refsolfilename, "r");
-   cr_assert_not_null(refsolfile);
-   cr_expect_file_contents_eq(solfile, refsolfile);
+      /* open reference solfile */
+      refsolfile = fopen(refsolfilename, "r");
+      cr_assert_not_null(refsolfile);
+      cr_expect_file_contents_eq(solfile, refsolfile);
+   }
 
    /* cleanup */
    fclose(solfile);
