@@ -322,7 +322,7 @@ set(instances_sparsify
 # Semicontinuous instances
 #
 set(instances_Semicontinuous
-    "instances/MINLP/meanvarxsc.lp\;14.36918"
+    "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
     "instances/MIP/semicon1.mps\;1.1"
     )
 #
