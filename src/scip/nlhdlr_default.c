@@ -328,7 +328,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
          }
 
          /* straighten out numerics */
-         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIPgetHugeValue(scip), &success) );
 
          /* if cleanup removed all but one variable, then the cut is essentially a bound; we can skip this and rely on boundtightening */
          if( success && SCIProwprepGetNVars(rowprep) > 1 )

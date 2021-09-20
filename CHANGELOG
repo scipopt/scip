@@ -574,13 +574,14 @@ NLPI:
 - deleted parameter "constraints/orbitope/usedynamicprop"
 - changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
 - deleted parameter "propagating/symmetry/disableofrestart"
-- removed constraints/nonlinear/cutmaxrange, constraints/nonlinear/linfeasshift, constraints/nonlinear/assumeconvex, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont
+- removed constraints/nonlinear/linfeasshift, constraints/nonlinear/assumeconvex, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont
 - removed constraints/nonlinear/upgrade/abspower
 - removed constraints/nonlinear/upgrade/and, use constraints/nonlinear/reformbinprodsand instead
 - removed constraints/nonlinear/upgrade/bivariate
 - removed constraints/nonlinear/upgrade/quadratic, use nlhdlr/quadratic/enabled instead
 - changed default of constraints/nonlinear/maxproprounds from 1 to 10
 - replaced constraints/nonlinear/enfocutsremovable by constraints/nonlinear/rownotremovable
+- replaced constraints/nonlinear/cutmaxrange by separating/maxcoefratiofacrowprep
 - removed constraints/quadratic/sepafreq, constraints/quadratic/propfreq, constraints/quadratic/proptiming, constraints/quadratic/eagerfreq, constraints/quadratic/maxprerounds, constraints/quadratic/delaysepa, constraints/quadratic/delayprop, constraints/quadratic/presoltiming
 - removed constraints/quadratic/replacebinaryprod, use constraints/nonlinear/reformbinprodsfac instead
 - removed constraints/quadratic/empathy4and, use constraints/nonlinear/reformbinprodsand instead
