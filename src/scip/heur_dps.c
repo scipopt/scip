@@ -1647,7 +1647,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
        * Since propagators can have changed the number of constraints/variables,
        * the statistics are no longer up-to-date and have to be recomputed.
        */
-      SCIPcomputeDecompStats(scip, decomp, TRUE);
+      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp, TRUE) );
       nblocks = SCIPdecompGetNBlocks(decomp);
    }
 
