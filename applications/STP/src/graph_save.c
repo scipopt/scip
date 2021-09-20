@@ -335,7 +335,7 @@ SCIP_RETCODE graph_writeReductionRatioStatsLive(
    SCIP_CALL( SCIPgetIntParam(scip, "stp/minelims", &(minelims)) );
 
    time_start = clock();
-   SCIP_CALL( reduce(scip, graph, redsol, STP_REDUCTION_ADVANCED, minelims, TRUE) );
+   SCIP_CALL( reduce_exec(scip, graph, redsol, STP_REDUCTION_ADVANCED, minelims, TRUE) );
    time_end = clock();
 
    SCIP_CALL( SCIPgetStringParam(scip, "stp/redstatsfile", &filename) );

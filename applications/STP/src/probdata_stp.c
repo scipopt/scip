@@ -394,7 +394,7 @@ SCIP_RETCODE presolveStp(
 #endif
 
    /* the actual presolving; NOTE: we always want to have userec=TRUE */
-   SCIP_CALL( reduce(scip, graph, redsol, reduction, probdata->minelims, TRUE) );
+   SCIP_CALL( reduce_exec(scip, graph, redsol, reduction, probdata->minelims, TRUE) );
 
    probdata->presolub = reduce_solGetUpperBoundWithOffset(redsol);
    SCIPdebugMessage("presol ub: %f \n", probdata->presolub);

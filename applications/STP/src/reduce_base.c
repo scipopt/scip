@@ -45,10 +45,10 @@
 #define STP_RED_MAXNOUTROUNDS_PC  4
 #define STP_RED_MAXNOUTROUNDS_MW  4
 
-
 #define STP_BND_THRESHOLD 0.03
-#include "mincut.h"
+#define USE_FULLSEPA
 
+#include "mincut.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1193,7 +1193,7 @@ void reduce_baseFree(
 
 
 /** basic reduction package for the STP */
-SCIP_RETCODE reduceStp(
+SCIP_RETCODE reduce_stp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    REDSOL*               redsol,             /**< primal solution container */
@@ -1252,7 +1252,7 @@ SCIP_RETCODE reduceStp(
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,
                           .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
 
-      SCIP_CALL( redLoopStp(scip, g, &redbase) );
+      SCIP_CALL( reduce_redLoopStp(scip, g, &redbase) );
    }
 
    SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n", reduce_solGetOffset(redsol));
@@ -1272,7 +1272,7 @@ SCIP_RETCODE reduceStp(
 }
 
 /** basic reduction package for the (R)PCSTP */
-SCIP_RETCODE reducePc(
+SCIP_RETCODE reduce_pc(
    SCIP*                 scip,               /**< SCIP data structure */
    REDSOL*               redsol,             /**< solution storage */
    GRAPH*                g,                  /**< graph data structure */
@@ -1336,7 +1336,7 @@ SCIP_RETCODE reducePc(
    reductbound = reduce_getMinNreductions(g, minelims);
 
    /* reduction loop */
-   SCIP_CALL( redLoopPc(scip, redsol, g, vnoi, path, nodearrreal, heap, state,
+   SCIP_CALL( reduce_redLoopPc(scip, redsol, g, vnoi, path, nodearrreal, heap, state,
          vbase, nodearrint, edgearrint, nodearrint2, nodearrchar,
          advanced, bred, userec && advanced, reductbound, userec, nodereplacing, usestrongreds) );
 
@@ -1356,7 +1356,7 @@ SCIP_RETCODE reducePc(
 }
 
 /** reduction package for the MWCSP */
-SCIP_RETCODE reduceMw(
+SCIP_RETCODE reduce_mw(
    SCIP*                 scip,               /**< SCIP data structure */
    REDSOL*               redsol,             /**< solution storage */
    GRAPH*                g,                  /**< graph data structure */
@@ -1400,7 +1400,7 @@ SCIP_RETCODE reduceMw(
    }
 
    /* reduction loop */
-   SCIP_CALL( redLoopMw(scip, redsol, g, vnoi, nodearrreal, state,
+   SCIP_CALL( reduce_redLoopMw(scip, redsol, g, vnoi, nodearrreal, state,
          vbase, nodearrint, nodearrchar, advanced, bred, advanced, redbound, userec, usestrongreds) );
 
    /* free memory */
@@ -1415,7 +1415,7 @@ SCIP_RETCODE reduceMw(
 }
 
 /** basic reduction package for the HCDSTP */
-SCIP_RETCODE reduceHc(
+SCIP_RETCODE reduce_hc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
@@ -1569,7 +1569,7 @@ SCIP_RETCODE reduceHc(
 }
 
 /** basic reduction package for the SAP */
-SCIP_RETCODE reduceSap(
+SCIP_RETCODE reduce_sap(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Bool             dualascent,         /**< perform dual-ascent reductions? */
@@ -1681,7 +1681,7 @@ SCIP_RETCODE reduceSap(
 
 
 /** reduce node-weighted Steiner tree problem */
-SCIP_RETCODE reduceNw(
+SCIP_RETCODE reduce_nw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
@@ -1741,7 +1741,7 @@ SCIP_RETCODE reduceNw(
 
 
 /** reduce degree constrained Steiner tree problem */
-SCIP_RETCODE reduceDc(
+SCIP_RETCODE reduce_dc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
@@ -1783,7 +1783,7 @@ SCIP_RETCODE reduceDc(
 }
 
 /** MWCS loop */
-SCIP_RETCODE redLoopMw(
+SCIP_RETCODE reduce_redLoopMw(
    SCIP*                 scip,               /**< SCIP data structure */
    REDSOL*               redsol,             /**< solution contained */
    GRAPH*                g,                  /**< graph data structure */
@@ -1910,7 +1910,7 @@ SCIP_RETCODE redLoopMw(
 }
 
 /** (R)PC loop */
-SCIP_RETCODE redLoopPc(
+SCIP_RETCODE reduce_redLoopPc(
    SCIP*                 scip,               /**< SCIP data structure */
    REDSOL*               redsol,             /**< solution contained */
    GRAPH*                g,                  /**< graph data structure */
@@ -2087,10 +2087,8 @@ SCIP_RETCODE redLoopPc(
    return SCIP_OKAY;
 }
 
-#define USE_FULLSEPA
-
 /** STP loop */
-SCIP_RETCODE redLoopStp(
+SCIP_RETCODE reduce_redLoopStp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    REDBASE*              redbase             /**< parameters */
@@ -2208,7 +2206,7 @@ SCIP_RETCODE redLoopStp(
 
 
 /** reduces the graph */
-SCIP_RETCODE reduce(
+SCIP_RETCODE reduce_exec(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph structure */
    REDSOL*               redsol,             /**< primal solution container */
@@ -2254,72 +2252,72 @@ SCIP_RETCODE reduce(
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, redsol, graph, minelims, FALSE, FALSE, TRUE, TRUE) );
+         SCIP_CALL( reduce_pc(scip, redsol, graph, minelims, FALSE, FALSE, TRUE, TRUE) );
       }
       else if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
       {
-         SCIP_CALL( reduceMw(scip, redsol, graph, minelims, FALSE, FALSE, TRUE) );
+         SCIP_CALL( reduce_mw(scip, redsol, graph, minelims, FALSE, FALSE, TRUE) );
       }
       else if( stp_type == STP_DHCSTP )
       {
-         SCIP_CALL( reduceHc(scip, graph, offset, minelims) );
+         SCIP_CALL( reduce_hc(scip, graph, offset, minelims) );
       }
       else if( stp_type == STP_SAP || stp_type == STP_NWPTSPG )
       {
-         SCIP_CALL( reduceSap(scip, graph, FALSE, offset, minelims) );
+         SCIP_CALL( reduce_sap(scip, graph, FALSE, offset, minelims) );
       }
       else if( stp_type == STP_NWSPG )
       {
-         SCIP_CALL( reduceNw(scip, graph, offset, minelims) );
+         SCIP_CALL( reduce_nw(scip, graph, offset, minelims) );
       }
       else if( stp_type == STP_DCSTP )
       {
-         SCIP_CALL( reduceDc(scip, graph, offset, minelims) );
+         SCIP_CALL( reduce_dc(scip, graph, offset, minelims) );
       }
       else
       {
          assert(graph_typeIsSpgLike(graph));
 
-         SCIP_CALL( reduceStp(scip, graph, redsol, minelims, FALSE, TRUE, FALSE, TRUE) );
+         SCIP_CALL( reduce_stp(scip, graph, redsol, minelims, FALSE, TRUE, FALSE, TRUE) );
       }
    }
    else if( reductionlevel == STP_REDUCTION_ADVANCED )
    {
       if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
       {
-         SCIP_CALL( reducePc(scip, redsol, graph, minelims, TRUE, userec, TRUE, TRUE) );
+         SCIP_CALL( reduce_pc(scip, redsol, graph, minelims, TRUE, userec, TRUE, TRUE) );
 
          if( graph->stp_type == STP_SPG )
          {
             reduce_solReInitLocal(graph, redsol);
-            SCIP_CALL( reduceStp(scip, graph, redsol, minelims, TRUE, TRUE, userec, TRUE) );
+            SCIP_CALL( reduce_stp(scip, graph, redsol, minelims, TRUE, TRUE, userec, TRUE) );
          }
       }
       else if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
       {
-         SCIP_CALL( reduceMw(scip, redsol, graph, minelims, TRUE, userec, TRUE) );
+         SCIP_CALL( reduce_mw(scip, redsol, graph, minelims, TRUE, userec, TRUE) );
       }
       else if( stp_type == STP_DHCSTP )
       {
-         SCIP_CALL( reduceHc(scip, graph, offset, minelims) );
+         SCIP_CALL( reduce_hc(scip, graph, offset, minelims) );
       }
       else if( stp_type == STP_SAP || stp_type == STP_NWPTSPG )
       {
-         SCIP_CALL( reduceSap(scip, graph, TRUE, offset, minelims) );
+         SCIP_CALL( reduce_sap(scip, graph, TRUE, offset, minelims) );
       }
       else if( stp_type == STP_NWSPG )
       {
-         SCIP_CALL( reduceNw(scip, graph, offset, minelims) );
+         SCIP_CALL( reduce_nw(scip, graph, offset, minelims) );
       }
       else if( stp_type == STP_DCSTP )
       {
-         SCIP_CALL( reduceDc(scip, graph, offset, minelims) );
+         SCIP_CALL( reduce_dc(scip, graph, offset, minelims) );
       }
       else
       {
          assert(graph_typeIsSpgLike(graph));
 
-         SCIP_CALL( reduceStp(scip, graph, redsol, minelims, TRUE, TRUE, userec, TRUE) );
+         SCIP_CALL( reduce_stp(scip, graph, redsol, minelims, TRUE, TRUE, userec, TRUE) );
       }
    }
 

@@ -1892,12 +1892,12 @@ SCIP_RETCODE fixVarsRedbased(
    /* now reduce the graph by standard reductions */
    if( graph_pc_isPc(propgraph) )
    {
-      SCIP_CALL( reducePc(scip, redsol, propgraph, 2, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( reduce_pc(scip, redsol, propgraph, 2, FALSE, FALSE, FALSE, FALSE) );
    }
    else if( graph_pc_isMw(propgraph) )
    {
       SCIPdebugMessage("starting MW reductions \n");
-      SCIP_CALL( reduceMw(scip, redsol, propgraph, 2, FALSE, FALSE, FALSE) );
+      SCIP_CALL( reduce_mw(scip, redsol, propgraph, 2, FALSE, FALSE, FALSE) );
    }
    else
    {
@@ -1955,7 +1955,7 @@ SCIP_RETCODE fixVarsRedbased(
       // todo: before make all the node replacements from lurking bounds!
       assert(graph_typeIsSpgLike(propgraph));
       SCIP_CALL( reduce_unconnected(scip, propgraph) );
-      SCIP_CALL( reduceStp(scip, propgraph, redsol, 2, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( reduce_stp(scip, propgraph, redsol, 2, FALSE, FALSE, FALSE, FALSE) );
 
     //  SCIP_CALL( reduceStp(scip, propgraph, redsol, 2, FALSE, TRUE, FALSE) );
 

@@ -599,7 +599,7 @@ SCIP_RETCODE decomposeReduceSubDoIt(
       reduce_solSetOffset(0.0, redsol);
       redbase->bidecompparams->newLevelStarted = TRUE;
 
-      SCIP_CALL(redLoopStp(scip, subgraph, redbase));
+      SCIP_CALL(reduce_redLoopStp(scip, subgraph, redbase));
 
       redparams->reductbound = reductbound_org;
       reduce_solSetOffset(reduce_solGetOffset(redsol) + offset_org, redsol);

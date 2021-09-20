@@ -252,13 +252,13 @@ SCIP_RETCODE reduceExact(
 
    if( graph_pc_isPc(prunegraph) )
    {
-      SCIP_CALL( redLoopPc(scip, redsol, prunegraph, vnoi, path, nodearrreal, heap, state,
+      SCIP_CALL( reduce_redLoopPc(scip, redsol, prunegraph, vnoi, path, nodearrreal, heap, state,
             vbase, nodearrint, edgearrint, nodearrint2, nodearrchar,
             FALSE, FALSE, FALSE, LURKPRUNE_MINREDELIMS, FALSE, TRUE, TRUE) );
    }
    else if( graph_pc_isMw(prunegraph) )
    {
-      SCIP_CALL( redLoopMw(scip, redsol, prunegraph, vnoi, nodearrreal, state,
+      SCIP_CALL( reduce_redLoopMw(scip, redsol, prunegraph, vnoi, nodearrreal, state,
             vbase, nodearrint, nodearrchar,
             FALSE, FALSE, FALSE, LURKPRUNE_MINREDELIMS, FALSE, TRUE) );
    }
@@ -274,7 +274,7 @@ SCIP_RETCODE reduceExact(
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,
                           .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
 
-      SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
+      SCIP_CALL( reduce_redLoopStp(scip, prunegraph, &redbase) );
    }
 
    (lurkprune->offsetnew) = reduce_solGetOffset(redsol);

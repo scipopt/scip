@@ -1539,13 +1539,13 @@ SCIP_RETCODE SCIPStpHeurRecRun(
               || probtype == STP_RMWCSP )
          {
             SCIP_CALL( reduce_solInit(scip, solgraph, FALSE, &redsol) );
-            SCIP_CALL( reduce(scip, solgraph, redsol, 0, 5, FALSE) );
+            SCIP_CALL( reduce_exec(scip, solgraph, redsol, 0, 5, FALSE) );
          }
          else
          {
             const int minnreds = 5;
             SCIP_CALL( reduce_solInit(scip, solgraph, TRUE, &redsol) );
-            SCIP_CALL( reduce(scip, solgraph, redsol,
+            SCIP_CALL( reduce_exec(scip, solgraph, redsol,
                   STP_REDUCTION_ADVANCED, minnreds, FALSE) );
          }
 
@@ -1792,7 +1792,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    SCIP_CALL( reduce_solInit(scip, newgraph, FALSE, &redsol) );
 
-   SCIP_CALL( reduce(scip, newgraph, redsol, 1, 5, FALSE) );
+   SCIP_CALL( reduce_exec(scip, newgraph, redsol, 1, 5, FALSE) );
 
    reduce_solFree(scip, &redsol);
 
