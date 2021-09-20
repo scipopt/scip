@@ -1017,6 +1017,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Bool doscaling;
    SCIP_Bool istimeleft;
    SCIP_Bool success;
+   int maxgraphedge;
    int ndecomps;
    int nconss;
    int nvars;
@@ -1138,6 +1139,13 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       goto TERMINATE;
    }
 
+   /* we do not need the block decomposition graph of the statistics */
+   SCIP_CALL( SCIPgetIntParam(scip, "decomposition/maxgraphedge", &maxgraphedge) );
+   if( !SCIPisParamFixed(scip, "decomposition/maxgraphedge") )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", 0) );
+   }
+
    /* don't change problem by sorting constraints */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sortedconss, conss, nconss) );
 
@@ -1164,6 +1172,18 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       /* number of blocks can get smaller (since assigning constraints can lead to empty blocks) */
       nblocks = SCIPdecompGetNBlocks(decomp);
    }
+   else
+   {
+      /* The decomposition statistics were computed during transformation of the decomposition store.
+       * Since propagators can have changed the number of constraints/variables,
+       * the statistics are no longer up-to-date and have to be recomputed.
+       */
+      SCIP_CALL( SCIPcomputeDecompStats(scip, decomp, TRUE) );
+      nblocks = SCIPdecompGetNBlocks(decomp);
+   }
+
+   /* reset parameter */
+   SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", maxgraphedge) );
 
    /* @note the terms 'linking' and 'border' (constraints/variables) are used interchangeably */
 
