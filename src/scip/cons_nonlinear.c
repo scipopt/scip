@@ -12101,8 +12101,8 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
 
 CLEANUP:
    /* free allocated memory */
-   SCIPfreeBufferArray(scip, &funvals);
    SCIPfreeBufferArray(scip, &corner);
+   SCIPfreeBufferArray(scip, &funvals);
    SCIPfreeBufferArray(scip, &nonfixedpos);
 
    return SCIP_OKAY;
