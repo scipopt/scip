@@ -1063,7 +1063,7 @@ SCIP_RETCODE updatePartition(
          residual += shift_tmp;
          shift[nonviolatedblocksrhs[v]] += shift_tmp;
       }
-      if( SCIPisZero(scip, residual) )
+      if( !SCIPisZero(scip, residual) )
       {
          /* assign residual to first block */
          shift[nonviolatedblocksrhs[0]] -= residual;
@@ -1086,7 +1086,7 @@ SCIP_RETCODE updatePartition(
          residual += shift_tmp;
          shift[nonviolatedblockslhs[v]] += shift_tmp;
       }
-      if( SCIPisZero(scip, residual) )
+      if( !SCIPisZero(scip, residual) )
       {
          /* assign residual to first block */
          shift[nonviolatedblockslhs[0]] -= residual;
