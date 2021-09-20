@@ -1757,16 +1757,19 @@ SCIP_RETCODE separatePoint(
    }
 
    /* free memory */
-   for( i = 0; i < SCIPgetNVars(scip); ++i )
+   for( i = 0; i < SCIPhashmapGetNEntries(tableau); ++i )
    {
-      if( SCIPhashmapExists(tableau, (void*)SCIPgetVars(scip)[i]) )
+      SCIP_HASHMAPENTRY* entry;
+
+      entry = SCIPhashmapGetEntry(tableau, i);
+
+      if( entry != NULL )
       {
          SCIP_Real* tableaurow;
 
-         tableaurow = (SCIP_Real *)SCIPhashmapGetImage(tableau, (void*)SCIPgetVars(scip)[i]);
+         tableaurow = (SCIP_Real *) SCIPhashmapEntryGetImage(entry);
 
-         if( tableaurow != NULL )
-            SCIPfreeBufferArray(scip, &tableaurow);
+         SCIPfreeBufferArray(scip, &tableaurow);
       }
    }
    SCIPhashmapFree(&tableau);
