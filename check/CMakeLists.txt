@@ -298,8 +298,8 @@ set(instances_MINLP
     "instances/MINLP/tltr.mps\;48.0666666667"
     )
 set(instances_Bilinrelax
-    "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
-    "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
+    "instances/MINLP/pointpack04.osil\;1.00000024988836"
+    "instances/MINLP/pointpack06.osil\;0.361111675167215"
   )
 
 #
