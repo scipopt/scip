@@ -167,9 +167,6 @@ int getWorkLimitsPc(
       limit = (int) MAX(limit, limit * sqrtnedges / 200.0);
    }
 
-   // printf("limit %d \n", limit);
-   // printf("avg degree %f \n", graph_get_avgDeg(g));
-
    assert(limit >= 0);
 
    return limit;
@@ -497,17 +494,6 @@ SCIP_RETCODE redLoopInnerStp(
       }
 
       assert(*wasDecomposed == FALSE);
-
-      // for debugging of extended reductions todo deleteme
-#if 0
-      if( fullreduce && da)
-      {
-        const RPDA paramsda = { .useSlackPrune = FALSE, .prevrounds = inner_rounds, .useRec = redparameters->userec, .extredMode = extred_full, .nodereplacing = nodereplacing};
-        int extendedelims = 0;
-        SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, fixed, &extendedelims, randnumgen) );
-        printf("debug extendedelims=%d \n", extendedelims);
-      }
-#endif
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1084,7 +1070,6 @@ SCIP_RETCODE redLoopInnerPc(
       if( nelims <= reductbound_global )
          rerun = FALSE;
    } /* inner reduction loop */
-
 
    return SCIP_OKAY;
 }
