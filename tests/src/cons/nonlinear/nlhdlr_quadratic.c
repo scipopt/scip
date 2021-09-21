@@ -39,6 +39,7 @@
 #include "scip/expr_var.h"
 #include "scip/expr_value.h"
 #include "scip/nlpi_ipopt.h"
+#include "scip/struct_expr.h"
 
 /*
  * TEST
@@ -299,7 +300,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    checkQuadTerm(expr, 1, cosexpr, NULL, 0.0, 1.0);
 
 #if DEFAULT_USEINTERCUTS
-   cr_expect(SCIPgetExprNAuxvarUsesNonlinear(quad.expr) > 0, "cos expr should have auxiliary variable!\n");
+//   cr_expect(SCIPgetExprNAuxvarUsesNonlinear(quad.expr) > 0, "cos expr should have auxiliary variable!\n");
 #endif
 
 
@@ -970,7 +971,7 @@ void simplifyAndDetect(
    infeasible = TRUE;
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert(!infeasible);
-   expr = SCIPgetExprNonlinear(scip, *cons);
+   expr = SCIPgetExprNonlinear(*cons);
 
    /* SCIP_CALL( SCIPprintExpr(scip, conshdlr, expr, NULL) ); */
    /* SCIPinfoMessage(scip, NULL, "\n"); */
@@ -992,15 +993,18 @@ void registerAndFree(
    )
 {
    SCIP_EXPR* expr;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
-   expr = SCIPgetExprNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(expr->enfos), 1) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(expr->enfos[0])) );
-   expr->enfos[0]->nlhdlr = nlhdlr;
-   expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
-   expr->nenfos = 1;
-   expr->enfos[0]->issepainit = FALSE;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ownerdata->enfos), 1) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(ownerdata->enfos[0])) );
+   ownerdata->enfos[0]->nlhdlr = nlhdlr;
+   ownerdata->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
+   ownerdata->nenfos = 1;
+   ownerdata->enfos[0]->issepainit = FALSE;
 
    ///* if there is an nlhdlr, then there must also be an auxvar */
    //SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
@@ -1024,7 +1028,7 @@ void testRays(
    int expectedncols
    )
 {
-   SCIP_QUADEXPR* quaddata;
+   SCIP_EXPR* quaddata;
    SCIP_EXPR** linexprs;
    SCIP_Bool success;
    SCIP_COL** cols;
@@ -1032,7 +1036,7 @@ void testRays(
    int nlinexprs;
    int ncols;
 
-   quaddata = nlhdlrexprdata->quaddata;
+   quaddata = nlhdlrexprdata->qexpr;
 
    ncols = SCIPgetNLPCols(scip);
    cols = SCIPgetLPCols(scip);
@@ -1193,7 +1197,7 @@ void testCut(
    enorm = SQRT( enorm );
    cr_assert(enorm > 0);
 
-   expr = SCIPgetExprNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
 
@@ -1849,9 +1853,9 @@ Test(interCuts, testRaysAuxvar1)
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x> - 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
 
    /* create aux variable */
-   expr = SCIPgetExprNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(cons);
    cr_assert_not_null(expr);
-   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
    /*
@@ -1921,9 +1925,9 @@ Test(interCuts, testRaysAuxvar2)
     */
 
    /* create aux variable */
-   expr = SCIPgetExprNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(cons);
    cr_assert_not_null(expr);
-   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
    //SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
@@ -2561,12 +2565,13 @@ Test(interCuts, testBoundRays1)
       int expectedncols = 3;
       SCIP_VAR* vars[6] = {x, y, w, z, s, t};
       SCIP_VAR* consvars[3] = {x, y, z};
+      SCIP_Bool success;
 
       /*
       * find and test nearest vertex and rays
       */
       SCIP_CALL( SCIPcreateSol(scip, &vertex, NULL) );
-      SCIP_CALL( findVertexAndGetRays(scip, nlhdlrexprdata, sol, vertex, NULL, &myrays) );
+      SCIP_CALL( findVertexAndGetRays(scip, nlhdlrexprdata, sol, vertex, NULL, &myrays, &success) );
 
       for( int i = 0; i < 6; ++i )
       {
