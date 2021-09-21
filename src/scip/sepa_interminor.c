@@ -1685,8 +1685,7 @@ SCIP_RETCODE separatePoint(
 {
    SCIP_SEPADATA* sepadata;
    SCIP_HASHMAP* tableau;
-   int* basicvarpos2tableaurow; /* map between basic var and its tableau row */
-   int ncols;
+   int* basicvarpos2tableaurow = NULL; /* map between basic var and its tableau row */
    int i;
 
    assert(sepa != NULL);
@@ -1702,15 +1701,6 @@ SCIP_RETCODE separatePoint(
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
-
-   ncols = SCIPgetNLPCols(scip);
-
-   /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &basicvarpos2tableaurow, ncols) );
-   SCIP_CALL( SCIPhashmapCreate(&tableau, SCIPblkmem(scip), SCIPgetNVars(scip)) );
-
-   /* construct basicvar to tableau row map */
-   SCIP_CALL( constructBasicVars2TableauRowMap(scip, basicvarpos2tableaurow) );
 
    /* loop over the minors and if they are violated build cut */
    for( i = 0; i < sepadata->nminors && (*result != SCIP_CUTOFF); ++i )
@@ -1744,17 +1734,32 @@ SCIP_RETCODE separatePoint(
       if( SCIPisFeasZero(scip, det) )
          continue;
 
+      if( basicvarpos2tableaurow == NULL )
+      {
+         /* allocate memory */
+         SCIP_CALL( SCIPallocBufferArray(scip, &basicvarpos2tableaurow, SCIPgetNLPCols(scip)) );
+         SCIP_CALL( SCIPhashmapCreate(&tableau, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+
+         /* construct basicvar to tableau row map */
+         SCIP_CALL( constructBasicVars2TableauRowMap(scip, basicvarpos2tableaurow) );
+      }
+
       if( SCIPisFeasPositive(scip, det) )
       {
          SCIP_CALL( separateDeterminant(scip, sepa, sepadata, auxvarxik, auxvarxil, auxvarxjk, auxvarxjl, &isauxvarxikdiag,
                   &isauxvarxildiag, &isauxvarxjkdiag, &isauxvarxjldiag, basicvarpos2tableaurow, tableau, result) );
       }
-      else if( SCIPisFeasNegative(scip, det) )
+      else
       {
+         assert(SCIPisFeasNegative(scip, det));
          SCIP_CALL( separateDeterminant(scip, sepa, sepadata, auxvarxil, auxvarxik, auxvarxjl, auxvarxjk, &isauxvarxildiag,
                   &isauxvarxikdiag, &isauxvarxjldiag, &isauxvarxjkdiag, basicvarpos2tableaurow, tableau, result) );
       }
    }
+
+   /* all minors were feasible, so no memory to free */
+   if( basicvarpos2tableaurow == NULL )
+      return SCIP_OKAY;
 
    /* free memory */
    for( i = 0; i < SCIPhashmapGetNEntries(tableau); ++i )
