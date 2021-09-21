@@ -909,14 +909,6 @@ void sdCliqueStarUpdateSd(
          sd_final = distBaseToBase;
       }
 
-#if 0
-         if( EQ(sd_final, 6.0) )
-         {
-            sdCliqueStarGetRecomputedSd(sdprofit, g, nodes_pred, edge, nodes_dist, nodes_base);
-            printf("bases %d %d \n", nodes_base[prednode], nodes_base[newnode]);
-            printf("my sd_final=%f \n", sd_final);
-         }
-#endif
       assert(LE(sd_final, sdist));
       sdist = sd_final;
    }

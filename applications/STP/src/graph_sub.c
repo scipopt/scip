@@ -538,7 +538,7 @@ void reinsertSubgraphTransferFixedHistory(
 
    orggraph->fixedcomponents = subgraph->fixedcomponents;
 
-   assert(graph_get_nFixpseudonodes(subgraph) == graph_get_nFixpseudonodes(orggraph));
+   assert(graph_getNfixpseudonodes(subgraph) == graph_getNfixpseudonodes(orggraph));
    subgraph->fixedcomponents = NULL;
 }
 

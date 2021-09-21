@@ -837,10 +837,10 @@ SCIP_RETCODE reduce_fixedConflicts(
    )
 {
    int* hasharr;
-   const int* fixednodes = graph_get_fixpseudonodes(scip, g);
+   const int* fixednodes = graph_getFixpseudonodes(scip, g);
    const int nedges = graph_get_nEdges(g);
    const int arrsize = graph_pseudoAncestorsGetHashArraySize(g->pseudoancestors);
-   const int nfixednodes = graph_get_nFixpseudonodes(g);
+   const int nfixednodes = graph_getNfixpseudonodes(g);
 
    *countnew = 0;
 

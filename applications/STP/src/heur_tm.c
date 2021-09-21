@@ -3131,15 +3131,6 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
          assert(e1 >= 0);
          assert(e2 != EAT_LAST);
 
-#if 0
-         if( e2 == EAT_LAST )
-         {
-            mst[i].edge = e1;
-         }
-         else
-         {
-#endif
-
          k1 = g->tail[e1];
          k2 = g->tail[e2];
 
@@ -3513,20 +3504,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
 
    if( *success )
       SCIPdebugMessage("final objective: %f \n", solstp_getObj(graph, tmbase.best_result, 0.0));
-
-#if 0
-   {
-      FILE *fp;
-      const SCIP_Real obj_final = solstp_getObj(graph, tmbase.best_result, 0.0);
-
-      fp = fopen(
-                  "/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/tm_old.txt",
-                  "a+");
-      fprintf(fp, "%s %f \n", SCIPgetProbName(scip), obj_final);
-      fclose(fp);
-      exit(1);
-   }
-#endif
 
    return SCIP_OKAY;
 }

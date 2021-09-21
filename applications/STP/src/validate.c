@@ -31,28 +31,6 @@
 #include "graph.h"
 #include "portab.h"
 
-#if 0
-static void show(
-   GRAPH*  g,
-   int     vars,
-   STP_Bool*   state,
-   double* xval)
-{
-   int i;
-   for(i = 0; i < vars; i++)
-   {
-      if (xval[i] > 1e-6)
-      {
-	 fprintf(stderr, "%d-%d, xval[%d]=%g (%d)\n",
-            g->tail[i % g->edges] + 1,
-            g->head[i % g->edges] + 1,
-            i,
-            xval[i],
-            state[i]);
-      }
-   }
-}
-#endif
 
 static int nail(
    const GRAPH*  g,

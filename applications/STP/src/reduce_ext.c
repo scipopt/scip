@@ -267,15 +267,6 @@ SCIP_Real shortenSubtree(
       for( int i = 0; i < dfsdepth - 1; i++ )
          treecost += redcost[treeedges[i]];
 
-#if 0 // todo deleteeme
-      if( !SCIPisEQ(scip, treecost, treecostold - redcost[lastedge]) )
-      {
-         printf("%.15f %.15f \n", treecost, treecostold - redcost[lastedge]);
-         assert(0);
-         exit(1);
-      }
-#endif
-
       assert(SCIPisEQ(scip, treecost, treecostold - redcost[lastedge]));
    }
 

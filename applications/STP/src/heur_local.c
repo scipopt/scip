@@ -1173,16 +1173,6 @@ SCIP_RETCODE connectivityDataInit(
          const int tail = graph->tail[e];
          const int head = graph->head[e];
 
-#if 0
-         printf("candidate " );
-         graph_edge_printInfo(graph, e);
-
-         printf("vnoibase[tail]=%d \n", vnoibase[tail]);
-         printf("vnoibase[head]=%d \n", vnoibase[head]);
-         printf("graph->path_state[tail]=%d \n", graph->path_state[tail]);
-         printf("graph->path_state[head]=%d \n", graph->path_state[head]);
-#endif
-
          /* is edge 'e' a boundary-edge? */
          if( vnoibase[tail] != vnoibase[head] && graphmark[tail] && graphmark[head] )
          {

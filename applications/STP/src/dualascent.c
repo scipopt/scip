@@ -409,13 +409,6 @@ void dapathsUpdate(
 
             if( redcost[e] < 0.0 )
                redcost[e] = 0.0;
-
-#if 0
-            if( !Is_term(g->term[node_i]) && !Is_term(g->term[node_j]) )
-            {
-               printf("%d->%d...c=%f \n", node_i, node_j, redcost[e]);
-            }
-#endif
          }
       }
    }
@@ -1898,8 +1891,6 @@ SCIP_Bool dualascent_allTermsReachable(
 
    SCIPfreeMemoryArray(scip, &scanned);
    SCIPfreeMemoryArray(scip, &queue);
-
-//   printf("%d vs %d \n", termscount, g->terms);
 
    return (termscount == g->terms);
 }

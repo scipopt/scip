@@ -212,15 +212,6 @@ SCIP_RETCODE pricing(
 
    SCIPdebug( SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) ) );
 
-# if 0
-   if ( pricerdata->lowerbound <= 4 )
-   {
-      char label[SCIP_MAXSTRLEN];
-      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "X%g.gml", pricerdata->lowerbound);
-      SCIP_CALL( SCIPprobdataPrintGraph(scip, label , NULL, TRUE) );
-      pricerdata->lowerbound++;
-   }
-#endif
    /* get the graph*/
    graph = SCIPprobdataGetGraph(probdata);
 

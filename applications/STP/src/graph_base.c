@@ -67,14 +67,6 @@ SCIP_Bool graphisValidPcMw(
 
    assert(graph_pc_term2edgeIsConsistent(scip, g));
 
-#if 0
-   if( !isRooted && g->grad[g->source] < 2 )
-   {
-      SCIPdebugMessage("only artificial root left \n");
-      return FALSE;
-   }
-#endif
-
    for( int k = 0; k < nnodes; k++ )
    {
       if( graph_pc_knotIsFixedTerm(g, k) )

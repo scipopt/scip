@@ -459,11 +459,6 @@ void getBiasedMw(
 
    BMScopyMemoryArray(costbiased, graph->cost, graph->edges);
 
-#if 0
-    BMScopyMemoryArray(prizebiased, graph->prize, nnodes);
-    return;
-#endif
-
    for( int k = 0; k < nnodes; k++ )
    {
       if( Is_pseudoTerm(graph->term[k]) && graph->grad[k] != 0 )
@@ -2381,16 +2376,6 @@ SCIP_RETCODE graph_pc_contractNodeAncestors(
 
    SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[s]), graph_edge_getAncestors(g, ets), NULL));
    SCIP_CALL(SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), graph_edge_getAncestors(g, ets), NULL));
-
-#if 0
-   SCIP_Bool conflict;
-
-   SCIP_CALL( graph_pseudoAncestors_appendCopyEdgeToNode(scip, t, ets, FALSE, g, &conflict) );
-   assert(!conflict);
-
-   SCIP_CALL( graph_pseudoAncestors_appendCopyNode(scip, t, s, FALSE, g, &conflict) );
-   assert(!conflict);
-#endif
 
    return SCIP_OKAY;
 }

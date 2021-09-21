@@ -664,13 +664,6 @@ void generalStarSetUp(
 
       SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &hasharr, hashsize) );
 
-#if 0
-      printf("next: \n");
-      graph_edge_printInfo(graph, edge);
-      graph_knot_printInfo(graph, tail);
-      graph_knot_printInfo(graph, head);
-#endif
-
       for( int e = graph->outbeg[tail]; e != EAT_LAST; e = graph->oeat[e] )
       {
          const int myhead = graph->head[e];

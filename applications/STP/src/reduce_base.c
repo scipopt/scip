@@ -2205,7 +2205,7 @@ SCIP_RETCODE reduce_exec(
    SCIP_Bool graphWasInitialized = FALSE;
 
    assert(scip && offset);
-   assert(graph_get_fixedges(graph) == NULL);
+   assert(graph_getFixedges(graph) == NULL);
    assert(reductionlevel == STP_REDUCTION_NONE || reductionlevel == STP_REDUCTION_BASIC || reductionlevel == STP_REDUCTION_ADVANCED );
    assert(minelims >= 0);
    assert(EQ(*offset, 0.0));

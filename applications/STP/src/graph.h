@@ -105,9 +105,9 @@ extern SCIP_RETCODE   graph_fixed_addEdge(SCIP*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_addNodePc(SCIP*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_moveNodePc(SCIP*, int, GRAPH*);
 extern SCIP_RETCODE   graph_copyFixed(SCIP*, GRAPH*, SCIP_Bool, GRAPH*);
-extern IDX*           graph_get_fixedges(const GRAPH*);
-extern const int*     graph_get_fixpseudonodes(SCIP*, const GRAPH*);
-extern int            graph_get_nFixpseudonodes(const GRAPH*);
+extern IDX*           graph_getFixedges(const GRAPH*);
+extern const int*     graph_getFixpseudonodes(SCIP*, const GRAPH*);
+extern int            graph_getNfixpseudonodes(const GRAPH*);
 
 /* graph_util.c
  */

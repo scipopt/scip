@@ -1059,18 +1059,9 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
    SCIP_Bool success;
    const SCIP_Bool isPc = graph_pc_isPc(graph);
    const SCIP_Bool isExtendedOrg = graph->extended;
-#if 0
-   int* nodetouchcount;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodetouchcount, nnodes) );
-
-   for( int k = 0; k < nnodes; k++ )
-      nodetouchcount[k] = 0;
-#endif
 
    assert(GE(cutoffbound, 0.0));
    assert(nodeToTermsPaths && rootToNodeDist && redcost);
-
 
    if( isPc )
       graph_pc_2orgcheck(scip, graph);
@@ -1085,7 +1076,7 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
          int edgecount = 0;
          SCIP_Bool rpc3term = FALSE;
 
-         if( !pseudoDelNodes[k] ) // || nodetouchcount[k] > 0
+         if( !pseudoDelNodes[k] )
             continue;
 
          if( isPc && degree == 3 && graph_pc_knotIsNonLeafTerm(graph, k) && graph->grad[k] == 3 )
@@ -1097,11 +1088,6 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
          {
             continue;
          }
-
-#if 0
-         for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-            nodetouchcount[graph->head[e]]++;
-#endif
 
          if( rpc3term )
          {
@@ -1166,16 +1152,6 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
                *offsetp += prize;
             }
          }
-#if 0
-         else
-         {
-            for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-            {
-               nodetouchcount[graph->head[e]]--;
-               assert(nodetouchcount[graph->head[e]] >= 0);
-            }
-         }
-#endif
       }
    }
 
@@ -1183,8 +1159,6 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
 
    if( isPc && isExtendedOrg != graph->extended )
       graph_pc_2trans(scip, graph);
-
-  // SCIPfreeBufferArray(scip, &nodetouchcount);
 
    return SCIP_OKAY;
 }

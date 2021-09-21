@@ -652,9 +652,9 @@ SCIP_Bool fixedPseudoAncestorsAreValid(
    )
 {
    int *hasharr;
-   const int *fixednodes = graph_get_fixpseudonodes(scip, g);
+   const int *fixednodes = graph_getFixpseudonodes(scip, g);
    const int arrsize = graph_pseudoAncestorsGetHashArraySize(g->pseudoancestors);
-   const int nfixednodes = graph_get_nFixpseudonodes(g);
+   const int nfixednodes = graph_getNfixpseudonodes(g);
    SCIP_Bool isValid = TRUE;
 
    assert(arrsize >= nfixednodes);
@@ -1941,7 +1941,7 @@ SCIP_RETCODE graph_copyFixed(
 
 
 /** gets fixed edges */
-IDX* graph_get_fixedges(
+IDX* graph_getFixedges(
    const GRAPH*          g                   /**< the graph */
 )
 {
@@ -1954,7 +1954,7 @@ IDX* graph_get_fixedges(
 }
 
 /** gets fixed pseudo eliminated nodes */
-const int* graph_get_fixpseudonodes(
+const int* graph_getFixpseudonodes(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g                   /**< the graph */
 )
@@ -1968,7 +1968,7 @@ const int* graph_get_fixpseudonodes(
 }
 
 /** gets number of fixed pseudo eliminated nodes */
-int graph_get_nFixpseudonodes(
+int graph_getNfixpseudonodes(
    const GRAPH*          g                   /**< the graph */
 )
 {

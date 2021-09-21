@@ -752,7 +752,7 @@ void updateEdgestateFromRed(
       }
    }
 
-   fixEdgestate(propgraph, graph_get_fixedges(propgraph), edgestate);
+   fixEdgestate(propgraph, graph_getFixedges(propgraph), edgestate);
 
    validateEdgestate(graph, propgraph, vars, edgestate, error);
 }
@@ -804,7 +804,7 @@ void updateEdgestateFromRedPcmw(
       if( e == nedges || propgraph->ieat[e] != EAT_FREE )
       {
          // ugly as hell, use extra method!
-         IDX* curr = (e < nedges) ? ancestors[e] : graph_get_fixedges(propgraph);
+         IDX* curr = (e < nedges) ? ancestors[e] : graph_getFixedges(propgraph);
 
          while( curr != NULL )
          {
@@ -850,7 +850,7 @@ void updateEdgestateFromRedPcmw(
    SCIPfreeBufferArray(scip, &edge_isSet);
    SCIPfreeBufferArray(scip, &node_isSet);
 
-   fixEdgestate(propgraph, graph_get_fixedges(propgraph), edgestate);
+   fixEdgestate(propgraph, graph_getFixedges(propgraph), edgestate);
 
    validateEdgestate(graph, propgraph, vars, edgestate, error);
 }

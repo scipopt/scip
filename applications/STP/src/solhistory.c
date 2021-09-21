@@ -135,7 +135,7 @@ SCIP_RETCODE computeHistory(
    assert(edgevars || graph->edges == 0);
 
    /* iterate through the list of fixed edges */
-   updateorgsol(graph, graph_get_fixedges(graph), orgnodes, orgedges, &nsolnodes, &nsoledges);
+   updateorgsol(graph, graph_getFixedges(graph), orgnodes, orgedges, &nsolnodes, &nsoledges);
 
    for( int e = 0; e < graph->edges; e++ )
    {
@@ -319,7 +319,7 @@ SCIP_RETCODE computeHistoryPcMw(
          if( e < graph->edges )
             curr = graph_edge_getAncestors(graph, e);
          else
-            curr = graph_get_fixedges(graph);
+            curr = graph_getFixedges(graph);
 
          while (curr != NULL)
          {

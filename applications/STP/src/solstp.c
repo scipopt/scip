@@ -2172,7 +2172,7 @@ SCIP_RETCODE solstp_getOrg(
          setNodeList(orggraph, orgnodearr, graph_edge_getAncestors(transgraph, e));
 
    /* retransform edges fixed during graph reduction */
-   setNodeList(orggraph, orgnodearr, graph_get_fixedges(transgraph));
+   setNodeList(orggraph, orgnodearr, graph_getFixedges(transgraph));
 
    if( pcmw )
    {

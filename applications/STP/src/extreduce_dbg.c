@@ -1611,44 +1611,6 @@ SCIP_Bool extreduce_mstInternalsInSync(
 }
 
 
-#if 0
-/** does the stack top correspond to MST depository top? */
-SCIP_Bool extreduce_stackTopMstDepoInSync(
-   const GRAPH*          graph,             /**< graph data structure */
-   const EXTDATA*        extdata            /**< extension data */
-)
-{
-   const REDDATA* const reddata = extdata->reddata;
-   const CSRDEPO* const msts = reddata->msts;
-   CSR topmst;
-   const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
-   const int stackpos = extStackGetPosition(extdata);
-   const int topsize = (extstack_start[stackpos + 1] - extstack_start[stackpos]);
-
-   graph_csrdepo_getTop(msts, &topmst);
-
-   assert(topsize > 0);
-
-   for( int i = extstack_start[stackpos]; i < extstack_start[stackpos + 1]; i++ )
-   {
-      const int edge = extstack_data[i];
-      const int head = graph->head[edge];
-
-      if( reduce )
-      {
-
-      }
-
-   }
-
-   assert(extdata->extstack_state[stackpos] != EXT_STATE_NONE);
-
-   return TRUE;
-}
-#endif
-
-
 /** is that complete current stack hashed? */
 SCIP_Bool extreduce_stackTopIsHashed(
    const GRAPH*          graph,             /**< graph data structure */

@@ -288,8 +288,6 @@ void bdkGetEdgeCutoffs(
       }
    }
 
-
-
    assert(tail_pos >= 0);
    assert(adjverts[tail_pos] == tail);
 
@@ -311,27 +309,6 @@ void bdkGetEdgeCutoffs(
    }
 
    assert(edgecount == node_degree - 1);
-
-#if 0
-   for( int k = 0; k < STP_BDKIMP_MAXDEGREE - 1; k++ )
-   {
-      if( k >= node_degree )
-         continue;
-
-      for( int e = cliquegraph->outbeg[k]; e != EAT_LAST; e = cliquegraph->oeat[e] )
-      {
-         const int k2 = cliquegraph->head[e];
-
-         if( k2 >= node_degree )
-            continue;
-
-         if( k2 > k )
-         {
-            printf("%d, %d  %f\n", adjverts[k], adjverts[k2], cliquegraph->cost[e]);
-         }
-      }
-   }
-#endif
 }
 
 

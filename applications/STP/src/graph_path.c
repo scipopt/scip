@@ -2526,14 +2526,5 @@ SCIP_RETCODE graph_path_st_brmwcs(
    SCIPfreeBufferArray( scip, &my );
    SCIPfreeBufferArray( scip, &alreadyContained );
 
-#if 0
-   for( int n = 0; n < nnodes; n++ )
-   {
-      if(connected[n])// && g->mark[n])
-      printf("$%d ist in solution\n", n+1);
-   }
-   printf("solution exists \n");
-#endif
-
    return SCIP_OKAY;
 }
