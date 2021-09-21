@@ -729,12 +729,14 @@ SCIP_RETCODE cancelCol(
    SCIP_Real bestscale;
    SCIP_Real ncols;
    SCIP_Bool colishashing;
+   SCIP_Bool swapped = FALSE;
    int cancelcollen;
    int bestnfillin;
    int nretrieves;
    int maxfillin;
    int bestcand;
    int nchgcoef;
+
    ncols = SCIPmatrixGetNColumns(matrix);
    colishashing = ishashingcols[colidx];
    cancelcollen = SCIPmatrixGetColNNonzs(matrix, colidx);
@@ -1134,6 +1136,7 @@ CHECKFILLINAGAIN:
           */
          SCIPswapPointers((void**) &tmpinds, (void**) &cancelcolinds);
          SCIPswapPointers((void**) &tmpvals, (void**) &cancelcolvals);
+         swapped = ! swapped;
          cancelcollen = tmpcollen;
          SCIP_CALL( aggregation(scip, matrix, presoldata, vars, colidx, bestcand, ishashingcols[bestcand], -bestscale) );
 
@@ -1171,10 +1174,20 @@ CHECKFILLINAGAIN:
    }
 
    SCIPfreeBufferArray(scip, &scores);
-   SCIPfreeBufferArray(scip, &tmpvals);
-   SCIPfreeBufferArray(scip, &tmpinds);
-   SCIPfreeBufferArray(scip, &cancelcolvals);
-   SCIPfreeBufferArray(scip, &cancelcolinds);
+   if( swapped )
+   {
+      SCIPfreeBufferArray(scip, &cancelcolvals);
+      SCIPfreeBufferArray(scip, &cancelcolinds);
+      SCIPfreeBufferArray(scip, &tmpvals);
+      SCIPfreeBufferArray(scip, &tmpinds);
+   }
+   else
+   {
+      SCIPfreeBufferArray(scip, &tmpvals);
+      SCIPfreeBufferArray(scip, &tmpinds);
+      SCIPfreeBufferArray(scip, &cancelcolvals);
+      SCIPfreeBufferArray(scip, &cancelcolinds);
+   }
 
    return SCIP_OKAY;
 }
