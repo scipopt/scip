@@ -1635,8 +1635,8 @@ help:
 		@echo
 		@echo "  Main targets:"
 		@echo "  - all (default): Build SCIP libraries and binary."
-		@echo "  - libscipsolver: Build standalone SCIP library."
-		@echo "  - libscip: Build library for the main part of SCIP."
+		@echo "  - libscip: Build standalone SCIP library."
+		@echo "  - libscipbase: Build library for the main part of SCIP."
 		@echo "  - libobjscip: Build library for the C++-interface of SCIP."
 		@echo "  - liblpi: Build library for the LP interface in SCIP."
 		@echo "  - libtpi: Build library for the parallel task interface in SCIP."
