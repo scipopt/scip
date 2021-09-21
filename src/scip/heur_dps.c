@@ -752,9 +752,9 @@ SCIP_RETCODE roundPartition(
 
       /* get fractional part of blockconstraints */
       if( roundbyrhs )
-         fracPart[b] = SCIPfrac(scip, linking->currentrhs[b]);
+         fracPart[b] = linking->currentrhs[b] - floor(linking->currentrhs[b]); /* do not use SCIPfrac()! */
       else
-         fracPart[b] = SCIPfrac(scip, linking->currentlhs[b]);
+         fracPart[b] = linking->currentlhs[b] - floor(linking->currentlhs[b]);
 
       SCIPfreeBufferArray(scip, &blockvals);
       SCIPfreeBufferArray(scip, &blockvars);
