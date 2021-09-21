@@ -2559,14 +2559,9 @@ Test(interCuts, testBoundRays1)
    {
       SCIP_Real expectedvertexcoefs[6] = {-1.0, 9.0, 0.0, 1.0, 0.0, 0.0};
       SCIP_Real expectedrayscoefs[8] = {1.0, -1.0, 1.0};
-      int expectedraysidx[3] = {0, 1, 2};
-      int expectedlppos[3] = {0, 1, 3};
-      int expectedbegin[4] = {0, 1, 2, 3};
       int expectednrays = 3;
       int expectednnonz = 3;
-      int expectedncols = 3;
       SCIP_VAR* vars[6] = {x, y, w, z, s, t};
-      SCIP_VAR* consvars[3] = {x, y, z};
       SCIP_Bool success;
 
       /*
