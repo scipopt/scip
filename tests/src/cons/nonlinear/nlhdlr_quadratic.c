@@ -1249,7 +1249,7 @@ Test(interCuts, testRays1)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: 6xy + 2x^2 -2z^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -1299,7 +1299,7 @@ Test(interCuts, testRays2)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: 6xy + 2x^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<x>*<y> + 2.0*<x>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -1348,7 +1348,7 @@ Test(interCuts, testRays3)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: 6zy + 2z^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<z>*<y> + 2.0*<z>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<z>*<y> + 2.0*<z>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -1396,7 +1396,7 @@ Test(interCuts, testRays4)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: 6z + 2z^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -1465,7 +1465,7 @@ Test(interCuts, testRays5)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: x*y + x*w - z + w*s + t + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x>*<y> + <x>*<w> - <z> + <w>*<s> + <t> + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>*<y> + <x>*<w> - <z> + <w>*<s> + <t> + 2 <= 0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -1609,7 +1609,7 @@ Test(interCuts, testRays6)
    SCIP_Real root;
    SCIP_Bool success;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <y>*<z> + <z>^2 + <x> + 2.0 <= 2.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <y>*<z> + <z>^2 + <x> + 2.0 <= 2.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -1850,7 +1850,7 @@ Test(interCuts, testRaysAuxvar1)
    SCIP_VAR* auxvar;
 
    /* simplify and detect quadratic structure in: x - 6z + 2z^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x> - 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x> - 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
 
    /* create aux variable */
    expr = SCIPgetExprNonlinear(cons);
@@ -1914,7 +1914,7 @@ Test(interCuts, testRaysAuxvar2)
    SCIP_VAR* auxvar;
 
    /* simplify and detect quadratic structure in: x - 6z + 2z^2 + 2 <= 0*/
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x> - 6.0*<z> - 2.0*<z>^2 + 2.0 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x> - 6.0*<z> - 2.0*<z>^2 + 2.0 <= 0.0");
 
    /* for this example simplify changes the cons to -x +6z +2z^2 -2
     * we are testing the constraint induced by the auxiliary variable:
@@ -2029,7 +2029,7 @@ Test(interCuts, cut1, .description = "test cut for Case 2")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<y>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<y>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -2065,7 +2065,7 @@ Test(interCuts, cut2, .description = "test cut for Case 1")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: (<x> - <y>)^2 - <z>*<x> + <x> -<z>^2 <= -1.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 - <z>*<x> + <x> -<z>^2 <= -1.0");
 
    /*
     * build LP so that every var is non-basic
@@ -2085,7 +2085,7 @@ Test(interCuts, cut2, .description = "test cut for Case 1")
       SCIP_VAR* expectedvars[2]  = {y, z};
       SCIP_Real expectedlhs      = 0.98106166069077;
 
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/quadratic/usestrengthening", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", FALSE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2101,7 +2101,7 @@ Test(interCuts, cut3, .description = "test cut for Case 3")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: -(<x> - <y>)^2 + (2 + <x> - <w>)^2 + (<x> + <y> + <z>)^2 - (<w> + <z>)^2 <= 0.25");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: -(<x> - <y>)^2 + (2 + <x> - <w>)^2 + (<x> + <y> + <z>)^2 - (<w> + <z>)^2 <= 0.25");
 
 
    /*
@@ -2141,7 +2141,7 @@ Test(interCuts, strength1, .description = "test strengthening case 1")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: (<x> - <y>)^2 -<z>*<x> + <x> + 1 - <z>^2 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 -<z>*<x> + <x> + 1 - <z>^2 <= 0.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2204,7 +2204,7 @@ Test(interCuts, strength2, .description = "test strengthening case 2")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: (<x> - <y>)^2 - 2*<z>*<x> - <x> - <z>^2 <= -3.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 - 2*<z>*<x> - <x> - <z>^2 <= -3.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2268,7 +2268,7 @@ Test(interCuts, strength3, .description = "test strengthening case 3")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: (<x> - <y>)^2 -<z>*<x> + <x> - <z>^2 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 -<z>*<x> + <x> - <z>^2 <= 0.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2331,7 +2331,7 @@ Test(interCuts, strength4, .description = "test strengthening case 4")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x>^2 -<z>*<x> + <y>*<x> + <x>- <z> + 2.0 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 -<z>*<x> + <y>*<x> + <x>- <z> + 2.0 <= 0.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2398,7 +2398,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x>^2 - 3*<y>^2 + 3*<x>*<y> + <z> + 1.0 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 - 3*<y>^2 + 3*<x>*<y> + <z> + 1.0 <= 0.0");
 
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
    cr_assert_not(cutoff);
