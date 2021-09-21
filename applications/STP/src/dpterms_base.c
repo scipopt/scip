@@ -409,9 +409,6 @@ SCIP_RETCODE dpsolverSolve(
    SCIP_Bool*            wasSolved           /**< was problem solved to optimality? */
 )
 {
-   // todo compress?
-
-
    SCIP_CALL( dpterms_coreSolve(scip, g, dpsolver, wasSolved) );
 
    return SCIP_OKAY;

@@ -105,7 +105,6 @@ void termcompDeleteEdges(
                continue;
             }
 
-          //  printf("%f %f %f \n", pathdist[k], cost[e], vnoi[subhead].dist);
             redcost = pathdist[subhead] + cost[flipedge(e)] + vnoi[k].dist;
 
             if( SCIPisGT(scip, redcost, cutoffbound) && !graph_edge_isDeleted(g, eorg) )
@@ -408,8 +407,6 @@ SCIP_RETCODE initHelpers(
       SCIPdebugMessage("update nChecks %d->%d \n", maxncompchecks, mincheckbound);
       maxncompchecks = mincheckbound;
    }
-
-  // printf("maxncompchecks=%d \n", maxncompchecks);
 
    /* NOTE: we want to allow a few more terminal separators to be able to choose small ones */
    SCIP_CALL( mincut_termsepasInit(scip, g, (int) (1.5 * maxncompchecks), maxsepasize, termsepas) );
