@@ -1641,7 +1641,7 @@ SCIP_RETCODE separateDeterminant(
    /* merge coefficients that belong to same variable */
    SCIPmergeRowprepTerms(scip, rowprep);
 
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, sepadata->mincutviol, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, sepadata->mincutviol, NULL, &success) );
 
    /* if cleanup was successfull, create row out of rowprep and add it */
    if( success )
