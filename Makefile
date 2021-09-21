@@ -838,7 +838,7 @@ SCIPLIBBASESRC	=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.c))
 SCIPLIBBASESRC	+=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBCPPOBJ:.o=.cpp))
 SCIPLIBBASESRC	+=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPLIBBASELINK	 =	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBBASESHORTNAME).$(BASE).$(LIBEXT)
-SCIPLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBBASESHORTNAME).$(LIBEXT)
+SCIPLIBBASESHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBBASESHORTNAME).$(LIBEXT)
 
 # define library that contains everything
 SCIPLIBSHORTNAME = scip
@@ -938,9 +938,9 @@ all:		libs
 		@$(MAKE) $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: libs
-libs:		libscip libobjscip liblpi libtpi
+libs:		libscipbase libobjscip liblpi libtpi
 ifeq ($(SHARED),true)
-		@$(MAKE) libscipsolver
+		@$(MAKE) libscip
 endif
 
 .PHONY: preprocess
@@ -1091,7 +1091,7 @@ $(SCIPLIBBASELINK): 	$(SCIPLIBBASEFILE)
 .PHONY: $(SCIPLIBBASESHORTLINK)
 $(SCIPLIBBASESHORTLINK):	$(SCIPLIBBASEFILE)
 		@rm -f $@
-		cd $(dir $@) && $(LN_s) $(notdir $(SCIPLIBBASeFILE)) $(notdir $@)
+		cd $(dir $@) && $(LN_s) $(notdir $(SCIPLIBBASEFILE)) $(notdir $@)
 
 $(OBJSCIPLIBLINK):	$(OBJSCIPLIBFILE)
 		@rm -f $@
