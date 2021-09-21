@@ -18,6 +18,7 @@ Features
 - New separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint).
 - New parsing routines for cons_orbisack and cons_symresack.
 - Variables can now be marked to forbid aggregation
+- Heuristic PADM can now reoptimize found solution with original objective function
 - Added code to support debugging of catching or releasing of variables to var.c (prints backtrace
   when catching and releasing).
 - SCIPintervalSin() and SCIPintervalCos() are now rounding-safe.
@@ -584,6 +585,7 @@ NLPI:
 - deleted parameter "constraints/orbitope/usedynamicprop"
 - changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
 - deleted parameter "propagating/symmetry/disableofrestart"
+- parameter "heuristics/padm/original" is now an advanced parameter
 - removed constraints/nonlinear/linfeasshift, constraints/nonlinear/assumeconvex, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont
 - removed constraints/nonlinear/upgrade/abspower
 - removed constraints/nonlinear/upgrade/and, use constraints/nonlinear/reformbinprodsand instead
