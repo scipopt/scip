@@ -373,7 +373,6 @@ SCIP_RETCODE createBlockproblem(
 
    /* save number of variables that have a corresponding variable in original problem*/
    blockproblem->nblockvars = SCIPgetNVars(blockproblem->blockscip);
-   assert(blockproblem->nblockvars == nvars);
 
    /* save original objective and set objective to zero */
    subvars = SCIPgetVars(blockproblem->blockscip);
