@@ -801,8 +801,8 @@ SCIP_RETCODE computeOffValues(
 
    SCIPfreeExpriter(&it);
    SCIPhashmapFree(&auxvarmap);
-   SCIPfreeBufferArray(scip, &origvals0);
    SCIPfreeBufferArray(scip, &origvars);
+   SCIPfreeBufferArray(scip, &origvals0);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    return SCIP_OKAY;
@@ -1795,7 +1795,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
             /* only perspectivy when the absolute value of cst0 is not too small
              * TODO on ex1252a there was cst0=0 - ok to still use the cut?
             */
-            if( cst0 == 0.0 || maxcoef / REALABS(cst0) <= SCIP_CONSNONLINEAR_CUTMAXRANGE )
+            if( cst0 == 0.0 || maxcoef / REALABS(cst0) <= 10.0 / SCIPfeastol(scip) )
             {
                /* update the rowprep by adding cst0 - cst0*z */
                SCIProwprepAddConstant(rowprep, cst0);

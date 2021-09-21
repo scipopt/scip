@@ -604,6 +604,9 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
             (consdata->nnodesinunion[consdata->node1]) + (consdata->nnodesinunion[consdata->node2]);
          consdata->nnodesinunion[consdata->node2] = 0;
          consdata->unionofnode[consdata->node2] = NULL;
+
+         /* the constraint associated to node2 can be removed from this branch-and-bound node and its subtree */
+         SCIP_CALL( SCIPdelConsLocal(scip, COLORprobGetConstraint(scip, consdata->node2)));
       }
 
       /* create the complementary graph */

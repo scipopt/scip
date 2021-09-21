@@ -1962,7 +1962,7 @@ SCIP_RETCODE addTightEstimatorCut(
 
       /* complete estimator to cut and clean it up */
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
-      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPinfinity(scip), &estimatesuccess) );
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPinfinity(scip), &estimatesuccess) );
 
       /* if cleanup failed or rowprep is local now, then skip */
       if( !estimatesuccess || SCIProwprepIsLocal(rowprep) )
@@ -11463,8 +11463,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
        */
       if( !allowweakcuts )
       {
-         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE,
-                                        conshdlrdata->strongcutmaxcoef, &sepasuccess) );
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, conshdlrdata->strongcutmaxcoef, &sepasuccess) );
 
          if( !sepasuccess )
          {
@@ -11520,8 +11519,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          if( !branchscoresuccess )
             SCIProwprepRecordModifications(rowprep);
 
-         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, mincutviolation, &cutviol,
-                                       &sepasuccess) );
+         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, mincutviolation, &cutviol, &sepasuccess) );
 
          if( !sepasuccess )
          {
@@ -12101,8 +12099,8 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
 
 CLEANUP:
    /* free allocated memory */
-   SCIPfreeBufferArray(scip, &funvals);
    SCIPfreeBufferArray(scip, &corner);
+   SCIPfreeBufferArray(scip, &funvals);
    SCIPfreeBufferArray(scip, &nonfixedpos);
 
    return SCIP_OKAY;

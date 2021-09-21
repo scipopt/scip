@@ -534,7 +534,7 @@ SCIP_RETCODE generateCutSolSOC(
    /* add side */
    SCIProwprepAddSide(rowprep, cutrhs);
 
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPinfinity(scip), NULL) );
 
    if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
    {
@@ -694,7 +694,7 @@ SCIP_RETCODE generateCutSolDisagg(
    /* add side */
    SCIProwprepAddSide(rowprep, constant - fvalue);
 
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIPinfinity(scip), NULL) );
 
    if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
    {
@@ -2132,8 +2132,8 @@ CLEANUP:
    SCIPfreeBufferArrayNull(scip, &bp);
    SCIPfreeBufferArray(scip, &eigvals);
    SCIPfreeBufferArray(scip, &lincoefs);
-   SCIPfreeBufferArray(scip, &occurringexprs);
    SCIPfreeBufferArray(scip, &eigvecmatrix);
+   SCIPfreeBufferArray(scip, &occurringexprs);
    SCIPhashmapFree(&expr2idx);
 
    return SCIP_OKAY;

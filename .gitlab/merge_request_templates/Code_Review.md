@@ -25,5 +25,5 @@
 ### Does this merge request introduce an API change? :warning:
 
 * [ ] No, **or** as far as possible, the code ensures backwards compatibility.
-* [ ] No, **or** after merging, the `SCIP_APIVERSION` is updated (use label 'public SCIP API'; in particular if new `SCIP_EXPORT` methods have been added).
+* [ ] No, **or** the `SCIP_APIVERSION` is updated (use label 'public SCIP API'; in particular if new `SCIP_EXPORT` methods have been added).
 * [ ] No parameter was added/deleted/changed **or** the MR is tagged with the label 'default parameter'. (This includes the addition of parameters by adding/deleting a plugin.)

@@ -596,7 +596,7 @@ SCIP_RETCODE addCut(
    SCIPdebugMsg(scip, "cut violation %g mincutviol = %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviol);
 
    /* cleanup coefficient and side, esp treat epsilon to integral values; don't consider scaling up here */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, 0.0, NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, 0.0, NULL, &success) );
 
    /* check cut violation */
    if( success && SCIPgetRowprepViolation(scip, rowprep, sol, NULL) > mincutviol )

@@ -118,8 +118,7 @@ set(settings_fastMIP
     "../../../scripts/trainEstimation/periodic_report"
   )
 set(settings_MINLP
-#    "emphasis_numerics"
-    "minlp"
+    "default"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -129,16 +128,12 @@ set(settings_MINLP
     "nlpdivingsolvesubmip"
     "nlpdiving4"
     "separating_aggressive"
+    "emphasis_numerics"
 )
 
 set(settings_branch
     "branch_inference"
 )
-
-set(settings_Bilinrelax
-    "minlp"
-    "bilinrelax"
-  )
 
 set(settings_Symmetry_A
     "orbitalfixing-timing0"
@@ -309,8 +304,8 @@ set(instances_branch
     "instances/MINLP/ex1266.mps\;16.3"
     )
 set(instances_Bilinrelax
-    "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
-    "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
+    "instances/MINLP/pointpack04.osil\;1.00000024988836"
+    "instances/MINLP/pointpack06.osil\;0.361111675167215"
   )
 
 #
@@ -338,8 +333,8 @@ set(instances_sparsify
 # Semicontinuous instances
 #
 set(instances_Semicontinuous
-#    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
-    "instances/Semicontinuous/semicon1.mps\;1.1"
+    "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
+    "instances/MIP/semicon1.mps\;1.1"
     )
 #
 # SAT instance(s)
@@ -423,7 +418,7 @@ set(instances_BendersLB
 
 set(instances_BendersQP
     "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec.gz\;-8.22960761981176e-02"
-    "instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
+    #"instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
     "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.34740783553289e-02"
    )
 
@@ -554,7 +549,7 @@ add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandle
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_branch settings_branch "Branch")
-add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
+add_instancetests(instances_Bilinrelax settings_default "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
 add_instancetests(instances_sparsify settings_sparsify "Sparsify")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")

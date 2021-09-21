@@ -28,6 +28,8 @@ Features
 - New separator sepa_rlt to compute cuts via the reformulation-linearization technique (RLT).
 - New separator sepa_minor to compute cuts from 2x2 minors of a violated semidefiniteness constraint that is
   implied by the extended formulation for bilinear products.
+- New separator sepa_interminor to compute intersection cuts from 2x2 (not only principle) minors of a violated
+  semidefiniteness constraint that is implied by the extended formulation for bilinear products.
 - Symmetry handling has been extended to detect also symmetries between variables that also appear in nonlinear constraints.
 - Improved OBBT by only considering variables that are contained in at least one nonconvex expression that has an auxiliary variable.
 - Default parameter settings for NLP solves are now defined independently of the NLP solver.
@@ -35,6 +37,8 @@ Features
 - Ipopt interface now supports warmstarts from a full primal/dual solution pair.
 - Extended data structure SCIP_ROWPREP and routines to assemble a linear inequality before it is turned into a SCIP row and
   made it available via the API.
+- MIR procedure is now available for strengthening the Benders' optimality cut
+- SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
 
 Expressions:
 - Removed support for expression types min and max for now. Removed support for expression type sign.
@@ -68,7 +72,7 @@ Constraint handlers for NLP:
   providing propagation and separation mechanisms.
 - Added nlhdlr "default" as a mandatory nlhdlr: this is a nlhdlr that gets active on expressions that no other nlhdlr handles.
   It then uses the callbacks implemented in expression handlers to provide domain propagation and linear under/overestimates.
-- Added nlhdlr for quadratic expressions: domain propagation that was previously part of cons_quadratic.
+- Added nlhdlr for quadratic expressions: domain propagation that was previously part of cons_quadratic; separation via intersection cuts (currently disabled).
 - Added nlhdlr for bilinear expressions: collects bilinear products and provides under/overestimation of a product over a 2D-projection of the LP.
 - Added nlhdlr for convex and concave expressions: detection of convex/concave subexpressions and linear under/overestimation.
 - Added nlhdlr for quotients: detects quotients, provides specialized linear under/overestimation and domain propagation for univariate quotients.
@@ -129,6 +133,7 @@ Performance improvements
 - Revised and improved subNLP primal heuristic, in particular choice of iteration limit and starting condition and reuse of subSCIP.
 - Merge strongcg into the gomory separator to avoid computing the same base equality twice. The files
   sepa_strongcg.{h|c} have been removed.
+- The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
 
 Examples and applications
 -------------------------
@@ -581,13 +586,14 @@ NLPI:
 - changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
 - deleted parameter "propagating/symmetry/disableofrestart"
 - parameter "heuristics/padm/original" is now an advanced parameter
-- removed constraints/nonlinear/cutmaxrange, constraints/nonlinear/linfeasshift, constraints/nonlinear/assumeconvex, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont
+- removed constraints/nonlinear/linfeasshift, constraints/nonlinear/assumeconvex, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont
 - removed constraints/nonlinear/upgrade/abspower
 - removed constraints/nonlinear/upgrade/and, use constraints/nonlinear/reformbinprodsand instead
 - removed constraints/nonlinear/upgrade/bivariate
 - removed constraints/nonlinear/upgrade/quadratic, use nlhdlr/quadratic/enabled instead
 - changed default of constraints/nonlinear/maxproprounds from 1 to 10
 - replaced constraints/nonlinear/enfocutsremovable by constraints/nonlinear/rownotremovable
+- replaced constraints/nonlinear/cutmaxrange by separating/maxcoefratiofacrowprep
 - removed constraints/quadratic/sepafreq, constraints/quadratic/propfreq, constraints/quadratic/proptiming, constraints/quadratic/eagerfreq, constraints/quadratic/maxprerounds, constraints/quadratic/delaysepa, constraints/quadratic/delayprop, constraints/quadratic/presoltiming
 - removed constraints/quadratic/replacebinaryprod, use constraints/nonlinear/reformbinprodsfac instead
 - removed constraints/quadratic/empathy4and, use constraints/nonlinear/reformbinprodsand instead
@@ -667,14 +673,15 @@ NLPI:
 - nlhdlr/concave/enabled, nlhdlr/concave/detectsum, nlhdlr/concave/cvxquadratic, nlhdlr/concave/cvxsignomial, nlhdlr/concave/cvxprodcomp, nlhdlr/concave/handletrivial
 - nlhdlr/bilinear/enabled, nlhdlr/bilinear/useinteval, nlhdlr/bilinear/usereverseprop, nlhdlr/bilinear/maxseparoundsroot, nlhdlr/bilinear/maxseparounds, nlhdlr/bilinear/maxsepadepth
 - nlhdlr/perspective/enabled, nlhdlr/perspective/maxproprounds, nlhdlr/perspective/mindomreduction, nlhdlr/perspective/minviolprobing, nlhdlr/perspective/probingonlyinsepa, nlhdlr/perspective/probingfreq, nlhdlr/perspective/convexonly, nlhdlr/perspective/tightenbounds
-- nlhdlr/quadratic/enabled
+- nlhdlr/quadratic/enabled, nlhdlr/quadratic/useintersectioncuts, nlhdlr/quadratic/usestrengthening, nlhdlr/quadratic/useboundsasrays, nlhdlr/quadratic/ncutslimit, nlhdlr/quadratic/ncutslimitroot, nlhdlr/quadratic/maxrank, nlhdlr/quadratic/mincutviolation, nlhdlr/quadratic/minviolation, nlhdlr/quadratic/atwhichnodes, nlhdlr/quadratic/nstrengthlimit, nlhdlr/quadratic/ignorebadrayrestriction, nlhdlr/quadratic/ignorehighre
 - nlhdlr/quotient/enabled
 - nlhdlr/soc/enabled, nlhdlr/soc/mincutefficacy, nlhdlr/soc/compeigenvalues
 - propagating/obbt/createlincons
 - propagating/symmetry/onlybinarysymmetry
 - separating/minor/priority, separating/minor/freq, separating/minor/maxbounddist, separating/minor/delay, separating/minor/expbackoff, separating/minor/maxminorsconst, separating/minor/maxminorsfac, separating/minor/mincutviol, separating/minor/maxrounds, separating/minor/maxroundsroot, separating/minor/ignorepackingconss
 - separating/rlt/priority, separating/rlt/freq, separating/rlt/maxbounddist, separating/rlt/delay, separating/rlt/expbackoff, separating/rlt/maxncuts, separating/rlt/maxunknownterms, separating/rlt/maxusedvars, separating/rlt/maxrounds, separating/rlt/maxroundsroot, separating/rlt/onlyeqrows, separating/rlt/onlycontrows, separating/rlt/onlyoriginal, separating/rlt/useinsubscip, separating/rlt/useprojection, separating/rlt/detecthidden, separating/rlt/hiddenrlt, separating/rlt/addtopool, separating/rlt/goodscore, separating/rlt/badscore, separating/rlt/objparalweight, separating/rlt/efficacyweight, separating/rlt/dircutoffdistweight, separating/rlt/goodmaxparall, separating/rlt/maxparall
-- table/cons_nonlinear/active, table/nlhdlr/active, table/exprhdlr/active, table/nlpi/active, table/nlhdlr_bilinear/active
+- separating/interminor/usestrengthening, separating/interminor/usebounds, separating/interminor/mincutviol, separating/interminor/maxrounds, separating/interminor/maxroundsroot
+- table/cons_nonlinear/active, table/nlhdlr/active, table/exprhdlr/active, table/nlpi/active, table/nlhdlr_bilinear/active, table/nlhdlr_quadratic/active
 - expr/log/minzerodistance, expr/pow/minzerodistance
 - benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
 - nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
@@ -686,7 +693,9 @@ NLPI:
 - heuristics/subnlp/presolveemphasis, heuristics/subnlp/setcutoff
 - new parameters "branching/inference/conflictprio" and "branching/inference/cutoffprio" that allow
   using the different score criteria in inference branching hierarchically
-
+- new parameters "heuristics/alns/nodesquotmin", "heuristics/alns/maxcallssamesol" and "heuristics/alns/initduringroot"
+  to control neighborhoods in ALNS
+- new parameter "benders/default/benderscut/optimality/mir" to control whether mixed-integer rounding procedure is applied to Benders optimality cuts
 
 ### Data structures
 
