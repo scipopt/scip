@@ -1684,7 +1684,7 @@ SCIP_RETCODE separatePoint(
    )
 {
    SCIP_SEPADATA* sepadata;
-   SCIP_HASHMAP* tableau;
+   SCIP_HASHMAP* tableau = NULL;
    int* basicvarpos2tableaurow = NULL; /* map between basic var and its tableau row */
    int i;
 
@@ -1743,6 +1743,7 @@ SCIP_RETCODE separatePoint(
          /* construct basicvar to tableau row map */
          SCIP_CALL( constructBasicVars2TableauRowMap(scip, basicvarpos2tableaurow) );
       }
+      assert(tableau != NULL);
 
       if( SCIPisFeasPositive(scip, det) )
       {
