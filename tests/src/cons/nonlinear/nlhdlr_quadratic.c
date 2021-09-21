@@ -945,9 +945,7 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
  *
  */
 
-/* TODO testsuite should also be able to run and succeed if DEFAULT_USEINTERCUTS is FALSE */
-#if DEFAULT_USEINTERCUTS
-TestSuite(interCuts, .init = setup, .fini = teardown, .disabled = !DEFAULT_USEINTERCUTS);
+TestSuite(interCuts, .init = setup, .fini = teardown);
 
 static
 void simplifyAndDetect(
@@ -1099,7 +1097,7 @@ void buildAndSolveSimpleProbingLP(void)
    SCIP_CALL( SCIPchgVarLbProbing(scip, w, 0.0) );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   cr_expect_not(cutoff);
+   //cr_expect_not(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
    cr_expect_not(lperror);
 
    /* all variables should be nonbasic */
@@ -1519,7 +1517,7 @@ Test(interCuts, testRays5)
       //SCIP_CALL( SCIPchgVarObjProbing(scip, y,  1.0e-5) );
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-      cr_assert_not(cutoff);
+      //cr_assert_not(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
       cr_assert_not(lperror);
       SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) );
 
@@ -2041,8 +2039,6 @@ Test(interCuts, cut1, .description = "test cut for Case 2")
 
    buildAndSolveSimpleProbingLP();
 
-   printf("here*\n");
-
    /* check cut */
    {
       int       expectednvars    = 2;
@@ -2122,6 +2118,7 @@ Test(interCuts, cut3, .description = "test cut for Case 3")
       SCIP_VAR* expectedvars[4]  = {x, y, w, z};
       SCIP_Real expectedlhs      = 0.788874349522027;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", FALSE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2188,6 +2185,7 @@ Test(interCuts, strength1, .description = "test strengthening case 1")
       SCIP_VAR* expectedvars[3]  = {x, y, z};
       SCIP_Real expectedlhs      = 0.43067995082696664;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2251,6 +2249,7 @@ Test(interCuts, strength2, .description = "test strengthening case 2")
       SCIP_VAR* expectedvars[3]  = {x, y, z};
       SCIP_Real expectedlhs      = 0.6638190109054805748;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       /* we need to overestimate because simplify will multiply cons by -1 */
       testCut(nlhdlrexprdata, cons, TRUE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
@@ -2315,6 +2314,7 @@ Test(interCuts, strength3, .description = "test strengthening case 3")
       SCIP_VAR* expectedvars[3]  = {x, y, z};
       SCIP_Real expectedlhs      = 0.1747724718238416967;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2378,6 +2378,7 @@ Test(interCuts, strength4, .description = "test strengthening case 4")
       SCIP_VAR* expectedvars[3]  = {x, y, z};
       SCIP_Real expectedlhs      = 1.3375271971557974;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2498,6 +2499,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
       SCIP_VAR* expectedvars[2]  = {x, y};
       SCIP_Real expectedlhs      = 0.551754189836395;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2539,7 +2541,7 @@ Test(interCuts, testBoundRays1)
    SCIPchgVarLbProbing(scip, z, 1.0);
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   cr_expect_not(cutoff);
+   //cr_expect_not(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
    cr_expect_not(lperror);
 
    /* choose solution to separate */
@@ -2598,4 +2600,3 @@ Test(interCuts, testBoundRays1)
    /* register enforcer info in expr and free */
    registerAndFree(cons, nlhdlrexprdata);
 }
-#endif
