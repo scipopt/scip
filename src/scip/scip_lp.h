@@ -395,6 +395,20 @@ int SCIPgetNLPCols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets current number of unfixed LP columns
+ *
+ *  @return the current number of unfixed LP columns.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+int SCIPgetNUnfixedLPCols(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets current LP rows along with the current number of LP rows
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

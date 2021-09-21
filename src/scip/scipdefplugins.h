@@ -231,7 +231,6 @@
 #include "scip/sepa_oddcycle.h"
 #include "scip/sepa_rapidlearning.h"
 #include "scip/sepa_rlt.h"
-#include "scip/sepa_strongcg.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
 #include "scip/symmetry.h"

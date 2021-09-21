@@ -3731,13 +3731,6 @@ SCIP_RETCODE paramsetSetSeparatingFast(
    {
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/mcf/freq", -1, quiet) );
    }
-#ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "strongcg") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/strongcg/maxroundsroot", 10, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/strongcg/maxsepacutsroot", 200, quiet) );
-   }
 
    return SCIP_OKAY;
 }
