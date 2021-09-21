@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPsetSepaPriority(
    return SCIP_OKAY;
 }
 
-/** sets whether separator is a parent separator
+/** declares separator to be a parent separator
  *
  *  Parent separators generate cuts of several types. To distinguish these cuts, they create child separators, which are
  *  only needed to detect which cuts are applied.

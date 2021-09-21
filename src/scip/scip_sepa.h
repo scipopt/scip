@@ -189,7 +189,7 @@ SCIP_RETCODE SCIPsetSepaPriority(
    int                   priority            /**< new priority of the separator */
    );
 
-/** sets whether separator is a parent separator
+/** declares separator to be a parent separator
  *
  *  Parent separators generate cuts of several types. To distinguish these cuts, they create child separators, which are
  *  only needed to detect which cuts are applied.

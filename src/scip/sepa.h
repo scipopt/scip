@@ -169,7 +169,7 @@ void SCIPsepaSetExitsol(
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
    );
 
-/** sets whether separator is a parent separator */
+/** declares separator to be a parent separator */
 void SCIPsepaSetIsParentsepa(
    SCIP_SEPA*            sepa                /**< separator */
    );

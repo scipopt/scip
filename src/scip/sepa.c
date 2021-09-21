@@ -695,7 +695,7 @@ void SCIPsepaSetExitsol(
    sepa->sepaexitsol = sepaexitsol;
 }
 
-/** sets whether separator is a parent separator */
+/** declares separator to be a parent separator */
 void SCIPsepaSetIsParentsepa(
    SCIP_SEPA*            sepa                /**< separator */
    )
