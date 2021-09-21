@@ -35,6 +35,7 @@ Features
 - Extended data structure SCIP_ROWPREP and routines to assemble a linear inequality before it is turned into a SCIP row and
   made it available via the API.
 - MIR procedure is now available for strengthening the Benders' optimality cut
+- SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
 
 Expressions:
 - Removed support for expression types min and max for now. Removed support for expression type sign.
