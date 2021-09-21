@@ -118,8 +118,7 @@ set(settings_fastMIP
     "../../../scripts/trainEstimation/periodic_report"
   )
 set(settings_MINLP
-#    "emphasis_numerics"
-    "minlp"
+    "default"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -129,16 +128,12 @@ set(settings_MINLP
     "nlpdivingsolvesubmip"
     "nlpdiving4"
     "separating_aggressive"
+    "emphasis_numerics"
 )
 
 set(settings_branch
     "branch_inference"
 )
-
-set(settings_Bilinrelax
-    "minlp"
-    "bilinrelax"
-  )
 
 set(settings_Symmetry_A
     "orbitalfixing-timing0"
@@ -309,8 +304,8 @@ set(instances_branch
     "instances/MINLP/ex1266.mps\;16.3"
     )
 set(instances_Bilinrelax
-    "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
-    "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
+    "instances/MINLP/pointpack04.osil\;1.00000024988836"
+    "instances/MINLP/pointpack06.osil\;0.361111675167215"
   )
 
 #
@@ -338,8 +333,8 @@ set(instances_sparsify
 # Semicontinuous instances
 #
 set(instances_Semicontinuous
-#    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
-    "instances/Semicontinuous/semicon1.mps\;1.1"
+    "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
+    "instances/MIP/semicon1.mps\;1.1"
     )
 #
 # SAT instance(s)
@@ -554,7 +549,7 @@ add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandle
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_branch settings_branch "Branch")
-add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
+add_instancetests(instances_Bilinrelax settings_default "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
 add_instancetests(instances_sparsify settings_sparsify "Sparsify")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")

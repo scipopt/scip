@@ -93,12 +93,6 @@ typedef struct SCIP_ConsNonlinear_BilinTerm SCIP_CONSNONLINEAR_BILINTERM; /**< b
 /** maximum dimension of vertex-polyhedral function for which we can try to compute a facet of its convex or concave envelope */
 #define SCIP_MAXVERTEXPOLYDIM 14
 
-/* TODO maybe should make this a parameter (was cutmaxrange in previous conshdlr)
- * TODO maybe should derive this from the current feastol (e.g., 10/feastol)
- */
-/** maximal range for nonzero coefficients in generated cuts */
-#define SCIP_CONSNONLINEAR_CUTMAXRANGE 1.0e7
-
 /** upgrading method for nonlinear constraints into more specific constraints
  *
  * The method might upgrade a nonlinear constraint into a set of upgrade constraints.
