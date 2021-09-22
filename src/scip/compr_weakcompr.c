@@ -163,7 +163,7 @@ SCIP_RETCODE constructCompression(
       nleaveids = SCIPgetNReoptLeaves(scip, currentnode);
    }
 
-   SCIPdebugMsg(scip, ">> start <%s> at node %llu (nleaves: %d, depth: %d)\n", COMPR_NAME,
+   SCIPdebugMsg(scip, ">> start <%s> at node %" SCIP_LONGINT_FORMAT " (nleaves: %d, depth: %d)\n", COMPR_NAME,
       SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVED ? 0 : SCIPnodeGetNumber(SCIPgetCurrentNode(scip)),
       nleaveids, SCIPgetStage(scip) <= SCIP_STAGE_PRESOLVED ? 0 : SCIPnodeGetDepth(currentnode));
 

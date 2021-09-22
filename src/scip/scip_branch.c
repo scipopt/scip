@@ -437,7 +437,7 @@ int SCIPgetNLPBranchCands(
 
    if( retcode != SCIP_OKAY )
    {
-      SCIPerrorMessage("Error <%u> during computation of the number of LP branching candidates\n", retcode);
+      SCIPerrorMessage("Error <%d> during computation of the number of LP branching candidates\n", retcode);
       SCIPABORT();
       return 0; /*lint !e527*/
    }
@@ -475,7 +475,7 @@ int SCIPgetNPrioLPBranchCands(
 
    if( retcode != SCIP_OKAY )
    {
-      SCIPerrorMessage("Error <%u> during computation of the number of LP branching candidates with maximal priority\n", retcode);
+      SCIPerrorMessage("Error <%d> during computation of the number of LP branching candidates with maximal priority\n", retcode);
       SCIPABORT();
       return 0; /*lint !e527*/
    }

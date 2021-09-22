@@ -54,6 +54,7 @@
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -119,6 +120,7 @@ struct SCIP_ConsData
    SCIP_VAR*             var;                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar;             /**< binary, integer or implicit integer bounding variable y */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
+   SCIP_NLROW*           nlrow;              /**< NLP row, if constraint has been added to NLP relaxation */
    unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
    unsigned int          varboundsadded:1;   /**< are the globally valid variable bounds added? */
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
@@ -324,6 +326,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
    (*consdata)->row = NULL;
+   (*consdata)->nlrow = NULL;
    (*consdata)->presolved = FALSE;
    (*consdata)->varboundsadded = FALSE;
    (*consdata)->changed = TRUE;
@@ -362,6 +365,12 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* release the nlrow */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
    /* release variables */
@@ -437,6 +446,51 @@ SCIP_RETCODE addRelaxation(
       SCIPdebugMsg(scip, "adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, infeasible) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds varbound constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< varbound constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_VAR* vars[2];
+      SCIP_Real coefs[2];
+
+      assert(consdata->lhs <= consdata->rhs);
+
+      vars[0] = consdata->var;
+      vars[1] = consdata->vbdvar;
+
+      coefs[0] = 1.0;
+      coefs[1] = consdata->vbdcoef;
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+         0.0, 2, vars, coefs, NULL, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_LINEAR) );
+
+      assert(consdata->nlrow != NULL);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -2664,7 +2718,11 @@ SCIP_RETCODE preprocessConstraintPairs(
              * @note we need to force the bound change since we are deleting the constraint afterwards
              */
             SCIP_CALL( SCIPtightenVarUb(scip, consdata0->var, rhs, TRUE, &infeasible, &tightened) );
-            assert(!infeasible);
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               break;
+            }
             if( tightened )
                ++(*nchgbds);
 
@@ -2673,7 +2731,11 @@ SCIP_RETCODE preprocessConstraintPairs(
              * @note we need to force the bound change since we are deleting the constraint afterwards
              */
             SCIP_CALL( SCIPtightenVarLb(scip, consdata0->var, lhs, TRUE, &infeasible, &tightened) );
-            assert(!infeasible);
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               break;
+            }
             if( tightened )
                ++(*nchgbds);
 
@@ -4138,6 +4200,24 @@ SCIP_DECL_CONSFREE(consFreeVarbound)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolVarbound)
+{  /*lint --e{715}*/
+
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolVarbound)
@@ -4145,7 +4225,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolVarbound)
    SCIP_CONSDATA* consdata;
    int c;
 
-   /* release the rows of all constraints */
+   /* release the rows and nlrows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -4154,6 +4234,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolVarbound)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
 
@@ -4692,6 +4777,41 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
    return SCIP_OKAY;
 }
 
+/** constraint activation notification method of constraint handler */
+static
+SCIP_DECL_CONSACTIVE(consActiveVarbound)
+{  /*lint --e{715}*/
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveVarbound)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintVarbound)
@@ -4962,11 +5082,6 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
 /**@} */
 
 
-/**@name Interface methods
- *
- * @{
- */
-
 /** creates the handler for variable bound constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -4992,7 +5107,10 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyVarbound, consCopyVarbound) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveVarbound) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveVarbound) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteVarbound) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolVarbound) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolVarbound) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeVarbound) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsVarbound) );
@@ -5360,5 +5478,3 @@ SCIP_RETCODE SCIPcleanupConssVarbound(
 
    return SCIP_OKAY;
 }
-
-/**@} */

@@ -241,8 +241,8 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
       return TRUE;
    }
 
-   if( (!SCIPsetIsInfinity(set, rhs) && SCIPsetIsFeasGT(set, minactivity, rhs)) ||
-       (!SCIPsetIsInfinity(set, -lhs) &&  SCIPsetIsFeasLT(set, maxactivity, lhs) ))
+   if( (!SCIPsetIsInfinity(set,  rhs) && SCIPsetIsFeasPositive(set, minactivity - rhs)) ||
+       (!SCIPsetIsInfinity(set, -lhs) && SCIPsetIsFeasNegative(set, maxactivity - lhs)) )
    {
       SCIPsetDebugMsg(set, "cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);

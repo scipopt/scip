@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPtransformProb(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVED
  *
  *  @post After calling this method \SCIP reaches one of the following stages:
  *        - \ref SCIP_STAGE_PRESOLVING if the presolving process was interrupted
@@ -209,31 +210,6 @@ SCIP_RETCODE SCIPfreeSolve(
    SCIP_Bool             restart             /**< should certain data be preserved for improved restarting? */
    );
 
-/** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
- *  preserved
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *
- *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
- *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPfreeReoptSolve(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** frees all solution process data including presolving and transformed problem, only original problem is kept
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -285,6 +261,31 @@ SCIP_RETCODE SCIPinterruptSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** indicates whether \SCIP has been informed that the solving process should be interrupted as soon as possible
+ *
+ *  This function returns whether SCIPinterruptSolve() has been called, which is different from SCIPinterrupted(),
+ *  which returns whether a SIGINT signal has been received by the SCIP signal handler.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note the \SCIP stage does not get changed
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisSolveInterrupted(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** informs SCIP that the solving process should be restarted as soon as possible (e.g., after the current node has
  *  been solved)
  *
@@ -301,6 +302,58 @@ SCIP_RETCODE SCIPinterruptSolve(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPrestartSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether we are in the restarting phase
+ *
+ *  @return TRUE, if we are in the restarting phase; FALSE, otherwise
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisInRestart(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@} */
+
+/**@addtogroup PublicReoptimizationMethods
+ *
+ * @{
+ */
+
+/** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
+ *  preserved
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
+ *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeReoptSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -395,26 +448,6 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
    SCIP_VAR*             var,                /**< variable */
    int                   run,                /**< number of the run */
    SCIP_Real*            objcoef             /**< pointer to store the objective coefficient */
-   );
-
-/** returns whether we are in the restarting phase
- *
- *  @return TRUE, if we are in the restarting phase; FALSE, otherwise
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- */
-SCIP_EXPORT
-SCIP_Bool SCIPisInRestart(
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */

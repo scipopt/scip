@@ -12,14 +12,11 @@ endif()
 
 include_directories(${SCIP_INCLUDE_DIRS})
 
-add_executable(circle
-   src/circle.c)
-
 add_executable(gastrans
    src/gastrans.c)
 
-add_executable(string
-   src/string.c)
+add_executable(spring
+   src/spring.c)
 
 add_executable(brachistochrone
    src/brachistochrone.c)
@@ -33,14 +30,13 @@ if(NOT LIBM)
   set(LIBM "")
 endif()
 
-target_link_libraries(circle ${SCIP_LIBRARIES})
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
-target_link_libraries(string ${SCIP_LIBRARIES})
+target_link_libraries(spring ${SCIP_LIBRARIES})
 target_link_libraries(brachistochrone ${SCIP_LIBRARIES} ${LIBM})
 target_link_libraries(circlepacking ${SCIP_LIBRARIES} ${LIBM})
 
 if( TARGET examples )
-    add_dependencies( examples circle gastrans string brachistochrone circlepacking )
+    add_dependencies( examples gastrans spring brachistochrone circlepacking )
 endif()
 
 #
@@ -48,7 +44,7 @@ endif()
 #
 macro(addbuildandtest target)
     add_test(NAME examples-callablelibrary_${target}-build
-            COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${target}
+            COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target ${target}
             )
     #
     # avoid that several build jobs try to concurrently build the SCIP library
@@ -66,10 +62,17 @@ macro(addbuildandtest target)
                         PROPERTIES
                             DEPENDS examples-callablelibrary_${target}-build
                         )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties(examples-callablelibrary_${target}
+                PROPERTIES
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 endmacro(addbuildandtest)
 
-addbuildandtest(circle)
 addbuildandtest(gastrans)
-addbuildandtest(string)
+addbuildandtest(spring)
 addbuildandtest(brachistochrone)
 addbuildandtest(circlepacking)

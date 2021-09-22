@@ -16,7 +16,7 @@ set(instances
 # add test to build the VRP executable
 #
 add_test(NAME examples-vrp-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target vrp
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target vrp
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -42,4 +42,12 @@ foreach(instance ${instances})
                         PROPERTIES
                             DEPENDS examples-vrp-build
                             )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties(examples-vrp-${basename}
+                PROPERTIES
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 endforeach(instance)

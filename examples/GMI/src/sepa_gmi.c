@@ -577,7 +577,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
    int ncols;
    int nrows;
    int ncalls;
-   int depth;
    int maxsepacuts;
    int ncuts;
    int cutnz;
@@ -611,7 +610,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* Only call the GMI cut separator a given number of times at each node. */

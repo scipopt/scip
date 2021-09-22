@@ -169,6 +169,9 @@ Problem<SCIP_Real> buildProblem(
       builder.setRowRhsInf(i, SCIPisInfinity(scip, rhs));
    }
 
+   /* init objective offset - the value itself is irrelevant */
+   builder.setObjOffset(0);
+
    return builder.build();
 }
 
@@ -309,39 +312,36 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* set up the presolvers that shall participate */
    using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
 
+   /* fast presolvers*/
+   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
 
+   /* medium presolver */
+   presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
    if( data->enableparallelrows )
       presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
-
-   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
+   /* todo: parallel cols cannot be handled by SCIP currently
+   * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
+   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
 
-   if( data->enablemultiaggr )
-      presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
-
+   /* exhaustive presolvers*/
+   presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
+   if( data->enabledualinfer )
+      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
    if( data->enableprobing )
       presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-
+   if( data->enabledomcol )
+      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+   if( data->enablemultiaggr )
+      presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
    if( data->enablesparsify )
       presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
 
-   if( data->enabledualinfer )
-      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
-
-   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
-
-   if( data->enabledomcol )
-      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
-
-   /* todo: parallel cols cannot be handled by SCIP currently
-    * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
 
    /* set tolerances */
    presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
@@ -363,6 +363,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
    int oldnnz = problem.getConstraintMatrix().getNnz();
+
    PresolveResult<SCIP_Real> res = presolve.apply(problem);
    data->lastncols = problem.getNCols();
    data->lastnrows = problem.getNRows();
@@ -492,6 +493,32 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          assert(fixed);
          break;
       }
+#if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
+#else
+      case ReductionType::kFixedInfCol: {
+          if(!constraintsReplaced)
+              continue;
+          SCIP_Bool infeas;
+          SCIP_Bool fixed;
+          SCIP_Real value = SCIPinfinity(scip);
+
+          int column = res.postsolve.indices[first];
+          bool is_negative_infinity = res.postsolve.values[first] < 0;
+          SCIP_VAR* column_variable = SCIPmatrixGetVar(matrix, column);
+
+          if( is_negative_infinity )
+          {
+              value = -SCIPinfinity(scip);
+          }
+
+          SCIP_CALL( SCIPfixVar(scip, column_variable, value, &infeas, &fixed) );
+          *nfixedvars += 1;
+
+          assert(!infeas);
+          assert(fixed);
+          break;
+      }
+#endif
       case ReductionType::kSubstitutedCol:
       {
          int col = res.postsolve.indices[first];
@@ -522,6 +549,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          else
          {
             SCIP_Real colCoef = 0.0;
+            SCIP_Real updatedSide;
 
             for( int j = first + 1; j < last; ++j )
             {
@@ -543,7 +571,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_CALL( SCIPgetProbvarSum(scip, &aggrvar, &colCoef, &constant) );
             assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
 
-            side -= constant;
+            updatedSide = side - constant;
 
             for( int j = first + 1; j < last; ++j )
             {
@@ -555,7 +583,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             }
 
             SCIP_CALL( SCIPmultiaggregateVar(scip, aggrvar, tmpvars.size(),
-               tmpvars.data(), tmpvals.data(), side / colCoef, &infeas, &aggregated) );
+               tmpvars.data(), tmpvals.data(), updatedSide / colCoef, &infeas, &aggregated) );
          }
 
          if( aggregated )
@@ -588,9 +616,10 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
          break;
       }
-      default:
       case ReductionType::kParallelCol:
          return SCIP_INVALIDRESULT;
+      default:
+         continue;
       }
    }
 
@@ -668,9 +697,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO) [GitHash: {}]", PAPILO_GITHASH);
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
 #else
-   String desc("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO)");
+   String desc("parallel presolve for integer and linear optimization (github.com/scipopt/papilo)");
 #endif
 
    /* add external code info for the presolve library */

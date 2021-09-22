@@ -40,7 +40,7 @@ SCIP_RETCODE SCIPtpiCreateJob(
    return SCIP_ERROR;
 }
 
-/** submit a job for parallel processing the return is a globally defined status */
+/** submit a job for parallel processing; the return value is a globally defined status */
 SCIP_RETCODE SCIPtpiSumbitJob(
    SCIP_JOB*             job,                /**< pointer to the job to be submitted */
    SCIP_SUBMITSTATUS*    status              /**< pointer to store the job's submit status */

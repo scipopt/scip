@@ -53,11 +53,13 @@
 #include "scip/pub_compr.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_cutpool.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_history.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
+#include "scip/pub_nlpi.h"
 #include "scip/pub_presol.h"
 #include "scip/pub_pricer.h"
 #include "scip/pub_prop.h"
@@ -955,7 +957,7 @@ int SCIPgetNPricevars(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNPricevars", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPpricestoreGetNVars(scip->pricestore);
+   return scip->pricestore == NULL ? 0 : SCIPpricestoreGetNVars(scip->pricestore);
 }
 
 /** get total number of pricing variables found so far
@@ -973,7 +975,7 @@ int SCIPgetNPricevarsFound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNPricevarsFound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPpricestoreGetNVarsFound(scip->pricestore);
+   return scip->pricestore == NULL ? 0 : SCIPpricestoreGetNVarsFound(scip->pricestore);
 }
 
 /** get total number of pricing variables applied to the LPs
@@ -991,7 +993,7 @@ int SCIPgetNPricevarsApplied(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNPricevarsApplied", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPpricestoreGetNVarsApplied(scip->pricestore);
+   return scip->pricestore == NULL ? 0 : SCIPpricestoreGetNVarsApplied(scip->pricestore);
 }
 
 /** gets number of separation rounds performed so far at the current node
@@ -1025,7 +1027,7 @@ int SCIPgetNCutsFound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNCutsFound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPsepastoreGetNCutsFound(scip->sepastore);
+   return scip->sepastore == NULL ? 0 : SCIPsepastoreGetNCutsFound(scip->sepastore);
 }
 
 /** get number of cuts found so far in current separation round
@@ -1043,7 +1045,7 @@ int SCIPgetNCutsFoundRound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNCutsFoundRound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPsepastoreGetNCutsFoundRound(scip->sepastore);
+   return scip->sepastore == NULL ? 0 : SCIPsepastoreGetNCutsFoundRound(scip->sepastore);
 }
 
 /** get total number of cuts applied to the LPs
@@ -1061,7 +1063,7 @@ int SCIPgetNCutsApplied(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNCutsApplied", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPsepastoreGetNCutsApplied(scip->sepastore);
+   return scip->sepastore == NULL ? 0 : SCIPsepastoreGetNCutsApplied(scip->sepastore);
 }
 
 /** get total number of constraints found in conflict analysis (conflict, reconvergence constraints, and dual proofs)
@@ -1085,7 +1087,7 @@ SCIP_Longint SCIPgetNConflictConssFound(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictConssFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNPropConflictConss(scip->conflict)
+   return scip->conflict == NULL ? 0 : (SCIPconflictGetNPropConflictConss(scip->conflict)
       + SCIPconflictGetNPropReconvergenceConss(scip->conflict)
       + SCIPconflictGetNInfeasibleLPConflictConss(scip->conflict)
       + SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict)
@@ -1096,7 +1098,7 @@ SCIP_Longint SCIPgetNConflictConssFound(
       + SCIPconflictGetNPseudoConflictConss(scip->conflict)
       + SCIPconflictGetNPseudoReconvergenceConss(scip->conflict)
       + SCIPconflictGetNDualproofsBndGlobal(scip->conflict)
-      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict);
+      + SCIPconflictGetNDualproofsInfGlobal(scip->conflict));
 }
 
 /** get number of conflict constraints found so far at the current node
@@ -1120,7 +1122,7 @@ int SCIPgetNConflictConssFoundNode(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictConssFoundNode", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNConflicts(scip->conflict);
+   return scip->conflict == NULL ? 0 : SCIPconflictGetNConflicts(scip->conflict);
 }
 
 /** get total number of conflict constraints added to the problem
@@ -1144,7 +1146,7 @@ SCIP_Longint SCIPgetNConflictConssApplied(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictConssApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNAppliedConss(scip->conflict);
+   return scip->conflict == NULL ? 0 : SCIPconflictGetNAppliedConss(scip->conflict);
 }
 
 /** get total number of dual proof constraints added to the problem
@@ -1168,7 +1170,8 @@ SCIP_Longint SCIPgetNConflictDualproofsApplied(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNConflictDualproofsApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNDualproofsInfSuccess(scip->conflict) + SCIPconflictGetNDualproofsBndSuccess(scip->conflict);
+   return scip->conflict == NULL ? 0 : (SCIPconflictGetNDualproofsInfSuccess(scip->conflict) +
+      SCIPconflictGetNDualproofsBndSuccess(scip->conflict));
 }
 
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -1374,6 +1377,13 @@ SCIP_Real SCIPgetLowerbound(
        * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
        */
       return -SCIPinfinity(scip);
+   }
+   else if( SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE )
+   {
+      /* SCIPtreeGetLowerbound() should return +inf in the case of infeasibility, but when infeasibility is detected
+       * during presolving this does not seem to be the case; hence, we treat this case explicitly
+       */
+      return SCIPinfinity(scip);
    }
    else
    {
@@ -2468,7 +2478,7 @@ void SCIPprintTransProblemStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
    SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Nonzeros         : %d constraint, %d clique table\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Nonzeros         : %" SCIP_LONGINT_FORMAT " constraint, %" SCIP_LONGINT_FORMAT " clique table\n",
          scip->stat->nnz, SCIPcliquetableGetNEntries(scip->cliquetable));
 }
 
@@ -3279,7 +3289,7 @@ void SCIPprintLPStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", (SCIP_Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          - %10d\n", scip->stat->nsbtimesiterlimhit);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          - %10" SCIP_LONGINT_FORMAT "\n", scip->stat->nsbtimesiterlimhit);
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "    (at root node) :          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f          -\n",
       scip->stat->nrootstrongbranchs,
@@ -3345,14 +3355,14 @@ void SCIPprintRelaxatorStatistics(
    if( scip->set->nrelaxs == 0 )
       return;
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls    Cutoffs ImprBounds  ImprTime ReducedDom  Separated AddedConss\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Relaxators         :       Time      Calls    Cutoffs ImprBounds   ImprTime ReducedDom  Separated AddedConss\n");
 
    /* sort relaxators w.r.t. their name */
    SCIPsetSortRelaxsName(scip->set);
 
    for( i = 0; i < scip->set->nrelaxs; ++i )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
          SCIPrelaxGetName(scip->set->relaxs[i]),
          SCIPrelaxGetTime(scip->set->relaxs[i]),
          SCIPrelaxGetNCalls(scip->set->relaxs[i]),
@@ -3388,9 +3398,9 @@ void SCIPprintTreeStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file,
       "  nodes            : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " internal, %" SCIP_LONGINT_FORMAT " leaves)\n",
       scip->stat->nnodes, scip->stat->ninternalnodes, scip->stat->nnodes - scip->stat->ninternalnodes );
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  feasible leaves  : %10d\n", scip->stat->nfeasleaves);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeas. leaves   : %10d\n", scip->stat->ninfeasleaves);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  objective leaves : %10d\n", scip->stat->nobjleaves);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  feasible leaves  : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->nfeasleaves);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeas. leaves   : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->ninfeasleaves);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  objective leaves : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->nobjleaves);
    SCIPmessageFPrintInfo(scip->messagehdlr, file,
       "  nodes (total)    : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " internal, %" SCIP_LONGINT_FORMAT " leaves)\n",
       scip->stat->ntotalnodes, scip->stat->ntotalinternalnodes, scip->stat->ntotalnodes - scip->stat->ntotalinternalnodes);
@@ -3651,7 +3661,7 @@ void SCIPprintConcsolverStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Concurrent Solvers : SolvingTime    SyncTime       Nodes    LP Iters SolsShared   SolsRecvd TighterBnds TighterIntBnds\n");
       for( i = 0; i < nconcsolvers; ++i )
       {
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %c%-16s: %11.2f %11.2f %11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT "%11i %11i %11" SCIP_LONGINT_FORMAT " %14" SCIP_LONGINT_FORMAT "\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %c%-16s: %11.2f %11.2f %11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT "%11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT " %11" SCIP_LONGINT_FORMAT " %14" SCIP_LONGINT_FORMAT "\n",
             winner == i ? '*' : ' ',
             SCIPconcsolverGetName(concsolvers[i]),
             SCIPconcsolverGetSolvingTime(concsolvers[i]),
@@ -3697,7 +3707,7 @@ void SCIPprintBendersStatistics(
          int nbenderscuts;
          int j;
 
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10d %10d %10d %10d %10d %10d\n",
             SCIPbendersGetName(scip->set->benders[i]),
             SCIPbendersGetTime(scip->set->benders[i]),
             SCIPbendersGetSetupTime(scip->set->benders[i]),
@@ -3845,6 +3855,145 @@ void SCIPprintTimingStatistics(
    }
 }
 
+/** outputs expression handler statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintExpressionHandlerStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   SCIP_Bool headerprinted = FALSE;
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintExpressionHandlerStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   for( i = 0; i < scip->set->nexprhdlrs; ++i )
+   {
+      SCIP_EXPRHDLR* exprhdlr = scip->set->exprhdlrs[i];
+      assert(exprhdlr != NULL);
+
+      /* skip unused expression handler */
+      if( SCIPexprhdlrGetNCreated(exprhdlr) == 0 )
+         continue;
+
+      if( !headerprinted )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file,
+            "Expressions        : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+            "#IntEval", "IntEvalTi", "#RevProp", "RevPropTi", "DomReds", "Cutoffs", "#Estimate", "EstimTime", "Branching", "#Simplify", "SimplifyTi", "Simplified");
+         headerprinted = TRUE;
+      }
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:", SCIPexprhdlrGetName(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNIntevalCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetIntevalTime(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNReversepropCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetReversepropTime(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNDomainReductions(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNCutoffs(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNEstimateCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetEstimateTime(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNBranchings(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNSimplifyCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetSimplifyTime(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNSimplifications(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+   }
+}
+
+/** outputs NLPI statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintNLPIStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   SCIP_Bool printedheader = FALSE;
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintNLPIStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   for( i = 0; i < scip->set->nnlpis; ++i )
+   {
+      SCIP_Real solvetime;
+      SCIP_Real evaltime = 0.0;
+      SCIP_Longint niter;
+      SCIP_NLPI* nlpi;
+      int j;
+
+      nlpi = scip->set->nlpis[i];
+      assert(nlpi != NULL);
+
+      /* skip unused NLP solver */
+      if( SCIPnlpiGetNProblems(nlpi) == 0 )
+         continue;
+
+      if( !printedheader )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file,
+            "NLP Solvers        : %10s %10s %10s %10s %s%10s %10s"
+            " %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s"
+            " %10s %10s %10s %10s %10s %10s %10s\n",
+            "#Problems", "ProblemTi", "#Solves", "SolveTime",
+            scip->set->time_nlpieval ? "  EvalTime%" : "",
+            "#Iter", "Time/Iter",
+            "#Okay", "#TimeLimit", "#IterLimit", "#LObjLimit", "#Interrupt", "#NumError", "#EvalError", "#OutOfMem", "#LicenseEr", "#OtherTerm",
+            "#GlobOpt", "#LocOpt", "#Feasible", "#LocInfeas", "#GlobInfea", "#Unbounded", "#Unknown"
+         );
+         printedheader = TRUE;
+      }
+
+      solvetime = SCIPnlpiGetSolveTime(nlpi);
+      if( scip->set->time_nlpieval )
+         evaltime = SCIPnlpiGetEvalTime(nlpi);
+      niter = SCIPnlpiGetNIterations(nlpi);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:", SCIPnlpiGetName(nlpi));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNProblems(nlpi));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPnlpiGetProblemTime(nlpi));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNSolves(nlpi));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", solvetime);
+      if( scip->set->time_nlpieval )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", solvetime > 0.0 ? 100.0 * evaltime / solvetime : 0.0);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, niter);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", niter > 0 ? solvetime / niter : 0.0);
+
+      for( j = (int)SCIP_NLPTERMSTAT_OKAY; j <= (int)SCIP_NLPTERMSTAT_OTHER; ++j )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNTermStat(nlpi, (SCIP_NLPTERMSTAT)j));
+
+      for( j = (int)SCIP_NLPSOLSTAT_GLOBOPT; j <= (int)SCIP_NLPSOLSTAT_UNKNOWN; ++j )
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d", SCIPnlpiGetNSolStat(nlpi, (SCIP_NLPSOLSTAT)j));
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+   }
+}
+
 /** comparison method for statistics tables */
 static
 SCIP_DECL_SORTPTRCOMP(tablePosComp)
@@ -3935,15 +4084,21 @@ SCIP_RETCODE SCIPprintReoptStatistics(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintReoptStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   assert(scip != NULL);
+
    /* skip if reoptimization is disabled */
    if( !scip->set->reopt_enable )
+      return SCIP_OKAY;
+
+   /* skip if not problem yet */
+   if( scip->stat == NULL )
       return SCIP_OKAY;
 
    solving = SCIPclockGetTime(scip->stat->solvingtimeoverall);
    presolving = SCIPclockGetTime(scip->stat->presolvingtimeoverall);
    updatetime = SCIPclockGetTime(scip->stat->reoptupdatetime);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finish after %d runs.\n", scip->stat->nreoptruns);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finished after %d runs.\n", scip->stat->nreoptruns);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time         (sec) :\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", solving);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  presolving       : %10.2f (included in solving)\n", presolving);
@@ -3953,19 +4108,32 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d %10d %10d\n",
          SCIPreoptGetNTotalFeasNodes(scip->reopt), SCIPreoptGetNTotalInfNodes(scip->reopt),
          SCIPreoptGetNTotalPrunedNodes(scip->reopt), SCIPreoptGetNTotalCutoffReoptnodes(scip->reopt));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n",
+   if( scip->stat->nreoptruns > 0 )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f %10.2f %10.2f\n",
          (SCIP_Real)SCIPreoptGetNTotalFeasNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalInfNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalPrunedNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalCutoffReoptnodes(scip->reopt)/scip->stat->nreoptruns);
-
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10s %10s %10s %10s\n", "--", "--", "--", "--");
+   }
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Restarts           :     global      local\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  first            : %10d         --\n", SCIPreoptGetFirstRestarts(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  last             : %10d         --\n", SCIPreoptGetLastRestarts(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d\n", SCIPreoptGetNRestartsGlobal(scip->reopt),
          SCIPreoptGetNTotalRestartsLocal(scip->reopt));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              :         -- %10.2f\n",
+   if( scip->stat->nreoptruns > 0 )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              :         -- %10.2f\n",
          (SCIP_Real)SCIPreoptGetNTotalRestartsLocal(scip->reopt)/scip->stat->nreoptruns);
+   }
+   else
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              :         -- %10s\n", "--");
+   }
 
    return SCIP_OKAY;
 }

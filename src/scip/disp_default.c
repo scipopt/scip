@@ -670,7 +670,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLPCondition)
    SCIP_CALL( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &cond) );
 
    if( cond == SCIP_INVALID )  /*lint !e777*/
-      SCIPinfoMessage(scip, file, "   n/a ", cond);
+      SCIPinfoMessage(scip, file, "   n/a ");
    else
       SCIPinfoMessage(scip, file, "%.1e", cond);
 

@@ -13,11 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   initlp.c
- * @brief  unit test for checking behaviour of the initlp callback
+/**@file   slack.c
+ * @brief  unit test for checking slack models
  *
- * TODO: how to specify the path of the file?
- * What should the test actually test?
+ * test the solution of a slack model minizing the violation of constraints and/or variable bounds
+ *
  *
  */
 

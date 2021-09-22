@@ -174,7 +174,7 @@ SCIP_RETCODE SCIPvalidateSolve(
       else
          SCIPinfoMessage(scip, NULL, "Success");
       SCIPinfoMessage(scip, NULL, "\n");
-      SCIPinfoMessage(scip, NULL, "  %-17s: %10u\n", "cons violation", !localfeasible);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10u\n", "cons violation", !localfeasible); /*lint !e705*/
       SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "primal violation", primviol, dualreference);
       SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "dual violation", dualviol, primalreference);
    }
