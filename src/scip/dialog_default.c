@@ -4163,9 +4163,9 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    if( !SCIPdialogHasEntry(submenu, "exprhdlrs") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-                                   NULL,
-                                   SCIPdialogExecDisplayExprhdlrs, NULL, NULL,
-                                   "exprhdlrs", "display expression handlers", FALSE, NULL) );
+            NULL,
+            SCIPdialogExecDisplayExprhdlrs, NULL, NULL,
+            "exprhdlrs", "display expression handlers", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -4173,9 +4173,9 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    /* display cut selectors */
    if( !SCIPdialogHasEntry(submenu, "cutselectors") ) {
       SCIP_CALL(SCIPincludeDialog(scip, &dialog,
-                                  NULL,
-                                  SCIPdialogExecDisplayCutselectors, NULL, NULL,
-                                  "cutselectors", "display cut selectors", FALSE, NULL));
+            NULL,
+            SCIPdialogExecDisplayCutselectors, NULL, NULL,
+            "cutselectors", "display cut selectors", FALSE, NULL));
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
