@@ -39,7 +39,7 @@ Features
   made it available via the API.
 - MIR procedure is now available for strengthening the Benders' optimality cut
 - SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
-- New cut-selector plugin. Users can now include their own cut-selection rules. Default rule moved to cutsel_hybrid,
+- New plugin type for cut selection: users can now include their own cut selection rules, default rule moved to cutsel_hybrid.
 
 Expressions:
 - Removed support for expression types min and max for now. Removed support for expression type sign.
