@@ -76,7 +76,6 @@ public:
    /** destructor */
    virtual ~ObjCutsel()
    {
-      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
