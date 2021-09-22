@@ -4040,7 +4040,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* Reduce the max coefratio to prevent the creation of potentially numerical unstable cuts */
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratio", 100.0, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratiofacrowprep", 1.0, quiet) );
-#ifdef SCIP_WITH_PRESOLVELIB
+
+#ifdef SCIP_WITH_PAPILO
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/hugebound", 1e6, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/markowitztolerance", 0.1, quiet) );
 #endif
