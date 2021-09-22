@@ -342,7 +342,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
- *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_CONSADDED  : an additional constraint was generated (added constraints must have initial flag = TRUE)
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_SOLVELP    : the LP should be solved again because the LP primal feasibility tolerance has been tightened
@@ -367,7 +367,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
- *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_CONSADDED  : an additional constraint was generated (added constraints must have initial flag = TRUE)
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility

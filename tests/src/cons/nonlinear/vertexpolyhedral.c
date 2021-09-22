@@ -355,9 +355,9 @@ void test_vertexpolyhedral(
          facetval += facetcoefs[j] * corner[j];
 
       if( overestimate )
-         cr_expect_geq(facetval, funval-SCIPepsilon(scip), "Facet value %g expected to be above function value %g", facetval, funval);
+         cr_expect_geq(facetval, funval-SCIPdualfeastol(scip)*MAX(1.0,REALABS(funval)), "Facet value %.15g expected to be above function value %.15g", facetval, funval);
       else
-         cr_expect_leq(facetval, funval+SCIPepsilon(scip), "Facet value %g expected to be below function value %g", facetval, funval);
+         cr_expect_leq(facetval, funval+SCIPdualfeastol(scip)*MAX(1.0,REALABS(funval)), "Facet value %.15g expected to be below function value %.15g", facetval, funval);
 
       if( SCIPisFeasEQ(scip, facetval, funval) )
          ++ntight;
