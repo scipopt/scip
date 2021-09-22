@@ -365,7 +365,11 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    int oldnnz = problem.getConstraintMatrix().getNnz();
 
    /*call presolving without storing information for dual postsolve*/
+#if (PAPILO_VERSION_MAJOR >= 2)
    PresolveResult<SCIP_Real> res = presolve.apply(problem, false);
+#else
+   PresolveResult<SCIP_Real> res = presolve.apply(problem);
+#endif
    data->lastncols = problem.getNCols();
    data->lastnrows = problem.getNRows();
 
