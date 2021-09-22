@@ -539,10 +539,6 @@ SCIP_Bool dpterms_isPromisingPartly(
    if( graph->terms < PROMISING_PARTLY_LARGE_MAXNTERMS && nedges >= PROMISING_PARTLY_LARGE_MINNEDGES )
       return TRUE;
 
-   // deleteme
-   if( graph->terms == 97 && nedges >= PROMISING_PARTLY_LARGE_MINNEDGES && nedges <= 15000 )
-       return TRUE;
-
    // todo just a test, remove!
    if( graph->terms == 73 && nedges >= 3500 && nedges <= 4000  )
        return TRUE;
