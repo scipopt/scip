@@ -69,7 +69,6 @@ public:
         scip_desc_(0),
         scip_priority_(priority)
    {
-      /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
@@ -77,7 +76,6 @@ public:
    /** destructor */
    virtual ~ObjCutsel()
    {
-      /* the macro SCIPfreeMemoryArray does not need the first argument: */
       /*lint --e{64}*/
       SCIPfreeMemoryArray(scip_, &scip_name_);
       SCIPfreeMemoryArray(scip_, &scip_desc_);
