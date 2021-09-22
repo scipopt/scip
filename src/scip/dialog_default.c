@@ -938,7 +938,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
 }
 
 /** dialog execution method for the display exprhdlrs command */
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs) {  /*lint --e{715}*/
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs)
+{  /*lint --e{715}*/
    SCIP_EXPRHDLR **exprhdlrs;
    int nexprhdlrs;
    int i;
