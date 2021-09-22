@@ -1431,7 +1431,7 @@ void consdataRecomputeMaxactivity(
 
       }
       #ifdef SCIP_DEBUG
-      else if (RatIsPositive(bound))
+      else if ( RatIsPositive(bound) )
       {
          maxactivityposinf++;
       }
@@ -1441,8 +1441,10 @@ void consdataRecomputeMaxactivity(
       }
       #endif
    }
-   assert(maxactivityneginf == consdata->maxactivityneginf);
+   #ifdef SCIP_DEBUG
+   assert( maxactivityneginf == consdata->maxactivityneginf );
    assert(maxactivityposinf == consdata->maxactivityposinf);
+   #endif
    /* the activity was just computed from scratch and is valid now */
    consdata->validmaxact = TRUE;
 
