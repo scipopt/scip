@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,7 +89,7 @@ SCIP_RETCODE paramTestBool(
 
    if( value != TRUE && value != FALSE )
    {
-      SCIPerrorMessage("Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n", value, param->name);
+      SCIPerrorMessage("Invalid value <%u> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n", value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -176,7 +176,7 @@ SCIP_RETCODE paramTestChar(
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
-      SCIPerrorMessage("Invalid value <%x> for char parameter <%s>.\n", (int)value, param->name);
+      SCIPerrorMessage("Invalid value <%d> for char parameter <%s>.\n", (int)value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -223,7 +223,7 @@ SCIP_RETCODE paramTestString(
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
       {
-         SCIPerrorMessage("Invalid character <%x> in string parameter <%s> at position %d.\n", (int)value[i], param->name, i);
+         SCIPerrorMessage("Invalid character <%d> in string parameter <%s> at position %u.\n", (int)value[i], param->name, i);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -3736,13 +3736,6 @@ SCIP_RETCODE paramsetSetSeparatingFast(
    {
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/mcf/freq", -1, quiet) );
    }
-#ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "strongcg") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/strongcg/maxroundsroot", 10, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/strongcg/maxsepacutsroot", 200, quiet) );
-   }
 
    return SCIP_OKAY;
 }
@@ -4050,12 +4043,18 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques", FALSE, quiet) );
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities", FALSE, quiet) );
 
-      /* Reduce the max coefratio to prevent the creation of potentially numerical unstable constraints */
+      /* Reduce the max coefratio to prevent the creation of potentially numerical unstable cuts */
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratio", 100.0, quiet) );
-#ifdef SCIP_WITH_PRESOLVELIB
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratiofacrowprep", 1.0, quiet) );
+
+#ifdef SCIP_WITH_PAPILO
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/hugebound", 1e6, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/markowitztolerance", 0.1, quiet) );
 #endif
+
+      /* weaken domain propagation of nonlinear constraints by increasing relaxation of variable bounds and constraint sides */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/conssiderelaxamount", 1e-7, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/varboundrelaxamount", 1e-7, quiet) );
 
       break;
 

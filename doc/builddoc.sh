@@ -41,7 +41,7 @@ cd ..
 
 # build a fresh version of SCIP
 # make -j clean
-make -j ZIMPL=false >> ${DOCLOG}
+make -j8 ZIMPL=false >> ${DOCLOG}
 
 # run scip with some commands for the shell tutorial
 bin/scip < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.tmp >> ${DOCLOG}

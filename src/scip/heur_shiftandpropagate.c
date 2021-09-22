@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1213,7 +1213,7 @@ SCIP_RETCODE updateTransformation(
 
    case TRANSFORMSTATUS_NONE:
    default:
-      SCIPerrorMessage("Error: Invalid variable status <%d> in shift and propagagate heuristic, aborting!\n");
+      SCIPerrorMessage("Error: Invalid variable status <%d> in shift and propagagate heuristic, aborting!\n", status);
       SCIPABORT();
       return SCIP_INVALIDDATA;   /*lint !e527*/
    }
@@ -2213,6 +2213,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          char strbuf[SCIP_MAXSTRLEN];
          /* case that remaining LP has to be solved */
          SCIP_Bool lperror;
+         int ncols;
 
 #ifndef NDEBUG
          {
@@ -2224,13 +2225,28 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             for( v = 0; v < ndiscvars; ++v )
             {
                if( SCIPvarIsInLP(vars[v]) )
+               {
                   assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])));
+               }
             }
          }
 #endif
 
-         /* print probing stats before LP */
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+         /* print message if relatively large LP is solved from scratch, since this could lead to a longer period during
+          * which the user sees no output; more detailed probing stats only in debug mode */
+         ncols = SCIPgetNLPCols(scip);
+         if( !SCIPisLPSolBasic(scip) && ncols > 1000 )
+         {
+            int nunfixedcols = SCIPgetNUnfixedLPCols(scip);
+
+            if( nunfixedcols > 0.5 * ncols )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+                  "Heuristic " HEUR_NAME " solving LP from scratch with %.1f %% unfixed columns (%d of %d) ...\n",
+                  100.0 * (nunfixedcols / (SCIP_Real)ncols), nunfixedcols, ncols);
+            }
+         }
+         SCIPdebugMsg(scip, "Heuristic " HEUR_NAME " probing LP: %s\n",
             SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
          SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 

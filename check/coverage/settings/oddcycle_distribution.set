@@ -9,4 +9,3 @@ branching/distribution/priority = 500000
 # frequency for calling separator <oddcycle> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 separating/oddcycle/freq = 0
-

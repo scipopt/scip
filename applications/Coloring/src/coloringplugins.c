@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,6 +31,8 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_CALL( SCIPincludeDialogDefaultBasic(scip) );
+
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
@@ -97,7 +99,6 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
 #endif
 
    SCIP_CALL( SCIPincludeDispDefault(scip) );
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
 
    return SCIP_OKAY;
 }

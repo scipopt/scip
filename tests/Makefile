@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -28,7 +28,7 @@ UNITTESTSSRC	=	$(shell find src/ -name *.c)
 
 # remove unittests in src/bugs if BUGS is not true
 ifneq ($(BUGS),true)
-	UNITTESTSSRC 	:= $(filter-out $(shell find src/bugs/ -name *.c),$(UNITTESTSSRC))
+	UNITTESTSSRC 	:= $(filter-out $(wildcard src/bugs/*.c),$(UNITTESTSSRC))
 endif
 
 # removes `src/` prefix and file.c postfix, then sorts, which removes duplicates!
@@ -77,11 +77,6 @@ override VERSION	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* VERSION=\([^@]*\
 override ZIMPL		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZIMPL=\([^@]*\).*/\1/')
 override ZIMPLOPT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZIMPLOPT=\([^@]*\).*/\1/')
 override ZLIB		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZLIB=\([^@]*\).*/\1/')
-ifneq ($(OPT), dbg)
-$(error Please compile SCIP with OPT=dbg)
-endif
-else
-override OPT	=	dbg
 endif
 
 #-----------------------------------------------------------------------------
@@ -217,7 +212,19 @@ clean:
 tags:
 		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
 
-$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(TPILIBFILE)
+.PHONY: depend
+depend:		$(SCIPDIR)
+		@- rm -f $(UNITTESTSDEP)
+		$(foreach src, $(UNITTESTSSRC), \
+			$(SHELL) -ec '$(DCC) $(FLAGS) $(src) \
+			$(DFLAGS) $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
+
+
+
+-include	$(UNITTESTSDEP)
+
+
+$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE)
 		@echo "-> linking $@"
 		$(LINKCXX) $< $(LINKCXXSCIPALL) \
 		$(LINKCXX_l)$(TPILIB) \
@@ -229,13 +236,11 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX_o)$@
 
 $(LPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) LPS=$(LPS))
 $(SCIPLIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
-$(NLPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED))
 $(TPILIBFILE):
-		$(error $@ not available. SCIP must be compiled with OPT=dbg SHARED=true IPOPT=$(IPOPT) LPS=$(LPS) TPI=$(TPI))
+		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) TPI=$(TPI))
 
 -include	$(UNITTESTSDEP)
 
@@ -257,5 +262,4 @@ Criterion:
 	cmake .. -DCMAKE_INSTALL_PREFIX=..; \
 	make; \
 	make install
-
 #---- EOF --------------------------------------------------------------------

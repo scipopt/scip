@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,7 +38,6 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_nonlinear.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_xor.h"
@@ -58,7 +57,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
-#include "nlpi/pub_expr.h"
 #include <string.h>
 
 #ifdef WITHEQKNAPSACK
@@ -7562,6 +7560,7 @@ SCIP_RETCODE findAggregation(
  */
 
 #ifdef NONLINCONSUPGD_PRIORITY
+#include "scip/cons_nonlinear.h"
 /** tries to upgrade a nonlinear constraint into a pseudoboolean constraint */
 static
 SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdPseudoboolean)

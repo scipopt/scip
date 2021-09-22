@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -646,6 +646,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
    /* create both children */
    else
    {
+      assert(SCIPconsIsEnabled(COLORprobGetConstraint(scip, node1)));
+      assert(SCIPconsIsEnabled(COLORprobGetConstraint(scip, node2)));
+
       /* create the b&b-tree child-nodes of the current node */
       SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalTransEstimate(scip)) );
       SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalTransEstimate(scip)) );

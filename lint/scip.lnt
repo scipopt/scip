@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,6 +89,10 @@
 -emacro(506,SCIPdebugCheckRow)    // Constant value Boolean
 -emacro(506,SCIPdebugCheckImplic) // Constant value Boolean
 -emacro(506,assert)               // Constant value Boolean
+-emacro(446,SCIPsolveNlpi)        // side effect in initializer (which is not true)
+-emacro(485,SCIPsolveNlpi)        // Duplicate initialization of object element
+-emacro(446,SCIPsolveNLP)         // side effect in initializer (which is not true)
+-emacro(485,SCIPsolveNLP)         // Duplicate initialization of object element
 
 -emacro(506,isfinite)       // turn off all messages for isfinite
 -emacro(686,isfinite)       // turn off all messages for isfinite

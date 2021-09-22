@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3359,7 +3359,7 @@ SCIP_RETCODE createCGCutDirect(
             SCIP_ROW* cut;
 
             /* create the cut */
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%" SCIP_LONGINT_FORMAT "_%u", SCIPgetNLPs(scip), *ngen);
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
@@ -3622,7 +3622,7 @@ SCIP_RETCODE createCGCutCMIR(
       SCIP_ROW* cut;
 
       /* create the cut */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%" SCIP_LONGINT_FORMAT "_%u", SCIPgetNLPs(scip), *ngen);
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
@@ -3853,7 +3853,7 @@ SCIP_RETCODE createCGCutStrongCG(
       SCIP_ROW* cut;
 
       /* create the cut */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%" SCIP_LONGINT_FORMAT "_%u", SCIPgetNLPs(scip), *ngen);
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
@@ -4278,7 +4278,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    SCIP_SEPADATA* sepadata;
    CGMIP_MIPDATA* mipdata;
 
-   int depth;
    int ncalls;
    int ncols;
    int nrows;
@@ -4295,8 +4294,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-
-   depth = SCIPgetDepth(scip);
 
    /* only call separator, if we are not close to terminating */
    if ( SCIPisStopped(scip) )

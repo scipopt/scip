@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -133,18 +133,42 @@ $(BINDIR):
 
 .PHONY: test
 test:           $(MAINFILE)
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evaluate.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_solufile.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
+		cd check; \
+		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) \
+		$(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON);
+
+OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
+
+-include $(SCIPDIR)/make/local/make.$(OPTHOST)
+
+.PHONY: testcluster
+testcluster:	$(MAINFILE)
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evaluate.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_solufile.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/allcmpres.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/cmpres.awk);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-			$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
+		$(SHELL) ./check_cluster.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) \
+		$(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) \
+		$(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) \
+		$(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(SLURMACCOUNT);
 
 .PHONY: clean
 clean:		$(OBJDIR)
@@ -162,11 +186,11 @@ tags:
 
 -include	$(MAINOBJFILES:.o=.d) $(CLASSIFYOBJFILES:.o=.d)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
-$(CLASSIFYFILE): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(CLASSIFYOBJFILES)
+$(CLASSIFYFILE): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(CLASSIFYOBJFILES)
 		@echo "-> linking $@"
 		$(LINKCXX) $(CLASSIFYOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 

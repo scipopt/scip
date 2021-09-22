@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -914,9 +914,7 @@ SCIP_RETCODE graph_load(
    curf.section     = &section_table[0];
    save             = curf_null;
 
-   (void)sprintf(curf.filename, "%s%s",
-      pathname,
-      basename);
+   (void) SCIPsnprintf(curf.filename, MAX_PATH_LEN, "%s%s", pathname, basename);
 
    /* Open the file...
     */

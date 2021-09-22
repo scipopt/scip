@@ -2,24 +2,64 @@
 # Lines that start with '#' are comments.
 # For a project mostly in C, the following would be a good set of
 # exclude patterns (uncomment them if you want to use them):
+
+\#*
+backup/
+cplex.log
+
+settings/
+
+# compiled object files
 *.[oa]
 *.pyc
 *.so
 *~
-\#*
-backup/
+
+# created by make compilation
 bin/
 lib/
 obj/
 TAGS
+
+# common cmake build folder names
+build/
+build*
 debug/
 release/
+cmake-build-debug/
+
+# check folder, files created by or for `make test`
 check/results/
 check/results*/
 check/locks
 check/MINLP
 check/IP
-cplex.log
+check/LP
+check/instancedata
+check/solchecker/doc/doc/
+
+# ignore check/coverage but not check/coverage/settings
+check/coverage/
+!check/coverage/settings
+
+# vim swap files
+.*.swp
+
+# thumbnails and os system information
+.directory
+
+# lint and pclint configurations files
+lint.out
+lint/gcc-include-path.lnt
+lint/lint_cmac.h
+lint/lint_cppmac.h
+lint/size-options.lnt
+pclint/co-gcc.h
+pclint/co-gcc.lnt
+pclint/co-clang.h
+pclint/co-clang.lnt
+
+# doc files
 doc/html/
 doc/html_devel/
 doc/doxygen
@@ -28,46 +68,88 @@ doc/inc/faq/faqdata.php
 doc/inc/faq/faq.inc
 doc/inc/parameters.set
 doc/**/*.tmp
+doc/*.log
+doc/inc/simpleinstance/output.log
+
+# editor cache files
 .cproject
 .project
 .vscode/
 .idea/
-cmake-build-debug/
 .settings/
+
+# git hooks
 hooks/
-build/
-examples/*/check/results/
-examples/*/check/*.sh
-examples/*/check/*.awk
-applications/*/check/results/
-applications/*/check/*.sh
-applications/*/check/*.awk
-
-###############################
-## files created by `make lint`
-################################
-lint.out
-lint/gcc-include-path.lnt
-lint/lint_cmac.h
-lint/lint_cppmac.h
-lint/size-options.lnt
-
 localhooks/
+
+# created when packaging, don't version control this
 src/scip/githash.c
 src/scip/buildflags.c
+
+# settings
 settings/
 !check/coverage/settings
-unittests/check/results
-unittests/check/locks
-unittests/check/evalcheck.sh
-unittests/check/getlastprob.awk
-interfaces/python/.cache/
-interfaces/python/build/
-interfaces/python/include/
-interfaces/python/tests/check
-interfaces/python/pyscipopt/*.c
-interfaces/gams/gams
-interfaces/gams/test
-examples/*/doc/html
+
+# tests
+tests/Testing
+tests/Criterion
+tests/CTestTestfile.cmake
+tests/*.swp
+tests/*.swo
+
+# tex documents
+tex/*
+!tex/*.tex
+!tex/*.bib
+
+### applications and examples
+
+# testrun files in check folders
+applications/*/check/locks/
+applications/*/check/results/
+applications/*/check/instances
+applications/*/check/*.sh
+applications/*/check/*.awk
+# cmake build folder
+applications/*/build
+# doc files of applications
+applications/*/doc/doxygen
 applications/*/doc/html
-doc/inc/simpleinstance/output.log
+applications/*/doc/footer.html
+applications/*/doc/scipfooter.html
+applications/*/doc/scip.css
+applications/*/doc/scippy.png
+applications/*/doc/miniscippy.png
+applications/*/doc/userguide.*
+applications/*/!doc/userguide.tex
+# lint folder
+applications/*/lint
+
+# same for examples
+examples/*/check/locks/
+examples/*/check/results/
+examples/*/check/instances
+examples/*/check/*.sh
+examples/*/check/*.awk
+example/*/build
+examples/*/doc/doxygen
+examples/*/doc/html
+examples/*/doc/footer.html
+examples/*/doc/scipfooter.html
+examples/*/doc/scip.css
+examples/*/doc/scippy.png
+examples/*/doc/miniscippy.png
+examples/*/doc/userguide.*
+examples/*/!doc/userguide.tex
+examples/*/lint
+
+# sma for interfaces
+interfaces/ampl/solvers/
+interfaces/ampl/check/locks/
+interfaces/ampl/check/results/
+interfaces/ampl/check/evalcheck.sh
+interfaces/ampl/check/evaluate.sh
+interfaces/ampl/check/check.awk
+interfaces/ampl/check/getlastprob.awk
+interfaces/ampl/check/instances/*/*.sol
+interfaces/ampl/lint

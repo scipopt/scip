@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,12 +20,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_nonlinear.h"
-#include "nlpi/nlpi_ipopt.h"
-
-#include "scip/cons_quadratic.c"
-
 #include "include/scip_test.h"
+
+/* #3026 will decide whether to remove or adapt this code */
+#ifdef SCIP_DISABLED_CODE
+
+#include "scip/nlpi_ipopt.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.c"
 
 #define EPS 1e-6
 
@@ -146,3 +148,5 @@ Test(separation, gauge, .init = setup,
    /* check for memory leaks */
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
+
+#endif  /* ifdef SCIP_DISABLED_CODE */

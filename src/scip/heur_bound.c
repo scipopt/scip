@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -189,18 +189,31 @@ SCIP_RETCODE applyBoundHeur(
       char strbuf[SCIP_MAXSTRLEN];
       SCIP_LPSOLSTAT lpstatus;
       SCIP_Bool lperror;
+      int ncols;
 
-      SCIPdebugMsg(scip, "starting solving bound-heur LP at time %g, LP iterations: %" SCIP_LONGINT_FORMAT "\n",
-         SCIPgetSolvingTime(scip), SCIPgetNLPIterations(scip));
+      /* print message if relatively large LP is solved from scratch, since this could lead to a longer period during
+       * which the user sees no output; more detailed probing stats only in debug mode */
+      ncols = SCIPgetNLPCols(scip);
+      if( !SCIPisLPSolBasic(scip) && ncols > 1000 )
+      {
+         int nunfixedcols = SCIPgetNUnfixedLPCols(scip);
 
-      /* print probing stats before LP */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+         if( nunfixedcols > 0.5 * ncols )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+               "Heuristic " HEUR_NAME " solving LP from scratch with %.1f %% unfixed columns (%d of %d) ...\n",
+               100.0 * (nunfixedcols / (SCIP_Real)ncols), nunfixedcols, ncols);
+         }
+      }
+      SCIPdebugMsg(scip, "Heuristic " HEUR_NAME " probing LP: %s\n",
          SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
        * heuristic.  hence in optimized mode, the return code is caught and a warning is printed, only in debug mode,
        * SCIP will stop.
        */
+      SCIPdebugMsg(scip, "starting solving bound-heur LP at time %g, LP iterations: %" SCIP_LONGINT_FORMAT "\n",
+         SCIPgetSolvingTime(scip), SCIPgetNLPIterations(scip));
 #ifdef NDEBUG
       {
          SCIP_Bool retstat;

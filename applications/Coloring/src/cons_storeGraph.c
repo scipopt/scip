@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -604,6 +604,9 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
             (consdata->nnodesinunion[consdata->node1]) + (consdata->nnodesinunion[consdata->node2]);
          consdata->nnodesinunion[consdata->node2] = 0;
          consdata->unionofnode[consdata->node2] = NULL;
+
+         /* the constraint associated to node2 can be removed from this branch-and-bound node and its subtree */
+         SCIP_CALL( SCIPdelConsLocal(scip, COLORprobGetConstraint(scip, consdata->node2)));
       }
 
       /* create the complementary graph */

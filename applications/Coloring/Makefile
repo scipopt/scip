@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -104,6 +104,19 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE $$i; \
 			done'
 
+.PHONY: pclint
+pclint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC) $(SYMSRC)
+		-rm -f pclint.out
+ifeq ($(FILES),)
+		@$(SHELL) -ec 'echo "-> running pclint on $^..."; \
+			$(PCLINT) -I$(SCIPDIR) -I$(SCIPDIR)/pclint main-gcc.lnt +os\(pclint.out\) -u -zero -max_threads=$(MAXJOBS) \
+			$(USRFLAGS) $(FLAGS) -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $^;'
+else
+		@$(SHELL) -ec  'echo "-> running pclint on files $(FILES) ..."; \
+			$(PCLINT) -I$(SCIPDIR) -I$(SCIPDIR)/pclint main-gcc.lnt +os\(pclint.out\) -u -zero -max_threads=$(MAXJOBS) \
+			$(USRFLAGS) $(FLAGS) -uNDEBUG -uSCIP_WITH_READLINE -uSCIP_ROUNDING_FE -D_BSD_SOURCE $(FILES);'
+endif
+
 .PHONY: scip
 scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^
@@ -140,7 +153,8 @@ test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-			$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
+			$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
+			$(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON);
 
 .PHONY: clean
 clean:		$(OBJDIR)
@@ -157,7 +171,7 @@ tags:
 
 -include	$(MAINOBJFILES:.o=.d)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 

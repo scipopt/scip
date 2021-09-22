@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -58,7 +58,7 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAMES	=	string gastrans circle brachistochrone circlepacking
+MAINNAMES	=	spring gastrans brachistochrone circlepacking
 MAINOBJ		=	$(addsuffix .o,$(MAINNAMES))
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 
@@ -117,7 +117,7 @@ doc:
 
 -include	$(MAINOBJFILES:.o=.d)
 
-$(BINDIR)/%.$(BASE).$(LPS)$(EXEEXTENSION): $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/%.o | $(BINDIR)
+$(BINDIR)/%.$(BASE).$(LPS)$(EXEEXTENSION): $(SCIPLIBFILE) $(LPILIBFILE) $(OBJDIR)/%.o | $(BINDIR)
 		@echo "-> linking $@"
 		$(LINKCXX) $(OBJDIR)/$*.o $(LINKCXXSCIPALL)	$(LDFLAGS) $(LINKCXX_o)$@
 

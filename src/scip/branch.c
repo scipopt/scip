@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -218,19 +218,6 @@ SCIP_RETCODE branchcandCalcLPCands(
    SCIPsetDebugMsg(set, "calculating LP branching candidates: validlp=%" SCIP_LONGINT_FORMAT ", lpcount=%" SCIP_LONGINT_FORMAT "\n",
       branchcand->validlpcandslp, stat->lpcount);
 
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
-   {
-      branchcand->lpmaxpriority = INT_MIN / 2;
-      branchcand->nlpcands = 0;
-      branchcand->npriolpcands = 0;
-      branchcand->npriolpbins = 0;
-      branchcand->nimpllpfracs = 0;
-      branchcand->validlpcandslp = stat->lpcount;
-
-      SCIPsetDebugMsg(set, " LP is unbounded -> no branching candidates\n");
-      return SCIP_OKAY;
-   }
-
    /* check, if the current LP branching candidate array is invalid */
    if( branchcand->validlpcandslp < stat->lpcount )
    {
@@ -269,6 +256,10 @@ SCIP_RETCODE branchcandCalcLPCands(
          assert(primsol < SCIP_INVALID);
          assert(SCIPsetIsInfinity(set, -col->lb) || SCIPsetIsFeasGE(set, primsol, col->lb));
          assert(SCIPsetIsInfinity(set, col->ub) || SCIPsetIsFeasLE(set, primsol, col->ub));
+
+         /* count values at infinity as integral */
+         if( SCIPsetIsInfinity(set, REALABS(primsol)) )
+            continue;
 
          var = col->var;
          assert(var != NULL);

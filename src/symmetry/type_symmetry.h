@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,7 +65,11 @@ typedef enum SYM_Rhssense SYM_RHSSENSE;
 typedef uint32_t SYM_HANDLETYPE;        /**< type of symmetry handling */
 
 typedef struct SYM_Vartype SYM_VARTYPE;      /**< data of variables that are considered to be equivalent */
-typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation */
+typedef struct SYM_Optype SYM_OPTYPE;        /**< data of operators that are considered to be equivalent */
+typedef struct SYM_Consttype SYM_CONSTTYPE;  /**< data of constants that are considered to be equivalent */
+typedef struct SYM_Rhstype SYM_RHSTYPE;      /**< data of constraint sides that are considered to be equivalent */
+typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation on linear constraints */
+typedef struct SYM_Exprdata SYM_EXPRDATA;    /**< data for symmetry group computation on nonlinear constraints */
 
 /** selection rules for leaders in SST cuts */
 enum SCIP_LeaderRule
@@ -104,6 +108,15 @@ enum SCIP_OrbitopeType
    SCIP_ORBITOPETYPE_PACKING      = 2        /**< constraint is a packing orbitope constraint:      rowsum(x) <= 1 */
 };
 typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
+
+/** conditions to recompute symmetries after a restart */
+enum SCIP_RecomputesymType
+{
+   SCIP_RECOMPUTESYM_NEVER         = 0,       /**< never recompute symmetries */
+   SCIP_RECOMPUTESYM_ALWAYS        = 1,       /**< always recompute symmetries */
+   SCIP_RECOMPUTESYM_OFFOUNDRED    = 2        /**< only if orbital fixing found a reduction in previous run */
+};
+typedef enum SCIP_RecomputesymType SCIP_RECOMPUTESYMTYPE;
 
 
 #ifdef __cplusplus

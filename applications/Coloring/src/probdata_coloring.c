@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1311,7 +1311,7 @@ SCIP_RETCODE COLORprobSetUpArrayOfCons(
       char consname[SCIP_MAXSTRLEN];
 
       /* create the constraint */
-      sprintf(consname, "Node-Constraint%d", i+1);
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "Node-Constraint%d", i+1);
 
       SCIP_CALL( SCIPcreateConsSetcover(scip, &constraints[i], consname, 0, NULL, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, constraints[i]) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -128,7 +128,7 @@ SCIP_RETCODE readCol(
       return SCIP_READERROR;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &probname, (j-i-4)) );
-   strncpy(probname, &filename[i+1], (j-i-5)); /*lint !e732 !e776*/
+   (void) strncpy(probname, &filename[i+1], (j-i-5)); /*lint !e732 !e776*/
    probname[j-i-5]= '\0';
 
    /* Read until information about graph starts */

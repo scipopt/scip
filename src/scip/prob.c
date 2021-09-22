@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -464,8 +464,8 @@ SCIP_RETCODE SCIPprobFree(
 
       if( SCIPvarGetNUses((*prob)->vars[v]) > 1 )
       {
-         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
-            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]));
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP problem <%s>.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]), SCIPprobGetName(*prob));
 #ifndef NDEBUG
          unreleasedvar = TRUE;
 #endif
@@ -483,8 +483,8 @@ SCIP_RETCODE SCIPprobFree(
 
       if( SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
       {
-         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP.\n",
-            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]));
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP problem <%s>.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]), SCIPprobGetName(*prob));
 #ifndef NDEBUG
          unreleasedvar = TRUE;
 #endif

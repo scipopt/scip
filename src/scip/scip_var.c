@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -368,7 +368,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
    return SCIP_OKAY;
 }
 
-/** print the given monomials as polynomial in the following form
+/** print the given terms as signomial in the following form
  *  c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...
  *
  *  This string can be parsed by the method SCIPparseVarsPolynomial().
@@ -783,14 +783,13 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    return SCIP_OKAY;
 }
 
-/** parse the given string as polynomial of variables and coefficients
+/** parse the given string as signomial of variables and coefficients
  *  (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
  *  (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
  *
  *  The user has to call SCIPfreeParseVarsPolynomialData(scip, monomialvars, monomialexps,
  *  monomialcoefs, monomialnvars, *nmonomials) short after SCIPparseVarsPolynomial to free all the
- *  allocated memory again.  Do not keep the arrays created by SCIPparseVarsPolynomial around, since
- *  they use buffer memory that is intended for short term use only.
+ *  allocated memory again.
  *
  *  Parsing is stopped at the end of string (indicated by the \\0-character) or when no more monomials
  *  are recognized.
@@ -885,21 +884,22 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          if( coef != SCIP_INVALID  ) /*lint !e777*/
          {
             SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
+
             /* push previous monomial */
             if( monomialssize <= *nmonomials )
             {
                monomialssize = SCIPcalcMemGrowSize(scip, *nmonomials+1);
 
-               SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  monomialssize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  monomialssize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, monomialssize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, monomialssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialexps,  *nmonomials, monomialssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialnvars, *nmonomials, monomialssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialcoefs, *nmonomials, monomialssize) );
             }
 
             if( nvars > 0 )
             {
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialvars)[*nmonomials], vars, nvars) ); /*lint !e866*/
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialexps)[*nmonomials], exponents, nvars) ); /*lint !e866*/
+               SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*monomialvars)[*nmonomials], vars, nvars) ); /*lint !e866*/
+               SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*monomialexps)[*nmonomials], exponents, nvars) ); /*lint !e866*/
             }
             else
             {
@@ -921,15 +921,11 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
              */
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
             coef = 1.0;
-            break;
          }
-         if( *str == '-' || *str == '+' || isdigit(*str) )
-         {
+         else if( *str == '-' || *str == '+' || isdigit(*str) )
             state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
-            break;
-         }
-
-         state = SCIPPARSEPOLYNOMIAL_STATE_END;
+         else
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
 
          break;
       }
@@ -940,18 +936,15 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          {
             /* there seem to come another variable */
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
-            break;
          }
-
-         if( *str == '-' || *str == '+' || isdigit(*str) )
+         else if( *str == '-' || *str == '+' || isdigit(*str) )
          {
             /* there seem to come a coefficient, which means the next monomial */
             state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
-            break;
          }
+         else /* since we cannot detect the symbols we stop parsing the polynomial */
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
 
-         /* since we cannot detect the symbols we stop parsing the polynomial */
-         state = SCIPPARSEPOLYNOMIAL_STATE_END;
          break;
       }
 
@@ -981,7 +974,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          }
 
          /* after the coefficient we go into the intermediate state, i.e., expecting next variables */
-         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;  /*lint !e838*/
 
          break;
       }
@@ -1013,8 +1006,8 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          if( nvars + 1 > varssize )
          {
             varssize = SCIPcalcMemGrowSize(scip, nvars+1);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      varssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, varssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vars,      nvars, varssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &exponents, nvars, varssize) );
          }
          assert(vars != NULL);
          assert(exponents != NULL);
@@ -1049,7 +1042,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          str = *endptr;
 
          /* after the exponent we go into the intermediate state, i.e., expecting next variables */
-         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;  /*lint !e838*/
          break;
       }
 
@@ -1078,17 +1071,17 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          if( monomialssize <= *nmonomials )
          {
             monomialssize = *nmonomials+1;
-            SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  monomialssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  monomialssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, monomialssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, monomialssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialexps,  *nmonomials, monomialssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialnvars, *nmonomials, monomialssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialcoefs, *nmonomials, monomialssize) );
          }
 
          if( nvars > 0 )
          {
             /* shrink vars and exponents array to needed size and take over ownership */
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      nvars) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, nvars) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vars, varssize, nvars) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &exponents, varssize, nvars) );
             (*monomialvars)[*nmonomials] = vars;
             (*monomialexps)[*nmonomials] = exponents;
             vars = NULL;
@@ -1121,17 +1114,17 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    }
 
    /* free memory to store current monomial, if still existing */
-   SCIPfreeBufferArrayNull(scip, &vars);
-   SCIPfreeBufferArrayNull(scip, &exponents);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &exponents, varssize);
 
    if( *success && *nmonomials > 0 )
    {
       /* shrink arrays to required size, so we do not need to keep monomialssize around */
       assert(*nmonomials <= monomialssize);
-      SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  *nmonomials) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  *nmonomials) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, *nmonomials) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, *nmonomials) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  monomialssize, *nmonomials) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialexps,  monomialssize, *nmonomials) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialnvars, monomialssize, *nmonomials) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialcoefs, monomialssize, *nmonomials) );
 
       /* SCIPwriteVarsPolynomial(scip, NULL, *monomialvars, *monomialexps, *monomialcoefs, *monomialnvars, *nmonomials, FALSE); */
    }
@@ -1145,7 +1138,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    return SCIP_OKAY;
 }
 
-/** frees memory allocated when parsing a polynomial from a string
+/** frees memory allocated when parsing a signomial from a string
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1187,14 +1180,14 @@ void SCIPfreeParseVarsPolynomialData(
 
    for( i = nmonomials - 1; i >= 0; --i )
    {
-      SCIPfreeBufferArrayNull(scip, &(*monomialexps)[i]);
-      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*monomialexps)[i], (*monomialnvars)[i]);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*monomialvars)[i], (*monomialnvars)[i]);
    }
 
-   SCIPfreeBufferArray(scip, monomialcoefs);
-   SCIPfreeBufferArray(scip, monomialnvars);
-   SCIPfreeBufferArray(scip, monomialexps);
-   SCIPfreeBufferArray(scip, monomialvars);
+   SCIPfreeBlockMemoryArray(scip, monomialcoefs, nmonomials);
+   SCIPfreeBlockMemoryArray(scip, monomialnvars, nmonomials);
+   SCIPfreeBlockMemoryArray(scip, monomialexps, nmonomials);
+   SCIPfreeBlockMemoryArray(scip, monomialvars, nmonomials);
 }
 
 /** increases usage counter of variable
@@ -1277,9 +1270,9 @@ SCIP_RETCODE SCIPreleaseVar(
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
-      if( !SCIPvarIsTransformed(*var) && (*var)->nuses == 1 )
+      if( !SCIPvarIsTransformed(*var) && (*var)->nuses == 1 && (*var)->data.original.transvar != NULL )
       {
-         SCIPerrorMessage("cannot release last use of original variable while the transformed problem exists\n");
+         SCIPerrorMessage("cannot release last use of original variable while associated transformed variable exists\n");
          return SCIP_INVALIDCALL;
       }
       SCIP_CALL( SCIPvarRelease(var, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
@@ -4343,6 +4336,7 @@ SCIP_RETCODE SCIPaddVarLocks(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -4363,7 +4357,7 @@ SCIP_RETCODE SCIPlockVarCons(
    int nlocksup[NLOCKTYPES];
    int i;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -4428,6 +4422,7 @@ SCIP_RETCODE SCIPlockVarCons(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -4448,7 +4443,7 @@ SCIP_RETCODE SCIPunlockVarCons(
    int nlocksup[NLOCKTYPES];
    int i;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPunlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPunlockVarCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -4478,6 +4473,7 @@ SCIP_RETCODE SCIPunlockVarCons(
       assert(!SCIPvarIsTransformed(var));
       /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
@@ -8078,7 +8074,7 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
    return SCIP_OKAY;
 }
 
-/** tightens the variable bounds due a new variable type */
+/** tightens the variable bounds due to a new variable type */
 static
 SCIP_RETCODE tightenBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8107,7 +8103,9 @@ SCIP_RETCODE tightenBounds(
        * tightening, because relaxing bounds may not be allowed
        */
       if( !SCIPisFeasIntegral(scip, SCIPvarGetLbGlobal(var)) ||
-         (!SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) && SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)))
+         (!SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)) && SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var))) ||
+         (!SCIPsetIsEQ(scip->set, SCIPvarGetLbGlobal(var), SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var))) &&
+          SCIPvarGetLbGlobal(var) < SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)))
         )
       {
          SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, SCIPfeasCeil(scip, SCIPvarGetLbGlobal(var)), TRUE, infeasible, &tightened) );
@@ -8560,6 +8558,19 @@ SCIP_Bool SCIPdoNotMultaggr(
    return scip->set->presol_donotmultaggr;
 }
 
+/** returns whether variable is not allowed to be aggregated */
+SCIP_Bool SCIPdoNotAggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable x to aggregate */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(var->scip == scip);
+
+   return scip->set->presol_donotaggr || SCIPvarDoNotAggr(var);
+}
+
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPdoNotMultaggrVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8626,6 +8637,39 @@ SCIP_Bool SCIPallowWeakDualReds(
    assert(scip != NULL);
 
    return !scip->set->reopt_enable && scip->set->misc_allowweakdualreds;
+}
+
+/** marks the variable that it must not be aggregated
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *
+ *  @note There exists no "unmark" method since it has to be ensured that if a plugin requires that a variable is not
+ *        aggregated that this is will be the case.
+ */
+SCIP_RETCODE SCIPmarkDoNotAggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to delete */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(var->scip == scip);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPmarkDoNotAggrVar", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE) );
+
+   SCIP_CALL( SCIPvarMarkDoNotAggr(var) );
+
+   return SCIP_OKAY;
 }
 
 /** marks the variable that it must not be multi-aggregated

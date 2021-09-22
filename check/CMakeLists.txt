@@ -112,13 +112,13 @@ set(settings_fastMIP
     "lookahead-addclique-scaledcutoffscore"
     "presolving_off"
     "separating_off"
+    "separating_misc"
     "vbcvisualization"
     "enable_treeprofile_regression_forest"
     "../../../scripts/trainEstimation/periodic_report"
   )
 set(settings_MINLP
-#    "emphasis_numerics"
-    "minlp"
+    "default"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -128,16 +128,12 @@ set(settings_MINLP
     "nlpdivingsolvesubmip"
     "nlpdiving4"
     "separating_aggressive"
-)
-set(settings_Bivariate
-    "minlp"
-    "bivariate"
+    "emphasis_numerics"
 )
 
-set(settings_Bilinrelax
-    "minlp"
-    "bilinrelax"
-  )
+set(settings_branch
+    "branch_inference"
+)
 
 set(settings_Symmetry_A
     "orbitalfixing-timing0"
@@ -156,6 +152,10 @@ set(settings_Symmetry_B
     "sst_leader-first_tiebreak-maxconflicts"
     "sst_leader-first_tiebreak-orbitmin"
     "sst_leader-maxconflicts_tiebreak-orbitmin"
+    )
+
+set(settings_Symmetry_MINLP
+    "checksym"
     )
 
 set(settings_sparsify
@@ -214,23 +214,18 @@ set(settings_Or
 )
 
 
-set(instances_Readertest
-    "instances/MIP/bell5.mps\;8966406.49"
-    "instances/MIP/egout.mps\;568.1007"
-    "instances/MIP/enigma.mps\;0"
-    "instances/MIP/flugpl.mps\;1201500"
-    "instances/MIP/gt2.mps\;21166"
-    "instances/MIP/lseu.mps\;1120"
-    "instances/MIP/MANN_a9.clq.lp\;16"
-    "instances/MIP/misc03.mps\;3360"
+#
+# read/write instances
+#
+set(instances_MIP_write
+  #"instances/MIP/bell5.mps\;8966406.49"
+  #"instances/MIP/egout.mps\;568.1007"
+  #"instances/MIP/flugpl.mps\;1201500"
+  #"instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/p0033.osil\;3089"
-    "instances/MIP/p0548.mps\;8691"
     "instances/MIP/stein27.fzn\;18"
     "instances/MIP/stein27_inf.lp\;+infinity"
-    "instances/MIP/vpm2.fzn\;13.75"
-)
-
-
+    )
 #
 # MIP instances
 #
@@ -295,19 +290,22 @@ endif()
 #
 set(instances_MINLP
     "instances/MINLP/bip_cross_min.10.10.10.1.pip\;1"
-    "instances/MINLP/circle.cip\;4.57424778"
+    "instances/MINLP/circle.lp\;4.57424778"
     "instances/MINLP/ex1266.mps\;16.3"
     "instances/MINLP/m3.osil\;37.8"
     "instances/MINLP/parincQuadratic.osil\;49920.5564"
     "instances/MINLP/tltr.mps\;48.0666666667"
     )
-set(instances_Bivariate
-    "instances/Bivariate/st_qpk1.osil\;-3"
-    "instances/Bivariate/nvs01.osil\;12.4696688"
-   )
+set(instances_branch
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/p0033.osil\;3089"
+    "instances/MINLP/circle.lp\;4.57424778"
+    "instances/MINLP/ex1266.mps\;16.3"
+    )
 set(instances_Bilinrelax
-    "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
-    "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
+    "instances/MINLP/pointpack04.osil\;1.00000024988836"
+    "instances/MINLP/pointpack06.osil\;0.361111675167215"
   )
 
 #
@@ -335,8 +333,8 @@ set(instances_sparsify
 # Semicontinuous instances
 #
 set(instances_Semicontinuous
-#    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
-    "instances/Semicontinuous/semicon1.mps\;1.1"
+    "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
+    "instances/MIP/semicon1.mps\;1.1"
     )
 #
 # SAT instance(s)
@@ -367,11 +365,13 @@ set(instances_SOS
     )
 
 #
-# Orbitope instances
+# Orbitope/Orbisack/Symresack instances
 #
-set(instances_Orbitope
-    "instances/Orbitope/packorb_1-FullIns_3.cip\;28"
-    "instances/Orbitope/partorb_1-FullIns_3.cip\;4"
+set(instances_SymmetryConss
+    "instances/Symmetry/packorb_1-FullIns_3.cip\;28"
+    "instances/Symmetry/partorb_1-FullIns_3.cip\;4"
+    "instances/Symmetry/packorbisack_1-FullIns_3.cip\;4"
+    "instances/Symmetry/symresack_1-FullIns_3.cip\;28"
     )
 
 #
@@ -386,6 +386,15 @@ set(instances_Symmetry_A
 set(instances_Symmetry_B
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
+    )
+
+#
+# Symmetry MINLP instances
+#
+set(instances_Symmetry_MINLP
+    "instances/MINLP/gastrans.osil.gz\;89.0858400000"
+    "instances/MINLP/tln2.osil.gz\;5.3000000000"
+    "instances/MINLP/cvxnonsep_psig40r.osil.gz\;86.5450782341784"
     )
 
 #
@@ -409,7 +418,7 @@ set(instances_BendersLB
 
 set(instances_BendersQP
     "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec.gz\;-8.22960761981176e-02"
-    "instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
+    #"instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
     "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.34740783553289e-02"
    )
 
@@ -421,17 +430,21 @@ set(instances_Or
 # available reader file extensions for SCIP readers
 #
 set(scip_reader_extensions
-    "cip"
-    "gms"
-    "ppm"
-    "pbm"
-    "ccg"
-    "opb"
-    "pip"
-    "rlp"
-    "mps"
-    "lp"
-    )
+  "mps"
+  "lp"
+  "opb"
+  "pip"
+  "fzn"
+  "cip"
+  "rlp"
+  )
+
+#
+# Writer output formats that are not also readers (all writers are scip_reader_extensions + scip_only_writer_extensions)
+#
+set(scip_writer_only_extensions
+  "wbo"
+  )
 
 #
 # add a test to build the SCIP binary that all further tests depend on
@@ -535,16 +548,17 @@ add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
-add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
-add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
+add_instancetests(instances_branch settings_branch "Branch")
+add_instancetests(instances_Bilinrelax settings_default "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
 add_instancetests(instances_sparsify settings_sparsify "Sparsify")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
-add_instancetests(instances_Orbitope settings_default "Orbitope")
+add_instancetests(instances_SymmetryConss settings_default "SymmetryConss")
 add_instancetests(instances_Symmetry_A settings_Symmetry_A "Symmetry_A")
 add_instancetests(instances_Symmetry_B settings_Symmetry_B "Symmetry_B")
+add_instancetests(instances_Symmetry_MINLP settings_Symmetry_MINLP "Symmetry_MINLP")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
@@ -613,12 +627,35 @@ set(basenames_pip_wrongformat
     )
 set(message_format_pip "PIP might be corrupted")
 
+#
+# test writing and reading from and to different file extensions for MIP
+#
+foreach(instance ${instances_MIP_write})
+  foreach(extension ${scip_writer_only_extensions})
+    split_instance(instance)
+    configure_file(interactiveshell/writeronlytest.bat.in interactiveshell/writeronlytest-${extension}-${basename}.bat)
+    set(regex "written original problem to file")
+
+    add_test(NAME MIP-writeronlytest-${extension}-${basename}
+      COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/writeronlytest-${extension}-${basename}.bat
+      )
+    set_tests_properties(MIP-writeronlytest-${extension}-${basename}
+      PROPERTIES
+      PASS_REGULAR_EXPRESSION ${regex}
+      DEPENDS scip-build
+      )
+  endforeach(extension)
+endforeach(instance)
 
 #
 # test writing and reading from and to different file extensions for MIP
 #
 foreach(instance ${instances_MIP})
     split_instance(instance)
+    if(${basename} STREQUAL "rgn.mps")
+      continue()
+    endif()
+
     foreach(extension ${scip_reader_extensions})
         #
         # configure the batch file for this test by substituting placeholders in the in.file
@@ -632,7 +669,7 @@ foreach(instance ${instances_MIP})
         #
         if( wrongformat EQUAL -1 )
             configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
-            set(regex "Validation         : Success")
+            set(regex "Validation         : Success.*Validation         : Success")
         else()
             configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
             set(regex "${message_format_${extension}}")

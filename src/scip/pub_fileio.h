@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,9 @@ SCIP_EXPORT SCIP_FILE* SCIPfopen(const char *path, const char *mode);
 SCIP_EXPORT SCIP_FILE* SCIPfdopen(int fildes, const char *mode);
 SCIP_EXPORT size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
 SCIP_EXPORT size_t SCIPfwrite(const void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream);
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT int SCIPfprintf(SCIP_FILE *stream, const char *format, ...);
 SCIP_EXPORT int SCIPfputc(int c, SCIP_FILE *stream);
 SCIP_EXPORT int SCIPfputs(const char *s, SCIP_FILE *stream);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1134,9 +1134,9 @@ SCIP_RETCODE SCIPreleaseCons(
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
-      if( SCIPconsIsOriginal(*cons) && (*cons)->nuses == 1 )
+      if( SCIPconsIsOriginal(*cons) && (*cons)->nuses == 1 && (*cons)->transorigcons != NULL )
       {
-         SCIPerrorMessage("cannot release last use of original constraint while the transformed problem exists\n");
+         SCIPerrorMessage("cannot release last use of original constraint while an associated transformed constraint exists\n");
          return SCIP_INVALIDCALL;
       }
       SCIP_CALL( SCIPconsRelease(cons, scip->mem->probmem, scip->set) );
