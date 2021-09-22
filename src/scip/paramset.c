@@ -3731,13 +3731,6 @@ SCIP_RETCODE paramsetSetSeparatingFast(
    {
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/mcf/freq", -1, quiet) );
    }
-#ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "strongcg") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/strongcg/maxroundsroot", 10, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/strongcg/maxsepacutsroot", 200, quiet) );
-   }
 
    return SCIP_OKAY;
 }
@@ -4044,12 +4037,17 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques", FALSE, quiet) );
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities", FALSE, quiet) );
 
-      /* Reduce the max coefratio to prevent the creation of potentially numerical unstable constraints */
+      /* Reduce the max coefratio to prevent the creation of potentially numerical unstable cuts */
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratio", 100.0, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratiofacrowprep", 1.0, quiet) );
 #ifdef SCIP_WITH_PRESOLVELIB
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/hugebound", 1e6, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/markowitztolerance", 0.1, quiet) );
 #endif
+
+      /* weaken domain propagation of nonlinear constraints by increasing relaxation of variable bounds and constraint sides */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/conssiderelaxamount", 1e-7, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/varboundrelaxamount", 1e-7, quiet) );
 
       break;
 

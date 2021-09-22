@@ -169,6 +169,9 @@ Problem<SCIP_Real> buildProblem(
       builder.setRowRhsInf(i, SCIPisInfinity(scip, rhs));
    }
 
+   /* init objective offset - the value itself is irrelevant */
+   builder.setObjOffset(0);
+
    return builder.build();
 }
 
@@ -360,6 +363,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
    int oldnnz = problem.getConstraintMatrix().getNnz();
+
    PresolveResult<SCIP_Real> res = presolve.apply(problem);
    data->lastncols = problem.getNCols();
    data->lastnrows = problem.getNRows();
@@ -545,6 +549,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          else
          {
             SCIP_Real colCoef = 0.0;
+            SCIP_Real updatedSide;
 
             for( int j = first + 1; j < last; ++j )
             {
@@ -566,7 +571,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_CALL( SCIPgetProbvarSum(scip, &aggrvar, &colCoef, &constant) );
             assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
 
-            side -= constant;
+            updatedSide = side - constant;
 
             for( int j = first + 1; j < last; ++j )
             {
@@ -578,7 +583,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             }
 
             SCIP_CALL( SCIPmultiaggregateVar(scip, aggrvar, tmpvars.size(),
-               tmpvars.data(), tmpvals.data(), side / colCoef, &infeas, &aggregated) );
+               tmpvars.data(), tmpvals.data(), updatedSide / colCoef, &infeas, &aggregated) );
          }
 
          if( aggregated )
@@ -692,9 +697,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization (https://github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
 #else
-   String desc("parallel presolve for integer and linear optimization (https://github.com/scipopt/papilo)");
+   String desc("parallel presolve for integer and linear optimization (github.com/scipopt/papilo)");
 #endif
 
    /* add external code info for the presolve library */

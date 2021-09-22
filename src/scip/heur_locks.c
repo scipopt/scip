@@ -741,6 +741,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    else
    {
       char strbuf[SCIP_MAXSTRLEN];
+      int ncols;
 
       if( SCIPgetNContVars(scip) > 0 )
       {
@@ -766,15 +767,28 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             goto TERMINATE;
       }
 
-      /* print probing stats before LP */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+      /* print message if relatively large LP is solved from scratch, since this could lead to a longer period during
+       * which the user sees no output; more detailed probing stats only in debug mode */
+      ncols = SCIPgetNLPCols(scip);
+      if( !SCIPisLPSolBasic(scip) && ncols > 1000 )
+      {
+         int nunfixedcols = SCIPgetNUnfixedLPCols(scip);
+
+         if( nunfixedcols > 0.5 * ncols )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+               "Heuristic " HEUR_NAME " solving LP from scratch with %.1f %% unfixed columns (%d of %d) ...\n",
+               100.0 * (nunfixedcols / (SCIP_Real)ncols), nunfixedcols, ncols);
+         }
+      }
+      SCIPdebugMsg(scip, "Heuristic " HEUR_NAME " probing LP: %s\n",
          SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
 
-      SCIPdebugMsg(scip, "starting solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
       /* solve LP;
        * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
+      SCIPdebugMsg(scip, "starting solving locks-lp at time %g\n", SCIPgetSolvingTime(scip));
 #ifdef NDEBUG
       {
          SCIP_Bool retstat;
@@ -936,17 +950,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
       SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
-
-      /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
-       * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-       * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-       * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
-       * made for the original SCIP
-       */
-      if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-      {
-         SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
-      }
 
       /* if there is already a solution, add an objective cutoff */
       if( SCIPgetNSols(scip) > 0 )

@@ -506,17 +506,6 @@ SCIP_RETCODE setSubscipParameters(
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
-    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
-    * made for the original SCIP
-    */
-   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && ! SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
-   }
-
    /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
    if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
@@ -756,7 +745,7 @@ SCIP_RETCODE setupSubscipLpface(
 
       /* copy all plugins */
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
       /* get name of the original problem and add the string "_lpfacesub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));
 
@@ -1231,6 +1220,9 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
       assert(heurdata->subscipdata->subscip == NULL);
 
+      /* allocate memory to hold sub-SCIP variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
       SCIP_CALL( SCIPallocBufferArray(scip, &fixvars, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &fixvals, nvars) );
 
@@ -1240,15 +1232,13 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       {
          SCIPfreeBufferArray(scip, &fixvals);
          SCIPfreeBufferArray(scip, &fixvars);
+         SCIPfreeBufferArray(scip, &subvars);
 
          *result = SCIP_DIDNOTRUN;
          return SCIP_OKAY;
       }
 
       SCIPdebugMsg(scip, "Creating new sub-Problem for LP face heuristic\n");
-
-      /* allocate memory to hold sub-SCIP variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
       /* initialize the subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );

@@ -98,6 +98,7 @@ VectorBase ADFun<Base>::Forward(
 	);
 
 	// lowest order we are computing
+	assert(n>0);  //SV for scan-build
 	size_t p = q + 1 - size_t(xq.size()) / n;
 	CPPAD_ASSERT_UNKNOWN( p == 0 || p == q );
 	CPPAD_ASSERT_KNOWN(

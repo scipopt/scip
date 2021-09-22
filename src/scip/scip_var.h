@@ -240,7 +240,7 @@ SCIP_RETCODE SCIPwriteVarsLinearsum(
    SCIP_Bool             type                /**< should the variable type be also posted */
    );
 
-/** print the given monomials as polynomial in the following form
+/** print the given terms as signomial in the following form
  *  c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...
  *
  *  This string can be parsed by the method SCIPparseVarsPolynomial().
@@ -401,7 +401,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    );
 
-/** parse the given string as polynomial of variables and coefficients
+/** parse the given string as signomial of variables and coefficients
  *  (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
  *  (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
  *
@@ -438,7 +438,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    );
 
-/** frees memory allocated when parsing a polynomial from a string
+/** frees memory allocated when parsing a signomial from a string
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

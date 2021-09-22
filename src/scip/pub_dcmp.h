@@ -94,7 +94,14 @@ SCIP_Real SCIPdecompGetModularity(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
-/** gets variable size for each block, sorted by increasing block label */
+/** gets variable size for each block, sorted by increasing block label
+ *
+ * To get all variable sizes, set nlabels to SCIPdecompGetNBlocks() + 1.
+ * The first entry corresponds to the number of border variables.
+ *
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdecompGetVarsSize(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -102,7 +109,14 @@ SCIP_RETCODE SCIPdecompGetVarsSize(
    int                   nblocks             /**< length of variable sizes array */
    );
 
-/** gets constraint size for each block, sorted by increasing block label */
+/** gets constraint size for each block, sorted by increasing block label
+ *
+ * To get all constraint sizes, set nlabels to SCIPdecompGetNBlocks() + 1.
+ * The first entry corresponds to the number of border constraints.
+ *
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdecompGetConssSize(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
@@ -110,13 +124,21 @@ SCIP_RETCODE SCIPdecompGetConssSize(
    int                   nblocks             /**< length of constraint sizes array */
    );
 
-/** gets number of border variables of this decomposition */
+/** gets number of border variables of this decomposition
+ *
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
+ */
 SCIP_EXPORT
 int SCIPdecompGetNBorderVars(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */
    );
 
-/** gets number of border constraints of this decomposition */
+/** gets number of border constraints of this decomposition
+ *
+ * @note Ensure that SCIPcomputeDecompStats() has been called before.
+ *       If the decomposition was read from a file, this was done automatically.
+ */
 SCIP_EXPORT
 int SCIPdecompGetNBorderConss(
    SCIP_DECOMP*          decomp              /**< decomposition data structure */

@@ -193,11 +193,12 @@
 #include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
 #include "lpi/type_lpi.h"
-#include "nlpi/type_expr.h"
+#include "scip/expr_var.h"
+#include "scip/expr_product.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_varbound.h"
 #include "scip/heur_indicator.h"
 #include "scip/heur_trysol.h"
@@ -3162,7 +3163,6 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
-
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
    (*consdata)->nfixednonzero = 0;
@@ -3407,7 +3407,7 @@ SCIP_RETCODE presolRoundIndicator(
    /* if the binary variable is fixed to zero */
    if ( SCIPvarGetUbLocal(consdata->binvar) < 0.5 )
    {
-      SCIPdebugMsg(scip, "Presolving <%s>: Binary variable fixed to 0, deleting indicator constraint.\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "Presolving <%s>: Binary variable <%s> fixed to 0, deleting indicator constraint.\n", SCIPconsGetName(cons), SCIPvarGetName(consdata->binvar));
 
       /* mark linear constraint to be update-able */
       if ( SCIPconsIsActive(consdata->lincons) )
@@ -5353,19 +5353,20 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
        */
       if ( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
       {
-         SCIP_NLROW* nlrow;
-         SCIP_VAR* quadvars[2];
-         SCIP_QUADELEM quadelem;
-
          /* create nonlinear row binary variable * slack variable = 0 */
-         quadvars[0] = consdata->binvar;
-         quadvars[1] = consdata->slackvar;
-         quadelem.idx1 = 0;
-         quadelem.idx2 = 1;
-         quadelem.coef = 1.0;
+         SCIP_NLROW* nlrow;
+         SCIP_EXPR* quadexpr;
+         SCIP_EXPR* varexprs[2];
 
-         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, 2, quadvars, 1,
-               &quadelem, NULL, 0.0, 0.0, SCIP_EXPRCURV_UNKNOWN) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[0], consdata->binvar, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[1], consdata->slackvar, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprProduct(scip, &quadexpr, 2, varexprs, 1.0, NULL, NULL) );
+
+         SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0, 0, NULL, NULL, quadexpr, 0.0, 0.0, SCIP_EXPRCURV_UNKNOWN) );
+
+         SCIP_CALL( SCIPreleaseExpr(scip, &quadexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[1]) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[0]) );
 
          /* add row to NLP and forget about it */
          SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
@@ -5734,8 +5735,10 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
 
    /* create constraint data */
    consdata = NULL;
+   /* Note that the constraint has activeone = TRUE, since the binary variable has been negated already if needed. */
    SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, SCIPconsGetName(sourcecons), &consdata, conshdlrdata->eventhdlrbound,
-         conshdlrdata->eventhdlrrestart, sourcedata->binvar, sourcedata->activeone, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsactive) );
+         conshdlrdata->eventhdlrrestart, sourcedata->binvar, TRUE, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsactive) );
+   consdata->activeone = sourcedata->activeone;
    assert( consdata != NULL );
 
    /* capture slack variable and linear constraint */
@@ -6674,7 +6677,6 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    SCIP_CONS* sourcelincons;
    SCIP_CONSHDLR* conshdlrlinear;
    const char* consname;
-   SCIP_Bool activeone;
 
    assert( scip != NULL );
    assert( sourcescip != NULL );
@@ -6771,12 +6773,10 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       assert( targetbinvar != NULL );
       assert( targetslackvar != NULL );
 
-      activeone = sourceconsdata->activeone;
-
       /* creates indicator constraint (and captures the linear constraint) */
-      SCIP_CALL( SCIPcreateConsIndicatorGenericLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar, activeone,
+      /* Note that the copied constraint has activeone = TRUE, since the target binary variable already was negated if needed. */
+      SCIP_CALL( SCIPcreateConsIndicatorGenericLinCons(scip, cons, consname, targetbinvar, targetlincons, targetslackvar, TRUE,
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
-
    }
    else
    {
@@ -7621,18 +7621,18 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    if ( conshdlrdata->generatebilinear )
    {
       SCIP_Real val = 1.0;
-      /* if active on 0, the binary variable is reversed */
       SCIP_VAR* binvarinternal;
+
+      /* if active on 0, the binary variable is reversed */
       if ( activeone )
-      {
          binvarinternal = binvar;
-      }
       else
       {
          SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
       }
+
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvarinternal, &slackvar, &val, 0.0, 0.0,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, 0, NULL, NULL, 1, &binvarinternal, &slackvar, &val, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
@@ -7653,16 +7653,26 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          /* make sure that binary variable hash exists */
          if ( conshdlrdata->sepaalternativelp )
          {
+            SCIP_VAR* binvarinternal;
+
             if ( conshdlrdata->binvarhash == NULL )
             {
                SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
             }
 
+            /* if active on 0, the binary variable is reversed */
+            if ( activeone )
+               binvarinternal = binvar;
+            else
+            {
+               SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+            }
+
             /* check whether binary variable is present: note that a binary variable might appear several times, but this seldomly happens. */
             assert( conshdlrdata->binvarhash != NULL );
-            if ( ! SCIPhashmapExists(conshdlrdata->binvarhash, (void*) consdata->binvar) )
+            if ( ! SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarinternal) )
             {
-               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binvarhash, (void*) consdata->binvar, (void*) (*cons)) );
+               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binvarhash, (void*) binvarinternal, (void*) (*cons)) );
             }
          }
       }
@@ -7828,7 +7838,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
       }
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
-      SCIP_CALL( SCIPcreateConsQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvarinternal, &slackvar, &val, 0.0, 0.0,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, 0, NULL, NULL, 1, &binvarinternal, &slackvar, &val, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
@@ -8078,6 +8088,7 @@ SCIP_VAR* SCIPgetBinaryVarIndicator(
    return consdata->binvar;
 }
 
+/** similar to SCIPgetBinaryVarIndicator but returns the original binary variable passed by the user. */
 SCIP_VAR* SCIPgetBinaryVarIndicatorGeneric(
    SCIP_CONS*            cons                /**< indicator constraint */
    )
@@ -8092,7 +8103,7 @@ SCIP_VAR* SCIPgetBinaryVarIndicatorGeneric(
    assert(consdata != NULL);
    binvar = consdata->binvar;
 
-   if( !consdata->activeone )
+   if ( ! consdata->activeone )
       binvar = SCIPvarGetNegationVar(binvar);
    assert(binvar != NULL);
 
@@ -8140,7 +8151,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
       /* make sure we have a transformed binary variable */
       SCIP_CALL( SCIPgetTransformedVar(scip, binvar, &var) );
       assert( var != NULL );
-      if ( !consdata->activeone )
+      if ( ! consdata->activeone )
          SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
 
       consdata->binvar = var;
@@ -8171,7 +8182,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
    }
    else
    {
-      if ( !consdata->activeone )
+      if ( ! consdata->activeone )
          SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvar) );
       consdata->binvar = binvar;
    }

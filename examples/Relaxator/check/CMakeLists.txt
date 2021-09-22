@@ -10,7 +10,7 @@ set(instances
     "instances/MIP/flugpl.mps\;1201500"
     "instances/MIP/gt2.mps\;21166"
     "instances/MIP/lseu.mps\;1120"
-    "instances/MINLP/circle.cip\;4.57424778"
+    "instances/MINLP/circle.lp\;4.57424778"
     "instances/MINLP/m3.osil\;37.8"
 #    "instances/MINLP/parincQuadratic.osil\;49920.5564"
 # this instance currently fails

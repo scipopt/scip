@@ -867,7 +867,6 @@ INPUT                  = . \
                          ../INSTALL_APPLICATIONS_EXAMPLES.md \
                          ../src \
                          ../src/scip \
-                         ../src/nlpi \
                          ../src/lpi \
                          ../src/objscip \
                          ../src/tclique \
