@@ -128,6 +128,7 @@ Performance improvements
 - Revised and improved subNLP primal heuristic, in particular choice of iteration limit and starting condition and reuse of subSCIP.
 - Merge strongcg into the gomory separator to avoid computing the same base equality twice. The files
   sepa_strongcg.{h|c} have been removed.
+- Use cpsolver emphasis in sepa_rapidlearning.
 
 Examples and applications
 -------------------------
