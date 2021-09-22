@@ -194,7 +194,7 @@ endif
 LPSOPTIONS	+=	spx ( = spx2)
 ifeq ($(LPS),spx2)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/include/spxinc
+FLAGS		+=	-DSOPLEX_NO_CONFIG_HEADER -I$(LIBDIR)/include/spxinc
 LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
@@ -663,6 +663,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_gauge.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
+			scip/sepa_interminor.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
 			scip/sepa_minor.o \
@@ -670,7 +671,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_rlt.o \
-			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
 
@@ -841,8 +841,6 @@ SCIPLIBOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.c))
 SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBCPPOBJ:.o=.cpp))
 SCIPLIBSRC	+=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
-SCIPPLUGININCSRC=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBOBJ:.o=.h))
-SCIPPLUGININCSRC +=	$(addprefix $(SRCDIR)/,$(SCIPPLUGINLIBCPPOBJ:.o=.h))
 SCIPLIBLINK	 =	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
 SCIPLIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBSHORTNAME).$(LIBEXT)
 

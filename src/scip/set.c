@@ -419,6 +419,7 @@
                                                  *   bound compared to best node's dual bound for applying local separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_SEPA_MAXCOEFRATIO     1e+4 /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
+#define SCIP_DEFAULT_SEPA_MAXCOEFRATIOFACROWPREP 10.0 /**< maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup */
 #define SCIP_DEFAULT_SEPA_MINEFFICACY      1e-4 /**< minimal efficacy for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  1e-4 /**< minimal efficacy for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
@@ -2393,6 +2394,11 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/maxcoefratio",
          "maximal ratio between coefficients in strongcg, cmir, and flowcover cuts",
          &(*set)->sepa_maxcoefratio, FALSE, SCIP_DEFAULT_SEPA_MAXCOEFRATIO, 1.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/maxcoefratiofacrowprep",
+         "maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup",
+         &(*set)->sepa_maxcoefratiofacrowprep, FALSE, SCIP_DEFAULT_SEPA_MAXCOEFRATIOFACROWPREP, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/minefficacy",
@@ -5829,6 +5835,20 @@ int SCIPsetGetSepaMaxcuts(
       return set->sepa_maxcutsroot;
    else
       return set->sepa_maxcuts;
+}
+
+/** returns the maximal ratio between coefficients to ensure in rowprep cleanup */
+SCIP_Real SCIPsetGetSepaMaxCoefRatioRowprep(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Real maxcoefrange;
+
+   maxcoefrange = set->sepa_maxcoefratiofacrowprep / set->num_feastol;
+   if( maxcoefrange < 1.0 )
+      maxcoefrange = 1.0;
+
+   return maxcoefrange;
 }
 
 /** returns user defined objective value (in original space) for reference purposes */

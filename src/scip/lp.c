@@ -12108,6 +12108,13 @@ SCIP_RETCODE lpSolve(
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
       assert(!lpCutoffDisabled(set));
+
+#ifndef NDEBUG
+      /* the LP solution objective should exceed the limit in this case */
+      SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
+      assert(SCIPsetIsGE(set, lp->lpobjval, lp->lpiobjlim));
+#endif
+
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
       lp->lpobjval = SCIPsetInfinity(set);
    }
@@ -17505,6 +17512,33 @@ int SCIPlpGetNCols(
    assert(lp != NULL);
 
    return lp->ncols;
+}
+
+/** gets current number of unfixed columns in LP */
+int SCIPlpGetNUnfixedCols(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             eps                 /**< numerical tolerance */
+   )
+{
+   SCIP_COL** lpcols;
+   int nlpcols;
+   int nunfixedcols;
+   int c;
+
+   assert(lp != NULL);
+   assert(eps > 0.0);
+
+   lpcols = lp->cols;
+   nlpcols = lp->ncols;
+
+   nunfixedcols = 0;
+   for( c = 0; c < nlpcols; ++c )
+   {
+      if( lpcols[c]->ub - lpcols[c]->lb > eps )
+         ++nunfixedcols;
+   }
+
+   return nunfixedcols;
 }
 
 /** gets array with rows of the LP */

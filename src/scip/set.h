@@ -1032,6 +1032,11 @@ int SCIPsetGetSepaMaxcuts(
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
+/** returns the maximal ratio between coefficients to ensure in rowprep cleanup */
+SCIP_Real SCIPsetGetSepaMaxCoefRatioRowprep(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** returns user defined objective value (in original space) for reference purposes */
 SCIP_Real SCIPsetGetReferencevalue(
    SCIP_SET*             set                 /**< global SCIP settings */

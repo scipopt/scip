@@ -363,7 +363,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    int nchildren;
    SCIP_Bool changed;
    SORTEXPRDATA sortdata;
-   int* order;
+   int* order = NULL;
 
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
@@ -443,8 +443,6 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
          changed = TRUE;
    }
 
-   SCIPfreeBufferArray(scip, &order);
-
    /* post-process */
 
    /* enforces SS4 */
@@ -519,9 +517,10 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    SCIPcaptureExpr(*simplifiedexpr);
 
    /* free memory */
-CLEANUP:
+ CLEANUP:
    SCIPfreeBufferArrayNull(scip, &newcoefs);
    SCIPfreeBufferArrayNull(scip, &newchildren);
+   SCIPfreeBufferArrayNull(scip, &order);
    SCIP_CALL( SCIPreleaseExpr(scip, &duplicate) );
 
    return SCIP_OKAY;

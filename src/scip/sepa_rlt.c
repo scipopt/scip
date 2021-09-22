@@ -3190,16 +3190,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
 
    SCIP_CALL( storeSuitableRows(scip, sepa, sepadata, prob_rows, rows, &nrows, row_to_pos, allowlocal) );
 
-   if( sepadata->isinitialround || sepadata->onlyoriginal )
-   {
-      SCIPfreeBufferArray(scip, &prob_rows);
-      sepadata->isinitialround = FALSE;
-   } /* no need to free memory in the other case since SCIPgetLPRowsData does not allocate it */
-
    if( nrows == 0 ) /* no suitable rows found, free memory and exit */
    {
       SCIPhashmapFree(&row_to_pos);
       SCIPfreeBufferArray(scip, &rows);
+      if( sepadata->isinitialround || sepadata->onlyoriginal )
+      {
+         SCIPfreeBufferArray(scip, &prob_rows);
+         sepadata->isinitialround = FALSE;
+      }
       return SCIP_OKAY;
    }
 
@@ -3264,6 +3263,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
 
    SCIPhashmapFree(&row_to_pos);
    SCIPfreeBufferArray(scip, &rows);
+
+   if( sepadata->isinitialround || sepadata->onlyoriginal )
+   {
+      SCIPfreeBufferArray(scip, &prob_rows);
+      sepadata->isinitialround = FALSE;
+   }
 
    return SCIP_OKAY;
 }
