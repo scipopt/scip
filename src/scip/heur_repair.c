@@ -548,6 +548,7 @@ SCIP_RETCODE applyRepair(
    int ndiscvars;
    int nfixeddiscvars;
    SCIP_Bool success;
+   SCIP_Bool avoidmemlimit;
 
    heurdata = SCIPheurGetData(heur);
    sol = heurdata->infsol;
@@ -910,6 +911,7 @@ SCIP_RETCODE applyRepair(
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemlimit", &avoidmemlimit) );
 
    /* subtract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( !SCIPisInfinity(scip, memorylimit) )
@@ -918,8 +920,11 @@ SCIP_RETCODE applyRepair(
       memorylimit -= SCIPgetMemExternEstim(scip) / 1048576.0;
    }
 
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0 )
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemlimit == TRUE)
+    * to create a copy of SCIP, including external memory usage */
+   if( !avoidmemlimit && (timelimit <= 0.0 || memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0) )
+      goto TERMINATE;
+   else if( avoidmemlimit && timelimit <= 0.0 )
       goto TERMINATE;
 
    /* set limits for the subproblem */

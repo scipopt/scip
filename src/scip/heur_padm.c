@@ -1017,6 +1017,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
    SCIP_Bool doscaling;
    SCIP_Bool istimeleft;
    SCIP_Bool success;
+   SCIP_Bool avoidmemlimit;
    int maxgraphedge;
    int ndecomps;
    int nconss;
@@ -1133,7 +1134,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
    /* estimate required memory for all blocks and terminate if not enough memory is available */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memory) );
-   if( ((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory )
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemlimit", &avoidmemlimit) );
+   if( !avoidmemlimit && (((SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip))/1048576.0) * nblocks >= memory) )
    {
       SCIPdebugMsg(scip, "The estimated memory usage for %d blocks is too large.\n", nblocks);
       goto TERMINATE;

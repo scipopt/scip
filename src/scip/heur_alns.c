@@ -1945,6 +1945,7 @@ SCIP_RETCODE determineLimits(
    SCIP_HEURDATA* heurdata;
    SCIP_Real initfactor;
    SCIP_Real nodesquot;
+   SCIP_Bool avoidmemlimit;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1958,6 +1959,7 @@ SCIP_RETCODE determineLimits(
    if( ! SCIPisInfinity(scip, solvelimits->timelimit) )
       solvelimits->timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &solvelimits->memorylimit) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemlimit", &avoidmemlimit) );
 
    /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( ! SCIPisInfinity(scip, solvelimits->memorylimit) )
@@ -1966,8 +1968,11 @@ SCIP_RETCODE determineLimits(
       solvelimits->memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( solvelimits->timelimit <= 0.0 || solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemlimit == TRUE)
+   * to create a copy of SCIP, including external memory usage */
+   if( !avoidmemlimit && (solvelimits->timelimit <= 0.0 || solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0) )
+      *runagain = FALSE;
+   else if( avoidmemlimit && solvelimits->timelimit <= 0.0 )
       *runagain = FALSE;
 
    nodesquot = heurdata->nodesquot;

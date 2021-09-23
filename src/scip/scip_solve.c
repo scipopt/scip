@@ -3013,7 +3013,10 @@ SCIP_RETCODE SCIPsolveConcurrent(
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
          memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
          /* estimate maximum number of copies that be created based on memory limit */
-         nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));
+         if( !scip->set->misc_avoidmemlimit )
+            nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));
+         else
+            nthreads = minnthreads;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "estimated a maximum of %lli threads based on memory limit\n", nthreads);
       }
       nconcsolvertypes = SCIPgetNConcsolverTypes(scip);
