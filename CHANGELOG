@@ -194,6 +194,8 @@ Interface changes
 - removed arguments timelimit, minimprove, itercontingent, and iterused from SCIPapplyHeurSubNlp()
 - removed SCIPresolveSolHeurSubNlp(), SCIPgetSubScipHeurSubNlp(), SCIPgetVarMappingScip2SubScipHeurSubNlp(), SCIPgetVarMappingSubScip2ScipHeurSubNlp()
 - SCIPlockVarCons() and SCIPunlockVarCons() are now allowed in stage TRANSFORMED as well
+- Added functions SCIPsetSepaIsParentsepa(), SCIPsetSepaParentsepa() [in scip_sepa.h], SCIPsepaSetIsParentsepa(), SCIPsepaSetParentsepa() [in sepa.h],
+  SCIPsepaIsParentsepa(), SCIPsepaGetParentsepa() [in pub_sepa.h]
 
 NLP:
 - SCIPhasNLPContinuousNonlinearity() now returns SCIP_RETCODE and has additional argument result
