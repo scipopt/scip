@@ -1130,7 +1130,7 @@ SCIP_Bool extreduce_distCloseNodesAreValid(
 {
    SCIP_Real* closenodes_dists;
    int* closenodes_indices;
-   int nclosenodes;
+   int nclosenodes = 0;
    const int nnodes = graph_get_nNodes(g);
    SCIP_Bool isValid = TRUE;
 
