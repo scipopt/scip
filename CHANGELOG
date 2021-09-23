@@ -452,6 +452,7 @@ Constraint handlers for NLP:
 - added SCIPcreateConsIndicatorGeneric() and SCIPcreateConsIndicatorGenericLinCons()
   which copy the interface of SCIPcreateConsIndicator() and SCIPcreateConsIndicatorLinCons() and
   add an activeone argument to specify whether the indicator constraint should be activated on 0 or 1.
+  SCIPcreateConsIndicator() also adds a lessthanineq flag to choose whether the linear constraint is a less-than or greater-than inequality.
 - added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
 - added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
 - added SCIPdecompGetNBorderVars() and SCIPdecompGetNBorderConss() to get number of border variables/constraints
