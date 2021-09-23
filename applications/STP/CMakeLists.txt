@@ -19,6 +19,9 @@ add_executable(scipstp
     src/cons_stp.c
     src/cons_stpcomponents.c
     src/dialog_stp.c
+    src/dpborder_base.c
+    src/dpborder_core.c
+    src/dpborder_util.c
     src/dpterms_base.c
     src/dpterms_core.c
     src/dpterms_util.c
