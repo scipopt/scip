@@ -188,7 +188,7 @@ SCIP_DECL_RELAXEXITSOL(relaxExitsolStpdp)
    return SCIP_OKAY;
 }
 
-#include <unistd.h>
+
 /** execution method of relaxator */
 static
 SCIP_DECL_RELAXEXEC(relaxExecStpdp)
