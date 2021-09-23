@@ -177,22 +177,22 @@ Test(readernl, read3, .description = "check reading .nl file with suffixes")
 /* check whether running shell with -AMPL flag works */
 Test(readernl, run, .description = "check running SCIP with -AMPL")
 {
-   char* args[3];
+   const char* args[3];
    char solfile[SCIP_MAXSTRLEN];
 
    /* skip test if nl reader not available (SCIP compiled with AMPL=false) */
    if( SCIPfindReader(scip, "nlreader") == NULL )
       return;
 
-   args[0] = (char*)"dummy";
+   args[0] = "dummy";
 
    /* get file to read: suffix1.nl that lives in the same directory as this file */
-   args[1] = (char*)malloc(SCIP_MAXSTRLEN);
-   strcpy(args[1], __FILE__);
-   dirname(args[1]);
-   strcat(args[1], "/suffix1");
+   args[1] = (const char*)malloc(SCIP_MAXSTRLEN);
+   strcpy((char*)args[1], __FILE__);
+   dirname((char*)args[1]);
+   strcat((char*)args[1], "/suffix1");
 
-   args[2] = (char*)"-AMPL";
+   args[2] = "-AMPL";
 
    /* get name of file where sol will be written: .nl-file with .nl replaced by .sol */
    strcpy(solfile, __FILE__);
@@ -213,7 +213,7 @@ Test(readernl, run, .description = "check running SCIP with -AMPL")
    /* cleanup */
    remove(solfile);
 
-   free(args[1]);
+   free((char*)args[1]);
 }
 
 /* check whether solving a LP without presolve gives a dual solution in the AMPL solution file */
@@ -260,15 +260,19 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
    solfile = fopen(solfilename, "r");
    cr_assert_not_null(solfile);
 
-   /* get name of reference solution file to compare solfile with */
-   strcpy(refsolfilename, __FILE__);
-   dirname(refsolfilename);
-   strcat(refsolfilename, "/lp1.refsol");
+   /* dual solution is not unique; the one we compare with seems to be the one given by CPLEX and SoPlex at the moment (2021) */
+   if( strncmp(SCIPlpiGetSolverName(), "CPLEX", 5) == 0 || strncmp(SCIPlpiGetSolverName(), "SoPlex", 6) == 0 )
+   {
+      /* get name of reference solution file to compare solfile with */
+      strcpy(refsolfilename, __FILE__);
+      dirname(refsolfilename);
+      strcat(refsolfilename, "/lp1.refsol");
 
-   /* open reference solfile */
-   refsolfile = fopen(refsolfilename, "r");
-   cr_assert_not_null(refsolfile);
-   cr_expect_file_contents_eq(solfile, refsolfile);
+      /* open reference solfile */
+      refsolfile = fopen(refsolfilename, "r");
+      cr_assert_not_null(refsolfile);
+      cr_expect_file_contents_eq(solfile, refsolfile);
+   }
 
    /* cleanup */
    fclose(solfile);

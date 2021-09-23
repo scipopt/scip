@@ -521,6 +521,7 @@ struct SCIP_Set
                                               *   compared to best node's dual bound for applying local separation
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
    SCIP_Real             sepa_maxcoefratio;  /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
+   SCIP_Real             sepa_maxcoefratiofacrowprep; /**< maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup */
    SCIP_Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the LP */
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */

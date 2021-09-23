@@ -789,8 +789,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
  *
  *  The user has to call SCIPfreeParseVarsPolynomialData(scip, monomialvars, monomialexps,
  *  monomialcoefs, monomialnvars, *nmonomials) short after SCIPparseVarsPolynomial to free all the
- *  allocated memory again.  Do not keep the arrays created by SCIPparseVarsPolynomial around, since
- *  they use buffer memory that is intended for short term use only.
+ *  allocated memory again.
  *
  *  Parsing is stopped at the end of string (indicated by the \\0-character) or when no more monomials
  *  are recognized.
@@ -885,21 +884,22 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          if( coef != SCIP_INVALID  ) /*lint !e777*/
          {
             SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", coef, nvars);
+
             /* push previous monomial */
             if( monomialssize <= *nmonomials )
             {
                monomialssize = SCIPcalcMemGrowSize(scip, *nmonomials+1);
 
-               SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  monomialssize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  monomialssize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, monomialssize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, monomialssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialexps,  *nmonomials, monomialssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialnvars, *nmonomials, monomialssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialcoefs, *nmonomials, monomialssize) );
             }
 
             if( nvars > 0 )
             {
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialvars)[*nmonomials], vars, nvars) ); /*lint !e866*/
-               SCIP_CALL( SCIPduplicateBufferArray(scip, &(*monomialexps)[*nmonomials], exponents, nvars) ); /*lint !e866*/
+               SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*monomialvars)[*nmonomials], vars, nvars) ); /*lint !e866*/
+               SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*monomialexps)[*nmonomials], exponents, nvars) ); /*lint !e866*/
             }
             else
             {
@@ -1006,8 +1006,8 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          if( nvars + 1 > varssize )
          {
             varssize = SCIPcalcMemGrowSize(scip, nvars+1);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      varssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, varssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vars,      nvars, varssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &exponents, nvars, varssize) );
          }
          assert(vars != NULL);
          assert(exponents != NULL);
@@ -1071,17 +1071,17 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          if( monomialssize <= *nmonomials )
          {
             monomialssize = *nmonomials+1;
-            SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  monomialssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  monomialssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, monomialssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, monomialssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialexps,  *nmonomials, monomialssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialnvars, *nmonomials, monomialssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialcoefs, *nmonomials, monomialssize) );
          }
 
          if( nvars > 0 )
          {
             /* shrink vars and exponents array to needed size and take over ownership */
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,      nvars) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &exponents, nvars) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vars, varssize, nvars) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &exponents, varssize, nvars) );
             (*monomialvars)[*nmonomials] = vars;
             (*monomialexps)[*nmonomials] = exponents;
             vars = NULL;
@@ -1114,17 +1114,17 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    }
 
    /* free memory to store current monomial, if still existing */
-   SCIPfreeBufferArrayNull(scip, &vars);
-   SCIPfreeBufferArrayNull(scip, &exponents);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &exponents, varssize);
 
    if( *success && *nmonomials > 0 )
    {
       /* shrink arrays to required size, so we do not need to keep monomialssize around */
       assert(*nmonomials <= monomialssize);
-      SCIP_CALL( SCIPreallocBufferArray(scip, monomialvars,  *nmonomials) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, monomialexps,  *nmonomials) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, monomialnvars, *nmonomials) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, monomialcoefs, *nmonomials) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  monomialssize, *nmonomials) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialexps,  monomialssize, *nmonomials) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialnvars, monomialssize, *nmonomials) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialcoefs, monomialssize, *nmonomials) );
 
       /* SCIPwriteVarsPolynomial(scip, NULL, *monomialvars, *monomialexps, *monomialcoefs, *monomialnvars, *nmonomials, FALSE); */
    }
@@ -1180,14 +1180,14 @@ void SCIPfreeParseVarsPolynomialData(
 
    for( i = nmonomials - 1; i >= 0; --i )
    {
-      SCIPfreeBufferArrayNull(scip, &(*monomialexps)[i]);
-      SCIPfreeBufferArrayNull(scip, &(*monomialvars)[i]);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*monomialexps)[i], (*monomialnvars)[i]);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*monomialvars)[i], (*monomialnvars)[i]);
    }
 
-   SCIPfreeBufferArray(scip, monomialcoefs);
-   SCIPfreeBufferArray(scip, monomialnvars);
-   SCIPfreeBufferArray(scip, monomialexps);
-   SCIPfreeBufferArray(scip, monomialvars);
+   SCIPfreeBlockMemoryArray(scip, monomialcoefs, nmonomials);
+   SCIPfreeBlockMemoryArray(scip, monomialnvars, nmonomials);
+   SCIPfreeBlockMemoryArray(scip, monomialexps, nmonomials);
+   SCIPfreeBlockMemoryArray(scip, monomialvars, nmonomials);
 }
 
 /** increases usage counter of variable

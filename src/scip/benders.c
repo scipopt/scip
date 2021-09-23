@@ -1757,7 +1757,7 @@ TERMINATE:
 
    if( probnumber >= 0 )
    {
-      SCIPdebugMsg(subproblem, "subproblem <%s> has been found to be of type %d\n", SCIPgetProbName(subproblem),
+      SCIPsetDebugMsg(set, "subproblem <%s> has been found to be of type %d\n", SCIPgetProbName(subproblem),
          SCIPbendersGetSubproblemType(benders, probnumber));
    }
 

@@ -1414,6 +1414,8 @@
  * - tightening the LP primal feasibility tolerance and requesting to solve the LP again (result SCIP_SOLVELP),
  * - performing a branching (result SCIP_BRANCHED).
  *
+ * Note that in case SCIP_CONSADDED, the added constraints must be created with flag initial=TRUE.
+ *
  * However, the solution is not given as a SCIP_SOL* data structure.
  *
  * The value of a variable <code>var</code> in the LP solution can be accessed by calling
