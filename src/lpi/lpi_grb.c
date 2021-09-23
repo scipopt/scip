@@ -4119,7 +4119,8 @@ SCIP_RETCODE SCIPlpiGetObjval(
    assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
 #endif
 
-   ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
+   /* obtain objective value; do not use objbound, since this does not seem to give meaningful values on a cutoff */
+   ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval);
 
    if( ret == GRB_ERROR_DATA_NOT_AVAILABLE )
    {
