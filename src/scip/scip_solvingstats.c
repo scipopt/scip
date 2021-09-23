@@ -2957,7 +2957,7 @@ void SCIPprintSeparatorStatistics(
       /* only output data for separators without parent separator */
       if( SCIPsepaGetParentsepa(sepa) == NULL )
       {
-         int ncutsapplied;
+         SCIP_Longint ncutsapplied;
 
          /* collect total number of applied cuts */
          ncutsapplied = SCIPsepaGetNCutsApplied(sepa);
@@ -3006,10 +3006,9 @@ void SCIPprintSeparatorStatistics(
                if( parentsepa != sepa )
                   continue;
 
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10s %10s %10s %10s %10s %10s %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10s %10s %10s %10s %10s %10s %10" SCIP_LONGINT_FORMAT "\n",
                   SCIPsepaGetName(scip->set->sepas[k]), "", "", "", "", "", "",
-                  SCIPsepaGetNCutsApplied(scip->set->sepas[k]),
-                  SCIPsepaGetNConssFound(scip->set->sepas[k]));
+                  SCIPsepaGetNCutsApplied(scip->set->sepas[k]));
             }
          }
       }
