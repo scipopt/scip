@@ -3006,9 +3006,9 @@ void SCIPprintSeparatorStatistics(
                if( parentsepa != sepa )
                   continue;
 
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10s %10s %10s %10s %10s %10s %10" SCIP_LONGINT_FORMAT "\n",
-                  SCIPsepaGetName(scip->set->sepas[k]), "", "", "", "", "", "",
-                  SCIPsepaGetNCutsApplied(scip->set->sepas[k]));
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  > %-15.17s: %10s %10s %10s %10s %10s %10s %10" SCIP_LONGINT_FORMAT " %10s\n",
+                  SCIPsepaGetName(scip->set->sepas[k]), "-", "-", "-", "-", "-", "-",
+                  SCIPsepaGetNCutsApplied(scip->set->sepas[k]), "-");
             }
          }
       }
