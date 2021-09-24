@@ -7884,14 +7884,13 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    if( QUAD_TO_DBL(hfrac) < 1 )
       return 0.0;
 
-   /* decrease by one to make sure rounding errors or coefficients that are larger than the right hand side by
-    * themselves did not push h too far; we perform this in floating-point first because on some instances h was seen to
-    * exceed the range of int */
+   /* we perform h = MIN(h, coversize) in floating-point first because on some instances h was seen to exceed the range
+    * of int */
    hreal = floor(QUAD_TO_DBL(hfrac) + QUAD_EPSILON);
    if( hreal > (SCIP_Real)coversize )
-      h = coversize - 1;
+      h = coversize;
    else
-      h = (int)hreal - 1;
+      h = (int)hreal;
 
    SCIPquadprecSumQD(hfrac, hfrac, -h);
 
@@ -7906,6 +7905,10 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    }
    else
       cutcoef = 0.0;
+
+   /* decrease by one to make sure rounding errors or coefficients that are larger than the right hand side by themselves
+    * did not push h too far */
+   h--;
 
    /* now increase coefficient to its lifted value based on its size relative to the S^- values.
     * The coefficient a_i is lifted to the unique integer h such that S^-(h) < a_i <= S^-(h+1).
