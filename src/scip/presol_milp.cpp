@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -177,12 +177,12 @@ Problem<SCIP_Real> buildProblem(
 
 /** builds the presolvelib problem datastructure from the matrix */
 static
-Problem<Rational> buildProblemRational(
+Problem<papilo::Rational> buildProblemRational(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix              /**< initialized SCIP_MATRIX data structure */
    )
 {
-   ProblemBuilder<Rational> builder;
+   ProblemBuilder<papilo::Rational> builder;
 
    /* build problem from matrix */
    int nnz = SCIPmatrixGetNNonzs(matrix);
@@ -212,7 +212,7 @@ Problem<Rational> buildProblemRational(
    {
       int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, i);
       SCIP_Rational** rowvalsscip = SCIPmatrixGetRowValPtrExact(matrix, i);
-      std::vector<Rational> rowvals;
+      std::vector<papilo::Rational> rowvals;
       int rowlen = SCIPmatrixGetRowNNonzs(matrix, i);
       for(int j = 0; j < rowlen; ++j)
          rowvals.push_back(rowvalsscip[j]->val);
@@ -233,7 +233,7 @@ static
 void setRational(
    SCIP*                 scip,
    SCIP_Rational*        res,
-   Rational              papiloval
+   papilo::Rational      papiloval
    )
 {
    assert(scip != NULL);
@@ -323,8 +323,8 @@ SCIP_RETCODE doMilpPresolveRational(
    int nvars = SCIPgetNVars(scip);
    int nconss = SCIPgetNConss(scip);
 
-   Problem<Rational> problem = buildProblemRational(scip, matrix);
-   Presolve<Rational> presolve;
+   Problem<papilo::Rational> problem = buildProblemRational(scip, matrix);
+   Presolve<papilo::Rational> presolve;
 
    /* only allow communication of constraint modifications by deleting all constraints when they have not been upgraded yet */
    SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear-exact");
@@ -371,41 +371,41 @@ SCIP_RETCODE doMilpPresolveRational(
       presolve.getPresolveOptions().dualreds = 0;
 
    /* set up the presolvers that shall participate */
-   using uptr = std::unique_ptr<PresolveMethod<Rational>>;
+   using uptr = std::unique_ptr<PresolveMethod<papilo::Rational>>;
 
-   presolve.addPresolveMethod( uptr( new CoefficientStrengthening<Rational>() ) );
-   presolve.addPresolveMethod( uptr( new SimpleProbing<Rational>() ) );
-   presolve.addPresolveMethod( uptr( new ConstraintPropagation<Rational>() ) );
-   presolve.addPresolveMethod( uptr( new ImplIntDetection<Rational>() ) );
-   presolve.addPresolveMethod( uptr( new FixContinuous<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new CoefficientStrengthening<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SimpleProbing<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new ConstraintPropagation<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new ImplIntDetection<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new FixContinuous<papilo::Rational>() ) );
 
    if( data->enableparallelrows )
-      presolve.addPresolveMethod( uptr( new ParallelRowDetection<Rational>() ) );
+      presolve.addPresolveMethod( uptr( new ParallelRowDetection<papilo::Rational>() ) );
 
-   presolve.addPresolveMethod( uptr( new SimpleSubstitution<Rational>() ) );
-   presolve.addPresolveMethod( uptr( new SimplifyInequalities<Rational>() ) );
-   presolve.addPresolveMethod( uptr( new SingletonCols<Rational>() ) );
-   presolve.addPresolveMethod( uptr( new DualFix<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SimpleSubstitution<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SingletonCols<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new DualFix<papilo::Rational>() ) );
 
    if( data->enablemultiaggr )
-      presolve.addPresolveMethod( uptr( new Substitution<Rational>() ) );
+      presolve.addPresolveMethod( uptr( new Substitution<papilo::Rational>() ) );
 
    if( data->enableprobing )
-      presolve.addPresolveMethod( uptr( new Probing<Rational>() ) );
+      presolve.addPresolveMethod( uptr( new Probing<papilo::Rational>() ) );
 
    if( data->enablesparsify )
-      presolve.addPresolveMethod( uptr( new Sparsify<Rational>() ) );
+      presolve.addPresolveMethod( uptr( new Sparsify<papilo::Rational>() ) );
 
    if( data->enabledualinfer )
-      presolve.addPresolveMethod( uptr( new DualInfer<Rational>() ) );
+      presolve.addPresolveMethod( uptr( new DualInfer<papilo::Rational>() ) );
 
-   presolve.addPresolveMethod( uptr( new SingletonStuffing<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SingletonStuffing<papilo::Rational>() ) );
 
    if( data->enabledomcol )
-      presolve.addPresolveMethod( uptr( new DominatedCols<Rational>() ) );
+      presolve.addPresolveMethod( uptr( new DominatedCols<papilo::Rational>() ) );
 
    /* todo: parallel cols cannot be handled by SCIP currently
-    * addPresolveMethod( uptr( new ParallelColDetection<Rational>() ) ); */
+    * addPresolveMethod( uptr( new ParallelColDetection<papilo::Rational>() ) ); */
 
    /* set tolerances */
    presolve.getPresolveOptions().feastol = 0.0;
@@ -427,7 +427,7 @@ SCIP_RETCODE doMilpPresolveRational(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
    int oldnnz = problem.getConstraintMatrix().getNnz();
-   PresolveResult<Rational> res = presolve.apply(problem);
+   PresolveResult<papilo::Rational> res = presolve.apply(problem);
    data->lastncols = problem.getNCols();
    data->lastnrows = problem.getNRows();
 
@@ -505,12 +505,12 @@ SCIP_RETCODE doMilpPresolveRational(
          auto rowvec = consmatrix.getRowCoefficients(i);
          const int* rowcols = rowvec.getIndices();
          /* SCIPcreateConsBasicLinear() requires a non const pointer */
-         Rational* rowvals = const_cast<Rational*>(rowvec.getValues());
+         papilo::Rational* rowvals = const_cast<papilo::Rational*>(rowvec.getValues());
          int rowlen = rowvec.getLength();
 
          /* retrieve SCIP compatible left and right hand sides */
-         Rational lhs = rflags[i].test(RowFlag::kLhsInf) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
-         Rational rhs = rflags[i].test(RowFlag::kRhsInf) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
+         papilo::Rational lhs = rflags[i].test(RowFlag::kLhsInf) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
+         papilo::Rational rhs = rflags[i].test(RowFlag::kRhsInf) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
 
          /* create variable array matching the value array */
          tmpvars.clear();
@@ -565,7 +565,7 @@ SCIP_RETCODE doMilpPresolveRational(
 
          SCIP_VAR* colvar = SCIPmatrixGetVar(matrix, col);
 
-         Rational value = res.postsolve.values[first];
+         papilo::Rational value = res.postsolve.values[first];
          SCIP_Rational* tmpval;
          SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpval) );
          setRational(scip, tmpval, value);
@@ -585,7 +585,7 @@ SCIP_RETCODE doMilpPresolveRational(
       case ReductionType::kSubstitutedCol:
       {
          int col = res.postsolve.indices[first];
-         Rational side = res.postsolve.values[first];
+         papilo::Rational side = res.postsolve.values[first];
 
          int rowlen = last - first - 1;
          SCIP_Bool infeas;
@@ -595,8 +595,8 @@ SCIP_RETCODE doMilpPresolveRational(
          {
             SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 1]);
             SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 2]);
-            Rational scalarx = res.postsolve.values[first + 1];
-            Rational scalary = res.postsolve.values[first + 2];
+            papilo::Rational scalarx = res.postsolve.values[first + 1];
+            papilo::Rational scalary = res.postsolve.values[first + 2];
 
             SCIP_Rational* constant;
             SCIP_Rational* tmpscalarx;
@@ -667,7 +667,8 @@ SCIP_RETCODE doMilpPresolveRational(
                c++;
             }
 
-            setRational(scip, constant, side / colCoef->val);
+            setRational(scip, constant, side);
+            RatDiv(constant, constant, colCoef);
 
             RatDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), constant);
 
@@ -732,7 +733,7 @@ SCIP_RETCODE doMilpPresolveRational(
    /* tighten bounds of variables that are still present after presolving */
    if( *result != SCIP_CUTOFF )
    {
-      VariableDomains<Rational>& varDomains = problem.getVariableDomains();
+      VariableDomains<papilo::Rational>& varDomains = problem.getVariableDomains();
       SCIP_Rational* varbound;
       SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &varbound) );
       varbound->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
@@ -909,39 +910,40 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* set up the presolvers that shall participate */
    using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
 
+   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
 
    if( data->enableparallelrows )
-      presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
-
-   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
-
-   if( data->enablemultiaggr )
-      presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
-
-   if( data->enableprobing )
-      presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-
-   if( data->enablesparsify )
-      presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
-
-   if( data->enabledualinfer )
-      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
-
-   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
-
-   if( data->enabledomcol )
-      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+       presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
 
    /* todo: parallel cols cannot be handled by SCIP currently
     * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
+
+   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
+
+   if( data->enabledualinfer )
+       presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
+
+   if( data->enablemultiaggr )
+       presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
+
+   if( data->enableprobing )
+       presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
+
+   if( data->enabledomcol )
+       presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
+
+    if( data->enablesparsify )
+      presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
+
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
+
 
    /* set tolerances */
    presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
@@ -1092,6 +1094,32 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          assert(fixed);
          break;
       }
+#if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
+#else
+      case ReductionType::kFixedInfCol: {
+          if(!constraintsReplaced)
+              continue;
+          SCIP_Bool infeas;
+          SCIP_Bool fixed;
+          SCIP_Real value = SCIPinfinity(scip);
+
+          int column = res.postsolve.indices[first];
+          bool is_negative_infinity = res.postsolve.values[first] < 0;
+          SCIP_VAR* column_variable = SCIPmatrixGetVar(matrix, column);
+
+          if( is_negative_infinity )
+          {
+              value = -SCIPinfinity(scip);
+          }
+
+          SCIP_CALL( SCIPfixVar(scip, column_variable, value, &infeas, &fixed) );
+          *nfixedvars += 1;
+
+          assert(!infeas);
+          assert(fixed);
+          break;
+      }
+#endif
       case ReductionType::kSubstitutedCol:
       {
          int col = res.postsolve.indices[first];
@@ -1188,9 +1216,10 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
          break;
       }
-      default:
       case ReductionType::kParallelCol:
          return SCIP_INVALIDRESULT;
+      default:
+         continue;
       }
    }
 
@@ -1268,9 +1297,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO) [GitHash: {}]", PAPILO_GITHASH);
+   String desc = fmt::format("parallel presolve for integer and linear optimization [GitHash: {}]", PAPILO_GITHASH);
 #else
-   String desc("parallel presolve for integer and linear optimization (https://github.com/lgottwald/PaPILO)");
+   String desc("parallel presolve for integer and linear optimization");
 #endif
 
    /* add external code info for the presolve library */

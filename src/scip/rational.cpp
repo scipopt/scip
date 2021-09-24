@@ -581,7 +581,7 @@ void RatSetString(
    {
       std::string s(desc);
       /* case 1: string is given in nom/den format */
-      if( s.find('.') == std::string::npos )
+      if( s.find('.') == std::string::npos && findSubStringIC("e",s) == s.end() )
       {
          res->val = Rational(desc);
          res->isinf = FALSE;
@@ -590,29 +590,38 @@ void RatSetString(
       else
       {
          std::string::const_iterator it = findSubStringIC("e", s);
-         int exponent = 1;
-         int mult = 0;
+         int exponent = 0;
+         // split s in decimal part and exponent
          if( it != s.end() )
          {
             int exponentidx = it - s.begin();
-            mult = std::stoi(s.substr(exponentidx + 1, s.length()));
+            exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
             s = s.substr(0, exponentidx);
          }
          // std::cout << s << std::endl;
          if( s[0] == '.' )
             s.insert(0, "0");
-         size_t pos = s.find('.');
-         size_t exp = s.length() - 1 - pos;
-         std::string den("1");
-         for( int i = 0; i < exp; ++i )
-            den.append("0");
 
-         s.erase(pos, 1);
+         // transform decimal into fraction
+         size_t decimalpos = s.find('.');
+         size_t exponentpos = s.length() - 1 - decimalpos;
+         std::string denominator("1");
+
+         if( decimalpos != std::string::npos )
+         {
+            for( int i = 0; i < exponentpos; ++i )
+               denominator.append("0");
+
+            s.erase(decimalpos, 1);
+         }
          assert(std::all_of(s.begin()+1, s.end(), ::isdigit));
+
          s.append("/");
-         s.append(den);
+         s.append(denominator);
+
          res->val = Rational(s);
-         res->val *= pow(10, mult);
+         res->val *= pow(10, exponent);
+
          res->isinf = FALSE;
          // RatPrint(res);
       }
@@ -641,6 +650,16 @@ void RatSetReal(
       res->val = real;
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
+}
+
+/** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */
+void RatResetFloatingPointRepresentable(
+   SCIP_Rational*        rat                 /**< the number to set flag for */
+   )
+{
+   assert(rat != NULL);
+
+   rat->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /*
@@ -749,7 +768,7 @@ void RatRelDiff(
 
    absval1 = abs(val1->val);
    absval2 = abs(val2->val);
-   quot = max(absval1, absval2);
+   quot = absval1 >= absval2 ? absval1 : absval2;
    if( quot < 1.0 )
       quot = 1.0;
 
@@ -1055,7 +1074,7 @@ void RatMIN(
    }
    else
    {
-      res->val = min(op1->val, op2->val);
+      res->val = op1->val < op2->val ? op1->val : op2->val;
       res->isinf = FALSE;
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
@@ -1087,7 +1106,7 @@ void RatMAX(
    }
    else
    {
-      res->val = max(op1->val, op2->val);
+      res->val = op1->val >= op2->val ? op1->val : op2->val;
       res->isinf = FALSE;
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
@@ -1904,7 +1923,11 @@ SCIP_Real RatApproxReal(
    if( rational->isinf )
       return (rational->val.sign() * infinity);
 
+#ifdef SCIP_WITH_GMP
+   retval = mpq_get_d(rational->val.backend().data()); // mpq_get_d is faster than the boost internal implementation
+#else
    retval = rational->val.convert_to<SCIP_Real>();
+#endif
 #endif
    return retval;
 }

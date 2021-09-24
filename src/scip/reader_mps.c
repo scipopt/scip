@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -479,7 +479,7 @@ SCIP_Bool mpsinputReadLine(
             return FALSE;
          mpsi->lineno++;
       }
-      while( *mpsi->buf == '*' );
+      while( *mpsi->buf == '*' );   /* coverity[a_loop_bound] */
 
       /* Normalize line */
       len = (unsigned int) strlen(mpsi->buf);
@@ -732,6 +732,7 @@ SCIP_RETCODE readName(
    mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
 
    /* This hat to be a new section */
+   /* coverity[tainted_data] */
    if( !mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL) )
    {
       mpsinputSyntaxerror(mpsi);
@@ -786,6 +787,7 @@ SCIP_RETCODE readObjsen(
    }
 
    /* Look for ROWS, USERCUTS, LAZYCONS, or OBJNAME Section */
+   /* coverity[tainted_data] */
    if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL )
    {
       mpsinputSyntaxerror(mpsi);
@@ -830,6 +832,7 @@ SCIP_RETCODE readObjname(
    mpsinputSetObjname(mpsi, mpsinputField1(mpsi));
 
    /* Look for ROWS, USERCUTS, or LAZYCONS Section */
+   /* coverity[tainted_data] */
    if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL )
    {
       mpsinputSyntaxerror(mpsi);
@@ -859,6 +862,7 @@ SCIP_RETCODE readRows(
 {
    SCIPdebugMsg(scip, "read rows\n");
 
+   /* coverity[tainted_data] */
    while( mpsinputReadLine(mpsi) )
    {
       if( mpsinputField0(mpsi) != NULL )
@@ -1380,7 +1384,7 @@ SCIP_RETCODE readRhs(
          if( cons == NULL )
          {
             /* the rhs of the objective row is treated as objective constant */
-            if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+            if( strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) == 0 )
             {
                val = atof(mpsinputField3(mpsi));
                SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
@@ -1423,9 +1427,9 @@ SCIP_RETCODE readRhs(
             if( cons == NULL )
             {
                /* the rhs of the objective row is treated as objective constant */
-               if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+               if( strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) == 0 )
                {
-                  val = atof(mpsinputField3(mpsi));
+                  val = atof(mpsinputField5(mpsi));
                   SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
                }
                else
@@ -2479,7 +2483,7 @@ SCIP_RETCODE readBoundsExact(
          case 'L':
             if( !RatIsZero(SCIPvarGetLbGlobalExact(var)) && RatIsLT(val, SCIPvarGetLbGlobalExact(var)) )
             {
-               SCIPwarningMessage(scip, "Relaxing already defined lower bound %q of variable <%s> to %q not allowed.\n", SCIPvarGetLbGlobalExact(var), SCIPvarGetName(var), RatApproxReal(val));
+               SCIPwarningMessage(scip, "Relaxing already defined lower bound (%.14g) of variable <%s> to (%.14g) not allowed.\n", SCIPvarGetLbGlobal(var), SCIPvarGetName(var), RatApproxReal(val));
             }
 
             SCIP_CALL( SCIPchgVarLbExact(scip, var, val) );
@@ -2872,6 +2876,7 @@ SCIP_RETCODE readQMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, size) );
 
    /* loop through section */
+   /* coverity[tainted_data] */
    while( mpsinputReadLine(mpsi) )
    {
       /* otherwise we are in the section given variables */
@@ -3094,7 +3099,7 @@ SCIP_RETCODE readQCMatrix(
    lincons = SCIPfindCons(scip, mpsinputField1(mpsi));
    if( lincons == NULL )
    {
-      SCIPerrorMessage("no row under name <%s> processed so far.\n");
+      SCIPerrorMessage("no row under name <%s> processed so far.\n", mpsinputField1(mpsi));
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
@@ -3105,6 +3110,7 @@ SCIP_RETCODE readQCMatrix(
    SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, size) );
 
    /* loop through section */
+   /* coverity[tainted_data] */
    while( mpsinputReadLine(mpsi) )
    {
       /* otherwise we are in the section given variables */
@@ -4351,7 +4357,7 @@ void printColumnSection(
          printStart(scip, file, "", "INTEND", (int) maxnamelen);
          printRecord(scip, file, "'MARKER'", "", maxnamelen);
          printRecord(scip, file, "'INTEND'", "", maxnamelen);
-         SCIPinfoMessage(scip, file, "\n", maxnamelen);
+         SCIPinfoMessage(scip, file, "\n");
          intSection = FALSE;
       }
       else if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !intSection )
@@ -4394,7 +4400,7 @@ void printColumnSection(
       printStart(scip, file, "", "INTEND", (int) maxnamelen);
       printRecord(scip, file, "'MARKER'", "", maxnamelen);
       printRecord(scip, file, "'INTEND'", "", maxnamelen);
-      SCIPinfoMessage(scip, file, "\n", maxnamelen);
+      SCIPinfoMessage(scip, file, "\n");
    }
 }
 
@@ -4407,7 +4413,8 @@ void printRhsSection(
    int                   nconss,             /**< number of constraints */
    const char**          consnames,          /**< constraint names */
    SCIP_Real*            rhss,               /**< right hand side array */
-   unsigned int          maxnamelen          /**< maximum name length */
+   unsigned int          maxnamelen,         /**< maximum name length */
+   SCIP_Real             objoffset           /**< objective offset */
    )
 {
    int recordcnt = 0;
@@ -4428,6 +4435,12 @@ void printRhsSection(
       assert(consnames[c] != NULL);
 
       printEntry(scip, file, "RHS", consnames[c], rhss[c], &recordcnt, maxnamelen);
+   }
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      /* write objective offset (-1 because it is moved to the rhs) */
+      printEntry(scip, file, "RHS", "Obj", -objoffset, &recordcnt, maxnamelen);
    }
 
    if( recordcnt == 1 )
@@ -5106,8 +5119,6 @@ SCIP_RETCODE SCIPwriteMps(
    SCIPinfoMessage(scip, file, "*   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale);
-   SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset);
 
    /* print NAME of the problem */
    SCIPinfoMessage(scip, file, "%-14s%s\n", "NAME", name);
@@ -5140,7 +5151,7 @@ SCIP_RETCODE SCIPwriteMps(
       {
          assert( matrix->nentries < matrix->sentries );
 
-         matrix->values[matrix->nentries] = value;
+         matrix->values[matrix->nentries] = objscale * value;
          matrix->columns[matrix->nentries] = var;
          matrix->rows[matrix->nentries] = "Obj";
          matrix->nentries++;
@@ -5166,6 +5177,9 @@ SCIP_RETCODE SCIPwriteMps(
 
       /* construct constraint name */
       consname = consnames[c];
+
+      /* init rhs value to infinity (would then ignored) */
+      rhss[c] = SCIPinfinity(scip);
 
       if( strcmp(conshdlrname, "linear") == 0 )
       {
@@ -5737,7 +5751,7 @@ SCIP_RETCODE SCIPwriteMps(
    printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
 
    /* output RHS section */
-   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen);
+   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen, objscale * objoffset);
 
    /* output RANGES section */
    if( needRANGES )
@@ -5862,7 +5876,7 @@ SCIP_RETCODE SCIPwriteMps(
             /* print "x x coeff" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
-            SCIPinfoMessage(scip, file, "\n", valuestr);
+            SCIPinfoMessage(scip, file, "\n");
          }
 
          /* print bilinear terms; CPLEX format expects a symmetric matrix with all coefficients specified,
@@ -5886,12 +5900,12 @@ SCIP_RETCODE SCIPwriteMps(
             /* print "x y coeff/2" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
             printRecord(scip, file, varname2, valuestr, maxnamelen);
-            SCIPinfoMessage(scip, file, "\n", valuestr);
+            SCIPinfoMessage(scip, file, "\n");
 
             /* print "y x coeff/2" line */
             printStart(scip, file, "", varname2, (int) maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
-            SCIPinfoMessage(scip, file, "\n", valuestr);
+            SCIPinfoMessage(scip, file, "\n");
          }
       }
 
@@ -5932,7 +5946,7 @@ SCIP_RETCODE SCIPwriteMps(
             /* print "x x coeff" line */
             printStart(scip, file, "", varname, (int) maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
-            SCIPinfoMessage(scip, file, "\n", valuestr);
+            SCIPinfoMessage(scip, file, "\n");
          }
 
          /* print -(alpha_{n+1} x_{n+1})^2 term */
@@ -5948,7 +5962,7 @@ SCIP_RETCODE SCIPwriteMps(
          /* print "x x coeff" line */
          printStart(scip, file, "", varname, (int) maxnamelen);
          printRecord(scip, file, varname, valuestr, maxnamelen);
-         SCIPinfoMessage(scip, file, "\n", valuestr);
+         SCIPinfoMessage(scip, file, "\n");
       }
 
       SCIPfreeBufferArray(scip, &namestr);

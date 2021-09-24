@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1748,7 +1748,7 @@ SCIP_RETCODE SCIPsolSetValExact(
       if( !RatIsEqual(val, SCIPvarGetLbGlobalExact(var)) )
       {
          SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
-            SCIPvarGetName(var), SCIPvarGetLbGlobalExact(var), val);
+            SCIPvarGetName(var), RatApproxReal(SCIPvarGetLbGlobalExact(var)), RatApproxReal(val));
          return SCIP_INVALIDDATA;
       }
       return SCIP_OKAY;
@@ -2491,7 +2491,7 @@ SCIP_RETCODE SCIPsolCheck(
    assert(prob != NULL);
    assert(feasible != NULL);
 
-   SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
+   SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%d)\n",
       sol->obj, sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;

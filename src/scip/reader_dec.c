@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -108,6 +108,7 @@ SCIP_RETCODE readDecomposition(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_FILE* file;
    SCIP_CONS** conss;
    SCIP_CONS** scip_conss;
@@ -152,8 +153,8 @@ SCIP_RETCODE readDecomposition(
    /* use the number of constraints of the problem as buffer storage size */
    nconss = SCIPgetNConss(scip);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &conss, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &labels, nconss) );
+   SCIP_CALL_TERMINATE( retcode, SCIPallocBufferArray(scip, &conss, nconss), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPallocBufferArray(scip, &labels, nconss), TERMINATE );
 
    /* start parsing the file */
    section = DEC_SECTION_INIT;
@@ -181,6 +182,7 @@ SCIP_RETCODE readDecomposition(
       {
          section = DEC_SECTION_BLOCK;
 
+         /* coverity[secure_coding] */
          nread = sscanf(buffer, "BLOCK %1018d\n", &currblock);
          if( nread < 1 )
          {
@@ -215,6 +217,7 @@ SCIP_RETCODE readDecomposition(
          case DEC_SECTION_NBLOCKS:
             /* read in number of blocks */
             assert(nblocks == -1);
+            /* coverity[secure_coding] */
             nread = sscanf(buffer, "%1024d\n", &nblocks);
             if( nread < 1 )
                error = TRUE;
@@ -224,6 +227,7 @@ SCIP_RETCODE readDecomposition(
          case DEC_SECTION_BLOCK:
          case DEC_SECTION_MASTER:
             /* read constraint name in both cases */
+            /* coverity[secure_coding] */
             nread = sscanf(buffer, "%1024s\n", consname);
             if( nread < 1 )
                error = TRUE;
@@ -305,6 +309,14 @@ SCIP_RETCODE readDecomposition(
 
    SCIPfreeBufferArray(scip, &labels);
    SCIPfreeBufferArray(scip, &conss);
+
+/* cppcheck-suppress unusedLabel */
+TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPfclose(file);
+      return retcode;
+   }
 
    if( error )
       return SCIP_READERROR;

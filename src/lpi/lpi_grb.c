@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,8 +23,6 @@
  * This LPI only works with Gurobi versions >= 7.0.2.
  *
  * @todo Try quad-precision and concurrent runs.
- *
- * @todo Make this lpi thread safe.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,6 +34,7 @@
 #include "lpi/lpi.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc_sort.h"
+#include "tinycthread/tinycthread.h"
 
 #ifdef _WIN32
 #define snprintf _snprintf
@@ -48,10 +47,20 @@
 /* define infinity value of Gurobi */
 #define GRB_INFBOUND 1e+20
 
+/* macro for checking return codes of Gurobi */
 #define CHECK_ZERO(messagehdlr, x) do { int _restat_;                   \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
-         SCIPmessagePrintWarning((messagehdlr), "Gurobi error %d: %s\n", _restat_, GRBgeterrormsg(grbenv)); \
+         SCIPmessagePrintWarning((messagehdlr), "Gurobi error %d: %s\n", _restat_, GRBgeterrormsg(lpi->grbenv)); \
+         return SCIP_LPERROR;                                           \
+      }                                                                 \
+   } while(0)
+
+/* variant of macro for checking return codes of Gurobi */
+#define CHECK_ZERO_STAR(messagehdlr, x) do { int _restat_;              \
+      if( (_restat_ = (x)) != 0 )                                       \
+      {                                                                 \
+         SCIPmessagePrintWarning((messagehdlr), "Gurobi error %d: %s\n", _restat_, GRBgeterrormsg((*lpi)->grbenv)); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
    } while(0)
@@ -126,8 +135,8 @@ typedef struct GRBParam GRBPARAM;
 /** LP interface */
 struct SCIP_LPi
 {
-   GRBmodel*             grbmodel;           /**< Gurobi model pointer */
    GRBenv*               grbenv;             /**< environment corresponding to model */
+   GRBmodel*             grbmodel;           /**< Gurobi model pointer */
    int                   solstat;            /**< solution status of last optimization call */
    GRBPARAM              defparam;           /**< default parameter values */
    GRBPARAM              curparam;           /**< current parameter values stored in Gurobi LP */
@@ -180,10 +189,20 @@ struct SCIP_LPiNorms
    double*               rownorm;            /**< dual norms for rows */
 };
 
-/* global variables for Gurobi environment */
-static GRBenv*           grbenv = NULL;      /**< Gurobi environment (only needed for initialization) */
-static int               numlp = 0;          /**< number of open LP objects */
 
+#ifdef SCIP_THREADSAFE
+   #if defined(_Thread_local)
+      /* Use thread local environment in order to not create a new environment for each new LP. */
+      _Thread_local GRBenv*    reusegrbenv = NULL; /**< thread local Gurobi environment */
+      _Thread_local int        numlp = 0;          /**< number of open LP objects */
+      #define SCIP_REUSEENV
+   #endif
+#else
+   /* Global Gurobi environment in order to not create a new environment for each new LP. This is not thread safe. */
+   static GRBenv*           reusegrbenv = NULL; /**< global Gurobi environment */
+   static int               numlp = 0;          /**< number of open LP objects */
+   #define SCIP_REUSEENV
+#endif
 
 
 /*
@@ -475,12 +494,12 @@ void SCIPencodeDualBitNeg(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SCIP_DUALPACKETSIZE == 16);
+   assert(SCIP_DUALPACKETSIZE == 16); /*lint !e506*/
 
    rest = count % (int)SCIP_DUALPACKETSIZE;
    nfull = count - rest;
 
-   for( i = 0; i < nfull; i += (int)SCIP_DUALPACKETSIZE, inp += (int)SCIP_DUALPACKETSIZE )
+   for( i = 0; i < nfull; i += (int)SCIP_DUALPACKETSIZE, inp += (int)SCIP_DUALPACKETSIZE ) /*lint !e679*/
    {
       assert(inp != NULL);
       assert(out != NULL);
@@ -508,7 +527,7 @@ void SCIPencodeDualBitNeg(
       assert(out != NULL);
 
       for( i = 0; i < rest; i++ )
-         m |= mask[i][-inp[i]];
+         m |= mask[i][-inp[i]];  /*lint !e661*/
       *out = m;
    }
 }
@@ -529,7 +548,7 @@ void SCIPdecodeDualBitNeg(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SCIP_DUALPACKETSIZE == 16);
+   assert(SCIP_DUALPACKETSIZE == 16); /*lint !e506*/
 
    rest = count % (int)SCIP_DUALPACKETSIZE;
    nfull = count - rest;
@@ -1229,7 +1248,7 @@ const char* SCIPlpiGetSolverName(
    int technical;
 
    GRBversion(&majorversion, &minorversion, &technical);
-   sprintf(grbname, "Gurobi %d.%d.%d", majorversion, minorversion, technical);
+   (void) snprintf(grbname, 100, "Gurobi %d.%d.%d", majorversion, minorversion, technical);
    return grbname;
 }
 
@@ -1259,6 +1278,10 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0. */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( ncols >= 0 );
+   assert( ncols == 0 || intInfo != NULL );
+
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1307,37 +1330,71 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   assert(sizeof(SCIP_Real) == sizeof(double)); /* Gurobi only works with doubles as floating points */
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* Gurobi only works with ints as bools */
+   assert(sizeof(SCIP_Real) == sizeof(double)); /*lint !e506*/ /* Gurobi only works with doubles as floating points */
+   assert(sizeof(SCIP_Bool) == sizeof(int));    /*lint !e506*/ /* Gurobi only works with ints as bools */
    assert(lpi != NULL);
    assert(name != NULL);
+#ifdef SCIP_REUSEENV
    assert(numlp >= 0);
+#endif
 
    SCIPdebugMessage("SCIPlpiCreate()\n");
 
-   /* create environment
-    *
-    * Each problem will get a copy of the original environment. Thus, grbenv is only needed once.
-    */
-   if ( grbenv == NULL )
-   {
-      /* initialize environment - no log file */
-      CHECK_ZERO( messagehdlr, GRBloadenv(&grbenv, NULL) );
-
-      /* turn off output for all models */
-      CHECK_ZERO( messagehdlr, GRBsetintparam(grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
-
-      /* turn on that basis information for infeasible and unbounded models is available */
-      CHECK_ZERO( messagehdlr, GRBsetintparam(grbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
-   }
-   assert( grbenv != NULL );
-
    /* create empty LPI */
    SCIP_ALLOC( BMSallocMemory(lpi) );
-   CHECK_ZERO( messagehdlr, GRBnewmodel(grbenv, &(*lpi)->grbmodel, name, 0, NULL, NULL, NULL, NULL, NULL) );
 
-   /* get local copy of environment */
+   /* create environment */
+#ifdef SCIP_REUSEENV
+   /* temporarily set environment for error messages (might be NULL) */
+   (*lpi)->grbenv = reusegrbenv;
+
+   /* Try to reuse Gurobi environment (either thread local or not being thread safe). */
+   if ( reusegrbenv == NULL )
+   {
+      int restat;
+
+      assert( numlp == 0 );
+
+      /* create evironment */
+      restat = GRBloadenv(&reusegrbenv, NULL);
+      if ( restat != 0 )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "Gurobi error %d: Something went wrong with creating the environment.\n", restat);
+         return SCIP_LPERROR;
+      }
+
+      /* turn off output for all models */
+      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+      /* turn on that basis information for infeasible and unbounded models is available */
+      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
+   }
+
+   /* create empty model */
+   CHECK_ZERO_STAR( messagehdlr, GRBnewmodel(reusegrbenv, &(*lpi)->grbmodel, name, 0, NULL, NULL, NULL, NULL, NULL) );
+
+   /* replace by local copy of environment */
    (*lpi)->grbenv = GRBgetenv((*lpi)->grbmodel);
+   ++numlp;
+
+#else
+
+   /* Create new environment for each new instaniation; note that this involves additional work and
+    * uses a new license for each new instantiation. */
+   CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&(*lpi)->grbenv, NULL) );
+
+   /* turn off output for all models */
+   CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+   /* turn on that basis information for infeasible and unbounded models is available */
+   CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
+
+   /* create empty model */
+   CHECK_ZERO_STAR( messagehdlr, GRBnewmodel((*lpi)->grbenv, &(*lpi)->grbmodel, name, 0, NULL, NULL, NULL, NULL, NULL) );
+
+#endif
+   assert( (*lpi)->grbenv != NULL );
+
    (*lpi)->senarray = NULL;
    (*lpi)->rhsarray = NULL;
    (*lpi)->rngarray = NULL;
@@ -1370,7 +1427,6 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_CALL( getParameterValues((*lpi), &((*lpi)->defparam)) );
    copyParameterValues(&((*lpi)->curparam), &((*lpi)->defparam));
    copyParameterValues(&((*lpi)->grbparam), &((*lpi)->defparam));
-   ++numlp;
 
    /* set objective sense */
    SCIP_CALL( SCIPlpiChgObjsen(*lpi, objsen) );
@@ -1388,14 +1444,14 @@ SCIP_RETCODE SCIPlpiFree(
    SCIP_LPI**            lpi                 /**< pointer to an LP interface structure */
    )
 {
-   assert(grbenv != NULL);
    assert(lpi != NULL);
    assert(*lpi != NULL);
+   assert((*lpi)->grbenv != NULL);
 
    SCIPdebugMessage("SCIPlpiFree()\n");
 
    /* free model */
-   CHECK_ZERO( (*lpi)->messagehdlr, GRBfreemodel((*lpi)->grbmodel) );
+   CHECK_ZERO_STAR( (*lpi)->messagehdlr, GRBfreemodel((*lpi)->grbmodel) );
 
    /* free memory */
    BMSfreeMemoryArrayNull(&(*lpi)->senarray);
@@ -1409,15 +1465,22 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->rngvals);
    BMSfreeMemoryArrayNull(&(*lpi)->indarray);
    BMSfreeMemoryArrayNull(&(*lpi)->valarray);
-   BMSfreeMemory(lpi);
 
    /* free environment */
+#ifdef SCIP_REUSEENV
    --numlp;
    if( numlp == 0 )
    {
-      GRBfreeenv(grbenv);
-      grbenv = NULL;
+      /* free reused environment */
+      GRBfreeenv(reusegrbenv);
+      reusegrbenv = NULL;
    }
+#else
+   /* free local environment */
+   GRBfreeenv((*lpi)->grbenv);
+#endif
+
+   BMSfreeMemory(lpi);
 
    return SCIP_OKAY;
 }
@@ -2593,8 +2656,9 @@ SCIP_RETCODE SCIPlpiGetRows(
                if ( lpi->rngrowmap[i] >= 0 )
                   theend--;
 
-               memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
-               memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val)); /*lint !e776*/
+               assert( theend >= thebeg );
+               memmove(&ind[newnz], &ind[thebeg], ((size_t) (theend - thebeg)) * sizeof(*ind)); /*lint !e776 !e571*/
+               memmove(&val[newnz], &val[thebeg], ((size_t) (theend - thebeg)) * sizeof(*val)); /*lint !e776 !e571*/
                beg[i - firstrow] = newnz; /*lint !e661*/
                newnz += theend - thebeg;
             }
@@ -2624,6 +2688,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol);
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -2645,6 +2710,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow);
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -3908,7 +3974,7 @@ SCIP_Bool SCIPlpiIsStable(
       SCIP_RETCODE retcode;
 
       retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
-      if ( retcode != SCIP_OKAY )
+      if ( retcode != SCIP_OKAY ) /*lint !e774*/
       {
          SCIPABORT();
          return FALSE; /*lint !e527*/
@@ -4849,6 +4915,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED( binvrow );
 
    SCIPdebugMessage("getting binv-row %d\n", r);
 
@@ -5142,7 +5209,7 @@ SCIP_RETCODE SCIPlpiSetState(
    if ( lpistate->nrngrows > 0 && lpistate->ncols < ncols )
    {
       /* New columns have been added: need to move range variable information */
-      memmove(&lpi->cstat[ncols], &lpi->cstat[lpistate->ncols], lpistate->nrngrows * sizeof(*lpi->cstat));
+      memmove(&lpi->cstat[ncols], &lpi->cstat[lpistate->ncols], (size_t) lpistate->nrngrows * sizeof(*lpi->cstat)); /*lint !e571*/
    }
 
    /* extend the basis to the current LP beyond the previously existing columns */
@@ -5272,7 +5339,7 @@ SCIP_RETCODE SCIPlpiWriteState(
          SCIPerrorMessage("Basis file name too long.\n");
          return SCIP_LPERROR;
       }
-      snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
+      (void) snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
       CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
    }
 

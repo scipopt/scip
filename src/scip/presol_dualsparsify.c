@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -676,7 +676,7 @@ SCIP_RETCODE aggregation(
     */
    if( !isimpliedfree && (!SCIPisInfinity(scip, rhs) || !SCIPisInfinity(scip, -lhs)) )
    {
-      SCIPdebugMsg(scip, "create a linear constraint to ensure %g <= %g %s + %g <= %g\n", lhs, coefs[0], SCIPvarGetName(tmpvars[0]),
+      SCIPdebugMsg(scip, "create a linear constraint to ensure %g <= %g %s + %g %s <= %g\n", lhs, coefs[0], SCIPvarGetName(tmpvars[0]),
          coefs[1], SCIPvarGetName(tmpvars[1]), rhs);
       (void) SCIPsnprintf(newconsname, SCIP_MAXSTRLEN, "dualsparsifycons_%d", presoldata->naggregated);
 
@@ -1349,7 +1349,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       nnonz = SCIPmatrixGetColNNonzs(matrix, c);
 
-      getImpliedBounds(scip, matrix, c, &lbimplied, &ubimplied);
+      getImpliedBounds(scip, matrix, c, &ubimplied, &lbimplied);
 
       ishashingcols[c] = FALSE;
 
@@ -1412,6 +1412,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
                i1 = perm[(i + failshift) % nnonz];
                i2 = perm[(j + failshift) % nnonz];
+               /* coverity[var_deref_op] */
                conspairs[nconspairs].colindex = c;
 
                if( colinds[i1] < colinds[i2])

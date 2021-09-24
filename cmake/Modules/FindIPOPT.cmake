@@ -61,40 +61,25 @@ if(NOT WIN32)
 
     if(IPOPT_FIND_VERSION)
       if(IPOPT_FIND_VERSION_EXACT)
-        pkg_check_modules(_PC_IPOPT QUIET ipopt=${IPOPT_FIND_VERSION})
+        pkg_check_modules(_PC_IPOPT QUIET IMPORTED_TARGET ipopt=${IPOPT_FIND_VERSION})
       else()
-        pkg_check_modules(_PC_IPOPT QUIET ipopt>=${IPOPT_FIND_VERSION})
+        pkg_check_modules(_PC_IPOPT QUIET IMPORTED_TARGET ipopt>=${IPOPT_FIND_VERSION})
       endif()
     else()
-      pkg_check_modules(_PC_IPOPT QUIET ipopt)
+      pkg_check_modules(_PC_IPOPT QUIET IMPORTED_TARGET ipopt)
     endif()
-
   endif()
 
   if(_PC_IPOPT_FOUND)
     set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
-    set(IPOPT_LIBRARIES "" CACHE STRING "IPOPT libraries" FORCE)
-    foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
-      find_library(${_LIBRARY}_PATH
-                   NAMES ${_LIBRARY}
-                   PATHS ${_PC_IPOPT_LIBRARY_DIRS}
-                   NO_DEFAULT_PATH)
-      find_library(${_LIBRARY}_PATH
-                   NAMES ${_LIBRARY}
-                   PATHS ${_PC_IPOPT_LIBRARY_DIRS})
-      list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
-    endforeach()
-    string(REPLACE "-framework;Accelerate" "-framework Accelerate" IPOPT_LDFLAGS "${_PC_IPOPT_LDFLAGS}")
-    list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
-
+    set(IPOPT_LIBRARIES PkgConfig::_PC_IPOPT CACHE STRING "IPOPT libraries" FORCE)
   else()
   # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
 
-    # version ipopt >= 3.13
     set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin-or)
 
     if(NOT EXISTS "${IPOPT_INCLUDE_DIRS}")
-        # version ipopt <= 3.12
+      # # version ipopt <= 3.12
         set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin)
     endif()
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -902,11 +902,14 @@ SCIP_RETCODE readCoefficients(
    SCIP_VAR***           quadvars2,          /**< pointer to store the array with second variables in quadratic terms (must be freed by caller) */
    SCIP_Real**           quadcoefs,          /**< pointer to store the array with coefficients in quadratic terms (must be freed by caller) */
    int*                  nquadcoefs,         /**< pointer to store the number of quadratic coefficients */
+   SCIP_Real*            objoffset,          /**< pointer to store an objective offset (or NULL if ! isobjective) */
    SCIP_Bool*            newsection          /**< pointer to store whether a new section was encountered */
    )
 {
+   SCIP_VAR* var = NULL;
    SCIP_Bool havesign;
    SCIP_Bool havevalue;
+   SCIP_Bool haveobjoffset = FALSE;
    SCIP_Real coef;
    int coefsign;
    SCIP_Bool inquadpart;
@@ -923,6 +926,7 @@ SCIP_RETCODE readCoefficients(
    assert(quadvars2 != NULL);
    assert(quadcoefs != NULL);
    assert(nquadcoefs != NULL);
+   assert(!isobjective || objoffset != NULL);
    assert(newsection != NULL);
 
    *coefssize = 0;
@@ -937,6 +941,12 @@ SCIP_RETCODE readCoefficients(
    *nquadcoefs = 0;
    *newsection = FALSE;
    inquadpart = FALSE;
+
+   if( isobjective )
+   {
+      assert(objoffset != NULL);
+      *objoffset = 0.0;
+   }
 
    /* read the first token, which may be the name of the line */
    if( getNextToken(scip, lpinput) )
@@ -996,7 +1006,23 @@ SCIP_RETCODE readCoefficients(
    *nquadcoefs = 0;
    while( getNextToken(scip, lpinput) )
    {
-      SCIP_VAR* var;
+      /* check whether we reached a new sign token */
+      if( lpinput->token[1] == '\0' && ( *lpinput->token == '+' || *lpinput->token == '-' ) )
+      {
+         /* check whether we found an objective offset */
+         if( isobjective && havevalue && var == NULL )
+         {
+            assert( objoffset != NULL );
+            if( haveobjoffset )
+            {
+               syntaxError(scip, lpinput, "two objective offsets.");
+               return SCIP_OKAY;
+            }
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * coef);
+            haveobjoffset = TRUE;
+            *objoffset = coefsign * coef;
+         }
+      }
 
       /* check if we read a sign */
       if( isSign(lpinput, &coefsign) )
@@ -1044,7 +1070,15 @@ SCIP_RETCODE readCoefficients(
          }
          else if( isobjective && havevalue && !SCIPisZero(scip, coef) )
          {
-            SCIPwarningMessage(scip, "constant term %+g in objective is skipped\n", coef * coefsign);
+            assert( objoffset != NULL );
+            /* check whether we found an objective offset */
+            if( haveobjoffset )
+            {
+               syntaxError(scip, lpinput, "two objective offsets.");
+               return SCIP_OKAY;
+            }
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * coef);
+            *objoffset = coefsign * coef;
          }
 
          *newsection = TRUE;
@@ -1161,6 +1195,7 @@ SCIP_RETCODE readCoefficients(
       }
 
       /* check if the last variable should be squared */
+      var = NULL;
       if( *lpinput->token == '^' )
       {
          if( !inquadpart )
@@ -1267,6 +1302,7 @@ SCIP_RETCODE readObjective(
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
    SCIP_Bool newsection;
+   SCIP_Real objoffset;
    int ncoefs;
    int coefssize;
    int quadcoefssize;
@@ -1276,7 +1312,12 @@ SCIP_RETCODE readObjective(
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
-         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &objoffset, &newsection) );
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      SCIP_CALL( SCIPaddOrigObjoffset(scip, objoffset) );
+   }
 
    if( !hasError(lpinput) )
    {
@@ -1415,7 +1456,7 @@ SCIP_RETCODE createIndicatorConstraint(
 
    /* read linear constraint */
    SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name2, &lincoefssize, &linvars, &lincoefs, &nlincoefs,
-         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, NULL, &newsection) );
 
    if( hasError(lpinput) )
       goto TERMINATE;
@@ -1437,7 +1478,12 @@ SCIP_RETCODE createIndicatorConstraint(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(scip, lpinput) || !isSense(lpinput, &linsense) )
+   if( !getNextToken(scip, lpinput) )
+   {
+      syntaxError(scip, lpinput, "missing constraint sense.");
+      goto TERMINATE;
+   }
+   if( !isSense(lpinput, &linsense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
@@ -1599,7 +1645,7 @@ SCIP_RETCODE readConstraints(
 
    /* read coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name, &coefssize, &vars, &coefs, &ncoefs,
-         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, NULL, &newsection) );
 
    if( hasError(lpinput) )
       goto TERMINATE;
@@ -1611,7 +1657,12 @@ SCIP_RETCODE readConstraints(
    }
 
    /* read the constraint sense */
-   if( !getNextToken(scip, lpinput) || !isSense(lpinput, &sense) )
+   if( !getNextToken(scip, lpinput) )
+   {
+      syntaxError(scip, lpinput, "missing constraint sense.");
+      goto TERMINATE;
+   }
+   if( !isSense(lpinput, &sense) )
    {
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
@@ -3289,12 +3340,10 @@ void checkConsnames(
    SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
-   SCIP_Bool printwarning;
+   SCIP_Bool printwarning = TRUE;
 
    assert( scip != NULL );
    assert( conss != NULL || nconss == 0 );
-
-   printwarning = TRUE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -3318,7 +3367,7 @@ void checkConsnames(
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
-         SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
+         SCIP_Real rhs = SCIPgetRhsLinear(scip, cons);
 
          if( (SCIPisEQ(scip, lhs, rhs) && len > LP_MAX_NAMELEN) || ( !SCIPisEQ(scip, lhs, rhs) && len > LP_MAX_NAMELEN - 4) )
          {
@@ -3650,8 +3699,6 @@ SCIP_RETCODE SCIPwriteLp(
    SCIPinfoMessage(scip, file, "\\   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "\\   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "\\   Obj. scale       : %.15g\n", objscale);
-   SCIPinfoMessage(scip, file, "\\   Obj. offset      : %.15g\n", objoffset);
 
    /* print objective sense */
    SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "Minimize" : "Maximize");
@@ -3680,18 +3727,27 @@ SCIP_RETCODE SCIPwriteLp(
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", SCIPvarGetObj(var), varname );
+      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", objscale * SCIPvarGetObj(var), varname );
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
-   /* add a linear term to avoid troubles when reading the lp file with another MIP solver */
-   if( zeroobj && nvars >= 1 )
+   /* add objective offset */
+   if ( ! SCIPisZero(scip, objoffset) )
    {
-      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[0]));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " 0 %s", varname );
-
+      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g", objscale * objoffset);
       appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+   else
+   {
+      /* add a linear term to avoid troubles when reading the lp file with another MIP solver */
+      if( zeroobj && nvars >= 1 )
+      {
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[0]));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " 0 %s", varname );
+
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
    }
 
    endLine(scip, file, linebuffer, &linecnt);

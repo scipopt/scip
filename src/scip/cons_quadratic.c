@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -7520,7 +7520,7 @@ void updateBilinearRelaxation(
    for( i = 0; i < nineqs; ++i )
    {
       constshift[i] = MAX(0.0, ineqs[3*i] * refx - ineqs[3*i+1] * refy - ineqs[3*i+2]);
-      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", constshift[i]);
+      SCIPdebugMsg(scip, "constant shift of inequality %d = %.16f\n", i, constshift[i]);
    }
 
    /* try to use both inequalities */
@@ -7692,7 +7692,7 @@ SCIP_RETCODE generateCutNonConvex(
          lby = SCIPvarGetLbLocal(y);
          uby = SCIPvarGetUbLocal(y);
          SCIPdebugMsg(scip, "bilinear term %g %s %s with (%g,%g) in [%g,%g]x[%g,%g] overestimate=%u\n", bilinterm->coef,
-            SCIPvarGetName(x), SCIPvarGetName(y), refx, refy, lbx, ubx, lby, uby, violside == SCIP_SIDETYPE_LEFT);
+            SCIPvarGetName(x), SCIPvarGetName(y), refx, refy, lbx, ubx, lby, uby, (SCIP_Bool) (violside == SCIP_SIDETYPE_LEFT));
 
          /* use the McCormick relaxation for under- or overestimating the bilinear term */
          coef = 0.0;

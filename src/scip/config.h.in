@@ -15,7 +15,7 @@
 #cmakedefine TPI_NONE
 #cmakedefine TPI_TNYC
 #cmakedefine TPI_OMP
-#cmakedefine NPARASCIP
+#cmakedefine SCIP_THREADSAFE
 #cmakedefine WITH_SCIPDEF
 #cmakedefine SCIP_WITH_PAPILO
 #cmakedefine SCIP_WITH_ZLIB

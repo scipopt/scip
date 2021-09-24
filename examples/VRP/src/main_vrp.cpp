@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -34,6 +34,8 @@
  * where T_k is the set of tours visiting at most k customers
  * with repetitions of customers allowed and a^t_e (a^t_j) counts how often
  * edge e (node j) is traversed in t in T_k.
+ *
+ * Examples and the file format are given at https://neo.lcc.uma.es/vrp/vrp-instances/capacitated-vrp-instances/.
  */
 
 /* standard library includes */

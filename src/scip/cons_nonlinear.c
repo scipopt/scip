@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -9411,7 +9411,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
       if( conshdlrdata->nlconsupgrades[i]->nlconsupgd == nonlinconsupgd && conshdlrdata->nlconsupgrades[i]->nodereform == nodereform)
       {
 #ifdef SCIP_DEBUG
-         SCIPwarningMessage(scip, "Try to add already known upgrade method pair (%p,%p) for constraint handler <%s>.\n", nonlinconsupgd, nodereform, conshdlrname); /*lint !e611*/
+         SCIPwarningMessage(scip, "Try to add already known upgrade method pair for constraint handler <%s>.\n", conshdlrname); /*lint !e611*/
 #endif
          return SCIP_OKAY;
       }
