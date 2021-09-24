@@ -238,6 +238,7 @@
 #include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
+#include "scip/cutsel_hybrid.h"
 
 #include "scip/expr_varidx.h"
 #include "scip/nlpi_ipopt.h"

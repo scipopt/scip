@@ -188,6 +188,18 @@ SCIP_Bool SCIPsepaIsInitialized(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
+/** gets whether separator is a parent separator */
+SCIP_EXPORT
+SCIP_Bool SCIPsepaIsParentsepa(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
+/** gets parent separator (or NULL) */
+SCIP_EXPORT
+SCIP_SEPA* SCIPsepaGetParentsepa(
+   SCIP_SEPA*            sepa                /**< separator */
+   );
+
 /** @} */
 
 #ifdef __cplusplus

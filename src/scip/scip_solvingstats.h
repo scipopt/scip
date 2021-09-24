@@ -1850,6 +1850,18 @@ void SCIPprintSeparatorStatistics(
    FILE*                 file                /**< output file */
    );
 
+/** outputs cutselector statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+void SCIPprintCutselectorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   );
+
 /** outputs pricer statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:

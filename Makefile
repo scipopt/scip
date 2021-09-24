@@ -508,6 +508,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_varbound.o \
 			scip/cons_xor.o \
 			scip/cons_components.o \
+			scip/cutsel_hybrid.o \
 			scip/dialog_default.o \
 			scip/event_softtimelimit.o \
 			scip/disp_default.o \
@@ -723,6 +724,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/cons.o \
 			scip/cutpool.o \
 			scip/cuts.o \
+			scip/cutsel.o \
 			scip/debug.o \
 			scip/dcmp.o \
 			scip/dialog.o \
@@ -770,6 +772,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_cons.o \
 			scip/scip_copy.o \
 			scip/scip_cut.o \
+			scip/scip_cutsel.o \
 			scip/scip_datastructures.o\
 			scip/scip_debug.o \
 			scip/scip_dcmp.o \

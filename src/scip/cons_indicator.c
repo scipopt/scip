@@ -318,6 +318,7 @@ struct SCIP_ConsData
    SCIP_VAR*             slackvar;           /**< slack variable of inequality of indicator constraint */
    SCIP_CONS*            lincons;            /**< linear constraint corresponding to indicator constraint */
    SCIP_Bool             activeone;          /**< whether the constraint is active on 1 or 0 */
+   SCIP_Bool             lessthanineq;       /**< whether the original linear constraint is less-than-rhs or greater-than-rhs */
    int                   nfixednonzero;      /**< number of variables among binvar and slackvar fixed to be nonzero */
    int                   colindex;           /**< column index in alternative LP */
    unsigned int          linconsactive:1;    /**< whether linear constraint and slack variable are active */
@@ -3138,6 +3139,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_EVENTHDLR*       eventhdlrrestart,   /**< event handler for handling restarts */
    SCIP_VAR*             binvar,             /**< binary variable (or NULL) */
    SCIP_Bool             activeone,          /**< whether the constraint is active on 1 or not */
+   SCIP_Bool             lessthanineq,       /**< whether the original linear constraint is a less-than-rhs (TRUE) or not */
    SCIP_VAR*             slackvar,           /**< slack variable */
    SCIP_CONS*            lincons,            /**< linear constraint (or NULL) */
    SCIP_Bool             linconsactive       /**< whether the linear constraint is active */
@@ -3171,6 +3173,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->binvar = binvarinternal;
    (*consdata)->slackvar = slackvar;
    (*consdata)->activeone = activeone;
+   (*consdata)->lessthanineq = lessthanineq;
    (*consdata)->lincons = lincons;
    (*consdata)->implicationadded = FALSE;
    (*consdata)->slacktypechecked = FALSE;
@@ -5737,7 +5740,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    consdata = NULL;
    /* Note that the constraint has activeone = TRUE, since the binary variable has been negated already if needed. */
    SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, SCIPconsGetName(sourcecons), &consdata, conshdlrdata->eventhdlrbound,
-         conshdlrdata->eventhdlrrestart, sourcedata->binvar, TRUE, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsactive) );
+         conshdlrdata->eventhdlrrestart, sourcedata->binvar, TRUE, sourcedata->lessthanineq, sourcedata->slackvar, sourcedata->lincons, sourcedata->linconsactive) );
    consdata->activeone = sourcedata->activeone;
    assert( consdata != NULL );
 
@@ -7450,14 +7453,16 @@ SCIP_RETCODE SCIPcreateConsIndicator(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
-   return SCIPcreateConsIndicatorGeneric(scip, cons, name, binvar, nvars, vars, vals, rhs, TRUE, initial,
+   return SCIPcreateConsIndicatorGeneric(scip, cons, name, binvar, nvars, vars, vals, rhs, TRUE, TRUE, initial,
                                          separate, enforce, check, propagate, local, dynamic, removable, stickingatnode);
 }
 
 /** creates and captures a indicator constraint in a more generic version.
  *
- *  The key difference from SCIPcreateConsIndicator() is the activeone Boolean.
- *  if \f$z = o\f$, with \f$o\f$ the activeone flag, then \f$ax \leq b\f$ holds.
+ *  The key difference from SCIPcreateConsIndicator() is the activeone and lessthanineq Booleans.
+ *  If \f$z = o\f$, with \f$o\f$ the activeone flag, then:
+ *  if lessthanineq then \f$a^T x \leq b\f$ holds, else the passed vectors are assumed to be of the form \f$a^T x \geq b\f$.
+ *  The underlying linear constraint is always created as a less-than inequality.
  */
 SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7469,6 +7474,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    SCIP_Real*            vals,               /**< values of variables in inequality (or NULL) */
    SCIP_Real             rhs,                /**< rhs of the inequality */
    SCIP_Bool             activeone,          /**< is the constraint active when the binary is 1? */
+   SCIP_Bool             lessthanineq,       /**< is the linear constraint a less than RHS (TRUE) or greater than RHS (FALSE)? */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
                                               *   Usually set to TRUE. */
@@ -7500,6 +7506,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    SCIP_VARTYPE slackvartype;
    SCIP_Real absvalsum = 0.0;
    char s[SCIP_MAXSTRLEN];
+   SCIP_Real* valscopy;
    int j;
 
    if ( nvars < 0 )
@@ -7531,13 +7538,26 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       return SCIP_INVALIDDATA;
    }
 
+   valscopy = NULL;
+   if ( lessthanineq )
+      valscopy = vals;
+   else
+   {
+      /* flip coefficients and RHS of indicator */
+      SCIP_CALL( SCIPallocBufferArray(scip, &valscopy, nvars) );
+      for (j = 0; j < nvars; ++j)
+         valscopy[j] = -vals[j];
+      rhs = -rhs;
+   }
+   assert( nvars == 0 || valscopy != NULL );
+
    /* check if slack variable can be made implicit integer */
    slackvartype = SCIP_VARTYPE_IMPLINT;
    for (j = 0; j < nvars; ++j)
    {
       if ( conshdlrdata->scaleslackvar )
-         absvalsum += REALABS(vals[j]);
-      if ( ! SCIPvarIsIntegral(vars[j]) || ! SCIPisIntegral(scip, vals[j]) )
+         absvalsum += REALABS(valscopy[j]);
+      if ( ! SCIPvarIsIntegral(vars[j]) || ! SCIPisIntegral(scip, valscopy[j]) )
       {
          slackvartype = SCIP_VARTYPE_CONTINUOUS;
          if ( ! conshdlrdata->scaleslackvar )
@@ -7587,15 +7607,18 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    if ( linconsactive )
    {
       /* the constraint is initial if initial is true, enforced, separated, and checked */
-      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, valscopy, -SCIPinfinity(scip), rhs,
             initial, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
    {
       /* create non-active linear constraint, which is neither initial, nor enforced, nor separated, nor checked */
-      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, valscopy, -SCIPinfinity(scip), rhs,
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    }
+
+   if ( ! lessthanineq )
+      SCIPfreeBufferArray(scip, &valscopy);
 
    /* mark linear constraint not to be upgraded - otherwise we loose control over it */
    SCIPconsAddUpgradeLocks(lincons, 1);
@@ -7640,7 +7663,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       /* create constraint data */
       consdata = NULL;
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
-            binvar, activeone, slackvar, lincons, linconsactive) );
+            binvar, activeone, lessthanineq, slackvar, lincons, linconsactive) );
       assert( consdata != NULL );
       /* do not need to capture slack variable and linear constraint here */
 
@@ -7845,7 +7868,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
    {
       /* create constraint data */
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrbound, conshdlrdata->eventhdlrrestart,
-            binvar, activeone, slackvar, lincons, linconsactive) );
+            binvar, activeone, TRUE, slackvar, lincons, linconsactive) );
       assert( consdata != NULL );
 
       /* create constraint */
@@ -7952,6 +7975,10 @@ SCIP_RETCODE SCIPaddVarIndicator(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
+
+   /* if linear inequality is flipped, variable is added with negative coefficient */
+   if ( !consdata->lessthanineq )
+      val = -val;
 
    SCIP_CALL( SCIPaddCoefLinear(scip, consdata->lincons, var, val) );
 

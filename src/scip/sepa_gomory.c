@@ -739,6 +739,13 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitGomory) );
    SCIP_CALL( SCIPsetSepaExit(scip, sepa, sepaExitGomory) );
 
+   /* mark main separator as a parent */
+   SCIPsetSepaIsParentsepa(scip, sepa);
+
+   /* set pointer from child separators to main separator */
+   SCIPsetSepaParentsepa(scip, sepadata->strongcg, sepa);
+   SCIPsetSepaParentsepa(scip, sepadata->gomory, sepa);
+
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/gomory/maxrounds",
