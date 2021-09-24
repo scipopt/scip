@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   stptest_mist.c
+/**@file   stptest_misc.c
  * @brief  tests for Steiner tree methods
  * @author Daniel Rehfeldt
  *

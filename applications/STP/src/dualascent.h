@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   graph.h
+/**@file   dualascent.h
  * @brief  Includes dual-ascent for classic Steiner tree and some variants.
  * @author Daniel Rehfeldt
  *

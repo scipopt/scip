@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   solpool.c
+/**@file   solpool.h
  * @brief  includes solution pool for Steiner tree problems
  * @author Daniel Rehfeldt
  *

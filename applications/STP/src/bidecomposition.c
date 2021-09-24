@@ -234,7 +234,7 @@ static
 SCIP_Bool decomposeCsrIsValid(
    const CUTNODES*       cutnodes,           /**< cut nodes */
    const GRAPH*          g,                  /**< graph data structure */
-   const BIDECOMP*       bidecomp
+   const BIDECOMP*       bidecomp            /**< bi-decomposition structure */
    )
 {
    const int* const nodes = bidecomp->nodes;
@@ -296,7 +296,7 @@ static
 void decomposeBuildCsr(
    const CUTNODES*       cutnodes,           /**< cut nodes */
    const GRAPH*          g,                  /**< graph data structure */
-   BIDECOMP*             bidecomp
+   BIDECOMP*             bidecomp            /**< bidecomposition data structure */
    )
 {
    int* RESTRICT nodes = bidecomp->nodes;
@@ -568,7 +568,7 @@ SCIP_RETCODE bidecomposition_init(
    SCIP*                 scip,               /**< SCIP data structure */
    const CUTNODES*       cutnodes,           /**< cut nodes */
    const GRAPH*          g,                  /**< graph data structure */
-   BIDECOMP**            bidecomposition
+   BIDECOMP**            bidecomposition     /**< bidecomposition data structure */
    )
 {
    BIDECOMP* bidecomp;
@@ -600,7 +600,7 @@ SCIP_RETCODE bidecomposition_init(
 SCIP_RETCODE bidecomposition_initSubInOut(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   BIDECOMP*             bidecomposition
+   BIDECOMP*             bidecomposition     /**< bidecomposition data structure */
    )
 {
    assert(scip && g && bidecomposition);
@@ -615,7 +615,7 @@ SCIP_RETCODE bidecomposition_initSubInOut(
 /** frees */
 void bidecomposition_free(
    SCIP*                 scip,               /**< SCIP data structure */
-   BIDECOMP**            bidecomposition
+   BIDECOMP**            bidecomposition     /**< bidecomposition data structure */
    )
 {
    BIDECOMP* bidecomp;
@@ -763,7 +763,7 @@ SCIP_Bool bidecomposition_isPossible(
 
 /** returns nodes ratio of component and the remaining graph */
 SCIP_Real bidecomposition_getCompNodeRatio(
-   const BIDECOMP*       bidecomp,
+   const BIDECOMP*       bidecomp,           /**< bidecomposition data structure */
    int                   compindex           /**< component index */
    )
 {
@@ -789,7 +789,7 @@ SCIP_Real bidecomposition_getCompNodeRatio(
 
 /** returns ratio of nodes of maximum component and the remaining graph */
 SCIP_Real bidecomposition_getMaxcompNodeRatio(
-   const BIDECOMP*       bidecomp
+   const BIDECOMP*       bidecomp            /**< bidecomposition data structure */
    )
 {
    const int* const starts = bidecomp->starts;

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   graph_ancestors.c
+/**@file   graph_history.c
  * @brief  includes graph ancestor methods for Steiner problems
  * @author Daniel Rehfeldt
  *

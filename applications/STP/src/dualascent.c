@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_stp.c
+/**@file   dualascent.c
  * @brief  Dual-ascent dual heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *

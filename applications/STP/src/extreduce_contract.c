@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   extreduce_contmst.c
+/**@file   extreduce_contract.c
  * @brief  extended-reduction tree contraction algorithms for Steiner tree problems
  * @author Daniel Rehfeldt
  *

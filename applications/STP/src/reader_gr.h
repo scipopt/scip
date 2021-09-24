@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_stp.h
+/**@file   reader_gr.h
  * @brief  Steiner tree problem file reader
  * @author Daniel Rehfeldt
  *

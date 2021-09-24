@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   stptest_reduce.c
+/**@file   stptest_extreduce.c
  * @brief  tests for Steiner tree extended reductions
  * @author Daniel Rehfeldt
  *

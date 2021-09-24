@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   completegraph.c
+/**@file   completegraph.h
  * @brief  includes complete graph methods, in particular for MST calculation
  * @author Daniel Rehfeldt
  *

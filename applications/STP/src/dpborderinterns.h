@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   dptermsinterns.h
+/**@file   dpborderinterns.h
  * @brief  Dynamic programming internals for Steiner tree (sub-) problems with small number of terminals
  * @author Daniel Rehfeldt
  *

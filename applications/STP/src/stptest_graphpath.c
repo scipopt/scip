@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   stptest_graphutils.c
+/**@file   stptest_graphpath.c
  * @brief  graph utility tests for Steiner tree problem methods
  * @author Daniel Rehfeldt
  *

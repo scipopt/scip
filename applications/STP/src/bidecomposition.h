@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   bidecomposition.c
+/**@file   bidecomposition.h
  * @brief  several decomposition methods for Steiner tree problems
  * @author Daniel Rehfeldt
  *

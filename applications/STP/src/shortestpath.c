@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   shortestpaths.c
+/**@file   shortestpath.c
  * @brief  Shortest path based algorithms for Steiner problems
  * @author Daniel Rehfeldt
  *
