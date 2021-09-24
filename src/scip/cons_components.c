@@ -688,12 +688,12 @@ SCIP_RETCODE solveSubscip(
 
    /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemlimit == TRUE)
     * to create a copy of SCIP, including external memory usage */
-   if( !avoidmemlimit && (timelimit <= 0.0 || memorylimit <= 0.0) )
+   if( avoidmemlimit && memorylimit <= 0.0 )
    {
-      SCIPdebugMessage("--> not solved (not enough memory or time left)\n");
+      SCIPdebugMessage("--> not solved (not enough memory left)\n");
       return SCIP_OKAY;
    }
-   else if( avoidmemlimit && timelimit <= 0.0 )
+   else if( timelimit <= 0.0 )
    {
       SCIPdebugMessage("--> not solved (not enough time left)\n");
       return SCIP_OKAY;

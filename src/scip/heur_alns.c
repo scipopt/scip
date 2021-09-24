@@ -1968,11 +1968,9 @@ SCIP_RETCODE determineLimits(
       solvelimits->memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemlimit == TRUE)
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemlimit == FALSE)
    * to create a copy of SCIP, including external memory usage */
-   if( !avoidmemlimit && (solvelimits->timelimit <= 0.0 || solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0) )
-      *runagain = FALSE;
-   else if( avoidmemlimit && solvelimits->timelimit <= 0.0 )
+   if( solvelimits->timelimit <= 0.0 || (avoidmemlimit && solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0) )
       *runagain = FALSE;
 
    nodesquot = heurdata->nodesquot;
