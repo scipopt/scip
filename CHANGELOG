@@ -854,6 +854,7 @@ Fixed bugs
 - improved the likelihood that a solution that satisfies the nonlinear constraints in the transformed (presolved) problem is also feasible for the original problem
 - worked around a problem with derivatives of pow at 0 with non-integer exponents in CppAD
 - fixed that setting of feasiblity and optimiality tolerance for NLP relaxation was overwritten with defaults when solving NLP
+- fixed potential overflow in cuts.c:evaluateLiftingFunctionKnapsack()
 
 Miscellaneous
 -------------
