@@ -1383,6 +1383,50 @@ SCIP_Real SCIPeventGetNewbound(
    }  /*lint !e788*/
 }
 
+/** gets new bound for a bound change event */
+SCIP_Rational* SCIPeventGetNewboundExact(
+   SCIP_EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+   switch( event->eventtype )
+   {
+   case SCIP_EVENTTYPE_GLBCHANGED:
+   case SCIP_EVENTTYPE_GUBCHANGED:
+   case SCIP_EVENTTYPE_LBTIGHTENED:
+   case SCIP_EVENTTYPE_LBRELAXED:
+   case SCIP_EVENTTYPE_UBTIGHTENED:
+   case SCIP_EVENTTYPE_UBRELAXED:
+      return event->data.eventbdchg.newboundexact;
+
+   default:
+      SCIPerrorMessage("event is not a bound change event\n");
+      SCIPABORT();
+   }  /*lint !e788*/
+}
+
+/** gets new bound for a bound change event */
+SCIP_Rational* SCIPeventGetOldboundExact(
+   SCIP_EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+   switch( event->eventtype )
+   {
+   case SCIP_EVENTTYPE_GLBCHANGED:
+   case SCIP_EVENTTYPE_GUBCHANGED:
+   case SCIP_EVENTTYPE_LBTIGHTENED:
+   case SCIP_EVENTTYPE_LBRELAXED:
+   case SCIP_EVENTTYPE_UBTIGHTENED:
+   case SCIP_EVENTTYPE_UBRELAXED:
+      return event->data.eventbdchg.oldboundexact;
+
+   default:
+      SCIPerrorMessage("event is not a bound change event\n");
+      SCIPABORT();
+   }  /*lint !e788*/
+}
+
 /** gets old variable type for a variable type change event */
 SCIP_VARTYPE SCIPeventGetOldtype(
    SCIP_EVENT*           event               /**< event */

@@ -2290,6 +2290,59 @@ void consdataCalcActivities(
 {
    int i;
 
+   // Code for verifying that the old activity data was valid if consdata->validactivities is true
+   #ifdef SCIP_DEBUG
+   bool activityWasValid = consdata->validactivities;
+
+   int oldminactivityneginf = consdata->minactivityneginf;
+   int oldminactivityposinf = consdata->minactivityposinf;
+   int oldmaxactivityneginf = consdata->maxactivityneginf;
+   int oldmaxactivityposinf = consdata->maxactivityposinf;
+   int oldminactivityneghuge = consdata->minactivityneghuge;
+   int oldminactivityposhuge = consdata->minactivityposhuge;
+   int oldmaxactivityneghuge = consdata->maxactivityneghuge;
+   int oldmaxactivityposhuge = consdata->maxactivityposhuge;
+   int oldglbminactivityneginf = consdata->glbminactivityneginf;
+   int oldglbminactivityposinf = consdata->glbminactivityposinf;
+   int oldglbmaxactivityneginf = consdata->glbmaxactivityneginf;
+   int oldglbmaxactivityposinf = consdata->glbmaxactivityposinf;
+   int oldglbminactivityneghuge = consdata->glbminactivityneghuge;
+   int oldglbminactivityposhuge = consdata->glbminactivityposhuge;
+   int oldglbmaxactivityneghuge = consdata->glbmaxactivityneghuge;
+   int oldglbmaxactivityposhuge = consdata->glbmaxactivityposhuge;
+
+   SCIP_Rational* oldmaxabsval;
+   SCIP_Rational* oldminabsval;
+   SCIP_Rational* oldminactivity;
+   SCIP_Rational* oldmaxactivity;
+   SCIP_Rational* oldlastminactivity;
+   SCIP_Rational* oldlastmaxactivity;
+   SCIP_Rational* oldglbminactivity;
+   SCIP_Rational* oldglbmaxactivity;
+   SCIP_Rational* oldlastglbminactivity;
+   SCIP_Rational* oldlastglbmaxactivity;
+   RatCreateBuffer(SCIPbuffer(scip), &oldmaxabsval);
+   RatCreateBuffer(SCIPbuffer(scip), &oldminabsval);
+   RatCreateBuffer(SCIPbuffer(scip), &oldminactivity);
+   RatCreateBuffer(SCIPbuffer(scip), &oldmaxactivity);
+   RatCreateBuffer(SCIPbuffer(scip), &oldlastminactivity);
+   RatCreateBuffer(SCIPbuffer(scip), &oldlastmaxactivity);
+   RatCreateBuffer(SCIPbuffer(scip), &oldglbminactivity);
+   RatCreateBuffer(SCIPbuffer(scip), &oldglbmaxactivity);
+   RatCreateBuffer(SCIPbuffer(scip), &oldlastglbminactivity);
+   RatCreateBuffer(SCIPbuffer(scip), &oldlastglbmaxactivity);
+   RatSet(oldmaxabsval, consdata->maxabsval);
+   RatSet(oldminabsval, consdata->minabsval);
+   RatSet(oldminactivity, consdata->minactivity);
+   RatSet(oldmaxactivity, consdata->maxactivity);
+   RatSet(oldlastminactivity, consdata->lastminactivity);
+   RatSet(oldlastmaxactivity, consdata->lastmaxactivity);
+   RatSet(oldglbminactivity, consdata->glbminactivity);
+   RatSet(oldglbmaxactivity, consdata->glbmaxactivity);
+   RatSet(oldlastglbminactivity, consdata->lastglbminactivity);
+   RatSet(oldlastglbmaxactivity, consdata->lastglbmaxactivity);
+   #endif
+
    assert(scip != NULL);
    assert(consdata != NULL);
    //assert(!consdata->validactivities);
@@ -2301,7 +2354,7 @@ void consdataCalcActivities(
    consdata->validmaxabsval = TRUE;
    consdata->validminabsval = TRUE;
    consdata->validactivities = TRUE;
-   consdata->validminact = TRUE; //@TODO, why was this here in the first place?
+   consdata->validminact = TRUE;
    consdata->validmaxact = TRUE;
    consdata->validglbminact = TRUE;
    consdata->validglbmaxact = TRUE;
@@ -2339,6 +2392,53 @@ void consdataCalcActivities(
    RatSet(consdata->lastmaxactivity, consdata->maxactivity);
    RatSet(consdata->lastglbminactivity, consdata->glbminactivity);
    RatSet(consdata->lastglbmaxactivity, consdata->glbmaxactivity);
+
+   #ifdef SCIP_DEBUG
+   assert( !activityWasValid || RatIsEqual(consdata->lastglbmaxactivity, consdata->glbmaxactivity) );
+   assert( !activityWasValid || RatIsEqual(consdata->lastglbminactivity, consdata->glbminactivity) );
+   assert( !activityWasValid || RatIsEqual(consdata->lastmaxactivity, consdata->maxactivity) );
+   assert( !activityWasValid || RatIsEqual(consdata->lastminactivity, consdata->minactivity) );
+
+   assert( !activityWasValid || RatIsEqual(consdata->maxabsval, consdata->maxabsval));
+   assert( !activityWasValid || RatIsEqual(consdata->minabsval, consdata->minabsval));
+   assert( !activityWasValid || RatIsEqual(consdata->minactivity, consdata->minactivity));
+   assert( !activityWasValid || RatIsEqual(consdata->maxactivity, consdata->maxactivity));
+   assert( !activityWasValid || RatIsEqual(consdata->lastminactivity, consdata->lastminactivity));
+   assert( !activityWasValid || RatIsEqual(consdata->lastmaxactivity, consdata->lastmaxactivity));
+   assert( !activityWasValid || RatIsEqual(consdata->glbminactivity, consdata->glbminactivity));
+   assert( !activityWasValid || RatIsEqual(consdata->glbmaxactivity, consdata->glbmaxactivity));
+   assert( !activityWasValid || RatIsEqual(consdata->lastglbminactivity, consdata->lastglbminactivity));
+   assert( !activityWasValid || RatIsEqual(consdata->lastglbmaxactivity, consdata->lastglbmaxactivity));
+
+   assert( !activityWasValid || oldminactivityneginf == consdata->minactivityneginf );
+   assert( !activityWasValid || oldminactivityposinf == consdata->minactivityposinf );
+   assert( !activityWasValid || oldmaxactivityneginf == consdata->maxactivityneginf );
+   assert( !activityWasValid || oldmaxactivityposinf == consdata->maxactivityposinf );
+   assert( !activityWasValid || oldminactivityneghuge == consdata->minactivityneghuge );
+   assert( !activityWasValid || oldminactivityposhuge == consdata->minactivityposhuge );
+   assert( !activityWasValid || oldmaxactivityneghuge == consdata->maxactivityneghuge );
+   assert( !activityWasValid || oldmaxactivityposhuge == consdata->maxactivityposhuge );
+   assert( !activityWasValid || oldglbminactivityneginf == consdata->glbminactivityneginf );
+   assert( !activityWasValid || oldglbminactivityposinf == consdata->glbminactivityposinf );
+   assert( !activityWasValid || oldglbmaxactivityneginf == consdata->glbmaxactivityneginf );
+   assert( !activityWasValid || oldglbmaxactivityposinf == consdata->glbmaxactivityposinf );
+   assert( !activityWasValid || oldglbminactivityneghuge == consdata->glbminactivityneghuge );
+   assert( !activityWasValid || oldglbminactivityposhuge == consdata->glbminactivityposhuge );
+   assert( !activityWasValid || oldglbmaxactivityneghuge == consdata->glbmaxactivityneghuge );
+   assert( !activityWasValid || oldglbmaxactivityposhuge == consdata->glbmaxactivityposhuge );
+
+   RatFreeBuffer(SCIPbuffer(scip), &oldmaxabsval);
+   RatFreeBuffer(SCIPbuffer(scip), &oldminabsval);
+   RatFreeBuffer(SCIPbuffer(scip), &oldminactivity);
+   RatFreeBuffer(SCIPbuffer(scip), &oldmaxactivity);
+   RatFreeBuffer(SCIPbuffer(scip), &oldlastminactivity);
+   RatFreeBuffer(SCIPbuffer(scip), &oldlastmaxactivity);
+   RatFreeBuffer(SCIPbuffer(scip), &oldglbminactivity);
+   RatFreeBuffer(SCIPbuffer(scip), &oldglbmaxactivity);
+   RatFreeBuffer(SCIPbuffer(scip), &oldlastglbminactivity);
+   RatFreeBuffer(SCIPbuffer(scip), &oldlastglbmaxactivity);
+   #endif
+
 }
 
 /** computes the activity of a row for a given solution plus a bound on the floating-point error using running error analysis */
@@ -2914,7 +3014,9 @@ void consdataGetGlbActivityResiduals(
       || (maxresactivity != NULL && maxisrelax != NULL && ismaxsettoinfinity != NULL));
 
    /* get activity bounds of linear constraint */
+   #ifndef SCIP_DEBUG
    if( !consdata->validactivities )
+   #endif
       consdataCalcActivities(scip, consdata);
 
    assert(consdata->glbminactivityneginf >= 0);
@@ -6933,7 +7035,10 @@ SCIP_RETCODE tightenVarBounds(
    val = consdata->vals[pos];
    lhs = consdata->lhs;
    rhs = consdata->rhs;
-   consdataCalcActivities(scip, consdata);
+   #ifndef SCIP_DEBUG
+   if( !consdata->validactivities )
+   #endif
+      consdataCalcActivities(scip, consdata);
    consdataGetActivityResiduals(scip, consdata, var, val, FALSE, minresactivity, maxresactivity,
       &minisrelax, &maxisrelax, &isminsettoinfinity, &ismaxsettoinfinity);
    assert(var != NULL);
@@ -17100,9 +17205,6 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    assert(cons != NULL);
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   return SCIP_OKAY;
-# if 0
    /* we can skip events droped for deleted constraints */
    if( SCIPconsIsDeleted(cons) )
       return SCIP_OKAY;
@@ -17112,90 +17214,97 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
 
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 )
    {
-      SCIP_Real oldbound;
-      SCIP_Real newbound;
+      SCIP_Rational* oldbound;
+      SCIP_Rational* newbound;
       SCIP_Rational* val;
       int varpos;
 
       varpos = eventdata->varpos;
       assert(0 <= varpos && varpos < consdata->nvars);
-      oldbound = SCIPeventGetOldbound(event);
-      newbound = SCIPeventGetNewbound(event);
+      oldbound = SCIPeventGetOldboundExact(event);
+      newbound = SCIPeventGetNewboundExact(event);
+      assert((oldbound != NULL) == (newbound != NULL));
       assert(var != NULL);
-      assert(consdata->vars[varpos] == var);
-      val = consdata->vals[varpos];
 
-      /* we only need to update the activities if the constraint is active,
-       * otherwise we mark them to be invalid
-       */
-      if( SCIPconsIsActive(cons) )
+      if (oldbound != NULL)
       {
-         /* update the activity values */
-         if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-            consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
-         else
+         assert(consdata->vars[varpos] == var);
+         val = consdata->vals[varpos];
+
+         /* we only need to update the activities if the constraint is active,
+         * otherwise we mark them to be invalid
+         */
+         if( SCIPconsIsActive(cons) )
          {
-            assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-            consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
-         }
-      }
-      else
-         consdataInvalidateActivities(consdata);
-
-      consdata->presolved = FALSE;
-      consdata->rangedrowpropagated = 0;
-
-      /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
-      if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
-      {
-         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
-
-         /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
-         if( consdata->maxactdeltavar == var )
-         {
-            consdata->maxactdelta = SCIP_INVALID;
-            consdata->maxactdeltavar = NULL;
-         }
-
-         /* check whether bound tightening might now be successful */
-         if( consdata->boundstightened > 0)
-         {
-            switch( eventtype )
+            /* update the activity values */
+            if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
+               consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
+            else
             {
-            case SCIP_EVENTTYPE_LBTIGHTENED:
-               if( (val > 0.0 ? !RisInfinity(consdata->rhs) : !RisInfinity(-consdata->lhs)) )
-                  consdata->boundstightened = 0;
-               break;
-            case SCIP_EVENTTYPE_UBTIGHTENED:
-               if( (val > 0.0 ? !RisInfinity(-consdata->lhs) : !RisInfinity(consdata->rhs)) )
-                  consdata->boundstightened = 0;
-               break;
-            default:
-               SCIPerrorMessage("invalid event type %d\n", eventtype);
-               return SCIP_INVALIDDATA;
+               assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
+               consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
             }
          }
-      }
-      /* update maximal activity delta if a bound was relaxed */
-      else if( !RisInfinity(consdata->maxactdelta) )
-      {
-         SCIP_Real lb;
-         SCIP_Real ub;
-         SCIP_Real domain;
-         SCIP_Real delta;
+         else
+            consdataInvalidateActivities(consdata);
 
-         assert((eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != 0);
+         consdata->presolved = FALSE;
+         consdata->rangedrowpropagated = 0;
 
-         lb = SCIPvarGetLbLocal(var);
-         ub = SCIPvarGetUbLocal(var);
-
-         domain = ub - lb;
-         delta = REALABS(val) * domain;
-
-         if( delta > consdata->maxactdelta )
+         /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
+         if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
          {
-            consdata->maxactdelta = delta;
-            consdata->maxactdeltavar = var;
+            SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+
+            /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
+            if( consdata->maxactdeltavar == var )
+            {
+               RatSetString(consdata->maxactdelta, "inf");
+               consdata->maxactdeltavar = NULL;
+            }
+
+            /* check whether bound tightening might now be successful */
+            if( consdata->boundstightened > 0)
+            {
+               switch( eventtype )
+               {
+               case SCIP_EVENTTYPE_LBTIGHTENED:
+                  if( (RatIsPositive(val) ? !RatIsInfinity(consdata->rhs) : !RatIsNegInfinity(consdata->lhs)) )
+                     consdata->boundstightened = 0;
+                  break;
+               case SCIP_EVENTTYPE_UBTIGHTENED:
+                  if( (RatIsPositive(val) ? !RatIsNegInfinity(consdata->lhs) : !RatIsInfinity(consdata->rhs)) )
+                     consdata->boundstightened = 0;
+                  break;
+               default:
+                  SCIPerrorMessage("invalid event type %d\n", eventtype);
+                  return SCIP_INVALIDDATA;
+               }
+            }
+         }
+         /* update maximal activity delta if a bound was relaxed */
+         else if( !RatIsInfinity(consdata->maxactdelta) )
+         {
+            SCIP_Rational* lb;
+            SCIP_Rational* ub;
+            SCIP_Rational* delta;
+            RatCreateBuffer(SCIPbuffer(scip), &delta);
+            assert((eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != 0);
+
+            lb = SCIPvarGetLbLocalExact(var);
+            ub = SCIPvarGetUbLocalExact(var);
+
+            RatDiff(delta, ub, lb);
+            RatMult(delta, delta, val);
+            RatAbs(delta, delta);
+
+
+            if( delta > consdata->maxactdelta )
+            {
+               consdata->maxactdelta = delta;
+               consdata->maxactdeltavar = var;
+            }
+            RatFreeBuffer(SCIPbuffer(scip), &delta);
          }
       }
    }
@@ -17209,7 +17318,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
       /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
       if( consdata->maxactdeltavar == var )
       {
-         consdata->maxactdelta = SCIP_INVALID;
+         RatSetString(consdata->maxactdelta, "inf");
          consdata->maxactdeltavar = NULL;
       }
    }
@@ -17223,28 +17332,30 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    }
    else if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != 0 )
    {
-      SCIP_Real oldbound;
-      SCIP_Real newbound;
-      SCIP_Real val;
+      SCIP_Rational* oldbound;
+      SCIP_Rational* newbound;
+      SCIP_Rational* val;
       int varpos;
 
       varpos = eventdata->varpos;
       assert(0 <= varpos && varpos < consdata->nvars);
-      oldbound = SCIPeventGetOldbound(event);
-      newbound = SCIPeventGetNewbound(event);
+      oldbound = SCIPeventGetOldboundExact(event);
+      newbound = SCIPeventGetNewboundExact(event);
       assert(var != NULL);
       assert(consdata->vars[varpos] == var);
       val = consdata->vals[varpos];
 
       consdata->rangedrowpropagated = 0;
-
-      /* update the activity values */
-      if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
-         consdataUpdateActivitiesGlbLb(scip, consdata, oldbound, newbound, val, TRUE);
-      else
+      if (oldbound != NULL && newbound != NULL)
       {
-         assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != 0);
-         consdataUpdateActivitiesGlbUb(scip, consdata, oldbound, newbound, val, TRUE);
+         /* update the activity values */
+         if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
+            consdataUpdateActivitiesGlbLb(scip, consdata, oldbound, newbound, val, TRUE);
+         else
+         {
+            assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != 0);
+            consdataUpdateActivitiesGlbUb(scip, consdata, oldbound, newbound, val, TRUE);
+         }
       }
    }
    else
@@ -17254,7 +17365,6 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    }
 
    return SCIP_OKAY;
-   #endif
 }
 
 

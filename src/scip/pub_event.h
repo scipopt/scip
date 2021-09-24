@@ -106,7 +106,7 @@ SCIP_EVENTTYPE SCIPeventGetType(
    SCIP_EVENT*           event               /**< event */
    );
 
-/** gets variable for a variable event (var added, var deleted, var fixed, 
+/** gets variable for a variable event (var added, var deleted, var fixed,
  *  objective value or domain change, domain hole added or removed) */
 SCIP_EXPORT
 SCIP_VAR* SCIPeventGetVar(
@@ -134,6 +134,18 @@ SCIP_Real SCIPeventGetOldbound(
 /** gets new bound for a bound change event */
 SCIP_EXPORT
 SCIP_Real SCIPeventGetNewbound(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets old bound for a bound change event */
+SCIP_EXPORT
+SCIP_Rational* SCIPeventGetOldboundExact(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new bound for a bound change event */
+SCIP_EXPORT
+SCIP_Rational* SCIPeventGetNewboundExact(
    SCIP_EVENT*           event               /**< event */
    );
 
