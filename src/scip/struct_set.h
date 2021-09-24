@@ -46,6 +46,7 @@
 #include "scip/type_reader.h"
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
+#include "scip/type_cutsel.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
 #include "scip/type_nlpi.h"
@@ -76,6 +77,7 @@ struct SCIP_Set
    SCIP_PRESOL**         presols;            /**< presolvers */
    SCIP_RELAX**          relaxs;             /**< relaxators */
    SCIP_SEPA**           sepas;              /**< separators */
+   SCIP_CUTSEL**         cutsels;            /**< cut selectors */
    SCIP_PROP**           props;              /**< propagators */
    SCIP_PROP**           props_presol;       /**< propagators (sorted by presol priority) */
    SCIP_HEUR**           heurs;              /**< primal heuristics */
@@ -116,6 +118,8 @@ struct SCIP_Set
    int                   relaxssize;         /**< size of relaxs array */
    int                   nsepas;             /**< number of separators */
    int                   sepassize;          /**< size of sepas array */
+   int                   ncutsels;           /**< number of cut selectors */
+   int                   cutselssize;        /**< size of cutsels array */
    int                   nprops;             /**< number of propagators */
    int                   propssize;          /**< size of props array */
    int                   nheurs;             /**< number of primal heuristics */
@@ -159,6 +163,7 @@ struct SCIP_Set
    SCIP_Bool             relaxsnamesorted;   /**< are the relaxators sorted by name? */
    SCIP_Bool             sepassorted;        /**< are the separators sorted by priority? */
    SCIP_Bool             sepasnamesorted;    /**< are the separators sorted by name? */
+   SCIP_Bool             cutselssorted;      /**< are the cutsels sorted by priority? */
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
    SCIP_Bool             propspresolsorted;  /**< are the propagators in prop_presol sorted? */
    SCIP_Bool             propsnamesorted;    /**< are the propagators sorted by name? */
@@ -526,10 +531,6 @@ struct SCIP_Set
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
-   SCIP_Real             sepa_efficacyfac;   /**< factor to scale efficacy of cut in score calc. */
-   SCIP_Real             sepa_dircutoffdistfac;/**< factor to scale directed cutoff distance of cut in score calc. */
-   SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in score calc. */
-   SCIP_Real             sepa_intsupportfac; /**< factor to scale integral support of cut in score calculation */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
                                                 *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */

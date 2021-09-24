@@ -75,6 +75,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
    SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copycutselectors,   /**< should the cut selectors be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
@@ -655,6 +656,23 @@ void SCIPsetSortSepas(
 
 /** sorts separators by name */
 void SCIPsetSortSepasName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** inserts cut selector in cut selector list */
+SCIP_RETCODE SCIPsetIncludeCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
+/** returns the cut selector of the given name, or NULL if not existing */
+SCIP_CUTSEL* SCIPsetFindCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
+   );
+
+/** sorts cut selectors by priorities */
+void SCIPsetSortCutsels(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

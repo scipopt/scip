@@ -78,6 +78,11 @@
 #define TABLE_POSITION_SEPA              9000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_SEPA        SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
+#define TABLE_NAME_CUTSEL                "cutsel"
+#define TABLE_DESC_CUTSEL                "cutsel statistics table"
+#define TABLE_POSITION_CUTSEL            9500                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_CUTSEL      SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
+
 #define TABLE_NAME_PRICER                "pricer"
 #define TABLE_DESC_PRICER                "pricer statistics table"
 #define TABLE_POSITION_PRICER            10000                  /**< the position of the statistics table */
@@ -284,6 +289,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSepa)
    assert(table != NULL);
 
    SCIPprintSeparatorStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputCutsel)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIPprintCutselectorStatistics(scip, file);
 
    return SCIP_OKAY;
 }
@@ -549,6 +566,11 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SEPA, TABLE_DESC_SEPA, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSepa,
          NULL, TABLE_POSITION_SEPA, TABLE_EARLIEST_STAGE_SEPA) );
+
+   assert(SCIPfindTable(scip, TABLE_NAME_CUTSEL) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CUTSEL, TABLE_DESC_CUTSEL, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCutsel,
+         NULL, TABLE_POSITION_CUTSEL, TABLE_EARLIEST_STAGE_CUTSEL) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_PRICER) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRICER, TABLE_DESC_PRICER, TRUE,
