@@ -135,6 +135,7 @@ Performance improvements
 - Merge strongcg into the gomory separator to avoid computing the same base equality twice. The files
   sepa_strongcg.{h|c} have been removed.
 - The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
+- Use cpsolver emphasis in sepa_rapidlearning.
 
 Examples and applications
 -------------------------
