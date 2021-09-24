@@ -2093,6 +2093,9 @@ SCIP_RETCODE reduce_npv(
    assert(nelims != NULL);
    assert(limit > 0);
 
+   /* NOTE: necessary because of erroneous compiler warning */
+   incedges[0] = incedges[1] = incedges[2] = -1;
+
    *nelims = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &pathhead, nnodes + 1) );
