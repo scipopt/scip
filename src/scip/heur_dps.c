@@ -310,6 +310,13 @@ SCIP_RETCODE copyToSubscip(
       SCIP_CALL( SCIPreleaseCons(subscip, &newcons) );
    }
 
+   /* block constraint contains variables which are not part of this block
+    *
+    * todo: maybe they are part of the block, but it is not recognized, because they are, for example, negated or aggregated.
+    */
+   if( nvars != SCIPgetNOrigVars(subscip) )
+      *success = FALSE;
+
    return SCIP_OKAY;
 }
 
