@@ -6626,7 +6626,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    if( tightened != NULL )
       *tightened = FALSE;
 
-   SCIPvarAdjustUbExact(var, scip->set, adjustedBound);
+   SCIPvarAdjustLbExact(var, scip->set, adjustedBound);
 
    /* ignore tightenings of upper bounds to -infinity during solving process */
    if( RatIsNegInfinity(adjustedBound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
@@ -6639,8 +6639,8 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    }
 
    /* get current bounds */
-   ub = SCIPvarGetLbLocalExact(var);
-   lb = SCIPvarGetUbLocalExact(var);
+   lb = SCIPvarGetLbLocalExact(var);
+   ub = SCIPvarGetUbLocalExact(var);
    assert(RatIsLE(lb, ub));
 
    if( RatIsGT(adjustedBound, ub) )
@@ -6649,7 +6649,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
       goto RETURN_SCIP_OKAY;
    }
 
-   if( RatIsGE(newbound, lb) ) {
+   if( RatIsLE(newbound, lb) ) {
       goto RETURN_SCIP_OKAY;
    }
 
