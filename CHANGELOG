@@ -140,6 +140,10 @@ Examples and applications
 
 - Add c++ Sudoku example
 - Removed circle.c and renamed string.c to spring.c in CallableLibrary example.
+- SCIP-Jack (Steiner tree application):
+  Most files have been modified and many new ones have been added (code base more than doubled).
+  Two new problem classes are supported: maximum-weight connected subgraph problem with budget constraints, partial-terminal node-weighted Steiner tree problem.
+  Major performance improvements accross all problem classes that are supported.
 
 Interface changes
 -----------------
