@@ -2823,7 +2823,10 @@ void prettifyConss(
 
          maxmult = (SCIP_Longint)(SCIPfeastol(scip)/SCIPepsilon(scip) + SCIPfeastol(scip));
          maxmult = MIN(maxmult, MAXSCALEDCOEF);
-         epsilon = SCIPepsilon(scip) / (SCIP_Real)maxmult; /* this ensures that one coefficient in the scaled constraint should be one */
+
+         /* this ensures that one coefficient in the scaled constraint will be one as asserted below; 0.9 to be safe */
+         epsilon = SCIPepsilon(scip) / (SCIP_Real)maxmult;
+         epsilon *= 0.9;
 
          success = SCIPrealToRational(consdata->vbdcoef, -epsilon, epsilon , maxmult, &nominator, &denominator);
 
