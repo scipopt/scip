@@ -99,6 +99,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs);
 
+/** dialog execution method for the display cutselectors command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCutselectors);
+
 /** dialog execution method for the display heuristics command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics);

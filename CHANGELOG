@@ -39,6 +39,7 @@ Features
   made it available via the API.
 - MIR procedure is now available for strengthening the Benders' optimality cut
 - SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
+- New plugin type for cut selection: users can now include their own cut selection rules, default rule moved to cutsel_hybrid.
 
 Expressions:
 - Removed support for expression types min and max for now. Removed support for expression type sign.
@@ -187,7 +188,8 @@ Interface changes
   their return type from SCIP_RETCODE (which _always_ was SCIP_OKAY) to void
 - removed SCIPincludeDialogDefault(), use SCIPincludeDialogDefaultBasic() instead and check whether you also need SCIPincludeDialogDefaultSet() and SCIPincludeDialogDefaultFix()
 - removed exprint argument from SCIPaddNlRowGradientBenderscutOpt()
-- added copyexprhdlrs argument to SCIPcopyPlugins() (18th position)
+- added copyexprhdlrs argument to SCIPcopyPlugins() (19th position)
+- added copycutselectors argument to SCIPcopyPlugins() (10th position)
 - removed refpoint argument from SCIPaddSquareSecant()
 - added argument exprdata to SYMcomputeSymmetryGenerators()
 - removed SCIPconsNonlinearGetRhs(), SCIPconsNonlinearGetLhs(), SCIPconsNonlinearAddLinearCoef()
@@ -573,6 +575,10 @@ NLPI:
 - added SCIPnlpiOracleResetEvalTime(), SCIPnlpiOracleGetEvalTime()
 - added SCIPaddNlpiProblemNlRows()
 
+Cut Selector:
+- added SCIPincludeCutsel(), SCIPincludeCutselBasic(), SCIPsetCutselCopy(), SCIPsetCutselFree(), SCIPsetCutselInit(), SCIPsetCutselExit(),  SCIPsetCutselInitsol(), SCIPsetCutselExitsol(), SCIPfindCutsel(), SCIPgetCutsels(), SCIPgetNCutsels(), SCIPsetCutselPriority()
+- added SCIPcutselGetName(), SCIPcutselGetData(), SCIPcutselGetDesc(), SCIPcutselGetPriority(), SCIPcutselSetData(), SCIPcutselIsInitialized(), SCIPcutselGetSetupTime(), SCIPcutselGetTime()
+
 ### Command line interface
 ### Interfaces to external software
 
@@ -631,6 +637,8 @@ NLPI:
 - Removed parameters for strongcg separator: separating/strongcg/..., i.e.,
   maxrounds, maxroundsroot, maxsepacutsroot, maxsepacuts, dynamiccuts. One can control the
   strongcg behavior throught the parameters of sepa_gomory.
+- renamed separating/minorthoroot to cutselection/hybrid/minorthoroot
+- renamed separating/minortho to cutselection/hybrid/minortho
 
 ### New parameters
 
@@ -699,6 +707,7 @@ NLPI:
 - new parameters "heuristics/alns/nodesquotmin", "heuristics/alns/maxcallssamesol" and "heuristics/alns/initduringroot"
   to control neighborhoods in ALNS
 - new parameter "benders/default/benderscut/optimality/mir" to control whether mixed-integer rounding procedure is applied to Benders optimality cuts
+- cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
 
 ### Data structures
 
@@ -735,6 +744,7 @@ NLPI:
 - renamed SCIP_NLPTERMSTAT_MEMERR to SCIP_NLPTERMSTAT_OUTOFMEMORY
 - renamed SCIP_NLPTERMSTAT_LICERR to SCIP_NLPTERMSTAT_LICENSEERROR
 - added evaltime to SCIP_NLPSTATISTICS
+- added structs SCIP_CUTSEL, SCIP_CUTSELDATA
 
 Deleted files
 -------------

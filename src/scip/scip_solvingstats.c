@@ -53,6 +53,7 @@
 #include "scip/pub_compr.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_cutpool.h"
+#include "scip/pub_cutsel.h"
 #include "scip/pub_expr.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_history.h"
@@ -3012,6 +3013,39 @@ void SCIPprintSeparatorStatistics(
             }
          }
       }
+   }
+}
+
+/** outputs cutselector statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintCutselectorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintCutselectorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Cutselectors       :   ExecTime  SetupTime\n");
+
+   /* sort cutsels w.r.t. their priority */
+   SCIPsetSortCutsels(scip->set);
+
+   for( i = 0; i < scip->set->ncutsels; ++i )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f\n",
+         SCIPcutselGetName(scip->set->cutsels[i]),
+         SCIPcutselGetTime(scip->set->cutsels[i]),
+         SCIPcutselGetSetupTime(scip->set->cutsels[i])
+         );
    }
 }
 

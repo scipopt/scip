@@ -226,6 +226,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
    SCIP_CALL( SCIPincludeBendersDefault(scip) );
+   SCIP_CALL( SCIPincludeCutselHybrid(scip) );
    SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
    SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
    SCIP_CALL( SCIPincludeExprhdlrEntropy(scip) );
