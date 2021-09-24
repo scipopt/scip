@@ -4548,7 +4548,6 @@ SCIP_RETCODE reduce_bd34WithSd(
    assert(scip && g && vnoi);
    assert(!graph_pc_isPcMw(g));
 
-
    /* build auxiliary graph */
    SCIP_CALL( graph_buildCompleteGraph(scip, &auxg, STP_BD_MAXDEGREE) );
    assert(auxg->edges == 2 * STP_BD_MAXDNEDGES);
@@ -4559,6 +4558,10 @@ SCIP_RETCODE reduce_bd34WithSd(
 
    for( int i = 0; i < STP_BD_MAXDEGREE; i++ )
       sd[i] = 0.0;
+
+   /* NOTE: necessary due to compiler warning... */
+   for( int i = 0; i < STP_BD_MAXDEGREE; i++ )
+      adjvert[i] = -1;
 
    graph_mark(g);
 
