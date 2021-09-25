@@ -696,7 +696,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    SCIP_Bool complete;
    SCIP_Bool infeasible;
    int nrows;
-   int r;
+   SCIP_Longint r;
    int i;
    int j;
    int numcancel;
@@ -708,8 +708,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    int* rowsparsity;
    SCIP_HASHTABLE* pairtable;
    ROWVARPAIR* varpairs;
-   int nvarpairs;
-   int varpairssize;
+   SCIP_Longint nvarpairs;
+   SCIP_Longint varpairssize;
    SCIP_PRESOLDATA* presoldata;
    SCIP_Longint maxuseless;
    SCIP_Longint nuseless;
@@ -801,7 +801,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          {
             int* rowinds;
             SCIP_Real* rowvals;
-            int npairs;
+            SCIP_Longint npairs;
             int failshift;
 
             rowinds = SCIPmatrixGetRowIdxPtr(matrix, r);
@@ -821,7 +821,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             npairs = (nnonz * (nnonz - 1)) / 2;
             if( nvarpairs + npairs > varpairssize )
             {
-               int newsize = SCIPcalcMemGrowSize(scip, nvarpairs + npairs);
+               SCIP_Longint newsize = SCIPcalcMemGrowSize(scip, nvarpairs + npairs);
                SCIP_CALL( SCIPreallocBufferArray(scip, &varpairs, newsize) );
                varpairssize = newsize;
             }
@@ -897,6 +897,12 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
          if( insert )
          {
+            /* prevent the insertion of too many variable pairs into the hashtable */
+            if( SCIPhashtableGetNEntries(pairtable) * 2 * sizeof(void*) > (INT_MAX >> 1) )
+            {
+               break;
+            }
+
             SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
          }
       }
