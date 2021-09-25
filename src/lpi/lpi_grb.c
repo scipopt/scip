@@ -4090,10 +4090,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    return SCIP_OKAY;
 }
 
-/** gets objective value of solution
- *
- *  @note if the solution status is iteration limit reached (GRB_ITERATION_LIMIT), the objective value was not computed
- */
+/** gets objective value of solution */
 SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval              /**< stores the objective value */
@@ -4119,37 +4116,41 @@ SCIP_RETCODE SCIPlpiGetObjval(
    assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
 #endif
 
-   /* obtain objective value; do not use objbound, since this does not seem to give meaningful values on a cutoff */
+   /* obtain objective value */
    ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval);
+   assert( ret == 0 || ret == GRB_ERROR_DATA_NOT_AVAILABLE );
 
-   if( ret == GRB_ERROR_DATA_NOT_AVAILABLE )
+   /* return minus infinity if value not available and we reached the iteration limit (see lpi_cpx) */
+   if( lpi->solstat == GRB_ITERATION_LIMIT )
    {
-      /* return minus infinity if value not available and we reached an iteration limit (see lpi_cpx) */
-      if( lpi->solstat == GRB_ITERATION_LIMIT )
-         *objval = -SCIPlpiInfinity(lpi);
+      (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
+   }
+   else if( lpi->solstat == GRB_CUTOFF )
+   {
+      SCIP_Real cutoff;
+
+      /* if we reached the cutoff, then OBJBOUND seems to be -infinity; we set the value to the cutoff in this case */
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &cutoff) );
+      *objval = cutoff;
+
+#if SCIP_DISABLED_CODE
       /**@todo The following is some kind of hack which works with the current SCIP implementation and should be fixed.  In
-       * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queries (e.g., objval,
+       * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queried (e.g., objval,
        * primal and dual solution), in this case we just return the installed cutoff value minus some epsilon. This is some
        * kind of hack for the code in conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that is similar to
        * this case.
        */
-      else if( lpi->solstat == GRB_CUTOFF )
-      {
-         SCIP_Real dval;
-         SCIP_OBJSEN objsense;
+      SCIP_Real dval;
+      SCIP_OBJSEN objsense;
 
-         SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
-         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
 
-         if( objsense == SCIP_OBJSEN_MINIMIZE )
-            *objval = dval - 1e-06;
-         else
-            *objval = dval + 1e-06;
-      }
-   }
-   else
-   {
-      CHECK_ZERO( lpi->messagehdlr, ret );
+      if( objsense == SCIP_OBJSEN_MINIMIZE )
+         *objval = dval - 1e-06;
+      else
+         *objval = dval + 1e-06;
+#endif
    }
 
    return SCIP_OKAY;
