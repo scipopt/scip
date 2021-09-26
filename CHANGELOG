@@ -756,6 +756,7 @@ Deleted files
 - src/scip/pub_misc_nonlinear.h
 - src/scip/misc_nonlinear.c
 - src/scip/scip_nonlinear.{c,h}
+- src/scip/sepa_strongcg.{h|c}
 
 Unit tests
 ----------
