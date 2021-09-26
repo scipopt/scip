@@ -434,6 +434,28 @@ SCIP_RETCODE SCIPcutoffNode(
    return SCIP_OKAY;
 }
 
+/** removes all nodes from branch and bound tree that were marked to be cut off via SCIPcutoffNode()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note In diving mode, the removal of nodes is delayed until diving ends.
+ */
+SCIP_RETCODE SCIPpruneTree(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPpruneTree", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
+         scip->eventqueue, scip->lp, SCIPsetInfinity(scip->set)) );
+
+   return SCIP_OKAY;
+}
+
 /** marks the given node to be propagated again the next time a node of its subtree is processed
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
