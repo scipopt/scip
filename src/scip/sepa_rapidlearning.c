@@ -419,7 +419,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
  #endif
 
-   disabledualreductions = FALSE;
+   if( SCIPallowStrongDualReds(scip) )
+      disabledualreductions = FALSE;
+   else
+      disabledualreductions = TRUE;
 
    /* check, whether a solution was found */
    if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 )
