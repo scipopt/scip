@@ -708,8 +708,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    int* rowsparsity;
    SCIP_HASHTABLE* pairtable;
    ROWVARPAIR* varpairs;
-   SCIP_Longint nvarpairs;
-   SCIP_Longint varpairssize;
+   int nvarpairs;
+   int varpairssize;
    SCIP_PRESOLDATA* presoldata;
    SCIP_Longint maxuseless;
    SCIP_Longint nuseless;
@@ -897,12 +897,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
          if( insert )
          {
-            /* prevent the insertion of too many variable pairs into the hashtable */
-            if( (SCIP_Longint)(SCIPhashtableGetNEntries(pairtable) * 2 * sizeof(void*)) > (SCIP_Longint)(INT_MAX >> 1) )
-            {
-               break;
-            }
-
             SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
          }
       }
