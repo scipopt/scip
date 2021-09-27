@@ -396,7 +396,7 @@ SCIP_DECL_NLHDLRENFO(enfoHdlr)
 
    /* check whether its violation and numerical properties are ok (and maybe improve) */
    /* TODO if not allowweakcuts, maybe use SCIPcleanupRowprep2 */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPgetLPFeastol(scip), NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIPgetLPFeastol(scip), NULL, &success) );
 
    if( success )
    {

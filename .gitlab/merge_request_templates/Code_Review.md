@@ -14,7 +14,7 @@
 
 * [ ] The CHANGELOG is up to date (including API changes if present in this MR).
 * [ ] The user documentation is up to date (doc/xternal.c, doc/inc/faq/, installation instructions, ...).
-* [ ] makedist.sh and the Makefile dependencies are up to date.
+* [ ] makedist.sh and both build systems are up to date (file additions/removals, ...).
 
 ### Testing
 
@@ -25,5 +25,5 @@
 ### Does this merge request introduce an API change? :warning:
 
 * [ ] No, **or** as far as possible, the code ensures backwards compatibility.
-* [ ] No, **or** after merging, the `SCIP_APIVERSION` is updated (use label 'public SCIP API'; in particular if new `SCIP_EXPORT` methods have been added).
+* [ ] No, **or** the `SCIP_APIVERSION` is updated (use label 'public SCIP API'; in particular if new `SCIP_EXPORT` methods have been added).
 * [ ] No parameter was added/deleted/changed **or** the MR is tagged with the label 'default parameter'. (This includes the addition of parameters by adding/deleting a plugin.)

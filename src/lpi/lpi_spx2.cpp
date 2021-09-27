@@ -4253,7 +4253,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
           *ival = INT_MAX;
       break;
    case SCIP_LPPAR_PRESOLVING:
-      *ival = lpi->spx->intParam(SoPlex::SIMPLIFIER) == SoPlex::SIMPLIFIER_AUTO;
+      *ival = lpi->spx->intParam(SoPlex::SIMPLIFIER);
       break;
    case SCIP_LPPAR_PRICING:
       *ival = (int) lpi->pricing;
@@ -4332,7 +4332,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
-      (void) lpi->spx->setIntParam(SoPlex::SIMPLIFIER, (ival ? SoPlex::SIMPLIFIER_AUTO : SoPlex::SIMPLIFIER_OFF));
+#if SOPLEX_APIVERSION < 13
+      assert(ival == TRUE || ival == FALSE);
+#else
+      assert(ival == 1 || ival == 0 || ival == 2);
+#endif
+      (void) lpi->spx->setIntParam(SoPlex::SIMPLIFIER, ival);
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = (SCIP_PRICING)ival;

@@ -53,6 +53,7 @@
 #include "scip/pub_compr.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_cutpool.h"
+#include "scip/pub_cutsel.h"
 #include "scip/pub_expr.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_history.h"
@@ -2950,16 +2951,101 @@ void SCIPprintSeparatorStatistics(
 
    for( i = 0; i < scip->set->nsepas; ++i )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
-         SCIPsepaGetName(scip->set->sepas[i]),
-         SCIPsepaGetTime(scip->set->sepas[i]),
-         SCIPsepaGetSetupTime(scip->set->sepas[i]),
-         SCIPsepaGetNCalls(scip->set->sepas[i]),
-         SCIPsepaGetNCutoffs(scip->set->sepas[i]),
-         SCIPsepaGetNDomredsFound(scip->set->sepas[i]),
-         SCIPsepaGetNCutsFound(scip->set->sepas[i]),
-         SCIPsepaGetNCutsApplied(scip->set->sepas[i]),
-         SCIPsepaGetNConssFound(scip->set->sepas[i]));
+      SCIP_SEPA* sepa;
+
+      sepa = scip->set->sepas[i];
+
+      /* only output data for separators without parent separator */
+      if( SCIPsepaGetParentsepa(sepa) == NULL )
+      {
+         SCIP_Longint ncutsapplied;
+
+         /* collect total number of applied cuts */
+         ncutsapplied = SCIPsepaGetNCutsApplied(sepa);
+         if( SCIPsepaIsParentsepa(sepa) )
+         {
+            SCIP_SEPA* parentsepa;
+            int k;
+
+            for( k = 0; k < scip->set->nsepas; ++k )
+            {
+               if( k == i )
+                  continue;
+
+               parentsepa = SCIPsepaGetParentsepa(scip->set->sepas[k]);
+               if( parentsepa != sepa )
+                  continue;
+
+               ncutsapplied += SCIPsepaGetNCutsApplied(scip->set->sepas[k]);
+            }
+         }
+
+         /* output data */
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+            SCIPsepaGetName(sepa),
+            SCIPsepaGetTime(sepa),
+            SCIPsepaGetSetupTime(sepa),
+            SCIPsepaGetNCalls(sepa),
+            SCIPsepaGetNCutoffs(sepa),
+            SCIPsepaGetNDomredsFound(sepa),
+            SCIPsepaGetNCutsFound(sepa),
+            ncutsapplied,
+            SCIPsepaGetNConssFound(sepa));
+
+         /* for parent separators search for dependent separtors */
+         if( SCIPsepaIsParentsepa(sepa) )
+         {
+            SCIP_SEPA* parentsepa;
+            int k;
+
+            for( k = 0; k < scip->set->nsepas; ++k )
+            {
+               if( k == i )
+                  continue;
+
+               parentsepa = SCIPsepaGetParentsepa(scip->set->sepas[k]);
+               if( parentsepa != sepa )
+                  continue;
+
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "  > %-15.17s: %10s %10s %10s %10s %10s %10s %10" SCIP_LONGINT_FORMAT " %10s\n",
+                  SCIPsepaGetName(scip->set->sepas[k]), "-", "-", "-", "-", "-", "-",
+                  SCIPsepaGetNCutsApplied(scip->set->sepas[k]), "-");
+            }
+         }
+      }
+   }
+}
+
+/** outputs cutselector statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintCutselectorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintCutselectorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Cutselectors       :   ExecTime  SetupTime\n");
+
+   /* sort cutsels w.r.t. their priority */
+   SCIPsetSortCutsels(scip->set);
+
+   for( i = 0; i < scip->set->ncutsels; ++i )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f\n",
+         SCIPcutselGetName(scip->set->cutsels[i]),
+         SCIPcutselGetTime(scip->set->cutsels[i]),
+         SCIPcutselGetSetupTime(scip->set->cutsels[i])
+         );
    }
 }
 

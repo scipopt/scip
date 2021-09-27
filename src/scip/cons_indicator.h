@@ -129,8 +129,10 @@ SCIP_RETCODE SCIPcreateConsBasicIndicator(
 
 /** creates and captures a indicator constraint in a more generic version.
  *
- *  The key difference from SCIPcreateConsIndicator() is the activeone Boolean.
- *  if \f$z = o\f$, with \f$o\f$ the activeone flag, then \f$a^T x \leq b\f$ holds.
+ *  The key difference from SCIPcreateConsIndicator() is the activeone and lessthanineq Booleans.
+ *  If \f$z = o\f$, with \f$o\f$ the activeone flag, then:
+ *  if lessthanineq then \f$a^T x \leq b\f$ holds, else the passed vectors are assumed to be of the form \f$a^T x \geq b\f$.
+ *  The underlying linear constraint is always created as a less-than inequality.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
@@ -143,6 +145,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    SCIP_Real*            vals,               /**< values of variables in inequality (or NULL) */
    SCIP_Real             rhs,                /**< rhs of the inequality */
    SCIP_Bool             activeone,          /**< is the constraint active when the binary is 1? */
+   SCIP_Bool             lessthanineq,       /**< is the linear constraint a less than RHS (TRUE) or greater than RHS (FALSE)? */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? Usually set to TRUE. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
                                               *   Usually set to TRUE. */

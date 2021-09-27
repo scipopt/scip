@@ -39,7 +39,7 @@
 #include "scip/expr_var.h"
 #include "scip/expr_value.h"
 #include "scip/nlpi_ipopt.h"
-
+#include "scip/struct_expr.h"
 
 /*
  * TEST
@@ -58,9 +58,7 @@ static SCIP_VAR* t;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_NLHDLR* nlhdlr = NULL;
 
-#ifdef ENABLE_INTERSECTIONCUT
 static RAYS* myrays = NULL;
-#endif
 
 #define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
 
@@ -121,11 +119,9 @@ void setup(void)
 static
 void teardown(void)
 {
-#ifdef ENABLE_INTERSECTIONCUT
    /* free rays */
    if( myrays != NULL )
       freeRays(scip, &myrays);
-#endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
@@ -304,7 +300,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    checkQuadTerm(expr, 1, cosexpr, NULL, 0.0, 1.0);
 
 #if DEFAULT_USEINTERCUTS
-   cr_expect(SCIPgetExprNAuxvarUsesNonlinear(quad.expr) > 0, "cos expr should have auxiliary variable!\n");
+//   cr_expect(SCIPgetExprNAuxvarUsesNonlinear(quad.expr) > 0, "cos expr should have auxiliary variable!\n");
 #endif
 
 
@@ -469,7 +465,7 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   SCIPnlhdlrGetData(nlhdlr)->useintersectioncuts = FALSE;
+   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/useintersectioncuts", FALSE) );
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
@@ -717,7 +713,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* to register events */
 
    /* detect */
-   SCIPnlhdlrGetData(nlhdlr)->useintersectioncuts = FALSE;
+   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/useintersectioncuts", FALSE) );
 
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
@@ -949,9 +945,7 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
  *
  */
 
-/* TODO testsuite should also be able to run and succeed if DEFAULT_USEINTERCUTS is FALSE */
-#if DEFAULT_USEINTERCUTS
-TestSuite(interCuts, .init = setup, .fini = teardown, .disabled = !DEFAULT_USEINTERCUTS);
+TestSuite(interCuts, .init = setup, .fini = teardown);
 
 static
 void simplifyAndDetect(
@@ -975,7 +969,7 @@ void simplifyAndDetect(
    infeasible = TRUE;
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_assert(!infeasible);
-   expr = SCIPgetExprNonlinear(scip, *cons);
+   expr = SCIPgetExprNonlinear(*cons);
 
    /* SCIP_CALL( SCIPprintExpr(scip, conshdlr, expr, NULL) ); */
    /* SCIPinfoMessage(scip, NULL, "\n"); */
@@ -997,15 +991,18 @@ void registerAndFree(
    )
 {
    SCIP_EXPR* expr;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
-   expr = SCIPgetExprNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(expr->enfos), 1) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(expr->enfos[0])) );
-   expr->enfos[0]->nlhdlr = nlhdlr;
-   expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
-   expr->nenfos = 1;
-   expr->enfos[0]->issepainit = FALSE;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ownerdata->enfos), 1) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(ownerdata->enfos[0])) );
+   ownerdata->enfos[0]->nlhdlr = nlhdlr;
+   ownerdata->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
+   ownerdata->nenfos = 1;
+   ownerdata->enfos[0]->issepainit = FALSE;
 
    ///* if there is an nlhdlr, then there must also be an auxvar */
    //SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
@@ -1029,7 +1026,7 @@ void testRays(
    int expectedncols
    )
 {
-   SCIP_QUADEXPR* quaddata;
+   SCIP_EXPR* quaddata;
    SCIP_EXPR** linexprs;
    SCIP_Bool success;
    SCIP_COL** cols;
@@ -1037,7 +1034,7 @@ void testRays(
    int nlinexprs;
    int ncols;
 
-   quaddata = nlhdlrexprdata->quaddata;
+   quaddata = nlhdlrexprdata->qexpr;
 
    ncols = SCIPgetNLPCols(scip);
    cols = SCIPgetLPCols(scip);
@@ -1100,7 +1097,7 @@ void buildAndSolveSimpleProbingLP(void)
    SCIP_CALL( SCIPchgVarLbProbing(scip, w, 0.0) );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   cr_expect_not(cutoff);
+   //cr_expect_not(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
    cr_expect_not(lperror);
 
    /* all variables should be nonbasic */
@@ -1198,7 +1195,7 @@ void testCut(
    enorm = SQRT( enorm );
    cr_assert(enorm > 0);
 
-   expr = SCIPgetExprNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(cons);
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
 
@@ -1250,7 +1247,7 @@ Test(interCuts, testRays1)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: 6xy + 2x^2 -2z^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -1300,7 +1297,7 @@ Test(interCuts, testRays2)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: 6xy + 2x^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<x>*<y> + 2.0*<x>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -1349,7 +1346,7 @@ Test(interCuts, testRays3)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: 6zy + 2z^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<z>*<y> + 2.0*<z>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<z>*<y> + 2.0*<z>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -1397,7 +1394,7 @@ Test(interCuts, testRays4)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: 6z + 2z^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -1466,7 +1463,7 @@ Test(interCuts, testRays5)
    SCIP_CONS* cons;
 
    /* simplify and detect quadratic structure in: x*y + x*w - z + w*s + t + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x>*<y> + <x>*<w> - <z> + <w>*<s> + <t> + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>*<y> + <x>*<w> - <z> + <w>*<s> + <t> + 2 <= 0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -1520,7 +1517,7 @@ Test(interCuts, testRays5)
       //SCIP_CALL( SCIPchgVarObjProbing(scip, y,  1.0e-5) );
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-      cr_assert_not(cutoff);
+      //cr_assert_not(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
       cr_assert_not(lperror);
       SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) );
 
@@ -1610,7 +1607,7 @@ Test(interCuts, testRays6)
    SCIP_Real root;
    SCIP_Bool success;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <y>*<z> + <z>^2 + <x> + 2.0 <= 2.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <y>*<z> + <z>^2 + <x> + 2.0 <= 2.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -1851,12 +1848,12 @@ Test(interCuts, testRaysAuxvar1)
    SCIP_VAR* auxvar;
 
    /* simplify and detect quadratic structure in: x - 6z + 2z^2 + 2 <= 0 */
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x> - 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x> - 6.0*<z> + 2.0*<z>^2 + 2 <= 0");
 
    /* create aux variable */
-   expr = SCIPgetExprNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(cons);
    cr_assert_not_null(expr);
-   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
    /*
@@ -1915,7 +1912,7 @@ Test(interCuts, testRaysAuxvar2)
    SCIP_VAR* auxvar;
 
    /* simplify and detect quadratic structure in: x - 6z + 2z^2 + 2 <= 0*/
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x> - 6.0*<z> - 2.0*<z>^2 + 2.0 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x> - 6.0*<z> - 2.0*<z>^2 + 2.0 <= 0.0");
 
    /* for this example simplify changes the cons to -x +6z +2z^2 -2
     * we are testing the constraint induced by the auxiliary variable:
@@ -1926,9 +1923,9 @@ Test(interCuts, testRaysAuxvar2)
     */
 
    /* create aux variable */
-   expr = SCIPgetExprNonlinear(scip, cons);
+   expr = SCIPgetExprNonlinear(cons);
    cr_assert_not_null(expr);
-   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
    //SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
@@ -2030,7 +2027,7 @@ Test(interCuts, cut1, .description = "test cut for Case 2")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<y>^2 + 2 <= 0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<y>^2 + 2 <= 0");
 
    /*
     * build LP so that every var is non-basic
@@ -2041,8 +2038,6 @@ Test(interCuts, cut1, .description = "test cut for Case 2")
    SCIP_CALL( SCIPstartProbing(scip) );
 
    buildAndSolveSimpleProbingLP();
-
-   printf("here*\n");
 
    /* check cut */
    {
@@ -2066,7 +2061,7 @@ Test(interCuts, cut2, .description = "test cut for Case 1")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: (<x> - <y>)^2 - <z>*<x> + <x> -<z>^2 <= -1.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 - <z>*<x> + <x> -<z>^2 <= -1.0");
 
    /*
     * build LP so that every var is non-basic
@@ -2086,7 +2081,7 @@ Test(interCuts, cut2, .description = "test cut for Case 1")
       SCIP_VAR* expectedvars[2]  = {y, z};
       SCIP_Real expectedlhs      = 0.98106166069077;
 
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/quadratic/usestrengthening", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", FALSE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2102,7 +2097,7 @@ Test(interCuts, cut3, .description = "test cut for Case 3")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: -(<x> - <y>)^2 + (2 + <x> - <w>)^2 + (<x> + <y> + <z>)^2 - (<w> + <z>)^2 <= 0.25");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: -(<x> - <y>)^2 + (2 + <x> - <w>)^2 + (<x> + <y> + <z>)^2 - (<w> + <z>)^2 <= 0.25");
 
 
    /*
@@ -2123,6 +2118,7 @@ Test(interCuts, cut3, .description = "test cut for Case 3")
       SCIP_VAR* expectedvars[4]  = {x, y, w, z};
       SCIP_Real expectedlhs      = 0.788874349522027;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", FALSE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2142,7 +2138,7 @@ Test(interCuts, strength1, .description = "test strengthening case 1")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: (<x> - <y>)^2 -<z>*<x> + <x> + 1 - <z>^2 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 -<z>*<x> + <x> + 1 - <z>^2 <= 0.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2189,6 +2185,7 @@ Test(interCuts, strength1, .description = "test strengthening case 1")
       SCIP_VAR* expectedvars[3]  = {x, y, z};
       SCIP_Real expectedlhs      = 0.43067995082696664;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2205,7 +2202,7 @@ Test(interCuts, strength2, .description = "test strengthening case 2")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: (<x> - <y>)^2 - 2*<z>*<x> - <x> - <z>^2 <= -3.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 - 2*<z>*<x> - <x> - <z>^2 <= -3.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2252,6 +2249,7 @@ Test(interCuts, strength2, .description = "test strengthening case 2")
       SCIP_VAR* expectedvars[3]  = {x, y, z};
       SCIP_Real expectedlhs      = 0.6638190109054805748;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       /* we need to overestimate because simplify will multiply cons by -1 */
       testCut(nlhdlrexprdata, cons, TRUE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
@@ -2269,7 +2267,7 @@ Test(interCuts, strength3, .description = "test strengthening case 3")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: (<x> - <y>)^2 -<z>*<x> + <x> - <z>^2 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 -<z>*<x> + <x> - <z>^2 <= 0.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2316,6 +2314,7 @@ Test(interCuts, strength3, .description = "test strengthening case 3")
       SCIP_VAR* expectedvars[3]  = {x, y, z};
       SCIP_Real expectedlhs      = 0.1747724718238416967;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2332,7 +2331,7 @@ Test(interCuts, strength4, .description = "test strengthening case 4")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x>^2 -<z>*<x> + <y>*<x> + <x>- <z> + 2.0 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 -<z>*<x> + <y>*<x> + <x>- <z> + 2.0 <= 0.0");
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2379,6 +2378,7 @@ Test(interCuts, strength4, .description = "test strengthening case 4")
       SCIP_VAR* expectedvars[3]  = {x, y, z};
       SCIP_Real expectedlhs      = 1.3375271971557974;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2399,7 +2399,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
-   simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <x>^2 - 3*<y>^2 + 3*<x>*<y> + <z> + 1.0 <= 0.0");
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 - 3*<y>^2 + 3*<x>*<y> + <z> + 1.0 <= 0.0");
 
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
    cr_assert_not(cutoff);
@@ -2499,6 +2499,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
       SCIP_VAR* expectedvars[2]  = {x, y};
       SCIP_Real expectedlhs      = 0.551754189836395;
 
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       testCut(nlhdlrexprdata, cons, FALSE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }
 
@@ -2508,4 +2509,89 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
    /* register enforcer info in expr and free */
    registerAndFree(cons, nlhdlrexprdata);
 }
-#endif
+
+/* test that stored rays are
+ * x    1     0     0     0
+ * y  = 0 x + 1 y + 0 w + 0 z
+ * z    0     0     0     1
+ */
+Test(interCuts, testBoundRays1)
+{
+   SCIP_Bool cutoff;
+   SCIP_Bool lperror;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONS* cons;
+   SCIP_SOL* sol;
+   SCIP_SOL* vertex;
+
+   /* simplify and detect quadratic structure in: 6xy + 2x^2 -2z^2 + 2 <= 0 */
+   simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
+
+   /*
+    * build LP
+    */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
+   cr_assert_not(cutoff);
+
+   SCIP_CALL( SCIPstartProbing(scip) );
+
+   /* add bounds to vars */
+   SCIPchgVarLbProbing(scip, x, -1.0); SCIPchgVarUbProbing(scip, x, 10.0);
+   SCIPchgVarLbProbing(scip, y, -2.0); SCIPchgVarUbProbing(scip, y, 9.0);
+   SCIPchgVarLbProbing(scip, z, 1.0);
+
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
+   //cr_expect_not(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
+   cr_expect_not(lperror);
+
+   /* choose solution to separate */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 4.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, 6.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
+
+   /* the vertex we separate is {-1.0, 9.0, -, 1.0, -, -}
+    * and bound rays are
+    * x    1      0     0
+    * y  = 0 x + -1 y + 0 z
+    * z    0      0     1
+    */
+   {
+      SCIP_Real expectedvertexcoefs[6] = {-1.0, 9.0, 0.0, 1.0, 0.0, 0.0};
+      SCIP_Real expectedrayscoefs[8] = {1.0, -1.0, 1.0};
+      int expectednrays = 3;
+      int expectednnonz = 3;
+      SCIP_VAR* vars[6] = {x, y, w, z, s, t};
+      SCIP_Bool success;
+
+      /*
+      * find and test nearest vertex and rays
+      */
+      SCIP_CALL( SCIPcreateSol(scip, &vertex, NULL) );
+      SCIP_CALL( findVertexAndGetRays(scip, nlhdlrexprdata, sol, vertex, NULL, &myrays, &success) );
+
+      for( int i = 0; i < 6; ++i )
+      {
+         cr_expect_float_eq(SCIPgetSolVal(scip, vertex, vars[i]), expectedvertexcoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
+            expectedvertexcoefs[i], SCIPgetSolVal(scip, vertex, vars[i]));
+      }
+
+      cr_expect_eq(myrays->nrays, expectednrays, "e %d g %d\n", expectednrays, myrays->nrays);
+      cr_expect_eq(myrays->raysbegin[myrays->nrays], expectednnonz, "e %d g %d\n", expectednnonz, myrays->raysbegin[myrays->nrays]);
+
+      for( int i = 0; i < expectednnonz; ++i )
+      {
+         cr_expect_float_eq(myrays->rays[i], expectedrayscoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
+            expectedrayscoefs[i], myrays->rays[i]);
+      }
+      /* cr_expect_arr_eq(myrays->raysidx, expectedraysidx, expectednnonz * sizeof(int));
+      cr_expect_arr_eq(myrays->lpposray, expectedlppos, expectednrays * sizeof(int));
+      cr_expect_arr_eq(myrays->raysbegin, expectedbegin, (expectednrays + 1) * sizeof(int)); */
+   }
+
+   /* end probing mode */
+   SCIP_CALL( SCIPendProbing(scip) );
+
+   /* register enforcer info in expr and free */
+   registerAndFree(cons, nlhdlrexprdata);
+}

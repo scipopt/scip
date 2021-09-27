@@ -1911,7 +1911,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
 
       /* straighten out numerics */
-      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIPgetHugeValue(scip), &success) );
       if( !success )
       {
          SCIPdebugMsg(scip, "failed to cleanup rowprep numerics for k = %d\n", k);
@@ -2238,7 +2238,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConcave)
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
 
    /* straighten out numerics */
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIPgetHugeValue(scip), &success) );
    if( !success )
    {
       SCIPdebugMsg(scip, "failed to cleanup rowprep numerics\n");

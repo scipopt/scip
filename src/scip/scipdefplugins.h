@@ -224,6 +224,7 @@
 #include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
+#include "scip/sepa_interminor.h"
 #include "scip/sepa_intobj.h"
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_minor.h"
@@ -237,6 +238,7 @@
 #include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
+#include "scip/cutsel_hybrid.h"
 
 #include "scip/expr_varidx.h"
 #include "scip/nlpi_ipopt.h"

@@ -52,6 +52,7 @@
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
+#include "scip/cutsel.h"
 #include "scip/table.h"
 #include "scip/prop.h"
 #include "scip/benders.h"
@@ -418,14 +419,9 @@
                                                  *   bound compared to best node's dual bound for applying local separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_SEPA_MAXCOEFRATIO     1e+4 /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
+#define SCIP_DEFAULT_SEPA_MAXCOEFRATIOFACROWPREP 10.0 /**< maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup */
 #define SCIP_DEFAULT_SEPA_MINEFFICACY      1e-4 /**< minimal efficacy for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  1e-4 /**< minimal efficacy for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_MINORTHO         0.90 /**< minimal orthogonality for a cut to enter the LP */
-#define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.90 /**< minimal orthogonality for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_OBJPARALFAC       0.1 /**< factor to scale objective parallelism of cut in score calculation */
-#define SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC  0.0 /**< factor to scale directed cutoff distance of cut in score calculation */
-#define SCIP_DEFAULT_SEPA_EFFICACYFAC       1.0 /**< factor to scale efficacy of cut in score calculation */
-#define SCIP_DEFAULT_SEPA_INTSUPPORTFAC     0.1 /**< factor to scale integral support of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
                                                  *   's'um, 'd'iscrete) */
@@ -826,6 +822,9 @@ void SCIPsetEnableOrDisablePluginClocks(
    for( i = set->nnodesels - 1; i >= 0; --i )
       SCIPnodeselEnableOrDisableClocks(set->nodesels[i], enabled);
 
+   for ( i = set->ncutsels - 1; i >= 0; --i )
+      SCIPcutselEnableOrDisableClocks(set->cutsels[i], enabled);
+
    for( i = set->nbranchrules - 1; i >= 0; --i )
       SCIPbranchruleEnableOrDisableClocks(set->branchrules[i], enabled);
 }
@@ -853,6 +852,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
    SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copycutselectors,   /**< should the cut selectors be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
@@ -969,6 +969,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = sourceset->nsepas - 1; p >= 0; --p )
       {
          SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
+      }
+   }
+
+   /* copy all cut selector plugins */
+   if( copycutselectors && sourceset->cutsels != NULL )
+   {
+      for( p = sourceset->ncutsels - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPcutselCopyInclude(sourceset->cutsels[p], targetset) );
       }
    }
 
@@ -1154,6 +1163,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nconcsolvers = 0;
    (*set)->concsolverssize = 0;
    (*set)->concurrent_paramsetprefix = NULL;
+   (*set)->cutsels = NULL;
+   (*set)->ncutsels = 0;
+   (*set)->cutselssize = 0;
+   (*set)->cutselssorted = FALSE;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
@@ -2383,6 +2396,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->sepa_maxcoefratio, FALSE, SCIP_DEFAULT_SEPA_MAXCOEFRATIO, 1.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/maxcoefratiofacrowprep",
+         "maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup",
+         &(*set)->sepa_maxcoefratiofacrowprep, FALSE, SCIP_DEFAULT_SEPA_MAXCOEFRATIOFACROWPREP, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/minefficacy",
          "minimal efficacy for a cut to enter the LP",
          &(*set)->sepa_minefficacy, FALSE, SCIP_DEFAULT_SEPA_MINEFFICACY, 0.0, SCIP_INVALID/10.0,
@@ -2391,36 +2409,6 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/minefficacyroot",
          "minimal efficacy for a cut to enter the LP in the root node",
          &(*set)->sepa_minefficacyroot, FALSE, SCIP_DEFAULT_SEPA_MINEFFICACYROOT, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/minortho",
-         "minimal orthogonality for a cut to enter the LP",
-         &(*set)->sepa_minortho, FALSE, SCIP_DEFAULT_SEPA_MINORTHO, 0.0, 1.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/minorthoroot",
-         "minimal orthogonality for a cut to enter the LP in the root node",
-         &(*set)->sepa_minorthoroot, FALSE, SCIP_DEFAULT_SEPA_MINORTHOROOT, 0.0, 1.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/objparalfac",
-         "factor to scale objective parallelism of cut in separation score calculation",
-         &(*set)->sepa_objparalfac, TRUE, SCIP_DEFAULT_SEPA_OBJPARALFAC, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/dircutoffdistfac",
-         "factor to scale directed cutoff distance of cut in score calculation",
-         &(*set)->sepa_dircutoffdistfac, TRUE, SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/efficacyfac",
-         "factor to scale efficacy of cut in score calculation",
-         &(*set)->sepa_efficacyfac, TRUE, SCIP_DEFAULT_SEPA_EFFICACYFAC, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/intsupportfac",
-         "factor to scale integral support of cut in separation score calculation",
-         &(*set)->sepa_intsupportfac, TRUE, SCIP_DEFAULT_SEPA_INTSUPPORTFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
            "separating/minactivityquot",
@@ -2778,6 +2766,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPsepaFree(&(*set)->sepas[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->sepas);
+
+   /* free cut selectors */
+   for( i = 0; i < (*set)->ncutsels; ++i)
+   {
+      SCIP_CALL( SCIPcutselFree(&(*set)->cutsels[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->cutsels);
 
    /* free propagators */
    for( i = 0; i < (*set)->nprops; ++i )
@@ -4225,6 +4220,64 @@ void SCIPsetSortSepasName(
    }
 }
 
+/** inserts cut selector in cut selector list */
+SCIP_RETCODE SCIPsetIncludeCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(set != NULL);
+   assert(cutsel != NULL);
+   assert(!SCIPcutselIsInitialized(cutsel));
+
+   if( set->ncutsels >= set->cutselssize )
+   {
+      set->cutselssize = SCIPsetCalcMemGrowSize(set, set->ncutsels + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->cutsels, set->cutselssize) );
+   }
+   assert(set->ncutsels < set->cutselssize);
+
+   set->cutsels[set->ncutsels] = cutsel;
+   set->ncutsels++;
+   set->cutselssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the cut selector of the given name, or NULL if not existing */
+SCIP_CUTSEL* SCIPsetFindCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      if( strcmp(SCIPcutselGetName(set->cutsels[i]), name) == 0 )
+         return set->cutsels[i];
+   }
+
+   return NULL;
+}
+
+/** sorts cut selectors by priorities */
+void SCIPsetSortCutsels(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->cutselssorted )
+   {
+      SCIPsortPtr((void**)set->cutsels, SCIPcutselComp, set->ncutsels);
+      set->cutselssorted = TRUE;
+   }
+}
+
 /** inserts propagator in propagator list */
 SCIP_RETCODE SCIPsetIncludeProp(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5167,6 +5220,12 @@ SCIP_RETCODE SCIPsetInitPlugins(
       SCIP_CALL( SCIPsepaInit(set->sepas[i], set) );
    }
 
+   /* cut selectors */
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselInit(set->cutsels[i], set) );
+   }
+
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
@@ -5280,6 +5339,12 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->nsepas; ++i )
    {
       SCIP_CALL( SCIPsepaExit(set->sepas[i], set) );
+   }
+
+   /* cut selectors */
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselExit(set->cutsels[i], set) );
    }
 
    /* propagators */
@@ -5467,6 +5532,12 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPsepaInitsol(set->sepas[i], set) );
    }
 
+   /* cut selectors */
+   for( i =0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselInitsol(set->cutsels[i], set) );
+   }
+
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
@@ -5560,6 +5631,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->nsepas; ++i )
    {
       SCIP_CALL( SCIPsepaExitsol(set->sepas[i], set) );
+   }
+
+   /* cut selectors */
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselExitsol(set->cutsels[i], set) );
    }
 
    /* propagators */
@@ -5758,6 +5835,20 @@ int SCIPsetGetSepaMaxcuts(
       return set->sepa_maxcutsroot;
    else
       return set->sepa_maxcuts;
+}
+
+/** returns the maximal ratio between coefficients to ensure in rowprep cleanup */
+SCIP_Real SCIPsetGetSepaMaxCoefRatioRowprep(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Real maxcoefrange;
+
+   maxcoefrange = set->sepa_maxcoefratiofacrowprep / set->num_feastol;
+   if( maxcoefrange < 1.0 )
+      maxcoefrange = 1.0;
+
+   return maxcoefrange;
 }
 
 /** returns user defined objective value (in original space) for reference purposes */
