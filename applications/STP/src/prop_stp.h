@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "scip/scip.h"
-#include "grph.h"
+#include "graph.h"
 #include "probdata_stp.h"
 
 #ifdef __cplusplus
@@ -38,28 +38,59 @@ extern "C" {
 #endif
 
 /** creates the stp propagator and includes it in SCIP */
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** fix a variable (corresponding to an edge) to zero */
-SCIP_RETCODE fixedgevar(
+
+/** fix a variable (corresponding to an edge) to 0 */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpFixEdgeVarTo0(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             edgevar,            /**< the variable to be fixed */
-   int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
+   SCIP_Bool*            success             /**< could variable be fixed? */
    );
 
+
+/** fix a variable (corresponding to an edge) to 1 */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpFixEdgeVarTo1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             edgevar,            /**< the variable to be fixed */
+   SCIP_Bool*            success             /**< could variable be fixed? */
+   );
+
+
 /** return total number of arcs fixed by 'fixedgevar' method of this propagator */
+SCIP_EXPORT
 int SCIPStpNfixedEdges(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+
+/** checks whether problem has become infeasible at current node */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpPropCheckForInfeas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            probisinfeas        /**< is infeasible? */
+   );
+
 /** gets propagator graph  */
-void SCIPStpPropGetGraph(
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpPropGetGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data */
-   SCIP_Longint*         graphnodenumber     /**< pointer to b&b node for which graph is valid */
+   SCIP_Longint*         graphnodenumber,    /**< point to b&b node for which graph is valid */
+   SCIP_Bool*            probisinfeas,       /**< infeasible problem? */
+   SCIP_Real*            offset              /**< needed for PC/MW */
    );
+
+/** gives array indicating which nodes are degree-2 bounded */
+SCIP_EXPORT
+const SCIP_Bool* SCIPStpPropGet2BoundedArr(
+   SCIP*                 scip                /**< SCIP data structure */
+);
 
 #ifdef __cplusplus
 }

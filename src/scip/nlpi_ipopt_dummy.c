@@ -65,7 +65,7 @@ void* SCIPgetNlpiOracleIpopt(
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
+/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
  * It's here, because Ipopt is linked against Lapack.
  */ /*lint -e715*/
 SCIP_RETCODE SCIPcallLapackDsyevIpopt(

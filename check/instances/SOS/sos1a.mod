@@ -1,5 +1,5 @@
 suffix sosno integer IN;
-suffix ref integer IN; 
+suffix ref integer IN;
 
 var s1 >= 0, <= 0.8;
 var s2 >= 0, <= 0.6;

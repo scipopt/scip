@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   grphmcut.c
+/**@file   graph_mcut.c
  * @brief  Minimum cut routine for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch
@@ -25,7 +25,7 @@
  *
  * The implemented algorithm is described in "A Faster Algorithm for Finding the Minimum Cut in a Graph" by Hao and Orlin.
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -35,7 +35,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "portab.h"
-#include "grph.h"
+#include "graph.h"
 
 #define DEBUG        0        /* 0 = No, 1 = Validation, 2 = Show flow       */
 #define STATIST      0
@@ -271,65 +271,6 @@ static int is_valid_arr(
 }
 #endif
 
-/** initialize min cut arrays */
-SCIP_RETCODE graph_mincut_init(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                p                   /**< graph data structure */
-     )
-{
-   assert(p    != NULL);
-   assert(p->mincut_dist == NULL);
-   assert(p->mincut_head == NULL);
-   assert(p->mincut_numb == NULL);
-   assert(p->mincut_prev == NULL);
-   assert(p->mincut_next == NULL);
-   assert(p->mincut_temp == NULL);
-   assert(p->mincut_e    == NULL);
-   assert(p->mincut_x    == NULL);
-   assert(p->mincut_r    == NULL);
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_dist), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head_inact), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_numb), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_prev), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_next), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_temp), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_e), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_r), p->edges) );
-
-   return SCIP_OKAY;
-}
-
-/** frees min cut arrays */
-void graph_mincut_exit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                p                   /**< graph data structure */
-     )
-{
-   assert(p->mincut_dist != NULL);
-   assert(p->mincut_head != NULL);
-   assert(p->mincut_numb != NULL);
-   assert(p->mincut_prev != NULL);
-   assert(p->mincut_next != NULL);
-   assert(p->mincut_temp != NULL);
-   assert(p->mincut_e    != NULL);
-   assert(p->mincut_r    != NULL);
-
-   SCIPfreeMemoryArray(scip, &(p->mincut_r));
-   SCIPfreeMemoryArray(scip, &(p->mincut_e));
-   SCIPfreeMemoryArray(scip, &(p->mincut_temp));
-   SCIPfreeMemoryArray(scip, &(p->mincut_next));
-   SCIPfreeMemoryArray(scip, &(p->mincut_prev));
-   SCIPfreeMemoryArray(scip, &(p->mincut_numb));
-   SCIPfreeMemoryArray(scip, &(p->mincut_head_inact));
-   SCIPfreeMemoryArray(scip, &(p->mincut_head));
-   SCIPfreeMemoryArray(scip, &(p->mincut_dist));
-
-#if STATIST
-   cut_statist();
-#endif
-}
 #if 0
 /** backwards bfs from t along arcs of cap > 0 and set distance labels according to distance from t */
 static int bfs(
@@ -402,12 +343,39 @@ static int bfs(
 }
 #endif
 
+
+/** initializes minimum cut arrays */
+static
+SCIP_RETCODE mincutInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nnodes,
+   int                   nedges,
+   GRAPH*                p                   /**< graph data structure */
+)
+{
+   assert(nnodes > 0 && nedges > 0);
+
+   p->mincut_nnodes = nnodes;
+   p->mincut_nedges = nedges;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_dist), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head_inact), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_numb), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_prev), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_next), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_temp), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_e), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_r), nedges) );
+
+   return SCIP_OKAY;
+}
+
 /** global relabel heuristic that sets distance of sink to zero and relabels all other nodes using backward bfs on residual
  * graph, starting from the sink.  */
 static void globalrelabel(
-   const GRAPH* p,
    const int    s,
    const int    t,
+   const int     nnodesreal,
    int* RESTRICT dist,
    int* RESTRICT headactive,
    int* RESTRICT headinactive,
@@ -426,25 +394,20 @@ static void globalrelabel(
    int*         dormmax
    )
 {
-   int i;
-   int q;
-   int k;
-   int end;
-   int nnodes;
    int currdist;
-   int nextdist;
    int nextnode;
    int actmaxloc;
    int actminloc;
    int glbmaxloc;
    int dormmaxnext;
+   const int nnodes = nnodesreal;
+   const int end = *glbmax;
    SCIP_Bool hit;
 
-   assert(p      != NULL);
    assert(s      >= 0);
-   assert(s      <  p->knots);
+   assert(s      <  nnodesreal);
    assert(t      >= 0);
-   assert(t      <  p->knots);
+   assert(t      <  nnodesreal);
    assert(s      != t);
    assert(w      != NULL);
    assert(headactive != NULL);
@@ -461,15 +424,10 @@ static void globalrelabel(
    assert(headactive != NULL);
    assert(headinactive != NULL);
 
-   nnodes = p->knots;
-
-   assert(*glbmax < nnodes);
-
-   end = *glbmax;
-
+   assert(end < nnodes);
    assert(w[t] == 0);
 
-   for( i = 0; i <= end; i++ )
+   for( int i = 0; i <= end; i++ )
    {
       headactive[i] = Q_NULL;
       headinactive[i] = Q_NULL;
@@ -477,12 +435,16 @@ static void globalrelabel(
          w[i] = -1;
    }
 
-   for( i = 0; i < nnodes; i++ )
+#ifndef NDEBUG
+   for( int i = 0; i < nnodes; i++ )
       assert(headactive[i] == Q_NULL && headinactive[i] == Q_NULL);
+#endif
 
-   for( i = end + 1; i < nnodes; i++ )
+   for( int i = end + 1; i < nnodes; i++ )
+   {
       if( w[i] == 0 )
          w[i] = -1;
+   }
 
    assert(w[t] == -1);
 
@@ -499,22 +461,24 @@ static void globalrelabel(
    /* bfs loop */
    for( currdist = 0; TRUE; currdist++ )
    {
-      nextdist = currdist + 1;
+      const int nextdist = currdist + 1;
 
       /* no more nodes with current distance? */
       if( (headactive[currdist] < 0) && (headinactive[currdist] < 0) )
          break;
 
       /* check inactive nodes */
-      for( i = headinactive[currdist]; i >= 0; i = next[i] )
+      for( int i = headinactive[currdist]; i >= 0; i = next[i] )
       {
-         for( q = edgestart[i], end = edgestart[i + 1]; q != end; q++ )
+         const int edges_start = edgestart[i];
+         const int edges_end = edgestart[i + 1];
+         for( int q = edges_start; q != edges_end; q++ )
          {
             if( residual[edgearr[q]] != 0 )
             {
                if( w[headarr[q]] < 0 )
                {
-                  k = headarr[q];
+                  const int k = headarr[q];
 
                   w[k] = 0;
 
@@ -535,13 +499,15 @@ static void globalrelabel(
       }
 
       /* check active nodes */
-      for( i = headactive[currdist]; i >= 0; i = next[i] )
+      for( int i = headactive[currdist]; i >= 0; i = next[i] )
       {
-         for( q = edgestart[i], end = edgestart[i + 1]; q != end; q++ )
+         const int edges_start = edgestart[i];
+         const int edges_end = edgestart[i + 1];
+         for( int q = edges_start; q != edges_end; q++ )
          {
             if( residual[edgearr[q]] != 0 )
             {
-               k = headarr[q];
+               const int k = headarr[q];
 
                if( w[k] < 0 )
                {
@@ -576,7 +542,7 @@ static void globalrelabel(
    assert(w[t] == 0);
 
    dormmaxnext = (*dormmax) + 1;
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       if( w[i] < 0 )
       {
@@ -596,10 +562,11 @@ static void globalrelabel(
 
 
 /** initialize data for the first max-flow run */
-static void initialise(
-   const GRAPH* p,
+static
+void initialise(
    const int    s,
    const int    t,
+   const int    nnodesreal,
    const int    rootcutsize,
    const int*   rootcut,
    const int*   capa,
@@ -622,7 +589,6 @@ static void initialise(
    int*         glbmax
    )
 {
-   int i;
 #if 0
    int k;
    int e;
@@ -631,19 +597,17 @@ static void initialise(
    int head;
    int nedges;
 #endif
-   int nnodes;
+   const int nnodes = nnodesreal;
    int nextnode;
    int actmaxloc;
    int actminloc;
    int glbmaxloc;
 
-   assert(p      != NULL);
    assert(s      >= 0);
-   assert(s      <  p->knots);
+   assert(s      <  nnodes);
    assert(t      >= 0);
-   assert(t      <  p->knots);
+   assert(t      <  nnodes);
    assert(s      != t);
-   assert(capa   != NULL);
    assert(w      != NULL);
    assert(headactive != NULL);
    assert(headinactive != NULL);
@@ -659,7 +623,6 @@ static void initialise(
    assert(headactive != NULL);
    assert(headinactive != NULL);
 
-   nnodes = p->knots;
 #if 0
    nedges = p->edges;
 #endif
@@ -674,7 +637,7 @@ static void initialise(
    assert(w[t] == 0);
 
    /* set distance labels, and add nodes to lists */
-   for( i = nnodes - 1; i >= 0; i-- )
+   for( int i = nnodes - 1; i >= 0; i-- )
    {
       dist[i] = 1;
 
@@ -866,10 +829,11 @@ static void initialise(
 }
 
 /** initialize data for the repeated max-flow run */
-static void reinitialise(
-   const GRAPH* p,
+static
+void reinitialise(
    const int    s,
    const int    t,
+   const int    nnodesreal,
    const int    rootcutsize,
    const int*   rootcut,
    const int*   capa,
@@ -892,12 +856,7 @@ static void reinitialise(
    int*         glbmax
    )
 {
-   int i;
-   int j;
-   int k;
-   int l;
-   int end;
-   int nnodes;
+   const int nnodes = nnodesreal;
    int visited;
 #if 0
    int a;
@@ -911,13 +870,11 @@ static void reinitialise(
    int dormmaxlocp1;
    SCIP_Bool hit;
 
-   assert(p      != NULL);
    assert(s      >= 0);
-   assert(s      <  p->knots);
+   assert(s      <  nnodes);
    assert(t      >= 0);
-   assert(t      <  p->knots);
+   assert(t      <  nnodes);
    assert(s      != t);
-   assert(capa   != NULL);
    assert(w      != NULL);
    assert(dist != NULL);
    assert(prev != NULL);
@@ -933,12 +890,10 @@ static void reinitialise(
    assert(headinactive != NULL);
 
    /* initialize */
-   nnodes = p->knots;
 
    assert(w[s] == 1);
 
    dormmaxloc = 1;
-
    actmaxloc = 0;
    actminloc = nnodes;
    glbmaxloc = 0;
@@ -946,7 +901,7 @@ static void reinitialise(
    /* t already awake? */
    if( w[t] == 0 )
    {
-      for( i = nnodes - 1; i >= 0; i-- )
+      for( int i = nnodes - 1; i >= 0; i-- )
       {
          headactive[i] = Q_NULL;
          headinactive[i] = Q_NULL;
@@ -965,8 +920,8 @@ static void reinitialise(
    }
    else
    {
-      int wt = w[t];
-      for( i = nnodes - 1; i >= 0; i-- )
+      const int wt = w[t];
+      for( int i = nnodes - 1; i >= 0; i-- )
       {
          headactive[i] = Q_NULL;
          headinactive[i] = Q_NULL;
@@ -995,26 +950,25 @@ static void reinitialise(
    dist[t]         = 0;
 
    /* bfs loop */
-   for( j = 0; j < visited; j++ )
+   for( int j = 0; j < visited; j++ )
    {
+      const int i = temp[j];
+
       assert(visited <= nnodes);
-
-      i = temp[j];
-
       assert(i         >= 0);
       assert(i         <  nnodes);
       assert(dist[i] >= 0);
       assert(dist[i] <  visited);
       assert(w[i]      == 0);
 
-      for( l = edgestart[i], end = edgestart[i + 1]; l != end; l++ )
+      for( int outedge = edgestart[i], end = edgestart[i + 1]; outedge != end; outedge++ )
       {
-         k = headarr[l];
+         const int k = headarr[outedge];
 
          /* not visited yet? */
          if( dist[k] < 0 && w[k] == 0 )
          {
-            if( residual[edgearr[l]] > 0 )
+            if( residual[edgearr[outedge]] > 0 )
             {
                dist[k] = dist[i] + 1;
                temp[visited++] = k;
@@ -1040,7 +994,7 @@ static void reinitialise(
 
    hit = FALSE;
    dormmaxlocp1 = dormmaxloc + 1;
-   for( i = nnodes - 1; i >= 0; i-- )
+   for( int i = nnodes - 1; i >= 0; i-- )
    {
       /* unreachable non-dormant node? */
       if( dist[i] < 0 && w[i] == 0 )
@@ -1121,6 +1075,129 @@ static void reinitialise(
 #endif
 }
 
+
+
+/** sets default values*/
+void graph_mincut_setDefaultVals(
+   GRAPH*                g                   /**< graph data structure */
+     )
+{
+   const int nnodes = g->mincut_nnodes;
+   int* RESTRICT excess = g->mincut_e;
+   int* RESTRICT headactive = g->mincut_head;
+   int* RESTRICT headinactive = g->mincut_head_inact;
+
+   assert(g && excess && headactive && headinactive);
+   assert(g->mincut_nnodes >= g->knots);
+
+   for( int k = 0; k < nnodes; k++ )
+      headactive[k] = Q_NULL;
+
+   for( int k = 0; k < nnodes; k++ )
+      headinactive[k] = Q_NULL;
+
+   for( int k = 0; k < nnodes; k++ )
+      excess[k] = 0;
+}
+
+
+/** initialize min cut arrays */
+SCIP_RETCODE graph_mincut_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                p                   /**< graph data structure */
+     )
+{
+   assert(p    != NULL);
+   assert(!graph_mincut_isInitialized(p));
+
+   SCIP_CALL( mincutInit(scip, p->knots, p->edges, p) );
+
+   return SCIP_OKAY;
+}
+
+
+/** reinitializes minimum cut arrays */
+SCIP_RETCODE graph_mincut_reInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nnodes,
+   int                   nedges,
+   GRAPH*                p                   /**< graph data structure */
+     )
+{
+   if( graph_mincut_isInitialized(p) )
+   {
+      graph_mincut_exit(scip, p);
+   }
+
+   SCIP_CALL( mincutInit(scip, nnodes, nedges, p) );
+
+   return SCIP_OKAY;
+}
+
+
+/** is the minimum data initialized? */
+SCIP_Bool graph_mincut_isInitialized(
+   const GRAPH*          p                   /**< graph data structure */
+     )
+{
+   assert(p);
+
+   if( p->mincut_dist )
+   {
+      assert(p->mincut_dist != NULL);
+      assert(p->mincut_head != NULL);
+      assert(p->mincut_numb != NULL);
+      assert(p->mincut_prev != NULL);
+      assert(p->mincut_next != NULL);
+      assert(p->mincut_temp != NULL);
+      assert(p->mincut_e    != NULL);
+      assert(p->mincut_nnodes > 0);
+
+      return TRUE;
+   }
+
+   assert(p->mincut_nnodes == 0);
+   assert(p->mincut_dist == NULL);
+   assert(p->mincut_head == NULL);
+   assert(p->mincut_numb == NULL);
+   assert(p->mincut_prev == NULL);
+   assert(p->mincut_next == NULL);
+   assert(p->mincut_temp == NULL);
+   assert(p->mincut_e    == NULL);
+   assert(p->mincut_x    == NULL);
+   assert(p->mincut_r    == NULL);
+
+   return FALSE;
+}
+
+
+/** frees min cut arrays */
+void graph_mincut_exit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                p                   /**< graph data structure */
+     )
+{
+   assert(scip && p);
+   assert(graph_mincut_isInitialized(p));
+   assert(p->mincut_nnodes > 0);
+
+   p->mincut_nnodes = 0;
+   p->mincut_nedges = 0;
+   SCIPfreeMemoryArray(scip, &(p->mincut_r));
+   SCIPfreeMemoryArray(scip, &(p->mincut_e));
+   SCIPfreeMemoryArray(scip, &(p->mincut_temp));
+   SCIPfreeMemoryArray(scip, &(p->mincut_next));
+   SCIPfreeMemoryArray(scip, &(p->mincut_prev));
+   SCIPfreeMemoryArray(scip, &(p->mincut_numb));
+   SCIPfreeMemoryArray(scip, &(p->mincut_head_inact));
+   SCIPfreeMemoryArray(scip, &(p->mincut_head));
+   SCIPfreeMemoryArray(scip, &(p->mincut_dist));
+
+#if STATIST
+   cut_statist();
+#endif
+}
+
 /** finds a minimum s-t cut */
 void graph_mincut_exec(
    const GRAPH*          p,
@@ -1135,10 +1212,9 @@ void graph_mincut_exec(
    const int*            edgestart,
    const int*            edgearr,
    const int*            headarr,
-   const SCIP_Bool       rerun
+   const SCIP_Bool       isRerun
    )
 {
-   int    i;
    int    l;
    int    actmax;
    int    actmin;
@@ -1148,15 +1224,15 @@ void graph_mincut_exec(
    int    mindist;
    int    minnode;
    int    minedgestart;
-   int*   e;
-   int*   r;
-   int*   dist;
-   int*   prev;
-   int*   next;
-   int*   temp;
-   int*   edgecurr;
-   int*   headactive;
-   int*   headinactive;
+   int* RESTRICT e;
+   int* RESTRICT r;
+   int* RESTRICT dist;
+   int* RESTRICT prev;
+   int* RESTRICT next;
+   int* RESTRICT temp;
+   int* RESTRICT edgecurr;
+   int* RESTRICT headactive;
+   int* RESTRICT headinactive;
    int j;
    int end;
    int nnodes;
@@ -1175,7 +1251,6 @@ void graph_mincut_exec(
    assert(t      >= 0);
    assert(t      <  p->knots);
    assert(s      != t);
-   assert(capa   != NULL);
    assert(w      != NULL);
    assert(p->mincut_dist   != NULL);
    assert(p->mincut_numb   != NULL);
@@ -1203,24 +1278,29 @@ void graph_mincut_exec(
    relabelupdatebnd = (GLOBALRELABEL_MULT * nnodesreal) + nedgesreal;
    relabeltrigger = 0;
 
-   if( !rerun )
-      initialise(p, s, t, rootcutsize, rootcut, capa, dist, headactive, headinactive, edgecurr, next, prev, temp, e, r, w, edgestart,
+   if( !isRerun )
+   {
+      initialise(s, t, nnodesreal, rootcutsize, rootcut, capa, dist, headactive, headinactive, edgecurr, next, prev, temp, e, r, w, edgestart,
             edgearr, headarr, &dormmax, &actmin, &actmax, &glbmax);
+   }
    else
-      reinitialise(p, s, t, rootcutsize, rootcut, capa, dist, headactive, headinactive, edgecurr, next, prev, temp, e, r, w, edgestart,
+   {
+      reinitialise(s, t, nnodesreal, rootcutsize, rootcut, capa, dist, headactive, headinactive, edgecurr, next, prev, temp, e, r, w, edgestart,
             edgearr, headarr, &dormmax, &actmin, &actmax, &glbmax);
+   }
 
    /* main loop: get highest label node */
    while( actmax >= actmin )
    {
+      const int i = headactive[actmax];
+
       /* no active vertices with distance label == actmax? */
-      if( headactive[actmax] < 0 )
+      if( i < 0 )
       {
          actmax--;
          continue;
       }
 
-      i = headactive[actmax];
 
       assert(actmax <= glbmax);
       assert(dist[i] == actmax);
@@ -1493,7 +1573,7 @@ void graph_mincut_exec(
                      break;
 
                   /* execute global relabel heuristic */
-                  globalrelabel(p, s, t, dist, headactive, headinactive, edgecurr, next, prev,
+                  globalrelabel(s, t, nnodesreal, dist, headactive, headinactive, edgecurr, next, prev,
                         e, r, w, edgestart, edgearr, headarr, &actmin, &actmax, &glbmax, &dormmax);
 
                   relabeltrigger = 0;
@@ -1521,7 +1601,7 @@ void graph_mincut_exec(
             break;
 
          /* execute global relabel heuristic */
-         globalrelabel(p, s, t, dist, headactive, headinactive, edgecurr, next, prev,
+         globalrelabel(s, t, nnodesreal, dist, headactive, headinactive, edgecurr, next, prev,
                e, r, w, edgestart, edgearr, headarr, &actmin, &actmax, &glbmax, &dormmax);
 
          relabeltrigger = 0;
@@ -1531,6 +1611,7 @@ void graph_mincut_exec(
    assert(!w[t]);
 
 #if CHECK
+   assert(capa);
    if( !is_valid_arr(p, s, t, edgestart, headarr, edgearr, r, capa, w) )
       printf("flow is not valid \n");
    assert(is_valid_arr(p, s, t, edgestart, headarr, edgearr, r, capa, w));

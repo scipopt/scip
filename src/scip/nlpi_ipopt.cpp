@@ -258,8 +258,8 @@ public:
 
    /** Method to return some info about the nlp */
    bool get_nlp_info(
-      Index&             n,                  /**< place to store number of variables */ 
-      Index&             m,                  /**< place to store number of constraints */ 
+      Index&             n,                  /**< place to store number of variables */
+      Index&             m,                  /**< place to store number of constraints */
       Index&             nnz_jac_g,          /**< place to store number of nonzeros in jacobian */
       Index&             nnz_h_lag,          /**< place to store number of nonzeros in hessian */
       IndexStyleEnum&    index_style         /**< place to store used index style (0-based or 1-based) */
@@ -267,7 +267,7 @@ public:
 
    /** Method to return the bounds for my problem */
    bool get_bounds_info(
-      Index              n,                  /**< number of variables */ 
+      Index              n,                  /**< number of variables */
       Number*            x_l,                /**< buffer to store lower bounds on variables */
       Number*            x_u,                /**< buffer to store upper bounds on variables */
       Index              m,                  /**< number of constraints */
@@ -277,10 +277,10 @@ public:
 
    /** Method to return the starting point for the algorithm */
    bool get_starting_point(
-      Index              n,                  /**< number of variables */ 
-      bool               init_x,             /**< whether initial values for primal values are requested */ 
+      Index              n,                  /**< number of variables */
+      bool               init_x,             /**< whether initial values for primal values are requested */
       Number*            x,                  /**< buffer to store initial primal values */
-      bool               init_z,             /**< whether initial values for dual values of variable bounds are requested */  
+      bool               init_z,             /**< whether initial values for dual values of variable bounds are requested */
       Number*            z_L,                /**< buffer to store dual values for variable lower bounds */
       Number*            z_U,                /**< buffer to store dual values for variable upper bounds */
       Index              m,                  /**< number of constraints */
@@ -311,24 +311,24 @@ public:
 
    /** Method to return the objective value */
    bool eval_f(
-      Index              n,                  /**< number of variables */ 
-      const Number*      x,                  /**< point to evaluate */ 
+      Index              n,                  /**< number of variables */
+      const Number*      x,                  /**< point to evaluate */
       bool               new_x,              /**< whether some function evaluation method has been called for this point before */
       Number&            obj_value           /**< place to store objective function value */
       );
 
    /** Method to return the gradient of the objective */
    bool eval_grad_f(
-      Index              n,                  /**< number of variables */ 
-      const Number*      x,                  /**< point to evaluate */ 
+      Index              n,                  /**< number of variables */
+      const Number*      x,                  /**< point to evaluate */
       bool               new_x,              /**< whether some function evaluation method has been called for this point before */
       Number*            grad_f              /**< buffer to store objective gradient */
       );
 
    /** Method to return the constraint residuals */
    bool eval_g(
-      Index              n,                  /**< number of variables */ 
-      const Number*      x,                  /**< point to evaluate */ 
+      Index              n,                  /**< number of variables */
+      const Number*      x,                  /**< point to evaluate */
       bool               new_x,              /**< whether some function evaluation method has been called for this point before */
       Index              m,                  /**< number of constraints */
       Number*            g                   /**< buffer to store constraint function values */
@@ -339,12 +339,12 @@ public:
     *   2) The values of the jacobian (if "values" is not NULL)
     */
    bool eval_jac_g(
-      Index              n,                  /**< number of variables */ 
-      const Number*      x,                  /**< point to evaluate */ 
+      Index              n,                  /**< number of variables */
+      const Number*      x,                  /**< point to evaluate */
       bool               new_x,              /**< whether some function evaluation method has been called for this point before */
       Index              m,                  /**< number of constraints */
-      Index              nele_jac,           /**< number of nonzero entries in jacobian */ 
-      Index*             iRow,               /**< buffer to store row indices of nonzero jacobian entries, or NULL if values 
+      Index              nele_jac,           /**< number of nonzero entries in jacobian */
+      Index*             iRow,               /**< buffer to store row indices of nonzero jacobian entries, or NULL if values
                                               * are requested */
       Index*             jCol,               /**< buffer to store column indices of nonzero jacobian entries, or NULL if values
                                               * are requested */
@@ -357,12 +357,12 @@ public:
     *   2) The values of the hessian of the lagrangian (if "values" is not NULL)
     */
    bool eval_h(
-      Index              n,                  /**< number of variables */ 
-      const Number*      x,                  /**< point to evaluate */ 
+      Index              n,                  /**< number of variables */
+      const Number*      x,                  /**< point to evaluate */
       bool               new_x,              /**< whether some function evaluation method has been called for this point before */
-      Number             obj_factor,         /**< weight for objective function */ 
+      Number             obj_factor,         /**< weight for objective function */
       Index              m,                  /**< number of constraints */
-      const Number*      lambda,             /**< weights for constraint functions */ 
+      const Number*      lambda,             /**< weights for constraint functions */
       bool               new_lambda,         /**< whether the hessian has been evaluated for these values of lambda before */
       Index              nele_hess,          /**< number of nonzero entries in hessian */
       Index*             iRow,               /**< buffer to store row indices of nonzero hessian entries, or NULL if values
@@ -373,7 +373,7 @@ public:
       );
 
    /** Method called by the solver at each iteration.
-    * 
+    *
     * Checks whether Ctrl-C was hit.
     */
    bool intermediate_callback(
@@ -394,16 +394,16 @@ public:
 
    /** This method is called when the algorithm is complete so the TNLP can store/write the solution. */
    void finalize_solution(
-      SolverReturn       status,             /**< solve and solution status */ 
-      Index              n,                  /**< number of variables */ 
-      const Number*      x,                  /**< primal solution values */ 
+      SolverReturn       status,             /**< solve and solution status */
+      Index              n,                  /**< number of variables */
+      const Number*      x,                  /**< primal solution values */
       const Number*      z_L,                /**< dual values of variable lower bounds */
       const Number*      z_U,                /**< dual values of variable upper bounds */
-      Index              m,                  /**< number of constraints */ 
-      const Number*      g,                  /**< values of constraints */ 
-      const Number*      lambda,             /**< dual values of constraints */ 
-      Number             obj_value,          /**< objective function value */ 
-      const IpoptData*   data,               /**< pointer to Ipopt Data */ 
+      Index              m,                  /**< number of constraints */
+      const Number*      g,                  /**< values of constraints */
+      const Number*      lambda,             /**< dual values of constraints */
+      Number             obj_value,          /**< objective function value */
+      const IpoptData*   data,               /**< pointer to Ipopt Data */
       IpoptCalculatedQuantities* cq          /**< pointer to calculated quantities */
       );
 };
@@ -1859,8 +1859,8 @@ void* SCIPgetNlpiOracleIpopt(
 
 /** Method to return some info about the nlp */
 bool ScipNLP::get_nlp_info(
-   Index&             n,                  /**< place to store number of variables */ 
-   Index&             m,                  /**< place to store number of constraints */ 
+   Index&             n,                  /**< place to store number of variables */
+   Index&             m,                  /**< place to store number of constraints */
    Index&             nnz_jac_g,          /**< place to store number of nonzeros in jacobian */
    Index&             nnz_h_lag,          /**< place to store number of nonzeros in hessian */
    IndexStyleEnum&    index_style         /**< place to store used index style (0-based or 1-based) */
@@ -1901,7 +1901,7 @@ bool ScipNLP::get_nlp_info(
 
 /** Method to return the bounds for my problem */
 bool ScipNLP::get_bounds_info(
-   Index              n,                  /**< number of variables */ 
+   Index              n,                  /**< number of variables */
    Number*            x_l,                /**< buffer to store lower bounds on variables */
    Number*            x_u,                /**< buffer to store upper bounds on variables */
    Index              m,                  /**< number of constraints */
@@ -1956,10 +1956,10 @@ bool ScipNLP::get_bounds_info(
 
 /** Method to return the starting point for the algorithm */  /*lint -e{715}*/
 bool ScipNLP::get_starting_point(
-   Index              n,                  /**< number of variables */ 
-   bool               init_x,             /**< whether initial values for primal values are requested */ 
+   Index              n,                  /**< number of variables */
+   bool               init_x,             /**< whether initial values for primal values are requested */
    Number*            x,                  /**< buffer to store initial primal values */
-   bool               init_z,             /**< whether initial values for dual values of variable bounds are requested */  
+   bool               init_z,             /**< whether initial values for dual values of variable bounds are requested */
    Number*            z_L,                /**< buffer to store dual values for variable lower bounds */
    Number*            z_U,                /**< buffer to store dual values for variable upper bounds */
    Index              m,                  /**< number of constraints */
@@ -2105,8 +2105,8 @@ bool ScipNLP::get_var_con_metadata(
 
 /** Method to return the objective value */  /*lint -e{715}*/
 bool ScipNLP::eval_f(
-   Index              n,                  /**< number of variables */ 
-   const Number*      x,                  /**< point to evaluate */ 
+   Index              n,                  /**< number of variables */
+   const Number*      x,                  /**< point to evaluate */
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
    Number&            obj_value           /**< place to store objective function value */
    )
@@ -2125,8 +2125,8 @@ bool ScipNLP::eval_f(
 
 /** Method to return the gradient of the objective */  /*lint -e{715}*/
 bool ScipNLP::eval_grad_f(
-   Index              n,                  /**< number of variables */ 
-   const Number*      x,                  /**< point to evaluate */ 
+   Index              n,                  /**< number of variables */
+   const Number*      x,                  /**< point to evaluate */
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
    Number*            grad_f              /**< buffer to store objective gradient */
    )
@@ -2154,8 +2154,8 @@ bool ScipNLP::eval_grad_f(
 
 /** Method to return the constraint residuals */  /*lint -e{715}*/
 bool ScipNLP::eval_g(
-   Index              n,                  /**< number of variables */ 
-   const Number*      x,                  /**< point to evaluate */ 
+   Index              n,                  /**< number of variables */
+   const Number*      x,                  /**< point to evaluate */
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
    Index              m,                  /**< number of constraints */
    Number*            g                   /**< buffer to store constraint function values */
@@ -2178,13 +2178,13 @@ bool ScipNLP::eval_g(
  *   2) The values of the jacobian (if "values" is not NULL)
  */  /*lint -e{715}*/
 bool ScipNLP::eval_jac_g(
-   Index              n,                  /**< number of variables */ 
-   const Number*      x,                  /**< point to evaluate */ 
+   Index              n,                  /**< number of variables */
+   const Number*      x,                  /**< point to evaluate */
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
    Index              m,                  /**< number of constraints */
-   Index              nele_jac,           /**< number of nonzero entries in jacobian */ 
+   Index              nele_jac,           /**< number of nonzero entries in jacobian */
    Index*             iRow,               /**< buffer to store row indices of nonzero jacobian entries, or NULL if values are requested */
-   Index*             jCol,               /**< buffer to store column indices of nonzero jacobian entries, or NULL if values are requested */                  
+   Index*             jCol,               /**< buffer to store column indices of nonzero jacobian entries, or NULL if values are requested */
    Number*            values              /**< buffer to store values of nonzero jacobian entries, or NULL if structure is requested */
    )
 { /*lint --e{715}*/
@@ -2241,16 +2241,16 @@ bool ScipNLP::eval_jac_g(
  *   2) The values of the hessian of the lagrangian (if "values" is not NULL)
  */   /*lint -e{715}*/
 bool ScipNLP::eval_h(
-   Index              n,                  /**< number of variables */ 
-   const Number*      x,                  /**< point to evaluate */ 
+   Index              n,                  /**< number of variables */
+   const Number*      x,                  /**< point to evaluate */
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
-   Number             obj_factor,         /**< weight for objective function */ 
+   Number             obj_factor,         /**< weight for objective function */
    Index              m,                  /**< number of constraints */
-   const Number*      lambda,             /**< weights for constraint functions */ 
+   const Number*      lambda,             /**< weights for constraint functions */
    bool               new_lambda,         /**< whether the hessian has been evaluated for these values of lambda before */
    Index              nele_hess,          /**< number of nonzero entries in hessian */
    Index*             iRow,               /**< buffer to store row indices of nonzero hessian entries, or NULL if values are requested */
-   Index*             jCol,               /**< buffer to store column indices of nonzero hessian entries, or NULL if values are requested */                  
+   Index*             jCol,               /**< buffer to store column indices of nonzero hessian entries, or NULL if values are requested */
    Number*            values              /**< buffer to store values of nonzero hessian entries, or NULL if structure is requested */
    )
 {  /*lint --e{715}*/
@@ -2307,7 +2307,7 @@ bool ScipNLP::eval_h(
 }
 
 /** Method called by the solver at each iteration.
- * 
+ *
  * Checks whether SCIP solve is interrupted, objlimit is reached, or fastfail is triggered.
  * Sets solution and termination status accordingly.
  */   /*lint -e{715}*/
@@ -2423,16 +2423,16 @@ bool ScipNLP::intermediate_callback(
 
 /** This method is called when the algorithm is complete so the TNLP can store/write the solution. */  /*lint -e{715}*/
 void ScipNLP::finalize_solution(
-   SolverReturn       status,             /**< solve and solution status */ 
-   Index              n,                  /**< number of variables */ 
-   const Number*      x,                  /**< primal solution values */ 
+   SolverReturn       status,             /**< solve and solution status */
+   Index              n,                  /**< number of variables */
+   const Number*      x,                  /**< primal solution values */
    const Number*      z_L,                /**< dual values of variable lower bounds */
    const Number*      z_U,                /**< dual values of variable upper bounds */
-   Index              m,                  /**< number of constraints */ 
-   const Number*      g,                  /**< values of constraints */ 
-   const Number*      lambda,             /**< dual values of constraints */ 
-   Number             obj_value,          /**< objective function value */ 
-   const IpoptData*   data,               /**< pointer to Ipopt Data */ 
+   Index              m,                  /**< number of constraints */
+   const Number*      g,                  /**< values of constraints */
+   const Number*      lambda,             /**< dual values of constraints */
+   Number             obj_value,          /**< objective function value */
+   const IpoptData*   data,               /**< pointer to Ipopt Data */
    IpoptCalculatedQuantities* cq          /**< pointer to calculated quantities */
    )
 { /*lint --e{715}*/

@@ -142,6 +142,10 @@ Examples and applications
 
 - Add c++ Sudoku example
 - Removed circle.c and renamed string.c to spring.c in CallableLibrary example.
+- SCIP-Jack (Steiner tree application):
+  Most files have been modified and many new ones have been added (code base more than doubled).
+  Two new problem classes are supported: maximum-weight connected subgraph problem with budget constraints, partial-terminal node-weighted Steiner tree problem.
+  Major performance improvements accross all problem classes that are supported.
 
 Interface changes
 -----------------
@@ -859,6 +863,7 @@ Fixed bugs
 - worked around a problem with derivatives of pow at 0 with non-integer exponents in CppAD
 - fixed that setting of feasiblity and optimiality tolerance for NLP relaxation was overwritten with defaults when solving NLP
 - fixed potential overflow in cuts.c:evaluateLiftingFunctionKnapsack()
+- do not transfer dual reductions to main SCIP in sepa_rapidlearning if strong dual reductions are forbidden
 
 Miscellaneous
 -------------
