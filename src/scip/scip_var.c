@@ -6524,7 +6524,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
       goto RETURN_SCIP_OKAY;
    }
 
-   if( RatIsGE(newbound, ub) ) {
+   if( RatIsGE(adjustedBound, ub) ) {
       goto RETURN_SCIP_OKAY;
    }
 
@@ -6537,10 +6537,10 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       SCIP_CALL( SCIPvarChgUbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
-            scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+            scip->branchcand, scip->eventqueue, scip->cliquetable, adjustedBound) );
       SCIP_CALL( SCIPvarChgUbLocalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
-            scip->branchcand, scip->eventqueue, newbound) );
-      SCIP_CALL( SCIPvarChgUbOriginalExact(var, scip->set, newbound) );
+            scip->branchcand, scip->eventqueue, adjustedBound) );
+      SCIP_CALL( SCIPvarChgUbOriginalExact(var, scip->set, adjustedBound) );
       break;
 
    case SCIP_STAGE_PRESOLVING:
@@ -6550,7 +6550,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
+               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, adjustedBound,
                SCIP_BOUNDTYPE_UPPER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
@@ -6564,7 +6564,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinferExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_UPPER, infercons, NULL, inferinfo, FALSE) );
+            scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_UPPER, infercons, NULL, inferinfo, FALSE) );
       break;
 
    default:
@@ -6642,7 +6642,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
       goto RETURN_SCIP_OKAY;
    }
 
-   if( RatIsLE(newbound, lb) ) {
+   if( RatIsLE(adjustedBound, lb) ) {
       goto RETURN_SCIP_OKAY;
    }
 
@@ -6655,10 +6655,10 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       SCIP_CALL( SCIPvarChgLbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
-            scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+            scip->branchcand, scip->eventqueue, scip->cliquetable, adjustedBound) );
       SCIP_CALL( SCIPvarChgLbLocalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
-            scip->branchcand, scip->eventqueue, newbound) );
-      SCIP_CALL( SCIPvarChgLbOriginalExact(var, scip->set, newbound) );
+            scip->branchcand, scip->eventqueue, adjustedBound) );
+      SCIP_CALL( SCIPvarChgLbOriginalExact(var, scip->set, adjustedBound) );
       break;
 
    case SCIP_STAGE_PRESOLVING:
@@ -6668,7 +6668,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
          assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
 
          SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
+               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, adjustedBound,
                SCIP_BOUNDTYPE_LOWER, FALSE) );
 
          if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
@@ -6682,7 +6682,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundinferExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
             scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue,
-            scip->cliquetable, var, newbound, SCIP_BOUNDTYPE_LOWER, infercons, NULL, inferinfo, FALSE) );
+            scip->cliquetable, var, adjustedBound, SCIP_BOUNDTYPE_LOWER, infercons, NULL, inferinfo, FALSE) );
       break;
 
    default:
