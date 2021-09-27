@@ -507,12 +507,12 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #endif
       case ReductionType::kSubstitutedCol:
       {
-         int rowlen;
          int col;
          SCIP_Real side;
 
-         int startRowCoefficients;
-         int lastRowCoefficients;
+         int rowlen = 0;
+         int startRowCoefficients = 0;
+         int lastRowCoefficients = 0;
 
          if( type == ReductionType::kSubstitutedCol )
          {
