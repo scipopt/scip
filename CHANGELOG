@@ -40,6 +40,8 @@ Features
 - MIR procedure is now available for strengthening the Benders' optimality cut
 - SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
 - New plugin type for cut selection: users can now include their own cut selection rules, default rule moved to cutsel_hybrid.
+- New construction heuristic DPS which additionally needs a user-provided decomposition and splits the problem into several sub-SCIPs
+  according to this decomposition. The sub-SCIPs are solved and updated repeatedly until a feasible solution of the original problem is found.
 
 Expressions:
 - Removed support for expression types min and max for now. Removed support for expression type sign.
