@@ -639,8 +639,7 @@ Cut Selector:
 - Removed parameters for strongcg separator: separating/strongcg/..., i.e.,
   maxrounds, maxroundsroot, maxsepacutsroot, maxsepacuts, dynamiccuts. One can control the
   strongcg behavior throught the parameters of sepa_gomory.
-- renamed separating/minorthoroot to cutselection/hybrid/minorthoroot
-- renamed separating/minortho to cutselection/hybrid/minortho
+- renamed separating/{minortho,minorthoroot,objparalfac,intsupportfac} to cutselection/hybrid/{minortho,minorthoroot,objparalweight,intsupportweight}
 
 ### New parameters
 
