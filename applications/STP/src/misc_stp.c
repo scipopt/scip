@@ -31,15 +31,136 @@
 
 #include <assert.h>
 #include <string.h>
-#include "heur_tm.h"
 #include "probdata_stp.h"
 #include "portab.h"
-#include "scip/misc.h"
+#include "misc_stp.h"
 
 
-/** returns maximum of given SCIP_Real values */
-SCIP_Real misc_stp_maxReal(
-   SCIP_Real*            realarr,            /**< array of reals */
+/** internal method for combining the siblings after the root has been deleted */
+static
+SCIP_RETCODE pairheapCombineSiblings(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PHNODE**              p,                  /**< the first sibling */
+   int                   size                /**< the size of the heap */
+   )
+{
+   PHNODE** treearray;
+   int i;
+   int j;
+   int nsiblings;
+   if( (*p)->sibling == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &treearray, size) );
+
+   /* store all siblings in an array */
+   for( nsiblings = 0; (*p) != NULL; nsiblings++ )
+   {
+      assert(size > nsiblings);
+      treearray[nsiblings] = (*p);
+      if( (*p)->prev != NULL )
+         (*p)->prev->sibling = NULL;
+      (*p) = (*p)->sibling;
+   }
+   assert(size > nsiblings);
+   treearray[nsiblings] = NULL;
+
+   /* combine the subtrees (two at a time) */
+   for( i = 0; i < nsiblings - 1; i += 2 )
+   {
+      treearray[i] = SCIPpairheapMergeheaps(scip, treearray[i], treearray[i + 1]);
+   }
+   j = i - 2;
+
+   /* if the number of trees is odd, get the last one */
+   if( j == nsiblings - 3 )
+   {
+      treearray[j] = SCIPpairheapMergeheaps(scip, treearray[j], treearray[j + 2]);
+   }
+
+   for( ; j >= 2; j -= 2 )
+   {
+      treearray[j - 2] = SCIPpairheapMergeheaps(scip, treearray[j - 2], treearray[j]);
+   }
+
+   (*p) = treearray[0];
+
+   SCIPfreeBufferArray(scip, &treearray);
+
+   return SCIP_OKAY;
+}
+
+
+/** internal method used by 'pairheap_buffarr' */
+static
+void pairheapRec(
+   const PHNODE* p,
+   int* RESTRICT arr,
+   int* RESTRICT n
+   )
+{
+   if( p == NULL )
+   {
+      return;
+   }
+
+   arr[(*n)++] = p->element;
+   pairheapRec(p->sibling, arr, n);
+   pairheapRec(p->child, arr, n);
+}
+
+
+
+/** add heap to heap */
+static
+PHNODE* pairheapAddtoHeap(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PHNODE*               root1,              /**< pointer to root of first heap */
+   PHNODE*               root2               /**< pointer to root of second heap */
+   )
+{
+   assert(root2 != NULL);
+   assert(root1 != NULL);
+
+   if( root1->key <= root2->key )
+   {
+      /* attach root2 as (the leftmost) child of root1 */
+      root2->prev = root1;
+      root1->sibling = root2->sibling;
+      /* @todo: should never happen */
+      if( root1->sibling != NULL )
+      {
+         root1->sibling->prev = root1;
+      }
+
+      root2->sibling = root1->child;
+      if( root2->sibling != NULL )
+         root2->sibling->prev = root2;
+
+      root1->child = root2;
+
+      return root1;
+   }
+   else
+   {
+      /* attach root1 as (the leftmost) child of root2 */
+      root2->prev = root1->prev;
+      root1->prev = root2;
+      root1->sibling = root2->child;
+      if( root1->sibling != NULL )
+         root1->sibling->prev = root1;
+
+      root2->child = root1;
+
+      return root2;
+   }
+}
+
+
+/** returns maximum of given SCIP_Real values
+ *  todo check whether this is really more efficient than a variadic function */
+SCIP_Real miscstp_maxReal(
+   const SCIP_Real*      realarr,            /**< array of reals */
    unsigned              nreals              /**< size of array of reals */
   )
 {
@@ -48,8 +169,10 @@ SCIP_Real misc_stp_maxReal(
    assert(nreals >= 1);
 
    for( unsigned i = 1; i < nreals; i++ )
+   {
       if( realarr[i] > max )
          max = realarr[i];
+   }
 
    return max;
 }
@@ -201,6 +324,23 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
    return SCIP_OKAY;
 }
 
+
+/** append list pertaining to node2 to (non-empty!) node1 */
+void SCIPintListNodeAppend(
+   IDX*                  node1,              /**< pointer to the last node of non-empty list to be enlarged */
+   IDX*                  node2               /**< pointer to the last node of source list */
+   )
+{
+   IDX* curr = node1;
+   assert(node1);
+
+   while( curr->parent )
+      curr = curr->parent;
+
+   curr->parent = node2;
+}
+
+
 /** free list */
 void SCIPintListNodeFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -224,77 +364,73 @@ void SCIPintListNodeFree(
  */
 
 /** inits a node, setting 'parent' and 'edge' to its default values */
-void SCIPlinkcuttreeInit(
-   NODE*                 v                   /**< pointer to node representing the tree */
+void SCIPlinkcuttreeInitNode(
+   LCNODE*               v                   /**< pointer to node  */
    )
 {
-   v->parent = NULL;
+   v->parent = -1;
    v->edge = -1;
 }
 
-/** renders v a child of w; v has to be the root of its tree */
+
+/** renders v a child of w; v has to be the root index of its tree */
 void SCIPlinkcuttreeLink(
-   NODE*                 v,                  /**< pointer to node representing the tree */
-   NODE*                 w,                  /**< pointer to the child */
+   LCNODE*               tree,               /**< the tree */
+   int                   v,                  /**< pointer to node representing the tree */
+   int                   w,                  /**< pointer to node of another tree */
    int                   edge                /**< link edge */
    )
 {
-   assert(v->parent == NULL);
-   assert(v->edge == -1);
-   v->parent = w;
-   v->edge = edge;
+   assert(tree[v].parent == -1);
+   assert(tree[v].edge == -1);
+   tree[v].parent = w;
+   tree[v].edge = edge;
 }
 
+
 /** cut tree at given node */
-void SCIPlinkcuttreeCut(
-   NODE*                 v                   /**< node to cut at */
+void SCIPlinkcuttreeCutNode(
+   LCNODE*               v                   /**< node to cut at */
    )
 {
    v->edge = -1;
-   v->parent = NULL;
+   v->parent = -1;
 }
 
 /** finds minimum weight chain between node 'start' and distinct root node **/
-SCIP_Real SCIPlinkcuttreeFindMinChain(
+SCIP_Real SCIPlinkcuttreeFindMinChainMw(
    SCIP*                 scip,               /**< SCIP data structure */
+   const LCNODE*         tree,               /**< tree */
    const SCIP_Real*      nodeweight,         /**< node weight array */
-   const int*            head,               /**< head of an arc */
+   const int*            heads,              /**< head of an arc */
    const int*            stdeg,              /**< degree in Steiner tree */
-   const NODE*           start,              /**< the node to start at */
-   NODE**                first,              /**< first node of chain */
-   NODE**                last                /**< last node of chain */
+   const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
+   int                   start,              /**< the node to start at */
+   int*                  first,              /**< first node of chain */
+   int*                  last                /**< last node of chain */
    )
 {
-   NODE* curr;
-   NODE* tmpfirst;
-   SCIP_Real min;
-   SCIP_Real tmpmin;
-   SCIP_Bool stopped;
-   int node;
+   int tmpfirst = -1;
+   SCIP_Real min = 0.0;
+   SCIP_Real tmpmin = 0.0;
+   SCIP_Bool stopped = TRUE;
 
-   assert(scip != NULL);
-   assert(head != NULL);
-   assert(nodeweight != NULL);
-   assert(stdeg != NULL);
-   assert(start != NULL);
-   assert(first != NULL);
-   assert(last != NULL);
+   assert(scip && heads && nodeweight && nodeIsBlocked && stdeg && first && last);
 
-   *last = NULL;
-   *first = NULL;
+   *first = -1;
+   *last = -1;
 
-   min = 0.0;
-   tmpmin = 0.0;
-   stopped = TRUE;
-
-   /* while p is not root */
-   for( curr = (NODE*) start; curr->parent != NULL; curr = curr->parent )
+   /* while curr is not root */
+   for( int curr = start; tree[curr].parent != -1; curr = tree[curr].parent )
    {
-      assert(curr->edge >= 0);
+      int head;
+      const SCIP_Bool headIsRoot = (tree[tree[curr].parent].parent == -1);
 
-      node = head[curr->edge];
+      assert(tree[curr].edge >= 0);
 
-      if( stdeg[node] == 2 && !SCIPisPositive(scip, nodeweight[node]) && curr->parent->parent != NULL )
+      head = heads[tree[curr].edge];
+
+      if( stdeg[head] == 2 && nodeweight[head] < 0.0 && !headIsRoot && !nodeIsBlocked[head] )
       {
          if( stopped )
          {
@@ -302,18 +438,20 @@ SCIP_Real SCIPlinkcuttreeFindMinChain(
             tmpmin = 0.0;
             tmpfirst = curr;
          }
-         tmpmin += nodeweight[node];
+
+         tmpmin += nodeweight[head];
       }
       else
       {
          /* better chain found? */
          if( !stopped && SCIPisLT(scip, tmpmin, min) )
          {
-            assert(tmpfirst != NULL);
+            assert(tmpfirst != -1);
             min = tmpmin;
             *first = tmpfirst;
             *last = curr;
          }
+
          stopped = TRUE;
       }
    }
@@ -322,55 +460,143 @@ SCIP_Real SCIPlinkcuttreeFindMinChain(
 }
 
 
-
-/** finds the max edge value between node 'v' and the root of the tree **/
-NODE* SCIPlinkcuttreeFindMax(
+/** Finds maximum weight chain between node 'start' and distinct root node and returns cost.
+ ** Note: 'last' is the tail of the last edge of the chain. So if 'last' and 'first' coincide, the chain is an edge. */
+SCIP_Real SCIPlinkcuttreeFindMaxChain(
    SCIP*                 scip,               /**< SCIP data structure */
-   const SCIP_Real*      cost,               /**< edge cost array */
-   NODE*                 v                   /**< the node */
+   const LCNODE*         tree,               /**< tree */
+   const SCIP_Real*      edgecosts,          /**< edge cost array */
+   const SCIP_Real*      prizes,             /**< node weight array for PC/RPC */
+   const int*            heads,              /**< head of an arc */
+   const int*            nonTermDeg,         /**< degree in Steiner tree, or UNKNOWN if vertex is terminal */
+   const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
+   int                   start,              /**< the node to start at (NOT the root!) */
+   int*                  first,              /**< first node of chain */
+   int*                  last                /**< last node of chain */
    )
 {
-   NODE* p = v;
-   NODE* q = v;
-   SCIP_Real max = -1;
+   int tmpfirst = -1;
+   SCIP_Real max;
+   SCIP_Real tmpmax;
+   SCIP_Bool reset_chain;
+   const SCIP_Bool withPrize = (prizes != NULL);
+
+   assert(tree && edgecosts && heads && nonTermDeg && first && last && nodeIsBlocked);
+   assert(tree[start].parent != -1); /* start should not be the root */
+   assert(tree[start].edge >= 0);
+
+   *first = -1;
+   *last = -1;
+
+   max = -1.0;
+   tmpmax = 0.0;
+   reset_chain = TRUE;
+
+   /* while curr is not root */
+   for( int curr = start; tree[curr].parent != -1; curr = tree[curr].parent )
+   {
+      int head;
+      const int edge = tree[curr].edge;
+      const SCIP_Bool headIsRoot = (tree[tree[curr].parent].parent == -1);
+
+      assert(edge >= 0);
+
+      /* is the current node the last one of a chain? */
+      if( reset_chain )
+      {
+         tmpfirst = curr;
+         tmpmax = 0.0;
+      }
+
+      assert(SCIPisGE(scip, tmpmax, 0.0));
+
+      tmpmax += edgecosts[edge];
+
+      head = heads[edge];
+
+      /* is head of degree 2, allowed, and not the root?  */
+      if( nonTermDeg[head] == 2 && !nodeIsBlocked[head] && !headIsRoot )
+      {
+         reset_chain = FALSE;
+
+         if( withPrize )
+         {
+            assert(SCIPisGE(scip, edgecosts[edge], prizes[head]));
+            tmpmax -= prizes[head];
+         }
+      }
+      else
+      {
+         /* better chain found? */
+         if( tmpmax > max )
+         {
+            assert(tmpfirst != -1 && curr != -1);
+
+            max = tmpmax;
+            *first = tmpfirst;
+            *last = curr;
+         }
+
+         reset_chain = TRUE;
+      }
+   }
+
+   assert(max > -0.5);
+   assert(*last != -1 && *first != -1);
+
+   return max;
+}
+
+
+/** finds the max edge value between node 'v' and the root of the tree
+ *  Returns index of node that has this edge */
+int SCIPlinkcuttreeFindMax(
+   const LCNODE*         tree,                /**< tree */
+   const SCIP_Real*      cost,                /**< edge cost array */
+   int                   v                    /**< the node */
+   )
+{
+   int p = v;
+   int q = v;
+   SCIP_Real max = -1.0;
 
    /* while p is not the root */
-   while( p->parent != NULL )
+   while( tree[p].parent != -1 )
    {
-      assert(p->edge >= 0);
-      if( SCIPisGE(scip, cost[p->edge], max) )
+      assert(tree[p].edge >= 0);
+      if( GE(cost[tree[p].edge], max) )
       {
-         max = cost[p->edge];
+         max = cost[tree[p].edge];
          q = p;
       }
-      p = p->parent;
+      p = tree[p].parent;
    }
+
    return q;
 }
 
 /** makes vertex v the root of the link cut tree */
 void SCIPlinkcuttreeEvert(
-   NODE*                 v                   /**< the vertex to become the root */
+   LCNODE* RESTRICT      tree,                /**< tree */
+   int                   root_new             /**< the vertex to become the root  */
    )
 {
-   NODE* p = NULL;
-   NODE* q = v;
-   NODE* r;
-   int val = -1;
-   int tmpval;
+   int p = -1;
+   int q = root_new;
+   int edge = -1;
 
-   assert(v != NULL);
-
-   while( q != NULL )
+   while( q != -1 )
    {
-      r = q->parent;
-      tmpval =  q->edge;
-      if( val != -1 )
-         q->edge = flipedge(val);
+      const int tmpedge = tree[q].edge;
+      const int r = tree[q].parent;
+
+      if( edge != -1 )
+         tree[q].edge = flipedge(edge);
       else
-         q->edge = -1;
-      val = tmpval;
-      q->parent = p;
+         tree[q].edge = -1;
+
+      edge = tmpedge;
+      tree[q].parent = p;
       p = q;
       q = r;
    }
@@ -425,135 +651,38 @@ PHNODE* SCIPpairheapMergeheaps(
    }
 }
 
-/** add heap to heap */
-PHNODE* SCIPpairheapAddtoheap(
-   SCIP*                 scip,               /**< SCIP data structure */
-   PHNODE*               root1,              /**< pointer to root of first heap */
-   PHNODE*               root2               /**< pointer to root of second heap */
-   )
-{
-   assert(root2 != NULL);
-   assert(root1 != NULL);
-
-   if( root1->key <= root2->key )
-   {
-      /* attach root2 as (the leftmost) child of root1 */
-      root2->prev = root1;
-      root1->sibling = root2->sibling;
-      /* @todo: should never happen */
-      if( root1->sibling != NULL )
-      {
-         root1->sibling->prev = root1;
-      }
-
-      root2->sibling = root1->child;
-      if( root2->sibling != NULL )
-         root2->sibling->prev = root2;
-
-      root1->child = root2;
-
-      return root1;
-   }
-   else
-   {
-      /* attach root1 as (the leftmost) child of root2 */
-      root2->prev = root1->prev;
-      root1->prev = root2;
-      root1->sibling = root2->child;
-      if( root1->sibling != NULL )
-         root1->sibling->prev = root1;
-
-      root2->child = root1;
-
-      return root2;
-   }
-}
-
-/** internal method for combining the siblings after the root has been deleted */
-static
-SCIP_RETCODE pairheapCombineSiblings(
-   SCIP*                 scip,               /**< SCIP data structure */
-   PHNODE**              p,                  /**< the first sibling */
-   int                   size                /**< the size of the heap */
-   )
-{
-   PHNODE** treearray;
-   int i;
-   int j;
-   int nsiblings;
-   if( (*p)->sibling == NULL )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &treearray, size) );
-
-   /* store all siblings in an array */
-   for( nsiblings = 0; (*p) != NULL; nsiblings++ )
-   {
-      assert(size > nsiblings);
-      treearray[nsiblings] = (*p);
-      if( (*p)->prev != NULL )
-         (*p)->prev->sibling = NULL;
-      (*p) = (*p)->sibling;
-   }
-   assert(size > nsiblings);
-   treearray[nsiblings] = NULL;
-
-   /* combine the subtrees (two at a time) */
-   for( i = 0; i < nsiblings - 1; i += 2 )
-   {
-      treearray[i] = SCIPpairheapMergeheaps(scip, treearray[i], treearray[i + 1]);
-   }
-   j = i - 2;
-
-   /* if the number of trees is odd, get the last one */
-   if( j == nsiblings - 3 )
-   {
-      treearray[j] = SCIPpairheapMergeheaps(scip, treearray[j], treearray[j + 2]);
-   }
-
-   for( ; j >= 2; j -= 2 )
-   {
-      treearray[j - 2] = SCIPpairheapMergeheaps(scip, treearray[j - 2], treearray[j]);
-   }
-
-   (*p) = treearray[0];
-
-   SCIPfreeBufferArray(scip, &treearray);
-
-   return SCIP_OKAY;
-}
-
 
 /** inserts a new node into the pairing heap */
 SCIP_RETCODE SCIPpairheapInsert(
    SCIP*                 scip,               /**< SCIP data structure */
    PHNODE**              root,               /**< pointer to root of the heap */
+   PHNODE*               pheapelems,         /**< data array */
    int                   element,            /**< data of new node */
    SCIP_Real             key,                /**< key of new node */
    int*                  size                /**< pointer to size of the heap */
    )
 {
+   assert(pheapelems[element].element == -1);
+
    if( (*root) == NULL )
    {
       (*size) = 1;
-      SCIP_CALL( SCIPallocBlockMemory(scip, root) );
-      (*root)->key = key;
-      (*root)->element = element;
-      (*root)->child = NULL;
-      (*root)->sibling = NULL;
-      (*root)->prev = NULL;
+      pheapelems[element].key = key;
+      pheapelems[element].element = element;
+      pheapelems[element].child = NULL;
+      pheapelems[element].sibling = NULL;
+      pheapelems[element].prev = NULL;
+      *root = &(pheapelems[element]);
    }
    else
    {
-      PHNODE* node;
       (*size)++;
-      SCIP_CALL( SCIPallocBlockMemory(scip, &node) );
-      node->key = key;
-      node->element = element;
-      node->child = NULL;
-      node->sibling = NULL;
-      node->prev = NULL;
-      (*root) = SCIPpairheapAddtoheap(scip, (*root), node);
+      pheapelems[element].key = key;
+      pheapelems[element].element = element;
+      pheapelems[element].child = NULL;
+      pheapelems[element].sibling = NULL;
+      pheapelems[element].prev = NULL;
+      (*root) = pairheapAddtoHeap(scip, (*root), &pheapelems[element]);
    }
    return SCIP_OKAY;
 }
@@ -588,7 +717,7 @@ SCIP_RETCODE SCIPpairheapDeletemin(
          SCIP_CALL( pairheapCombineSiblings(scip, &newroot, (*size)--) );
       }
 
-      SCIPfreeBlockMemory(scip, root);
+      (*root)->element = -1;
       (*root) = newroot;
    }
    return SCIP_OKAY;
@@ -642,41 +771,24 @@ void SCIPpairheapFree(
       SCIPpairheapFree(scip, &((*root)->child));
    }
 
-   SCIPfreeBlockMemory(scip, root);
+   (*root)->element = -1;
    (*root) = NULL;
-
-}
-
-
-/** internal method used by 'pairheap_buffarr' */
-static
-void pairheapRec(
-   PHNODE* p,
-   int** arr,
-   int* n
-   )
-{
-   if( p == NULL )
-   {
-      return;
-   }
-   (*arr)[(*n)++] = p->element;
-   pairheapRec(p->sibling, arr, n);
-   pairheapRec(p->child, arr, n);
 }
 
 
 /** stores all elements of the pairing heap in an array */
 SCIP_RETCODE SCIPpairheapBuffarr(
    SCIP*                 scip,               /**< SCIP data structure */
-   PHNODE*               root,               /**< root of the heap */
+   const PHNODE*         root,               /**< root of the heap */
    int                   size,               /**< size of the array */
-   int**                 elements            /**< pointer to array */
+   int**                 elements            /**< pointer to array (will be allocated) */
    )
 {
    int n = 0;
+
    SCIP_CALL( SCIPallocBufferArray(scip, elements, size) );
-   pairheapRec(root, elements, &n);
+   pairheapRec(root, *elements, &n);
+
    return SCIP_OKAY;
 }
 
@@ -689,14 +801,19 @@ SCIP_RETCODE SCIPpairheapBuffarr(
 SCIP_RETCODE SCIPStpunionfindInit(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
-   int                   length              /**< number of components */
+   int                   length              /**< number of elements */
    )
 {
-   int i;
-   uf->count = length;
+   assert(length > 0);
+
+   uf->nComponents = length;
+   uf->nElements = length;
+
    SCIP_CALL( SCIPallocMemoryArray(scip, &(uf->parent), length) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(uf->size), length) );
-   for( i = 0; i < length; i++ ) {
+
+   for( int i = 0; i < length; i++ )
+   {
       uf->parent[i] = i;
       uf->size[i] = 1;
    }
@@ -707,20 +824,44 @@ SCIP_RETCODE SCIPStpunionfindInit(
 /** clears the union-find structure 'uf'*/
 void SCIPStpunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
-   UF*                   uf,                 /**< union find data structure */
-   int                   length              /**< number of components */
+   UF*                   uf                  /**< union find data structure */
    )
 {
-   int i;
-   uf->count = length;
+   const int length = uf->nElements;
 
-   for( i = 0; i < length; i++ )
+   uf->nComponents = length;
+
+   for( int i = 0; i < length; i++ )
    {
       uf->parent[i] = i;
       uf->size[i] = 1;
    }
 
    return;
+}
+
+
+/** is the union-find structure 'uf' clear? */
+SCIP_Bool SCIPStpunionfindIsClear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const UF*             uf                  /**< union find data structure */
+   )
+{
+   const int length = uf->nElements;
+
+   if( uf->nComponents != length )
+      return FALSE;
+
+   for( int i = 0; i < length; i++ )
+   {
+      if( uf->parent[i] != i )
+         return FALSE;
+
+      if( uf->size[i] != 1 )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 
@@ -733,6 +874,8 @@ int SCIPStpunionfindFind(
    int newelement;
    int root = element;
    int* parent = uf->parent;
+
+   assert(element >= 0 && element < uf->nElements);
 
    while( root != parent[root] )
    {
@@ -748,11 +891,12 @@ int SCIPStpunionfindFind(
    return root;
 }
 
-/** merges the components containing p and q respectively */
+/** Merges the components containing p and q respectively.
+ *  Identifier of 'p' will always be used if 'compress' is FALSE. */
 void SCIPStpunionfindUnion(
    UF*                   uf,                 /**< union find data structure */
    int                   p,                  /**< first component */
-   int                   q,                  /**< second component*/
+   int                   q,                  /**< second component */
    SCIP_Bool             compress            /**< compress union find structure? */
    )
 {
@@ -787,16 +931,19 @@ void SCIPStpunionfindUnion(
    }
 
    /* one less component */
-   uf->count--;
+   uf->nComponents--;
 
 }
 
 /** frees the data fields of the union-find structure */
-void SCIPStpunionfindFree(
+void SCIPStpunionfindFreeMembers(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf                  /**< union find data structure */
    )
 {
+   uf->nElements = 0;
+   uf->nComponents = 0;
+
    SCIPfreeMemoryArray(scip, &uf->parent);
    SCIPfreeMemoryArray(scip, &uf->size);
 }

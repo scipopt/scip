@@ -6,7 +6,7 @@
 # To get the result files call "./evalcheck_cluster.sh
 # results/check.$TSTNAME.$BINNMAE.$SETNAME.eval in directory check/
 #
-# This leads to result files 
+# This leads to result files
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
