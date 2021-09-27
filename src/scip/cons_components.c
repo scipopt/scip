@@ -661,7 +661,7 @@ SCIP_RETCODE solveSubscip(
 {
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
-   SCIP_Bool avoidmemlimit;
+   SCIP_Bool avoidmemout;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -684,11 +684,11 @@ SCIP_RETCODE solveSubscip(
    }
 
    /* check if mem limit needs to be avoided */
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemlimit", &avoidmemlimit) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
 
-   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemlimit == TRUE)
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemout == TRUE)
     * to create a copy of SCIP, including external memory usage */
-   if( avoidmemlimit && memorylimit <= 0.0 )
+   if( avoidmemout && memorylimit <= 0.0 )
    {
       SCIPdebugMessage("--> not solved (not enough memory left)\n");
       return SCIP_OKAY;

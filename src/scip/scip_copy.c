@@ -3242,7 +3242,7 @@ SCIP_RETCODE SCIPcheckCopyLimits(
 
    SCIP_CALL( getCopyTimelimit(sourcescip, &timelimit) );
 
-   if( sourcescip->set->misc_avoidmemlimit )
+   if( sourcescip->set->misc_avoidmemout )
    {
       SCIP_Real memorylimit;
 

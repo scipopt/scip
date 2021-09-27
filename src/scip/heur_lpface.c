@@ -425,14 +425,14 @@ SCIP_RETCODE setSubscipLimits(
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
    SCIP_Longint nodelimit;
-   SCIP_Bool avoidmemlimit;
+   SCIP_Bool avoidmemout;
 
    *success = TRUE;
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemlimit", &avoidmemlimit) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
 
    if( ! SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
@@ -444,9 +444,9 @@ SCIP_RETCODE setSubscipLimits(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemlimit == FALSE)
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemout == FALSE)
     * to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || (avoidmemlimit && memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0) )
+   if( timelimit <= 0.0 || (avoidmemout && memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0) )
    {
       *success = FALSE;
       return SCIP_OKAY;

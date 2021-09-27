@@ -709,7 +709,7 @@ Cut Selector:
 - new parameters "heuristics/alns/nodesquotmin", "heuristics/alns/maxcallssamesol" and "heuristics/alns/initduringroot"
   to control neighborhoods in ALNS
 - new parameter "benders/default/benderscut/optimality/mir" to control whether mixed-integer rounding procedure is applied to Benders optimality cuts
-- new parameter "misc/avoidmemlimit" to try to avoid running into memory limit
+- new parameter "misc/avoidmemout" to try to avoid running into memory limit
 - cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
 
 ### Data structures

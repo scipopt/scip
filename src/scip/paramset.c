@@ -4062,7 +4062,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       /* turn off memory saving mode and do not try to avoid memory limit */
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "memory/savefac", 1.0, quiet) );
-      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "misc/avoidmemlimit", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "misc/avoidmemout", FALSE, quiet) );
       break;
 
    default:

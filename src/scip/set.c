@@ -286,7 +286,7 @@
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
-#define SCIP_DEFAULT_MISC_AVOIDMEMLIMIT    TRUE /**< try to avoid running into memory limit by restricting plugins like heuristics? */
+#define SCIP_DEFAULT_MISC_AVOIDMEMOUT      TRUE /**< try to avoid running into memory limit by restricting plugins like heuristics? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
 #define SCIP_DEFAULT_MISC_TRANSSOLSORIG    TRUE /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
@@ -1967,9 +1967,9 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_estimexternmem, FALSE, SCIP_DEFAULT_MISC_ESTIMEXTERNMEM,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "misc/avoidmemlimit",
+         "misc/avoidmemout",
          "try to avoid running into memory limit by restricting plugins like heuristics?",
-         &(*set)->misc_avoidmemlimit, FALSE, SCIP_DEFAULT_MISC_AVOIDMEMLIMIT,
+         &(*set)->misc_avoidmemout, FALSE, SCIP_DEFAULT_MISC_AVOIDMEMOUT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/transorigsols",
