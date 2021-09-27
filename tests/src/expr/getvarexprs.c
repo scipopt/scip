@@ -73,7 +73,7 @@ Test(getvars, expression_not_containing_all_vars)
    SCIP_EXPR* varexprs[3];
    int nvarexprs;
    int i;
-   
+
    /* note that this captures the variable expressions */
    SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvarexprs) );
    cr_assert_eq(nvarexprs, 3);
@@ -95,7 +95,7 @@ Test(getvars, expression_containing_all_vars)
    SCIP_EXPR* sumexpr;
    int nvarexprs;
    int i;
-   
+
    SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 0, NULL, NULL, 0, NULL, NULL) );
    SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, sumexpr, wexpr, 1.0) );

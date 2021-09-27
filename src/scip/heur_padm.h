@@ -20,10 +20,10 @@
  *         by Martin Schmidt, Lars Schewe, and Dieter Weninger
  * @author Dieter Weninger
  * @author Katrin Halbig
- * 
+ *
  * The penalty alternating direction method (PADM) heuristic is a construction heuristic which additionally needs a
  * user decomposition with linking variables only.
- * 
+ *
  * PADM splits the problem into several sub-SCIPs according to the decomposition, whereby the linking variables get
  * copied and the difference is penalized. Then the sub-SCIPs are solved on an alternating basis until they arrive at
  * the same values of the linking variables (ADM-loop). If they don't reconcile after a couple of iterations,
