@@ -68,6 +68,8 @@ struct SCIP_Sepa
    SCIP_Bool             lpwasdelayed;       /**< was the LP separation delayed at the last call? */
    SCIP_Bool             solwasdelayed;      /**< was the solution separation delayed at the last call? */
    SCIP_Bool             initialized;        /**< is separator initialized? */
+   SCIP_Bool             isparentsepa;       /**< is separator a parent separator that create cuts of child separators? */
+   struct SCIP_Sepa*     parentsepa;         /**< pointer to parent separator or NULL */
 };
 
 #ifdef __cplusplus

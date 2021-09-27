@@ -39,6 +39,7 @@ Features
   made it available via the API.
 - MIR procedure is now available for strengthening the Benders' optimality cut
 - SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
+- New plugin type for cut selection: users can now include their own cut selection rules, default rule moved to cutsel_hybrid.
 
 Expressions:
 - Removed support for expression types min and max for now. Removed support for expression type sign.
@@ -134,6 +135,7 @@ Performance improvements
 - Merge strongcg into the gomory separator to avoid computing the same base equality twice. The files
   sepa_strongcg.{h|c} have been removed.
 - The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
+- Use cpsolver emphasis in sepa_rapidlearning.
 
 Examples and applications
 -------------------------
@@ -187,13 +189,16 @@ Interface changes
   their return type from SCIP_RETCODE (which _always_ was SCIP_OKAY) to void
 - removed SCIPincludeDialogDefault(), use SCIPincludeDialogDefaultBasic() instead and check whether you also need SCIPincludeDialogDefaultSet() and SCIPincludeDialogDefaultFix()
 - removed exprint argument from SCIPaddNlRowGradientBenderscutOpt()
-- added copyexprhdlrs argument to SCIPcopyPlugins() (18th position)
+- added copyexprhdlrs argument to SCIPcopyPlugins() (19th position)
+- added copycutselectors argument to SCIPcopyPlugins() (10th position)
 - removed refpoint argument from SCIPaddSquareSecant()
 - added argument exprdata to SYMcomputeSymmetryGenerators()
 - removed SCIPconsNonlinearGetRhs(), SCIPconsNonlinearGetLhs(), SCIPconsNonlinearAddLinearCoef()
 - removed arguments timelimit, minimprove, itercontingent, and iterused from SCIPapplyHeurSubNlp()
 - removed SCIPresolveSolHeurSubNlp(), SCIPgetSubScipHeurSubNlp(), SCIPgetVarMappingScip2SubScipHeurSubNlp(), SCIPgetVarMappingSubScip2ScipHeurSubNlp()
 - SCIPlockVarCons() and SCIPunlockVarCons() are now allowed in stage TRANSFORMED as well
+- Added functions SCIPsetSepaIsParentsepa(), SCIPsetSepaParentsepa() [in scip_sepa.h], SCIPsepaSetIsParentsepa(), SCIPsepaSetParentsepa() [in sepa.h],
+  SCIPsepaIsParentsepa(), SCIPsepaGetParentsepa() [in pub_sepa.h]
 
 NLP:
 - SCIPhasNLPContinuousNonlinearity() now returns SCIP_RETCODE and has additional argument result
@@ -450,6 +455,7 @@ Constraint handlers for NLP:
 - added SCIPcreateConsIndicatorGeneric() and SCIPcreateConsIndicatorGenericLinCons()
   which copy the interface of SCIPcreateConsIndicator() and SCIPcreateConsIndicatorLinCons() and
   add an activeone argument to specify whether the indicator constraint should be activated on 0 or 1.
+  SCIPcreateConsIndicator() also adds a lessthanineq flag to choose whether the linear constraint is a less-than or greater-than inequality.
 - added SCIPmarkDoNotAggrVar() to mark that a variable should not be aggregated
 - added SCIPdoNotAggrVar() to query whether a variable should not be aggregated
 - added SCIPdecompGetNBorderVars() and SCIPdecompGetNBorderConss() to get number of border variables/constraints
@@ -570,6 +576,10 @@ NLPI:
 - added SCIPnlpiOracleResetEvalTime(), SCIPnlpiOracleGetEvalTime()
 - added SCIPaddNlpiProblemNlRows()
 
+Cut Selector:
+- added SCIPincludeCutsel(), SCIPincludeCutselBasic(), SCIPsetCutselCopy(), SCIPsetCutselFree(), SCIPsetCutselInit(), SCIPsetCutselExit(),  SCIPsetCutselInitsol(), SCIPsetCutselExitsol(), SCIPfindCutsel(), SCIPgetCutsels(), SCIPgetNCutsels(), SCIPsetCutselPriority()
+- added SCIPcutselGetName(), SCIPcutselGetData(), SCIPcutselGetDesc(), SCIPcutselGetPriority(), SCIPcutselSetData(), SCIPcutselIsInitialized(), SCIPcutselGetSetupTime(), SCIPcutselGetTime()
+
 ### Command line interface
 ### Interfaces to external software
 
@@ -628,6 +638,7 @@ NLPI:
 - Removed parameters for strongcg separator: separating/strongcg/..., i.e.,
   maxrounds, maxroundsroot, maxsepacutsroot, maxsepacuts, dynamiccuts. One can control the
   strongcg behavior throught the parameters of sepa_gomory.
+- renamed separating/{minortho,minorthoroot,objparalfac,intsupportfac} to cutselection/hybrid/{minortho,minorthoroot,objparalweight,intsupportweight}
 
 ### New parameters
 
@@ -696,6 +707,7 @@ NLPI:
 - new parameters "heuristics/alns/nodesquotmin", "heuristics/alns/maxcallssamesol" and "heuristics/alns/initduringroot"
   to control neighborhoods in ALNS
 - new parameter "benders/default/benderscut/optimality/mir" to control whether mixed-integer rounding procedure is applied to Benders optimality cuts
+- cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
 
 ### Data structures
 
@@ -732,6 +744,7 @@ NLPI:
 - renamed SCIP_NLPTERMSTAT_MEMERR to SCIP_NLPTERMSTAT_OUTOFMEMORY
 - renamed SCIP_NLPTERMSTAT_LICERR to SCIP_NLPTERMSTAT_LICENSEERROR
 - added evaltime to SCIP_NLPSTATISTICS
+- added structs SCIP_CUTSEL, SCIP_CUTSELDATA
 
 Deleted files
 -------------
@@ -743,6 +756,7 @@ Deleted files
 - src/scip/pub_misc_nonlinear.h
 - src/scip/misc_nonlinear.c
 - src/scip/scip_nonlinear.{c,h}
+- src/scip/sepa_strongcg.{h|c}
 
 Unit tests
 ----------
@@ -841,6 +855,7 @@ Fixed bugs
 - improved the likelihood that a solution that satisfies the nonlinear constraints in the transformed (presolved) problem is also feasible for the original problem
 - worked around a problem with derivatives of pow at 0 with non-integer exponents in CppAD
 - fixed that setting of feasiblity and optimiality tolerance for NLP relaxation was overwritten with defaults when solving NLP
+- fixed potential overflow in cuts.c:evaluateLiftingFunctionKnapsack()
 
 Miscellaneous
 -------------

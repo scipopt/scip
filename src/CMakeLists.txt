@@ -76,6 +76,7 @@ set(scipsources
     scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
+    scip/cutsel_hybrid.c
     scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
@@ -266,6 +267,7 @@ set(scipsources
     scip/cons.c
     scip/cutpool.c
     scip/cuts.c
+    scip/cutsel.c
     scip/debug.c
     scip/dialog.c
     scip/disp.c
@@ -313,6 +315,7 @@ set(scipsources
     scip/scip_cons.c
     scip/scip_copy.c
     scip/scip_cut.c
+    scip/scip_cutsel.c
     scip/scip_datastructures.c
     scip/scip_debug.c
     scip/scip_dcmp.c
@@ -518,6 +521,8 @@ set(scipheaders
     scip/cons_xor.h
     scip/cutpool.h
     scip/cuts.h
+    scip/cutsel.h
+    scip/cutsel_hybrid.h
     scip/dbldblarith.h
     scip/debug.h
     scip/dcmp.h
@@ -683,6 +688,7 @@ set(scipheaders
     scip/pub_conflict.h
     scip/pub_cons.h
     scip/pub_cutpool.h
+    scip/pub_cutsel.h
     scip/pub_dcmp.h
     scip/pub_dialog.h
     scip/pub_disp.h
@@ -761,6 +767,7 @@ set(scipheaders
     scip/scip_cons.h
     scip/scip_copy.h
     scip/scip_cut.h
+    scip/scip_cutsel.h
     scip/scip_datastructures.h
     scip/scip_debug.h
     scip/scip_dcmp.h
@@ -835,6 +842,7 @@ set(scipheaders
     scip/struct_cons.h
     scip/struct_cutpool.h
     scip/struct_cuts.h
+    scip/struct_cutsel.h
     scip/struct_dcmp.h
     scip/struct_dialog.h
     scip/struct_disp.h
@@ -892,6 +900,7 @@ set(scipheaders
     scip/type_cons.h
     scip/type_cutpool.h
     scip/type_cuts.h
+    scip/type_cutsel.h
     scip/type_dcmp.h
     scip/type_dialog.h
     scip/type_disp.h
