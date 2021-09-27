@@ -280,11 +280,14 @@ SCIP_RETCODE copyToSubscip(
    for( i = 0; i < nvars; ++i )
    {
       SCIP_CALL( SCIPgetVarCopy(scip, subscip, vars[i], &newvar, varsmap, conssmap, FALSE, success) );
-      assert(success);
 
       /* abort if variable was not successfully copied */
       if( !(*success) )
+      {
+         SCIPwarningMessage(scip, "Abort heuristic dps since not all variables were successfully copied.\n");
+         SCIPABORT();
          return SCIP_OKAY;
+      }
    }
    assert(nvars == SCIPgetNOrigVars(subscip));
 
