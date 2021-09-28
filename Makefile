@@ -539,6 +539,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
 			scip/heur_distributiondiving.o \
+			scip/heur_dps.o \
 			scip/heur_dualval.o \
 			scip/heur_farkasdiving.o \
 			scip/heur_feaspump.o \
