@@ -898,7 +898,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          if( insert )
          {
             /* prevent the insertion of too many variable pairs into the hashtable */
-            if( (SCIP_Longint)(SCIPhashtableGetNEntries(pairtable) * 2 * sizeof(void*)) > ((SCIP_Longint)INT_MAX >> 1) )
+            if( (SCIP_Longint) SCIPhashtableGetNEntries(pairtable) * 2 * sizeof(void*) > ((SCIP_Longint)INT_MAX >> 1) )
             {
                break;
             }
