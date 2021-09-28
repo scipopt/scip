@@ -223,7 +223,7 @@ ifeq ($(COMP),clang)
 GCCWARN += -Wno-unknown-warning-option -Wno-initializer-overrides
 endif
 ifeq ($(COMP),gnu)
-ifeq ($(ARCH),darwin)
+ifeq ($(OSTYPE),darwin)
 GCCWARN += -Wno-uninitialized
 else
 GCCWARN += -Wno-maybe-uninitialized
