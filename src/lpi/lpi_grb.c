@@ -4133,7 +4133,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &cutoff) );
       *objval = cutoff;
 
-#if SCIP_DISABLED_CODE
+#ifdef SCIP_DISABLED_CODE
       /**@todo The following is some kind of hack which works with the current SCIP implementation and should be fixed.  In
        * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queried (e.g., objval,
        * primal and dual solution), in this case we just return the installed cutoff value minus some epsilon. This is some
