@@ -589,4 +589,3 @@ SCIP_RETCODE SCIPgetVanillafullstrongData(
 
    return SCIP_OKAY;
 }
-

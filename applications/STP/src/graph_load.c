@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   grphload.c
+/**@file   graph_load.c
  * @brief  Methods for loading Steiner problems in .stp format
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
  *
  * This file includes methods for reading a Steiner problem in .stp format.
  *
- * A list of all interface methods can be found in grph.h.
+ * A list of all interface methods can be found in graph.h.
  *
  */
 
@@ -36,6 +36,7 @@
 #include <errno.h>         /* errno */
 #include <assert.h>
 #include <stdarg.h>        /* message: va_list etc */
+#include "reduce.h"
 
 #if defined(_MSC_VER)
 #include  <io.h>
@@ -50,7 +51,7 @@
 #endif
 
 #include "portab.h"
-#include "grph.h"
+#include "graph.h"
 
 #define MSG_FATAL    0
 #define MSG_ERROR    1
@@ -58,7 +59,11 @@
 #define MSG_INFO     3
 #define MSG_DEBUG    4
 
+#ifdef WITH_UG
+#define VERBOSE      MSG_WARN
+#else
 #define VERBOSE      MSG_INFO
+#endif
 
 /* Try to get the maximum length of a path.
  *
@@ -119,6 +124,10 @@ struct key
 #define KEY_TERMINALS_TG         3007
 #define KEY_TERMINALS_GROUPS     3008
 #define KEY_TERMINALS_TR         3009
+#define KEY_TERMINALS_TF         3010
+#define KEY_TERMINALS_TL         3011
+#define KEY_TERMINALS_TB         3012
+#define KEY_TERMINALS_RB         3013
 
 #define KEY_COORDINATES_DD       4001
 #define KEY_COORDINATES_DDD      4002
@@ -161,6 +170,9 @@ struct key
 
 #define KEY_TREE_S               11000
 
+#define KEY_BUDGET_B              12000
+
+
 static const struct key keyword_table[] =
    {
       /*
@@ -168,6 +180,9 @@ static const struct key keyword_table[] =
        */
       {  ".eof",                     KEY_EOF,                    NULL        },
       {  ".section",                 KEY_SECTION,                NULL        },
+
+      {  "budget.b",                 KEY_BUDGET_B,               "n"         },
+      {  "budget.end",               KEY_END,                    NULL        },
 
       {  "comment.creator",          KEY_COMMENT_CREATOR,        "s"         },
       {  "comment.date",             KEY_COMMENT_DATE,           "s"         },
@@ -228,11 +243,15 @@ static const struct key keyword_table[] =
 
       {  "terminals.end",            KEY_TERMINALS_END,          NULL        },
       {  "terminals.groups",         KEY_TERMINALS_GROUPS,       "n"         },
+      {  "terminals.rb",             KEY_TERMINALS_RB,           "nnn"       },
       {  "terminals.root",           KEY_TERMINALS_ROOT,         "n"         },
       {  "terminals.rootp",          KEY_TERMINALS_ROOTP,        "n"         },
       {  "terminals.t",              KEY_TERMINALS_T,            "n"         },
+      {  "terminals.tb",             KEY_TERMINALS_TB,           "nnn"       },
       {  "terminals.terminals",      KEY_TERMINALS_TERMINALS,    "n"         },
+      {  "terminals.tf",             KEY_TERMINALS_TF,           "n"         },
       {  "terminals.tg",             KEY_TERMINALS_TG,           "nn"        },
+      {  "terminals.tl",             KEY_TERMINALS_TL,           "n"         },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
       {  "terminals.tr",             KEY_TERMINALS_TR,           "nn"        },
 
@@ -262,6 +281,7 @@ static struct section section_table[] =
       /*
        * *** The section names MUST be sorted alphabetically ! ***
        */
+      { "budget", "bgt", FLAG_OPTIONAL, SECTION_MISSING },
       { "comment",     NULL,  FLAG_OPTIONAL, SECTION_MISSING },
       { "coordinates", "crd", FLAG_OPTIONAL, SECTION_MISSING },
       { "graph",       "grp", FLAG_REQUIRED, SECTION_MISSING },
@@ -306,6 +326,50 @@ char* strlower(
 
    return t;
 }
+
+
+/** checks input graph and return possible read error */
+static
+SCIP_RETCODE check_inputgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nterms,
+   GRAPH*                graph               /**< graph */
+)
+{
+   if( graph_typeIsSpgLike(graph) )
+   {
+      SCIP_Bool isInfeas;
+
+      if( nterms != graph->terms )
+      {
+         SCIPerrorMessage("wrong number of terminals specified %d vs %d \n\n", graph->terms, nterms);
+         return SCIP_READERROR;
+      }
+
+      // todo do that properly
+      SCIP_CALL( reduce_unconnectedInfeas(scip, TRUE, graph, &isInfeas) );
+
+      if( isInfeas )
+      {
+         SCIPerrorMessage("unconnected terminal node found \n\n");
+         return SCIP_READERROR;
+      }
+   }
+
+   if( !graph_validInput(scip, graph) )
+   {
+      return SCIP_READERROR;
+   }
+
+   if( graph_hasMultiEdges(scip, graph, TRUE) )
+   {
+      return SCIP_READERROR;
+   }
+
+
+   return SCIP_OKAY;
+}
+
 
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Print Message                                            ---*/
@@ -479,7 +543,7 @@ static int get_arguments(
          break;
       }
       if (missmatch)
-         message(MSG_ERROR, curf, err_missmatch_v);
+         message(MSG_WARN, curf, err_missmatch_v);
       else
       {
          para++;
@@ -567,7 +631,7 @@ static int open_file(
 
    /* Test Magic...
     */
-   else if (magic != STP_MAGIC)
+   else if (magic != STP_FILE_MAGIC)
       message(MSG_FATAL, curf, err_nomagic_d, magic);
 
    /* Did we get the right type of file ?
@@ -579,7 +643,7 @@ static int open_file(
       /* Succeeded. Just give a warning if the file has a different
        * version number than the reader and hope it will be ok.
        */
-      if ((version_major != VERSION_MAJOR) || (version_minor != VERSION_MINOR))
+      if ((version_major != STP_FILE_VERSION_MAJOR) || (version_minor != STP_FILE_VERSION_MINOR))
          message(MSG_WARN, curf, msg_version_dd, version_minor, version_major);
 
       result = SUCCESS;
@@ -833,7 +897,9 @@ SCIP_RETCODE graph_load(
    const char*  err_badedge_ddd = "Bad edge %d-%d (%d nodes)";
    const char*  err_badroot_dd  = "Bad root %d (%d nodes)";
    const char*  err_baddeg_dd   = "More degree constraints (%d) than nodes (%d)";
+#ifndef WITH_UG
    const char*  msg_finish_dddd = "Nodes: %d  Edges: %d  Terminals: %d  Source=%d\n";
+#endif
 
    const char*  endofline = "#;\n\r";
    const char*  separator = " \t:=";
@@ -850,7 +916,7 @@ SCIP_RETCODE graph_load(
    char         basename[MAX_PATH_LEN];
    char         keyword [MAX_KEYWORD_LEN];
    int          stop_input = FALSE;
-   int          ret        = FAILURE;
+   int          ret        = SUCCESS;
    char*        s;
    char*        t;
    struct key*  p;
@@ -867,6 +933,7 @@ SCIP_RETCODE graph_load(
    int          degcount = 0;
    int          hoplimit = UNKNOWN;
    int          stp_type = -1;
+   int          edgecount = 0;
    int          termcount = 0;
    int          nobstacles = -1;
    int          scale_order = 1;
@@ -874,6 +941,13 @@ SCIP_RETCODE graph_load(
    int**        scaled_coordinates = NULL;
    int**        obstacle_coords = NULL;
    int          transformed = 0;
+   SCIP_Bool    checkInput = FALSE;
+
+   SCIP_CALL( SCIPgetBoolParam(scip, "stp/checkinput", &checkInput) );
+
+   if( checkInput )
+      printf("input checker is active \n\n");
+
 
    assert(file != NULL);
 
@@ -1009,6 +1083,8 @@ SCIP_RETCODE graph_load(
 
             if( p->format == NULL || !get_arguments(&curf, (const char*)( newformat[0] != '\0' ? newformat : p->format ), s, para) )
             {
+               int vertex;
+
                /* Now, what should we do ?
                 */
                switch(p->sw_code)
@@ -1030,7 +1106,10 @@ SCIP_RETCODE graph_load(
                   break;
                case KEY_TREE_S : /* fall through */
                case KEY_EOF : /* EOF found */
-                  ret        = SUCCESS;
+                  if( !checkInput )
+                  {
+                     ret = SUCCESS;
+                  }
                   stop_input = TRUE;
 
                   /* Test if all required section were found.
@@ -1049,7 +1128,9 @@ SCIP_RETCODE graph_load(
                case KEY_COMMENT_DATE :
                case KEY_COMMENT_CREATOR :
                case KEY_COMMENT_PROBLEM :
+#ifndef WITH_UG
                   (void)printf("Problem: [%s]\n", para[0].s);
+#endif
                   if( strcmp(para[0].s, "SPG") == 0 )
                      stp_type = STP_SPG;
                   else if( strcmp(para[0].s, "PCSPG") == 0
@@ -1080,7 +1161,9 @@ SCIP_RETCODE graph_load(
                      stp_type = STP_GSTP;
                   break;
                case KEY_COMMENT_REMARK :
+#ifndef WITH_UG
                   (void)printf("Comment: [%s]\n", para[0].s);
+#endif
                   if( strcmp(para[0].s, "Transformed") == 0 )
                      transformed = 1;
                   break;
@@ -1128,6 +1211,17 @@ SCIP_RETCODE graph_load(
                      {
                         assert(hoplimit != UNKNOWN);
                         g->hoplimit = hoplimit;
+                     }
+                  }
+
+                  if( checkInput )
+                  {
+                     edgecount++;
+
+                     if( edgecount > edges )
+                     {
+                        SCIPerrorMessage("too many edges (should be at most %d) \n\n", edges);
+                        return SCIP_READERROR;
                      }
                   }
 
@@ -1182,24 +1276,36 @@ SCIP_RETCODE graph_load(
                      ret = FAILURE;
                   }
                   break;
+               case KEY_BUDGET_B :
+                  assert(g != NULL && stp_type == STP_BRMWCSP);
+                  assert(para[0].n >= 0.0);
+                  g->budget = para[0].n;
+
+                  break;
                case KEY_NODEWEIGHTS_NW :
                   nodeweight = (double) para[0].n;
                   assert(g != NULL);
                   assert(presol != NULL);
 
-                  if( stp_type != STP_NWSPG )
+                  if( stp_type != STP_NWSPG && stp_type != STP_NWPTSPG )
                      stp_type = STP_NWSPG;
 
-                  if( Is_term(g->term[nwcount]) )
-                     presol->fixed += nodeweight;
-                  else
-                     /* add node-weight to edge-weights of all incoming edges */
-                     for( i = g->inpbeg[nwcount]; i != EAT_LAST; i = g->ieat[i] )
-                        g->cost[i] += nodeweight;
-                  nwcount++;
+                  if( g->prize == NULL )
+                     SCIP_CALL( graph_pc_initPrizes(scip, g, nodes) );
+
+                  assert(nwcount < nodes);
+                  g->prize[nwcount++] = nodeweight;
+
                   break;
                case KEY_NODEWEIGHTS_END :
                   curf.section = &section_table[0];
+
+                  assert(nwcount == nodes);
+                  if( stp_type == STP_NWPTSPG )
+                     g->stp_type = STP_NWPTSPG;
+
+                  SCIP_CALL( graph_transNw(scip, presol, g) );
+
                   break;
                case KEY_OBSTACLES_RR :
                   assert(nobstacles > 0);
@@ -1247,38 +1353,36 @@ SCIP_RETCODE graph_load(
                      if( stp_type == STP_RMWCSP )
                      {
                         assert(nodes == termcount);
-                        if( g != NULL )
-                        {
-                           SCIP_CALL( graph_pc_2rmw(scip, g) );
-                        }
-                        else
-                        {
-                           message(MSG_FATAL, &curf, "graph not initialized \n");
-                           ret = FAILURE;
-                           break;
-                        }
+                        SCIP_CALL( graph_transRmw(scip, g) );
                      }
                      else if( stp_type == STP_MWCSP )
                      {
                         assert(nodes == termcount);
-                        if( g != NULL )
-                        {
-                           SCIP_CALL( graph_pc_2mw(scip, g, g->prize) );
-                        }
-                        else
-                        {
-                           message(MSG_FATAL, &curf, "graph not initialized \n");
-                           ret = FAILURE;
-                           break;
-                        }
+                        SCIP_CALL( graph_transMw(scip, g) );
+                     }
+                     else if( stp_type == STP_BRMWCSP )
+                     {
+                        assert(nodes == termcount);
+                        SCIP_CALL( graph_transRmw(scip, g) );
+                        g->stp_type = STP_BRMWCSP;
                      }
                      else if( stp_type == STP_PCSPG )
                      {
-                        SCIP_CALL( graph_pc_2pc(scip, g) );
+//#define STP_PC_2SPG
+#ifdef STP_PC_2SPG
+                        SCIP_CALL( graph_transPc2Spg(scip, presol, g) );
+#else
+                        SCIP_CALL( graph_transPc(scip, g) );
+
+#endif
                      }
                      else if( stp_type == STP_RPCSPG )
                      {
-                        SCIP_CALL( graph_pc_2rpc(scip, g) );
+#ifdef STP_RPC_FIXEDPROPER
+                        SCIP_CALL( graph_transRpc2FixedProper(scip, presol, g) );
+#else
+                        SCIP_CALL( graph_transRpc(scip, g) );
+#endif
                      }
                   }
                   curf.section = &section_table[0];
@@ -1291,14 +1395,14 @@ SCIP_RETCODE graph_load(
                   {
                      assert(terms == nodes);
                      assert(g != NULL);
+
                      if( g->prize == NULL )
-                        SCIP_CALL( graph_pc_init(scip, g, terms, -1) );
+                        SCIP_CALL( graph_pc_initPrizes(scip, g, terms) );
                   }
                   break;
                case KEY_TERMINALS_GROUPS :
                   assert(stp_type == STP_GSTP);
                   tgroups = (int)para[0].n;
-                  presol->fixed -= tgroups * 1e+8;
                   for( i = 0; i < tgroups; i++ )
                   {
                      graph_knot_add(g, 0);
@@ -1322,11 +1426,13 @@ SCIP_RETCODE graph_load(
                case KEY_TERMINALS_ROOTP :
                   assert(g != NULL);
                   assert(terms > 0);
+
                   g->source = (int)para[0].n - 1;
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
                   stp_type = STP_RPCSPG;
+
                   if( g->prize == NULL )
-                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
+                     SCIP_CALL( graph_pc_initPrizes(scip, g, nodes) );
 
                   g->prize[(int)para[0].n - 1] = FARAWAY;
                   break;
@@ -1343,11 +1449,38 @@ SCIP_RETCODE graph_load(
                   else
                      graph_knot_chg(g, (int)para[0].n - 1, 0);
                   break;
+               case KEY_TERMINALS_TF :
+                  assert(g != NULL);
+                  graph_knot_chg(g, (int)para[0].n - 1, 0);
+                  if( g->prize == NULL )
+                  {
+                     stp_type = STP_RPCSPG;
+                     SCIP_CALL( graph_pc_initPrizes(scip, g, nodes) );
+                  }
+                  else
+                     assert(stp_type == STP_RPCSPG);
+
+                  g->prize[(int)para[0].n - 1] = FARAWAY;
+                  graph_knot_chg(g, (int)para[0].n - 1, 0);
+                  termcount++;
+                  break;
                case KEY_TERMINALS_TG :
                   assert(g != NULL);
                   assert(tgroups > 0);
-                  graph_edge_add(scip, g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, 1e+8,  1e+8);
+                  graph_edge_add(scip, g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, BLOCKED,  BLOCKED);
                   assert(Is_term(g->term[g->knots - tgroups + (int)para[1].n - 1]));
+                  break;
+               case KEY_TERMINALS_TL :
+                  vertex = (int)para[0].n - 1;
+                  assert(g != NULL);
+                  assert(vertex >= 0);
+
+                  stp_type = STP_NWPTSPG;
+                  graph_knot_chg(g, vertex, 0);
+
+                  for( i = g->outbeg[vertex]; i != EAT_LAST; i = g->oeat[i] )
+                     g->cost[i] = FARAWAY;
+
                   break;
                case KEY_TERMINALS_TP :
                   assert(g != NULL);
@@ -1356,7 +1489,7 @@ SCIP_RETCODE graph_load(
                   {
                      assert(stp_type != STP_RPCSPG);
                      stp_type = STP_PCSPG;
-                     SCIP_CALL( graph_pc_init(scip, g, nodes, -1) );
+                     SCIP_CALL( graph_pc_initPrizes(scip, g, nodes) );
                   }
                   g->prize[(int)para[0].n - 1] = (double)para[1].n;
                   termcount++;
@@ -1365,6 +1498,40 @@ SCIP_RETCODE graph_load(
                   assert(stp_type == STP_RMWCSP);
                   assert(g != NULL);
                   assert(g->prize != NULL);
+                  g->prize[(int)para[0].n - 1] = FARAWAY;
+                  presol->fixed -= (double)para[1].n;
+                  graph_knot_chg(g, (int)para[0].n - 1, 0);
+                  termcount++;
+                  break;
+               case KEY_TERMINALS_TB :
+                  stp_type = STP_BRMWCSP;
+                  assert(g != NULL);
+                  assert(g->prize != NULL);
+                  if( g->costbudget == NULL )
+                  {
+                     assert(terms == nodes );
+                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->costbudget), terms) );
+                  }
+
+                  g->costbudget[(int)para[0].n - 1] = (double)para[2].n;
+                  g->prize[(int)para[0].n - 1] = (double)para[1].n;
+
+                  if( SCIPisGT(scip, (double)para[1].n, 0.0) )
+                     presol->fixed -= (double)para[1].n;
+                  termcount++;
+                  break;
+               case KEY_TERMINALS_RB :
+                  stp_type = STP_BRMWCSP;
+                  assert(g != NULL);
+                  assert(g->prize != NULL);
+                  if( g->costbudget == NULL )
+                  {
+                     assert(terms == nodes );
+                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->costbudget), terms) );
+                  }
+                  assert((double)para[2].n == 0.0);
+
+                  g->costbudget[(int)para[0].n - 1] = 0.0;
                   g->prize[(int)para[0].n - 1] = FARAWAY;
                   presol->fixed -= (double)para[1].n;
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
@@ -1479,14 +1646,18 @@ SCIP_RETCODE graph_load(
 
    if( ret == SUCCESS )
    {
+      const int nnodes = graph_get_nNodes(g);
+
       assert(g != NULL);
 
       if( g->source == UNKNOWN )
       {
-         for( i = 0; i < g->knots; i++ )
-            if ((g->term[i] == 0)
-               && ((g->source < 0) || (g->grad[i] > g->grad[g->source])))
+         const int* const grad = g->grad;
+         for( i = 0; i < nnodes; i++ )
+         {
+            if( (g->term[i] == STP_TERM) && ((g->source < 0) || (grad[i] > grad[g->source])) )
                g->source = i;
+         }
       }
 
       if( g->stp_type == UNKNOWN )
@@ -1497,10 +1668,23 @@ SCIP_RETCODE graph_load(
             g->stp_type = STP_SPG;
       }
 
+      if( stp_type == STP_GSTP )
+      {
+         graph_transGstpClean(presol, g);
+      }
+
+#ifndef WITH_UG
       (void)printf(msg_finish_dddd,
          g->knots, g->edges, g->terms, g->source);
+#endif
 
-      assert(graph_valid(g));
+      if( checkInput )
+      {
+         SCIP_CALL( check_inputgraph(scip, terms, g) );
+      }
+
+      assert(graph_valid(scip, g));
+      assert(!graph_hasMultiEdges(scip, g, FALSE));
       return SCIP_OKAY;
    }
    else
@@ -1511,6 +1695,9 @@ SCIP_RETCODE graph_load(
             SCIPfreeBufferArrayNull(scip, &(obstacle_coords[i]));
          SCIPfreeBufferArrayNull(scip, &(obstacle_coords));
       }
+
+      SCIPerrorMessage("errors in input found \n\n");
+
       return SCIP_READERROR;
    }
 

@@ -138,7 +138,7 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerXyz)
 #endif
 
 /** add variables */
-static 
+static
 SCIP_DECL_NLPIADDVARS(nlpiAddVarsXyz)
 {
    SCIPerrorMessage("method of xyz nonlinear solver is not implemented\n");

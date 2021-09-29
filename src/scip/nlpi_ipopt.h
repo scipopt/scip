@@ -63,7 +63,7 @@ void* SCIPgetNlpiOracleIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    );
 
-/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
+/** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
  *
  * It's here, because we use Ipopt's C interface to Lapack.
  */

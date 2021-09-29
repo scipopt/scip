@@ -14,8 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   portab.h
- * @brief  Portable defintions
+ * @brief  Portable definitions
  * @author Thorsten Koch
+ * @author Daniel Rehfeldt
  *
  */
 
@@ -29,6 +30,9 @@
 #include <float.h>
 
 #define EPSILON 1e-06
+
+typedef unsigned char STP_Bool;
+
 
 #ifndef TRUE
 #define TRUE            1
@@ -52,26 +56,34 @@
 #endif
 
 #define EPS_ZERO  (DBL_EPSILON * 1e4)
+#define EPS_ZERO_HARD  (DBL_EPSILON * 1e6)
+
 
 #ifndef Fsgn
 #define Fsgn(x)   ((((x) > -EPS_ZERO) && ((x) < EPS_ZERO)) ? 0 : (((x) < 0.0) ? -1 : 1))
 #endif /* fsgn */
 
-/* Hi Fortran !
- */
+
+#define RELDIFF(a, b) (((a)-(b))/ MAX(MAX(fabs(a), fabs(b)), 1.0))
+#define EQ_FEAS(a, b)  (fabs(RELDIFF(a, b)) <= EPS_ZERO)
+#define LT_FEAS(a, b)  (RELDIFF(a, b) < -EPS_ZERO)
+#define LE_FEAS(a, b)  (RELDIFF(a, b) < EPS_ZERO)
+#define GT_FEAS(a, b)  (RELDIFF(a, b) > EPS_ZERO)
+#define GE_FEAS(a, b)  (RELDIFF(a, b) > -EPS_ZERO)
+#define EQ_FEAS_EPS(a, b, eps)  (fabs(RELDIFF(a, b)) <= eps)
+#define LT_FEAS_EPS(a, b, eps)  (RELDIFF(a, b) < -eps)
+#define LE_FEAS_EPS(a, b, eps)  (RELDIFF(a, b) < eps)
+#define GT_FEAS_EPS(a, b, eps)  (RELDIFF(a, b) > eps)
+#define GE_FEAS_EPS(a, b, eps)  (RELDIFF(a, b) > -eps)
+
 #define EQ(a, b)   (fabs((a) - (b)) <= EPS_ZERO)
 #define NE(a, b)   (fabs((a) - (b)) >  EPS_ZERO)
 #define LT(a, b)   (((a) - (b))     < -EPS_ZERO)
+#define LT_HARD(a, b)   (((a) - (b))     < -EPS_ZERO_HARD)
 #define LE(a, b)   (((a) - (b))     <  EPS_ZERO)
 #define GT(a, b)   (((a) - (b))     >  EPS_ZERO)
 #define GE(a, b)   (((a) - (b))     > -EPS_ZERO)
-
-#ifdef __GNUC__
-#define does_not_return   __attribute__((noreturn))
-#else
-#define does_not_return   /**/
-#define inline            /**/
-#endif
+#define GE_HARD(a, b)   (((a) - (b))     > -EPS_ZERO_HARD)
 
 #if defined(MSDOS) || defined(WIN32)
 #define  DIRSEP "\\"

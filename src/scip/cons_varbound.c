@@ -2875,9 +2875,12 @@ void prettifyConss(
          SCIP_Longint maxmult;
          SCIP_Bool success;
 
-         epsilon = SCIPepsilon(scip) * 0.9;  /* slightly decrease epsilon to be safe in rational conversion below */
-         maxmult = (SCIP_Longint)(SCIPfeastol(scip)/epsilon + SCIPfeastol(scip));
+         maxmult = (SCIP_Longint)(SCIPfeastol(scip)/SCIPepsilon(scip) + SCIPfeastol(scip));
          maxmult = MIN(maxmult, MAXSCALEDCOEF);
+
+         /* this ensures that one coefficient in the scaled constraint will be one as asserted below; 0.9 to be safe */
+         epsilon = SCIPepsilon(scip) / (SCIP_Real)maxmult;
+         epsilon *= 0.9;
 
          success = SCIPrealToRational(consdata->vbdcoef, -epsilon, epsilon , maxmult, &nominator, &denominator);
 
@@ -2893,7 +2896,7 @@ void prettifyConss(
             success = success && (denominator <= maxmult);
 
             /* scale the constraint denominator/nominator */
-            if( success && ABS(denominator) > 1 && nominator == 1)
+            if( success && ABS(denominator) > 1 && nominator == 1 )
             {
                SCIP_VAR* swapvar;
 

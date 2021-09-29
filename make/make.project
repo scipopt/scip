@@ -223,7 +223,11 @@ ifeq ($(COMP),clang)
 GCCWARN += -Wno-unknown-warning-option -Wno-initializer-overrides
 endif
 ifeq ($(COMP),gnu)
+ifeq ($(OSTYPE),darwin)
+GCCWARN += -Wno-uninitialized
+else
 GCCWARN += -Wno-maybe-uninitialized
+endif
 endif
 
 GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
@@ -530,7 +534,7 @@ ifeq ($(PAPILO),true)
 ifeq ($(OSTYPE),darwin)
   LDFLAGS   +=  -L/usr/local/lib -l tbb
 else
-  LDFLAGS		+=	-l:libtbb.so.2
+  LDFLAGS		+=	-l:libtbb.so.12
 endif
 CXXFLAGS	+=	-std=c++14
 endif

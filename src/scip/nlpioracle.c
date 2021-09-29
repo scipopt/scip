@@ -1150,8 +1150,8 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    return SCIP_OKAY;
 }
 
-/** adds constraints 
- * 
+/** adds constraints
+ *
  *  linear coefficients: row(=constraint) oriented matrix;
  *  quadratic coefficients: row oriented matrix for each constraint
  */
@@ -1213,14 +1213,14 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 }
 
 /** sets or overwrites objective, a minimization problem is expected
- * 
+ *
  *  May change sparsity pattern.
  */
 SCIP_RETCODE SCIPnlpiOracleSetObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real       constant,           /**< constant part of objective */
-   int                   nlin,               /**< number of linear variable coefficients */ 
+   int                   nlin,               /**< number of linear variable coefficients */
    const int*            lininds,            /**< indices of linear variables, or NULL if no linear part */
    const SCIP_Real*      linvals,            /**< coefficients of linear variables, or NULL if no linear part */
    SCIP_EXPR*            expr                /**< expression of nonlinear part, or NULL if no nonlinear part */
@@ -1320,7 +1320,7 @@ SCIP_RETCODE SCIPnlpiOracleChgConsSides(
 SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int*                  delstats            /**< deletion status of vars in input (1 if var should be deleted, 0 if not); 
+   int*                  delstats            /**< deletion status of vars in input (1 if var should be deleted, 0 if not);
                                               *   new position of var in output (-1 if var was deleted) */
    )
 {  /*lint --e{715}*/
@@ -1462,12 +1462,12 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
 SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int*                  delstats            /**< array with deletion status of rows in input (1 if row should be deleted, 0 if not); 
+   int*                  delstats            /**< array with deletion status of rows in input (1 if row should be deleted, 0 if not);
                                               *   new position of row in output (-1 if row was deleted) */
    )
 {  /*lint --e{715}*/
    int c;
-   int lastgood; /* index of the last constraint that should be kept */ 
+   int lastgood; /* index of the last constraint that should be kept */
 
    assert(oracle != NULL);
 
@@ -1879,7 +1879,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Real*            objval              /**< pointer to store objective value */  
+   SCIP_Real*            objval              /**< pointer to store objective value */
    )
 {
    SCIP_RETCODE retcode;
@@ -1905,7 +1905,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint to evaluate */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Real*            conval              /**< pointer to store constraint value */  
+   SCIP_Real*            conval              /**< pointer to store constraint value */
    )
 {
    SCIP_RETCODE retcode;
@@ -1928,7 +1928,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Real*            convals             /**< buffer to store constraint values */  
+   SCIP_Real*            convals             /**< buffer to store constraint values */
    )
 {
    SCIP_RETCODE retcode = SCIP_OKAY;
@@ -1962,7 +1962,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
    SCIP_Real*            objval,             /**< pointer to store objective value */
-   SCIP_Real*            objgrad             /**< pointer to store (dense) objective gradient */  
+   SCIP_Real*            objgrad             /**< pointer to store (dense) objective gradient */
    )
 {
    SCIP_RETCODE retcode;
@@ -1992,7 +1992,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
    SCIP_Real*            conval,             /**< pointer to store constraint value */
-   SCIP_Real*            congrad             /**< pointer to store (dense) constraint gradient */  
+   SCIP_Real*            congrad             /**< pointer to store (dense) constraint gradient */
    )
 {
    SCIP_RETCODE retcode;
@@ -2011,9 +2011,9 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
 }
 
 /** gets sparsity pattern (rowwise) of Jacobian matrix
- * 
+ *
  *  Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
- *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary. 
+ *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary.
  */
 SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2141,7 +2141,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 }
 
 /** evaluates the Jacobian matrix in a given point
- * 
+ *
  *  The values in the Jacobian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity().
  *  The user need to call SCIPnlpiOracleGetJacobianSparsity() at least ones before using this function.
  *
@@ -2152,8 +2152,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
-   SCIP_Real*            convals,            /**< pointer to store constraint values, can be NULL */ 
-   SCIP_Real*            jacobi              /**< pointer to store sparse jacobian values */  
+   SCIP_Real*            convals,            /**< pointer to store constraint values, can be NULL */
+   SCIP_Real*            jacobi              /**< pointer to store sparse jacobian values */
    )
 {
    SCIP_NLPIORACLECONS* cons;
@@ -2269,7 +2269,7 @@ TERMINATE:
 }
 
 /** gets sparsity pattern of the Hessian matrix of the Lagrangian
- * 
+ *
  *  Note that internal data is returned in *offset and *col, thus the user must not to allocate memory there.
  *  Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
  *  Only elements of the lower left triangle and the diagonal are counted.
@@ -2361,7 +2361,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
 }
 
 /** evaluates the Hessian matrix of the Lagrangian in a given point
- * 
+ *
  *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity().
  *  The user must call SCIPnlpiOracleGetHessianLagSparsity() at least ones before using this function.
  *  Only elements of the lower left triangle and the diagonal are computed.
@@ -2375,8 +2375,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_Bool             isnewx_obj,         /**< has the point x changed since the last call to an objective evaluation function? */
    SCIP_Bool             isnewx_cons,        /**< has the point x changed since the last call to the constraint evaluation function? */
    SCIP_Real             objfactor,          /**< weight for objective function */
-   const SCIP_Real*      lambda,             /**< weights (Lagrangian multipliers) for the constraints */ 
-   SCIP_Real*            hessian             /**< pointer to store sparse hessian values */  
+   const SCIP_Real*      lambda,             /**< weights (Lagrangian multipliers) for the constraints */
+   SCIP_Real*            hessian             /**< pointer to store sparse hessian values */
    )
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode = SCIP_OKAY;
