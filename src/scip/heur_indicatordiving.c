@@ -686,7 +686,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    if( !isindicatorvar )
    {
       *score = SCIP_REAL_MIN;
-      *roundup = (candsfrac > 0.5);
+      *roundup = FALSE;
       if(! containsactiveIndicatorconstraints)
          getScoreOfFarkasDiving(scip, diveset, cand, candsfrac, roundup, score);
       return SCIP_OKAY;
@@ -712,7 +712,11 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    if ( nconsvars != 2 )
    {
       *score = SCIPrandomGetReal( randnumgen, -1.0, 0.0 );
-      *roundup = (candsfrac > 0.5);
+      /* try to avoid variability; decide randomly if the LP solution can contain some noise */
+      if( SCIPisEQ(scip, candsfrac, 0.5) )
+         *roundup = (SCIPrandomGetInt(randnumgen, 0, 1) == 0);
+      else
+         *roundup = (candsfrac > 0.5);
       return SCIP_OKAY;
    }
 
