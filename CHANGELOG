@@ -2185,7 +2185,6 @@ Interface changes
 ### New API functions
 
 - new methods SCIPtryTerminate() and SCIPterminated() in scip/interrupt.h for handling of SIGTERM signals.
-- new method SCIPselectCuts() to run SCIP's cut selection procedure on a given array of cuts
 
 ### Changed parameters
 
