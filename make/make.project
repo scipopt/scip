@@ -534,7 +534,7 @@ ifeq ($(PAPILO),true)
 ifeq ($(OSTYPE),darwin)
   LDFLAGS   +=  -L/usr/local/lib -l tbb
 else
-  LDFLAGS		+=	-l:libtbb.so.2
+  LDFLAGS		+=	-l:libtbb.so.12
 endif
 CXXFLAGS	+=	-std=c++14
 endif
