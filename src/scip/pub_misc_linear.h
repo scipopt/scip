@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc_linear.h
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief  internal miscellaneous methods for linear constraints
  * @author Jakob Witzig
  */
@@ -89,6 +89,7 @@ void SCIPconsGetDualfarkas(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the dual solution
  */
+SCIP_EXPORT
 void SCIPconsGetDualsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left hand side for */
