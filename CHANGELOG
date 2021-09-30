@@ -855,6 +855,9 @@ Build system
 
 - replace flag PARASCIP by THREADSAFE
 - flag AMPL is now true by default
+- libscip has been renamed to libscipbase and libscipsolver has been renamed to libscip
+  in order to have the same library names for makefiles and cmake. For downward
+  compatibility libscipsolver still exists (as a link).
 
 Fixed bugs
 ----------
