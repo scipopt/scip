@@ -11,3 +11,7 @@ heuristics/dps/reoptimize = TRUE
 # should solutions get reused in subproblems?
 # [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
 heuristics/dps/reuse = TRUE
+
+# frequency for calling primal heuristic <padm> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+heuristics/padm/freq = 0
