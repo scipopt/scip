@@ -136,15 +136,6 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-
-
-#define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
-#define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
-#define USEVBDS                   FALSE /**< use variable bounds - see cuts.c */
-#define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see cuts. */
-#define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see cuts.c */
-#define MAXFRAC                   0.999 /**< maximal fractionality of floor(rhs) - see cuts.c */
-
 /*#define SCIP_CONFGRAPH*/
 
 
@@ -381,15 +372,6 @@ int conflictCalcMaxsize(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< problem data */
    );
-
-/* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
- * 2^53 = 9007199254740992
- */
-#define NUMSTOP 9007199254740992.0
-
-
-
-
 
 /** undoes bound changes on variables, still leaving the given infeasibility proof valid */
 SCIP_RETCODE SCIPundoBdchgsProof(

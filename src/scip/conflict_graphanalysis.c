@@ -161,12 +161,6 @@
 
 
 
-#define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
-#define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
-#define USEVBDS                   FALSE /**< use variable bounds - see cuts.c */
-#define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see cuts. */
-#define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see cuts.c */
-#define MAXFRAC                   0.999 /**< maximal fractionality of floor(rhs) - see cuts.c */
 
 /*#define SCIP_CONFGRAPH*/
 
@@ -2099,11 +2093,6 @@ SCIP_RETCODE SCIPconflictFlushConss(
 
    return SCIP_OKAY;
 }
-
-/* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
- * 2^53 = 9007199254740992
- */
-#define NUMSTOP 9007199254740992.0
 
 /** resizes conflictsets array to be able to store at least num entries */
 static
