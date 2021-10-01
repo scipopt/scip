@@ -1,6 +1,7 @@
 #include "lpi/lpi.h"
 #include "scip/clock.h"
 #include "scip/conflict_general.h"
+#include "scip/conflict_dualproofanalysis.h"
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"

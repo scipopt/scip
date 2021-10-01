@@ -382,25 +382,6 @@ int conflictCalcMaxsize(
    SCIP_PROB*            prob                /**< problem data */
    );
 
-/** adds the collected conflict constraints to the corresponding nodes; the best set->conf_maxconss conflict constraints
- *  are added to the node of their validdepth; additionally (if not yet added, and if repropagation is activated), the
- *  conflict constraint that triggers the earliest repropagation is added to the node of its validdepth
- */
-SCIP_RETCODE SCIPconflictFlushConss(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
-   );
-
 /* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
  * 2^53 = 9007199254740992
  */

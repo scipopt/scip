@@ -1063,6 +1063,7 @@ SCIP_Longint SCIPconflictGetNStrongbranchIterations(
 
 
 /** adds a weighted LP row to an aggregation row */
+static
 SCIP_RETCODE addRowToAggrRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row,                /**< LP row */

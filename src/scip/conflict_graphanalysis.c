@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file   conflict.c
+/**@file   conflict_graphanalysis.c
  * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for conflict analysis
  * @author Tobias Achterberg
@@ -605,7 +605,7 @@ void conflictsetPrint(
 /** check conflict set for redundancy, other conflicts in the same conflict analysis could have led to global reductions
  *  an made this conflict set redundant
  */
-
+static
 SCIP_Bool checkRedundancy(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONFLICTSET*     conflictset         /**< conflict set */
@@ -1065,7 +1065,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrCompName)
 }
 
 /** method to call, when the priority of a conflict handler was changed */
-
+static
 SCIP_DECL_PARAMCHGD(paramChgdConflicthdlrPriority)
 {  /*lint --e{715}*/
    SCIP_PARAMDATA* paramdata;
@@ -2659,6 +2659,7 @@ SCIP_RETCODE SCIPconflictAnalyzeRemainingBdchgs(
  *       conflict->count); however the (x >= 3) only has be explained if conflictlb matches that one; that is
  *       (var->conflictlb == bdchginfo->newbound); otherwise it redundant/invalid.
  */
+ static
 SCIP_Bool bdchginfoIsInvalid(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
@@ -3986,6 +3987,7 @@ SCIP_Real calcBdchgScore(
 }
 
 /** ensures, that candidate array can store at least num entries */
+static
 SCIP_RETCODE ensureCandsSize(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR***           cands,              /**< pointer to candidate array */
@@ -4770,6 +4772,7 @@ SCIP_RETCODE SCIPundoBdchgsProof(
 
 
 /** analyzes an infeasible LP and undoes additional bound changes while staying infeasible */
+static
 SCIP_RETCODE undoBdchgsDualfarkas(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
