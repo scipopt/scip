@@ -159,9 +159,6 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-
-
-
 /*#define SCIP_CONFGRAPH*/
 
 

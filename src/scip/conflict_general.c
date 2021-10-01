@@ -158,6 +158,7 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+#define NUMSTOP 9007199254740992.0
 
 /** returns the current number of conflict sets in the conflict set storage */
 int SCIPconflictGetNConflicts(
