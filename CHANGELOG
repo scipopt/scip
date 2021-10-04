@@ -138,6 +138,7 @@ Performance improvements
   sepa_strongcg.{h|c} have been removed.
 - The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
 - Use cpsolver emphasis in sepa_rapidlearning.
+- If decomposition/maxgraphedge = 0, the computation of the block graph is completely turned off.
 
 Examples and applications
 -------------------------

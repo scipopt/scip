@@ -465,10 +465,6 @@ SCIP_RETCODE SCIPselectCutsHybrid(
 
    *nselectedcuts = 0;
 
-   /* if all cuts are forced cuts, no cuts from cuts array can be selected */
-   if( nforcedcuts >= MIN(ncuts, maxselectedcuts) )
-      return SCIP_OKAY;
-
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, ncuts) );
 
    /* compute scores of cuts and max score of cuts and forced cuts (used to define goodscore) */
