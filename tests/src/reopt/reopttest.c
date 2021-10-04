@@ -312,7 +312,7 @@ Test(reopt, conss)
    SCIP_Real* consvals;
    SCIP_SOL* bestsol;
    int nvars;
-   int nruns = 100;
+   int nruns = 5;
    int i;
    int j;
 
