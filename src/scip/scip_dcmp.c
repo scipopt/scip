@@ -837,7 +837,7 @@ static
 SCIP_RETCODE buildBlockGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
-   int                   maxgraphedge        /**< maximum number of edges in block graph computation, or -1 for no limit */
+   int                   maxgraphedge        /**< maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation) */
    )
 {
    SCIP_VAR** vars;
@@ -1321,7 +1321,11 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    else
       maxgraphedge = -1;
 
-   SCIP_CALL( buildBlockGraph(scip, decomp, maxgraphedge) );
+   /* do not start computation of the block graph if maxgraphedge is set to 0 */
+   if( maxgraphedge != 0 )
+   {
+      SCIP_CALL( buildBlockGraph(scip, decomp, maxgraphedge) );
+   }
 
    SCIPfreeBufferArray(scip, &varslabels);
    SCIPfreeBufferArray(scip, &varsarray);

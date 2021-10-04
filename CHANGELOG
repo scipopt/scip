@@ -138,6 +138,7 @@ Performance improvements
   sepa_strongcg.{h|c} have been removed.
 - The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
 - Use cpsolver emphasis in sepa_rapidlearning.
+- If decomposition/maxgraphedge = 0, the computation of the block graph is completely turned off.
 
 Examples and applications
 -------------------------
@@ -854,6 +855,9 @@ Build system
 
 - replace flag PARASCIP by THREADSAFE
 - flag AMPL is now true by default
+- libscip has been renamed to libscipbase and libscipsolver has been renamed to libscip
+  in order to have the same library names for makefiles and cmake. For downward
+  compatibility libscipsolver still exists (as a link).
 
 Fixed bugs
 ----------
