@@ -171,8 +171,7 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_OUTOFMEMORY   = 7,    /**< memory exceeded */
    SCIP_NLPTERMSTAT_LICENSEERROR  = 8,    /**< problems with license of NLP solver */
    SCIP_NLPTERMSTAT_OTHER         = 9     /**< other error (= this should never happen) */
-#ifndef _MSC_VER  /* MS __declspec(deprecated) not allowed within enums */
-#if ! defined(__GNUC__) || GCC_VERSION >= 600  /* _attribute__ ((deprecated)) within enums not allowed for older GCCs */
+#if defined(GCC_VERSION) && GCC_VERSION >= 600  /* _attribute__ ((deprecated)) within enums not allowed for older GCCs */
    ,/* for some backward compatibility */
    SCIP_NLPTERMSTAT_TILIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_TIMELIMIT,
    SCIP_NLPTERMSTAT_ITLIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_ITERLIMIT,
@@ -181,7 +180,6 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_EVALERR SCIP_DEPRECATED = SCIP_NLPTERMSTAT_EVALERROR,
    SCIP_NLPTERMSTAT_MEMERR  SCIP_DEPRECATED = SCIP_NLPTERMSTAT_OUTOFMEMORY,
    SCIP_NLPTERMSTAT_LICERR  SCIP_DEPRECATED = SCIP_NLPTERMSTAT_LICENSEERROR
-#endif
 #endif
 };
 typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /**< NLP solver termination status */
