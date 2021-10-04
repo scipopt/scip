@@ -3395,4 +3395,3 @@ SCIP_RETCODE SCIPsetCommonSubscipParams(
 
    return SCIP_OKAY;
 }
-

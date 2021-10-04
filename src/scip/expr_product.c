@@ -1035,7 +1035,7 @@ SCIP_RETCODE enforceSP12(
       /* simplify the sum */
       SCIP_CALL( SCIPcallExprSimplify(scip, expanded, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &expanded) );
- 
+
       return SCIP_OKAY;
    }
 

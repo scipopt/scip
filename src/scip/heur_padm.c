@@ -19,10 +19,10 @@
  *         by Martin Schmidt, Lars Schewe, and Dieter Weninger
  * @author Dieter Weninger
  * @author Katrin Halbig
- * 
+ *
  * The penalty alternating direction method (PADM) heuristic is a construction heuristic which additionally needs a
  * user decomposition with linking variables only.
- * 
+ *
  * PADM splits the problem into several sub-SCIPs according to the decomposition, whereby the linking variables get
  * copied and the difference is penalized. Then the sub-SCIPs are solved on an alternating basis until they arrive at
  * the same values of the linking variables (ADM-loop). If they don't reconcile after a couple of iterations,
@@ -624,7 +624,7 @@ SCIP_RETCODE reuseSolution(
    /* no solution in solution candidate storage found */
    if( nsols == 0 )
       return SCIP_OKAY;
-   
+
    SCIP_CALL( SCIPallocBufferArray(subscip, &consvars, COUPLINGSIZE) );
 
    sols = SCIPgetSols(subscip);
@@ -684,7 +684,7 @@ SCIP_RETCODE reuseSolution(
    {
       SCIPdebugMsg(subscip, "Correcting solution successful\n");
    }
-   
+
    SCIPfreeBufferArray(subscip, &blockvals);
    SCIPfreeBufferArray(subscip, &consvars);
 
@@ -1608,7 +1608,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                 */
                if( status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_GAPLIMIT ||
                      (status == SCIP_STATUS_NODELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0) ||
-                     (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
+                     (status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 &&
                      SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) )
                {
                   SCIPdebugMsg(scip, "Block is optimal or reached gaplimit or nodelimit.\n");
@@ -1705,7 +1705,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
             }
             while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT &&
                    !(status == SCIP_STATUS_NODELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0) &&
-                   !(status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
+                   !(status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 &&
                    SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) );
          }
       }

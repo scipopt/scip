@@ -41,6 +41,8 @@ Features
 - SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
 - New emphasis "benchmark" to avoid different solving paths that may come from checking remaining memory.
 - New plugin type for cut selection: users can now include their own cut selection rules, default rule moved to cutsel_hybrid.
+- New construction heuristic DPS which additionally needs a user-provided decomposition and splits the problem into several sub-SCIPs
+  according to this decomposition. The sub-SCIPs are solved and updated repeatedly until a feasible solution of the original problem is found.
 
 Expressions:
 - Removed support for expression types min and max for now. Removed support for expression type sign.
@@ -137,12 +139,17 @@ Performance improvements
   sepa_strongcg.{h|c} have been removed.
 - The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
 - Use cpsolver emphasis in sepa_rapidlearning.
+- If decomposition/maxgraphedge = 0, the computation of the block graph is completely turned off.
 
 Examples and applications
 -------------------------
 
 - Add c++ Sudoku example
 - Removed circle.c and renamed string.c to spring.c in CallableLibrary example.
+- SCIP-Jack (Steiner tree application):
+  Most files have been modified and many new ones have been added (code base more than doubled).
+  Two new problem classes are supported: maximum-weight connected subgraph problem with budget constraints, partial-terminal node-weighted Steiner tree problem.
+  Major performance improvements accross all problem classes that are supported.
 
 Interface changes
 -----------------
@@ -758,6 +765,7 @@ Deleted files
 - src/scip/pub_misc_nonlinear.h
 - src/scip/misc_nonlinear.c
 - src/scip/scip_nonlinear.{c,h}
+- src/scip/sepa_strongcg.{h|c}
 
 Unit tests
 ----------
@@ -849,6 +857,9 @@ Build system
 
 - replace flag PARASCIP by THREADSAFE
 - flag AMPL is now true by default
+- libscip has been renamed to libscipbase and libscipsolver has been renamed to libscip
+  in order to have the same library names for makefiles and cmake. For downward
+  compatibility libscipsolver still exists (as a link).
 
 Fixed bugs
 ----------
@@ -856,6 +867,8 @@ Fixed bugs
 - improved the likelihood that a solution that satisfies the nonlinear constraints in the transformed (presolved) problem is also feasible for the original problem
 - worked around a problem with derivatives of pow at 0 with non-integer exponents in CppAD
 - fixed that setting of feasiblity and optimiality tolerance for NLP relaxation was overwritten with defaults when solving NLP
+- fixed potential overflow in cuts.c:evaluateLiftingFunctionKnapsack()
+- do not transfer dual reductions to main SCIP in sepa_rapidlearning if strong dual reductions are forbidden
 
 Miscellaneous
 -------------

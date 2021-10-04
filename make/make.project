@@ -223,7 +223,11 @@ ifeq ($(COMP),clang)
 GCCWARN += -Wno-unknown-warning-option -Wno-initializer-overrides
 endif
 ifeq ($(COMP),gnu)
+ifeq ($(OSTYPE),darwin)
+GCCWARN += -Wno-uninitialized
+else
 GCCWARN += -Wno-maybe-uninitialized
+endif
 endif
 
 GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
@@ -530,7 +534,7 @@ ifeq ($(PAPILO),true)
 ifeq ($(OSTYPE),darwin)
   LDFLAGS   +=  -L/usr/local/lib -l tbb
 else
-  LDFLAGS		+=	-l:libtbb.so.2
+  LDFLAGS		+=	-l:libtbb.so.12
 endif
 CXXFLAGS	+=	-std=c++14
 endif
@@ -676,10 +680,10 @@ endif
 # SCIP Library
 #-----------------------------------------------------------------------------
 
-SCIPLIBNAME	=	scip
-SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)
-SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBNAME).$(LIBEXT)
+SCIPLIBBASENAME	=	scipbase
+SCIPLIBBASE	=	$(SCIPLIBBASENAME).$(BASE)
+SCIPLIBBASEFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBBASE).$(LIBEXT)
+SCIPLIBBASESHORTLINK =	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBBASENAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -697,11 +701,11 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEX
 #-----------------------------------------------------------------------------
 
 # link SCIP for C projects
-LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
 
 # link SCIP for C++ projects (including libobjscip)
-LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)

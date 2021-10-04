@@ -30,7 +30,7 @@
 
 
 #include "scip/scip.h"
-#include "grph.h"
+#include "graph.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,9 +49,7 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
    const GRAPH*          g,                  /**< the graph */
    const SCIP_Real*      redcosts,           /**< the reduced costs */
    int*                  edgearrint,         /**< int edges array to store solution */
-   int*                  nodearrint,         /**< int vertices array for internal computations */
    int                   root,               /**< the root (used for dual ascent) */
-   STP_Bool*             nodearrchar,        /**< char vertices array for internal computations */
    SCIP_Bool*            solfound,           /**< has a solution been found? */
    SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
    );

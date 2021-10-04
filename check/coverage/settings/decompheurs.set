@@ -1,0 +1,17 @@
+# SCIP version 7.0.3.5
+
+# frequency for calling primal heuristic <dps> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: -1]
+heuristics/dps/freq = 0
+
+# should the problem get reoptimized with the original objective function?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+heuristics/dps/reoptimize = TRUE
+
+# should solutions get reused in subproblems?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+heuristics/dps/reuse = TRUE
+
+# frequency for calling primal heuristic <padm> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,65534], default: 0]
+heuristics/padm/freq = 0
