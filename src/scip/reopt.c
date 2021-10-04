@@ -8346,6 +8346,7 @@ SCIP_RETCODE SCIPreoptResetActiveConss(
    {
       SCIP_CONS* cons;
 
+      assert(reopt->activeconss != NULL);
       cons = reopt->activeconss[i];
       assert(cons != NULL);
       assert(SCIPhashsetExists(reopt->activeconssset, cons));
