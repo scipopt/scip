@@ -37,6 +37,7 @@
 
 // todo more or less random values, tune them!
 #define PROMISING_FULL_MAXNTERMS              20
+#define PROMISING_FULL_MAXNTERMS_LARGE        15
 #define PROMISING_PARTLY_MAXDENSITY          2.2
 #define PROMISING_PARTLY_SMALL_MAXNTERMS      45
 #define PROMISING_PARTLY_SMALL_MINNEDGES    1100
@@ -44,6 +45,7 @@
 #define PROMISING_PARTLY_MEDIUM_MINNEDGES   1500
 #define PROMISING_PARTLY_LARGE_MAXNTERMS      65
 #define PROMISING_PARTLY_LARGE_MINNEDGES    3000
+#define PROMISING_FULL_LARGE_MINNEDGES    100000
 
 
 /*
@@ -553,8 +555,17 @@ SCIP_Bool dpterms_isPromisingFully(
 {
    assert(graph);
 
-   if( graph->terms <= PROMISING_FULL_MAXNTERMS )
+   if( graph->terms <= PROMISING_FULL_MAXNTERMS_LARGE )
       return TRUE;
+
+   if( graph->terms <= PROMISING_FULL_MAXNTERMS )
+   {
+      int nedges;
+      graph_get_nVET(graph, NULL, &nedges, NULL);
+
+      if( nedges < PROMISING_FULL_LARGE_MINNEDGES )
+         return TRUE;
+   }
 
    return FALSE;
 }
