@@ -1607,6 +1607,10 @@ Test(interCuts, testRays6)
    SCIP_Real root;
    SCIP_Bool success;
 
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
+
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <y>*<z> + <z>^2 + <x> + 2.0 <= 2.0");
 
    /* build LP */
@@ -1911,6 +1915,10 @@ Test(interCuts, testRaysAuxvar2)
    SCIP_EXPR* expr;
    SCIP_VAR* auxvar;
 
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
+
    /* simplify and detect quadratic structure in: x - 6z + 2z^2 + 2 <= 0*/
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x> - 6.0*<z> - 2.0*<z>^2 + 2.0 <= 0.0");
 
@@ -2027,6 +2035,10 @@ Test(interCuts, cut1, .description = "test cut for Case 2")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
+
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<y>^2 + 2 <= 0");
 
    /*
@@ -2060,6 +2072,10 @@ Test(interCuts, cut2, .description = "test cut for Case 1")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 - <z>*<x> + <x> -<z>^2 <= -1.0");
 
@@ -2096,6 +2112,10 @@ Test(interCuts, cut3, .description = "test cut for Case 3")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: -(<x> - <y>)^2 + (2 + <x> - <w>)^2 + (<x> + <y> + <z>)^2 - (<w> + <z>)^2 <= 0.25");
 
@@ -2137,6 +2157,10 @@ Test(interCuts, strength1, .description = "test strengthening case 1")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 -<z>*<x> + <x> + 1 - <z>^2 <= 0.0");
 
@@ -2201,6 +2225,10 @@ Test(interCuts, strength2, .description = "test strengthening case 2")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 - 2*<z>*<x> - <x> - <z>^2 <= -3.0");
 
@@ -2267,6 +2295,10 @@ Test(interCuts, strength3, .description = "test strengthening case 3")
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
 
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
+
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 -<z>*<x> + <x> - <z>^2 <= 0.0");
 
    /* build LP */
@@ -2330,6 +2362,10 @@ Test(interCuts, strength4, .description = "test strengthening case 4")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 -<z>*<x> + <y>*<x> + <x>- <z> + 2.0 <= 0.0");
 
@@ -2398,6 +2434,10 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 - 3*<y>^2 + 3*<x>*<y> + <z> + 1.0 <= 0.0");
 
@@ -2523,6 +2563,10 @@ Test(interCuts, testBoundRays1)
    SCIP_CONS* cons;
    SCIP_SOL* sol;
    SCIP_SOL* vertex;
+
+   /* skip when no ipopt */
+   if( ! SCIPisIpoptAvailableIpopt() )
+      return;
 
    /* simplify and detect quadratic structure in: 6xy + 2x^2 -2z^2 + 2 <= 0 */
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
