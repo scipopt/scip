@@ -41,6 +41,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_tree.h"
+#include "scip/scip_numerics.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_stat.h"
@@ -451,7 +452,7 @@ SCIP_RETCODE SCIPpruneTree(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpruneTree", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->lp, SCIPsetInfinity(scip->set)) );
+         scip->eventqueue, scip->lp, SCIPinfinity(scip)) );
 
    return SCIP_OKAY;
 }
