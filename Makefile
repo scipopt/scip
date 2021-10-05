@@ -358,7 +358,7 @@ LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
 SOFTLINKS    +=    $(LIBDIR)/include/tbb
 LPIINSTMSG    +=    "\n  -> \"tbb\" is the path to the tbb include folder\n"
 SOFTLINKS    +=    $(LIBDIR)/shared/libtbb.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-LPIINSTMSG    +=    " -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
+LPIINSTMSG    +=    " -> \"libtbb.*.so\" is the path to the oneTBB library, e.g., \"<oneTBB-path>/libtbb.so\""
 endif
 
 #-----------------------------------------------------------------------------
