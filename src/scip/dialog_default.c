@@ -3257,9 +3257,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisBenchmark)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
    /* set parameters for problems to run in benchmark mode */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_BENCHMARK, FALSE) );
 
