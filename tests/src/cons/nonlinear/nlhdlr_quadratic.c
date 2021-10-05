@@ -1150,7 +1150,6 @@ void buildAndSolveSimpleProbingLP2(void)
    SCIP_CALL( SCIPchgVarObjProbing(scip, z, 1.0) );
 
 
-   SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
    cr_assert_not(lperror);
@@ -1508,7 +1507,6 @@ Test(interCuts, testRays5)
       SCIP_CALL( SCIPchgVarObjProbing(scip, z, -1.0) );
       SCIP_CALL( SCIPchgVarObjProbing(scip, t, -1.0) );
 
-      SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
 
       /* give bounds to x and y to prevent basestat zero (needed for soplex apparently) */
       SCIP_CALL( SCIPchgVarLbProbing(scip, x, -1.0e10) ); SCIP_CALL( SCIPchgVarUbProbing(scip, x, 1.0e10) );
@@ -1656,7 +1654,6 @@ Test(interCuts, testRays6)
       SCIP_CALL( SCIPchgVarObjProbing(scip, z, 101.0) );
 
 
-      SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
 
       /* give bounds to x and y to prevent basestat zero */
       //SCIP_CALL( SCIPchgVarLbProbing(scip, x, -1.0e10) ); SCIP_CALL( SCIPchgVarUbProbing(scip, x, 1.0e10) );
