@@ -352,9 +352,13 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-FLAGS		+=	-DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -isystem $(LIBDIR)/include/papilo/external/tbb/include -isystem $(LIBDIR)/include/papilo/external -isystem $(LIBDIR)/include/papilo/src
-SOFTLINKS	+=	$(LIBDIR)/include/papilo
-LPIINSTMSG	+=	"\n  -> \"papilo\" is the path to the PaPILO directory\n"
+FLAGS        +=    -DSCIP_WITH_PAPILO -DPAPILO_NO_CMAKE_CONFIG -isystem $(LIBDIR)/include/tbb/include -isystem $(LIBDIR)/include/papilo/external -isystem $(LIBDIR)/include/papilo/src
+SOFTLINKS    +=    $(LIBDIR)/include/papilo
+LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO directory\n"
+SOFTLINKS    +=    $(LIBDIR)/include/tbb
+LPIINSTMSG    +=    "\n  -> \"tbb\" is the path to the tbb include folder\n"
+SOFTLINKS    +=    $(LIBDIR)/shared/libtbb.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+LPIINSTMSG    +=    " -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
 endif
 
 #-----------------------------------------------------------------------------
