@@ -106,13 +106,13 @@ then
     echo set load "${INSTANCESETTINGSFILE}"                      >> "${TMPFILE}"
 fi
 
+echo "set emphasis benchmark"                                    >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
 echo "set limits time ${TIMELIMIT}"                              >> "${TMPFILE}"
 echo "set limits nodes ${NODELIMIT}"                             >> "${TMPFILE}"
 echo "set limits memory ${MEMLIMIT}"                             >> "${TMPFILE}"
 echo "set lp advanced threads ${THREADS}"                        >> "${TMPFILE}"
 echo "set timing clocktype 1"                                    >> "${TMPFILE}"
 echo "set display freq ${DISPFREQ}"                              >> "${TMPFILE}"
-echo "set emphasis benchmark"                                    >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error
 echo "set save ${SETFILE}"                                       >> "${TMPFILE}"
 
 if test "${VISUALIZE}" = true
