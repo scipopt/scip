@@ -1150,7 +1150,6 @@ void buildAndSolveSimpleProbingLP2(void)
    SCIP_CALL( SCIPchgVarObjProbing(scip, z, 1.0) );
 
 
-   SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
    cr_assert_not(lperror);
@@ -1508,7 +1507,6 @@ Test(interCuts, testRays5)
       SCIP_CALL( SCIPchgVarObjProbing(scip, z, -1.0) );
       SCIP_CALL( SCIPchgVarObjProbing(scip, t, -1.0) );
 
-      SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
 
       /* give bounds to x and y to prevent basestat zero (needed for soplex apparently) */
       SCIP_CALL( SCIPchgVarLbProbing(scip, x, -1.0e10) ); SCIP_CALL( SCIPchgVarUbProbing(scip, x, 1.0e10) );
@@ -1606,8 +1604,17 @@ Test(interCuts, testRays6)
    SCIP_Real coefscond[3];
    SCIP_Real root;
    SCIP_Bool success;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <y>*<z> + <z>^2 + <x> + 2.0 <= 2.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -1652,7 +1659,6 @@ Test(interCuts, testRays6)
       SCIP_CALL( SCIPchgVarObjProbing(scip, z, 101.0) );
 
 
-      SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
 
       /* give bounds to x and y to prevent basestat zero */
       //SCIP_CALL( SCIPchgVarLbProbing(scip, x, -1.0e10) ); SCIP_CALL( SCIPchgVarUbProbing(scip, x, 1.0e10) );
@@ -1910,9 +1916,18 @@ Test(interCuts, testRaysAuxvar2)
    SCIP_CONS* cons;
    SCIP_EXPR* expr;
    SCIP_VAR* auxvar;
+   SCIP_Real* eigenvalues;
 
    /* simplify and detect quadratic structure in: x - 6z + 2z^2 + 2 <= 0*/
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x> - 6.0*<z> - 2.0*<z>^2 + 2.0 <= 0.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /* for this example simplify changes the cons to -x +6z +2z^2 -2
     * we are testing the constraint induced by the auxiliary variable:
@@ -2026,8 +2041,17 @@ Test(interCuts, cut1, .description = "test cut for Case 2")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<y>^2 + 2 <= 0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /*
     * build LP so that every var is non-basic
@@ -2060,8 +2084,17 @@ Test(interCuts, cut2, .description = "test cut for Case 1")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 - <z>*<x> + <x> -<z>^2 <= -1.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /*
     * build LP so that every var is non-basic
@@ -2096,9 +2129,17 @@ Test(interCuts, cut3, .description = "test cut for Case 3")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: -(<x> - <y>)^2 + (2 + <x> - <w>)^2 + (<x> + <y> + <z>)^2 - (<w> + <z>)^2 <= 0.25");
 
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /*
     * build LP so that every var is non-basic
@@ -2137,8 +2178,17 @@ Test(interCuts, strength1, .description = "test strengthening case 1")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 -<z>*<x> + <x> + 1 - <z>^2 <= 0.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2201,8 +2251,17 @@ Test(interCuts, strength2, .description = "test strengthening case 2")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 - 2*<z>*<x> - <x> - <z>^2 <= -3.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2266,8 +2325,17 @@ Test(interCuts, strength3, .description = "test strengthening case 3")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: (<x> - <y>)^2 -<z>*<x> + <x> - <z>^2 <= 0.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2330,8 +2398,17 @@ Test(interCuts, strength4, .description = "test strengthening case 4")
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 -<z>*<x> + <y>*<x> + <x>- <z> + 2.0 <= 0.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -2398,8 +2475,17 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 - 3*<y>^2 + 3*<x>*<y> + <z> + 1.0 <= 0.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
    cr_assert_not(cutoff);
@@ -2523,9 +2609,18 @@ Test(interCuts, testBoundRays1)
    SCIP_CONS* cons;
    SCIP_SOL* sol;
    SCIP_SOL* vertex;
+   SCIP_Real* eigenvalues;
 
    /* simplify and detect quadratic structure in: 6xy + 2x^2 -2z^2 + 2 <= 0 */
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: 6.0*<x>*<y> + 2.0*<x>^2 - 2.0*<z>^2 + 2 <= 0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /*
     * build LP

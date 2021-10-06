@@ -243,7 +243,7 @@ SCIP_RETCODE SCIPnlpiSolve(
    SCIP_NLPIPROBLEM*     problem,            /**< problem instance */
    SCIP_NLPPARAM*        param               /**< solve parameters */
    );
-   
+
 /** gives solution status */
 SCIP_NLPSOLSTAT SCIPnlpiGetSolstat(
    SCIP_SET*             set,                /**< global SCIP settings */

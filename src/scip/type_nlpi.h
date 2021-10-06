@@ -171,8 +171,7 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_OUTOFMEMORY   = 7,    /**< memory exceeded */
    SCIP_NLPTERMSTAT_LICENSEERROR  = 8,    /**< problems with license of NLP solver */
    SCIP_NLPTERMSTAT_OTHER         = 9     /**< other error (= this should never happen) */
-#ifndef _MSC_VER  /* MS __declspec(deprecated) not allowed within enums */
-#if ! defined(__GNUC__) || GCC_VERSION >= 600  /* _attribute__ ((deprecated)) within enums not allowed for older GCCs */
+#if defined(GCC_VERSION) && GCC_VERSION >= 600  /* _attribute__ ((deprecated)) within enums not allowed for older GCCs */
    ,/* for some backward compatibility */
    SCIP_NLPTERMSTAT_TILIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_TIMELIMIT,
    SCIP_NLPTERMSTAT_ITLIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_ITERLIMIT,
@@ -181,7 +180,6 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_EVALERR SCIP_DEPRECATED = SCIP_NLPTERMSTAT_EVALERROR,
    SCIP_NLPTERMSTAT_MEMERR  SCIP_DEPRECATED = SCIP_NLPTERMSTAT_OUTOFMEMORY,
    SCIP_NLPTERMSTAT_LICERR  SCIP_DEPRECATED = SCIP_NLPTERMSTAT_LICENSEERROR
-#endif
 #endif
 };
 typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /**< NLP solver termination status */
@@ -210,7 +208,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    SCIP_NLPI* sourcenlpi)
 
 /** frees the data of the NLP interface
- * 
+ *
  *  \param[in] scip     SCIP data structure
  *  \param[in] nlpi     datastructure for solver interface
  *  \param[in] nlpidata NLPI data to free
@@ -221,7 +219,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    SCIP_NLPIDATA** nlpidata)
 
 /** gets pointer to solver-internal NLP solver
- * 
+ *
  * Implementation of this callback is optional.
  *
  * Depending on the solver interface, a solver pointer may exist for every NLP problem instance.
@@ -230,7 +228,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
  * \param[in] scip    SCIP data structure
  * \param[in] nlpi    datastructure for solver interface
  * \param[in] problem datastructure for problem instance, or NULL
- *  
+ *
  * \return void pointer to solver
  */
 #define SCIP_DECL_NLPIGETSOLVERPOINTER(x) void* x (\
@@ -239,7 +237,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    SCIP_NLPIPROBLEM* problem)
 
 /** creates a problem instance
- * 
+ *
  * \param[in] scip     SCIP data structure
  * \param[in] nlpi     datastructure for solver interface
  * \param[out] problem pointer to store the problem data
@@ -252,7 +250,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    const char*        name)
 
 /** free a problem instance
- * 
+ *
  * \param[in] scip    SCIP data structure
  * \param[in] nlpi    datastructure for solver interface
  * \param[in] problem pointer where problem data is stored
@@ -263,13 +261,13 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    SCIP_NLPIPROBLEM** problem)
 
 /** gets pointer to solver-internal problem instance
- * 
+ *
  * Implementation of this callback is optional.
  *
  * \param[in] scip    SCIP data structure
  * \param[in] nlpi    datastructure for solver interface
  * \param[in] problem datastructure for problem instance
- *  
+ *
  * \return void pointer to problem instance
  */
 #define SCIP_DECL_NLPIGETPROBLEMPOINTER(x) void* x (\
@@ -297,7 +295,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    const char**      varnames)
 
 /** add constraints
- * 
+ *
  * \param[in] scip     SCIP data structure
  * \param[in] nlpi     datastructure for solver interface
  * \param[in] problem  datastructure for problem instance
@@ -324,7 +322,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    const char**      names)
 
 /** sets or overwrites objective, a minimization problem is expected
- * 
+ *
  * \param[in] scip     SCIP data structure
  * \param[in] nlpi     datastructure for solver interface
  * \param[in] problem  datastructure for problem instance
@@ -345,7 +343,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    const SCIP_Real   constant)
 
 /** change variable bounds
- * 
+ *
  * \param[in] scip    SCIP data structure
  * \param[in] nlpi    datastructure for solver interface
  * \param[in] problem datastructure for problem instance
@@ -383,7 +381,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    const SCIP_Real*  rhss)
 
 /** delete a set of variables
- * 
+ *
  * \param[in] scip       SCIP data structure
  * \param[in] nlpi       datastructure for solver interface
  * \param[in] problem    datastructure for problem instance
@@ -398,7 +396,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    int               dstatssize)
 
 /** delete a set of constraints
- * 
+ *
  * \param[in] scip       SCIP data structure
  * \param[in] nlpi       datastructure for solver interface
  * \param[in] problem    datastructure for problem instance
@@ -413,7 +411,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    int               dstatssize)
 
 /** changes (or adds) linear coefficients in a constraint or objective
- * 
+ *
  * \param[in] scip    SCIP data structure
  * \param[in] nlpi    datastructure for solver interface
  * \param[in] problem datastructure for problem instance
@@ -481,7 +479,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    SCIP_Real*        varubdualvalues)
 
 /** tries to solve NLP
- * 
+ *
  * \param[in] scip    SCIP data structure
  * \param[in] nlpi    datastructure for solver interface
  * \param[in] problem datastructure for problem instance
@@ -494,11 +492,11 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    SCIP_NLPPARAM     param)
 
 /** gives solution status
- * 
+ *
  * \param[in] scip    SCIP data structure
  * \param[in] nlpi    datastructure for solver interface
  * \param[in] problem datastructure for problem instance
- * 
+ *
  * \return Solution Status
  */
 #define SCIP_DECL_NLPIGETSOLSTAT(x) SCIP_NLPSOLSTAT x (\
@@ -507,11 +505,11 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    SCIP_NLPIPROBLEM* problem)
 
 /** gives termination reason
- * 
+ *
  * \param[in] scip    SCIP data structure
  * \param[in] nlpi    datastructure for solver interface
  * \param[in] problem datastructure for problem instance
- * 
+ *
  * \return Termination Status
  */
 #define SCIP_DECL_NLPIGETTERMSTAT(x) SCIP_NLPTERMSTAT x (\
@@ -520,7 +518,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    SCIP_NLPIPROBLEM* problem)
 
 /** gives primal and dual solution values
- * 
+ *
  * Solver can return NULL in dual values if not available,
  * but if solver provides dual values for one side of variable bounds, then it must also provide those for the other side.
  *
@@ -546,7 +544,7 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
    SCIP_Real*        objval)
 
 /** gives solve statistics
- * 
+ *
  * \param[in] scip        SCIP data structure
  * \param[in] nlpi        datastructure for solver interface
  * \param[in] problem     datastructure for problem instance

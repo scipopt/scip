@@ -1,3 +1,4 @@
+
 #!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
@@ -1520,7 +1521,7 @@ END {
 	    printf(" %9.1f %8.1f", timetofirstgeom[s,0], timetobestgeom[s,0]);
 	 if( o == 0 && printconfs )
 	    printf(" %8.1f %7.1f", confsgeom[s,0], conftimegeom[s,0]);
-	 
+
          if( nodegeomcomp < 0 )
             nodegeomcomp = nodegeom[s,0];
          if( timegeomcomp < 0 )
@@ -1718,7 +1719,7 @@ END {
          parse_time(ref_array,solver_array,timetofirst,o,printorder,probidx,problistlen);
          n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
          factorize(ref_array, solver_array, n, timelimit[s])
-	 
+
 	 z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
 	 printf("   z %8.4f",z);
 	 z_to_p(z);

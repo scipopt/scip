@@ -914,6 +914,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       SCIP_CALL( SCIPcutselsSelect(set, sepastore->cuts, sepastore->ncuts, sepastore->nforcedcuts, root, maxsepacuts,
             &nselectedcuts) );
       assert(nselectedcuts + sepastore->nforcedcuts <= maxsepacuts);
+      nselectedcuts += sepastore->nforcedcuts;
    }
 
    /*

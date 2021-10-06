@@ -27,7 +27,7 @@
 
 #include "probdata_stp.h"
 #include "reader_gr.h"
-#include "grph.h"
+#include "graph.h"
 
 
 /**@name Reader properties

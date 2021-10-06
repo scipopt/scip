@@ -1823,7 +1823,7 @@ void appendLine(
    assert( strlen(linebuffer) + strlen(extension) < PIP_MAX_PRINTLEN );
 
    /* NOTE: avoid
-    *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
+    *   sprintf(linebuffer, "%s%s", linebuffer, extension);
     * because of overlapping memory areas in memcpy used in sprintf.
     */
    (void) strncat(linebuffer, extension, PIP_MAX_PRINTLEN - strlen(linebuffer));
@@ -2539,7 +2539,7 @@ SCIP_RETCODE collectAggregatedVars(
       /* collect aggregated variables in a list */
       if( status >= SCIP_VARSTATUS_AGGREGATED )
       {
-         assert( status == SCIP_VARSTATUS_AGGREGATED || 
+         assert( status == SCIP_VARSTATUS_AGGREGATED ||
             status == SCIP_VARSTATUS_MULTAGGR ||
             status == SCIP_VARSTATUS_NEGATED );
 
