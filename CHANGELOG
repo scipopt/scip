@@ -178,6 +178,7 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- removed SCIPselectCuts(), replaced by SCIPselectCutsHybrid() of the hybrid cut selector plugin
 - If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
   variable is added to the transformed problem (SCIPaddVar()).
   SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
