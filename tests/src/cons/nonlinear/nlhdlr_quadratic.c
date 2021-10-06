@@ -1604,12 +1604,17 @@ Test(interCuts, testRays6)
    SCIP_Real coefscond[3];
    SCIP_Real root;
    SCIP_Bool success;
-
-   /* skip when no ipopt */
-   if( ! SCIPisIpoptAvailableIpopt() )
-      return;
+   SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <y>*<z> + <z>^2 + <x> + 2.0 <= 2.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
@@ -1911,13 +1916,18 @@ Test(interCuts, testRaysAuxvar2)
    SCIP_CONS* cons;
    SCIP_EXPR* expr;
    SCIP_VAR* auxvar;
-
-   /* skip when no ipopt */
-   if( ! SCIPisIpoptAvailableIpopt() )
-      return;
+   SCIP_Real* eigenvalues;
 
    /* simplify and detect quadratic structure in: x - 6z + 2z^2 + 2 <= 0*/
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x> - 6.0*<z> - 2.0*<z>^2 + 2.0 <= 0.0");
+
+   /* skip if eigenvalue decomposition does not exist */
+   SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
+   if( eigenvalues == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /* for this example simplify changes the cons to -x +6z +2z^2 -2
     * we are testing the constraint induced by the auxiliary variable:
