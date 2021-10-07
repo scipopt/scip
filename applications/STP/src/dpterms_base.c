@@ -548,6 +548,16 @@ SCIP_Bool dpterms_isPromisingPartly(
    return FALSE;
 }
 
+
+/** is DP embarrassingly promising? */
+SCIP_Bool dpterms_isPromisingEmbarrassingly(
+   const GRAPH*          graph               /**< graph */
+)
+{
+   return ( graph->terms <= 3 );
+}
+
+
 /** is DP fully promising? */
 SCIP_Bool dpterms_isPromisingFully(
    const GRAPH*          graph               /**< graph */
