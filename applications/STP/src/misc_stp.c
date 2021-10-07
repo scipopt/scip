@@ -770,6 +770,12 @@ SCIP_RETCODE SCIPpairheapBuffarr(
    int n = 0;
    int stacksize = 0;
 
+   if( size == 0 )
+   {
+      *elements = NULL;
+      return SCIP_OKAY;
+   }
+
    assert(root);
    assert(size > 0);
 
