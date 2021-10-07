@@ -624,7 +624,7 @@ SCIP_RETCODE updateNodeReplaceBounds(
    int outedges[STP_DABD_MAXDEGREE];
    const int nnodes = graph->knots;
    const SCIP_Real lpobjval = redcosts_getDualBoundTop(redcostdata);
-   const SCIP_Real cutoff = upperbound - lpobjval;
+   const SCIP_Real cutoff = MAX(upperbound - lpobjval, 0.0);
    const int halfnedges = graph->edges / 2;
    const SCIP_Real *redcost = redcosts_getEdgeCostsTop(redcostdata);
    const SCIP_Real *pathdist = redcosts_getRootToNodeDistTop(redcostdata);
@@ -633,7 +633,8 @@ SCIP_RETCODE updateNodeReplaceBounds(
    const int root = redcosts_getRootTop(redcostdata);
 
    assert(!graph_pc_isMw(graph));
-   assert(!SCIPisNegative(scip, cutoff));
+   assert(SCIPisFeasGE(scip, upperbound, lpobjval));
+
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
    assert(!extendedsearch && "deprecated!");
 

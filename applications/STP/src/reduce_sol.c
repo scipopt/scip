@@ -639,10 +639,10 @@ SCIP_Real reduce_sollocalGetUpperBound(
    if( EQ(sollocal->primalbound, FARAWAY) )
       return FARAWAY;
 
-   assert(GE(sollocal->primalbound - sollocal->offset, 0.0));
+   assert(GE_FEAS(sollocal->primalbound, sollocal->offset));
 
    SCIPdebugMessage("returning best bound: %f (%f-%f) \n", sollocal->primalbound - sollocal->offset, sollocal->primalbound, sollocal->offset);
-   return (sollocal->primalbound - sollocal->offset);
+   return MAX(sollocal->primalbound - sollocal->offset, 0.0);
 }
 
 
