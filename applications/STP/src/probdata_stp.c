@@ -2902,7 +2902,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
       {
          assert(usedp == STP_USEDP_ALWAYS || usedp == STP_USEDP_AUTOMATIC);
 
-         if( usedp == STP_USEDP_ALWAYS || SCIPStpDpRelaxIsPromising(scip, graph) )
+         if( (usedp == STP_USEDP_ALWAYS || SCIPStpDpRelaxIsPromising(scip, graph)) && graph->terms > 1 )
          {
             SCIP_CALL( SCIPStpDpRelaxActivate(scip) );
             usedacuts = STP_CONS_NEVER;
