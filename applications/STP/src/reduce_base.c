@@ -2109,9 +2109,6 @@ SCIP_RETCODE reduce_redLoopStp(
       SCIP_Bool wasDecomposed;
       rerun = FALSE;
 
-      if( redparameters->userec && (dpterms_isPromisingEmbarrassingly(g)) )
-         break;
-
       SCIP_CALL( redLoopInnerStp(scip, randnumgen, g, redsollocal, redbase, &wasDecomposed) );
 
       if( wasDecomposed )
