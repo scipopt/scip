@@ -136,7 +136,7 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    /* tresult can be understood as realization of a Student-T distributed variable with
     * countx + county - 2 degrees of freedom
     */
-   tresult = (meanx - meany) / pooledvariance;
+   tresult = (meanx - meany) / SQRT(pooledvariance);
    tresult *= SQRT(countx * county / (countx + county));
 
    return tresult;
