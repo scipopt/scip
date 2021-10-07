@@ -242,7 +242,7 @@ SCIP_RETCODE computeSteinerTreeTM(
    }
    else
    {
-      assert(graph->stp_type == STP_DHCSTP);
+      assert(graph->stp_type == STP_DHCSTP || graph->stp_type == STP_DCSTP);
       SCIPdebugMessage("TM failed \n");
    }
 
