@@ -1553,6 +1553,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
 
    doprobing = FALSE;
    nenfos = 0;
+   soladj = NULL;
 
    /* find suitable nlhdlrs and check if there is enough violation to do probing */
    for( j = 0; j < SCIPgetExprNEnfosNonlinear(expr); ++j )
@@ -1729,8 +1730,12 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
 
       if( nlhdlrdata->adjrefpoint )
       {
+         SCIP_Real solval;
+
+         solval = SCIPgetSolVal(scip, solcopy, indicator);
+
          /* make sure that when we adjust the point, we don't divide by something too close to 0.0 */
-         indval = MAX(SCIPgetSolVal(scip, solcopy, indicator), 0.1);
+         indval = MAX(solval, 0.1);
 
          /* create an adjusted point x^adj = (x* - x0) / z* + x0 */
          SCIP_CALL( SCIPcreateSol(scip, &soladj, NULL) );
