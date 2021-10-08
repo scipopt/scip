@@ -678,6 +678,7 @@ NLPI:
 - heuristics/subnlp/iterinit, heuristics/subnlp/ninitsolves, heuristics/subnlp/successrateexp
 - heuristics/subnlp/expectinfeas, heuristics/subnlp/opttol, heuristics/subnlp/feastolfactor
 - heuristics/subnlp/presolveemphasis, heuristics/subnlp/setcutoff
+- nlhdlr/perspective/adjrefpoint
 
 ### Data structures
 
