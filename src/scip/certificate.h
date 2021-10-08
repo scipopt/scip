@@ -32,6 +32,7 @@
 #include "scip/type_certificate.h"
 #include "scip/type_sol.h"
 #include "scip/type_lpexact.h"
+#include "scip/type_cons.h"
 #include "scip/type_var.h"
 #include "scip/pub_fileio.h"
 #include "scip/type_prob.h"
@@ -313,6 +314,20 @@ void SCIPcertificatePrintSolExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
+
+SCIP_Longint SCIPcertificatePrintActivityBound(
+   SCIP*                 scip,
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   const char*           linename,           /**< name of the unsplitting line */
+   SCIP_BOUNDTYPE        boundtype,
+   SCIP_Rational*        newbound,         /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Rational*        newboundproduct,
+   SCIP_Bool             ismaxactivity,
+   SCIP_CONS*            constraint,
+   SCIP_VAR*             variable
+   );
+
+void SCIPcertificateAssertStateCorrect(SCIP* scip, SCIP_VAR* var);
 
 #ifdef __cplusplus
 }

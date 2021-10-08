@@ -91,7 +91,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PRESOLTIMING    (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_EXHAUSTIVE) /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
-#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_AFTERLPLOOP
 
 #define EVENTHDLR_NAME         "linear-exact"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
@@ -6979,6 +6979,7 @@ SCIP_RETCODE rangedRowPropagation(
    return SCIP_OKAY;
 }
 #endif
+
 /** tightens bounds of a single variable due to activity bounds */
 static
 SCIP_RETCODE tightenVarBounds(
@@ -7038,7 +7039,7 @@ SCIP_RETCODE tightenVarBounds(
    #ifndef SCIP_DEBUG
    if( !consdata->validactivities )
    #endif
-      consdataCalcActivities(scip, consdata);
+   consdataCalcActivities(scip, consdata);
    consdataGetActivityResiduals(scip, consdata, var, val, FALSE, minresactivity, maxresactivity,
       &minisrelax, &maxisrelax, &isminsettoinfinity, &ismaxsettoinfinity);
    assert(var != NULL);
@@ -7057,8 +7058,10 @@ SCIP_RETCODE tightenVarBounds(
       {
          SCIP_Rational* newub;
          RatCreateBuffer(SCIPbuffer(scip), &newub);
-         RatDiff(newub, rhs, minresactivity);
-         RatDiv(newub, newub, val);
+         SCIP_Rational* newubproduct;
+         SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &newubproduct));
+         RatDiff(newubproduct, rhs, minresactivity);
+         RatDiv(newub, newubproduct, val);
 
          if( !RatIsInfinity(newub) &&
              RatIsLT(newub, ub) )
@@ -7066,6 +7069,10 @@ SCIP_RETCODE tightenVarBounds(
                /* tighten upper bound */
                RatDebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%q,%q], val=%q, resactivity=[%q,%q], sides=[%q,%q] -> newub=%q\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
+               if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+               {
+                  SCIPcertificatePrintActivityBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, newubproduct, false, cons, var);
+               }
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, newub, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                      &infeasible, &tightened) );
 
@@ -7079,6 +7086,7 @@ SCIP_RETCODE tightenVarBounds(
 
                   *cutoff = TRUE;
                   RatFreeBuffer(SCIPbuffer(scip), &newub);
+                  RatFreeBuffer(SCIPbuffer(scip), &newubproduct);
                   goto RETURN_SCIP_OKAY;
                }
                if( tightened )
@@ -7091,6 +7099,7 @@ SCIP_RETCODE tightenVarBounds(
                      SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
             }
          }
+         RatFreeBuffer(SCIPbuffer(scip), &newubproduct);
          RatFreeBuffer(SCIPbuffer(scip), &newub);
       }
 
@@ -7098,10 +7107,11 @@ SCIP_RETCODE tightenVarBounds(
       if( !ismaxsettoinfinity && !RatIsNegInfinity(lhs) && !maxisrelax )
       {
          SCIP_Rational* newlb;
-
          RatCreateBuffer(SCIPbuffer(scip), &newlb);
-         RatDiff(newlb, lhs, maxresactivity);
-         RatDiv(newlb, newlb, val);
+         SCIP_Rational* newlbproduct;
+         SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &newlbproduct));
+         RatDiff(newlbproduct, lhs, maxresactivity);
+         RatDiv(newlb, newlbproduct, val);
          if( !RatIsNegInfinity(newlb) &&
              RatIsGT(newlb, lb) )
          {
@@ -7110,6 +7120,9 @@ SCIP_RETCODE tightenVarBounds(
             /* tighten lower bound */
             RatDebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%q,%q], val=%q, resactivity=[%q,%q], sides=[%q,%q] -> newlb=%q\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
+            if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+               SCIPcertificatePrintActivityBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, newlbproduct, true, cons, var);
+
             SCIP_CALL( SCIPinferVarLbConsExact(scip, var, newlb, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
             if( infeasible )
@@ -7122,17 +7135,20 @@ SCIP_RETCODE tightenVarBounds(
 
                *cutoff = TRUE;
                RatFreeBuffer(SCIPbuffer(scip), &newlb);
+               RatFreeBuffer(SCIPbuffer(scip), &newlbproduct);
                goto RETURN_SCIP_OKAY;
             }
             if( tightened )
             {
                RatSet(lb, SCIPvarGetLbLocalExact(var)); /* get bound again: it may be additionally modified due to integrality */
-               assert(RatIsLE(lb, newlb));
+               assert(RatIsGE(lb, newlb));
+
                (*nchgbds)++;
                RatDebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
             }
          }
+         RatFreeBuffer(SCIPbuffer(scip), &newlbproduct);
          RatFreeBuffer(SCIPbuffer(scip), &newlb);
       }
    }
@@ -7143,8 +7159,10 @@ SCIP_RETCODE tightenVarBounds(
       {
          SCIP_Rational* newlb;
          RatCreateBuffer(SCIPbuffer(scip), &newlb);
-         RatDiff(newlb, rhs, minresactivity);
-         RatDiv(newlb, newlb, val);
+         SCIP_Rational* newlbproduct;
+         SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &newlbproduct));
+         RatDiff(newlbproduct, rhs, minresactivity);
+         RatDiv(newlb, newlbproduct, val);
 
          if( !RatIsNegInfinity(newlb) &&
             RatIsGT(newlb, lb) )
@@ -7154,6 +7172,8 @@ SCIP_RETCODE tightenVarBounds(
                /* tighten lower bound */
                RatDebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%q,%q], val=%.15g, resactivity=[%q,%q], sides=[%q,%q] -> newlb=%q\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
+               if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+                  SCIPcertificatePrintActivityBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, newlb, newlbproduct, false, cons, var);
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, newlb, cons, getInferInt(PROPRULE_1_RHS, pos), force,
                     &infeasible, &tightened) );
                if( infeasible )
@@ -7166,6 +7186,7 @@ SCIP_RETCODE tightenVarBounds(
 
                   *cutoff = TRUE;
                   RatFreeBuffer(SCIPbuffer(scip), &newlb);
+                  RatFreeBuffer(SCIPbuffer(scip), &newlbproduct);
                   goto RETURN_SCIP_OKAY;
                }
                if( tightened )
@@ -7178,6 +7199,7 @@ SCIP_RETCODE tightenVarBounds(
                }
 
          }
+         RatFreeBuffer(SCIPbuffer(scip), &newlbproduct);
          RatFreeBuffer(SCIPbuffer(scip), &newlb);
       }
 
@@ -7185,8 +7207,10 @@ SCIP_RETCODE tightenVarBounds(
       {
          SCIP_Rational* newub;
          RatCreateBuffer(SCIPbuffer(scip), &newub);
-         RatDiff(newub, lhs, maxresactivity);
-         RatDiv(newub, newub, val);
+         SCIP_Rational* newubproduct;
+         SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &newubproduct));
+         RatDiff(newubproduct, lhs, maxresactivity);
+         RatDiv(newub, newubproduct, val);
 
          if( !RatIsInfinity(newub) && RatIsLT(newub, ub))
          {
@@ -7195,6 +7219,8 @@ SCIP_RETCODE tightenVarBounds(
             /* tighten upper bound */
             RatDebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%q,%q], val=%q, resactivity=[%q,%q], sides=[%q,%q], newub=%q\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
+            if( SCIPisCertificateActive(scip) && (SCIPgetStage(scip) == SCIP_STAGE_SOLVING) )
+               SCIPcertificatePrintActivityBound(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, newub, newubproduct, true, cons, var);
             SCIP_CALL( SCIPinferVarUbConsExact(scip, var, newub, cons, getInferInt(PROPRULE_1_LHS, pos), force,
                   &infeasible, &tightened) );
             if( infeasible )
@@ -7207,6 +7233,7 @@ SCIP_RETCODE tightenVarBounds(
 
                *cutoff = TRUE;
                RatFreeBuffer(SCIPbuffer(scip), &newub);
+               RatFreeBuffer(SCIPbuffer(scip), &newubproduct);
                goto RETURN_SCIP_OKAY;
             }
             if( tightened )
@@ -7218,12 +7245,15 @@ SCIP_RETCODE tightenVarBounds(
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
             }
          }
+         RatFreeBuffer(SCIPbuffer(scip), &newubproduct);
          RatFreeBuffer(SCIPbuffer(scip), &newub);
       }
    }
 
    RETURN_SCIP_OKAY:
-
+#ifdef SCIP_DEBUG
+   SCIPcertificateAssertStateCorrect(scip, var);
+#endif
    RatFreeBuffer(SCIPbuffer(scip), &lb);
    RatFreeBuffer(SCIPbuffer(scip), &ub);
    RatFreeBuffer(SCIPbuffer(scip), &minresactivity);
@@ -7379,6 +7409,12 @@ SCIP_RETCODE tightenBounds(
    oldnchgbdstotal = *nchgbds;
 #endif
 
+#ifdef SCIP_DEBUG
+   for (int i = 0; i < nvars; i++)
+   {
+      SCIPcertificateAssertStateCorrect(scip, SCIPconsGetData(cons)->vars[i]);
+   }
+#endif
    for( nrounds = 0; (force || consdata->boundstightened < tightenmode) && nrounds < MAXTIGHTENROUNDS; ++nrounds ) /*lint !e574*/
    {
       /* mark the constraint to have the variables' bounds tightened */
@@ -7747,8 +7783,7 @@ SCIP_RETCODE propagateCons(
    SCIP_CONSDATA* consdata;
    SCIP_Rational* minactivity;
    SCIP_Rational* maxactivity;
-   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &minactivity));
-   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &maxactivity));
+
    SCIP_Bool minactisrelax;
    SCIP_Bool maxactisrelax;
 
@@ -7760,6 +7795,13 @@ SCIP_RETCODE propagateCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   // If the exact LP-row does not exist, we can not write a certificate, so we should not do propagation.
+   if (consdata->rowexact == NULL)
+      return SCIP_OKAY;
+
+   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &minactivity));
+   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &maxactivity));
 
    if( consdata->eventdata == NULL )
    {
