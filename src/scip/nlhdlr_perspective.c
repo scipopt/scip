@@ -40,7 +40,7 @@
 #define DEFAULT_PROBINGFREQ       1     /**< probing frequency (-1 - no probing, 0 - root node only) */
 #define DEFAULT_CONVEXONLY        FALSE /**< whether perspective cuts are added only for convex expressions */
 #define DEFAULT_TIGHTENBOUNDS     TRUE  /**< whether variable semicontinuity is used to tighten variable bounds */
-#define DEFAULT_ADJREFPOINT       FALSE /**< whether to adjust the reference point if indicator is not 1 */
+#define DEFAULT_ADJREFPOINT       TRUE  /**< whether to adjust the reference point if indicator is not 1 */
 
 /*
  * Data structures
