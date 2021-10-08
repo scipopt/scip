@@ -1115,7 +1115,7 @@ $(SCIPLIBLINK): $(SCIPLIBFILE)
 # the short link targets should be phony such that they are always updated and point to the files with last make options, even if nothing needed to be rebuilt
 .PHONY: $(SCIPLIBSHORTLINK)
 $(SCIPLIBSHORTLINK): $(SCIPLIBFILE)
-		@rm -f $@
+		@rm -f $@ $(SCIPLIBSOLVERLINK) $(SCIPLIBSOLVERSHORTLINK)
 		cd $(dir $@) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $@)
 		# for backward compatibility:
 		cd $(dir $@) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $(SCIPLIBSOLVERLINK))
