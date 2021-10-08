@@ -659,7 +659,7 @@ NLPI:
 - nlhdlr/convex/enabled, nlhdlr/convex/detectsum, nlhdlr/convex/preferextended, nlhdlr/convex/cvxquadratic, nlhdlr/convex/cvxsignomial, nlhdlr/convex/cvxprodcomp, nlhdlr/convex/handletrivial
 - nlhdlr/concave/enabled, nlhdlr/concave/detectsum, nlhdlr/concave/cvxquadratic, nlhdlr/concave/cvxsignomial, nlhdlr/concave/cvxprodcomp, nlhdlr/concave/handletrivial
 - nlhdlr/bilinear/enabled, nlhdlr/bilinear/useinteval, nlhdlr/bilinear/usereverseprop, nlhdlr/bilinear/maxseparoundsroot, nlhdlr/bilinear/maxseparounds, nlhdlr/bilinear/maxsepadepth
-- nlhdlr/perspective/enabled, nlhdlr/perspective/maxproprounds, nlhdlr/perspective/mindomreduction, nlhdlr/perspective/minviolprobing, nlhdlr/perspective/probingonlyinsepa, nlhdlr/perspective/probingfreq, nlhdlr/perspective/convexonly, nlhdlr/perspective/tightenbounds
+- nlhdlr/perspective/enabled, nlhdlr/perspective/maxproprounds, nlhdlr/perspective/mindomreduction, nlhdlr/perspective/minviolprobing, nlhdlr/perspective/probingonlyinsepa, nlhdlr/perspective/probingfreq, nlhdlr/perspective/convexonly, nlhdlr/perspective/tightenbounds, nlhdlr/perspective/adjrefpoint
 - nlhdlr/quadratic/enabled, nlhdlr/quadratic/useintersectioncuts, nlhdlr/quadratic/usestrengthening, nlhdlr/quadratic/useboundsasrays, nlhdlr/quadratic/ncutslimit, nlhdlr/quadratic/ncutslimitroot, nlhdlr/quadratic/maxrank, nlhdlr/quadratic/mincutviolation, nlhdlr/quadratic/minviolation, nlhdlr/quadratic/atwhichnodes, nlhdlr/quadratic/nstrengthlimit, nlhdlr/quadratic/ignorebadrayrestriction, nlhdlr/quadratic/ignorehighre
 - nlhdlr/quotient/enabled
 - nlhdlr/soc/enabled, nlhdlr/soc/mincutefficacy, nlhdlr/soc/compeigenvalues
@@ -678,7 +678,6 @@ NLPI:
 - heuristics/subnlp/iterinit, heuristics/subnlp/ninitsolves, heuristics/subnlp/successrateexp
 - heuristics/subnlp/expectinfeas, heuristics/subnlp/opttol, heuristics/subnlp/feastolfactor
 - heuristics/subnlp/presolveemphasis, heuristics/subnlp/setcutoff
-- nlhdlr/perspective/adjrefpoint
 
 ### Data structures
 
