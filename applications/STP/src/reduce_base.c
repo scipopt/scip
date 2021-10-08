@@ -1798,9 +1798,7 @@ SCIP_RETCODE reduce_redLoopMw(
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real prizesum;
 
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(fixed != NULL);
+   assert(scip && g);
    assert(advanced || !tryrmw);
 
    tryrmw = tryrmw && userec;

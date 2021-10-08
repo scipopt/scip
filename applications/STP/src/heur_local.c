@@ -589,7 +589,7 @@ SCIP_RETCODE lca(
    }
 
    /* free the boundary-paths array */
-   SCIPfreeBufferArray(scip, &uboundpaths);
+   SCIPfreeBufferArrayNull(scip, &uboundpaths);
 
    return SCIP_OKAY;
 }

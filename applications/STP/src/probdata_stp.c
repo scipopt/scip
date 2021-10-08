@@ -68,7 +68,7 @@
 #define STP_AGG_SYM
 
 #define FLOWB       FALSE
-#define USEOFFSETVAR TRUE
+#define USEOFFSETVAR FALSE
 
 #define SYM_CONS_LIMIT 20000         /**< maximum number of symmetry inequalities for MWCSP and PCSPG */
 #define CYC_CONS_LIMIT 10000         /**< maximum number of symmetry inequalities for PCSPG */
@@ -2902,7 +2902,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
       {
          assert(usedp == STP_USEDP_ALWAYS || usedp == STP_USEDP_AUTOMATIC);
 
-         if( usedp == STP_USEDP_ALWAYS || SCIPStpDpRelaxIsPromising(scip, graph) )
+         if( (usedp == STP_USEDP_ALWAYS || SCIPStpDpRelaxIsPromising(scip, graph)) && graph->terms > 1 )
          {
             SCIP_CALL( SCIPStpDpRelaxActivate(scip) );
             usedacuts = STP_CONS_NEVER;
