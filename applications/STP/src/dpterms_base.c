@@ -36,7 +36,7 @@
 
 
 // todo more or less random values, tune them!
-#define PROMISING_FULL_MAXNTERMS              20
+#define PROMISING_FULL_MAXNTERMS              19
 #define PROMISING_FULL_MAXNTERMS_LARGE        15
 #define PROMISING_PARTLY_MAXDENSITY          2.2
 #define PROMISING_PARTLY_SMALL_MAXNTERMS      45
