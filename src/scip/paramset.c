@@ -2388,6 +2388,11 @@ SCIP_RETCODE emphasisParse(
       SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
       globalemphasis = TRUE;
    }
+   else if ( strcmp(paramname, "benchmark") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_BENCHMARK, FALSE) );
+      globalemphasis = TRUE;
+   }
 
    /* check whether rest of line is clean */
    if ( globalemphasis )
@@ -3798,6 +3803,7 @@ SCIP_RETCODE paramsetSetSeparatingOff(
  *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_NUMERICS to solve problems which cause numerical issues
+ *  - \ref SCIP_PARAMEMPHASIS_BENCHMARK to not try to avoid running into memory limit
  */
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -4050,6 +4056,13 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/conssiderelaxamount", 1e-7, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/varboundrelaxamount", 1e-7, quiet) );
 
+      break;
+
+   case SCIP_PARAMEMPHASIS_BENCHMARK:
+
+      /* turn off memory saving mode and do not try to avoid memory limit */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "memory/savefac", 1.0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "misc/avoidmemout", FALSE, quiet) );
       break;
 
    default:

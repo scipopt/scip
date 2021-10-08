@@ -39,6 +39,7 @@ Features
   made it available via the API.
 - MIR procedure is now available for strengthening the Benders' optimality cut
 - SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
+- New emphasis "benchmark" to avoid different solving paths that may come from checking remaining memory.
 - New plugin type for cut selection: users can now include their own cut selection rules, default rule moved to cutsel_hybrid.
 - New construction heuristic DPS which additionally needs a user-provided decomposition and splits the problem into several sub-SCIPs
   according to this decomposition. The sub-SCIPs are solved and updated repeatedly until a feasible solution of the original problem is found.
@@ -716,6 +717,7 @@ Cut Selector:
 - new parameters "heuristics/alns/nodesquotmin", "heuristics/alns/maxcallssamesol" and "heuristics/alns/initduringroot"
   to control neighborhoods in ALNS
 - new parameter "benders/default/benderscut/optimality/mir" to control whether mixed-integer rounding procedure is applied to Benders optimality cuts
+- new parameter "misc/avoidmemout" to try to avoid running into memory limit
 - cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
 
 ### Data structures
