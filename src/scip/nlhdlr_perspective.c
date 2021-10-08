@@ -1648,12 +1648,16 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
       int nprobingvars;
       SCIP_Bool doprobingind;
       SCIP_Real indval;
+      SCIP_Real solval;
+      SCIP_Bool adjrefpoint;
 
       indicator = nlhdlrexprdata->indicators[i];
       probingvars = NULL;
       probingdoms = NULL;
       nprobingvars = 0;
       doprobingind = doprobing;
+      solval = SCIPgetSolVal(scip, solcopy, indicator);
+      adjrefpoint = nlhdlrdata->adjrefpoint && !SCIPisEQ(scip, solval, 1.0);
 
       SCIP_CALL( analyseOnoffBounds(scip, nlhdlrdata, nlhdlrexprdata, indicator, &probingvars, &probingdoms,
             &nprobingvars, &doprobingind, result) );
@@ -1728,12 +1732,8 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          }
       }
 
-      if( nlhdlrdata->adjrefpoint )
+      if( adjrefpoint )
       {
-         SCIP_Real solval;
-
-         solval = SCIPgetSolVal(scip, solcopy, indicator);
-
          /* make sure that when we adjust the point, we don't divide by something too close to 0.0 */
          indval = MAX(solval, 0.1);
 
@@ -1780,7 +1780,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPgetExprEnfoDataNonlinear(expr, enfoposs[j], &nlhdlr2, &nlhdlr2exprdata, NULL, NULL, NULL, &nlhdlr2auxvalue);
          assert(SCIPnlhdlrHasEstimate(nlhdlr2) && nlhdlr2 != nlhdlr);
 
-         if( nlhdlrdata->adjrefpoint )
+         if( adjrefpoint )
          {
             SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr2, expr, nlhdlr2exprdata, &nlhdlr2auxvalue, soladj) );
             SCIPsetExprEnfoAuxValueNonlinear(expr, j, nlhdlr2auxvalue);
@@ -1789,7 +1789,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPdebugMsg(scip, "asking nonlinear handler %s to %sestimate\n", SCIPnlhdlrGetName(nlhdlr2), overestimate ? "over" : "under");
 
          /* ask the nonlinear handler for an estimator */
-         if( nlhdlrdata->adjrefpoint )
+         if( adjrefpoint )
          {
             SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr,
                   nlhdlr2exprdata, soladj,
@@ -1885,7 +1885,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIP_CALL( SCIPclearPtrarray(scip, rowpreps2) );
       }
 
-      if( nlhdlrdata->adjrefpoint )
+      if( adjrefpoint )
          SCIP_CALL( SCIPfreeSol(scip, &soladj) );
 
       if( doprobingind )
