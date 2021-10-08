@@ -951,6 +951,10 @@ SCIP_RETCODE analyseVarOnoffBounds(
    loclb = SCIPvarGetLbLocal(var);
    locub = SCIPvarGetUbLocal(var);
 
+   /* nothing to do for fixed variables */
+   if( SCIPisEQ(scip, loclb, locub) )
+      return SCIP_OKAY;
+
    /* use a non-redundant lower bound */
    if( SCIPisGT(scip, sclb, SCIPvarGetLbLocal(var)) || (sclb >= 0.0 && loclb < 0.0) )
    {
