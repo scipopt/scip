@@ -1780,17 +1780,13 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPgetExprEnfoDataNonlinear(expr, enfoposs[j], &nlhdlr2, &nlhdlr2exprdata, NULL, NULL, NULL, &nlhdlr2auxvalue);
          assert(SCIPnlhdlrHasEstimate(nlhdlr2) && nlhdlr2 != nlhdlr);
 
-         if( adjrefpoint )
-         {
-            SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr2, expr, nlhdlr2exprdata, &nlhdlr2auxvalue, soladj) );
-            SCIPsetExprEnfoAuxValueNonlinear(expr, j, nlhdlr2auxvalue);
-         }
-
          SCIPdebugMsg(scip, "asking nonlinear handler %s to %sestimate\n", SCIPnlhdlrGetName(nlhdlr2), overestimate ? "over" : "under");
 
          /* ask the nonlinear handler for an estimator */
          if( adjrefpoint )
          {
+            SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr2, expr, nlhdlr2exprdata, &nlhdlr2auxvalue, soladj) );
+
             SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr,
                   nlhdlr2exprdata, soladj,
                   nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
@@ -1886,7 +1882,9 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
       }
 
       if( adjrefpoint )
+      {
          SCIP_CALL( SCIPfreeSol(scip, &soladj) );
+      }
 
       if( doprobingind )
       {
