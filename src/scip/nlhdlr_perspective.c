@@ -1763,7 +1763,9 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
                   SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->indicators[v])) );
          }
          if( SCIPvarGetStatus(auxvar) != SCIP_VARSTATUS_FIXED )
+         {
             SCIP_CALL( SCIPsetSolVal(scip, soladj, auxvar, SCIPgetSolVal(scip, solcopy, auxvar)) );
+         }
       }
 
       /* use cuts from every suitable nlhdlr */
