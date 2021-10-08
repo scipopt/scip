@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,7 +40,6 @@
 #endif
 
 #include "blockmemshell/memory.h"
-#include "nlpi/type_nlpi.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
 #include "scip/debug.h"

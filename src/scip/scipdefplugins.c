@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,9 +29,10 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_NLPI* nlpi;
+   /* include some default dialogs, since other plugins require that at least the root dialog is available */
+   SCIP_CALL( SCIPincludeDialogDefaultBasic(scip) );
 
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) ); /* expression constraint handler must be before linear due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear constraint handler must be before linear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
@@ -65,8 +66,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderLp(scip) );
    SCIP_CALL( SCIPincludeReaderSol(scip) );
    SCIP_CALL( SCIPincludeReaderOsil(scip) );
-   SCIP_CALL( SCIPincludeReaderGms(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
+#ifdef SCIP_WITH_AMPL
+   SCIP_CALL( SCIPincludeReaderNl(scip) );
+#endif
+   SCIP_CALL( SCIPincludeReaderGms(scip) );
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
    SCIP_CALL( SCIPincludeReaderPip(scip) );
@@ -208,9 +212,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
+   SCIP_CALL( SCIPincludeSepaInterminor(scip) );
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
    SCIP_CALL( SCIPincludeSepaMinor(scip) );
+   SCIP_CALL( SCIPincludeSepaMixing(scip) );
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
    SCIP_CALL( SCIPincludeSepaRlt(scip) );
@@ -221,39 +227,32 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
    SCIP_CALL( SCIPincludeBendersDefault(scip) );
-
-   /* include NLPI's, if available */
-   SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
-   }
-   SCIP_CALL( SCIPcreateNlpSolverFilterSQP(SCIPblkmem(scip), &nlpi) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP()) );
-   }
-
-   SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &nlpi, TRUE) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameWorhp(), SCIPgetSolverDescWorhp()) );
-   }
-
-   SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &nlpi, FALSE) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-   }
-
-   SCIP_CALL( SCIPcreateNlpSolverAll(SCIPblkmem(scip), &nlpi, SCIPgetNlpis(scip), SCIPgetNNlpis(scip)) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-   }
+   SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrEntropy(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrLog(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSignpower(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrDefault(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrConvex(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrConcave(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrBilinear(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrPerspective(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrQuadratic(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrQuotient(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrSoc(scip) );
+   SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
+   SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );
+   SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, TRUE) );
+   SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, FALSE) );
+   SCIP_CALL( SCIPincludeNlpSolverAll(scip) );
 
 #ifdef TPI_TNYC
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "TinyCThread", "Small, portable implementation of the C11 threads API (tinycthread.github.io)") );

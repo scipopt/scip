@@ -11,7 +11,7 @@ Write and run unit tests for SCIP.
 
 ## Overview
 
-A unit test is an automated piece of code that invokes a unit of work in the system and then checks a single assumption about the behavior of that unit of work. The SCIP Unit Test Suite leverages [Criterion](http://criterion.readthedocs.io/en/master/) as the testing framework and [ctest](https://cmake.org/cmake/help/v2.8.8/ctest.html) as the runner. The SCIP Unit Test Suite is very much in a state of development. Check out the [unit test suite milestone](https://git.zib.de/integer/scip/milestones/2) for more information.
+A unit test is an automated piece of code that invokes a unit of work in the system and then checks a single assumption about the behavior of that unit of work. The SCIP Unit Test Suite leverages [Criterion](http://criterion.readthedocs.io/en/master/) as the testing framework and [ctest](https://cmake.org/cmake/help/v2.8.8/ctest.html) as the runner. The SCIP Unit Test Suite is very much in a state of development. Check out the [unit test suite milestone](https://git.zib.de/integer/scip/-/milestones/2) for more information.
 
 ## Write
 

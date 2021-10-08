@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2209,13 +2209,13 @@ SCIP_RETCODE getEstimCompletion(
 {
    SCIP_Real completed;
 
+   *estim = -1.0;
+
    SCIP_CALL( getSearchCompletion(eventhdlrdata, &completed) );
 
    completed = MIN(completed, 1.0);
 
-   if( completed <= 0.0 )
-      *estim = -1.0;
-   else
+   if( completed > 0.0 )
       *estim = SCIPgetNNodes(scip) / completed;
 
    return SCIP_OKAY;
@@ -2986,7 +2986,10 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
 /* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
+   {
       freeTreeData(scip, &eventhdlrdata->treedata);
+      SCIPfreeMemory(scip, &eventhdlrdata);
+   }
 
    return retcode;
 }
@@ -2999,7 +3002,7 @@ SCIP_Real SCIPgetTreesizeEstimation(
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    TSPOS tspos = TSPOS_NONE;
-   SCIP_Real estim = -1.0;
+   SCIP_Real estim;
 
    assert(scip != NULL);
 

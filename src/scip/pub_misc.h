@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,6 +49,7 @@
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_misc_linear.h"
+#include "scip/pub_misc_rowprep.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -1793,6 +1794,22 @@ SCIP_Longint SCIPcalcBinomCoef(
    int                   m                   /**< number to choose out of the above */
    );
 
+/** calculates hash for floating-point number by using Fibonacci hashing */
+SCIP_EXPORT
+unsigned int SCIPcalcFibHash(
+   SCIP_Real             v                   /**< number to hash */
+   );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
+
+#endif
+
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
  *  successful
  */
@@ -1834,20 +1851,6 @@ SCIP_Bool SCIPfindSimpleRational(
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
-/** Performs the Newton Procedure from a given starting point to compute a root of the given function with
- *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
- */
-SCIP_EXPORT
-SCIP_Real SCIPcomputeRootNewton(
-   SCIP_DECL_NEWTONEVAL((*function)),       /**< pointer to function for which roots are computed */
-   SCIP_DECL_NEWTONEVAL((*derivative)),      /**< pointer to derivative of above function */
-   SCIP_Real*            params,            /**< parameters needed for function (can be NULL) */
-   int                   nparams,           /**< number of parameters (can be 0) */
-   SCIP_Real             x,                 /**< starting point */
-   SCIP_Real             eps,               /**< tolerance */
-   int                   k                  /**< iteration limit */
-   );
-
 /** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
  *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
  *  if no valid rational number inside the interval was found, selects the central value of the interval
@@ -1857,6 +1860,20 @@ SCIP_Real SCIPselectSimpleValue(
    SCIP_Real             lb,                 /**< lower bound of the interval */
    SCIP_Real             ub,                 /**< upper bound of the interval */
    SCIP_Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
+   );
+
+/** Performs the Newton Procedure from a given starting point to compute a root of the given function with
+ *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPcalcRootNewton(
+   SCIP_DECL_NEWTONEVAL((*function)),       /**< pointer to function for which roots are computed */
+   SCIP_DECL_NEWTONEVAL((*derivative)),      /**< pointer to derivative of above function */
+   SCIP_Real*            params,            /**< parameters needed for function (can be NULL) */
+   int                   nparams,           /**< number of parameters (can be 0) */
+   SCIP_Real             x,                 /**< starting point */
+   SCIP_Real             eps,               /**< tolerance */
+   int                   k                  /**< iteration limit */
    );
 
 /* The C99 standard defines the function (or macro) isfinite.
@@ -1973,30 +1990,8 @@ SCIP_Real SCIPgetRandomReal(
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
-/** returns a non-negative integer hash key for a given real number by using Fibonacci hashing */
-SCIP_EXPORT
-unsigned int SCIPcalcFibHash(
-   SCIP_Real             v                   /**< value to be hashed */
-   );
-
-#ifdef NDEBUG
-#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
-#endif
-
-/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
- *  that are larger, equal, and smaller than the weighted median
- *
- *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
- *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
- *
- *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
- *
- *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
- *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., nkeys
- *  contains only elements that are smaller than the median.
- *
- *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
- *  largest element by using a capacity k.
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
  *
  *  @deprecated Please use SCIPrandomGetSubset()
  */
@@ -2009,7 +2004,6 @@ SCIP_RETCODE SCIPgetRandomSubset(
    int                   nsubelems,          /**< number of elements that should be drawn and stored */
    unsigned int          randseed            /**< seed value for random generator */
    );
-
 
 /**@} */
 
@@ -2120,7 +2114,11 @@ void SCIPpermuteArray(
  */
 
 
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
+ */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeArraysIntersection(
    int*                  array1,             /**< first array (in ascending order) */
@@ -2133,7 +2131,20 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
                                               *   (note: it is possible to use narray1 for this input argument) */
    );
 
-/** computes pointer set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysIntersectionInt(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+/** computes set intersection (duplicates removed) of two void-pointer arrays that are ordered ascendingly */
 SCIP_EXPORT
 void SCIPcomputeArraysIntersectionPtr(
    void**                array1,             /**< first array (in ascending order) */
@@ -2147,9 +2158,26 @@ void SCIPcomputeArraysIntersectionPtr(
                                               *   (note: it is possible to use narray1 for this input argument) */
 );
 
-/** computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysSetminusInt().
+ */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysSetminusInt(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
    int*                  array2,             /**< second array (in ascending order) */
@@ -2270,6 +2298,14 @@ void SCIPstrCopySection(
    int                   size,               /**< size of the token char array */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
+
+/** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
+SCIP_EXPORT
+SCIP_Bool SCIPstrAtStart(
+        const char*           s,                  /**< string to search in */
+        const char*           t,                  /**< string to search for */
+        size_t                tlen                /**< length of t */
+);
 
 /**@} */
 

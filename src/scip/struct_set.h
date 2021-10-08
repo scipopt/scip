@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,9 +48,10 @@
 #include "scip/type_sepa.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_benders.h"
+#include "scip/type_expr.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus
@@ -86,6 +87,12 @@ struct SCIP_Set
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
+   SCIP_EXPRHDLR**       exprhdlrs;          /**< expression handlers */
+   SCIP_EXPRHDLR*        exprhdlrvar;        /**< expression handler for variables (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrval;        /**< expression handler for constant values (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrsum;        /**< expression handler for sums (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrproduct;    /**< expression handler for products (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrpow;        /**< expression handler for power (for quick access) */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
    SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
    SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */
@@ -127,6 +134,8 @@ struct SCIP_Set
    int                   tablessize;         /**< size of tables array */
    int                   ndialogs;           /**< number of dialogs */
    int                   dialogssize;        /**< size of dialogs array */
+   int                   nexprhdlrs;         /**< number of expression handlers */
+   int                   exprhdlrssize;      /**< size of expression handlers array */
    int                   nnlpis;             /**< number of NLPIs */
    int                   nlpissize;          /**< size of NLPIs array */
    int                   nconcsolvertypes;   /**< number of concurrent solver types */
@@ -160,6 +169,7 @@ struct SCIP_Set
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
+   SCIP_Bool             exprhdlrssorted;    /**< are the expression handlers sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             benderssorted;      /**< are the Benders' algorithms sorted by activity and priority? */
    SCIP_Bool             bendersnamesorted;  /**< are the Benders' algorithms sorted by name? */
@@ -434,7 +444,7 @@ struct SCIP_Set
    SCIP_Real             presol_restartminred;/**< minimal fraction of integer variables removed after restart to allow for
                                                *   an additional restart */
    SCIP_Bool             presol_donotmultaggr;/**< should multi-aggregation of variables be forbidden? */
-   SCIP_Bool             presol_donotaggr;   /**< shouldaggregation of variables be forbidden? */
+   SCIP_Bool             presol_donotaggr;    /**< should aggregation of variables be forbidden? */
 
    /* pricing settings */
    SCIP_Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
@@ -511,6 +521,7 @@ struct SCIP_Set
                                               *   compared to best node's dual bound for applying local separation
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
    SCIP_Real             sepa_maxcoefratio;  /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
+   SCIP_Real             sepa_maxcoefratiofacrowprep; /**< maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup */
    SCIP_Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the LP */
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
@@ -526,6 +537,7 @@ struct SCIP_Set
                                               *   'd'iscrete) */
    char                  sepa_cutselrestart; /**< cut selection during restart ('a'ge, activity 'q'uotient) */
    char                  sepa_cutselsubscip; /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
+   SCIP_Bool             sepa_filtercutpoolrel; /**< should cutpool separate only cuts with high relative efficacy? */
    int                   sepa_maxruns;       /**< maximal number of runs for which separation is enabled (-1: unlimited) */
    int                   sepa_maxrounds;     /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   sepa_maxroundsroot; /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -570,6 +582,7 @@ struct SCIP_Set
    SCIP_Bool             time_reading;       /**< belongs reading time to solving time? */
    SCIP_Bool             time_rareclockcheck;/**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
    SCIP_Bool             time_statistictiming;  /**< should timing for statistic output be enabled? */
+   SCIP_Bool             time_nlpieval;      /**< should time for evaluation in NLP solves be measured? */
 
    /* tree compression parameters (for reoptimization) */
    SCIP_Bool             compr_enable;       /**< should automatic tree compression after presolving be enabled? (only for reoptimization) */

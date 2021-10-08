@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -43,8 +43,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_soc.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/pub_misc.h"
 
@@ -1595,7 +1594,7 @@ SCIP_RETCODE readQMatrix(
          rhs = SCIPinfinity(scip);
       }
 
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, "qmatrix", 1, &qmatrixvar, &minusone, cnt, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, "qmatrix", 1, &qmatrixvar, &minusone, cnt, quadvars1, quadvars2, quadcoefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -1650,7 +1649,7 @@ SCIP_RETCODE readQCMatrix(
    lincons = SCIPfindCons(scip, mpsinputField1(mpsi));
    if( lincons == NULL )
    {
-      SCIPerrorMessage("no row under name <%s> processed so far.\n");
+      SCIPerrorMessage("no row under name <%s> processed so far.\n", mpsinputField1(mpsi));
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
@@ -1757,7 +1756,7 @@ SCIP_RETCODE readQCMatrix(
    {
       SCIP_CONS* cons = NULL;
 
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, SCIPconsGetName(lincons),
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, SCIPconsGetName(lincons),
             SCIPgetNVarsLinear(scip, lincons), SCIPgetVarsLinear(scip, lincons), SCIPgetValsLinear(scip, lincons),
             cnt, quadvars1, quadvars2, quadcoefs, SCIPgetLhsLinear(scip, lincons), SCIPgetRhsLinear(scip, lincons),
             SCIPconsIsInitial(lincons), SCIPconsIsSeparated(lincons), SCIPconsIsEnforced(lincons), SCIPconsIsChecked(lincons),

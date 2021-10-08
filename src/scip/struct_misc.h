@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -271,6 +271,25 @@ struct SCIP_DisjointSet
    int*                  sizes;              /**< array to store the size of the subtree rooted at each vertex */
    int                   size;               /**< the number of vertices in the graph */
    int                   componentcount;     /**< counter for the number of connected components of the graph */
+};
+
+/** a linear inequality row in preparation to become a SCIP_ROW */
+struct SCIP_RowPrep
+{
+   SCIP_VAR**            vars;               /**< variables */
+   SCIP_Real*            coefs;              /**< coefficients of variables */
+   int                   nvars;              /**< number of variables (= number of coefficients) */
+   int                   varssize;           /**< length of variables array (= lengths of coefficients array) */
+   SCIP_Real             side;               /**< side */
+   SCIP_SIDETYPE         sidetype;           /**< type of side */
+   SCIP_Bool             local;              /**< whether the row is only locally valid (i.e., for the current node) */
+   char                  name[SCIP_MAXSTRLEN]; /**< row name */
+
+   SCIP_Bool             recordmodifications;/**< whether to remember variables which coefficients were modified during cleanup */
+   SCIP_VAR**            modifiedvars;       /**< variables which coefficient were modified by cleanup */
+   int                   nmodifiedvars;      /**< number of variables which coefficient was modified */
+   int                   modifiedvarssize;   /**< length of `modifiedvars` array */
+   SCIP_Bool             modifiedside;       /**< whether the side was modified (relaxed) by cleanup */
 };
 
 #ifdef __cplusplus

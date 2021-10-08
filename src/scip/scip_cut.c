@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -583,6 +583,7 @@ SCIP_RETCODE SCIPseparateSolCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_Bool             pretendroot,        /**< should the cut separators be called as if we are at the root node? */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
@@ -597,7 +598,7 @@ SCIP_RETCODE SCIPseparateSolCutpool(
    }
 
    SCIP_CALL( SCIPcutpoolSeparate(cutpool, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter,
-         scip->lp, scip->sepastore, sol, FALSE, (SCIPtreeGetCurrentDepth(scip->tree) == 0), result) );
+         scip->lp, scip->sepastore, sol, FALSE, pretendroot, result) );
 
    return SCIP_OKAY;
 }

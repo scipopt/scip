@@ -31,15 +31,16 @@
  * computes the globally valid linear inequality \f$ v' A(x,X) v \ge 0 \f$.
  *
  *
- * To identify which entries of the matrix X exist, we (the separator) iterate over the available expression constraints.
- * For each constraint, we explore its expression tree and collect all nodes (expressions) of the form
- * - x^2
- * - y * z
- * Then, we goes through the found bilinear terms (y * z) and if the corresponding y^2 and z^2 exist, then we have found
+ * To identify which entries of the matrix X exist, we (the separator) iterate over the available nonlinear constraints.
+ * For each constraint, we explore its expression and collect all nodes (expressions) of the form
+ * - \f$x^2\f$
+ * - \f$y \cdot z\f$
+ *
+ * Then, we go through the found bilinear terms \f$(yz)\f$ and if the corresponding \f$y^2\f$ and \f$z^2\f$ exist, then we have found
  * a minor.
  *
- * For circle packing instances, the minor cuts are not really helpful (see Packing circles in a square: a theoretical
- * comparison of various convexification techniques, http://www.optimization-online.org/DB_HTML/2017/03/5911.html).
+ * For circle packing instances, the minor cuts are not really helpful (see [Packing circles in a square: a theoretical
+ * comparison of various convexification techniques](http://www.optimization-online.org/DB_HTML/2017/03/5911.html)).
  * Furthermore, the performance was negatively affected, thus circle packing constraint are identified and ignored in
  * the above algorithm. This behavior is controlled with the parameter "separating/minor/ignorepackingconss".
  */
@@ -70,9 +71,7 @@ SCIP_RETCODE SCIPincludeSepaMinor(
  * @{
  */
 
-/* TODO place other public methods in this group to facilitate navigation through the documentation */
-
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

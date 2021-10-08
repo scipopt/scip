@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -437,7 +437,11 @@ SCIP_Real SCIPclockGetTime(
    SCIPdebugMessage("getting time of clock %p (type %d, usedefault=%u, nruns=%d)\n",
       (void*)clck, clck->clocktype, clck->usedefault, clck->nruns);
 
-   if( clck->nruns == 0 )
+   if( !clck->enabled )
+   {
+      result = 0.0;
+   }
+   else if( clck->nruns == 0 )
    {
       /* the clock is not running: convert the clocks timer into seconds */
       switch( clck->clocktype )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,7 +25,7 @@
 /* #3026 will decide whether to remove or adapt this code */
 #ifdef SCIP_DISABLED_CODE
 
-#include "nlpi/nlpi_ipopt.h"
+#include "scip/nlpi_ipopt.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.c"
 

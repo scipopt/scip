@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1617,7 +1617,7 @@ SCIP_RETCODE branchBalancedCardinality(
          SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPgetLocalTransEstimate(scip)) );
 
          /* create branching constraint for node 1 */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "brleft_#%d", SCIPgetNNodes(scip));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "brleft_#%" SCIP_LONGINT_FORMAT, SCIPgetNNodes(scip));
          SCIP_CALL( SCIPcreateConsCardinality(scip, &cons1, name, ind+1, branchvars, (int)splitval1, branchindvars, NULL,
                FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 
@@ -1670,7 +1670,7 @@ SCIP_RETCODE branchBalancedCardinality(
          assert(cnt == nbranchvars - (ind + 1));
 
          /* create branching constraint for node 2 */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "brright_#%d", SCIPgetNNodes(scip));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "brright_#% " SCIP_LONGINT_FORMAT , SCIPgetNNodes(scip));
          SCIP_CALL( SCIPcreateConsCardinality(scip, &cons2, name, cnt, branchvars, (int)splitval2, branchindvars, NULL,
                FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 

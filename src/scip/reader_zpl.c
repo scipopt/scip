@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,7 +30,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "nlpi/pub_expr.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_sos1.h"
@@ -49,16 +48,16 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
-#include "scip/cons_expr.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/struct_misc.h"
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_log.h"
-#include "scip/cons_expr_exp.h"
-#include "scip/cons_expr_abs.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_sin.h"
-#include "scip/cons_expr_cos.h"
-#include "scip/cons_expr_product.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_log.h"
+#include "scip/expr_exp.h"
+#include "scip/expr_abs.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_trig.h"
+#include "scip/expr_product.h"
+#include "scip/pub_expr.h"
 #include "scip/type_reader.h"
 
 #ifdef __cplusplus
@@ -450,7 +449,7 @@ SCIP_RETCODE addConsTerm(
          }
       }
 
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvar1,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvar1,
             quadvar2, quadcoefs, sciplhs, sciprhs, initial, separate, enforce, check, propagate, local, modifiable,
             readerdata->dynamicconss, readerdata->dynamicrows) );
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -468,19 +467,14 @@ SCIP_RETCODE addConsTerm(
       SCIP_VAR** polyvars;
       SCIP_Real* polyexps;
       SCIP_HASHMAP* varexpmap;
-      SCIP_CONSEXPR_EXPR** monomials;
+      SCIP_EXPR** monomials;
       int        nmonomials;
       int        monomialssize;
       SCIP_Real* coefs;
       Mono*      monomial;
       int varpos;
       int j;
-      SCIP_CONSHDLR* consexprhdlr;
-      SCIP_CONSEXPR_EXPR* monomialexpr;
-
-      consexprhdlr = SCIPfindConshdlr(scip, "expr");
-
-      assert(consexprhdlr != NULL);
+      SCIP_EXPR* monomialexpr;
 
       (*created) = TRUE;
 
@@ -548,7 +542,7 @@ SCIP_RETCODE addConsTerm(
          assert(varpos == SCIPhashmapGetNElements(varexpmap));
          SCIPhashmapRemoveAll(varexpmap);
 
-         SCIP_CALL( SCIPcreateConsExprExprMonomial(scip, consexprhdlr, &monomialexpr, varpos, polyvars, polyexps) );
+         SCIP_CALL( SCIPcreateExprMonomial(scip, &monomialexpr, varpos, polyvars, polyexps, NULL, NULL) );
 
          SCIPfreeBufferArrayNull(scip, &polyexps);
          SCIPfreeBufferArrayNull(scip, &polyvars);
@@ -561,8 +555,8 @@ SCIP_RETCODE addConsTerm(
          }
          else
          {
-            SCIP_CONSEXPR_EXPR* cosexpr;
-            SCIP_CONSEXPR_EXPR* prodchildren[2];
+            SCIP_EXPR* cosexpr;
+            SCIP_EXPR* prodchildren[2];
 
             coefs[nmonomials] = 1.0;
 
@@ -570,48 +564,47 @@ SCIP_RETCODE addConsTerm(
             switch( mono_get_function(monomial) )
             {
             case MFUN_SQRT:
-               SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &monomials[nmonomials], monomialexpr, 0.5) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &monomials[nmonomials], monomialexpr, 0.5, NULL, NULL) );
                break;
             case MFUN_LOG:
                /* log10(x) = ln(x) / ln(10.0) */
                coefs[nmonomials] = 1.0 / log(10.0);
-               SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
+               SCIP_CALL( SCIPcreateExprLog(scip, &monomials[nmonomials], monomialexpr, NULL, NULL) );
                break;
             case MFUN_EXP:
-               SCIP_CALL( SCIPcreateConsExprExprExp(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
+               SCIP_CALL( SCIPcreateExprExp(scip, &monomials[nmonomials], monomialexpr, NULL, NULL) );
                break;
 #if ZIMPL_VERSION >= 330
             case MFUN_LN:
-               SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
+               SCIP_CALL( SCIPcreateExprLog(scip, &monomials[nmonomials], monomialexpr, NULL, NULL) );
                break;
             case MFUN_SIN:
-               SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
+               SCIP_CALL( SCIPcreateExprSin(scip, &monomials[nmonomials], monomialexpr, NULL, NULL) );
                break;
             case MFUN_COS:
-               SCIP_CALL( SCIPcreateConsExprExprCos(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
+               SCIP_CALL( SCIPcreateExprCos(scip, &monomials[nmonomials], monomialexpr, NULL, NULL) );
                break;
             case MFUN_TAN:
-               SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, &prodchildren[0], monomialexpr) );
-               SCIP_CALL( SCIPcreateConsExprExprCos(scip, consexprhdlr, &cosexpr, monomialexpr) );
-               SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &prodchildren[1], cosexpr, -1.0) );
-               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &monomials[nmonomials], 2, prodchildren,
-                     1.0) );
+               SCIP_CALL( SCIPcreateExprSin(scip, &prodchildren[0], monomialexpr, NULL, NULL) );
+               SCIP_CALL( SCIPcreateExprCos(scip, &cosexpr, monomialexpr, NULL, NULL) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &prodchildren[1], cosexpr, -1.0, NULL, NULL) );
+               SCIP_CALL( SCIPcreateExprProduct(scip, &monomials[nmonomials], 2, prodchildren, 1.0, NULL, NULL) );
 
-               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodchildren[1]) );
-               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &cosexpr) );
-               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodchildren[0]) );
+               SCIP_CALL( SCIPreleaseExpr(scip, &prodchildren[1]) );
+               SCIP_CALL( SCIPreleaseExpr(scip, &cosexpr) );
+               SCIP_CALL( SCIPreleaseExpr(scip, &prodchildren[0]) );
 
                break;
             case MFUN_ABS:
-               SCIP_CALL( SCIPcreateConsExprExprAbs(scip, consexprhdlr, &monomials[nmonomials], monomialexpr) );
+               SCIP_CALL( SCIPcreateExprAbs(scip, &monomials[nmonomials], monomialexpr, NULL, NULL) );
                break;
             case MFUN_POW:
-               SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &monomials[nmonomials], monomialexpr,
-                     numb_todbl(mono_get_coeff(monomial))) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &monomials[nmonomials], monomialexpr,
+                     numb_todbl(mono_get_coeff(monomial)), NULL, NULL) );
                break;
             case MFUN_SGNPOW:
-               SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, consexprhdlr, &monomials[nmonomials], monomialexpr,
-                     numb_todbl(mono_get_coeff(monomial))) );
+               SCIP_CALL( SCIPcreateExprSignpower(scip, &monomials[nmonomials], monomialexpr,
+                     numb_todbl(mono_get_coeff(monomial)), NULL, NULL) );
                break;
 #endif
             case MFUN_NONE:
@@ -626,7 +619,7 @@ SCIP_RETCODE addConsTerm(
                break;
             }  /*lint !e788*/
 
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &monomialexpr) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &monomialexpr) );
          }
 
          ++nmonomials;
@@ -637,14 +630,14 @@ SCIP_RETCODE addConsTerm(
 
       if( *created )
       {
-         SCIP_CONSEXPR_EXPR* polynomial;
+         SCIP_EXPR* polynomial;
 
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &polynomial, nmonomials, monomials, coefs, 0.0) );
-         SCIP_CALL( SCIPcreateConsExpr(scip, &cons, name, polynomial, sciplhs, sciprhs, initial, separate, enforce,
+         SCIP_CALL( SCIPcreateExprSum(scip, &polynomial, nmonomials, monomials, coefs, 0.0, NULL, NULL) );
+         SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, name, polynomial, sciplhs, sciprhs, initial, separate, enforce,
                check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &polynomial) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &polynomial) );
       }
 
       /* free memory */
@@ -652,7 +645,7 @@ SCIP_RETCODE addConsTerm(
       {
          if( monomials[j] != NULL )
          {
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &monomials[j]) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &monomials[j]) );
          }
       }
 

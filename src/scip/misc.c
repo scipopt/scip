@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
@@ -5527,6 +5528,16 @@ void SCIPsort(
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortPtrRealRealBoolBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealRealBoolBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
 /* SCIPsortPtrRealRealIntBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrRealRealIntBool
 #define SORTTPL_KEYTYPE     void*
@@ -6681,7 +6692,7 @@ void SCIPprofilePrint(
 {
    int t;
 
-   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", profile, profile->capacity);
+   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", (void*)profile, profile->capacity);
 
    for( t = 0; t < profile->ntimepoints; ++t )
    {
@@ -7894,12 +7905,13 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    int*                  narticulations      /**< number of the computed articulation points, or NULL */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
    BMS_BLKMEM* blkmem;
-   SCIP_Bool* visited;
-   SCIP_Bool* articulationflag;
-   int* tdisc;
-   int* mindisc;
-   int* parent;
+   SCIP_Bool* visited = NULL;
+   SCIP_Bool* articulationflag = NULL;
+   int* tdisc = NULL;
+   int* mindisc = NULL;
+   int* parent = NULL;
    int n;
    int articulationidx = 0;
    int time = 0;
@@ -7910,11 +7922,11 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    /* Only perform the computation if the articulation points are NOT up-to-date */
    if( !digraph->articulationscheck )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&visited, digraph->nnodes) );
-      SCIP_ALLOC( BMSallocMemoryArray(&tdisc, digraph->nnodes) );
-      SCIP_ALLOC( BMSallocMemoryArray(&mindisc, digraph->nnodes) );
-      SCIP_ALLOC( BMSallocMemoryArray(&parent, digraph->nnodes) );
-      SCIP_ALLOC( BMSallocMemoryArray(&articulationflag, digraph->nnodes) );
+      SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&visited, digraph->nnodes), TERMINATE );
+      SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&tdisc, digraph->nnodes), TERMINATE );
+      SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&mindisc, digraph->nnodes), TERMINATE );
+      SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&parent, digraph->nnodes), TERMINATE );
+      SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&articulationflag, digraph->nnodes), TERMINATE );
 
       assert(digraph->blkmem != NULL);
       blkmem = digraph->blkmem;
@@ -7940,22 +7952,16 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
       }
 
       /* allocation of the block memory for the node indices of the articulation points*/
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations) );
+      SCIP_ALLOC_TERMINATE( retcode, BMSallocBlockMemoryArray(blkmem, &digraph->articulations, digraph->narticulations), TERMINATE );
 
       for( n = 0; n < digraph->nnodes; ++n )
       {
-         if ( articulationflag[n] )
+         if( articulationflag[n] )
          {
             digraph->articulations[articulationidx] = n;
             ++articulationidx;
          }
       }
-
-      BMSfreeMemoryArrayNull(&articulationflag);
-      BMSfreeMemoryArrayNull(&parent);
-      BMSfreeMemoryArrayNull(&mindisc);
-      BMSfreeMemoryArrayNull(&tdisc);
-      BMSfreeMemoryArrayNull(&visited);
    }
 
    if( articulations != NULL )
@@ -7966,7 +7972,15 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    /* the articulation points are now up-to-date */
    digraph->articulationscheck = TRUE;
 
-   return SCIP_OKAY;
+/* cppcheck-suppress unusedLabel */
+TERMINATE:
+   BMSfreeMemoryArrayNull(&articulationflag);
+   BMSfreeMemoryArrayNull(&parent);
+   BMSfreeMemoryArrayNull(&mindisc);
+   BMSfreeMemoryArrayNull(&tdisc);
+   BMSfreeMemoryArrayNull(&visited);
+
+   return retcode;
 }
 
 /** Compute undirected connected components on the given graph.
@@ -9305,7 +9319,7 @@ SCIP_Bool SCIPrealToRational(
    assert(nominator != NULL);
    assert(denominator != NULL);
 
-   if( REALABS(val) >= 1.0 * SCIP_LONGINT_MAX / maxdnom )
+   if( REALABS(val) >= ((SCIP_Real)SCIP_LONGINT_MAX) / maxdnom )
       return FALSE;
 
    /* try the simple denominators first: each value of the simpledenoms table multiplied by powers of 10
@@ -9382,7 +9396,7 @@ SCIP_Bool SCIPrealToRational(
       delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
    }
 
-   if( REALABS(g0) > (SCIP_LONGINT_MAX >> 4) || h0 > (SCIP_LONGINT_MAX >> 4) )
+   if( REALABS(g0) > (SCIP_Real)(SCIP_LONGINT_MAX >> 4) || h0 > (SCIP_Real)(SCIP_LONGINT_MAX >> 4) )
       return FALSE;
 
    assert(h0 > 0.5);
@@ -9740,19 +9754,18 @@ SCIP_Real SCIPselectSimpleValue(
    return val;
 }
 
-/** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
- *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
- *  number inside the interval was found
+/** Performs the Newton Procedure from a given starting point to compute a root of the given function with
+ *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
  */
-SCIP_Real SCIPcomputeRootNewton(
-   SCIP_DECL_NEWTONEVAL((*function)),       /**< pointer to function for which roots are computed */
-   SCIP_DECL_NEWTONEVAL((*derivative)),     /**< pointer to derivative of above function */
-   SCIP_Real*            params,            /**< parameters needed for function (can be NULL) */
-   int                   nparams,           /**< number of parameters (can be 0) */
-   SCIP_Real             x,                 /**< starting point */
-   SCIP_Real             eps,               /**< tolerance */
-   int                   k                  /**< iteration limit */
-)
+SCIP_Real SCIPcalcRootNewton(
+   SCIP_DECL_NEWTONEVAL((*function)),        /**< pointer to function for which roots are computed */
+   SCIP_DECL_NEWTONEVAL((*derivative)),      /**< pointer to derivative of above function */
+   SCIP_Real*            params,             /**< parameters needed for function (can be NULL) */
+   int                   nparams,            /**< number of parameters (can be 0) */
+   SCIP_Real             x,                  /**< starting point */
+   SCIP_Real             eps,                /**< tolerance */
+   int                   k                   /**< iteration limit */
+   )
 {
    SCIP_Real result = x;
    int iteration = 0;
@@ -9786,7 +9799,6 @@ SCIP_Real SCIPcomputeRootNewton(
    else
       return result;
 }
-
 
 
 /*
@@ -10223,12 +10235,12 @@ SCIP_Longint SCIPcalcBinomCoef(
 }
 
 #ifndef NDEBUG
-/** returns a non-negative integer hash key for a given real number by using Fibonacci hashing */
+/** calculates hash for floating-point number by using Fibonacci hashing */
 #if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
 __attribute__((no_sanitize_undefined))
 #endif
 unsigned int SCIPcalcFibHash(
-   SCIP_Real             v                   /**< value to be hashed */
+   SCIP_Real             v                   /**< number to hash */
    )
 {
    if( v >= 0 )
@@ -10418,8 +10430,28 @@ SCIP_RETCODE SCIPgetRandomSubset(
  * Arrays
  */
 
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
+ */
 SCIP_RETCODE SCIPcomputeArraysIntersection(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   SCIPcomputeArraysIntersectionInt(array1, narray1, array2, narray2, intersectarray, nintersectarray);
+
+   return SCIP_OKAY;
+}
+
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+void SCIPcomputeArraysIntersectionInt(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
    int*                  array2,             /**< second array (in ascending order) */
@@ -10469,22 +10501,19 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
 
    /* store size of intersection array */
    *nintersectarray = cnt;
-
-   return SCIP_OKAY;
 }
 
-/** computes set intersection (duplicates removed) of two pointer arrays that are ordered ascendingly */
-void SCIPcomputeArraysIntersectionPtr
-   (
-      void**                array1,                   /**< pointer to first data array */
-      int                   narray1,                  /**< number of entries of first array */
-      void**                array2,                   /**< pointer to second data array */
-      int                   narray2,                  /**< number of entries of second array */
-      SCIP_DECL_SORTPTRCOMP((*ptrcomp)),              /**< data element comparator */
-      void**                intersectarray,           /**< intersection of array1 and array2
-                                                       *   (note: it is possible to use array1 for this input argument) */
-      int*                  nintersectarray           /**<  pointer to store number of entries of intersection array
-                                                       *   (note: it is possible to use narray1 for this input argument)*/
+/** computes set intersection (duplicates removed) of two void-pointer arrays that are ordered ascendingly */
+void SCIPcomputeArraysIntersectionPtr(
+   void**                array1,             /**< pointer to first data array */
+   int                   narray1,            /**< number of entries of first array */
+   void**                array2,             /**< pointer to second data array */
+   int                   narray2,            /**< number of entries of second array */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void**                intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**<  pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
    )
 {
    int cnt = 0;
@@ -10494,28 +10523,30 @@ void SCIPcomputeArraysIntersectionPtr
 
    assert( array1 != NULL );
    assert( array2 != NULL );
+   assert( ptrcomp != NULL );
    assert( intersectarray != NULL );
    assert( nintersectarray != NULL );
 
    /* determine intersection of array1 and array2 */
-   for (v1 = 0; v1 < narray1; ++v1)
+   for( v1 = 0; v1 < narray1; ++v1 )
    {
       assert( v1 == 0 || (*ptrcomp)(array1[v1], array1[v1-1]) >= 0 );
 
       /* skip duplicate entries */
-      if ( v1+1 < narray1 && array1[v1] == array1[v1+1])
+      if( v1+1 < narray1 && array1[v1] == array1[v1+1] )
          continue;
 
-      for (v2 = k; v2 < narray2; ++v2)
+      for( v2 = k; v2 < narray2; ++v2 )
       {
          assert( v2 == 0 || (*ptrcomp)(array2[v2], array2[v2-1]) > 0 || array2[v2] == array2[v2-1] );
 
-         if ( (*ptrcomp)(array2[v2], array1[v1]) > 0 )
+         if( (*ptrcomp)(array2[v2], array1[v1]) > 0 )
          {
             k = v2;
             break;
          }
-         else if ( array2[v2] == array1[v1] )
+
+         if( array2[v2] == array1[v1] )
          {
             intersectarray[cnt++] = array2[v2];
             k = v2 + 1;
@@ -10529,8 +10560,28 @@ void SCIPcomputeArraysIntersectionPtr
 }
 
 
-/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysSetminusInt().
+ */
 SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   SCIPcomputeArraysSetminusInt(array1, narray1, array2, narray2, setminusarray, nsetminusarray);
+
+   return SCIP_OKAY;
+}
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+void SCIPcomputeArraysSetminusInt(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
    int*                  array2,             /**< second array (in ascending order) */
@@ -10572,8 +10623,6 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
 
    /* store size of setminus array */
    *nsetminusarray = cnt;
-
-   return SCIP_OKAY;
 }
 
 
@@ -11210,4 +11259,24 @@ int SCIPdisjointsetGetSize(
    assert(djset != NULL);
 
    return djset->size;
+}
+
+/** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
+SCIP_Bool SCIPstrAtStart(
+   const char*           s,                  /**< string to search in */
+   const char*           t,                  /**< string to search for */
+   size_t                tlen                /**< length of t */
+   )
+{
+   int idxctr = 0;
+
+   assert(s != NULL);
+   assert(t != NULL);
+
+   /* skip whitespace at beginning */
+   while( idxctr < SCIP_MAXSTRLEN && isspace((unsigned char)s[idxctr]) )
+      ++idxctr;
+   if( strncmp(&s[idxctr], t, tlen) == 0 )
+      return TRUE;
+   return FALSE;
 }

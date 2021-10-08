@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1270,7 +1270,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          SCIPsortInt(cliques[*ncliques], cliquesizes[*ncliques]);
 
          /* create new constraint */
-         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "extsos1_%" SCIP_LONGINT_FORMAT, conshdlrdata->cntextsos1, conshdlrdata->cntextsos1);
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "extsos1_%d", conshdlrdata->cntextsos1);
 
          SCIP_CALL( SCIPcreateConsSOS1(scip, &newcons, consname, cliquesizes[*ncliques], vars, weights,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
@@ -2000,7 +2000,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                   }
 
                   /* get intersection with comsucc */
-                  SCIP_CALL( SCIPcomputeArraysIntersection(comsucc, ncomsucc, succ, nsucc, comsucc, &ncomsucc) );
+                  SCIPcomputeArraysIntersectionInt(comsucc, ncomsucc, succ, nsucc, comsucc, &ncomsucc);
                }
             }
 
@@ -5050,13 +5050,13 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
             }
 
             /* compute second partition of fixingsnode2 (that is fixingsnode2 \setminus fixingsnode21 ) */
-            SCIP_CALL( SCIPcomputeArraysSetminus(fixingsnode2, nfixingsnode2, fixingsnode21, nfixingsnode21, fixingsnode22, &nfixingsnode22) );
+            SCIPcomputeArraysSetminusInt(fixingsnode2, nfixingsnode2, fixingsnode21, nfixingsnode21, fixingsnode22, &nfixingsnode22);
             assert ( nfixingsnode22 + nfixingsnode21 == nfixingsnode2 );
 
             /* compute cover set (that are all the vertices not in fixingsnode1 and fixingsnode21, whose neighborhood covers all the vertices of fixingsnode22) */
             SCIP_CALL( getCoverVertices(conflictgraph, verticesarefixed, -1, fixingsnode22, nfixingsnode22, coverarray, &ncoverarray) );
-            SCIP_CALL( SCIPcomputeArraysSetminus(coverarray, ncoverarray, fixingsnode1, nfixingsnode1, coverarray, &ncoverarray) );
-            SCIP_CALL( SCIPcomputeArraysSetminus(coverarray, ncoverarray, fixingsnode21, nfixingsnode21, coverarray, &ncoverarray) );
+            SCIPcomputeArraysSetminusInt(coverarray, ncoverarray, fixingsnode1, nfixingsnode1, coverarray, &ncoverarray);
+            SCIPcomputeArraysSetminusInt(coverarray, ncoverarray, fixingsnode21, nfixingsnode21, coverarray, &ncoverarray);
 
             for (j = 0; j < ncoverarray; ++j)
             {
@@ -5194,7 +5194,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      if ( SCIPisGT(scip, feas, conshdlrdata->addcompsfeas) )
                      {
                         /* create SOS1 constraint */
-                        (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sos1_branchnode_%i_no_%i", SCIPnodeGetNumber(node), *naddedconss);
+                        (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sos1_branchnode_%" SCIP_LONGINT_FORMAT "_no_%i", SCIPnodeGetNumber(node), *naddedconss);
                         SCIP_CALL( SCIPcreateConsSOS1(scip, &conssos1, name, 0, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE,
                               TRUE, FALSE, FALSE, FALSE) );
 
@@ -5215,7 +5215,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      {
                         /* possibly create linear constraint of the form x_i/u_i + x_j/u_j <= t if a bound variable t with x_i <= u_i * t and x_j <= u_j * t exists.
                          * Otherwise try to create a constraint of the form x_i/u_i + x_j/u_j <= 1. Try the same for the lower bounds. */
-                        (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "boundcons_branchnode_%i_no_%i", SCIPnodeGetNumber(node), *naddedconss);
+                        (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "boundcons_branchnode_%" SCIP_LONGINT_FORMAT "_no_%i", SCIPnodeGetNumber(node), *naddedconss);
                         if ( takebound )
                         {
                            /* create constraint with right hand side = 0.0 */
@@ -5298,7 +5298,7 @@ SCIP_RETCODE resetConflictgraphSOS1(
          nsucc = SCIPdigraphGetNSuccessors(conflictgraph, j);
 
          /* reset number of successors */
-         SCIP_CALL( SCIPcomputeArraysSetminus(succ, nsucc, succloc, nsuccloc, succ, &k) );
+         SCIPcomputeArraysSetminusInt(succ, nsucc, succloc, nsuccloc, succ, &k);
          SCIP_CALL( SCIPdigraphSetNSuccessors(conflictgraph, j, k) );
          SCIP_CALL( SCIPdigraphSetNSuccessors(localconflicts, j, 0) );
       }

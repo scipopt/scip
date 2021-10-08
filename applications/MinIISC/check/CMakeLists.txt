@@ -14,7 +14,7 @@ set(instances
 # add a test that builds the executable
 #
 add_test(NAME applications-miniisc-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target miniisc
+        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target miniisc
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
@@ -44,4 +44,12 @@ foreach(instance ${instances})
                             PASS_REGULAR_EXPRESSION "Primal Bound       : \\+(${optval}\\.000000*|${optvalminusone}\\.999999*)e\\+00"
                             DEPENDS applications-miniisc-build
                         )
+    if(WIN32)
+        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties("applications-miniisc-${basename}"
+                PROPERTIES
+                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+            )
+    endif()
 endforeach()

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,7 +20,7 @@
  *
  * This reader allows to parse and write PIP files with linear and polynomial constraints and objective.
  * For writing, linear (general and specialized), quadratic, and "and" constraints are supported.
- * Also abspower, bivariate, and nonlinear constraints may be written, if they are representable as polynomials.
+ * Also nonlinear constraints may be written, if they are representable as polynomials.
  *
  * The PIP format is similar to the LP format and defined at http://polip.zib.de/pipformat.php .
  */

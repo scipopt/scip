@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,6 +54,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 {  /*lint --e{715}*/
    assert( scip != NULL );
    assert( matrixdata != NULL );
+   assert( exprdata != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,8 +25,8 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-#include "nlpi/pub_expr.h"
+#ifdef CLASSIC_NONLINEAR_CONSHDLR  /* TODO code disabled with this define needs to be update to work with new cons_nonlinear, see #3014 */
+#include "scip/pub_expr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_bivariate.h"
 #include "scip/cons_nonlinear.h"
@@ -2161,9 +2161,11 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Real ub;
    SCIP_Bool freeints;
    SCIP_Bool nondefbounds;
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
    SCIP_Bool nlcons;
    SCIP_Bool nqcons;
    SCIP_Bool nsmooth;
+#endif
    SCIP_Bool discrete;
    SCIP_Bool rangedrow;
    SCIP_Bool indicatorsosdef;
@@ -2511,9 +2513,11 @@ SCIP_RETCODE SCIPwriteGms(
    }
 
    /* print constraints */
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
    nlcons = FALSE;
    nqcons = FALSE;
    nsmooth = FALSE;
+#endif
    discrete = nbinvars > 0 || nintvars > 0;
    indicatorsosdef = FALSE;
    for( c = 0; c < nconss; ++c )
@@ -2718,8 +2722,10 @@ SCIP_RETCODE SCIPwriteGms(
 
       SCIPinfoMessage(scip, file, "\n");
    }
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
    /* if at most quadratic, then cannot have nonsmooth functions */
    assert(nlcons || !nsmooth);
+#endif
 
    /* print model creation */
    SCIPinfoMessage(scip, file, "Model m / all /;\n\n");
@@ -2729,8 +2735,12 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "option limcol = 0;\n\n");
 
    /* print solve command */
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
          discrete ? "MI" : "", nlcons ? (nqcons ? ((nsmooth && !discrete) ? "DNLP" : "NLP") : "QCP") : (discrete > 0 ? "P" : "LP"));
+#else
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, discrete ? "MIP" : "LP");
+#endif
 
    if( objvar != NULL )
    {

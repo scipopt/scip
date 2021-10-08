@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,8 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_var.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_conflict.h"
@@ -43,6 +42,7 @@
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -73,7 +73,7 @@
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define LINCONSUPGD_PRIORITY    +700000 /**< priority of the constraint handler for upgrading of linear constraints */
-#define EXPRCONSUPGD_PRIORITY   +700000 /**< priority of the constraint handler for upgrading of expr constraints */
+#define NONLINCONSUPGD_PRIORITY +700000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 
 #define EVENTHDLR_NAME         "setppc"
 #define EVENTHDLR_DESC         "bound change event handler for set partitioning / packing / covering constraints"
@@ -152,6 +152,7 @@ struct SCIP_ConsData
 {
    uint64_t              signature;          /**< bit signature of vars array */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
+   SCIP_NLROW*           nlrow;              /**< NLP row, if constraint has been added to NLP relaxation */
    SCIP_VAR**            vars;               /**< variables of the constraint */
    int                   varssize;           /**< size of vars array */
    int                   nvars;              /**< number of variables in the constraint */
@@ -570,6 +571,7 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->signature = 0;
    (*consdata)->row = NULL;
+   (*consdata)->nlrow = NULL;
    (*consdata)->existmultaggr = FALSE;
    (*consdata)->catchevents = FALSE;
    (*consdata)->nfixedzeros = 0;
@@ -707,6 +709,12 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* release the nlrow */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
    /* release variables */
@@ -2455,6 +2463,71 @@ SCIP_RETCODE addCut(
    {
       SCIPdebugMsg(scip, "adding constraint <%s> as cut to the LP\n", SCIPconsGetName(cons));
       SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds setppc constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< setppc constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_Real lhs, rhs;
+      SCIP_Real* coefs;
+      int i;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, consdata->nvars) );
+      for( i = 0; i < consdata->nvars; ++i )
+         coefs[i] = 1.0;
+
+      switch( SCIPgetTypeSetppc(scip, cons) )
+      {
+      case SCIP_SETPPCTYPE_PARTITIONING:
+         lhs = 1.0;
+         rhs = 1.0;
+         break;
+
+      case SCIP_SETPPCTYPE_PACKING:
+         lhs = -SCIPinfinity(scip);
+         rhs = 1.0;
+         break;
+
+      case SCIP_SETPPCTYPE_COVERING:
+         lhs = 1.0;
+         rhs = SCIPinfinity(scip);
+         break;
+
+      default:
+         SCIPerrorMessage("unexpected setppc type\n");
+         return SCIP_ERROR;
+      }
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+         0.0, consdata->nvars, consdata->vars, coefs, NULL, lhs, rhs, SCIP_EXPRCURV_LINEAR) );
+      assert(consdata->nlrow != NULL);
+
+      SCIPfreeBufferArray(scip, &coefs);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -7111,13 +7184,14 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
    return SCIP_OKAY;
 }
 
-/** tries to upgrade an expression constraint to a setpacking constraint */
+/** tries to upgrade a nonlinear constraint to a setpacking constraint */
 static
-SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
+SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
 {
-   SCIP_CONSEXPR_QUADEXPR* quaddata;
-   SCIP_CONSEXPR_EXPR* expr1;
-   SCIP_CONSEXPR_EXPR* expr2;
+   SCIP_Bool isquadratic;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* expr1;
+   SCIP_EXPR* expr2;
    SCIP_VAR* bilinvars[2];
    SCIP_VAR* vars[2];
    SCIP_Real bilincoef;
@@ -7136,11 +7210,11 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
    assert(nupgdconss != NULL);
    assert(upgdconss != NULL);
    assert(! SCIPconsIsModifiable(cons));
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "expr") == 0);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "nonlinear") == 0);
 
    *nupgdconss = 0;
 
-   SCIPdebugMsg(scip, "try to upgrade expression constraint <%s> to setpacking constraint ...\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "try to upgrade nonlinear constraint <%s> to setpacking constraint ...\n", SCIPconsGetName(cons));
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* need exactly two variables */
@@ -7150,17 +7224,17 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
    /* left and right hand side need to be equal
     * @todo we could also handle inequalities
     */
-   rhs = SCIPgetRhsConsExpr(scip, cons);
-   if( SCIPisInfinity(scip, rhs) || !SCIPisEQ(scip, SCIPgetLhsConsExpr(scip, cons), rhs) )
+   rhs = SCIPgetRhsNonlinear(cons);
+   if( SCIPisInfinity(scip, rhs) || !SCIPisEQ(scip, SCIPgetLhsNonlinear(cons), rhs) )
       return SCIP_OKAY;
 
-   /* get quadratic representation, if possible */
-   SCIP_CALL( SCIPgetQuadExprConsExpr(scip, cons, &quaddata) );
-
-   if( quaddata == NULL || !SCIPareConsExprQuadraticExprsVariables(quaddata) )
+   /* check whether constraint is quadratic */
+   SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
+   if( !isquadratic )
       return SCIP_OKAY;
 
-   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprterms);
+   expr = SCIPgetExprNonlinear(cons);
+   SCIPexprGetQuadraticData(expr, &constant, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprterms, NULL, NULL);
 
    /* adjust rhs */
    rhs -= constant;
@@ -7178,9 +7252,9 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
       return SCIP_OKAY;
 
    /* get bilinear term */
-   SCIPgetConsExprQuadraticBilinTermData(quaddata, 0, &expr1, &expr2, &bilincoef, NULL, NULL);
-   bilinvars[0] = SCIPgetConsExprExprVarVar(expr1);
-   bilinvars[1] = SCIPgetConsExprExprVarVar(expr2);
+   SCIPexprGetQuadraticBilinTerm(expr, 0, &expr1, &expr2, &bilincoef, NULL, NULL);
+   bilinvars[0] = SCIPgetVarExprVar(expr1);
+   bilinvars[1] = SCIPgetVarExprVar(expr2);
 
    if( SCIPisZero(scip, bilincoef) )
       return SCIP_OKAY;
@@ -7190,10 +7264,10 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
       return SCIP_OKAY;
 
    /* get data of quadratic terms */
-   SCIPgetConsExprQuadraticQuadTermData(quaddata, 0, &expr1, &lincoef, &sqrcoef, NULL, NULL, NULL);
+   SCIPexprGetQuadraticQuadTerm(expr, 0, &expr1, &lincoef, &sqrcoef, NULL, NULL, NULL);
    coefx = lincoef + sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
 
-   SCIPgetConsExprQuadraticQuadTermData(quaddata, 1, &expr2, &lincoef, &sqrcoef, NULL, NULL, NULL);
+   SCIPexprGetQuadraticQuadTerm(expr, 1, &expr2, &lincoef, &sqrcoef, NULL, NULL, NULL);
    coefy = lincoef + sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
 
    /* divide constraint by coefficient of x*y */
@@ -7215,23 +7289,23 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
 
    if( SCIPisZero(scip, coefy) )
    {
-      vars[0] = SCIPgetConsExprExprVarVar(expr1);
+      vars[0] = SCIPgetVarExprVar(expr1);
    }
    else
    {
       assert(SCIPisEQ(scip, coefy, -1.0));
       /* x - 1 = -(1-x) = -(~x) */
-      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPgetConsExprExprVarVar(expr1), &vars[0]) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPgetVarExprVar(expr1), &vars[0]) );
    }
    if( SCIPisZero(scip, coefx) )
    {
-      vars[1] = SCIPgetConsExprExprVarVar(expr2);
+      vars[1] = SCIPgetVarExprVar(expr2);
    }
    else
    {
       assert(SCIPisEQ(scip, coefx, -1.0));
       /* y - 1 = -(1 - y) = -(~y) */
-      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPgetConsExprExprVarVar(expr2), &vars[1]) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPgetVarExprVar(expr2), &vars[1]) );
    }
 
    /* constraint is now of the form  vars[0] * vars[1] == 0 */
@@ -7340,12 +7414,30 @@ SCIP_DECL_CONSEXITPRE(consExitpreSetppc)
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
+SCIP_DECL_CONSINITSOL(consInitsolSetppc)
+{  /*lint --e{715}*/
+
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
 SCIP_DECL_CONSEXITSOL(consExitsolSetppc)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int c;
 
-   /* release the rows of all constraints */
+   /* release the rows and nlrows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -7354,6 +7446,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolSetppc)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
 
@@ -8488,6 +8585,11 @@ SCIP_DECL_CONSACTIVE(consActiveSetppc)
    SCIP_CALL( consdataIncVaruses(scip, SCIPconshdlrGetData(conshdlr), SCIPconsGetData(cons)) );
 #endif
 
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -8496,25 +8598,26 @@ SCIP_DECL_CONSACTIVE(consActiveSetppc)
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
 {  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPconsIsTransformed(cons));
 
    SCIPdebugMsg(scip, "deactivation information for set partitioning / packing / covering constraint <%s>\n",
       SCIPconsGetName(cons));
 
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
 #ifdef VARUSES
    /* decrease the number of uses for each variable in the constraint */
-   SCIP_CALL( consdataDecVaruses(scip, SCIPconshdlrGetData(conshdlr), SCIPconsGetData(cons)) );
+   SCIP_CALL( consdataDecVaruses(scip, SCIPconshdlrGetData(conshdlr), condata) );
 #endif
 
    if( SCIPconsIsDeleted(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
-      SCIP_CONSDATA* consdata;
-
-      /* get constraint data */
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
 
       /* get event handler */
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -8526,6 +8629,14 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
       {
          SCIP_CALL( dropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
       }
+   }
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -8843,6 +8954,7 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
  * Callback methods of conflict handler
  */
 
+/** conflict processing method of conflict handler (called when conflict was found) */
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
 {  /*lint --e{715}*/
@@ -9006,6 +9118,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSetppc) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsSetppc) );
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSetppc) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSetppc) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSetppc) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSetppc) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsSetppc) );
@@ -9030,10 +9143,10 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
       /* include the linear constraint to setppc constraint upgrade in the linear constraint handler */
       SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetppc, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
    }
-   if( SCIPfindConshdlr(scip, "expr") != NULL )
+   if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
    {
       /* notify function that upgrades quadratic constraint to setpacking */
-      SCIP_CALL( SCIPincludeExprconsUpgrade(scip, exprUpgdSetppc, EXPRCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+      SCIP_CALL( SCIPincludeConsUpgradeNonlinear(scip, nonlinUpgdSetppc, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
    }
 
    /* set partitioning constraint handler parameters */

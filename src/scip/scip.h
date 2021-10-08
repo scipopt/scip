@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,6 +54,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_dialog.h"
 #include "scip/type_disp.h"
+#include "scip/type_expr.h"
 #include "scip/type_heur.h"
 #include "scip/type_compr.h"
 #include "scip/type_history.h"
@@ -66,11 +67,13 @@
 #include "scip/type_sepa.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_syncstore.h"
 #include "scip/type_benders.h"
 #include "scip/type_benderscut.h"
+
+#include "scip/intervalarith.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
 #include "scip/pub_bandit.h"
@@ -84,6 +87,7 @@
 #include "scip/pub_dialog.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_compr.h"
@@ -108,7 +112,6 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "lpi/lpi.h"
-#include "nlpi/pub_expr.h"
 
 /* include global presolving, cuts, and heuristics methods */
 #include "scip/presolve.h"
@@ -137,8 +140,8 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
+#include "scip/scip_nlpi.h"
 #include "scip/scip_nodesel.h"
-#include "scip/scip_nonlinear.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_presol.h"

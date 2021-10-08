@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,7 +37,7 @@ extern "C" {
 /** creates the components constraint handler and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
- * */
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP*                 scip                /**< SCIP data structure */

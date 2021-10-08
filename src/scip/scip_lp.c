@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -834,6 +834,30 @@ SCIP_RETCODE SCIPsumLPRows(
    return SCIP_OKAY;
 }
 
+/** interrupts or disables the interrupt of the currently ongoing lp solve; if the lp is not currently constructed just returns with no effect
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called in any SCIP stage
+ */
+SCIP_RETCODE SCIPinterruptLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPinterruptLP", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( scip->lp == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPlpInterrupt(scip->lp, interrupt) );
+   if( interrupt )
+      scip->stat->userinterrupt = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** writes current LP to a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1008,14 +1032,14 @@ SCIP_RETCODE SCIPprintLPSolutionQuality(
    if( quality != SCIP_INVALID ) /*lint !e777*/
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%.6e\n", quality);
    else
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "not available\n", quality);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "not available\n");
 
    SCIP_CALL( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_EXACTCONDITION, &quality) );
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Basis matrix condition (exact):     ");
    if( quality != SCIP_INVALID ) /*lint !e777*/
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%.6e\n", quality);
    else
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "not available\n", quality);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "not available\n");
 
    return SCIP_OKAY;
 }

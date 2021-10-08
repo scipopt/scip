@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -154,6 +154,13 @@ typedef struct SCIP_Regression SCIP_REGRESSION;
  *  - \ref DisjointSet "List of available methods"
  */
 typedef struct SCIP_DisjointSet SCIP_DISJOINTSET;
+
+/** a linear inequality row in preparation to become a SCIP_ROW
+ *
+ * Used to assemble data that could eventually make a SCIP_ROW.
+ * @note Only one-sided rows are allowed here.
+ */
+typedef struct SCIP_RowPrep SCIP_ROWPREP;
 
 /** compares two element indices
  *  result:

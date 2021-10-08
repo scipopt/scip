@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -5375,6 +5375,18 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** interrupts the currently ongoing lp solve or disables the interrupt */
+SCIP_RETCODE SCIPlpiInterrupt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{
+   /*lint --e{715}*/
+   assert(lpi != NULL);
 
    return SCIP_OKAY;
 }

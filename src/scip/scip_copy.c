@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,6 +49,7 @@
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_nlpi.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
@@ -102,7 +103,7 @@ SCIP_Bool takeCut(
       takecut = (SCIPcutGetLPActivityQuot(cut) >= scip->set->sepa_minactivityquot);
       break;
    default:
-      SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n");
+      SCIPerrorMessage("unknown cut selection strategy %c, must be either 'a' or 'q'\n", cutsel);
       SCIPABORT();
       takecut = FALSE;  /*lint !e527*/
       break;
@@ -280,6 +281,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
+   SCIP_Bool             copyexprhdlrs,      /**< should the expression handlers be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
@@ -303,7 +305,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set,
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copynlpis, valid) );
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copyexprhdlrs, copynlpis, valid) );
 
    return SCIP_OKAY;
 }
@@ -454,6 +456,8 @@ SCIP_RETCODE copyProb(
    SCIP_CALL( SCIPconflictstoreCreate(&targetscip->conflictstore, targetscip->set) );
 
    SCIP_CALL( SCIPdecompstoreCreate(&targetscip->decompstore, SCIPblkmem(targetscip), SCIP_DECOMPSTORE_CAPA) );
+
+   SCIP_CALL( SCIPdebugSolDataCreate(&targetscip->set->debugsoldata) );
 
    if( uselocalvarmap )
    {
@@ -1304,6 +1308,44 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    }
 
    return SCIP_OKAY;
+}
+
+/** merges the statistics of NLPIs from a source SCIP into a target SCIP
+ *
+ * The two SCIP instances should point to different SCIP instances.
+ *
+ *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
+ *        \p targetscip denotes the original instance
+ */
+void SCIPmergeNLPIStatistics(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_Bool             reset               /**< whether to reset statistics in sourcescip */
+   )
+{
+   int i;
+
+   assert(sourcescip != targetscip);
+
+   for( i = 0; i < sourcescip->set->nnlpis; ++i )
+   {
+      SCIP_NLPI* sourcenlpi;
+      SCIP_NLPI* targetnlpi;
+
+      sourcenlpi = sourcescip->set->nlpis[i];
+      /* probably NLPI is on same position in target and source, otherwise do search */
+      if( strcmp(SCIPnlpiGetName(targetscip->set->nlpis[i]), SCIPnlpiGetName(sourcenlpi)) == 0 )
+         targetnlpi = targetscip->set->nlpis[i];
+      else
+         targetnlpi = SCIPsetFindNlpi(targetscip->set, SCIPnlpiGetName(sourcenlpi));
+
+      if( targetnlpi != NULL )
+         SCIPnlpiMergeStatistics(targetnlpi, sourcenlpi, reset);
+      else
+      {
+         SCIPdebugMsg(targetscip, "NLPI <%s> from source SCIP not available in target SCIP\n", SCIPnlpiGetName(sourcenlpi));
+      }
+   }
 }
 
 /** provides values of a solution from a subscip according to the variable in the main scip
@@ -2645,7 +2687,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
    /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
@@ -3342,17 +3384,6 @@ SCIP_RETCODE SCIPsetCommonSubscipParams(
 
    /* speed up sub-SCIP by not checking dual LP feasibility */
    SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
-
-   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
-    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
-    * made for the original SCIP
-    */
-   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
-   }
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -892,7 +892,7 @@ SCIP_RETCODE SCIPconflictstoreClean(
    assert(conflictstore != NULL);
 
    SCIPsetDebugMsg(set, "cleaning conflict store: %d conflicts, %d dual proofs\n",
-         conflictstore->norigconfs, conflictstore->nconflicts, conflictstore->ndualrayconfs + conflictstore->ndualsolconfs);
+         conflictstore->nconflicts, conflictstore->ndualrayconfs + conflictstore->ndualsolconfs);
 
    ndelconfs = 0;
    ndeldualray = 0;
@@ -1088,8 +1088,8 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
          int pos = 0;
 
          /* sort dual rays */
-         SCIPsortPtrRealRealIntBool((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
-               conflictstore->scalefactors, (int*)conflictstore->updateside, conflictstore->dsolrelaxonly,
+         SCIPsortPtrRealRealBoolBool((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
+               conflictstore->scalefactors, conflictstore->updateside, conflictstore->dsolrelaxonly,
                compareConss, conflictstore->ndualsolconfs);
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualsolconfs[0]),
                SCIPconsGetAge(conflictstore->dualsolconfs[conflictstore->ndualsolconfs-1])));

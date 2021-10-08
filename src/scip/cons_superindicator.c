@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1761,6 +1761,7 @@ SCIP_DECL_CONSPARSE(consParseSuperindicator)
    *success = FALSE;
 
    /* extract binary variable name and value which triggers slack constraint */
+   /* coverity[secure_coding] */
    nargs = sscanf(str, " <%1023[^>]>[B] = %d", binvarname, &zeroone);
 
    if( nargs != 2 || (zeroone != 0 && zeroone != 1) )
@@ -1921,39 +1922,38 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSuperindicator) );
 
-   /* includes or updates the default dialog menus in SCIP */
-   SCIP_CALL( SCIPincludeDialogDefault(scip) );
-
+   /* add dialogs if they are not disabled */
    root = SCIPgetRootDialog(scip);
-   assert(root != NULL);
-
-   /* find change menu */
-   if( !SCIPdialogHasEntry(root, "change") )
+   if( root != NULL )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &changemenu,
+      /* find change menu */
+      if( !SCIPdialogHasEntry(root, "change") )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &changemenu,
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
             "change", "change the problem", TRUE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, root, changemenu) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &changemenu) );
-   }
+         SCIP_CALL( SCIPaddDialogEntry(scip, root, changemenu) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &changemenu) );
+      }
 
-   if( SCIPdialogFindEntry(root, "change", &changemenu) != 1 )
-   {
-      SCIPerrorMessage("change sub menu not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
+      if( SCIPdialogFindEntry(root, "change", &changemenu) != 1 )
+      {
+         SCIPerrorMessage("change sub menu not found\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
 
-   /* add minuc dialog */
-   if( !SCIPdialogHasEntry(changemenu, "minuc") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+      /* add minuc dialog */
+      if( !SCIPdialogHasEntry(changemenu, "minuc") )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecChangeMinUC, NULL, NULL,
             "minuc", "transforms the current problem into a MinUC problem minimizing the number of unsatisfied constraints",
             FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, changemenu, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, changemenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
    }
 
    /* add constraint handler parameters */
@@ -2038,9 +2038,7 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
 
    /* only allow types of slack constraints that can be handled */
    if( conshdlrdata->checkslacktype &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "abspower") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "and") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "bivariate") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "bounddisjunction") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "conjunction") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "disjunction") != 0 &&
@@ -2050,8 +2048,6 @@ SCIP_RETCODE SCIPcreateConsSuperindicator(
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "logicor") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "nonlinear") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "or") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "quadratic") != 0 &&
-      strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "soc") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS1") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "SOS2") != 0 &&
       strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(slackcons)), "cumulative") != 0 &&

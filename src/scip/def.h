@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -57,10 +57,24 @@
 
 /*
  * define whether compiler allows variadic macros
+ * __STDC_VERSION__ only exists for C code
+ * added the extra check using the GCC_VERSION to enable variadic macros also with C++ code with GCC atleast
+ *
  */
-#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L )
+#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L ) || ( GCC_VERSION >= 480 )
 #define SCIP_HAVE_VARIADIC_MACROS 1
 #endif
+
+/** get the first parameter and all-but-the-first arguments from variadic arguments
+ *
+ * normally, SCIP_VARARGS_FIRST_ should be sufficient
+ * the SCIP_VARARGS_FIRST_/SCIP_VARARGS_FIRST kludge is to work around a bug in MSVC (https://stackoverflow.com/questions/4750688/how-to-single-out-the-first-parameter-sent-to-a-macro-taking-only-a-variadic-par)
+ */
+#define SCIP_VARARGS_FIRST_(firstarg, ...) firstarg
+#define SCIP_VARARGS_FIRST(args) SCIP_VARARGS_FIRST_ args
+
+/** get all but the first parameter from variadic arguments */
+#define SCIP_VARARGS_REST(firstarg, ...) __VA_ARGS__
 
 /*
  * Boolean values
@@ -121,10 +135,10 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                701 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
-#define SCIP_APIVERSION              72 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                703 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               5 /**< SCIP sub version number */
+#define SCIP_APIVERSION             100 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2021 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -227,29 +241,19 @@ extern "C" {
 #endif
 
 #ifndef MAX
-#define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
-#define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
+#define MAX(x, y) ((x) >= (y) ? (x) : (y)) /**< returns maximum of x and y */
+#endif
+
+#ifndef MIN
+#define MIN(x, y) ((x) <= (y) ? (x) : (y)) /**< returns minimum of x and y */
 #endif
 
 #ifndef MAX3
-#define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))  /**< returns maximum of x, y, and z */
-#define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
+#define MAX3(x, y, z) ((x) >= (y) ? MAX(x, z) : MAX(y, z)) /**< returns maximum of x, y, and z */
 #endif
 
-#ifndef SIN
-#define SIN(x)       (sin((x)))
-#endif
-
-#ifndef COS
-#define COS(x)       (cos((x)))
-#endif
-
-#ifndef ASIN
-#define ASIN(x)      (asin((x)))
-#endif
-
-#ifndef ACOS
-#define ACOS(x)      (acos((x)))
+#ifndef MIN3
+#define MIN3(x, y, z) ((x) <= (y) ? MIN(x, z) : MIN(y, z)) /**< returns minimum of x, y, and z */
 #endif
 
 #ifndef COPYSIGN
@@ -307,7 +311,7 @@ extern "C" {
 #define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
 
-#define SCIP_MEM_NOLIMIT (SCIP_Longint)SCIP_LONGINT_MAX/1048576.0/**< initial size of dynamically allocated arrays */
+#define SCIP_MEM_NOLIMIT (SCIP_Longint)(SCIP_LONGINT_MAX >> 20)/**< initial size of dynamically allocated arrays */
 
 /*
  * Tree settings
@@ -365,7 +369,7 @@ extern "C" {
                        {                                                                                      \
                           if( NULL == (x) )                                                                   \
                           {                                                                                   \
-                             SCIPerrorMessage("No memory in function call\n", __FILE__, __LINE__);            \
+                             SCIPerrorMessage("No memory in function call\n");                                \
                              SCIPABORT();                                                                     \
                           }                                                                                   \
                        }                                                                                      \

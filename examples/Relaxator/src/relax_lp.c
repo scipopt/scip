@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -72,16 +72,16 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
       conshdlrname = SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c]));
 
       /* skip if there are any "and", "linking", or", "orbitope", "pseudoboolean", "superindicator", "xor" or new/unknown constraints */
-      if( strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0 && strcmp(conshdlrname, "abspower") != 0
-            && strcmp(conshdlrname, "bivariate") != 0 && strcmp(conshdlrname, "bounddisjunction") != 0
+      if( strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0
+            && strcmp(conshdlrname, "bounddisjunction") != 0
             && strcmp(conshdlrname, "cardinality") != 0 && strcmp(conshdlrname, "components") != 0
             && strcmp(conshdlrname, "conjunction") != 0 && strcmp(conshdlrname, "countsols") != 0
             && strcmp(conshdlrname, "cumulative") != 0 && strcmp(conshdlrname, "disjunction") != 0
             && strcmp(conshdlrname, "indicator") != 0 && strcmp(conshdlrname, "integral") != 0
             && strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "linear") != 0
             && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "nonlinear") != 0
-            && strcmp(conshdlrname, "orbisack") != 0 && strcmp(conshdlrname, "quadratic") != 0
-            && strcmp(conshdlrname, "setppc") != 0 && strcmp(conshdlrname, "soc") != 0
+            && strcmp(conshdlrname, "orbisack") != 0
+            && strcmp(conshdlrname, "setppc") != 0
             && strcmp(conshdlrname, "symresack") != 0 && strcmp(conshdlrname, "varbound") != 0 )
          return SCIP_OKAY;
    }
@@ -123,6 +123,10 @@ SCIP_DECL_RELAXEXEC(relaxExecLp)
          {
             SCIP_VAR* relaxvar;
             SCIP_Real solval;
+
+            /* skip relaxation-only variables: they don't appear in relaxation (and don't need to) */
+            if( SCIPvarIsRelaxationOnly(SCIPgetVars(scip)[i]) )
+               continue;
 
             relaxvar = SCIPhashmapGetImage(varmap, SCIPgetVars(scip)[i]);
             assert(relaxvar != NULL);
