@@ -6507,7 +6507,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    if( RatIsNegInfinity(adjustedBound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
-      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+      RatDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
          SCIPvarGetUbLocalExact(var));
 #endif
       goto RETURN_SCIP_OKAY;
@@ -6625,7 +6625,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    if( RatIsNegInfinity(adjustedBound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
 #ifndef NDEBUG
-      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+      RatDebugMessage("ignore upper bound tightening for %s from %q to -infinity\n", SCIPvarGetName(var),
          SCIPvarGetUbLocalExact(var));
 #endif
       goto RETURN_SCIP_OKAY;

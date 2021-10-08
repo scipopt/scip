@@ -873,7 +873,7 @@ SCIP_RETCODE consdataCreate(
    if( RatIsGT(lhs, rhs) )
    {
       SCIPwarningMessage(scip, "left hand side of linear constraint greater than right hand side\n");
-      SCIPwarningMessage(scip, " -> lhs=%g, rhs=%g\n", lhs, rhs);
+      RatDebugMessage(" -> lhs=%q, rhs=%q\n", lhs, rhs);
    }
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -3178,7 +3178,7 @@ void consdataGetActivity(
       else if( nneginf > 0 )
          RatSetString(activity, "-inf");
 
-      SCIPdebugMsg(scip, "corrected activity of linear constraint: %.15g\n", activity);
+      RatDebugMessage("corrected activity of linear constraint: %q\n", activity);
       RatFreeBuffer(SCIPbuffer(scip), &solval);
    }
 }
@@ -5635,7 +5635,7 @@ SCIP_RETCODE tightenVarLb(
    {
       SCIP_VARTYPE vartype;
 
-      SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
+      RatDebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%q,%q], val=%q, activity=[%q,%q], sides=[%q,%q] -> newlb=%.15g\n",
          SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos], consdata->minactivity, consdata->maxactivity, consdata->lhs, consdata->rhs, newlb);
 
       vartype = SCIPvarGetType(var);
@@ -5645,7 +5645,7 @@ SCIP_RETCODE tightenVarLb(
 
       if( infeasible )
       {
-         SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
+         RatDebugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%q,%q]\n",
             SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
 
          /* analyze conflict */
@@ -5656,7 +5656,7 @@ SCIP_RETCODE tightenVarLb(
       else if( tightened )
       {
          assert(RatIsGE(SCIPvarGetLbLocalExact(var), oldlb));
-         SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
+         RatDebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%q,%q]\n",
             SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetLbLocal(var), ub);
 
          (*nchgbds)++;
@@ -17319,7 +17319,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
                      consdata->boundstightened = 0;
                   break;
                default:
-                  SCIPerrorMessage("invalid event type %d\n", eventtype);
+                  SCIPerrorMessage("invalid event type %lx\n", eventtype);
                   return SCIP_INVALIDDATA;
                }
             }
