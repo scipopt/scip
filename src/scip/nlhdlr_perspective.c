@@ -2005,7 +2005,7 @@ SCIP_RETCODE SCIPincludeNlhdlrPerspective(
            "whether variable semicontinuity is used to tighten variable bounds",
            &nlhdlrdata->tightenbounds, FALSE, DEFAULT_TIGHTENBOUNDS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/adjrefpoint",
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/adjrefpoint",
            "whether to adjust the reference point",
            &nlhdlrdata->adjrefpoint, FALSE, DEFAULT_ADJREFPOINT, NULL, NULL) );
 
