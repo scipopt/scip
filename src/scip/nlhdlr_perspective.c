@@ -1657,7 +1657,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
       nprobingvars = 0;
       doprobingind = doprobing;
       solval = SCIPgetSolVal(scip, solcopy, indicator);
-      adjrefpoint = nlhdlrdata->adjrefpoint && !SCIPisEQ(scip, solval, 1.0);
+      adjrefpoint = nlhdlrdata->adjrefpoint && !SCIPisFeasEQ(scip, solval, 1.0);
 
       SCIP_CALL( analyseOnoffBounds(scip, nlhdlrdata, nlhdlrexprdata, indicator, &probingvars, &probingdoms,
             &nprobingvars, &doprobingind, result) );
