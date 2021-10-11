@@ -1573,6 +1573,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    SCIP_Real allslacksval;
    SCIP_Real blocksolval;
    SCIP_STATUS status;
+   SCIP_Bool disablemeasures;
    int maxgraphedge;
    int ndecomps;
    int nvars;
@@ -1628,11 +1629,16 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       return SCIP_OKAY;
    }
 
-   /* we do not need the block decomposition graph of the statistics */
+   /* we do not need the block decomposition graph and expensive measures of the decomposition statistics */
    SCIP_CALL( SCIPgetIntParam(scip, "decomposition/maxgraphedge", &maxgraphedge) );
    if( !SCIPisParamFixed(scip, "decomposition/maxgraphedge") )
    {
       SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", 0) );
+   }
+   SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/disablemeasures", &disablemeasures) );
+   if( !SCIPisParamFixed(scip, "decomposition/disablemeasures") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(scip, "decomposition/disablemeasures", TRUE) );
    }
 
    vars = SCIPgetVars(scip);
@@ -1670,8 +1676,9 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       nblocks = SCIPdecompGetNBlocks(decomp);
    }
 
-   /* reset parameter */
+   /* reset parameters */
    SCIP_CALL( SCIPsetIntParam(scip, "decomposition/maxgraphedge", maxgraphedge) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "decomposition/disablemeasures", disablemeasures) );
 
 #ifdef SCIP_DEBUG
       char buffer[SCIP_MAXSTRLEN];

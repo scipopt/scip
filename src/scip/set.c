@@ -353,6 +353,7 @@
 #define SCIP_DEFAULT_DECOMP_BENDERSLABELS FALSE /**< should the variables be labelled for the application of Benders' decomposition */
 #define SCIP_DEFAULT_DECOMP_APPLYBENDERS  FALSE /**< if a decomposition exists, should Benders' decomposition be applied? */
 #define SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE  10000 /**< maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation) */
+#define SCIP_DEFAULT_DECOMP_DISABLEMEASURES FALSE /**< disable expensive measures */
 
 /* Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
@@ -2235,6 +2236,11 @@ SCIP_RETCODE SCIPsetCreate(
          "maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation)",
          &(*set)->decomp_maxgraphedge, FALSE, SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE, -1, INT_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+      "decomposition/disablemeasures",
+      "disable expensive measures",
+      &(*set)->decomp_disablemeasures, FALSE, SCIP_DEFAULT_DECOMP_DISABLEMEASURES,
+      NULL, NULL) );
 
    /* Benders' decomposition parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

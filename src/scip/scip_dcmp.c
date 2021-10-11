@@ -1143,6 +1143,7 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    int considx;
    int i;
    int maxgraphedge;
+   SCIP_Bool disablemeasures;
 
    assert(scip != NULL);
    assert(decomp != NULL);
@@ -1310,9 +1311,12 @@ SCIP_RETCODE SCIPcomputeDecompStats(
    }
 
    /* compute more involved statistics such as the area score, the modularity, and the block graph statistics */
-   SCIP_CALL( computeModularity(scip, decomp, &decomp->modularity) );
-
-   computeAreaScore(scip, decomp);
+   SCIP_CALL( SCIPgetBoolParam(scip, "decomposition/disablemeasures", &disablemeasures) );
+   if( !disablemeasures )
+   {
+      SCIP_CALL( computeModularity(scip, decomp, &decomp->modularity) );
+      computeAreaScore(scip, decomp);
+   }
 
    if( uselimits )
    {
