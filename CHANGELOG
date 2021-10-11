@@ -719,6 +719,7 @@ Cut Selector:
 - new parameter "benders/default/benderscut/optimality/mir" to control whether mixed-integer rounding procedure is applied to Benders optimality cuts
 - new parameter "misc/avoidmemout" to try to avoid running into memory limit
 - cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
+- new parameter "decomposition/disablemeasures" to disable expensive measures in SCIPcomputeDecompStats()
 
 ### Data structures
 
