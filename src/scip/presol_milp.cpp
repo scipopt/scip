@@ -689,6 +689,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       VariableDomains<SCIP_Real>& varDomains = problem.getVariableDomains();
       for( int i = 0; i != problem.getNCols(); ++i )
       {
+         assert( ! varDomains.flags[i].test(ColFlag::kInactive) );
          SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
          if( !varDomains.flags[i].test(ColFlag::kLbInf) )
          {
