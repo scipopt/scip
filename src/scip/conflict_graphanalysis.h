@@ -136,6 +136,10 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*#define SCIP_CONFGRAPH*/
 
 
@@ -511,5 +515,9 @@ SCIP_RETCODE SCIPrunBoundHeuristic(
    SCIP_Bool*            dualproofsuccess,   /**< pointer to store success result of dual proof analysis */
    SCIP_Bool*            valid               /**< pointer to store whether the result is still a valid proof */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

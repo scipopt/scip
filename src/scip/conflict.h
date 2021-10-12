@@ -28,8 +28,4 @@
 #include "conflict_graphanalysis.h"
 #include "conflict_dualproofanalysis.h"
 
-#ifdef __cplusplus
-}
-#endif
-
 #endif

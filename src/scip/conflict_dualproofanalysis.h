@@ -40,6 +40,10 @@
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
 #include "scip/type_cuts.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
  * Proof Sets
  */
@@ -120,5 +124,9 @@ SCIP_RETCODE SCIPconflictAnalyzeDualProof(
    SCIP_Bool*            globalinfeasible,   /**< pointer to store whether global infeasibility could be proven */
    SCIP_Bool*            success             /**< pointer to store success result */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
