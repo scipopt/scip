@@ -51,8 +51,6 @@ extern "C" {
  * Conflict Analysis
  */
 
-
-
 /** creates conflict analysis data for propagation conflicts */
 SCIP_RETCODE SCIPconflictCreate(
    SCIP_CONFLICT**       conflict,           /**< pointer to conflict analysis data */
@@ -184,9 +182,6 @@ SCIP_Longint SCIPconflictGetNPropReconvergenceConss(
 SCIP_Longint SCIPconflictGetNPropReconvergenceLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
-
-
-
 
 /*
  * Infeasible LP Conflict Analysis

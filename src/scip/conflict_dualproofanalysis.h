@@ -17,6 +17,10 @@
  * @ingroup INTERNALAPI
  * @brief  internal methods for dual proof conflict analysis
  * @author Tobias Achterberg
+ In dual proof analysis, an infeasible LP relaxation is analysed.
+ *      Using the dual solution, a valid constraint is derived that is violated
+ *      by all values in the domain. This constraint is added to the problem
+ *      and can then be used for domain propagation.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -48,14 +52,13 @@ extern "C" {
  * Proof Sets
  */
 
-
+/** frees a proofset */
 void SCIPproofsetFree(
    SCIP_PROOFSET**       proofset,           /**< proof set */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** returns the number of variables in the proofset */
-
 int SCIPproofsetGetNVars(
    SCIP_PROOFSET*        proofset            /**< proof set */
    );
@@ -63,7 +66,6 @@ int SCIPproofsetGetNVars(
 
 
 /** creates and clears the proofset */
-
 SCIP_RETCODE SCIPconflictInitProofset(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
@@ -71,7 +73,6 @@ SCIP_RETCODE SCIPconflictInitProofset(
 
 
 /* create proof constraints out of proof sets */
-
 SCIP_RETCODE SCIPconflictFlushProofset(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */

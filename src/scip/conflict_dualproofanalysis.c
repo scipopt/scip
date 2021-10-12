@@ -102,7 +102,6 @@ SCIP_RETCODE proofsetCreate(
 }
 
 /** frees a proofset */
-
 void SCIPproofsetFree(
    SCIP_PROOFSET**       proofset,           /**< proof set */
    BMS_BLKMEM*           blkmem              /**< block memory */
@@ -175,7 +174,6 @@ SCIP_Real proofsetGetRhs(
 }
 
 /** returns the number of variables in the proofset */
-
 int SCIPproofsetGetNVars(
    SCIP_PROOFSET*        proofset            /**< proof set */
    )

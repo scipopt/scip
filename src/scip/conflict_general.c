@@ -22,93 +22,15 @@
  * @author Michael Winkler
  * @author Jakob Witzig
  *
- * This file implements a conflict analysis method like the one used in modern
- * SAT solvers like zchaff. The algorithm works as follows:
- *
- * Given is a set of bound changes that are not allowed being applied simultaneously, because they
- * render the current node infeasible (e.g. because a single constraint is infeasible in the these
- * bounds, or because the LP relaxation is infeasible).  The goal is to deduce a clause on variables
- * -- a conflict clause -- representing the "reason" for this conflict, i.e., the branching decisions
- * or the deductions (applied e.g. in domain propagation) that lead to the conflict. This clause can
- * then be added to the constraint set to help cutting off similar parts of the branch and bound
- * tree, that would lead to the same conflict.  A conflict clause can also be generated, if the
- * conflict was detected by a locally valid constraint. In this case, the resulting conflict clause
- * is also locally valid in the same depth as the conflict detecting constraint. If all involved
- * variables are binary, a linear (set covering) constraint can be generated, otherwise a bound
- * disjunction constraint is generated. Details are given in
- *
- * Tobias Achterberg, Conflict Analysis in Mixed Integer Programming@n
- * Discrete Optimization, 4, 4-20 (2007)
- *
- * See also @ref CONF. Here is an outline of the algorithm:
- *
- * -#  Put all the given bound changes to a priority queue, which is ordered,
- *     such that the bound change that was applied last due to branching or deduction
- *     is at the top of the queue. The variables in the queue are always active
- *     problem variables. Because binary variables are preferred over general integer
- *     variables, integer variables are put on the priority queue prior to the binary
- *     variables. Create an empty conflict set.
- * -#  Remove the top bound change b from the priority queue.
- * -#  Perform the following case distinction:
- *     -#  If the remaining queue is non-empty, and bound change b' (the one that is now
- *         on the top of the queue) was applied at the same depth level as b, and if
- *         b was a deduction with known inference reason, and if the inference constraint's
- *         valid depth is smaller or equal to the conflict detecting constraint's valid
- *         depth:
- *          - Resolve bound change b by asking the constraint that inferred the
- *            bound change to put all the bound changes on the priority queue, that
- *            lead to the deduction of b.
- *            Note that these bound changes have at most the same inference depth
- *            level as b, and were deduced earlier than b.
- *     -#  Otherwise, the bound change b was a branching decision or a deduction with
- *         missing inference reason, or the inference constraint's validity is more local
- *         than the one of the conflict detecting constraint.
- *          - If a the bound changed corresponds to a binary variable, add it or its
- *            negation to the conflict set, depending on which of them is currently fixed to
- *            FALSE (i.e., the conflict set consists of literals that cannot be FALSE
- *            altogether at the same time).
- *          - Otherwise put the bound change into the conflict set.
- *         Note that if the bound change was a branching, all deduced bound changes
- *         remaining in the priority queue have smaller inference depth level than b,
- *         since deductions are always applied after the branching decisions. However,
- *         there is the possibility, that b was a deduction, where the inference
- *         reason was not given or the inference constraint was too local.
- *         With this lack of information, we must treat the deduced bound change like
- *         a branching, and there may exist other deduced bound changes of the same
- *         inference depth level in the priority queue.
- * -#  If priority queue is non-empty, goto step 2.
- * -#  The conflict set represents the conflict clause saying that at least one
- *     of the conflict variables must take a different value. The conflict set is then passed
- *     to the conflict handlers, that may create a corresponding constraint (e.g. a logicor
- *     constraint or bound disjunction constraint) out of these conflict variables and
- *     add it to the problem.
- *
- * If all deduced bound changes come with (global) inference information, depending on
- * the conflict analyzing strategy, the resulting conflict set has the following property:
- *  - 1-FirstUIP: In the depth level where the conflict was found, at most one variable
- *    assigned at that level is member of the conflict set. This conflict variable is the
- *    first unique implication point of its depth level (FUIP).
- *  - All-FirstUIP: For each depth level, at most one variable assigned at that level is
- *    member of the conflict set. This conflict variable is the first unique implication
- *    point of its depth level (FUIP).
- *
- * The user has to do the following to get the conflict analysis running in its
- * current implementation:
- *  - A constraint handler or propagator supporting the conflict analysis must implement
- *    the CONSRESPROP/PROPRESPROP call, that processes a bound change inference b and puts all
- *    the reason bounds leading to the application of b with calls to
- *    SCIPaddConflictBound() on the conflict queue (algorithm step 3.(a)).
- *  - If the current bounds lead to a deduction of a bound change (e.g. in domain
- *    propagation), a constraint handler should call SCIPinferVarLbCons() or
- *    SCIPinferVarUbCons(), thus providing the constraint that infered the bound change.
- *    A propagator should call SCIPinferVarLbProp() or SCIPinferVarUbProp() instead,
- *    thus providing a pointer to itself.
- *  - If (in the current bounds) an infeasibility is detected, the constraint handler or
- *    propagator should
- *     1. call SCIPinitConflictAnalysis() to initialize the conflict queue,
- *     2. call SCIPaddConflictBound() for each bound that lead to the conflict,
- *     3. call SCIPanalyzeConflictCons() or SCIPanalyzeConflict() to analyze the conflict
- *        and add an appropriate conflict constraint.
+ * SCIP contains two kinds of conflict analysis:
+ *    - In graph based conflict analysis, the graph consisting of derived
+ *      is analysed. Code and documentation is available in conflict_graphanalysis.h
+ *    - In dual proof analysis, an infeasible LP relaxation is analysed.
+ *      Using the dual solution, a valid constraint is derived that is violated
+ *      by all values in the domain. This constraint is added to the problem
+ *      and can then be used for domain propagation.
+ *      Code is available in conflict_dualproofanalysis.h
+ * This file contains the methods that are shared by both kinds of conflict analysis.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -420,11 +342,6 @@ SCIP_RETCODE SCIPconflictFree(
    return SCIP_OKAY;
 }
 
-
-
-
-
-
 /** returns the conflict lower bound if the variable is present in the current conflict set; otherwise the global lower
  *  bound
  */
@@ -538,15 +455,6 @@ SCIP_Longint SCIPconflictGetNPropReconvergenceLiterals(
 
    return conflict->npropreconvliterals;
 }
-
-
-
-
-
-
-
-
-
 
 /** gets time in seconds used for analyzing infeasible LP conflicts */
 SCIP_Real SCIPconflictGetInfeasibleLPTime(
@@ -707,11 +615,6 @@ SCIP_Longint SCIPconflictGetNBoundexceedingLPIterations(
 
    return conflict->nboundlpiterations;
 }
-
-
-
-
-
 
 /** gets time in seconds used for analyzing infeasible strong branching conflicts */
 SCIP_Real SCIPconflictGetStrongbranchTime(
