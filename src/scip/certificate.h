@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "scip/type_set.h"
+#include "scip/type_cuts.h"
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_certificate.h"
@@ -71,6 +72,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
 
 /** closes the certificate output files */
 void SCIPcertificateExit(
+   SCIP*                 scip,               /**< scip data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
@@ -187,6 +189,40 @@ void SCIPcertificatePrintCons(
    SCIP_Rational**       val                 /**< coefficient array */
    );
 
+/** prints constraint */
+SCIP_RETCODE SCIPcertificatePrintMirCut(
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_ROW*             row,                /**< the row to be printed */
+   const char            sense               /**< sense of the constraint, i.e., G, L, or E */
+   );
+
+/** create a new node data structure for the current node */
+SCIP_RETCODE SCIPcertificateTransAggrrow(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_ROW*             row,                /**< the cut that we are attempting to prove */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows           /**< length of the arrays */
+   );
+
+/** create a new node data structure for the current node */
+SCIP_RETCODE SCIPcertificatePrintAggrrow(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows           /**< length of the arrays */
+   );
+
 /** prints a variable bound to the problem section of the certificate file and returns line index */
 SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
@@ -270,6 +306,35 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_NODE*            node                /**< new node, that was created */
+   );
+
+/** create a new split info structure for the current cut */
+SCIP_RETCODE SCIPcertificateNewMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** free all aggregation information */
+SCIP_RETCODE SCIPcertificateClearAggrinfo(
+   SCIP*                 scip                /**< global SCIP data structure */
+   );
+
+/** free aggregation information */
+SCIP_RETCODE SCIPcertificateFreeAggrInfo(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate structure */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_AGGREGATIONINFO* aggrinfo,           /**< SCIP aggregation info */
+   SCIP_ROW*             row                 /**< new row, that info should be stored for */
+   );
+
+/** create a new aggregation info for a row */
+SCIP_RETCODE SCIPcertificateNewAggrInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< new row, that info should be stored for */
+   SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
+   SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
+   SCIP_Real*            weights,            /**< array of weights */
+   int                   naggrrows           /**< length of the arrays */
    );
 
 /** prints unsplitting information to proof section */

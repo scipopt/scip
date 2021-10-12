@@ -3075,7 +3075,7 @@ SCIP_RETCODE SCIPlpiExactWriteState(
    return SCIP_OKAY;
 }
 
-/**@}
+/**@} */
 
 /*
  * Parameter Methods

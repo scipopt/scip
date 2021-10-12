@@ -96,6 +96,25 @@ void SCIProwExactUnlock(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
+SCIP_ROWEXACT* SCIProwGetRowExact(
+   SCIP_ROW*             row                 /**< SCIP row */
+   );
+
+/** returns fp row corresponding to exact row, if it exists. Otherwise returns NULL */
+SCIP_ROW* SCIProwExactGetRow(
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
+   );
+
+/** returns rhs-relaxation part of exact row, if it exists. Otherwise returns NULL */
+SCIP_ROW* SCIProwExactGetRowRhs(
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
+   );
+
+/** true if row can be relaxed (possibly as two fp rows) */
+SCIP_Bool SCIProwExactHasFpRelax(
+   SCIP_ROWEXACT*             row            /**< SCIP row */
+   );
 
 
 #ifdef __cplusplus

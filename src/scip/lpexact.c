@@ -201,10 +201,8 @@ SCIP_Bool rowExactInSync(
    fprow = rowexact->fprow;
 
    assert(fprow != NULL);
-
-   assert(rowexact->lpipos == fprow->lpipos);
-   assert(rowexact->lppos == fprow->lppos);
    assert(rowexact->len >= fprow->len);
+   assert(rowexact->lppos == rowexact->fprow->lppos);
 
    synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs, SCIP_ROUND_DOWNWARDS) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
    synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs, SCIP_ROUND_UPWARDS) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
@@ -1262,7 +1260,7 @@ SCIP_RETCODE rowExactAddCoef(
    assert(col->var != NULL);
    assert(!RatIsZero(val));
 
-   if( row->fprow->nlocks > 0 )
+   if( row->nlocks > 0 )
    {
       SCIPerrorMessage("cannot add a coefficient to the locked unmodifiable row <%s>\n", row->fprow->name);
       return SCIP_INVALIDDATA;
@@ -2664,6 +2662,104 @@ SCIP_RETCODE lpExactSetIterationLimit(
    return SCIP_OKAY;
 }
 
+/** resets row data to represent a row not in the LP solver */
+static
+void markRowExactDeleted(
+   SCIP_ROWEXACT*        row                 /**< row to be marked deleted */
+   )
+{
+   assert(row != NULL);
+
+   row->lpipos = -1;
+   RatSetReal(row->dualsol, 0.0);
+   RatSetString(row->activity, "inf");
+   RatSetReal(row->dualfarkas, 0.0);
+   row->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
+   row->validactivitylp = -1;
+}
+
+/* deletes the marked rows from the LP and the LP interface */
+SCIP_RETCODE SCIPlpExactDelRowset(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   int*                  rowdstat            /**< deletion status of rows:  1 if row should be deleted, 0 if not */
+   )
+{
+   SCIP_ROWEXACT* row;
+   int nrows;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->nrows == lp->nlpirows);
+   assert(rowdstat != NULL);
+
+   nrows = lp->nrows;
+
+   /* delete rows in LP solver */
+   SCIP_CALL( SCIPlpiExactDelRowset(lp->lpiexact, rowdstat) );
+
+   /* update LP data respectively */
+   for( r = 0; r < nrows; ++r )
+   {
+      row = lp->rows[r];
+      assert(row == lp->lpirows[r]);
+      assert(rowdstat[r] <= r);
+      assert(row != NULL);
+      row->lppos = rowdstat[r];
+      if( rowdstat[r] == -1 )
+      {
+         if( row->removable )
+            lp->nremovablerows--;
+
+         /* mark row to be deleted from the LPI and update row arrays of all linked columns */
+         markRowExactDeleted(row);
+         rowExactUpdateDelLP(row, set);
+         row->lpdepth = -1;
+
+         SCIP_CALL( SCIProwExactRelease(&lp->lpirows[r], blkmem, set, lp) );
+         //SCIProwExactUnlock(lp->rows[r]);
+         SCIP_CALL( SCIProwExactRelease(&lp->rows[r], blkmem, set, lp) );
+         assert(lp->lpirows[r] == NULL);
+         assert(lp->rows[r] == NULL);
+         lp->nrows--;
+         lp->nlpirows--;
+      }
+      else if( rowdstat[r] < r )
+      {
+         assert(lp->rows[rowdstat[r]] == NULL);
+         assert(lp->lpirows[rowdstat[r]] == NULL);
+         lp->rows[rowdstat[r]] = row;
+         lp->lpirows[rowdstat[r]] = row;
+         lp->rows[rowdstat[r]]->lppos = rowdstat[r];
+         lp->rows[rowdstat[r]]->lpipos = rowdstat[r];
+         lp->rows[r] = NULL;
+         lp->lpirows[r] = NULL;
+      }
+   }
+
+   /* mark LP to be unsolved */
+   if( lp->nrows < nrows )
+   {
+      assert(lp->nrows == lp->nlpirows);
+      assert(lp->nchgrows == 0);
+
+      lp->lpifirstchgrow = lp->nlpirows;
+
+      /* mark the current solution invalid */
+      lp->solved = FALSE;
+      lp->dualfeasible = FALSE;
+      lp->dualchecked = FALSE;
+      RatSetString(lp->lpobjval, "inf");
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
+
+   checkLinks(lp);
+
+   return SCIP_OKAY;
+}
+
 
 /** frees an LP column */
 SCIP_RETCODE SCIPcolExactFree(
@@ -3057,9 +3153,10 @@ SCIP_RETCODE SCIPcolExactChgUb(
 }
 
 /** creates and captures an LP row */
-SCIP_RETCODE SCIProwCreateExact(
+SCIP_RETCODE SCIProwExactCreate(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
    SCIP_ROW*             fprow,              /**< corresponding fp row */
+   SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -3070,6 +3167,7 @@ SCIP_RETCODE SCIProwCreateExact(
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
    SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
+   SCIP_Bool             isfprelaxable,      /**< is it possible to make fp-relaxation of this row */
    void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    )
 {
@@ -3090,6 +3188,10 @@ SCIP_RETCODE SCIProwCreateExact(
    (*row)->storedsolvals = NULL;
    (*row)->integral = TRUE;
    (*row)->fprow = fprow;
+   (*row)->fprowrhs = fprowrhs;
+   fprow->rowexact = (*row);
+   if( fprowrhs != NULL )
+      fprowrhs->rowexact = (*row);
 
    if( len > 0 )
    {
@@ -3155,12 +3257,89 @@ SCIP_RETCODE SCIProwCreateExact(
    (*row)->nonlpcolssorted = (len <= 1);
    (*row)->delaysort = FALSE;
    (*row)->nlocks = 0;
+   (*row)->fprelaxable = isfprelaxable;
 
    /* capture the row */
    SCIProwExactCapture(*row);
 
    return SCIP_OKAY;
 } /*lint !e715*/
+
+/** creates and captures an exact LP row from a fp row */
+SCIP_RETCODE SCIProwExactCreateFromRow(
+   SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
+   SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< the eventqueue */
+   SCIP_PROB*            prob,               /**< scip prob structure */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
+   )
+{
+   SCIP_ROWEXACT* workrow;
+   void* origin;
+   int i;
+   SCIP_Rational* tmpval;
+   SCIP_Rational* tmplhs;
+   SCIP_Real* rowvals;
+
+   assert(row != NULL);
+   assert(fprow != NULL);
+   assert(blkmem != NULL);
+   assert(stat != NULL);
+
+   switch(SCIProwGetOrigintype(fprow))
+   {
+      case SCIP_ROWORIGINTYPE_SEPA:
+         origin = SCIProwGetOriginSepa(fprow);
+      case SCIP_ROWORIGINTYPE_CONS:
+         origin = SCIProwGetOriginCons(fprow);
+      case SCIP_ROWORIGINTYPE_CONSHDLR:
+         origin = SCIProwGetOriginConshdlr(fprow);
+      default:
+         origin = NULL;
+   }
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmplhs) );
+
+   if( !SCIPsetIsInfinity(set, fprow->rhs) )
+      RatSetReal(tmpval, fprow->rhs);
+   else
+      RatSetString(tmpval, "inf");
+
+   if( !SCIPsetIsInfinity(set, -fprow->lhs) )
+      RatSetReal(tmplhs, fprow->lhs);
+   else
+      RatSetString(tmplhs, "-inf");
+
+   SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, blkmem, set, stat, lp, 0, NULL, NULL, tmplhs, tmpval, SCIProwGetOrigintype(fprow), TRUE, origin) );
+
+   workrow = *row;
+   rowvals = SCIProwGetVals(fprow);
+   workrow->removable = TRUE;
+
+   for( i = 0; i < SCIProwGetNNonz(fprow); i++ )
+   {
+      SCIP_COL* col;
+      SCIP_COLEXACT* colexact;
+
+      RatSetReal(tmpval, rowvals[i]);
+      col = SCIProwGetCols(fprow)[i];
+      colexact = SCIPcolGetColExact(col);
+
+      SCIP_CALL( SCIPvarAddToRowExact(SCIPcolGetVar(col), blkmem, set, stat, eventqueue, prob, lp, workrow, tmpval) );
+   }
+
+   RatSetReal(tmpval, SCIProwGetConstant(fprow));
+   SCIProwExactAddConstant(workrow, blkmem, set, stat, eventqueue, lp, tmpval);
+
+   RatFreeBuffer(set->buffer, &tmplhs);
+   RatFreeBuffer(set->buffer, &tmpval);
+
+   return SCIP_OKAY;
+}
 
 /** applies all cached changes to the LP solver */
 SCIP_RETCODE SCIPlpExactFlush(
@@ -3721,7 +3900,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    solveagain = FALSE;
 
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
    SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
 
    assert(SCIPlpExactIsSynced(lpexact, set, messagehdlr));
@@ -4449,15 +4628,43 @@ SCIP_Bool SCIProwHasExRow(
 }
 
 /** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
-SCIP_ROWEXACT* SCIProwGetExRow(
-   SCIP_LPEXACT*         lpexact,            /**< exact lp data structure */
+SCIP_ROWEXACT* SCIProwGetRowExact(
    SCIP_ROW*             row                 /**< SCIP row */
    )
 {
    assert(row != NULL);
-   assert(lpexact != NULL);
 
    return row->rowexact;
+}
+
+/** returns fp row corresponding to exact row, if it exists. Otherwise returns NULL */
+SCIP_ROW* SCIProwExactGetRow(
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->fprow;
+}
+
+/** returns rhs-relaxation part of exact row, if it exists. Otherwise returns NULL */
+SCIP_ROW* SCIProwExactGetRowRhs(
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->fprowrhs;
+}
+
+/** true if row can be relaxed (possibly as two fp rows) */
+SCIP_Bool SCIProwExactHasFpRelax(
+   SCIP_ROWEXACT*             row            /**< SCIP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->fprelaxable;
 }
 
 /** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
@@ -6148,7 +6355,7 @@ void SCIPlpExactDecNLoosevars(
 }
 
 /** get the number of rows currently in the lp */
-SCIP_RETCODE SCIPlexGetNRows(
+SCIP_RETCODE SCIPlpExactGetNRows(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
@@ -6385,10 +6592,18 @@ SCIP_RETCODE SCIPlpExactGetSol(
       lpirows[r]->validactivitylp = lpcount;
       if( overwritefplp )
       {
-         lp->fplp->lpirows[r]->dualsol = RatApproxReal(dualsol[r]);
-         lp->fplp->lpirows[r]->activity = RatApproxReal(lpirows[r]->activity);
-         lp->fplp->lpirows[r]->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
-         lp->fplp->lpirows[r]->validactivitylp = lpcount;
+         SCIP_ROW* fprow;
+         if( SCIProwIsInLP(lpirows[r]->fprow) )
+            fprow = lpirows[r]->fprow;
+         else
+         {
+            assert(SCIProwIsInLP(lpirows[r]->fprowrhs));
+            fprow = lpirows[r]->fprowrhs;
+         }
+         fprow->dualsol = RatApproxReal(dualsol[r]);
+         fprow->activity = RatApproxReal(lpirows[r]->activity);
+         fprow->basisstatus = (unsigned int) rstat[r]; /*lint !e732*/
+         fprow->validactivitylp = lpcount;
       }
       if( stillprimalfeasible )
       {
@@ -8155,4 +8370,19 @@ SCIP_Bool SCIPlpExactDiving(
       return FALSE;
 
    return lpexact->diving;
+}
+
+/** writes exact LP to a file */
+SCIP_RETCODE SCIPlpExactWrite(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   const char*           fname               /**< file name */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(fname != NULL);
+
+   SCIP_CALL( SCIPlpiExactWriteLP(lp->lpiexact, fname) );
+
+   return SCIP_OKAY;
 }

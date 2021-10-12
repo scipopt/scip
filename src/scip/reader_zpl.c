@@ -157,7 +157,7 @@ SCIP_RETCODE abortReadIfExact(
 {
    if( SCIPisExactSolve(scip) )
    {
-      SCIPerrorMessage(errmsg);
+      SCIPerrorMessage("%s\n",errmsg);
       if( created != NULL )
          (*created) = FALSE;
       return SCIP_ERROR;

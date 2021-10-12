@@ -2400,7 +2400,7 @@ SCIP_RETCODE solCheckExact(
 
                if( printreason )
                {
-                  RatDebugMessage("solution value %q violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", RatApproxReal(solval), SCIPvarGetName(var),
                         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(RatApproxReal(lb) - RatApproxReal(solval), 0.0) + MAX(RatApproxReal(solval) - RatApproxReal(ub), 0.0));
                }
 #ifdef SCIP_DEBUG
@@ -2424,7 +2424,7 @@ SCIP_RETCODE solCheckExact(
                   if( printreason )
                   {
                      RatDebugMessage("infinite solution value %q for variable  <%s> with obj %q implies objective value +infinity\n",
-                        solval, SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
+                        RatApproxReal(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #ifdef SCIP_DEBUG
                   else

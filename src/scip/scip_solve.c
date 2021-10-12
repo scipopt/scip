@@ -1792,6 +1792,9 @@ SCIP_RETCODE freeSolve(
    }
    scip->transprob->nlpenabled = FALSE;
 
+   /* clear all lp-related information in the certificate */
+   SCIPcertificateClearAggrinfo(scip);
+
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
    SCIPlpInvalidateRootObjval(scip->lp);
@@ -1832,7 +1835,7 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
    /* possibly close CERTIFICATE output file */
-   SCIPcertificateExit(scip->stat->certificate, scip->set, scip->messagehdlr);
+   SCIPcertificateExit(scip, scip->stat->certificate, scip->set, scip->messagehdlr);
 
    /* possibly close visualization output file */
    SCIPvisualExit(scip->stat->visual, scip->set, scip->messagehdlr);

@@ -202,12 +202,6 @@ SCIP_Bool SCIProwHasExRow(
    SCIP_ROW*             row                 /**< SCIP row */
    );
 
-/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
-SCIP_ROWEXACT* SCIProwGetExRow(
-   SCIP_LPEXACT*         lpexact,            /**< exact lp data structure */
-   SCIP_ROW*             row                 /**< SCIP row */
-   );
-
 /** changes left hand side of exact LP row */
 SCIP_RETCODE SCIProwExactChgLhs(
    SCIP_ROWEXACT*        row,                /**< exact LP row */
@@ -243,9 +237,10 @@ void SCIPcolExactCalcFarkasRedcostCoef(
    );
 
 /** creates and captures an LP row */
-SCIP_RETCODE SCIProwCreateExact(
+SCIP_RETCODE SCIProwExactCreate(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
    SCIP_ROW*             fprow,              /**< corresponding fp row */
+   SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -256,7 +251,20 @@ SCIP_RETCODE SCIProwCreateExact(
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
    SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
+   SCIP_Bool             isfprelaxable,      /**< is it possible to make fp-relaxation of this row */
    void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
+   );
+
+/** creates and captures an exact LP row from a fp row */
+SCIP_RETCODE SCIProwExactCreateFromRow(
+   SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
+   SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< the eventqueue */
+   SCIP_PROB*            prob,               /**< scip prob structure */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
 /** applies all cached changes to the LP solver */
@@ -396,6 +404,17 @@ SCIP_RETCODE SCIProwExactAddConstant(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_Rational*        addval              /**< constant value to add to the row */
+   );
+
+/** adds a previously non existing coefficient to an LP row */
+SCIP_RETCODE SCIProwExactAddCoef(
+   SCIP_ROWEXACT*        rowexact,           /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_COLEXACT*        colexact,           /**< LP column */
+   SCIP_Rational*        val                 /**< value of coefficient */
    );
 
 /** increases value of an existing or nonexisting coefficient in an LP column */
@@ -583,7 +602,7 @@ void SCIPlpExactDecNLoosevars(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
-SCIP_RETCODE SCIPlexGetNRows(
+SCIP_RETCODE SCIPlpExactGetNRows(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
@@ -671,6 +690,15 @@ SCIP_RETCODE SCIPlpExactshrinkRows(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    int                   newnrows            /**< new number of rows in the LP */
+   );
+
+/* deletes the marked rows from the LP and the LP interface */
+SCIP_RETCODE SCIPlpExactDelRowset(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   int*                  rowdstat            /**< deletion status of rows:  1 if row should be deleted, 0 if not */
    );
 
 /** resets the LP to the empty LP by removing all columns and rows from LP, releasing all rows, and flushing the
@@ -799,6 +827,12 @@ SCIP_RETCODE SCIPlpExactEndDive(
 SCIP_EXPORT
 SCIP_Bool SCIPlpExactDiving(
    SCIP_LPEXACT*         lpexact             /**< current exact LP data */
+   );
+
+/** writes exact LP to a file */
+SCIP_RETCODE SCIPlpExactWrite(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   const char*           fname               /**< file name */
    );
 
 #ifdef __cplusplus

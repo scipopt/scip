@@ -49,6 +49,7 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/cuts.h"
+#include "scip/certificate.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -57,6 +58,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cut.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -269,6 +271,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    int maxsepacuts;
    int c;
    int i;
+   int j;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -361,7 +364,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &cutinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisperm, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
@@ -452,8 +455,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       ninds = -1;
       SCIP_CALL( SCIPgetLPBInvRow(scip, j, binvrow, inds, &ninds) );
 
-      SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
-         sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
+      if( SCIPisExactSolve(scip) )
+      {
+         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
+            sepadata->sidetypebasis, allowlocal, 0, (int) MAXAGGRLEN(nvars), &success) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
+            sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
+      }
 
       if( !success )
          continue;
@@ -469,6 +480,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
        */
 
       SCIPdebugMsg(scip, " -> success=%u, rhs=%g, efficacy=%g\n", success, cutrhs, cutefficacy);
+
+      if( cutislocal )
+         success = FALSE;
 
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
       if( success )
@@ -493,12 +507,90 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             else
                (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
 
+            if( SCIPisExactSolve(scip) )
+            {
+               SCIP_ROUNDMODE roundmode;
+
+               roundmode = SCIPintervalGetRoundingMode();
+               SCIPintervalSetRoundingModeUpwards();
+               /* postprocess cut for exact solving, i.e. change almost integer values to integer by weakening side */
+               for( j = 0; j < cutnnz; j++ )
+               {
+                  if( SCIPisIntegral(scip, cutcoefs[j]) )
+                  {
+                     SCIP_Real roundedval = SCIPround(scip, cutcoefs[j]);
+                     SCIP_Real delta = roundedval - cutcoefs[j];
+                     SCIP_VAR* var = vars[cutinds[j]];
+
+                     if( delta == 0 )
+                        continue;
+                     cutcoefs[j]= roundedval;
+
+                     if( cutislocal )
+                        cutrhs += (delta > 0 ? SCIPvarGetUbLocal(var) : SCIPvarGetLbLocal(var)) * delta;
+                     else
+                        cutrhs += (delta > 0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var)) * delta;
+                  }
+               }
+               SCIPintervalSetRoundingMode(roundmode);
+            }
+
             /* create empty cut */
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
                                                 cutislocal, FALSE, sepadata->dynamiccuts) );
 
             /* set cut rank */
             SCIProwChgRank(cut, cutrank);
+
+            if( SCIPisExactSolve(scip) )
+            {
+               /* add aggregation information to certificate for later use */
+               if( SCIPisCertificateActive(scip) )
+               {
+                  SCIP_ROW** aggrrows;
+                  SCIP_Real* aggweights;
+                  SCIP_MIRINFO* splitinfo;
+                  SCIP_Bool uselhs;
+                  int c = 0;
+
+                  SCIP_CALL( SCIPallocBufferArray(scip, &aggrrows, nrows) );
+                  SCIP_CALL( SCIPallocBufferArray(scip, &aggweights, nrows) );
+                  if( ninds != -1 )
+                  {
+                     for( j = 0; j < ninds; j++ )
+                     {
+                        /** @todo exip: if we get negative slacks to work this might need to be more sophisticated */
+                        if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[inds[j]])) && binvrow[inds[j]] >= 0.0)
+                              || (SCIPisInfinity(scip, -SCIProwGetLhs(rows[inds[j]])) && binvrow[inds[j]] <= 0.0) )
+                           continue;
+                        aggweights[c] = binvrow[inds[j]];
+                        aggrrows[c] = rows[inds[j]];
+                        c++;
+                     }
+                  }
+                  else
+                  {
+                     for( j = 0; j < nrows; j++ )
+                     {
+                        if( !SCIPisFeasZero(scip, binvrow[j]) )
+                        {
+                           /** @todo exip: if we get negative slacks to work this might need to be more sophisticated */
+                           if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[j])) && binvrow[j] >= 0.0)
+                                 || (SCIPisInfinity(scip, -SCIProwGetLhs(rows[j])) && binvrow[j] <= 0.0) )
+                              continue;
+                           aggweights[c] = binvrow[j];
+                           aggrrows[c] = rows[j];
+                           c++;
+                        }
+                     }
+                  }
+                  SCIP_CALL( SCIPaddCertificateAggregation(scip, cut, aggrrow, aggrrows, aggweights, aggrrow->nrows) );
+                  SCIPfreeBufferArray(scip, &aggweights);
+                  SCIPfreeBufferArray(scip, &aggrrows);
+
+                  SCIPstoreCertificateActiveMirInfo(scip, cut);
+               }
+            }
 
             /* cache the row extension and only flush them if the cut gets added */
             SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
@@ -573,6 +665,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             SCIP_CALL( SCIPreleaseRow(scip, &cut) );
          }
       }
+      if( SCIPisCertificateActive(scip) )
+      {
+         SCIP_CALL( SCIPfreeCertificateActiveMirInfo(scip) );
+      }
    }
 
    /* free temporary memory */
@@ -622,6 +718,9 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaExeclpGomory, NULL,
          sepadata) );
+
+   /* gomory is safe to use in exact solving mode */
+   SCIPsepaSetExact(sepa);
 
    assert(sepa != NULL);
 

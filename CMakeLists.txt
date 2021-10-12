@@ -124,6 +124,9 @@ set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )
 set(SYM bliss CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss none )  #define list of values GUI will offer for the variable
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb3 -ltcmalloc")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -ggdb3 -ltcmalloc")
+
 #set options for memory management
 if( NOBLKBUFMEM )
    set(NOBLKMEM ON FORCE)

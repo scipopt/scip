@@ -31,7 +31,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
 #include "lpi/lpi.h"
 #include "lpiexact/lpiexact.h"
 #include "scip/clock.h"
@@ -5470,6 +5469,10 @@ SCIP_RETCODE SCIProwFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->cols_index, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->vals, (*row)->size);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->linkpos, (*row)->size);
+
+   if( (*row)->rowexact != NULL )
+      (*row)->rowexact->fprow = NULL;
+
    BMSfreeBlockMemory(blkmem, row);
 
    return SCIP_OKAY;

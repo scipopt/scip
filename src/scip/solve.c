@@ -2893,7 +2893,7 @@ SCIP_RETCODE applyBounding(
                SCIP_Rational* pseudoobjvalrational;
                SCIP_CALL( RatCreateBuffer(set->buffer, &pseudoobjvalrational) );
 
-               SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lp->lpexact, eventqueue) );
+               SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lp->lpexact, transprob, eventqueue) );
                SCIPlpExactGetPseudoObjval(lp->lpexact, set, transprob, pseudoobjvalrational);
 
                SCIPnodeUpdateExactLowerbound(focusnode, stat, set, tree, transprob, origprob, pseudoobjvalrational);

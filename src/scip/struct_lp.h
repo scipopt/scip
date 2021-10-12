@@ -222,7 +222,7 @@ struct SCIP_Row
    SCIP_Real*            vals;               /**< coefficients of row entries */
    int*                  linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this row */
-   SCIP_ROWEXACT*        rowexact;              /**< pointer to exact row if it exists, or NULL in fp-scip */
+   SCIP_ROWEXACT*        rowexact;           /**< pointer to exact row if it exists, or NULL in fp-scip */
    SCIP_Longint          validactivitylp;    /**< LP number for which activity value is valid */
    int                   index;              /**< consecutively numbered row identifier */
    int                   size;               /**< size of the col- and val-arrays */
