@@ -865,10 +865,22 @@ void RatDivReal(
    )
 {
    assert(res != NULL && op1 != NULL);
-   assert(!op1->isinf);
    assert(op2 != 0.0);
 
-   RatMultReal(res, op1, 1.0 / op2 );
+   if( op1->isinf )
+   {
+      op2 > 0 ? RatSet(res, op1) : RatNegate(res, op1);
+   }
+   else if( REALABS(op2) >= infinity && !RatIsZero(op1) )
+   {
+      RatSetReal(res, op2 * op1->val.sign());
+   }
+   else
+   {
+      res->val = op1->val / Rational(op2);
+      res->isinf = FALSE;
+   }
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 /* Computes res += op1 * op2 and saves the result in res */

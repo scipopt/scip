@@ -271,6 +271,34 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    return SCIP_OKAY;
 }
 
+/** creates and captures an exact LP row without any coefficients from a separator
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT**       rowexact,           /**< pointer to exact row */
+   SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
+   SCIP_SEPA*            sepa,               /**< separator that creates the row */
+   const char*           name,               /**< name of row */
+   SCIP_Rational*        lhs,                /**< left hand side of row */
+   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_Bool             hasfprelaxation     /**< the the fprow a relaxation or only an approximation of the exact row? */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, NULL, scip->mem->probmem, scip->set, scip->stat,
+         scip->lpexact, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, hasfprelaxation, (void*) sepa) );
+
+   return SCIP_OKAY;
+}
+
 /** returns the feasibility of a row for the given primal solution
  *
  *  @return the feasibility of a row for the given primal solution

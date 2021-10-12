@@ -1792,6 +1792,9 @@ SCIP_RETCODE freeSolve(
    }
    scip->transprob->nlpenabled = FALSE;
 
+   /* clear all lp-related information in the certificate */
+   SCIPcertificateClearAggrinfo(scip);
+
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
    SCIPlpInvalidateRootObjval(scip->lp);

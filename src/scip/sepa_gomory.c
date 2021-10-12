@@ -271,6 +271,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    int maxsepacuts;
    int c;
    int i;
+   int j;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -480,6 +481,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
       SCIPdebugMsg(scip, " -> success=%u, rhs=%g, efficacy=%g\n", success, cutrhs, cutefficacy);
 
+      if( cutislocal )
+         success = FALSE;
+
       /* if successful, convert dense cut into sparse row, and add the row as a cut */
       if( success )
       {
@@ -503,6 +507,34 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             else
                (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
 
+            if( SCIPisExactSolve(scip) )
+            {
+               SCIP_ROUNDMODE roundmode;
+
+               roundmode = SCIPintervalGetRoundingMode();
+               SCIPintervalSetRoundingModeUpwards();
+               /* postprocess cut for exact solving, i.e. change almost integer values to integer by weakening side */
+               for( j = 0; j < cutnnz; j++ )
+               {
+                  if( SCIPisIntegral(scip, cutcoefs[j]) )
+                  {
+                     SCIP_Real roundedval = SCIPround(scip, cutcoefs[j]);
+                     SCIP_Real delta = roundedval - cutcoefs[j];
+                     SCIP_VAR* var = vars[cutinds[j]];
+
+                     if( delta == 0 )
+                        continue;
+                     cutcoefs[j]= roundedval;
+
+                     if( cutislocal )
+                        cutrhs += (delta > 0 ? SCIPvarGetUbLocal(var) : SCIPvarGetLbLocal(var)) * delta;
+                     else
+                        cutrhs += (delta > 0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var)) * delta;
+                  }
+               }
+               SCIPintervalSetRoundingMode(roundmode);
+            }
+
             /* create empty cut */
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
                                                 cutislocal, FALSE, sepadata->dynamiccuts) );
@@ -510,42 +542,54 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             /* set cut rank */
             SCIProwChgRank(cut, cutrank);
 
-            /* add aggregation information to certificate for later use */
-            if( SCIPisCertificateActive(scip) )
+            if( SCIPisExactSolve(scip) )
             {
-               SCIP_ROW** aggrrows;
-               SCIP_Real* aggweights;
-               SCIP_MIRINFO* splitinfo;
-
-               SCIP_CALL( SCIPallocBufferArray(scip, &aggrrows, nrows) );
-               SCIP_CALL( SCIPallocBufferArray(scip, &aggweights, nrows) );
-               if( ninds != -1 )
+               /* add aggregation information to certificate for later use */
+               if( SCIPisCertificateActive(scip) )
                {
-                  for( i = 0; i < ninds; i++ )
-                  {
-                     aggweights[i] = binvrow[inds[i]];
-                     aggrrows[i] = rows[inds[i]];
-                  }
-               }
-               else
-               {
+                  SCIP_ROW** aggrrows;
+                  SCIP_Real* aggweights;
+                  SCIP_MIRINFO* splitinfo;
+                  SCIP_Bool uselhs;
                   int c = 0;
 
-                  for( i = 0; i < nrows; i++ )
+                  SCIP_CALL( SCIPallocBufferArray(scip, &aggrrows, nrows) );
+                  SCIP_CALL( SCIPallocBufferArray(scip, &aggweights, nrows) );
+                  if( ninds != -1 )
                   {
-                     if( !SCIPisFeasZero(scip, binvrow[i]) )
+                     for( j = 0; j < ninds; j++ )
                      {
-                        aggweights[c] = binvrow[i];
-                        aggrrows[c] = rows[i];
+                        /** @todo exip: if we get negative slacks to work this might need to be more sophisticated */
+                        if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[inds[j]])) && binvrow[inds[j]] >= 0.0)
+                              || (SCIPisInfinity(scip, -SCIProwGetLhs(rows[inds[j]])) && binvrow[inds[j]] <= 0.0) )
+                           continue;
+                        aggweights[c] = binvrow[inds[j]];
+                        aggrrows[c] = rows[inds[j]];
                         c++;
                      }
                   }
-               }
-               SCIP_CALL( SCIPaddCertificateAggregation(scip, cut, aggrrow, aggrrows, aggweights, aggrrow->nrows) );
-               SCIPfreeBufferArray(scip, &aggweights);
-               SCIPfreeBufferArray(scip, &aggrrows);
+                  else
+                  {
+                     for( j = 0; j < nrows; j++ )
+                     {
+                        if( !SCIPisFeasZero(scip, binvrow[j]) )
+                        {
+                           /** @todo exip: if we get negative slacks to work this might need to be more sophisticated */
+                           if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[j])) && binvrow[j] >= 0.0)
+                                 || (SCIPisInfinity(scip, -SCIProwGetLhs(rows[j])) && binvrow[j] <= 0.0) )
+                              continue;
+                           aggweights[c] = binvrow[j];
+                           aggrrows[c] = rows[j];
+                           c++;
+                        }
+                     }
+                  }
+                  SCIP_CALL( SCIPaddCertificateAggregation(scip, cut, aggrrow, aggrrows, aggweights, aggrrow->nrows) );
+                  SCIPfreeBufferArray(scip, &aggweights);
+                  SCIPfreeBufferArray(scip, &aggrrows);
 
-               SCIPstoreCertificateActiveMirInfo(scip, cut);
+                  SCIPstoreCertificateActiveMirInfo(scip, cut);
+               }
             }
 
             /* cache the row extension and only flush them if the cut gets added */

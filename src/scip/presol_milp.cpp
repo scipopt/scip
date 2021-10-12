@@ -239,7 +239,7 @@ void setRational(
    assert(scip != NULL);
    assert(res != NULL);
 
-   res->val = papiloval;
+   res->val = papilo::Rational(papiloval.backend().data());
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    if( SCIPisInfinity(scip, REALABS(RatApproxReal(res))) )
    {
@@ -586,6 +586,7 @@ SCIP_RETCODE doMilpPresolveRational(
       {
          int col = res.postsolve.indices[first];
          papilo::Rational side = res.postsolve.values[first];
+         papilo::Rational tmpval;
 
          int rowlen = last - first - 1;
          SCIP_Bool infeas;
@@ -601,9 +602,11 @@ SCIP_RETCODE doMilpPresolveRational(
             SCIP_Rational* constant;
             SCIP_Rational* tmpscalarx;
             SCIP_Rational* tmpscalary;
+            SCIP_Rational* tmpside;
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpscalarx) );
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpscalary) );
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpside) );
 
             setRational(scip, tmpscalarx, scalarx);
             setRational(scip, tmpscalary, scalary);
@@ -614,14 +617,15 @@ SCIP_RETCODE doMilpPresolveRational(
             SCIP_CALL( SCIPgetProbvarSumExact(scip, &vary, tmpscalary, constant) );
             assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
 
-            side -= constant->val;
-            setRational(scip, constant, side);
+            setRational(scip, tmpside, side);
+            RatDiff(tmpside, tmpside, constant);
 
             RatDebugMessage("Papilo aggregate vars %s, %s with scalars %q, %q and constant %q \n", SCIPvarGetName(varx), SCIPvarGetName(vary),
                tmpscalarx, tmpscalary, constant);
 
-            SCIP_CALL( SCIPaggregateVarsExact(scip, varx, vary, tmpscalarx, tmpscalary, constant, &infeas, &redundant, &aggregated) );
+            SCIP_CALL( SCIPaggregateVarsExact(scip, varx, vary, tmpscalarx, tmpscalary, tmpside, &infeas, &redundant, &aggregated) );
 
+            RatFreeBuffer(SCIPbuffer(scip), &tmpside);
             RatFreeBuffer(SCIPbuffer(scip), &tmpscalary);
             RatFreeBuffer(SCIPbuffer(scip), &tmpscalarx);
             RatFreeBuffer(SCIPbuffer(scip), &constant);
@@ -630,11 +634,13 @@ SCIP_RETCODE doMilpPresolveRational(
          {
             SCIP_Rational* colCoef;
             SCIP_Rational* constant;
+            SCIP_Rational* tmpside;
             SCIP_Rational** tmpvals;
             int c = 0;
 
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &colCoef) );
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpside) );
             SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
 
             for( int j = first + 1; j < last; ++j )
@@ -655,8 +661,6 @@ SCIP_RETCODE doMilpPresolveRational(
             SCIP_CALL( SCIPgetProbvarSumExact(scip, &aggrvar, colCoef, constant) );
             assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
 
-            side -= constant->val;
-
             for( int j = first + 1; j < last; ++j )
             {
                if( res.postsolve.indices[j] == col )
@@ -666,16 +670,17 @@ SCIP_RETCODE doMilpPresolveRational(
                setRational(scip, tmpvals[c], -res.postsolve.values[j] / colCoef->val);
                c++;
             }
+            setRational(scip, tmpside, side);
+            RatDiff(tmpside, tmpside, constant);
+            RatDiv(tmpside, tmpside, colCoef);
 
-            setRational(scip, constant, side);
-            RatDiv(constant, constant, colCoef);
-
-            RatDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), constant);
+            RatDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), tmpside);
 
             SCIP_CALL( SCIPmultiaggregateVarExact(scip, aggrvar, tmpvars.size(),
-                  tmpvars.data(), tmpvals, constant, &infeas, &aggregated) );
+                  tmpvars.data(), tmpvals, tmpside, &infeas, &aggregated) );
 
             RatFreeBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
+            RatFreeBuffer(SCIPbuffer(scip), &tmpside);
             RatFreeBuffer(SCIPbuffer(scip), &colCoef);
             RatFreeBuffer(SCIPbuffer(scip), &constant);
          }

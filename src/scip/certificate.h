@@ -191,6 +191,7 @@ void SCIPcertificatePrintCons(
 /** prints constraint */
 SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_PROB*            prob,               /**< SCIP problem data */
    SCIP_ROW*             row,                /**< the row to be printed */
@@ -212,6 +213,7 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
    SCIP_PROB*            prob,               /**< SCIP problem data */
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
@@ -308,6 +310,20 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
 /** create a new split info structure for the current cut */
 SCIP_RETCODE SCIPcertificateNewMirInfo(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** free all aggregation information */
+SCIP_RETCODE SCIPcertificateClearAggrinfo(
+   SCIP*                 scip                /**< global SCIP data structure */
+   );
+
+/** free aggregation information */
+SCIP_RETCODE SCIPcertificateFreeAggrInfo(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate structure */
+   SCIP_LP*              lp,                 /**< SCIP lp data structure */
+   SCIP_AGGREGATIONINFO* aggrinfo,           /**< SCIP aggregation info */
+   SCIP_ROW*             row                 /**< new row, that info should be stored for */
    );
 
 /** create a new aggregation info for a row */

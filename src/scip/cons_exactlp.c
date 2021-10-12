@@ -7535,7 +7535,7 @@ SCIP_RETCODE createRows(
    /* create two fp-rows for row relaxation */
    else
    {
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rowrhs, cons, SCIPconsGetName(cons), -SCIPinfinity(scip), rhsrelax,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rowrhs, cons, SCIPconsGetName(cons), lhsrelax, rhsrelax,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rowrhs, consdata->nvars, consdata->vars, valsrhsrelax) );
 

@@ -62,9 +62,10 @@ struct SCIP_MirInfo
    SCIP_Bool*            splitupperused;     /**< TRUE if ub was used to complemented variable, FALSE if lb was used */
    SCIP_Bool*            contupperused;      /**< TRUE if ub was used to complemented variable, FALSE if lb was used */
    int                   nsplitvars;         /**< number of variables in the split */
-   int                   ncontvars;         /**< number of variables in the split */
+   int                   ncontvars;          /**< number of variables in the split */
    SCIP_Real             rhs;                /**< rhs of the split disjunction */
    SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */
+   SCIP_Bool             global;             /**< is the cut valid globally? (relevant for which bounds to use in rounding)*/
 };
 
 struct SCIP_Certnodedata
