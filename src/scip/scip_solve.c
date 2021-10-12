@@ -2365,7 +2365,7 @@ SCIP_RETCODE prepareReoptimization(
     */
    if( scip->stat->nreoptruns == 1 )
    {
-      assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
+      assert(scip->set->stage == SCIP_STAGE_PRESOLVED || scip->set->stage == SCIP_STAGE_SOLVED);
 
       SCIP_CALL( SCIPreoptSaveGlobalBounds(scip->reopt, scip->transprob, scip->mem->probmem) );
 
@@ -2710,7 +2710,13 @@ SCIP_RETCODE SCIPsolve(
             statsprinted = TRUE;
 
          if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
+         {
+            if ( scip->set->reopt_enable )
+            {
+               SCIP_CALL( prepareReoptimization(scip) );
+            }
             break;
+         }
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
          if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
