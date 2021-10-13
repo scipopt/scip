@@ -278,8 +278,10 @@ SCIP_RETCODE SCIPStpDpRelaxActivate(
 
    assert(relaxdata);
 
-   // todo maybe also turn SCIP presolving off
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/TM/initruns", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trivial/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
    relaxdata->isActive = TRUE;
 

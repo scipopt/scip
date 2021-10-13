@@ -39,6 +39,7 @@ Features
   made it available via the API.
 - MIR procedure is now available for strengthening the Benders' optimality cut
 - SCIPbranchcandCalcLPCands() now also returns fractional variables in unbounded solutions.
+- New emphasis "benchmark" to avoid different solving paths that may come from checking remaining memory.
 - New plugin type for cut selection: users can now include their own cut selection rules, default rule moved to cutsel_hybrid.
 - New construction heuristic DPS which additionally needs a user-provided decomposition and splits the problem into several sub-SCIPs
   according to this decomposition. The sub-SCIPs are solved and updated repeatedly until a feasible solution of the original problem is found.
@@ -138,6 +139,7 @@ Performance improvements
   sepa_strongcg.{h|c} have been removed.
 - The RENS neighborhood in ALNS now fixes fractional variables if necessary for reaching its target fixing rate.
 - Use cpsolver emphasis in sepa_rapidlearning.
+- If decomposition/maxgraphedge = 0, the computation of the block graph is completely turned off.
 
 Examples and applications
 -------------------------
@@ -177,6 +179,7 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- removed SCIPselectCuts(), replaced by SCIPselectCutsHybrid() of the hybrid cut selector plugin
 - If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
   variable is added to the transformed problem (SCIPaddVar()).
   SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
@@ -205,6 +208,7 @@ Interface changes
 - SCIPlockVarCons() and SCIPunlockVarCons() are now allowed in stage TRANSFORMED as well
 - Added functions SCIPsetSepaIsParentsepa(), SCIPsetSepaParentsepa() [in scip_sepa.h], SCIPsepaSetIsParentsepa(), SCIPsepaSetParentsepa() [in sepa.h],
   SCIPsepaIsParentsepa(), SCIPsepaGetParentsepa() [in pub_sepa.h]
+- Added function SCIPpruneTree() to immediately delete nodes that were marked to be deleted with SCIPcutoffNode
 
 NLP:
 - SCIPhasNLPContinuousNonlinearity() now returns SCIP_RETCODE and has additional argument result
@@ -689,7 +693,7 @@ Cut Selector:
 - nlhdlr/convex/enabled, nlhdlr/convex/detectsum, nlhdlr/convex/preferextended, nlhdlr/convex/cvxquadratic, nlhdlr/convex/cvxsignomial, nlhdlr/convex/cvxprodcomp, nlhdlr/convex/handletrivial
 - nlhdlr/concave/enabled, nlhdlr/concave/detectsum, nlhdlr/concave/cvxquadratic, nlhdlr/concave/cvxsignomial, nlhdlr/concave/cvxprodcomp, nlhdlr/concave/handletrivial
 - nlhdlr/bilinear/enabled, nlhdlr/bilinear/useinteval, nlhdlr/bilinear/usereverseprop, nlhdlr/bilinear/maxseparoundsroot, nlhdlr/bilinear/maxseparounds, nlhdlr/bilinear/maxsepadepth
-- nlhdlr/perspective/enabled, nlhdlr/perspective/maxproprounds, nlhdlr/perspective/mindomreduction, nlhdlr/perspective/minviolprobing, nlhdlr/perspective/probingonlyinsepa, nlhdlr/perspective/probingfreq, nlhdlr/perspective/convexonly, nlhdlr/perspective/tightenbounds
+- nlhdlr/perspective/enabled, nlhdlr/perspective/maxproprounds, nlhdlr/perspective/mindomreduction, nlhdlr/perspective/minviolprobing, nlhdlr/perspective/probingonlyinsepa, nlhdlr/perspective/probingfreq, nlhdlr/perspective/convexonly, nlhdlr/perspective/tightenbounds, nlhdlr/perspective/adjrefpoint
 - nlhdlr/quadratic/enabled, nlhdlr/quadratic/useintersectioncuts, nlhdlr/quadratic/usestrengthening, nlhdlr/quadratic/useboundsasrays, nlhdlr/quadratic/ncutslimit, nlhdlr/quadratic/ncutslimitroot, nlhdlr/quadratic/maxrank, nlhdlr/quadratic/mincutviolation, nlhdlr/quadratic/minviolation, nlhdlr/quadratic/atwhichnodes, nlhdlr/quadratic/nstrengthlimit, nlhdlr/quadratic/ignorebadrayrestriction, nlhdlr/quadratic/ignorehighre
 - nlhdlr/quotient/enabled
 - nlhdlr/soc/enabled, nlhdlr/soc/mincutefficacy, nlhdlr/soc/compeigenvalues
@@ -713,7 +717,9 @@ Cut Selector:
 - new parameters "heuristics/alns/nodesquotmin", "heuristics/alns/maxcallssamesol" and "heuristics/alns/initduringroot"
   to control neighborhoods in ALNS
 - new parameter "benders/default/benderscut/optimality/mir" to control whether mixed-integer rounding procedure is applied to Benders optimality cuts
+- new parameter "misc/avoidmemout" to try to avoid running into memory limit
 - cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
+- new parameter "decomposition/disablemeasures" to disable expensive measures in SCIPcomputeDecompStats()
 
 ### Data structures
 
@@ -854,6 +860,9 @@ Build system
 
 - replace flag PARASCIP by THREADSAFE
 - flag AMPL is now true by default
+- libscip has been renamed to libscipbase and libscipsolver has been renamed to libscip
+  in order to have the same library names for makefiles and cmake. For downward
+  compatibility libscipsolver still exists (as a link).
 
 Fixed bugs
 ----------
@@ -861,6 +870,7 @@ Fixed bugs
 - improved the likelihood that a solution that satisfies the nonlinear constraints in the transformed (presolved) problem is also feasible for the original problem
 - worked around a problem with derivatives of pow at 0 with non-integer exponents in CppAD
 - fixed that setting of feasiblity and optimiality tolerance for NLP relaxation was overwritten with defaults when solving NLP
+- fixed variance computation in t-value computation in hypothesis testing of reliability branching
 - fixed potential overflow in cuts.c:evaluateLiftingFunctionKnapsack()
 - do not transfer dual reductions to main SCIP in sepa_rapidlearning if strong dual reductions are forbidden
 

@@ -2951,6 +2951,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    SCIP_Real memorylimit;                    /* memory limit for the subproblem */
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
    SCIP_Bool run;
+   SCIP_Bool avoidmemout;
 
    int h;
 
@@ -3011,13 +3012,14 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
 
    /* only call heuristics if we have enough memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
    if( !SCIPisInfinity(scip, memorylimit) )
    {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   if( memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   if( avoidmemout && memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
    {
       SCIPdebugMsg(scip, "skipping undercover heuristic: too little memory\n");
       return SCIP_OKAY;

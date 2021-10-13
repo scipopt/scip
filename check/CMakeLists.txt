@@ -176,6 +176,10 @@ set(settings_BendersQP
     "benders-qp"
    )
 
+set(settings_Decomp
+   "decompheurs"
+  )
+
 set(settings_Indicator
     "default"
     "indicatorrestart"
@@ -422,6 +426,10 @@ set(instances_BendersQP
     "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.34740783553289e-02"
    )
 
+set(instances_Decomp
+   "instances/Decomp/exp-1-500-5-5.mps.gz\;instances/Decomp/exp-1-500-5-5.dec.gz\;65887"
+  )
+
 set(instances_Or
     "instances/Or/or_constraint.cip\;18"
     )
@@ -517,7 +525,7 @@ if(DEFINED IPOPT_FOUND AND IPOPT_FOUND)
 else()
    set(TEST_BENDERSQP FALSE)
 endif()
-if(${TEST_BENDERSQP} AND ((NOT ${LPS} STREQUAL "msk" )))
+if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQUAL "BendersQP"))
     foreach(instance ${${instances}})
         split_decompinstance(instance)
         #
@@ -565,6 +573,7 @@ add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
 add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
+add_decompinstancetests(instances_Decomp settings_Decomp "Decomp")
 
 #
 # test writing and reading solutions
@@ -775,9 +784,7 @@ set_tests_properties(write_and_read_settings
 set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
 
-# disabled reopt on FullIns_3 until #2758 is dealt with
-# foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
-foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
+foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
     foreach(setting ${settings_reopt})
         configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
         add_test(NAME ${testname}-${setting}

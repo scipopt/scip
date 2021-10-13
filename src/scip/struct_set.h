@@ -389,6 +389,7 @@ struct SCIP_Set
    SCIP_Bool             misc_improvingsols; /**< should only solutions be checked which improve the primal bound */
    SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
    SCIP_Bool             misc_estimexternmem;/**< should the usage of external memory be estimated? */
+   SCIP_Bool             misc_avoidmemout;   /**< try to avoid running into memory limit by restricting plugins like heuristics? */
    SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
    SCIP_Bool             misc_transsolsorig; /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
@@ -464,7 +465,8 @@ struct SCIP_Set
    SCIP_Bool             decomp_benderslabels; /**< should the variables be labeled for the application of Benders'
                                                 *   decomposition */
    SCIP_Bool             decomp_applybenders;  /**< if a decomposition exists, should Benders' decomposition be applied*/
-   int                   decomp_maxgraphedge;  /**< maximum number of edges in block graph computation, or -1 for no limit */
+   int                   decomp_maxgraphedge;  /**< maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation) */
+   SCIP_Bool             decomp_disablemeasures; /**< disable expensive measures */
 
    /* Benders' decomposition settings */
    SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */

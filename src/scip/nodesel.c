@@ -654,7 +654,7 @@ SCIP_RETCODE SCIPnodepqBound(
       node = nodepq->slots[pos];
       assert(node != NULL);
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
-      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
+      if( SCIPsetIsInfinity(set, SCIPnodeGetLowerbound(node)) || SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
          SCIPsetDebugMsg(set, "free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));

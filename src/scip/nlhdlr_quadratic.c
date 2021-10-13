@@ -1044,6 +1044,8 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
    SCIPexprGetQuadraticData(qexpr, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, NULL, &eigenvalues,
          &eigenvectors);
 
+   assert( eigenvalues != NULL );
+
    /* first get constant of quadratic when written as quad <= 0 */
    if( nlhdlrexprdata->cons != NULL )
       constant = (sidefactor == 1.0) ? constant - SCIPgetRhsNonlinear(nlhdlrexprdata->cons) :

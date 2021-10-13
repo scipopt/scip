@@ -1668,7 +1668,7 @@ SCIP_Bool solstp_isValid(
 
 #ifndef NDEBUG
    for( int e = 0; e < graph->edges; ++e )
-      assert(result[e] == CONNECT || result[e] == UNKNOWN);
+      assert(graph->stp_type == STP_DCSTP || result[e] == CONNECT || result[e] == UNKNOWN);
 #endif
 
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &reached, nnodes) );

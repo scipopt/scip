@@ -59,7 +59,7 @@
 #define DEFAULT_EVALRUNS 20                  /**< number of runs */
 #define DEFAULT_INITRUNS 100                 /**< number of initial runs */
 #define DEFAULT_LEAFRUNS 25                  /**< number of runs at leafs */
-#define DEFAULT_HARD_RUNSMULT 3.5            /**< multiplier */
+#define DEFAULT_HARD_RUNSMULT 1.75           /**< multiplier */
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
 #define DEFAULT_DURINGLPFREQ 5               /**< frequency during LP solving */
 #define DEFAULT_TYPE  0                      /**< heuristic to execute */
