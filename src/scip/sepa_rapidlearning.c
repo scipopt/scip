@@ -256,34 +256,26 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
 
    SCIPdebugMsg(scip, "Copying SCIP was%s valid.\n", valid ? "" : " not");
 
-   /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
+   /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP, ... */
    if( SCIPisParamFixed(subscip, "lp/solvefreq") )
    {
       SCIPwarningMessage(scip, "unfixing parameter lp/solvefreq in subscip of rapidlearning\n");
       SCIP_CALL( SCIPunfixParam(subscip, "lp/solvefreq") );
-   }
-   SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
-   if( !SCIPisParamFixed(subscip, "conflict/fuiplevels") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/fuiplevels", 1) );
    }
    if( SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
    {
       SCIPwarningMessage(scip, "unfixing parameter nodeselection/dfs/stdpriority in subscip of rapidlearning\n");
       SCIP_CALL( SCIPunfixParam(subscip, "nodeselection/dfs/stdpriority") );
    }
-   SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+   SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
 
+   /* turn off pseudo objective propagation */
    if( !SCIPisParamFixed(subscip, "propagating/pseudoobj/freq") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "propagating/pseudoobj/freq", -1) );
    }
-   if( !SCIPisParamFixed(subscip, "constraints/disableenfops") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/disableenfops", TRUE) );
-   }
 
-   /* use inference branching */
+   /* use classic inference branching */
    if( !SCIPisParamFixed(subscip, "branching/inference/useweightedsum") )
    {
       SCIP_CALL( SCIPsetBoolParam(subscip, "branching/inference/useweightedsum", FALSE) );
@@ -427,7 +419,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
    SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
  #endif
 
-   disabledualreductions = FALSE;
+   if( SCIPallowStrongDualReds(scip) )
+      disabledualreductions = FALSE;
+   else
+      disabledualreductions = TRUE;
 
    /* check, whether a solution was found */
    if( sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 )

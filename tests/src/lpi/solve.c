@@ -461,7 +461,7 @@ SCIP_RETCODE checkData(
    for (i = 0; i < nrows; ++i)
    {
       cr_assert_float_eq_inf(lpilhs[i], lhs[i], EPS, "Violation of lhs %d: %g != %g\n", i, lpilhs[i], lhs[i]);
-      cr_assert_float_eq_inf(lpilhs[i], lhs[i], EPS, "Violation of rhs %d: %g != %g\n", i, lpirhs[i], rhs[i]);
+      cr_assert_float_eq_inf(lpirhs[i], rhs[i], EPS, "Violation of rhs %d: %g != %g\n", i, lpirhs[i], rhs[i]);
    }
 
    BMSfreeMemoryArray(&lpirhs);

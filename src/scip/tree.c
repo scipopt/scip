@@ -2206,7 +2206,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       assert(RatIsLE(newbound, oldub));
       RatSet(oldbound, oldlb);
       RatMIN(newbound, newbound, oldub);
-      oldboundreal = RatRoundReal(oldbound, SCIP_ROUND_UPWARDS);
+      oldboundreal = RatRoundReal(oldbound, SCIP_R_ROUND_UPWARDS);
 
       if ( set->stage == SCIP_STAGE_SOLVING && RatIsInfinity(newbound) )
       {
@@ -2224,7 +2224,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       assert(RatIsGE(newbound, oldlb));
       RatSet(oldbound, oldub);
       RatMAX(newbound, newbound, oldlb);
-      oldboundreal = RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS);
+      oldboundreal = RatRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS);
 
       if ( set->stage == SCIP_STAGE_SOLVING && RatIsNegInfinity(newbound) )
       {
@@ -2258,7 +2258,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    {
       int conflictingdepth;
 
-      newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+      newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
 
       /** @todo exip: do we need this exact as well? */
       conflictingdepth = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, newboundreal);
@@ -2774,7 +2774,7 @@ void SCIPnodeUpdateExactLowerbound(
 
       oldbound = node->lowerbound;
       RatSet(node->lowerboundexact, newbound);
-      node->lowerbound = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+      node->lowerbound = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
       node->estimate = MAX(node->estimate, node->lowerbound);
 
       if( node->depth == 0 )
@@ -5612,7 +5612,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nsiblings-1; i >= 0; --i )
    {
       node = tree->siblings[i];
-      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+      if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          if( set->exact_enabled && node->lowerbound < cutoffbound )
             continue;
@@ -5638,7 +5638,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nchildren-1; i >= 0; --i )
    {
       node = tree->children[i];
-      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+      if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          if( set->exact_enabled && node->lowerbound < cutoffbound )
             continue;

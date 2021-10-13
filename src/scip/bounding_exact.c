@@ -1790,7 +1790,7 @@ SCIP_RETCODE projectShift(
       }
    }
 
-   computedbound = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
+   computedbound = RatRoundReal(dualbound, SCIP_R_ROUND_DOWNWARDS);
 
    if( !usefarkas )
    {
@@ -2265,8 +2265,8 @@ SCIP_RETCODE boundShift(
          }
       }
 
-      assert(SCIPcolGetLb(col) <= RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_ROUND_DOWNWARDS));
-      assert(SCIPcolGetUb(col) >= RatRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_ROUND_UPWARDS));
+      assert(SCIPcolGetLb(col) <= RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_R_ROUND_DOWNWARDS));
+      assert(SCIPcolGetUb(col) >= RatRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_R_ROUND_UPWARDS));
       SCIPintervalSetBounds(&ublbcol[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
 
       /* opt out if there are infinity bounds and a non-infinte value */

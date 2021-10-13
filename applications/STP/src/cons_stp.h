@@ -29,23 +29,21 @@
 
 
 #include "scip/scip.h"
-#include "grph.h"
+#include "graph.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#ifndef RESTRICT
-#define RESTRICT restrict
-#endif
-
 /** creates the handler for element constraints and includes it in SCIP */
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a stp constraint */
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsStp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -54,39 +52,36 @@ SCIP_RETCODE SCIPcreateConsStp(
    );
 
 /** sets graph */
+SCIP_EXPORT
 void SCIPStpConshdlrSetGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g                   /**< graph data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** dual ascent heuristic */
-SCIP_RETCODE SCIPStpDualAscent(
+/** add cut corresponding to contraction */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpAddContractionCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real* RESTRICT   nodearrreal,        /**< real vertices array for internal computations or NULL */
-   SCIP_Real*            objval,             /**< pointer to store objective value */
-   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
-   SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
-   GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
-   const int*            result,             /**< solution array (solution needs to be provided) */
-   int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
-   int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
-   int                   root,               /**< the root */
-   SCIP_Bool             is_pseudoroot,      /**< is the root a pseudo root? */
-   SCIP_Real             damaxdeviation,     /**< number of dual ascent runs */
-   STP_Bool* RESTRICT    nodearrchar         /**< char vertices array for internal computations or NULL */
+   SCIP_VAR*             edge,               /**< edge */
+   SCIP_VAR*             revedge,            /**< reversed edge */
+   SCIP_Bool             localcut            /**< add local cut? */
    );
 
-/** dual ascent heuristic for the PCSPG and the MWCSP */
-SCIP_RETCODE SCIPStpDualAscentPcMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real*            objval,             /**< pointer to store objective value */
-   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
-   SCIP_Bool             ascendandprune,     /**< perform ascend-and-prune and add solution? */
-   int                   nruns               /**< number of dual ascent runs */
+/** returns implications start array */
+SCIP_EXPORT
+const int* SCIPStpGetPcImplStarts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns number implications starts */
+SCIP_EXPORT
+int SCIPStpGetPcImplNstarts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns implications vertices array */
+SCIP_EXPORT
+const int* SCIPStpGetPcImplVerts(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 

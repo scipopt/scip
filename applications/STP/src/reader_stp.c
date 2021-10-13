@@ -30,7 +30,8 @@
 
 #include "probdata_stp.h"
 #include "reader_stp.h"
-#include "grph.h"
+#include "reduce.h"
+#include "graph.h"
 
 
 /**@name Reader properties
@@ -42,14 +43,20 @@
 #define READER_DESC             "file reader for steiner tree data format"
 #define READER_EXTENSION        "stp"
 
-#define   DEFAULT_COMPCENTRAL  1             /**< selection type for the root (for undirected STPs) */
-#define   DEFAULT_EMITGRAPH    FALSE         /**< emit graph? */
-#define   DEFAULT_COUNTPRESOLTIME  TRUE      /**< count presolving time as part of overall solution time? */
-#define   DEFAULT_REDUCTION    2             /**< reduction mode to apply */
-#define   DEFAULT_SYMCONS      2             /**< symmetry constraints */
-#define   DEFAULT_CYCLECONS    2             /**< cycle constraints */
-#define   DEFAULT_MINELIMS     3             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
-#define   DEFAULT_PRETIMELIMIT -1.0          /**< presolving time limit */
+#define   DEFAULT_COMPCENTRAL  STP_CENTER_DEG             /**< selection type for the root (for undirected STPs) */
+#define   DEFAULT_EMITGRAPH    FALSE                      /**< emit graph? */
+#define   DEFAULT_CHECKINPUT   FALSE                      /**< check input data? */
+#define   DEFAULT_COUNTPRESOLTIME  TRUE                   /**< count presolving time as part of overall solution time? */
+#define   DEFAULT_REDUCTION    STP_REDUCTION_ADVANCED     /**< reduction mode to apply */
+#define   DEFAULT_SYMCONS      STP_CONS_AUTOMATIC         /**< symmetry constraints */
+#define   DEFAULT_CYCLECONS    STP_CONS_AUTOMATIC         /**< cycle constraints */
+#define   DEFAULT_DACUTS       STP_CONS_ALWAYS            /**< always use dual-ascent cuts */
+#define   DEFAULT_DACUTSTYPE   1                          /**< logicor */
+#define   DEFAULT_USEDACUTSINITIAL       TRUE             /**< use dual-ascent cuts for initial LP */
+#define   DEFAULT_USEDP        STP_USEDP_AUTOMATIC        /**< problem-specific */
+#define   DEFAULT_SDEXT        3                          /**< sd extended */
+#define   DEFAULT_MINELIMS     3                          /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
+#define   DEFAULT_PRETIMELIMIT -1.0                       /**< presolving time limit */
 
 #define STP_MODES "cfp" /**< valid values for user parameter 'stp/mode' */
 
@@ -122,7 +129,7 @@ SCIP_DECL_READERWRITE(readerWriteStp)
    offset = SCIPprobdataGetOffset(scip);
 
    /* save the graph in a .stp file */
-   SCIPwriteStp(scip, graph, file, offset);
+   graph_writeStp(scip, graph, file, offset);
 
    *result = SCIP_SUCCESS;
    return SCIP_OKAY;
@@ -163,9 +170,29 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
          NULL, FALSE, DEFAULT_CYCLECONS, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/usedacuts",
+         "Use initial dual ascent cuts: 0 never, 1 always, 2 problem specific",
+         NULL, FALSE, DEFAULT_DACUTS, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/dacutstype",
+         "Type of dual ascent cuts: 0 linear, 1 logicor, 2 setppc",
+         NULL, FALSE, DEFAULT_DACUTSTYPE, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/usedp",
+         "Use dynamic programming: 0 never, 1 always, 2 problem specific",
+         NULL, FALSE, DEFAULT_USEDP, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
          "stp/minelims",
          "minimal number of eliminations per reduction method",
-         NULL, FALSE, DEFAULT_MINELIMS, 0, 10000, NULL, NULL) );
+         NULL, FALSE, DEFAULT_MINELIMS, 1, 10000, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/sdext",
+         "mode of extended sd walk test 0 none, 1 fist, 2 second, 3 both",
+         NULL, FALSE, DEFAULT_SDEXT, 0, 3, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "stp/pretimelimit",
@@ -183,12 +210,21 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
          NULL, FALSE, DEFAULT_EMITGRAPH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
+         "stp/usedacutsinitial",
+         "use DA cuts for initial model?", NULL, FALSE, DEFAULT_USEDACUTSINITIAL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "stp/bigt",
          "use 'T' model", NULL, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "stp/printGraph",
          "print the graph before and after the presolving", NULL, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "stp/checkinput",
+         "checks input data for errors",
+         NULL, FALSE, DEFAULT_CHECKINPUT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip,
     "stp/mode",
@@ -206,6 +242,12 @@ SCIP_RETCODE SCIPStpReaderIncludeParams(
          "log file for intermediate solutions; use_probname for using problem name",
          NULL, FALSE, "",
          NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip,
+           "stp/redstatsfile",
+           "log file reduction statistics",
+           NULL, FALSE, "",
+           NULL, NULL) );
 
    return SCIP_OKAY;
 }

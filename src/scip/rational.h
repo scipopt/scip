@@ -466,7 +466,7 @@ SCIP_Bool RatIsApproxEqualReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_Rational*        r1,                 /**< the rational */
    SCIP_Real             r2,                 /**< the real */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding mode to use */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding mode to use */
    );
 
 /** checks if the first rational is greater than the second*/
@@ -646,7 +646,7 @@ void RatMessage(
 SCIP_EXPORT
 SCIP_Real RatRoundReal(
    SCIP_Rational*        r,                  /**< the rational to convert */
-   SCIP_ROUNDMODE        roundmode           /**< rounding direction (not really working yet) */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< rounding direction (not really working yet) */
    );
 
 /** returns approximation of rational as SCIP_Real */
@@ -659,7 +659,7 @@ SCIP_EXPORT
 void RatRound(
    SCIP_Rational*        retval,             /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );
 
 /** rounds rational to next integer in direction of roundmode */
@@ -667,7 +667,7 @@ SCIP_EXPORT
 SCIP_Bool RatRoundInteger(
    SCIP_Longint*         retval,             /**< the resulting rounded lon int */
    SCIP_Rational*        src,                /**< the rational to round */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );
 
 /*

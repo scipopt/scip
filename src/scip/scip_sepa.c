@@ -286,6 +286,38 @@ SCIP_RETCODE SCIPsetSepaPriority(
    return SCIP_OKAY;
 }
 
+/** declares separator to be a parent separator
+ *
+ *  Parent separators generate cuts of several types. To distinguish these cuts, they create child separators, which are
+ *  only needed to detect which cuts are applied.
+ */
+void SCIPsetSepaIsParentsepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(scip != NULL);
+   assert(sepa != NULL);
+
+   SCIPsepaSetIsParentsepa(sepa);
+}
+
+/** sets the parent separator
+ *
+ *  Informs SCIP that the separator @p sepa depends on the parent separator @p parentsepa.
+ */
+void SCIPsetSepaParentsepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPA*            parentsepa          /**< parent separator */
+   )
+{
+   assert(scip != NULL);
+   assert(sepa != NULL);
+
+   SCIPsepaSetParentsepa(sepa, parentsepa);
+}
+
 #undef SCIPgetSepaMinEfficacy
 
 /** gets value of minimal efficacy for a cut to enter the LP

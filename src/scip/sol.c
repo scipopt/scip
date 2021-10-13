@@ -1222,7 +1222,7 @@ SCIP_RETCODE SCIPsolLinkLPSolExact(
 
    /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
    SCIPlpExactGetObjval(lp, set, prob, sol->valsexact->obj);
-   sol->obj = RatRoundReal(sol->valsexact->obj, SCIP_ROUND_UPWARDS);
+   sol->obj = RatRoundReal(sol->valsexact->obj, SCIP_R_ROUND_UPWARDS);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
 
    return SCIP_OKAY;
@@ -1240,7 +1240,7 @@ SCIP_RETCODE SCIPsolLinkNLPSol(
    assert(stat != NULL);
    assert(tree != NULL);
    assert(nlp != NULL);
-   assert(SCIPnlpGetSolstat(nlp) <= SCIP_NLPSOLSTAT_FEASIBLE);
+   assert(SCIPnlpHasSolution(nlp));
 
    SCIPstatDebugMsg(stat, "linking solution to NLP\n");
 
@@ -3747,7 +3747,7 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
    {
       SCIP_ROUNDMODE roundmode;
       SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
-      roundmode = vars[i]->obj > 0 ? SCIP_ROUND_UPWARDS : SCIP_ROUND_DOWNWARDS;
+      roundmode = vars[i]->obj > 0 ? SCIP_R_ROUND_UPWARDS : SCIP_R_ROUND_DOWNWARDS;
 
       RatDebugMessage("overwriting value %g of var %s with value %g (%q) \n", SCIPsolGetVal(sol, set, stat, vars[i]),
            vars[i]->name, RatRoundReal(solval, roundmode), solval);
@@ -3758,7 +3758,7 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
 
    SCIPsolGetObjExact(sol, set, transprob, origprob, solval);
    /* hard-set the obj value of the solution  */
-   sol->obj = RatRoundReal(solval, SCIP_ROUND_UPWARDS);
+   sol->obj = RatRoundReal(solval, SCIP_R_ROUND_UPWARDS);
 
    RatFreeBuffer(set->buffer, &solval);
 

@@ -2352,7 +2352,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
 
       SCIPcertificatePrintProofMessage(certificate, "R%d G ", certificate->indexcounter - 1);
       updateFilesize(certificate, 4.0 + ceil(log10(certificate->indexcounter - 1 + 1)));
-      RatRound(lowerbound, lowerbound, SCIP_ROUND_UPWARDS);
+      RatRound(lowerbound, lowerbound, SCIP_R_ROUND_UPWARDS);
 
       SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
 
@@ -2779,7 +2779,7 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
          RatSetReal(tmpval, SCIPaggrRowGetValue(aggrrow, i));
          /* we round down integers with fractionality smaller than the rhs frac */
          if( RatIsLEReal(workfrac, frac) )
-            RatRound(tmpval, tmpval, splitupperextend[varindex] ? SCIP_ROUND_UPWARDS : SCIP_ROUND_DOWNWARDS);
+            RatRound(tmpval, tmpval, splitupperextend[varindex] ? SCIP_R_ROUND_UPWARDS : SCIP_R_ROUND_DOWNWARDS);
 
          SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
          SCIPcertificatePrintProofRational(certificate, tmpval, 10);

@@ -1174,7 +1174,7 @@ SCIP_Bool RatIsApproxEqualReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_Rational*        rat,                /**< the rational */
    SCIP_Real             real,               /**< the real */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding mode to use */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding mode to use */
    )
 {
    assert(rat != NULL);
@@ -1185,7 +1185,7 @@ SCIP_Bool RatIsApproxEqualReal(
    }
    else
    {
-      if( roundmode == SCIP_ROUND_NEAREST )
+      if( roundmode == SCIP_R_ROUND_NEAREST )
          return SCIPsetIsEQ(set, real, RatApproxReal(rat));
       else
          return SCIPsetIsEQ(set, real, RatRoundReal(rat, roundmode));
@@ -1444,7 +1444,7 @@ SCIP_Bool RatIsFpRepresentable(
    assert(rational != NULL);
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE )
    {
-      assert(RatRoundReal(rational, SCIP_ROUND_DOWNWARDS) == RatRoundReal(rational, SCIP_ROUND_UPWARDS));
+      assert(RatRoundReal(rational, SCIP_R_ROUND_DOWNWARDS) == RatRoundReal(rational, SCIP_R_ROUND_UPWARDS));
       return TRUE;
    }
    else if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_FALSE )
@@ -1453,8 +1453,8 @@ SCIP_Bool RatIsFpRepresentable(
    }
    else
    {
-      rational->isfprepresentable = (RatRoundReal(rational, SCIP_ROUND_DOWNWARDS)
-         == RatRoundReal(rational, SCIP_ROUND_UPWARDS)) ? SCIP_ISFPREPRESENTABLE_TRUE : SCIP_ISFPREPRESENTABLE_FALSE;
+      rational->isfprepresentable = (RatRoundReal(rational, SCIP_R_ROUND_DOWNWARDS)
+         == RatRoundReal(rational, SCIP_R_ROUND_UPWARDS)) ? SCIP_ISFPREPRESENTABLE_TRUE : SCIP_ISFPREPRESENTABLE_FALSE;
    }
 
    return rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE ? TRUE : FALSE;
@@ -1752,18 +1752,18 @@ int RatGetSign(
 /** @todo exip: we might have to worry about incorrect results when huge coefficients occur */
 SCIP_Real RatRoundReal(
    SCIP_Rational*        rational,           /**< the rational */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
    SCIP_Real realapprox;
    SCIP_Longint nom, denom;
-   SCIP_ROUNDMODE current;
+   SCIP_ROUNDMODE_RAT current;
 
    assert(rational != NULL);
 
    if( rational->isinf )
       return (rational->val.sign() * infinity);
-   if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_ROUND_NEAREST )
+   if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )
       return RatApproxReal(rational);
 
 #if 1
@@ -1776,15 +1776,15 @@ SCIP_Real RatRoundReal(
       val = RatGetGMP(rational);
       switch(roundmode)
       {
-         case SCIP_ROUND_DOWNWARDS:
+         case SCIP_R_ROUND_DOWNWARDS:
             mpfr_init_set_q(valmpfr, *val, MPFR_RNDD);
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDD);
             break;
-         case SCIP_ROUND_UPWARDS:
+         case SCIP_R_ROUND_UPWARDS:
             mpfr_init_set_q(valmpfr, *val, MPFR_RNDU);
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDU);
             break;
-         case SCIP_ROUND_NEAREST:
+         case SCIP_R_ROUND_NEAREST:
             mpfr_init_set_q(valmpfr, *val, MPFR_RNDN);
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDN);
             break;
@@ -1800,13 +1800,13 @@ SCIP_Real RatRoundReal(
    {
       switch(roundmode)
       {
-      case SCIP_ROUND_DOWNWARDS:
+      case SCIP_R_ROUND_DOWNWARDS:
          SCIPintervalSetRoundingModeDownwards();
          break;
-      case SCIP_ROUND_UPWARDS:
+      case SCIP_R_ROUND_UPWARDS:
          SCIPintervalSetRoundingModeUpwards();
          break;
-      case SCIP_ROUND_NEAREST:
+      case SCIP_R_ROUND_NEAREST:
          SCIPintervalSetRoundingModeToNearest();
          break;
       default:
@@ -1835,7 +1835,7 @@ SCIP_Real RatRoundReal(
 void RatRound(
    SCIP_Rational*        res,                /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
 #ifdef SCIP_WITH_BOOST
@@ -1855,13 +1855,13 @@ void RatRound(
       {
          switch (roundmode)
          {
-         case SCIP_ROUND_DOWNWARDS:
+         case SCIP_R_ROUND_DOWNWARDS:
             roundint = src->val.sign() > 0 ? roundint : roundint - 1;
             break;
-         case SCIP_ROUND_UPWARDS:
+         case SCIP_R_ROUND_UPWARDS:
             roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
             break;
-         case SCIP_ROUND_NEAREST:
+         case SCIP_R_ROUND_NEAREST:
             roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
             break;
          default:
@@ -1882,7 +1882,7 @@ void RatRound(
 SCIP_Bool RatRoundInteger(
    SCIP_Longint*         res,                /**< the resulting rounded long int */
    SCIP_Rational*        src,                /**< the rational to round */
-   SCIP_ROUNDMODE        roundmode           /**< the rounding direction */
+   SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
    SCIP_Bool success = FALSE;
@@ -1899,13 +1899,13 @@ SCIP_Bool RatRoundInteger(
    {
       switch (roundmode)
       {
-      case SCIP_ROUND_DOWNWARDS:
+      case SCIP_R_ROUND_DOWNWARDS:
          roundint = src->val.sign() > 0 ? roundint : roundint - 1;
          break;
-      case SCIP_ROUND_UPWARDS:
+      case SCIP_R_ROUND_UPWARDS:
          roundint = src->val.sign() > 0 ? roundint + 1 : roundint;
          break;
-      case SCIP_ROUND_NEAREST:
+      case SCIP_R_ROUND_NEAREST:
          roundint = abs(rest) * 2 >= denominator(src->val) ? roundint + src->val.sign() : roundint;
          break;
       default:

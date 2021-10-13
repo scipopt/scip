@@ -497,3 +497,377 @@ Test(intervalarith, issue2650)
    cr_assert(resultant.inf <= 5.0);
    cr_assert(resultant.sup >= 5.0);
 }
+
+#define EXPECTEQ(a,b) cr_expect_eq(a, b, "%s = %.20g != %g", #a, a, b)
+#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-12, "%s = %g != %g", #a, a, b)
+
+Test(intervalarith, sincos)
+{
+   SCIP_INTERVAL arg;
+   SCIP_INTERVAL res;
+
+   /* as M_PI, M_PI/2, etc are (obviously) not the exact values for pi, pi/2, etc,
+    * we cannot expect to obtain sin(pi)=0, cos(pi/2)=0, etc, so these tests with tolerances
+    *   even more this holds for tests against 1/sqrt(2)
+    * only at 0, we can expect an exact result, i.e., sin(0)=0, cos(0)=1
+    */
+
+   /* arg.inf = 0, arg.sup = 0, pi/4, pi/2, ... 2*pi, 3*pi */
+   arg.inf = 0.0;
+   arg.sup = M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, 0.0);
+   EXPECTFEQ(res.sup, M_SQRT1_2);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = 0.0;
+   arg.sup = M_PI_2;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, 0.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, 0.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = 0.0;
+   arg.sup = M_PI_2 + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, 0.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = 0.0;
+   arg.sup = M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, 0.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = 0.0;
+   arg.sup = M_PI + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = 0.0;
+   arg.sup = M_PI + M_PI_2;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = 0.0;
+   arg.sup = M_PI + M_PI_2 + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = 0.0;
+   arg.sup = 2*M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = 0.0;
+   arg.sup = 3*M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+
+
+   /* arg.inf = pi/4, arg.sup = pi/2, ... 2*pi, 2*pi+pi/4, 3*pi */
+   arg.inf = M_PI_4;
+   arg.sup = M_PI_2;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, 0.0);
+   EXPECTFEQ(res.sup, M_SQRT1_2);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = M_PI_2 + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ(res.sup, M_SQRT1_2);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, 0.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTFEQ(res.sup, M_SQRT1_2);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = M_PI + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTFEQ(res.sup, M_SQRT1_2);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = M_PI + M_PI_2;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTFEQ(res.sup, M_SQRT1_2);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = M_PI + M_PI_2 + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTFEQ(res.sup, M_SQRT1_2);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = 2*M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = 2*M_PI + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = 3*M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+
+
+   /* arg.inf = pi/2, arg.sup = pi/2+pi/4, pi/2, ... 2*pi+pi/2, 3*pi */
+   arg.inf = M_PI_2;
+   arg.sup = M_PI_2 + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ(res.sup, 0.0);
+
+
+   arg.inf = M_PI_2;
+   arg.sup = M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, 0.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTFEQ(res.sup, 0.0);
+
+
+   arg.inf = M_PI_2;
+   arg.sup = M_PI + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTFEQ(res.sup, 0.0);
+
+
+   arg.inf = M_PI_2;
+   arg.sup = M_PI + M_PI_2;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTFEQ(res.sup, 0.0);
+
+
+   arg.inf = M_PI_2;
+   arg.sup = M_PI + M_PI_2 + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTFEQ(res.sup, M_SQRT1_2);
+
+
+   arg.inf = M_PI_2;
+   arg.sup = 2*M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = 2*M_PI + M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = 2*M_PI + M_PI_2;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = M_PI_4;
+   arg.sup = 3*M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   /* arg.inf = -pi/4, arg.sup = 0, pi/4, pi/2, pi, 2*pi */
+   arg.inf = -M_PI_4;
+   arg.sup = 0.0;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ(res.sup, 0.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = -M_PI_4;
+   arg.sup = M_PI_4;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ(res.sup, M_SQRT1_2);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = -M_PI_4;
+   arg.sup = M_PI_2;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, 0.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = -M_PI_4;
+   arg.sup = M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+
+   arg.inf = -M_PI_4;
+   arg.sup = 2*M_PI;
+   SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+
+   SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
+   EXPECTEQ(res.inf, -1.0);
+   EXPECTEQ(res.sup, 1.0);
+}

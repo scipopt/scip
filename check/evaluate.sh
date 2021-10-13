@@ -62,6 +62,7 @@ fi
 
 echo "${OUTFILE}"
 
+# the variable AWKARGS needs to be without quotation marks in all awk calls!
 if test "${SOLVER}" = "gurobi_cl"
 then
     awk -f check_gurobi.awk -v "TEXFILE=${TEXFILE}" -v "PAVFILE=${PAVFILE}" ${AWKARGS} "${TESTFILE}" "${SOLUFILE}" "${OUTFILE}" | tee "${RESFILE}"

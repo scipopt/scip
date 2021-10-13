@@ -647,7 +647,7 @@ SCIP_RETCODE isSolutionInNode(
                if( !(*solcontained) && SCIPboundchgGetBoundchgtype(&boundchgs[i]) != SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d by inference <%s>[%.15g] %s %.15g\n",
-                     node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
+                     (void*) node, SCIPnodeGetDepth(node), SCIPvarGetName(boundchgs[i].var), varsol,
                      SCIPboundchgGetBoundtype(&boundchgs[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", boundchgs[i].newbound);
                   SCIPABORT();
                }
@@ -706,7 +706,7 @@ SCIP_RETCODE SCIPdebugReset(
    return SCIP_OKAY;
 }
 
-/** frees all debugging solution data */
+/** frees debugging data for the particular instance */
 SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
@@ -735,6 +735,22 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    /* free the debug solution */
    SCIP_CALL( SCIPdebugFreeSol(set) );
 
+   return SCIP_OKAY;
+}
+
+/** frees all debugging data */
+SCIP_RETCODE SCIPdebugFree(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+
+   assert(set != NULL);
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   SCIP_CALL( SCIPdebugFreeDebugData(set) );
    BMSfreeMemoryNull(&debugsoldata);
 
    set->debugsoldata = NULL;
@@ -1109,7 +1125,7 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       if( solisinnode )
       {
          SCIPerrorMessage("debugging solution was cut off in local node #%" SCIP_LONGINT_FORMAT " (%p) at depth %d\n",
-            node->number, node, SCIPnodeGetDepth(node));
+            node->number, (void*) node, SCIPnodeGetDepth(node));
          SCIPABORT();
       }
    }
@@ -1166,10 +1182,14 @@ SCIP_RETCODE SCIPdebugCheckGlobalLowerbound(
    treelowerbound = SCIPtreeGetLowerbound(set->scip->tree, set);
    treelowerbound = SCIPprobExternObjval(set->scip->transprob, set->scip->origprob, set, treelowerbound);
 
-   if( (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol)))
-      || (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol))) )
+   if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol)) )
    {
       SCIPerrorMessage("global lower bound %g is larger than the value of the debugging solution %g.\n", treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol));
+      SCIPABORT();
+   }
+   else if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol)) )
+   {
+      SCIPerrorMessage("global upper bound %g is smaller than the value of the debugging solution %g.\n", treelowerbound, SCIPsolGetOrigObj(debugsoldata->debugsol));
       SCIPABORT();
    }
 
@@ -1227,10 +1247,15 @@ SCIP_RETCODE SCIPdebugCheckLocalLowerbound(
       localbound = SCIPnodeGetLowerbound(node);
       localbound = SCIPprobExternObjval(set->scip->transprob, set->scip->origprob, set, localbound);
 
-      if( (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol)))
-         || (SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol))) )
+      if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsGT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol)) )
       {
          SCIPerrorMessage("local lower bound %g of node #%" SCIP_LONGINT_FORMAT " at depth %d is larger than the value of the debugging solution %g contained in this node.\n",
+            localbound, node->number, SCIPnodeGetDepth(node), SCIPsolGetOrigObj(debugsoldata->debugsol));
+         SCIPABORT();
+      }
+      else if( SCIPgetObjsense(set->scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsLT(set, localbound, SCIPsolGetOrigObj(debugsoldata->debugsol)) )
+      {
+         SCIPerrorMessage("local upper bound %g of node #%" SCIP_LONGINT_FORMAT " at depth %d is smaller than the value of the debugging solution %g contained in this node.\n",
             localbound, node->number, SCIPnodeGetDepth(node), SCIPsolGetOrigObj(debugsoldata->debugsol));
          SCIPABORT();
       }

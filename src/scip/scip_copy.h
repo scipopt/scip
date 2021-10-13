@@ -98,6 +98,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
    SCIP_Bool             copyrelaxators,     /**< should the relaxation handler be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copycutselectors,   /**< should the cut selectors be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
@@ -106,6 +107,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
+   SCIP_Bool             copyexprhdlrs,      /**< should the expression handlers be copied */
    SCIP_Bool             copynlpis,          /**< should the NLPIs be copied */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether plugins, in particular all constraint
@@ -453,6 +455,20 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
    SCIP_VAR**            sourcevars,         /**< source variables for history merge, NULL entries are ignored */
    SCIP_VAR**            targetvars,         /**< target variables for history merge, NULL entries are ignored */
    int                   nvars               /**< number of variables in both variable arrays */
+   );
+
+/** merges the statistics of NLPIs from a source SCIP into a target SCIP
+ *
+ * The two SCIP instances should point to different SCIP instances.
+ *
+ *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
+ *        \p targetscip denotes the original instance
+ */
+SCIP_EXPORT
+void SCIPmergeNLPIStatistics(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_Bool             reset               /**< whether to reset statistics in sourcescip */
    );
 
 /** translates a solution from a subscip to the main scip

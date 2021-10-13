@@ -32,10 +32,10 @@
  * the smallest tree.
  * In the case where the gap is not known, then we can compute the growth rate
  * of the tree, which we call the ratio.
- * The ratio of a variable (l, r) is the factor by which the size of the tree 
+ * The ratio of a variable (l, r) is the factor by which the size of the tree
  * built using (l, r) that closes a gap G must be multiplied by to close a gap
  * G+1. This ratio is not constant for all gaps, but when G tends to infinity,
- * it converges to a fixed value we can compute numerically using a root finding 
+ * it converges to a fixed value we can compute numerically using a root finding
  * algorithm (e.g. Laguerre).
  * The ratio is used when the gap is too large (e.g. no primal bound known) or
  * to help approximate the size of the SVB tree for that variable.
@@ -83,17 +83,17 @@
 /** parameters required by the Treemodel branching rules */
 struct SCIP_Treemodel
 {
-   SCIP_Bool            enabled;             /**< should candidate branching variables be scored using the Treemodel 
+   SCIP_Bool            enabled;             /**< should candidate branching variables be scored using the Treemodel
 					       * rule? */
-   char                 highrule;            /**< scoring function to use at nodes predicted to be high in the tree. 
+   char                 highrule;            /**< scoring function to use at nodes predicted to be high in the tree.
 					       * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-   char                 lowrule;             /**< scoring function to use at nodes predicted to be low in the tree 
+   char                 lowrule;             /**< scoring function to use at nodes predicted to be low in the tree
 					       * ('d'efault, 's'vts, 'r'atio, 't'ree sample) */
-   int                  height;              /**< estimated tree height at which we switch from using the low rule to 
+   int                  height;              /**< estimated tree height at which we switch from using the low rule to
 					       * the high rule */
-   char                 filterhigh;          /**< should dominated candidates be filtered before using the high 
+   char                 filterhigh;          /**< should dominated candidates be filtered before using the high
 					       * scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
-   char                 filterlow;           /**< should dominated candidates be filtered before using the low 
+   char                 filterlow;           /**< should dominated candidates be filtered before using the low
 					       * scoring function? ('a'uto, 't'rue, 'f'alse) [ADVANCED] */
    int                  maxfpiter;           /**< maximum number of fixed-point iterations when computing the ratio
 					       * [ADVANCED] */
@@ -180,7 +180,7 @@ SCIP_RETCODE findNonDominatedVars(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcurrents, size) );
 
-   /* we first find the permutation of indices of array b that corresponds to 
+   /* we first find the permutation of indices of array b that corresponds to
     * the array of a non-increasing sort of its values */
    SCIP_CALL( SCIPallocBufferArray(scip, &permb, size) );
    for( origindex=0; origindex<size; ++origindex )
@@ -444,7 +444,7 @@ SCIP_RETCODE selectCandidateUsingRatio(
    SCIP_Bool             filterdominated,    /**< whether dominated variables have been filtered */
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
    int                   nbranchcands,       /**< the number of branching candidates */
-   int*                  bestcand            /**< the best branching candidate found before the call, 
+   int*                  bestcand            /**< the best branching candidate found before the call,
 					          and the best candidate after the call (possibly the same) */
    )
 {
@@ -576,7 +576,7 @@ SCIP_RETCODE selectCandidateUsingSVTS(
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
    int                   nbranchcands,       /**< the number of branching candidates */
    int                   ndominated,         /**< the number of dominated candidates */
-   int*                  bestcand            /**< the best branching candidate found before the call, 
+   int*                  bestcand            /**< the best branching candidate found before the call,
 					          and the best candidate after the call (possibly the same) */
    )
 {
@@ -735,7 +735,7 @@ SCIP_RETCODE selectCandidateUsingSampling(
    SCIP_Bool*            dominated,          /**< whether each variable is dominated or not */
    int                   nbranchcands,       /**< the number of branching candidates */
    int                   ndominated,         /**< the number of dominated candidates */
-   int*                  bestcand            /**< the best branching candidate found before the call, 
+   int*                  bestcand            /**< the best branching candidate found before the call,
 					          and the best candidate after the call (possibly the same) */
    )
 {
@@ -908,7 +908,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_Real*            maxgains,           /**< maximum gain of rounding downwards or upwards */
    SCIP_Real*            tiebreakerscore,    /**< scores to use for tie breaking */
    int                   nbranchcands,       /**< the number of branching candidates */
-   int*                  bestcand            /**< the best branching candidate found before the call, 
+   int*                  bestcand            /**< the best branching candidate found before the call,
 					          and the best candidate after the call (possibly the same) */
    )
 {

@@ -78,6 +78,11 @@
 #define TABLE_POSITION_SEPA              9000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_SEPA        SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
+#define TABLE_NAME_CUTSEL                "cutsel"
+#define TABLE_DESC_CUTSEL                "cutsel statistics table"
+#define TABLE_POSITION_CUTSEL            9500                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_CUTSEL      SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
+
 #define TABLE_NAME_PRICER                "pricer"
 #define TABLE_DESC_PRICER                "pricer statistics table"
 #define TABLE_POSITION_PRICER            10000                  /**< the position of the statistics table */
@@ -103,6 +108,11 @@
 #define TABLE_POSITION_BENDERS           14000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BENDERS     SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
+#define TABLE_NAME_EXPRHDLRS             "exprhdlr"
+#define TABLE_DESC_EXPRHDLRS             "expression handlers statistics table"
+#define TABLE_POSITION_EXPRHDLRS         14500                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_EXPRHDLRS   SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+
 #define TABLE_NAME_LP                    "lp"
 #define TABLE_DESC_LP                    "lp statistics table"
 #define TABLE_POSITION_LP                15000                  /**< the position of the statistics table */
@@ -112,6 +122,11 @@
 #define TABLE_DESC_NLP                   "nlp statistics table"
 #define TABLE_POSITION_NLP               16000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NLP         SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
+
+#define TABLE_NAME_NLPIS                 "nlpi"
+#define TABLE_DESC_NLPIS                 "NLP solver interfaces statistics table"
+#define TABLE_POSITION_NLPIS             16500                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_NLPIS       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_RELAX                 "relaxator"
 #define TABLE_DESC_RELAX                 "relaxator statistics table"
@@ -280,6 +295,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSepa)
 
 /** output method of statistics table to output file stream 'file' */
 static
+SCIP_DECL_TABLEOUTPUT(tableOutputCutsel)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIPprintCutselectorStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** output method of statistics table to output file stream 'file' */
+static
 SCIP_DECL_TABLEOUTPUT(tableOutputPricer)
 {  /*lint --e{715}*/
    assert(scip != NULL);
@@ -422,6 +449,30 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBenders)
    return SCIP_OKAY;
 }
 
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputExprhdlrs)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIPprintExpressionHandlerStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputNlpis)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIPprintNLPIStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * statistics table specific interface methods
@@ -461,6 +512,8 @@ SCIP_RETCODE SCIPincludeTableDefault(
       assert(SCIPfindTable(scip, TABLE_NAME_SOL) != NULL );
       assert(SCIPfindTable(scip, TABLE_NAME_CONC) != NULL );
       assert(SCIPfindTable(scip, TABLE_NAME_BENDERS) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_EXPRHDLRS) != NULL );
+      assert(SCIPfindTable(scip, TABLE_NAME_NLPIS) != NULL );
 
       return SCIP_OKAY;
    }
@@ -514,6 +567,11 @@ SCIP_RETCODE SCIPincludeTableDefault(
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSepa,
          NULL, TABLE_POSITION_SEPA, TABLE_EARLIEST_STAGE_SEPA) );
 
+   assert(SCIPfindTable(scip, TABLE_NAME_CUTSEL) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CUTSEL, TABLE_DESC_CUTSEL, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCutsel,
+         NULL, TABLE_POSITION_CUTSEL, TABLE_EARLIEST_STAGE_CUTSEL) );
+
    assert(SCIPfindTable(scip, TABLE_NAME_PRICER) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRICER, TABLE_DESC_PRICER, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPricer,
@@ -539,6 +597,11 @@ SCIP_RETCODE SCIPincludeTableDefault(
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputBenders,
          NULL, TABLE_POSITION_BENDERS, TABLE_EARLIEST_STAGE_BENDERS) );
 
+   assert(SCIPfindTable(scip, TABLE_NAME_EXPRHDLRS) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_EXPRHDLRS, TABLE_DESC_EXPRHDLRS, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputExprhdlrs,
+         NULL, TABLE_POSITION_EXPRHDLRS, TABLE_EARLIEST_STAGE_EXPRHDLRS) );
+
    assert(SCIPfindTable(scip, TABLE_NAME_LP) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_LP, TABLE_DESC_LP, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputLP,
@@ -548,6 +611,11 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLP, TABLE_DESC_NLP, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNLP,
          NULL, TABLE_POSITION_NLP, TABLE_EARLIEST_STAGE_NLP) );
+
+   assert(SCIPfindTable(scip, TABLE_NAME_NLPIS) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLPIS, TABLE_DESC_NLPIS, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNlpis,
+         NULL, TABLE_POSITION_NLPIS, TABLE_EARLIEST_STAGE_NLPIS) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_RELAX) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RELAX, TABLE_DESC_RELAX, TRUE,

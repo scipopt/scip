@@ -45,11 +45,11 @@ typedef enum SCIP_IsFpRepresentable SCIP_ISFPREPRESENTABLE;
 /** defines the possible rounding direction for a rational number, when converting to a double */
 enum SCIP_RoundModeRational
 {
-   SCIP_ROUND_DOWNWARDS = 0,     /**< always round to nearest smaller double*/
-   SCIP_ROUND_UPWARDS = 1,       /**< always round to nearest larger double*/
-   SCIP_ROUND_NEAREST = 2        /**< always round to nearest double*/
+   SCIP_R_ROUND_DOWNWARDS = 0,     /**< always round to nearest smaller double*/
+   SCIP_R_ROUND_UPWARDS = 1,       /**< always round to nearest larger double*/
+   SCIP_R_ROUND_NEAREST = 2        /**< always round to nearest double*/
 };
-typedef enum SCIP_RoundModeRational SCIP_ROUND;
+typedef enum SCIP_RoundModeRational SCIP_ROUNDMODE_RAT;
 
 #ifdef __cplusplus
 }
