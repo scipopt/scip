@@ -2475,7 +2475,7 @@ SCIP_Longint SCIPcertificatePrintActivityBound(
       certificate->indexcounter++;
 
       SCIPcertificatePrintProofMessage(certificate, "ACT_R%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
-      RatRound(certificate->workbound->boundval, newbound, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_ROUND_DOWNWARDS : SCIP_ROUND_UPWARDS);
+      RatRound(certificate->workbound->boundval, newbound, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_R_ROUND_DOWNWARDS : SCIP_R_ROUND_UPWARDS);
 
       SCIPcertificatePrintProofRational(certificate, certificate->workbound->boundval, 10);
 
