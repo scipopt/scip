@@ -79,4 +79,3 @@ Test(fixedvar, addconswithfixedvar)
    /** free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 }
-

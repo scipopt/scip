@@ -5612,7 +5612,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nsiblings-1; i >= 0; --i )
    {
       node = tree->siblings[i];
-      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+      if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          if( set->exact_enabled && node->lowerbound < cutoffbound )
             continue;
@@ -5638,7 +5638,7 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nchildren-1; i >= 0; --i )
    {
       node = tree->children[i];
-      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+      if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          if( set->exact_enabled && node->lowerbound < cutoffbound )
             continue;

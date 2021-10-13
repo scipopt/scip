@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_stp.h
+/**@file   reader_gr.h
  * @brief  Steiner tree problem file reader
  * @author Daniel Rehfeldt
  *
@@ -34,6 +34,7 @@ extern "C" {
 
 
 /** includes the gr file reader in SCIP */
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderGr(
    SCIP*                 scip                /**< SCIP data structure */
    );
