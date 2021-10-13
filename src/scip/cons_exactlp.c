@@ -3507,7 +3507,7 @@ void permSortConsdata(
 {  /*lint --e{715}*/
    SCIP_VAR* varv;
    SCIP_EVENTDATA* eventdatav;
-   SCIP_Real valrealv;
+   SCIP_INTERVAL valrealv;
    SCIP_Rational* valv;
    int v;
    int i;
