@@ -130,6 +130,7 @@ lint/size-options.lnt // This .lnt file should be generated (preferrably
 +rw(__typeof__)         // activate __typeof__ keyword
 -d__typeof=__typeof__   // an alternative to using __typeof__
 
++rw(__thread)
 +rw( __restrict )
 +rw( __restrict__ )
 -rw(__except)           // This MS reserved word is used as an identifier

@@ -36,7 +36,7 @@
 #include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
 #include "lpiexact/lpiexact.h"
-#include "nlpi/exprinterpret.h"
+#include "scip/exprinterpret.h"
 #include "scip/clock.h"
 #include "scip/debug.h"
 #include "scip/dialog.h"

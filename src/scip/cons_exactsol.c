@@ -474,7 +474,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
                /* create rational solval and round it to the nearest integer */
                RatSetReal(newbound, solval);
-               RatRound(newbound, newbound, SCIP_ROUND_NEAREST);
+               RatRound(newbound, newbound, SCIP_R_ROUND_NEAREST);
 
                SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPround(scip, solval)) );
                SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPround(scip, solval)) );

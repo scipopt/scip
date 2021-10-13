@@ -69,6 +69,71 @@
                               *   in implication graph */
 #define MAXABSVBCOEF    1e+5 /**< maximal absolute coefficient in variable bounds added due to implications */
 
+
+/*
+ * Debugging variable release and capture
+ *
+ * Define DEBUGUSES_VARNAME to the name of the variable for which to print
+ * a backtrace when it is captured and released.
+ * Optionally define DEBUGUSES_PROBNAME to the name of a SCIP problem to consider.
+ * Have DEBUGUSES_NOADDR2LINE defined if you do not have addr2line installed on your system.
+ */
+/* #define DEBUGUSES_VARNAME "t_t_b7" */
+/* #define DEBUGUSES_PROBNAME "t_st_e35_rens" */
+/* #define DEBUGUSES_NOADDR2LINE */
+
+#ifdef DEBUGUSES_VARNAME
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "scip/struct_scip.h"
+
+/** obtains a backtrace and prints it to stdout. */
+static
+void print_backtrace(void)
+{
+   void* array[10];
+   char** strings;
+   int size;
+   int i;
+
+   size = backtrace(array, 10);
+   strings = backtrace_symbols(array, size);
+   if( strings == NULL )
+      return;
+
+   /* skip first entry, which is the print_backtrace function */
+   for( i = 1; i < size; ++i )
+   {
+      /* if string is something like
+       *  /path/to/scip/bin/../lib/shared/libscip-7.0.1.3.linux.x86_64.gnu.dbg.so(+0x2675dd3)
+       * (that is, no function name because it is a inlined function), then call
+       * addr2line -e <libname> <addr> to get func and code line
+       * dladdr() may be an alternative
+       */
+      char* openpar;
+      char* closepar = NULL;
+#ifndef DEBUGUSES_NOADDR2LINE
+      openpar = strchr(strings[i], '(');
+      if( openpar != NULL && openpar[1] == '+' )
+         closepar = strchr(openpar+2, ')');
+#endif
+      if( closepar != NULL )
+      {
+         char cmd[SCIP_MAXSTRLEN];
+         (void) SCIPsnprintf(cmd, SCIP_MAXSTRLEN, "addr2line -f -p -e \"%.*s\" %.*s", openpar - strings[i], strings[i], closepar-openpar-1, openpar+1);
+         printf("  ");
+         fflush(stdout);
+         system(cmd);
+      }
+      else
+         printf("  %s\n", strings[i]);
+    }
+
+  free(strings);
+}
+#endif
+
 /*
  * hole, holelist, and domain methods
  */
@@ -1522,7 +1587,7 @@ void adjustedLbExact(
    else if( RatIsPositive(lb) && SCIPsetIsInfinity(set, RatApproxReal(lb)) )
       RatSetString(lb, "inf");
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-      RatRound(lb, lb, SCIP_ROUND_UPWARDS);
+      RatRound(lb, lb, SCIP_R_ROUND_UPWARDS);
 }
 
 /** returns adjusted upper bound value, which is rounded for integral variable types */
@@ -1558,7 +1623,7 @@ void adjustedUbExact(
    else if( RatIsPositive(ub) && SCIPsetIsInfinity(set, RatApproxReal(ub)) )
       RatSetString(ub, "inf");
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-      RatRound(ub, ub, SCIP_ROUND_DOWNWARDS);
+      RatRound(ub, ub, SCIP_R_ROUND_DOWNWARDS);
 }
 
 /** writes the approximate exact multi-aggregate data in the floating-point structs */
@@ -2145,8 +2210,8 @@ SCIP_RETCODE SCIPvarAddExactData(
    assert(var != NULL);
    assert(blkmem != NULL);
 
-   assert(ub == NULL || var->glbdom.ub == RatRoundReal(ub, SCIP_ROUND_UPWARDS));
-   assert(lb == NULL || var->glbdom.lb == RatRoundReal(lb, SCIP_ROUND_DOWNWARDS));
+   assert(ub == NULL || var->glbdom.ub == RatRoundReal(ub, SCIP_R_ROUND_UPWARDS));
+   assert(lb == NULL || var->glbdom.lb == RatRoundReal(lb, SCIP_R_ROUND_DOWNWARDS));
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(var->exactdata)) );
 
@@ -3022,6 +3087,19 @@ void SCIPvarCapture(
 
    SCIPdebugMessage("capture variable <%s> with nuses=%d\n", var->name, var->nuses);
    var->nuses++;
+
+#ifdef DEBUGUSES_VARNAME
+   if( strcmp(var->name, DEBUGUSES_VARNAME) == 0
+#ifdef DEBUGUSES_PROBNAME
+      && ((var->scip->transprob != NULL && strcmp(SCIPprobGetName(var->scip->transprob), DEBUGUSES_PROBNAME) == 0) ||
+          strcmp(SCIPprobGetName(var->scip->origprob), DEBUGUSES_PROBNAME) == 0)
+#endif
+   )
+   {
+      printf("Captured variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; captured at\n", (void*)var->scip, var->nuses);
+      print_backtrace();
+   }
+#endif
 }
 
 /** decreases usage counter of variable, and frees memory if necessary */
@@ -3041,6 +3119,20 @@ SCIP_RETCODE SCIPvarRelease(
 
    SCIPsetDebugMsg(set, "release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
    (*var)->nuses--;
+
+#ifdef DEBUGUSES_VARNAME
+   if( strcmp((*var)->name, DEBUGUSES_VARNAME) == 0
+#ifdef DEBUGUSES_PROBNAME
+      && (((*var)->scip->transprob != NULL && strcmp(SCIPprobGetName((*var)->scip->transprob), DEBUGUSES_PROBNAME) == 0) ||
+          strcmp(SCIPprobGetName((*var)->scip->origprob), DEBUGUSES_PROBNAME) == 0)
+#endif
+   )
+   {
+      printf("Released variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; released at\n", (void*)(*var)->scip, (*var)->nuses);
+      print_backtrace();
+   }
+#endif
+
    if( (*var)->nuses == 0 )
    {
       SCIP_CALL( varFree(var, blkmem, set, eventqueue, lp) );
@@ -6748,7 +6840,7 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    }
 
    /* we know rhs is integral, so check if it is in integer range */
-   if( !RatRoundInteger(&c, rhs, SCIP_ROUND_DOWNWARDS) )
+   if( !RatRoundInteger(&c, rhs, SCIP_R_ROUND_DOWNWARDS) )
    {
       *infeasible = TRUE;
       goto FREE;
@@ -9221,7 +9313,7 @@ SCIP_RETCODE SCIPvarChgLbOriginalExact(
 
       /* change the bound */
       RatSet(var->exactdata->origdom.lb, newbound);
-      var->data.original.origdom.lb = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+      var->data.original.origdom.lb = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
    }
    else if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_NEGATED )
    {
@@ -9353,7 +9445,7 @@ SCIP_RETCODE SCIPvarChgUbOriginalExact(
 
       /* change the bound */
       RatSet(var->exactdata->origdom.ub, newbound);
-      var->data.original.origdom.ub = RatRoundReal(newbound, SCIP_ROUND_UPWARDS);
+      var->data.original.origdom.ub = RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS);
    }
    else if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_NEGATED )
    {
@@ -9456,7 +9548,7 @@ SCIP_RETCODE varEventGlbChangedExact(
 
       RatDebugMessage("issue exact GLBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
-      SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS)) );
+      SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
@@ -9533,7 +9625,7 @@ SCIP_RETCODE varEventGubChangedExact(
 
       SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, RatApproxReal(oldbound), RatApproxReal(newbound));
 
-      SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
+      SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
@@ -10037,7 +10129,7 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
    RatSet(oldbound, var->exactdata->glbdom.lb);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsLE(newbound, var->exactdata->glbdom.ub));
    RatSet(var->exactdata->glbdom.lb, newbound);
-   var->glbdom.lb = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+   var->glbdom.lb = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
    assert( RatIsLE(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) );
    assert( RatIsLE(var->exactdata->locdom.ub, var->exactdata->glbdom.ub) );
 
@@ -10188,7 +10280,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
    RatSet(oldbound, var->exactdata->glbdom.ub);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsGE(newbound, var->exactdata->glbdom.lb));
    RatSet(var->exactdata->glbdom.ub, newbound);
-   var->glbdom.ub = RatRoundReal(newbound, SCIP_ROUND_UPWARDS);
+   var->glbdom.ub = RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS);
    assert( RatIsLE(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) );
    assert( RatIsLE(var->exactdata->locdom.ub, var->exactdata->glbdom.ub) );
 
@@ -11043,7 +11135,7 @@ SCIP_RETCODE varEventLbChangedExact(
 
       RatDebugMessage("issue exact LBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
-      SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS)) );
+      SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
@@ -11119,7 +11211,7 @@ SCIP_RETCODE varEventUbChangedExact(
 
       SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, RatApproxReal(oldbound), RatApproxReal(newbound));
 
-      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
+      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
@@ -11195,7 +11287,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.lb, SCIP_ROUND_DOWNWARDS) != var->locdom.lb )
+   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.lb, SCIP_R_ROUND_DOWNWARDS) != var->locdom.lb )
       RatSetReal(var->exactdata->locdom.lb, var->locdom.lb);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -11365,7 +11457,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.ub, SCIP_ROUND_UPWARDS) != var->locdom.ub )
+   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.ub, SCIP_R_ROUND_UPWARDS) != var->locdom.ub )
       RatSetReal(var->exactdata->locdom.ub, var->locdom.ub);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -11548,7 +11640,7 @@ SCIP_RETCODE varProcessChgLbLocalExact(
    RatSet(oldbound, var->exactdata->locdom.lb);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsLE(newbound, var->exactdata->locdom.ub));
    RatSet(var->exactdata->locdom.lb, newbound);
-   var->locdom.lb = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+   var->locdom.lb = RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
@@ -11691,7 +11783,7 @@ SCIP_RETCODE varProcessChgUbLocalExact(
    RatSet(oldbound, var->exactdata->locdom.ub);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsGE(newbound, var->exactdata->locdom.lb));
    RatSet(var->exactdata->locdom.ub, newbound);
-   var->locdom.ub = RatRoundReal(newbound, SCIP_ROUND_UPWARDS);
+   var->locdom.ub = RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
@@ -15496,6 +15588,44 @@ SCIP_Bool SCIPvarHasBinaryImplic(
 
    return SCIPvarHasImplic(var, varfixing, implvar, implvarfixing ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER);
 }
+
+/** gets the values of b in implications x == varfixing -> y <= b or y >= b in the implication graph;
+ *  the values are set to SCIP_INVALID if there is no implied bound
+ */
+void SCIPvarGetImplicVarBounds(
+   SCIP_VAR*             var,                /**< problem variable x */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y to search for */
+   SCIP_Real*            lb,                 /**< buffer to store the value of the implied lower bound */
+   SCIP_Real*            ub                  /**< buffer to store the value of the implied upper bound */
+   )
+{
+   int lowerpos;
+   int upperpos;
+   SCIP_Real* bounds;
+
+   assert(lb != NULL);
+   assert(ub != NULL);
+
+   *lb = SCIP_INVALID;
+   *ub = SCIP_INVALID;
+
+   if( var->implics == NULL )
+      return;
+
+   SCIPimplicsGetVarImplicPoss(var->implics, varfixing, implvar, &lowerpos, &upperpos);
+   bounds = SCIPvarGetImplBounds(var, varfixing);
+
+   if( bounds == NULL )
+      return;
+
+   if( lowerpos >= 0 )
+      *lb = bounds[lowerpos];
+
+   if( upperpos >= 0 )
+      *ub = bounds[upperpos];
+}
+
 
 /** fixes the bounds of a binary variable to the given value, counting bound changes and detecting infeasibility */
 SCIP_RETCODE SCIPvarFixBinary(

@@ -152,6 +152,8 @@ SCIP_RETCODE doSepaCreate(
    (*sepa)->lpwasdelayed = FALSE;
    (*sepa)->solwasdelayed = FALSE;
    (*sepa)->initialized = FALSE;
+   (*sepa)->isparentsepa = FALSE;
+   (*sepa)->parentsepa = NULL;
    (*sepa)->isexact = FALSE;
 
    /* add parameters */
@@ -695,6 +697,27 @@ void SCIPsepaSetExitsol(
    sepa->sepaexitsol = sepaexitsol;
 }
 
+/** declares separator to be a parent separator */
+void SCIPsepaSetIsParentsepa(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->isparentsepa = TRUE;
+}
+
+/** sets the parent separator */
+void SCIPsepaSetParentsepa(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPA*            parentsepa          /**< parent separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->parentsepa = parentsepa;
+}
+
 /** gets name of separator */
 const char* SCIPsepaGetName(
    SCIP_SEPA*            sepa                /**< separator */
@@ -970,4 +993,24 @@ SCIP_Bool SCIPsepaIsInitialized(
    assert(sepa != NULL);
 
    return sepa->initialized;
+}
+
+/** gets whether separator is a parent separator */
+SCIP_Bool SCIPsepaIsParentsepa(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->isparentsepa;
+}
+
+/** gets parent separator (or NULL) */
+SCIP_SEPA* SCIPsepaGetParentsepa(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->parentsepa;
 }

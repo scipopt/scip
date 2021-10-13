@@ -25,7 +25,7 @@
 
 #include "event_bestsol.h"
 #include "probdata_stp.h"
-#include "grph.h"
+#include "graph.h"
 
 #include <string.h>
 

@@ -95,6 +95,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols);
 
+/** dialog execution method for the display exprhdlrs command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs);
+
+/** dialog execution method for the display cutselectors command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCutselectors);
+
 /** dialog execution method for the display heuristics command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics);
@@ -346,6 +354,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisNumerics);
 
+/** dialog execution method for the set emphasis benchmark command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisBenchmark);
+
 /** dialog execution method for the set limits objective command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);
@@ -368,9 +380,9 @@ SCIP_RETCODE SCIPcreateRootDialog(
  * @{
  */
 
-/** includes or updates the default dialog menus in SCIP */
+/** includes or updates the default dialog menus in SCIP except for menus "fix" and "set" */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeDialogDefault(
+SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

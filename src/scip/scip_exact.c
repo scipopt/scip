@@ -43,8 +43,8 @@
 
 
 #include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
-#include "nlpi/nlpi.h"
+#include "scip/exprinterpret.h"
+#include "scip/nlpi.h"
 #include "scip/benders.h"
 #include "scip/benderscut.h"
 #include "scip/branch.h"

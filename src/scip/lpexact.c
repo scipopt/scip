@@ -176,10 +176,10 @@ SCIP_Bool colExactInSync(
    assert(colexact->index == fpcol->index);
    assert(colexact->len >= fpcol->len);
 
-   assert(RatIsApproxEqualReal(set, colexact->obj, fpcol->obj, SCIP_ROUND_NEAREST));
-   assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj, SCIP_ROUND_NEAREST));
-   assert(RatIsApproxEqualReal(set, colexact->lb, fpcol->lb, SCIP_ROUND_DOWNWARDS) || (RatIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
-   assert(RatIsApproxEqualReal(set, colexact->ub, fpcol->ub, SCIP_ROUND_UPWARDS) || (RatIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
+   assert(RatIsApproxEqualReal(set, colexact->obj, fpcol->obj, SCIP_R_ROUND_NEAREST));
+   assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj, SCIP_R_ROUND_NEAREST));
+   assert(RatIsApproxEqualReal(set, colexact->lb, fpcol->lb, SCIP_R_ROUND_DOWNWARDS) || (RatIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
+   assert(RatIsApproxEqualReal(set, colexact->ub, fpcol->ub, SCIP_R_ROUND_UPWARDS) || (RatIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
 
    return TRUE;
 }
@@ -204,9 +204,9 @@ SCIP_Bool rowExactInSync(
    assert(rowexact->len >= fprow->len);
    assert(rowexact->lppos == rowexact->fprow->lppos);
 
-   synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs, SCIP_ROUND_DOWNWARDS) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
-   synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs, SCIP_ROUND_UPWARDS) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
-   synced = synced && (RatIsApproxEqualReal(set, rowexact->constant, fprow->constant, SCIP_ROUND_NEAREST) );
+   synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs, SCIP_R_ROUND_DOWNWARDS) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
+   synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs, SCIP_R_ROUND_UPWARDS) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
+   synced = synced && (RatIsApproxEqualReal(set, rowexact->constant, fprow->constant, SCIP_R_ROUND_NEAREST) );
 
    if( !synced )
    {
@@ -3952,7 +3952,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    }
    else
    {
-      SCIP_CALL( lpExactSetObjlim(lpexact, set, lpexact->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS), &success) );
+      SCIP_CALL( lpExactSetObjlim(lpexact, set, lpexact->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_R_ROUND_DOWNWARDS), &success) );
    }
    SCIP_CALL( lpExactSetIterationLimit(lpexact, harditlim) );
 
@@ -3993,7 +3993,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
 
          SCIP_CALL( SCIPlpiExactGetObjval(lpexact->lpiexact, lpexact->lpobjval) );
          SCIPdebugMessage("Exact lp solve terminated with optimal. Safe dual bound is %e, previous lp obj-val was %e \n",
-               RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS), lp->lpobjval);
+               RatRoundReal(lpexact->lpobjval, SCIP_R_ROUND_DOWNWARDS), lp->lpobjval);
          lpexact->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
          lp->validsollp = stat->lpcount;
 
@@ -4169,7 +4169,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
 
       if( primalfeasible && dualfeasible )
       {
-         lp->lpobjval = RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS);
+         lp->lpobjval = RatRoundReal(lpexact->lpobjval, SCIP_R_ROUND_DOWNWARDS);
          lp->hasprovedbound = TRUE;
       }
       else
@@ -4296,7 +4296,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
             /* optimal solution / objlimit with fastmip turned off / itlimit or timelimit, but objlimit exceeded */
             if( solstat == SCIP_LPSOLSTAT_OPTIMAL || solstat == SCIP_LPSOLSTAT_OBJLIMIT
                || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT)
-                  &&  RatIsGEReal(objval, lpexact->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS)) ) )
+                  &&  RatIsGEReal(objval, lpexact->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_R_ROUND_DOWNWARDS)) ) )
             {
                /* get LP solution and possibly check the solution's feasibility again */
                if( set->lp_checkprimfeas )
@@ -4330,7 +4330,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
                   * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
                   * this was already done in the lpSolve() method
                   */
-               if( RatIsGEReal(objval, lp->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS)) )
+               if( RatIsGEReal(objval, lp->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_R_ROUND_DOWNWARDS)) )
                {
                   lpexact->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
                   lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
@@ -4343,7 +4343,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
                   */
                if( !primalfeasible || !dualfeasible
                   || (solstat == SCIP_LPSOLSTAT_OBJLIMIT &&
-                     !RatIsGEReal(objval, lp->cutoffbound -  RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS))) )
+                     !RatIsGEReal(objval, lp->cutoffbound -  RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_R_ROUND_DOWNWARDS))) )
                {
                   SCIPmessagePrintInfo(messagehdlr, "(node %" SCIP_LONGINT_FORMAT ") numerical troubles exact in LP %" SCIP_LONGINT_FORMAT " \n ", stat->nnodes, stat->nlps);
                   lp->solved = FALSE;
@@ -4428,7 +4428,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
             }
 
             assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
-            assert(RatIsGEReal(objval, lp->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_ROUND_DOWNWARDS))
+            assert(RatIsGEReal(objval, lp->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_R_ROUND_DOWNWARDS))
                || lp->lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT);
          }
          else
@@ -6492,8 +6492,8 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_CALL( SCIPlpiExactGetSol(lp->lpiexact, NULL, primsol, dualsol, activity, redcost) );
    if( overwritefplp )
    {
-      stat->boundingerrorexlp += REALABS(lp->fplp->lpobjval - RatRoundReal(lp->lpobjval, SCIP_ROUND_DOWNWARDS));
-      lp->fplp->lpobjval = RatRoundReal(lp->lpobjval, SCIP_ROUND_DOWNWARDS);
+      stat->boundingerrorexlp += REALABS(lp->fplp->lpobjval - RatRoundReal(lp->lpobjval, SCIP_R_ROUND_DOWNWARDS));
+      lp->fplp->lpobjval = RatRoundReal(lp->lpobjval, SCIP_R_ROUND_DOWNWARDS);
       lp->fplp->lpsolstat = lp->lpsolstat;
       lp->fplp->primalfeasible = lp->primalfeasible;
       lp->fplp->dualfeasible = lp->dualfeasible;

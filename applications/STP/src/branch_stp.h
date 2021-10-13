@@ -33,37 +33,62 @@
 extern "C" {
 #endif
 
+#define BRANCH_STP_VERTEX_UNSET       -2
 #define BRANCH_STP_VERTEX_KILLED      -1
 #define BRANCH_STP_VERTEX_NONTERM      0
 #define BRANCH_STP_VERTEX_TERM         1
 
 
 /** parse constraint name and apply changes to graph or array */
+SCIP_EXPORT
 SCIP_RETCODE STPStpBranchruleParseConsname(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int*                  vertexchgs,         /**< array to store changes or NULL */
-   GRAPH*                graph,              /**< graph to modify or NULL */
+   int*                  vertexchgs,         /**< array to store changes */
    const char*           consname,           /**< constraint name */
-   SCIP_Bool             deletehistory       /**< delete history of graph? */
+   SCIP_Bool*            conflictFound       /**< conflict with existing vertex changes found? */
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
-SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpBranchruleGetVertexChgs(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  vertexchgs,         /**< array to store changes or NULL */
-   GRAPH*                graph               /**< graph to apply changes on or NULL */
+   int*                  vertexchgs,         /**< array to store changes */
+   SCIP_Bool*            conflictFound       /**< conflict with existing vertex changes found? */
+   );
+
+
+/** get last change */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpBranchruleGetVertexChgLast(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  vertex,             /**< changed vertex */
+   SCIP_Bool*            isDeleted           /**< deleted? (otherwise terminal) */
+   );
+
+
+/** is the branching rule active? */
+SCIP_EXPORT
+SCIP_Bool SCIPStpBranchruleIsActive(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
+SCIP_EXPORT
 void SCIPStpBranchruleInitNodeState(
    const GRAPH*          g,                  /**< graph data structure */
    int*                  nodestate           /**< node state array */
    );
 
 /** creates the stp branching rule and includes it to SCIP */
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/** returns whether branching-rule is compatible with given graph problem type */
+SCIP_EXPORT
+SCIP_Bool SCIPStpBranchruleProbIsCompatible(
+   const GRAPH*          graph               /**< graph */
+);
 
 #ifdef __cplusplus
 }

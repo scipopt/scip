@@ -11,8 +11,6 @@ preprocessorErrorDirective
 // unusedFunction doesn't work for libraries
 unusedFunction
 variableScope
-unusedPrivateFunction:src/nlpi/exprinterpret_cppad.cpp
-functionStatic:src/nlpi/exprinterpret_cppad.cpp
 
 // information
 unmatchedSuppression

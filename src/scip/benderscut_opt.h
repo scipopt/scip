@@ -63,7 +63,7 @@
 #include "scip/type_nlp.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-#include "nlpi/type_exprinterpret.h"
+#include "scip/type_exprinterpret.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,14 +71,17 @@ extern "C" {
 
 /** creates the optimality Benders' decomposition cut and includes it in SCIP
  *
- *  @addtogroup BenderscutIncludes
- *  @{
+ *  @ingroup BenderscutIncludes
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBenderscutOpt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
+
+/** @addtogroup BENDERSCUTS
+ * @{
+ */
 
 /** Generates a classical Benders' optimality cut using the dual solutions from the subproblem or the input arrays. If
  *  the dual solutions are input as arrays, then a mapping between the array indices and the rows/variables is required.
@@ -118,7 +121,6 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_Real             mult,               /**< multiplier */
    SCIP_Real*            primalvals,         /**< the primal solutions for the NLP, can be NULL */
    SCIP_HASHMAP*         var2idx,            /**< mapping from variable of the subproblem to the index in the dual arrays, can be NULL */

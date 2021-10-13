@@ -48,14 +48,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/debug.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -168,8 +168,7 @@
 #define MINVALRECOMP                1e-05 /**< minimal abolsute value we trust without recomputing the activity */
 
 
-#define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
-#define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
+#define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of expressions constraints */
 
 /* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue),
  *       maybe in fullDualPresolve(), see convertLongEquality()
@@ -204,6 +203,7 @@ struct SCIP_ConsData
    uint64_t              possignature;       /**< bit signature of coefficients that may take a positive value */
    uint64_t              negsignature;       /**< bit signature of coefficients that may take a negative value */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
+   SCIP_NLROW*           nlrow;              /**< NLP row, if constraint has been added to NLP relaxation */
    SCIP_VAR**            vars;               /**< variables of constraint entries */
    SCIP_Real*            vals;               /**< coefficients of constraint entries */
    SCIP_EVENTDATA**      eventdata;          /**< event data for bound change events of the variables */
@@ -965,6 +965,7 @@ SCIP_RETCODE consdataCreate(
    }
 
    (*consdata)->row = NULL;
+   (*consdata)->nlrow = NULL;
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
    (*consdata)->maxabsval = SCIP_INVALID;
@@ -1031,7 +1032,15 @@ SCIP_RETCODE consdataCreate(
    /* capture variables */
    for( v = 0; v < (*consdata)->nvars; v++ )
    {
-      assert((*consdata)->vars[v] != NULL);
+      /* likely implies a deleted variable */
+      if( (*consdata)->vars[v] == NULL )
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
+         SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vals, (*consdata)->varssize);
+         SCIPfreeBlockMemory(scip, consdata);
+         return SCIP_INVALIDDATA;
+      }
+
       assert(!SCIPisZero(scip, (*consdata)->vals[v]));
       SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[v]) );
    }
@@ -1057,6 +1066,12 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* release the nlrow */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
    /* release variables */
@@ -5590,7 +5605,6 @@ SCIP_RETCODE tightenVarBoundsEasy(
          }
          assert(consdata->validmaxact);
 
-
          /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
          {
@@ -7575,6 +7589,42 @@ SCIP_RETCODE addRelaxation(
          assert( pr == 0 || cr == 0 );
       }
 #endif
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds linear constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< linear constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local linear constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      assert(consdata->lhs <= consdata->rhs);
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+         0.0, consdata->nvars, consdata->vars, consdata->vals, NULL, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_LINEAR) );
+
+      assert(consdata->nlrow != NULL);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -15652,6 +15702,23 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolLinear)
+{  /*lint --e{715}*/
+
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -15661,7 +15728,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 
    assert(scip != NULL);
 
-   /* release the rows of all constraints */
+   /* release the rows and nlrows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
@@ -15672,6 +15739,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
 
@@ -15700,24 +15772,38 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 }
 
 
+/** constraint activation notification method of constraint handler */
+static
+SCIP_DECL_CONSACTIVE(consActiveLinear)
+{  /*lint --e{715}*/
+   assert(cons != NULL);
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** constraint deactivation notification method of constraint handler */
 static
 SCIP_DECL_CONSDEACTIVE(consDeactiveLinear)
 {  /*lint --e{715}*/
-   assert( cons != NULL );
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(cons != NULL );
+
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
    if( SCIPconsIsDeleted(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
-      SCIP_CONSDATA* consdata;
-
-      assert(scip != NULL);
-      assert(conshdlr != NULL);
-      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-      /* get constraint data */
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
 
       /* check for event handler */
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -15731,6 +15817,14 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLinear)
          SCIP_CALL( consDropAllEvents(scip, cons, conshdlrdata->eventhdlr) );
       }
       assert(consdata->eventdata == NULL);
+   }
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -17373,108 +17467,68 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 
 
 /*
- * Quadratic constraint upgrading
+ * Nonlinear constraint upgrading
  */
-
-
-/** upgrades quadratic constraints with only and at least one linear variables into a linear constraint
- */
-static
-SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
-{  /*lint --e{715}*/
-   SCIP_CONSDATA* upgdconsdata;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(nupgdconss != NULL);
-   assert(upgdconss  != NULL);
-
-   *nupgdconss = 0;
-
-   SCIPdebugMsg(scip, "upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebugPrintCons(scip, cons, NULL);
-
-   if( SCIPgetNQuadVarTermsQuadratic(scip, cons) > 0 )
-      return SCIP_OKAY;
-   if( SCIPgetNLinearVarsQuadratic(scip, cons) == 0 )
-      return SCIP_OKAY;
-
-   if( upgdconsssize < 1 )
-   {
-      /* signal that we need more memory */
-      *nupgdconss = -1;
-      return SCIP_OKAY;
-   }
-
-   *nupgdconss = 1;
-   SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
-         SCIPgetNLinearVarsQuadratic(scip, cons),
-         SCIPgetLinearVarsQuadratic(scip, cons),
-         SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-         SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-         SCIPconsIsStickingAtNode(cons)) );
-
-   upgdconsdata = SCIPconsGetData(upgdconss[0]);
-   assert(upgdconsdata != NULL);
-
-   /* check violation of this linear constraint with absolute tolerances, to be consistent with the original quadratic constraint */
-   upgdconsdata->checkabsolute = TRUE;
-
-   SCIPdebugMsg(scip, "created linear constraint:\n");
-   SCIPdebugPrintCons(scip, upgdconss[0], NULL);
-
-   return SCIP_OKAY;
-}
 
 /** tries to upgrade a nonlinear constraint into a linear constraint */
 static
 SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
 {
-   SCIP_CONSDATA* upgdconsdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* expr;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int i;
 
    assert(nupgdconss != NULL);
    assert(upgdconss != NULL);
+   assert(upgdconsssize > 0);
 
-   *nupgdconss = 0;
+   expr = SCIPgetExprNonlinear(cons);
+   assert(expr != NULL);
 
-   /* no interest in nonlinear constraints */
-   if( SCIPgetExprgraphNodeNonlinear(scip, cons) != NULL )
+   /* not a linear constraint if the expression is not a sum
+    * (unless the expression is a variable or a constant or a constant*variable, but these are simplified away in cons_nonlinear)
+    */
+   if( !SCIPisExprSum(scip, expr) )
       return SCIP_OKAY;
 
-   /* no interest in constant constraints */
-   if( SCIPgetNLinearVarsNonlinear(scip, cons) == 0 )
-      return SCIP_OKAY;
+   /* if at least one child is not a variable, then not a linear constraint */
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
+      if( !SCIPisExprVar(scip, SCIPexprGetChildren(expr)[i]) )
+         return SCIP_OKAY;
 
-   if( upgdconsssize < 1 )
-   {
-      /* request larger upgdconss array */
-      *nupgdconss = -1;
-      return SCIP_OKAY;
-   }
+   /* consider constant part of the sum expression */
+   lhs = SCIPisInfinity(scip, -SCIPgetLhsNonlinear(cons)) ? -SCIPinfinity(scip) : (SCIPgetLhsNonlinear(cons) - SCIPgetConstantExprSum(expr));
+   rhs = SCIPisInfinity(scip,  SCIPgetRhsNonlinear(cons)) ?  SCIPinfinity(scip) : (SCIPgetRhsNonlinear(cons) - SCIPgetConstantExprSum(expr));
 
-   *nupgdconss = 1;
    SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
-         SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
-         SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
+         0, NULL, NULL, lhs, rhs,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
          SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
          SCIPconsIsStickingAtNode(cons)) );
+   assert(upgdconss[0] != NULL);
 
-   upgdconsdata = SCIPconsGetData(upgdconss[0]);
-   assert(upgdconsdata != NULL);
+   consdata = SCIPconsGetData(upgdconss[0]);
+
+   /* add linear terms */
+   SCIP_CALL( consdataEnsureVarsSize(scip, consdata, SCIPexprGetNChildren(expr)) );
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
+   {
+      SCIP_CALL( addCoef(scip, upgdconss[0], SCIPgetVarExprVar(SCIPexprGetChildren(expr)[i]), SCIPgetCoefsExprSum(expr)[i]) );
+   }
 
    /* check violation of this linear constraint with absolute tolerances, to be consistent with the original nonlinear constraint */
-   upgdconsdata->checkabsolute = TRUE;
+   consdata->checkabsolute = TRUE;
+
+   *nupgdconss = 1;
 
    SCIPdebugMsg(scip, "created linear constraint:\n");
    SCIPdebugPrintCons(scip, upgdconss[0], NULL);
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /*
  * constraint specific interface methods
@@ -17513,11 +17567,13 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinear, consCopyLinear) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveLinear) );
    SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveLinear) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinear) );
    SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsLinear) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitLinear) );
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreLinear) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolLinear) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolLinear) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeLinear) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsLinear) );
@@ -17535,16 +17591,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinear) );
 
-   if( SCIPfindConshdlr(scip, "quadratic") != NULL )
-   {
-      /* include function that upgrades quadratic constraint to linear constraints */
-      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
-   }
-
    if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
    {
       /* include the linear constraint upgrade in the nonlinear constraint handler */
-      SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, upgradeConsNonlinear, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+      SCIP_CALL( SCIPincludeConsUpgradeNonlinear(scip, upgradeConsNonlinear, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
    }
 
    /* add linear constraint handler parameters */

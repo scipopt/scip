@@ -1,0 +1,8 @@
+Minimize
+ obj: 11 + x - y^3 z^2
+
+Subject To
+ e1: 1 x + 2 y + 3 z <= 1
+ e2: 4 x^2 y^3 z^4 + 5 x + 6 y + 7 = 10
+
+End
