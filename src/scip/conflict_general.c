@@ -2004,7 +2004,8 @@ SCIP_RETCODE conflictAnalyzeLP(
    /* todo: in theory, we could apply conflict graph analysis for locally valid proofs, too, but this needs to be implemented */
    if( !globalinfeasible && validdepth <= SCIPtreeGetEffectiveRootDepth(tree)
       && (((set->conf_useinflp == 'b' || set->conf_useinflp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP)
-      || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING)) )
+      || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING))
+      && !set->exact_enabled )
    {
       SCIP_Real* farkascoefs;
       SCIP_Real farkaslhs;
@@ -2355,7 +2356,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    assert(success == NULL || *success == FALSE);
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->conf_enable || set->conf_useinflp == 'o' || set->exact_enabled )
+   if( !set->conf_enable || set->conf_useinflp == 'o' )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
