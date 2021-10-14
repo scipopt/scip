@@ -873,6 +873,7 @@ Fixed bugs
 - fixed variance computation in t-value computation in hypothesis testing of reliability branching
 - fixed potential overflow in cuts.c:evaluateLiftingFunctionKnapsack()
 - do not transfer dual reductions to main SCIP in sepa_rapidlearning if strong dual reductions are forbidden
+- fixed a bug in cons_setppc.c:removeDoubleAndSingletonsAndPerformDualpresolve() which led to wrong variable aggregations
 
 Miscellaneous
 -------------
