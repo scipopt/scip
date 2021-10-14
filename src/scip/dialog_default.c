@@ -3145,10 +3145,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCounter)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for counting problems */
+   /* set parameters for counting problems; we do not reset parameters to their default values first, since the user
+    * should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_COUNTER, FALSE) );
 
    return SCIP_OKAY;
@@ -3161,10 +3160,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisCpsolver)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for CP like search problems */
+   /* set parameters for CP like search problems; we do not reset parameters to their default values first, since the
+    * user should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_CPSOLVER, FALSE) );
 
    return SCIP_OKAY;
@@ -3177,10 +3175,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisEasycip)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for easy CIP problems */
+   /* set parameters for easy CIP problems; we do not reset parameters to their default values first, since the user
+    * should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_EASYCIP, FALSE) );
 
    return SCIP_OKAY;
@@ -3193,10 +3190,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisFeasibility)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for feasibility problems */
+   /* set parameters for feasibility problems; we do not reset parameters to their default values first, since the user
+    * should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_FEASIBILITY, FALSE) );
 
    return SCIP_OKAY;
@@ -3209,10 +3205,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisHardlp)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for problems with hard LP */
+   /* set parameters for problems with hard LP; we do not reset parameters to their default values first, since the user
+    * should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_HARDLP, FALSE) );
 
    return SCIP_OKAY;
@@ -3225,10 +3220,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for problems to prove optimality fast */
+   /* set parameters for problems to prove optimality fast; we do not reset parameters to their default values first,
+    * since the user should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_OPTIMALITY, FALSE) );
 
    return SCIP_OKAY;
@@ -3241,10 +3235,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisNumerics)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* reset SCIP parameters */
-   SCIP_CALL( SCIPresetParams(scip) );
-
-   /* set parameters for problems to prove optimality fast */
+   /* set parameters for problems to prove optimality fast; we do not reset parameters to their default values first,
+    * since the user should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
 
    return SCIP_OKAY;
@@ -3257,7 +3250,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisBenchmark)
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-   /* set parameters for problems to run in benchmark mode */
+   /* set parameters for problems to run in benchmark mode; we do not reset parameters to their default values first,
+    * since the user should be able to combine emphasis settings in the interactive shell
+    */
    SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_BENCHMARK, FALSE) );
 
    return SCIP_OKAY;

@@ -3813,13 +3813,11 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   /* reset all parameter to default */
-   SCIP_CALL( SCIPparamsetSetToDefaults(paramset, set, messagehdlr) );
-
    switch( paramemphasis )
    {
    case SCIP_PARAMEMPHASIS_DEFAULT:
-      /* the default values are already set */
+      /* reset all parameter to default */
+      SCIP_CALL( SCIPparamsetSetToDefaults(paramset, set, messagehdlr) );
       break;
 
    case SCIP_PARAMEMPHASIS_COUNTER:
