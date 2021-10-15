@@ -132,6 +132,8 @@ struct SCIP_HeurData
    SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded up*/
    int                   mode;               /**< decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default)) */
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
+   int                   notfound;           /**< calls without found solution in succession */
+   SCIP_Bool             dynamicfreq;        /**< should the frequency be adjusted dynamically? */
 };
 
 /*
@@ -582,6 +584,8 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    SCIP_CALL( SCIPhashmapCreate( &heurdata->scvars, SCIPblkmem( scip ), SCIPgetNVars(scip) ));
 
+   heurdata->notfound = 0;
+
    return SCIP_OKAY;
 }
 
@@ -631,7 +635,23 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 
    SCIPdebugMessage("call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
 
+   /* dynamic frequency */
+   if( heurdata->dynamicfreq )
+   {
+      int newfreq;
+      if( heurdata->notfound >= 4 )
+         newfreq = SCIP_MAXTREEDEPTH;
+      else
+         newfreq = pow(10,(heurdata->notfound + 1));
+      SCIP_CALL( SCIPsetIntParam(scip, "heuristics/indicatordiving/freq", newfreq) );
+   }
+
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
+
+   if( *result == SCIP_DIDNOTFIND )
+      heurdata->notfound++;
+   else if( *result == SCIP_FOUNDSOL )
+      heurdata->notfound = 0;
 
    SCIPdebugMessage("leave heurExecIndicatordiving\n");
 
@@ -874,6 +894,10 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/semicontscoremode",
          "which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high)",
          &heurdata->semicontscoremode, FALSE, DEFAULT_SEMICONTSCOREMODE, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/dynamicfreq",
+         "should the frequency be adjusted dynamically?",
+         &heurdata->dynamicfreq, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
