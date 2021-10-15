@@ -239,14 +239,14 @@ int getRemainingNIndicatorCons(
 )
 {
    SCIP_CONS** indicatorconss;
-   int c;
+   int c, result;
 
    assert(scip != NULL);
    assert(sol != NULL);
 
    indicatorconss = SCIPconshdlrGetConss(conshdlr);
 
-   int result = 0;
+   result = 0;
    for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
       if( isViolatedAndNotFixed(scip, sol, indicatorconss[c]))
          result = result +1;
