@@ -642,7 +642,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
       if( heurdata->notfound >= 4 )
          newfreq = SCIP_MAXTREEDEPTH;
       else
-         newfreq = pow(10,(heurdata->notfound + 1));
+         newfreq = (int) pow(10.0, (heurdata->notfound + 1.0));
       SCIP_CALL( SCIPsetIntParam(scip, "heuristics/indicatordiving/freq", newfreq) );
    }
 
