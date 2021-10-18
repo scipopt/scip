@@ -298,7 +298,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             branchdomainweight; /**< weight by how much to consider the domain width in branching score */
    SCIP_Real             branchvartypeweight;/**< weight by how much to consider variable type in branching score */
    char                  branchscoreagg;     /**< how to aggregate several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
-   char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
+   char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
    SCIP_Real             branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
    char                  linearizeheursol;   /**< whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution) */
 
@@ -6273,7 +6273,7 @@ SCIP_Real getViolSplitWeight(
 
    switch( conshdlrdata->branchviolsplit )
    {
-      case 'e' :  /* evenly: everyone gets the same score */
+      case 'u' :  /* uniform: everyone gets the same score */
          return 1.0;
 
       case 'm' :  /* midness of solution: 0.5 if in middle of domain, 0.05 if close to lower or upper bound */
@@ -10964,8 +10964,8 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          &conshdlrdata->branchscoreagg, TRUE, 's', "ams", NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/violsplit",
-         "method used to split violation in expression onto variables: 'e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width",
-         &conshdlrdata->branchviolsplit, TRUE, 'm', "emdl", NULL, NULL) );
+         "method used to split violation in expression onto variables: 'u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width",
+         &conshdlrdata->branchviolsplit, TRUE, 'm', "umdl", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostreliable",
          "minimum pseudo-cost update count required to consider pseudo-costs reliable",
