@@ -10961,11 +10961,11 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/scoreagg",
          "how to aggregate several branching scores given for the same expression: 'a'verage, 'm'aximum, 's'um",
-         &conshdlrdata->branchscoreagg, TRUE, 's', "ams", NULL, NULL) );
+         &conshdlrdata->branchscoreagg, FALSE, 's', "ams", NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/violsplit",
          "method used to split violation in expression onto variables: 'u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width",
-         &conshdlrdata->branchviolsplit, TRUE, 'm', "umdl", NULL, NULL) );
+         &conshdlrdata->branchviolsplit, FALSE, 'm', "umdl", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostreliable",
          "minimum pseudo-cost update count required to consider pseudo-costs reliable",
