@@ -254,6 +254,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
 }
 
 #define divesetAvailableLinesearchdiving NULL
+#define divesetSolveMipLinesearchdiving NULL
 
 /*
  * primal heuristic specific interface methods
@@ -288,7 +289,7 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
          DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
          DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreLinesearchdiving, divesetAvailableLinesearchdiving) );
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreLinesearchdiving, divesetSolveMipLinesearchdiving, divesetAvailableLinesearchdiving) );
 
    return SCIP_OKAY;
 }

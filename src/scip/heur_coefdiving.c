@@ -269,6 +269,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
  */
 
 #define divesetAvailableCoefdiving NULL
+#define divesetSolveMipCoefdiving NULL
 
 /** creates the coefdiving heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurCoefdiving(
@@ -298,7 +299,7 @@ SCIP_RETCODE SCIPincludeHeurCoefdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
-         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreCoefdiving, divesetAvailableCoefdiving) );
+         DIVESET_ISPUBLIC, DIVESET_DIVETYPES, divesetGetScoreCoefdiving, divesetSolveMipCoefdiving, divesetAvailableCoefdiving) );
 
    return SCIP_OKAY;
 }

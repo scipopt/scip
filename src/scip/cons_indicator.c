@@ -7089,7 +7089,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
 
-   /* loop over indicator constraints and score indicator variables with already integral solution value  */
+   /* loop over indicator constraints and score indicator variables with already integral solution value */
    for (c = 0; c < nindconss; ++c)
    {
       /* check whether constraint is violated */
@@ -7106,10 +7106,10 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
          {
             SCIP_Real score;
             SCIP_Bool roundup;
-
             SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, binvar, solval, 0.0,
                   &score, &roundup) );
-
+/*            SCIPinfoMessage(scip, NULL, "    calculated score for variable %s to %i\n",
+               SCIPvarGetName(binvar), bestvarroundup);*/
             /* best candidate maximizes the score */
             if( score > bestscore )
             {
@@ -7121,11 +7121,11 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
          }
       }
    }
-
    assert(! *success || bestvar != NULL);
 
    if( *success )
    {
+      SCIPdebugMessage("best dive var %s will be fixed to %i\n", SCIPvarGetName(bestvar), (int) bestvarroundup);
       /* if the diving score voted for fixing the best variable to 1.0, we add this as the preferred bound change */
       SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_UPWARDS, 1.0, bestvarroundup) );
       SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_DOWNWARDS, 0.0, ! bestvarroundup) );
