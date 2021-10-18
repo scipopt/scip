@@ -1236,7 +1236,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-#if 0
+#if !1
    /* compute final coefrange, if requested by caller */
    if( coefrange != NULL )
    {
