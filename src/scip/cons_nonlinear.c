@@ -12958,6 +12958,7 @@ SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
    if( !SCIPisInfinity(scip, *viol) )
    {
       assert(auxvalue != SCIP_INVALID);
+      /* TODO maybe we should rather use max(eps,|auxvalue|)? */
       *viol /= MAX(1.0, REALABS(auxvalue));
    }
 
