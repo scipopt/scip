@@ -2806,6 +2806,12 @@ SCIP_RETCODE strengthenConss(
             SCIP_CALL( removeRedundantNonZeros(scip, cons, artvar, v, varstopos, occurlist, noccurlistentries,
             occurlistlength, eventhdlr, nchgcoefs, &deleted) );
 
+            /* if some variables have been fixed, indicate that there are new fixings to be processed*/
+            if( nvars > consdata->nvars )
+            {
+               consdata->presolved = FALSE;
+            }
+
             if( deleted )
             {
                assert(SCIPconsIsDeleted(cons));
