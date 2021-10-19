@@ -531,8 +531,6 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-ifeq ($(OSTYPE),darwin)
-endif
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)tbb.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 CXXFLAGS	+=	-std=c++14
 endif
