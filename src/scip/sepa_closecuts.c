@@ -232,6 +232,8 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolClosecuts)
       SCIP_CALL( SCIPfreeSol(scip, &sepadata->sepasol) );
       sepadata->triedRelint = FALSE;
    }
+   sepadata->discardnode = -1;
+   sepadata->nunsuccessful = 0;
 
    return SCIP_OKAY;
 }
