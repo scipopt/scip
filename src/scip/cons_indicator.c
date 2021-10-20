@@ -7090,7 +7090,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    nindconss = SCIPconshdlrGetNConss(conshdlr);
 
    /* loop over indicator constraints and score indicator variables with already integral solution value */
-   for (c = 0; c < nindconss; ++c)
+   for( c = 0; c < nindconss; ++c )
    {
       /* check whether constraint is violated */
       if( SCIPisViolatedIndicator(scip, indconss[c], sol) )

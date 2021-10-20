@@ -276,6 +276,7 @@ SCIP_DECL_DIVESETAVAILABLE(divesetAvailableGuideddiving)
 
    return SCIP_OKAY;
 }
+
 #define divesetSolveMipGuideddiving NULL
 
 /*

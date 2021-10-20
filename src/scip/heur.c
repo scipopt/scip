@@ -859,10 +859,10 @@ SCIP_RETCODE SCIPdivesetIsAvailable(
 
 /** calls the callback whether a MIP should be solved */
 SCIP_RETCODE SCIPdivesetSolveMIP(
-      SCIP_DIVESET*         diveset,         /**< diving heuristic settings */
-      SCIP*                 scip,            /**< SCIP data structure */
-      SCIP_Bool*            solvemip         /**< pointer to store if an MIP should be solved */
-)
+   SCIP_DIVESET*         diveset,            /**< diving heuristic settings */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            solvemip            /**< pointer to store if a MIP should be solved */
+   )
 {
    assert(scip != NULL);
    assert(diveset != NULL);
@@ -876,8 +876,6 @@ SCIP_RETCODE SCIPdivesetSolveMIP(
 
    return SCIP_OKAY;
 }
-
-
 
 /** copies the given primal heuristic to a new scip */
 SCIP_RETCODE SCIPheurCopyInclude(

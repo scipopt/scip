@@ -179,13 +179,13 @@ SCIP_Longint getDivesetIterLimit(
    return iterlimit;
 }
 
+/** checks if variable is indicator variable */
 static
 SCIP_RETCODE checkAndGetIndicator(
-      SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_VAR*             cand,               /**< candidate variable */
-      SCIP_CONS**           cons,               /**< pointer to store indicator constraint */
-      SCIP_Bool*            isindicator        /**< pointer to store whether candidate variable is indicator variable */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             cand,               /**< candidate variable */
+   SCIP_Bool*            isindicator         /**< pointer to store whether candidate variable is indicator variable */
+   )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** indicatorconss;
@@ -193,12 +193,10 @@ SCIP_RETCODE checkAndGetIndicator(
 
    assert(scip != NULL);
    assert(cand != NULL);
-   assert(cons != NULL);
    assert(isindicator != NULL);
 
    conshdlr = SCIPfindConshdlr(scip, "indicator");
    indicatorconss = SCIPconshdlrGetConss(conshdlr);
-   *cons = NULL;
    *isindicator = FALSE;
 
    for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
@@ -208,7 +206,6 @@ SCIP_RETCODE checkAndGetIndicator(
 
       if( cand == indicatorvar )
       {
-//         *cons = indicatorconss[c];
          *isindicator = TRUE;
          return SCIP_OKAY;
       }
@@ -216,26 +213,24 @@ SCIP_RETCODE checkAndGetIndicator(
    return SCIP_OKAY;
 }
 
-/** sets up and solves the sub SCIP for the Trust Region heuristic */
+/** sets up and solves the subSCIP for remaining MIP */
 static
 SCIP_RETCODE setupAndSolveSubscipHeuristics(
-      SCIP*                 scip,               /**< SCIP data structure */
-      SCIP*                 subscip,            /**< the subproblem created by trustregion */
-      SCIP_HEUR*            heur,               /**< trustregion heuristic */
-      SCIP_Longint          nsubnodes,          /**< nodelimit for subscip */
-      SCIP_SOL*             worksol,            /**< non-NULL working solution */
-      SCIP_RESULT*          result,             /**< result pointer */
-      SCIP_Bool             fixIndicator        /**< should indicator be fixed */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< the subproblem created by trustregion */
+   SCIP_HEUR*            heur,               /**< pointer to heuristic */
+   SCIP_Longint          nsubnodes,          /**< nodelimit for subscip */
+   SCIP_SOL*             worksol,            /**< non-NULL working solution */
+   SCIP_RESULT*          result,             /**< result pointer */
+   SCIP_Bool             fixindicator        /**< should indicator be fixed */
+   )
 {
    SCIP_VAR** subvars;
    SCIP_HASHMAP* varmapfw;
    SCIP_VAR** vars;
-
    int nvars;
    int i;
 
-   SCIP_VAR *negatedVar;
    SCIP_Real solval;
 
    SCIP_Bool success;
@@ -259,7 +254,7 @@ SCIP_RETCODE setupAndSolveSubscipHeuristics(
    success = FALSE;
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL(SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "diving", NULL, NULL, 0, uselprows,
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "diving", NULL, NULL, 0, uselprows,
                                               copycuts, &success, NULL) );
 
 
@@ -275,12 +270,11 @@ SCIP_RETCODE setupAndSolveSubscipHeuristics(
    /* copy local bounds of variables*/
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
-   for (i = 0; i < nvars; ++i)
+   for( i = 0; i < nvars; ++i )
    {
-      SCIP_VAR *var;
+      SCIP_VAR* var;
       SCIP_Real lbLocal;
       SCIP_Real ubLocal;
-      SCIP_CONS *cons;
       SCIP_Bool isindicator;
       SCIP_Bool fixed;
 
@@ -289,37 +283,37 @@ SCIP_RETCODE setupAndSolveSubscipHeuristics(
       fixed = FALSE;
 
       lbLocal = SCIPvarGetLbLocal(var);
-      if( lbLocal > SCIPvarGetLbGlobal(var))
+      if( lbLocal > SCIPvarGetLbGlobal(var) )
       {
          fixed = TRUE;
-         SCIP_CALL(SCIPchgVarLb(subscip, subvars[i], lbLocal));
+         SCIP_CALL( SCIPchgVarLb(subscip, subvars[i], lbLocal) );
 //         SCIPinfoMessage(scip, NULL,"lb of variable %s in the subproblem is changed to local bound\n", SCIPvarGetName(subvars[i]));
       }
       ubLocal = SCIPvarGetUbLocal(var);
       if( ubLocal < SCIPvarGetUbGlobal(var))
       {
          fixed = TRUE;
-         SCIP_CALL(SCIPchgVarUb(subscip, subvars[i], ubLocal));
+         SCIP_CALL( SCIPchgVarUb(subscip, subvars[i], ubLocal) );
 //         SCIPinfoMessage(scip, NULL,"ub of variable %s in the subproblem is changed to local bound\n", SCIPvarGetName(subvars[i]));
       }
 
-      if( !fixIndicator  || fixed || !SCIPvarIsBinary(var) )
+      if( !fixindicator  || fixed || !SCIPvarIsBinary(var) )
          continue;
 
       solval = SCIPgetSolVal(scip, worksol, var);
 
-      SCIP_CALL(checkAndGetIndicator(scip, var, &cons, &isindicator));
+      SCIP_CALL( checkAndGetIndicator(scip, var, &isindicator) );
       if( isindicator )
       {
          if( SCIPisEQ(scip, solval, 1.0) )
          {
-            SCIP_CALL(SCIPchgVarLb(subscip, subvars[i], 1.0));
-            SCIPinfoMessage(scip, NULL, "lb of variable %s in the subproblem is fixed to current solution\n",
+            SCIP_CALL( SCIPchgVarLb(subscip, subvars[i], 1.0) );
+            SCIPdebugMessage("lb of variable %s in the subproblem is fixed to current solution\n",
                             SCIPvarGetName(subvars[i]));
          }
          else if( SCIPisEQ(scip, solval, 0.0) )
          {
-            SCIP_CALL(SCIPchgVarUb(subscip, subvars[i], 0.0));
+            SCIP_CALL( SCIPchgVarUb(subscip, subvars[i], 0.0) );
             SCIPdebugMessage("ub of variable %s in the subproblem is fixed to current solution\n",
                              SCIPvarGetName(subvars[i]));
          }
@@ -328,30 +322,30 @@ SCIP_RETCODE setupAndSolveSubscipHeuristics(
          continue;
       }
 
-      SCIP_CALL(SCIPgetNegatedVar(scip, var, &negatedVar));
-      SCIP_CALL(checkAndGetIndicator(scip, negatedVar, &cons, &isindicator));
-      if( isindicator )
+      if( SCIPvarGetNegatedVar(var) != NULL )
       {
-         if( SCIPisEQ(scip, solval, 1.0) )
+         SCIP_VAR* negatedvar;
+         SCIP_CALL( SCIPgetNegatedVar(scip, var, &negatedvar) );
+         SCIP_CALL( checkAndGetIndicator(scip, negatedvar, &isindicator) );
+         if( isindicator )
          {
-            SCIP_CALL(SCIPchgVarUb(subscip, subvars[i], 0.0));
-            SCIPdebugMessage("negated ub of variable %s in the subproblem is fixed to current solution\n",
-                            SCIPvarGetName(subvars[i]));
+            if( SCIPisEQ(scip, solval, 1.0) )
+            {
+               SCIP_CALL( SCIPchgVarUb(subscip, subvars[i], 0.0) );
+               SCIPdebugMessage("negated ub of variable %s in the subproblem is fixed to current solution\n",
+                              SCIPvarGetName(subvars[i]));
+            }
+            else if( SCIPisEQ(scip, solval, 0.0) )
+            {
+               SCIP_CALL( SCIPchgVarLb(subscip, subvars[i], 1.0) );
+               SCIPdebugMessage("negated lb of variable %s in the subproblem is fixed to current solution\n",
+                              SCIPvarGetName(subvars[i]));
+            }
+            else
+               assert(FALSE);
          }
-         else if( SCIPisEQ(scip, solval, 0.0) )
-         {
-            SCIP_CALL(SCIPchgVarLb(subscip, subvars[i], 1.0));
-            SCIPdebugMessage("negated lb of variable %s in the subproblem is fixed to current solution\n",
-                             SCIPvarGetName(subvars[i]));
-         }
-         else
-            assert(FALSE);
       }
-
    }
-
-
-
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
@@ -370,12 +364,11 @@ SCIP_RETCODE setupAndSolveSubscipHeuristics(
     */
    SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
-
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
    //TODO:
    //   heurdata->usednodes += SCIPgetNNodes(subscip);
-   SCIPdebugMsg(scip, "trust region used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
+   SCIPdebugMsg(scip, "submip used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
                 SCIPgetNNodes(subscip), nsubnodes);
 
    /* checks the solutions of the sub SCIP and adds them to the main SCIP if feasible */
@@ -399,8 +392,6 @@ SCIP_RETCODE setupAndSolveSubscipHeuristics(
    SCIP_CALL( SCIPfree(&subscip) );
    return SCIP_OKAY;
 }
-
-
 
 /** performs a diving within the limits of the @p diveset parameters
  *
@@ -446,6 +437,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
    SCIP_Bool solvemip;
+   SCIP* subscip;
 
    SCIP_VAR** previouscands;
    SCIP_Real* lpcandsscores;
@@ -484,8 +476,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    int nlpcands;
    int lpsolvefreq;
-   SCIP* subscip;
-
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -753,15 +743,15 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
              lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
              &enfosuccess, &infeasible) );
+
       solvemip = TRUE;
-      SCIP_CALL(SCIPdivesetSolveMIP(diveset, scip, &solvemip) );
+      SCIP_CALL( SCIPdivesetSolveMIP(diveset, scip, &solvemip) );
       if( solvemip )
       {
          SCIPinfoMessage(scip, NULL, "start solving the subMIP\n");
          SCIP_CALL( SCIPcreate(&subscip) );
          //TODO: copy from other heur.
-         SCIP_CALL(setupAndSolveSubscipHeuristics(scip, subscip, heur, 1000LL, worksol, result, TRUE));
-         break;
+         SCIP_CALL( setupAndSolveSubscipHeuristics(scip, subscip, heur, 1000LL, worksol, result, TRUE) );
       }
       /* if we did not succeed finding an enforcement, the solution is potentially feasible and we break immediately */
       if( ! enfosuccess )
@@ -986,6 +976,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
                       lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
                       &enfosuccess, &infeasible) );
+
                solvemip = TRUE;
                SCIP_CALL(SCIPdivesetSolveMIP(diveset, scip, &solvemip) );
                if( solvemip )
