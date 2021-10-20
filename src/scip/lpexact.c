@@ -204,8 +204,8 @@ SCIP_Bool rowExactInSync(
    assert(rowexact->len >= fprow->len);
    assert(rowexact->lppos == rowexact->fprow->lppos);
 
-   synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs, SCIP_R_ROUND_DOWNWARDS) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
-   synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs, SCIP_R_ROUND_UPWARDS) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
+   synced = RatIsGEReal(rowexact->lhs, fprow->lhs) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
+   synced = synced && (RatIsLEReal(rowexact->rhs, fprow->rhs) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
    synced = synced && (RatIsApproxEqualReal(set, rowexact->constant, fprow->constant, SCIP_R_ROUND_NEAREST) );
 
    if( !synced )
