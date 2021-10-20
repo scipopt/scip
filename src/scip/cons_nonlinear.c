@@ -7152,9 +7152,9 @@ void scoreBranchingCandidates(
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(dual)", conshdlrdata->branchdualweight, cands[c].dual / maxscore.dual); )
       }
 
-      /* use pseudo-costs, if we have some for at least half the candidates */
       if( maxscore.pscost > 0.0 )
       {
+         /* use pseudo-costs only if available */
          if( cands[c].pscost != SCIP_INVALID )
          {
             cands[c].weighted += conshdlrdata->branchpscostweight * cands[c].pscost / maxscore.pscost;
