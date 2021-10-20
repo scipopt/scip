@@ -7072,6 +7072,9 @@ void scoreBranchingCandidates(
             else
                pscostup = SCIP_INVALID;
 
+            /* TODO if both are valid, we get pscostdown*pscostup, but does this compare well with vars were only pscostdown or pscostup is used?
+             * maybe we should use (pscostdown+pscostup)/2 or sqrt(pscostdown*pscostup) ?
+             */
             if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
                cands[c].pscost = SCIP_INVALID;
             else if( pscostdown == SCIP_INVALID )
