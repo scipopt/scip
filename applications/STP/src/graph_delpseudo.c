@@ -98,9 +98,9 @@ SCIP_Bool isCutoffEdge(
    return TRUE;
 }
 
-
+#ifndef NDEBUG
 /** in edge deletion mode? */
-static inline
+static
 SCIP_Bool delPseudoIsEdgeDeletionMode(
    const DELPSEUDO*     delpseudo           /**< data */
 )
@@ -110,6 +110,7 @@ SCIP_Bool delPseudoIsEdgeDeletionMode(
 
    return (delpseudo->edge != UNKNOWN);
 }
+#endif
 
 
 /** gets position of deletion edge in replacement arrays */
