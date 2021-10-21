@@ -11781,6 +11781,7 @@ SCIP_RETCODE simplifyInequalities(
    if( nvars > 2 && SCIPisIntegral(scip, vals[v]) )
    {
       SCIP_Bool redundant = FALSE;
+      SCIP_Bool numericsok;
 
       gcd = (SCIP_Longint)(REALABS(vals[v]) + feastol);
       assert(gcd >= 1);
@@ -11889,13 +11890,15 @@ SCIP_RETCODE simplifyInequalities(
       SCIPdebugMsg(scip, "stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %" SCIP_LONGINT_FORMAT ", offset position for 'side' coefficients = %d\n",
             v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
 
-      /* check if we can remove redundant variables; to avoid inconsistencies due to numerics, require that the
-       * quotients of the full and partial activities have reasonable values */
-      if( v < nvars && (REALABS(maxact)/REALABS(maxactsub) <= MAXACTQ && REALABS(maxactsub)/REALABS(maxact) <= MAXACTQ) &&
-            (REALABS(minact)/REALABS(minactsub) <= MAXACTQ && REALABS(minactsub)/REALABS(minact) <= MAXACTQ) &&
-            (redundant || (offsetv == -1 &&
-            hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
-            (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd)) )
+      /* to avoid inconsistencies due to numerics, check that the quotients of the full and partial activities have
+       * reasonable values */
+      numericsok = (REALABS(maxact)/REALABS(maxactsub) <= MAXACTQ && REALABS(maxactsub)/REALABS(maxact) <= MAXACTQ) &&
+            (REALABS(minact)/REALABS(minactsub) <= MAXACTQ && REALABS(minactsub)/REALABS(minact) <= MAXACTQ);
+
+      /* check if we can remove redundant variables */
+      if( v < nvars && numericsok && (redundant ||
+                        (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
+                        (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd)) )
       {
          SCIP_Real oldcoef;
 
