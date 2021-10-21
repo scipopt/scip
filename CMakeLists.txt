@@ -19,13 +19,10 @@ set(ADD_C_AND_CXX_FLAGS "-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcas
 set(ADD_C_FLAGS "-Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init")
 set(ADD_CXX_FLAGS "-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow ")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS}")
-
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} -fp-model precise")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS} -fp-model precise")
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
    # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
    # this happens with the cplex static lib
    if(LPS MATCHES "cpx")
@@ -37,16 +34,16 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
         message(WARNING "GCC version not supported, should be at least 4.8!")
     endif()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS} -Wno-psabi")
     if(APPLE)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-uninitialized")
     else()
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-maybe-uninitialized")
     endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option -Wno-initializer-overrides ")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS} -Wno-unknown-warning-option -Wno-initializer-overrides")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS}")
 endif()
 
 set(SCIP_VERSION_MAJOR 8)
