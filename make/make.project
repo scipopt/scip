@@ -213,29 +213,26 @@ endif
 ARFLAGS		=	cr
 DFLAGS		=	-MMD
 
-GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
-			-Wno-unknown-pragmas -Wno-unused-parameter -Wno-override-init \
-			-Wredundant-decls -Wdisabled-optimization \
-			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
-# GCCWARN is not only used for GCC!
-ifeq ($(COMP),clang)
-GCCWARN += -Wno-unknown-warning-option -Wno-initializer-overrides
-endif
-ifeq ($(COMP),gnu)
-ifeq ($(OSTYPE),darwin)
-GCCWARN += -Wno-uninitialized
-else
-GCCWARN += -Wno-maybe-uninitialized
-endif
-endif
+# enable many more warnings for GCC and CLANG on C/C++
+GCCWARN = -pedantic -Wall -W
+GXXWARN = -pedantic -Wall -W
 
-GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
-			-Wno-unknown-pragmas -Wno-unused-parameter \
-			-Wredundant-decls -Wdisabled-optimization \
-			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
-			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow #-Wno-variadic-macros -Wold-style-cast -Wshadow -Wundef
+# GCC and CLANG warning flags are not all equal; so disable warnings about unknown warnings
+GCCWARN += -Wno-unknown-warning-option -Wno-unknown-warning
+GXXWARN += -Wno-unknown-warning-option -Wno-unknown-warning
+
+# enable more warnings that are not in -Wall -W (probably in -Wextra, but we don't seem to use that)
+GCCWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
+           -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+GXXWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
+           -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual
+
+# disable some warning that would be too much effort to fix, disfigure the code, or produce too many false positive
+GCCWARN += -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized
+GXXWARN += -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter -Wno-strict-overflow
+
+# there are macros where we override initializers on purpose
+GCCWARN += -Wno-initializer-overrides
 
 ifeq ($(SHARED),true)
 LIBTYPE		=	shared
