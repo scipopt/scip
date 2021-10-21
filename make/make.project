@@ -213,6 +213,8 @@ endif
 ARFLAGS		=	cr
 DFLAGS		=	-MMD
 
+# if changing GCC/GXXWARN here, also update ADD_*_FLAGS in ../CMakeLists.txt
+
 # enable many more warnings for GCC and CLANG on C/C++
 GCCWARN = -pedantic -Wall -W
 GXXWARN = -pedantic -Wall -W
