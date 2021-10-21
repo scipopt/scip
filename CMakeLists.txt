@@ -15,9 +15,9 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
-set(ADD_C_AND_CXX_FLAGS "-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wno-unknown-pragmas -Wno-unused-parameter -Wredundant-decls -Wdisabled-optimization")
-set(ADD_C_FLAGS "-Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init")
-set(ADD_CXX_FLAGS "-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow ")
+set(ADD_C_AND_CXX_FLAGS "-pedantic -Wall -W -Wno-unknown-warning-option -Wno-unknown-warning -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter")
+set(ADD_C_FLAGS "-Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized -Wno-initializer-overrides")
+set(ADD_CXX_FLAGS "-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi")
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
@@ -35,14 +35,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         message(WARNING "GCC version not supported, should be at least 4.8!")
     endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS} -Wno-psabi")
-    if(APPLE)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-uninitialized")
-    else()
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-maybe-uninitialized")
-    endif()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS}")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS} -Wno-unknown-warning-option -Wno-initializer-overrides")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS} ")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS}")
 endif()
 
