@@ -35,9 +35,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} -Wredundant-decls -Wcast-align -std=c++11 -Wno-psabi")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS} -Wredundant-decls -Wcast-align -std=c99 -Wstrict-prototypes -Wdeclaration-after-statement -Wno-initializer-overrides")
     # require at least gcc 4.8
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "CLANG")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} -Wredundant-decls -Wdeclaration-after-statement -Wno-initializer-overrides")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS} -Wredundant-decls")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} -Wredundant-decls")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS} -Wdeclaration-after-statement -Wno-initializer-overrides -Wredundant-decls")
 endif()
 
 set(SCIP_VERSION_MAJOR 8)
