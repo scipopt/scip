@@ -298,7 +298,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             branchdomainweight; /**< weight by how much to consider the domain width in branching score */
    SCIP_Real             branchvartypeweight;/**< weight by how much to consider variable type in branching score */
    char                  branchscoreagg;     /**< how to aggregate several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
-   char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
+   char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
    SCIP_Real             branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
    char                  linearizeheursol;   /**< whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution) */
 
@@ -6273,7 +6273,7 @@ SCIP_Real getViolSplitWeight(
 
    switch( conshdlrdata->branchviolsplit )
    {
-      case 'e' :  /* evenly: everyone gets the same score */
+      case 'u' :  /* uniform: everyone gets the same score */
          return 1.0;
 
       case 'm' :  /* midness of solution: 0.5 if in middle of domain, 0.05 if close to lower or upper bound */
@@ -7072,6 +7072,9 @@ void scoreBranchingCandidates(
             else
                pscostup = SCIP_INVALID;
 
+            /* TODO if both are valid, we get pscostdown*pscostup, but does this compare well with vars were only pscostdown or pscostup is used?
+             * maybe we should use (pscostdown+pscostup)/2 or sqrt(pscostdown*pscostup) ?
+             */
             if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
                cands[c].pscost = SCIP_INVALID;
             else if( pscostdown == SCIP_INVALID )
@@ -7152,9 +7155,9 @@ void scoreBranchingCandidates(
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(dual)", conshdlrdata->branchdualweight, cands[c].dual / maxscore.dual); )
       }
 
-      /* use pseudo-costs, if we have some for at least half the candidates */
       if( maxscore.pscost > 0.0 )
       {
+         /* use pseudo-costs only if available */
          if( cands[c].pscost != SCIP_INVALID )
          {
             cands[c].weighted += conshdlrdata->branchpscostweight * cands[c].pscost / maxscore.pscost;
@@ -10961,11 +10964,11 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/scoreagg",
          "how to aggregate several branching scores given for the same expression: 'a'verage, 'm'aximum, 's'um",
-         &conshdlrdata->branchscoreagg, TRUE, 's', "ams", NULL, NULL) );
+         &conshdlrdata->branchscoreagg, FALSE, 's', "ams", NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branching/violsplit",
-         "method used to split violation in expression onto variables: 'e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width",
-         &conshdlrdata->branchviolsplit, TRUE, 'm', "emdl", NULL, NULL) );
+         "method used to split violation in expression onto variables: 'u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width",
+         &conshdlrdata->branchviolsplit, FALSE, 'm', "umdl", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostreliable",
          "minimum pseudo-cost update count required to consider pseudo-costs reliable",

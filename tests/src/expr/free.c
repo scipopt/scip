@@ -33,7 +33,7 @@
 static SCIP* scip;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
-static const int BIG = 100;
+#define BIG 100
 
 static
 void setup(void)
