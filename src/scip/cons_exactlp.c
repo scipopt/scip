@@ -17928,9 +17928,6 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       int nconsvars;
       int requiredsize;
 
-      SCIPerrorMessage("creating constrains after presolving not supported in exact solving mode yet \n");
-      SCIPABORT();
-
       SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
 
       nconsvars = nvars;
@@ -17938,7 +17935,7 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvals, vals, nconsvars) );
 
       /* get active variables for new constraint */
-      //SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, nconsvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, consvars, consvals, &nconsvars, nconsvars, constant, &requiredsize, TRUE) );
 
       /* if space was not enough we need to resize the buffers */
       if( requiredsize > nconsvars )
@@ -18012,7 +18009,6 @@ SCIP_RETCODE SCIPcreateConsExactLinear(
       assert(consdata != NULL);
 
       RatFreeBuffer(SCIPbuffer(scip), &constant);
-      RatFreeBlockArray(SCIPblkmem(scip), &consvals, nconsvars);
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
    }

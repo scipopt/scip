@@ -2172,8 +2172,6 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    SCIP_Real sidevalchg;
    int i;
 
-   assert(row->lppos >= 0);
-
    /* update local flag */
    aggrrow->local = aggrrow->local || row->local;
 
@@ -2182,16 +2180,19 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
 
    i = aggrrow->nrows++;
 
-   if( aggrrow->nrows > aggrrow->rowssize )
+   if (row->lppos >= 0)
    {
-      int newsize = SCIPcalcMemGrowSize(scip, aggrrow->nrows);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowsinds, aggrrow->rowssize, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->slacksign, aggrrow->rowssize, newsize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowweights, aggrrow->rowssize, newsize) );
-      aggrrow->rowssize = newsize;
+      if( aggrrow->nrows > aggrrow->rowssize )
+      {
+         int newsize = SCIPcalcMemGrowSize(scip, aggrrow->nrows);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowsinds, aggrrow->rowssize, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->slacksign, aggrrow->rowssize, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowweights, aggrrow->rowssize, newsize) );
+         aggrrow->rowssize = newsize;
+      }
+      aggrrow->rowsinds[i] = SCIProwGetLPPos(row);
+      aggrrow->rowweights[i] = weight;
    }
-   aggrrow->rowsinds[i] = SCIProwGetLPPos(row);
-   aggrrow->rowweights[i] = weight;
 
    if( sidetype == -1 )
    {
@@ -2214,22 +2215,14 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
          uselhs = FALSE;
    }
    rowexact = SCIProwGetRowExact(row);
-   if( !SCIProwExactHasFpRelax(rowexact) )
-   {
-      SCIPerrorMessage("cannot aggregate row that admits no fp relaxation");
-      SCIPABORT();
-   }
-   else if( SCIProwExactGetRowRhs(rowexact) != NULL && !uselhs )
-      userow = SCIProwExactGetRowRhs(rowexact);
-   else
-      userow = row;
 
    previousroundmode = SCIPintervalGetRoundingMode();
 
    if( uselhs )
    {
       SCIPintervalSetRoundingModeDownwards();
-      aggrrow->slacksign[i] = -1;
+      if (row->lppos >= 0)
+         aggrrow->slacksign[i] = -1;
       sideval = row->lhs - row->constant;
       if( row->integral )
          sideval = ceil(sideval); /* row is integral: round left hand side up */
@@ -2237,7 +2230,8 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    else
    {
       SCIPintervalSetRoundingModeUpwards();
-      aggrrow->slacksign[i] = +1;
+      if (row->lppos >= 0)
+         aggrrow->slacksign[i] = +1;
       sideval = row->rhs - row->constant;
       if( row->integral )
          sideval = floor(sideval); /* row is integral: round right hand side up */
@@ -2389,6 +2383,31 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
       SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, scale * rhs);
    }
 
+   return SCIP_OKAY;
+}
+
+/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
+SCIP_RETCODE SCIPaggrRowAddObjectiveFunctionSafely(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             rhs,                /**< right-hand side of the artificial row */
+   SCIP_Real             scale               /**< scalar */
+   )
+{
+   SCIP_ROW row;
+   row.cols = SCIPgetLPCols(scip);
+   row.len = SCIPgetNLPCols(scip);
+   row.local = FALSE;
+   row.constant = 0;
+   row.rhs = rhs;
+   row.lppos = -1;
+   SCIPallocBufferArray(scip, &row.vals, row.len);
+   for (int i = 0; i < row.len; i++)
+   {
+      row.vals[i] = SCIPvarGetObj(row.cols[i]->var);
+   }
+   SCIP_CALL( SCIPaggrRowAddRowSafely(scip, aggrrow, &row, scale, -1) );
+   SCIPfreeBufferArray(scip, &row.vals);
    return SCIP_OKAY;
 }
 

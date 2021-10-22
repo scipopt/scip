@@ -62,6 +62,8 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "scip/scip_prob.h"
+#include "scip/scip_lp.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/struct_conflict.h"
@@ -72,8 +74,10 @@
 #include "scip/struct_tree.h"
 #include "scip/struct_var.h"
 #include "scip/tree.h"
+#include "scip/cuts.h"
 #include "scip/var.h"
 #include "scip/visual.h"
+#include "scip/scip_solvingstats.h"
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
@@ -791,15 +795,16 @@ SCIP_RETCODE addRowToAggrRow(
    assert(weight != 0.0);
 
    /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
-   if( weight < 0.0 )
+   SCIP_Bool negated = weight < 0.0;
+   assert( !negated || !SCIPsetIsInfinity(set, -row->lhs) );
+   assert( negated || !SCIPsetIsInfinity(set, row->rhs) );
+   if( set->exact_enabled )
    {
-      assert(!SCIPsetIsInfinity(set, -row->lhs));
-      SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, -1) );
+      SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1) );
    }
    else
    {
-      assert(!SCIPsetIsInfinity(set, row->rhs));
-      SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight, +1) );
+      SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight,  negated ? -1 : 1) );
    }
    SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
       row->local ? "local" : "global",
@@ -1422,7 +1427,11 @@ SCIP_RETCODE SCIPgetDualProof(
     * use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
     * infeasible
     */
-   SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - SCIPsetSumepsilon(set), 1.0) );
+
+   if (set->exact_enabled)
+      SCIP_CALL( SCIPaggrRowAddObjectiveFunctionSafely(set->scip, farkasrow, lp->cutoffbound - SCIPsetSumepsilon(set), 1.0) );
+   else
+      SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - SCIPsetSumepsilon(set), 1.0) );
 
    /* dual row: z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub}
     * process rows: add z^T{lhs,rhs} to the dual row's left hand side, and -(y-z)^TA to the dual row's coefficients
@@ -1558,6 +1567,8 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
+   if (set->exact_enabled)
+      return SCIP_OKAY;
    SCIP_VAR** vars;
    SCIP_VAR* var;
    SCIP_Real* curvarlbs;
@@ -1848,7 +1859,7 @@ SCIP_RETCODE conflictAnalyzeLP(
        * additional simplex iteration yields better results.
        */
       SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-      if( objval < lp->lpiobjlim )
+      if( objval < SCIPgetCutoffbound(set->scip) )
       {
          SCIP_RETCODE retcode;
 
@@ -1901,14 +1912,14 @@ SCIP_RETCODE conflictAnalyzeLP(
       assert(!SCIPlpDivingObjChanged(lp));
 
       SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-      if( objval < lp->lpiobjlim )
+      if( objval < SCIPgetCutoffbound(set->scip) )
       {
-         SCIPsetDebugMsg(set, " -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiobjlim);
+         SCIPsetDebugMsg(set, " -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n", objval, SCIPgetCutoffbound(set->scip));
          return SCIP_OKAY;
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiobjlim);
+         SCIPsetDebugMsg(set, " -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, SCIPgetCutoffbound(set->scip));
       }
    }
 
@@ -2005,7 +2016,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    if( !globalinfeasible && validdepth <= SCIPtreeGetEffectiveRootDepth(tree)
       && (((set->conf_useinflp == 'b' || set->conf_useinflp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP)
       || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING))
-      && !set->exact_enabled )
+      && !set->exact_enabled)
    {
       SCIP_Real* farkascoefs;
       SCIP_Real farkaslhs;
@@ -2019,7 +2030,7 @@ SCIP_RETCODE conflictAnalyzeLP(
                SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
 
          SCIP_CALL( SCIPlpiGetRealpar(lpi, SCIP_LPPAR_OBJLIM, &objlim) );
-         SCIPsetDebugMsg(set, " -> objective limit in LP solver: %g (in LP: %g)\n", objlim, lp->lpiobjlim);
+         SCIPsetDebugMsg(set, " -> objective limit in LP solver: %g (in LP: %g)\n", objlim, SCIPgetCutoffbound(set->scip));
       }
 #endif
 
@@ -2519,8 +2530,8 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
 
    /* LP conflict analysis is only valid, if all variables are known */
    assert( SCIPprobAllColsInLP(transprob, set, lp) );
-   assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
-      || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
+   //assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
+   //   || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPisGE(scip, SCIPgetLPObjval(set->scip), SCIPgetCutoffbound(set->scip))) );
 
    /* save status */
    storedsolvals.lpsolstat = lp->lpsolstat;
@@ -2557,8 +2568,8 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
          storedrowsolvals[r].dualsol = row->dualfarkas;
       else
       {
-         assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
-            (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
+         //assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+         //   (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
          storedrowsolvals[r].dualsol = row->dualsol;
       }
       storedrowsolvals[r].activity = row->activity;
@@ -2611,7 +2622,9 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
             row->dualfarkas = storedrowsolvals[r].dualsol;
          else
          {
-            assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT );
+            SCIP_Real objval = SCIPgetLPObjval(set->scip);
+            SCIP_Real cutoff = SCIPgetCutoffbound(set->scip);
+            assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsGE(set, objval, cutoff) );
             row->dualsol = storedrowsolvals[r].dualsol;
          }
          row->activity = storedrowsolvals[r].activity;

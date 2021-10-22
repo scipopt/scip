@@ -5,6 +5,7 @@
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_exactlp.h"
 #include "scip/cuts.h"
 #include "scip/history.h"
 #include "scip/lp.h"
@@ -917,19 +918,44 @@ SCIP_RETCODE createAndAddProofcons(
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsbndsuccess);
    else
       return SCIP_INVALIDCALL;
-
-   SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
-         FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
-         FALSE, TRUE, TRUE, FALSE) );
-
-   for( i = 0; i < nnz; i++ )
+   if (set->exact_enabled)
    {
-      int v = inds[i];
-      SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[v], coefs[i]) );
+      SCIP_Rational* lhs;
+      SCIP_Rational* rhs;
+      SCIP_Rational** coefs_exact;
+      SCIP_VAR** consvars;
+      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &lhs));
+      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &rhs));
+      SCIP_CALL(RatCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz));
+      SCIP_CALL(SCIPallocBufferArray(set->scip, &consvars, nnz));
+      for( i = 0; i < nnz; i++ )
+      {
+         consvars[i] = vars[inds[i]];
+         RatSetReal(coefs_exact[i], coefs[i]);
+      }
+      SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs, rhs,
+            FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
+            FALSE, TRUE, TRUE, FALSE) );
+      SCIPfreeBufferArray(set->scip, &consvars);
+      RatFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
+      RatFreeBuffer(SCIPbuffer(set->scip), &rhs);
+      RatFreeBuffer(SCIPbuffer(set->scip), &lhs);
+
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
+            FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
+            FALSE, TRUE, TRUE, FALSE) );
+      for( i = 0; i < nnz; i++ )
+      {
+         int v = inds[i];
+         SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[v], coefs[i]) );
+      }
    }
 
    /* do not upgrade linear constraints of size 1 */
-   if( nnz > 1 )
+   if( nnz > 1 && !set->exact_enabled)
    {
       upgdcons = NULL;
       /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
@@ -1423,7 +1449,7 @@ SCIP_RETCODE tightenDualproof(
    debugPrintViolationInfo(set, aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
-   if( set->conf_sepaaltproofs )
+   if( set->conf_sepaaltproofs && !set->exact_enabled )
    {
       SCIP_CALL( separateAlternativeProofs(conflict, set, stat, transprob, tree, blkmem, proofrow, curvarlbs, curvarubs,
             conflict->conflictset->conflicttype) );
@@ -1462,7 +1488,7 @@ SCIP_RETCODE tightenDualproof(
     * todo: check whether we also want to do that for bound exceeding proofs, but then we cannot update the
     *       conflict anymore
     */
-   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+   if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP && !set->exact_enabled )
    {
       /* remove all continuous variables that have equal global and local bounds (ub or lb depend on the sign)
        * from the proof
@@ -1512,7 +1538,8 @@ SCIP_RETCODE tightenDualproof(
    }
 
    /* apply coefficient tightening to initial proof */
-   tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
+   if (!set->exact_enabled)
+      tightenCoefficients(set, proofset, &nchgcoefs, &redundant);
 
    /* it can happen that the constraints is almost globally redundant w.r.t to the maximal activity,
     * e.g., due to numerics. in this case, we want to discard the proof
