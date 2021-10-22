@@ -15,6 +15,11 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
+# if changing these flags, also update GCCWARN/GXXWARN in make/make.project
+set(ADD_C_AND_CXX_FLAGS "-pedantic -Wall -W -Wno-unknown-warning-option -Wno-unknown-warning -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter")
+set(ADD_C_FLAGS "-Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized -Wno-initializer-overrides")
+set(ADD_CXX_FLAGS "-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi")
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
@@ -25,16 +30,17 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -shared-intel ")
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -shared-intel ")
    endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    # require at least gcc 4.8
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
+        message(WARNING "GCC version not supported, should be at least 4.8!")
+    endif()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS}")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS} ")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS}")
 endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
-   # require at least gcc 4.8
-   if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
-     message(WARNING "GCC version not supported, should be at least 4.8!")
-   endif()
-endif()
-
 
 set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
@@ -484,7 +490,7 @@ endif()
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
     message(STATUS "Finding ZIMPL")
-    find_package(ZIMPL 3.4.0 CONFIG REQUIRED)
+    find_package(ZIMPL 3.4.0 EXACT CONFIG REQUIRED)
     message(STATUS "Finding ZIMPL - found")
     set(SCIP_WITH_ZIMPL ON)
     include_directories(${ZIMPL_INCLUDE_DIRS})
