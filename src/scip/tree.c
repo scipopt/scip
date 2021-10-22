@@ -943,9 +943,11 @@ SCIP_RETCODE nodeReleaseParent(
 
       /* update the effective root depth
        * in reoptimization we must not increase the effective root depth
+       * the same goes for exact solving
        */
       assert(tree->effectiverootdepth >= 0);
-      if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth && !set->reopt_enable )
+      if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth
+            && !set->reopt_enable && !set->exact_enabled )
       {
          tree->effectiverootdepth++;
          SCIPsetDebugMsg(set, "unlinked node #%" SCIP_LONGINT_FORMAT " in depth %d -> new effective root depth: %d\n",
