@@ -163,6 +163,9 @@
 #define MAXSCALEDCOEFINTEGER            0 /**< maximal coefficient value after scaling if all variables are of integral
                                            *   type
                                            */
+#define MAXACTQ                     1e+06 /**< maximal quotient between full and partial activity such that
+                                           *   redundancy-based simplifications are allowed to be applied
+                                           */
 
 #define MAXVALRECOMP                1e+06 /**< maximal abolsute value we trust without recomputing the activity */
 #define MINVALRECOMP                1e-05 /**< minimal abolsute value we trust without recomputing the activity */
@@ -11517,6 +11520,8 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Real feastol;
    SCIP_Real newcoef;
    SCIP_Real absval;
+   SCIP_Real minact;
+   SCIP_Real maxact;
    SCIP_Real side;
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -11664,7 +11669,7 @@ SCIP_RETCODE simplifyInequalities(
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* get global activities */
-   consdataGetGlbActivityBounds(scip, consdata, FALSE, &minactsub, &maxactsub,
+   consdataGetGlbActivityBounds(scip, consdata, FALSE, &minact, &maxact,
       &isminrelax, &ismaxrelax, &isminsettoinfinity, &ismaxsettoinfinity);
 
    /* cannot work with infinite activities */
@@ -11673,13 +11678,15 @@ SCIP_RETCODE simplifyInequalities(
 
    assert(!isminrelax);
    assert(!ismaxrelax);
-   assert(maxactsub > minactsub);
-   assert(!SCIPisInfinity(scip, -minactsub));
-   assert(!SCIPisInfinity(scip, maxactsub));
+   assert(maxact > minact);
+   assert(!SCIPisInfinity(scip, -minact));
+   assert(!SCIPisInfinity(scip, maxact));
 
    v = 0;
    offsetv = -1;
    side = haslhs ? lhs : rhs;
+   minactsub = minact;
+   maxactsub = maxact;
 
    /* we now determine coefficients as large as the side of the constraint to retrieve a better reduction where we
     * do not need to look at the large coefficients
@@ -11774,6 +11781,7 @@ SCIP_RETCODE simplifyInequalities(
    if( nvars > 2 && SCIPisIntegral(scip, vals[v]) )
    {
       SCIP_Bool redundant = FALSE;
+      SCIP_Bool numericsok;
 
       gcd = (SCIP_Longint)(REALABS(vals[v]) + feastol);
       assert(gcd >= 1);
@@ -11882,8 +11890,13 @@ SCIP_RETCODE simplifyInequalities(
       SCIPdebugMsg(scip, "stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %" SCIP_LONGINT_FORMAT ", offset position for 'side' coefficients = %d\n",
             v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
 
+      /* to avoid inconsistencies due to numerics, check that the quotients of the full and partial activities have
+       * reasonable values */
+      numericsok = (REALABS(maxact)/REALABS(maxactsub) <= MAXACTQ && REALABS(maxactsub)/REALABS(maxact) <= MAXACTQ) &&
+            (REALABS(minact)/REALABS(minactsub) <= MAXACTQ && REALABS(minactsub)/REALABS(minact) <= MAXACTQ);
+
       /* check if we can remove redundant variables */
-      if( v < nvars && (redundant ||
+      if( v < nvars && numericsok && (redundant ||
                         (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
                         (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd)) )
       {
