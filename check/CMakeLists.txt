@@ -945,5 +945,8 @@ if (UNIX)
                             # I assume that this test takes longer than 2 seconds
                             #
                             )
+
 endif (UNIX)
 endif()
+
+set_tests_properties(FastMIP-presolving_off-bell5.mps PROPERTIES TIMEOUT 3000)
