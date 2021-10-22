@@ -4047,7 +4047,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
     * linear sum on the left hand side.
     *
     * Note: this last step generalizes a technique that appeared in the classic cons_quadratic.
-    * The idea of that technique was to to borrow a bilinear term expr_k expr_l when propagating expr_l and the quadratic
+    * The idea of that technique was to borrow a bilinear term expr_k expr_l when propagating expr_l and the quadratic
     * function for expr_k was simple enough.
     * Since in P_l we only consider the indices of expressions that appear multiplying expr_l as _second_ factor, we
     * would lose the bilinear terms expr_k * expr_l, which contributes to the dependency problem.
