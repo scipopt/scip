@@ -875,6 +875,7 @@ Fixed bugs
 - do not transfer dual reductions to main SCIP in sepa_rapidlearning if strong dual reductions are forbidden
 - fixed a bug in cons_setppc.c:removeDoubleAndSingletonsAndPerformDualpresolve() which led to wrong variable aggregations
 - added missing redundancy check to coefficient tightening routine in cons_varbound that led to wrong variable locks
+- added a check of numerics to avoid wrong reductions in cons_linear.c:simplifyInequalities()
 
 Miscellaneous
 -------------
