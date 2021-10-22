@@ -85,7 +85,7 @@ struct dynamic_programming_border
    STP_Vectype(int)      global_partstarts;  /**< CSR like starts of partitions in array "global_partitions" */
    STP_Vectype(SCIP_Real) global_partcosts;  /**< costs of each partition */
    STP_Vectype(int)      global_predparts;   /**< predecessor partitions; of size global_npartitions */
-   STP_Vectype(STP_Bool) global_partsUseExt; /**< partition uses extension node? */
+   STP_Vectype(SCIP_Bool) global_partsUseExt; /**< partition uses extension node? */
    SCIP_Real             global_obj;         /**< objective */
    int                   global_npartitions; /**< number of global partitions */
    int                   global_partcap;     /**< capacity of array global_partitions */
