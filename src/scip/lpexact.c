@@ -3863,6 +3863,70 @@ SCIP_RETCODE SCIPlpExactSetCutoffbound(
    return SCIP_OKAY;
 }
 
+/** maximal number of verblevel-high messages about numerical trouble in LP that will be printed
+ * when this number is reached and display/verblevel is not full, then further messages are suppressed in this run
+ */
+#define MAXNUMTROUBLELPMSGS 10
+
+/** prints message about numerical trouble
+ *
+ * If message has verblevel at most high and display/verblevel is not full,
+ * then the message is not printed if already MAXNUMTROUBLELPMSGS messages
+ * were printed before in the current run.
+ */
+static
+void lpExactNumericalTroubleMessage(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VERBLEVEL        verblevel,          /**< verbosity level of message */
+   const char*           formatstr,          /**< message format string */
+   ...                                       /**< arguments to format string */
+   )
+{
+   va_list ap;
+
+   assert(verblevel > SCIP_VERBLEVEL_NONE);
+   assert(verblevel <= SCIP_VERBLEVEL_FULL);
+   assert(set->disp_verblevel <= SCIP_VERBLEVEL_FULL);
+
+   if( set->disp_verblevel < SCIP_VERBLEVEL_FULL )
+   {
+      if( verblevel <= SCIP_VERBLEVEL_HIGH )
+      {
+         /* if already max number of messages about numerical trouble in LP on verblevel at most high, then skip message */
+         if( stat->nnumtroublelpmsgs > MAXNUMTROUBLELPMSGS )
+            return;
+
+         /* increase count on messages with verblevel high */
+         ++stat->nnumtroublelpmsgs ;
+      }
+
+      /* if messages wouldn't be printed, then return already */
+      if( verblevel > set->disp_verblevel )
+         return;
+   }
+
+   /* print common begin of message */
+   SCIPmessagePrintInfo(messagehdlr,
+      "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in exact LP %" SCIP_LONGINT_FORMAT " -- ",
+      stat->nnodes, stat->nexlp);
+
+   /* print individual part of message */
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintInfo(messagehdlr, NULL, formatstr, ap);
+   va_end(ap);
+
+   /* warn that further messages will be suppressed */
+   if( set->disp_verblevel < SCIP_VERBLEVEL_FULL && verblevel <= SCIP_VERBLEVEL_HIGH && stat->nnumtroublelpmsgs > MAXNUMTROUBLELPMSGS )
+   {
+      SCIPmessagePrintInfo(messagehdlr, " -- further messages will be suppressed (use display/verblevel=5 to see all)");
+   }
+
+   /* print closing new-line */
+   SCIPmessagePrintInfo(messagehdlr, "\n");
+}
+
 /** flushes the exact LP and solves it with the primal or dual simplex algorithm, depending on the current basis feasibility */
 static
 SCIP_RETCODE lpExactFlushAndSolve(
@@ -4115,6 +4179,22 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    SCIP_CALL( lpExactFlushAndSolve(lpexact, blkmem, set, messagehdlr, stat,
          prob, eventqueue, harditlim, fromscratch, lperror) );
    assert(!(*lperror) || !lp->solved);
+
+   SCIPlpExactGetIterations(lpexact, &iterations);
+
+   if( usefarkas )
+      SCIPstatAdd(stat, set, niterationsexlpinf, iterations);
+   else
+      SCIPstatAdd(stat, set, niterationsexlp, iterations);
+
+   /* if not already done, solve again from scratch */
+   if( *lperror )
+   {
+      lpExactNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve exact lp again from scratch");
+      *lperror = FALSE;
+      SCIP_CALL( lpExactFlushAndSolve(lpexact, blkmem, set, messagehdlr, stat,
+         prob, eventqueue, harditlim, TRUE, lperror) );
+   }
 
    SCIPlpExactGetIterations(lpexact, &iterations);
    if( usefarkas )

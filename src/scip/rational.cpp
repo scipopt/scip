@@ -648,6 +648,7 @@ void RatSetReal(
       res->val = real;
       res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
+   assert(RatIsEqualReal(res, real));
 }
 
 /** resets the flag isfprepresentable to SCIP_ISFPREPRESENTABLE_UNKNOWN */

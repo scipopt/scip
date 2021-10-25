@@ -2665,8 +2665,9 @@ SCIP_RETCODE addOneRowSafely(
 
       sideval = userow->lhs - userow->constant;
       /* row is integral? round left hand side up */
-      if( userow->integral )
-         sideval = ceil(sideval);
+      /** @todo exip: we can't certify this yet so we have to disable it */
+      // if( userow->integral )
+      //    sideval = ceil(sideval);
    }
    else
    {
@@ -2679,8 +2680,9 @@ SCIP_RETCODE addOneRowSafely(
 
       sideval = userow->rhs - userow->constant;
       /* row is integral? round right hand side down */
-      if( userow->integral )
-         sideval = floor(sideval);
+      /** @todo exip: we can't certify this yet so we have to disable it */
+      // if( userow->integral )
+      //    sideval = floor(sideval);
    }
 
    SCIPintervalSetRoundingModeUpwards();
