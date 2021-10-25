@@ -381,7 +381,7 @@ void generalStarCheckExit(
    int* const nodes_mark = genstar->nodes_mark;
    const int degree = StpVecGetSize(genstar->edges_all);
 
-   assert(EQ(degree, StpVecGetSize(genstar->edges_head) + StpVecGetSize(genstar->edges_tail)));
+   assert(degree == (StpVecGetSize(genstar->edges_head) + StpVecGetSize(genstar->edges_tail)));
 
    for( int i = 0; i < degree; i++ )
    {
