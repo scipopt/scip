@@ -3299,20 +3299,7 @@ SCIP_RETCODE shortenConss(
          ++(*ndelconss);
 
          /* reset redundants array to FALSE */
-#if 1
          BMSclearMemoryArray(redundants, consdata->nvars);
-#else
-         if( nredvars > 0 )
-         {
-            for( v = consdata->nvars - 1; v >= 0; --v )
-            {
-               if( redundants[v] )
-               {
-                  redundants[v] = FALSE;
-               }
-            }
-         }
-#endif
          continue;
       }
 
