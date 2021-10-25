@@ -874,6 +874,7 @@ Fixed bugs
 - fixed potential overflow in cuts.c:evaluateLiftingFunctionKnapsack()
 - do not transfer dual reductions to main SCIP in sepa_rapidlearning if strong dual reductions are forbidden
 - fixed a bug in cons_setppc.c:removeDoubleAndSingletonsAndPerformDualpresolve() which led to wrong variable aggregations
+- fixed a bug in cons_logicor.c regarding fixed variables that were not removed
 
 Miscellaneous
 -------------
