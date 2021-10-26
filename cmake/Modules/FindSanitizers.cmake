@@ -27,20 +27,23 @@
 option(SANITIZE_LINK_STATIC "Try to link static against sanitizers." Off)
 
 
-
-
 set(FIND_QUIETLY_FLAG "")
 if (DEFINED Sanitizers_FIND_QUIETLY)
     set(FIND_QUIETLY_FLAG "QUIET")
 endif ()
 
+if(SANITIZE_ADDRESS)
 find_package(ASan ${FIND_QUIETLY_FLAG})
+endif()
+if(SANITIZE_THREAD)
 find_package(TSan ${FIND_QUIETLY_FLAG})
+endif()
+if(SANITIZE_MEMORY)
 find_package(MSan ${FIND_QUIETLY_FLAG})
+endif()
+if(SANITIZE_UNDEFINED)
 find_package(UBSan ${FIND_QUIETLY_FLAG})
-
-
-
+endif()
 
 function(sanitizer_add_blacklist_file FILE)
     if(NOT IS_ABSOLUTE ${FILE})
@@ -79,9 +82,17 @@ function(add_sanitizers ...)
         endif ()
 
         # Add sanitizers for target.
-        add_sanitize_address(${TARGET})
-        add_sanitize_thread(${TARGET})
-        add_sanitize_memory(${TARGET})
-        add_sanitize_undefined(${TARGET})
+        if(SANITIZE_ADDRESS)
+           add_sanitize_address(${TARGET})
+        endif()
+        if(SANITIZE_THREAD)
+           add_sanitize_thread(${TARGET})
+        endif()
+        if(SANITIZE_MEMORY)
+           add_sanitize_memory(${TARGET})
+        endif()
+        if(SANITIZE_UNDEFINED)
+           add_sanitize_undefined(${TARGET})
+        endif()
 	endforeach ()
 endfunction(add_sanitizers)
