@@ -2314,11 +2314,13 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
 
    /* inform what we can do */
    *participating = enforcebelow ? SCIP_NLHDLR_METHOD_SEPABELOW : SCIP_NLHDLR_METHOD_SEPAABOVE;
-   *enforcing |= *participating;
 
-   /* TODO/FIXME if we relax expr <= auxvar to expr <= ub(auxvar) (detectSocQuadratric*),
-    * then we should declare that we enforce this only if expr is the root of a constraint (cons != NULL)
+   /* if we have been successful on sqrt(...) <= auxvar, then we enforce
+    * otherwise, expr is quadratic and we separate for expr <= ub(auxvar) only
+    * in that case, we enforce only if expr is the root of a constraint, since then replacing auxvar by up(auxvar) does not relax anything (auxvar <= ub(auxvar) is the only constraint on auxvar)
     */
+   if( (SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) == 0.5) || (cons != NULL) )
+      *enforcing |= *participating;
 
    return SCIP_OKAY;
 }
