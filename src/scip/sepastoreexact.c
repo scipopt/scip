@@ -134,7 +134,7 @@ void SCIPsepastoreExactEndInitialLP(
 }
 
 /** adds cut to separation storage and captures it */
-SCIP_RETCODE SCIPsepastoreexAddCut(
+SCIP_RETCODE SCIPsepastoreExactAddCut(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -260,8 +260,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
       {
          assert(SCIProwGetOriginSepa(fplp->rows[i]) != NULL);
 
-         SCIP_CALL( SCIProwExactCreateFromRow(&rowexact, fplp->rows[i], blkmem, set, stat, eventqueue, prob, lpexact) );
-         SCIP_CALL( SCIPsepastoreexAddCut(sepastoreexact, blkmem, set, stat, eventqueue, lpexact, rowexact) );
+         SCIP_CALL( SCIPsepastoreExactAddCut(sepastoreexact, blkmem, set, stat, eventqueue, lpexact, rowexact) );
          SCIP_CALL( SCIPlpExactAddRow(lpexact, blkmem, set, eventqueue, rowexact, SCIProwGetLPDepth(fplp->rows[i])) );
          SCIP_CALL( SCIProwExactRelease(&rowexact, blkmem, set, lpexact) );
       }

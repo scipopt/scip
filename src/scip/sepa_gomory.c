@@ -52,6 +52,7 @@
 #include "scip/cuts.h"
 #include "scip/certificate.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
@@ -62,6 +63,7 @@
 #include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -287,11 +289,9 @@ SCIP_RETCODE addCut(
          {
             SCIP_ROW** aggrrows;
             SCIP_Real* aggweights;
-            SCIP_MIRINFO* splitinfo;
-            SCIP_Bool uselhs;
             SCIP_ROW** rows;
             int nrows;
-            int c = 0;
+            int counter = 0;
 
             nrows = SCIPgetNLPRows(scip);
             rows = SCIPgetLPRows(scip);
@@ -310,9 +310,9 @@ SCIP_RETCODE addCut(
                   if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[inds[j]])) && weights[inds[j]] >= 0.0)
                         || (SCIPisInfinity(scip, -SCIProwGetLhs(rows[inds[j]])) && weights[inds[j]] <= 0.0) )
                      continue;
-                  aggweights[c] = weights[inds[j]];
-                  aggrrows[c] = rows[inds[j]];
-                  c++;
+                  aggweights[counter] = weights[inds[j]];
+                  aggrrows[counter] = rows[inds[j]];
+                  counter++;
                }
             }
             else
@@ -325,9 +325,9 @@ SCIP_RETCODE addCut(
                      if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[j])) && weights[j] >= 0.0)
                            || (SCIPisInfinity(scip, -SCIProwGetLhs(rows[j])) && weights[j] <= 0.0) )
                         continue;
-                     aggweights[c] = weights[j];
-                     aggrrows[c] = rows[j];
-                     c++;
+                     aggweights[counter] = weights[j];
+                     aggrrows[counter] = rows[j];
+                     counter++;
                   }
                }
 
@@ -352,6 +352,18 @@ SCIP_RETCODE addCut(
 
       /* flush all changes before adding the cut */
       SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+      if( SCIPisExactSolve(scip) )
+      {
+         SCIP_ROWEXACT* rowexact;
+
+         SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
+
+         rowexact = SCIProwGetRowExact(cut);
+
+         SCIP_CALL( SCIPaddRowExact(scip, rowexact) );
+         SCIP_CALL( SCIPreleaseRowExact(scip, &(rowexact)) );
+      }
 
       if( SCIProwGetNNonz(cut) == 0 && !SCIPisExactSolve(scip) )
       {
@@ -692,7 +704,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       int ninds = -1;
       int cutnnz;
       int cutrank;
-      int j;
 
       if( basisfrac[i] == 0.0 )
          break;
