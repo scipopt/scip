@@ -1422,7 +1422,7 @@ SCIP_RETCODE SCIPcertificatePrintMirSplit(
    SCIP_PROB*            prob,               /**< SCIP problem data */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_ROW*             row,                /**< row that split should be printed for */
-   SCIP_Real*            frac                /**< the fractionality of the rhs of the final split gets returned here */
+   SCIP_Rational*        frac                /**< the fractionality of the rhs of the final split gets returned here */
    )
 {
    SCIP_MIRINFO* mirinfo;
@@ -1437,7 +1437,8 @@ SCIP_RETCODE SCIPcertificatePrintMirSplit(
 
    mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
 
-   *frac = mirinfo->rhs - floor(mirinfo->rhs);
+   RatSetReal(frac, mirinfo->rhs);
+   RatDiffReal(frac, frac, floor(mirinfo->rhs));
    vars = SCIPprobGetVars(prob);
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &splitrhs) );
@@ -1690,7 +1691,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIP_Longint contposindex;
    SCIP_Longint leftdisjunctionindex;
    SCIP_Longint rightdisjunctionindex;
-   SCIP_Real frac;
+   SCIP_Rational* frac;
    int arraypos;
 
    /* check if certificate output should be created */
@@ -1702,6 +1703,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    assert(SCIPhashmapExists(certificate->aggrinfohash, (void*) row));
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &frac) );
 
    index = certificate->indexcounter;
    rowexact = SCIProwGetRowExact(row);
@@ -1722,10 +1724,11 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    contposindex = certificate->indexcounter - 1;
 
    /* compute the correct split from the aggregation row, and print the two assumptions (\xi \le \lfloor \beta \rfloor), and  (\xi \ge \lfloor \beta + 1 \rfloor) */
-   SCIP_CALL( SCIPcertificatePrintMirSplit(set, prob, certificate, row, &frac) );
+   SCIP_CALL( SCIPcertificatePrintMirSplit(set, prob, certificate, row, frac) );
 
    leftdisjunctionindex = certificate->indexcounter - 2;
    rightdisjunctionindex = certificate->indexcounter - 1;
+
 
    /* print the mir cut with proof 1 * (\xi \le \lfloor \beta \rfloor) - (1/1-f)(\nu \ge 0) */
    assert(rowexact != NULL);
@@ -1741,7 +1744,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    /* - (1/1-f)(\nu \ge 0) */
    SCIPcertificatePrintProofMessage(certificate, " %d ", contposindex);
-   RatSetReal(tmpval, frac);
+   RatSet(tmpval, frac);
    RatDiffReal(tmpval, tmpval, 1.0);
    RatInvert(tmpval, tmpval);
    SCIPcertificatePrintProofRational(certificate, tmpval, 10);
@@ -1749,23 +1752,23 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
 
-   /* print the mir cut with prooef (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
+   /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintRow(certificate, rowexact);
 
    SCIPcertificatePrintProofMessage(certificate, " { lin weak 2 ");
 
    /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
    SCIPcertificatePrintProofMessage(certificate, "%d ", rightdisjunctionindex);
-   RatSetReal(tmpval, frac);
+   RatSet(tmpval, frac);
    RatDiffReal(tmpval, tmpval, 1.0); /* f - 1 */
-   RatDivReal(tmpval, tmpval, frac); /* (f-1)/f */
+   RatDiv(tmpval, tmpval, frac); /* (f-1)/f */
    RatInvert(tmpval, tmpval);  /* f/(f-1) = -f/(1-f) */
    SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
    /* (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintProofMessage(certificate, " %d ", aggrrowindex);
    RatNegate(tmpval, tmpval);
-   RatDivReal(tmpval, tmpval, frac);
+   RatDiv(tmpval, tmpval, frac);
    SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
@@ -1779,8 +1782,9 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    SCIP_CALL( SCIPcertificateFreeAggrInfo(set, certificate, lp, aggrinfo, row) );
 
-   SCIPcertificatePrintProofMessage(certificate, FALSE, "\n");
+   SCIPcertificatePrintProofMessage(certificate, "\n");
 
+   RatFreeBuffer(set->buffer, &frac);
    RatFreeBuffer(set->buffer, &tmpval);
 
    return SCIP_OKAY;
@@ -2625,10 +2629,10 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
    SCIP_ROWEXACT* rowexact;
    SCIP_VAR** vars;
    SCIP_VAR** contposvars;
-   SCIP_Real frac;
    SCIP_MIRINFO* mirinfo;
    SCIP_Rational** coeffracs;
    SCIP_Rational* workfrac;
+   SCIP_Rational* frac;
    int* varrounddowns;
    int ndeletedcontvars;
    int nrounddowns;
@@ -2639,8 +2643,16 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval2) );
-   SCIP_CALL( SCIPsetAllocCleanBufferArray(set, &splitupperextend, SCIPprobGetNVars(prob)) );
-   SCIP_CALL( SCIPsetAllocCleanBufferArray(set, &contupperextend, SCIPprobGetNVars(prob)) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &splitupperextend, SCIPprobGetNVars(prob)) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &contupperextend, SCIPprobGetNVars(prob)) );
+
+   /* ensure arrays are really clean */
+   for( i = 0; i < SCIPprobGetNVars(prob); i++ )
+   {
+      splitupperextend[i] = 0;
+      contupperextend[i] = 0;
+   }
+
    vars = SCIPprobGetVars(prob);
 
    SCIPdebugMessage("printing transformed aggrrow: ");
@@ -2649,7 +2661,6 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
    SCIPcertificatePrintProofMessage(certificate, "L%d %c ", certificate->indexcounter, 'L');
 
    mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
-   frac = mirinfo->rhs - floor(mirinfo->rhs);
    global = mirinfo->global;
    nrounddowns = 0;
    ndeletedcontvars = 0;
@@ -2657,8 +2668,11 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varrounddowns, SCIPaggrRowGetNNz(aggrrow)) );
    SCIP_CALL( RatCreateBufferArray(set->buffer, &coeffracs, SCIPaggrRowGetNNz(aggrrow)) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &workfrac) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &frac) );
 
    RatSetReal(tmpval, SCIPaggrRowGetRhs(aggrrow));
+   RatSetReal(frac, mirinfo->rhs); // mirinfo->rhs = cutrhs after bound-substitution = rhs of aggrrow + safe bound substitution
+   RatDiffReal(frac, frac, floor(mirinfo->rhs));
 
    /* populate the splitupperextend array */
    for( i = 0; i < mirinfo->nsplitvars; i++ )
@@ -2708,7 +2722,7 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
             RatNegate(workfrac, workfrac);
          }
          /* we round down integers with fractionality smaller than the rhs frac */
-         if( RatIsLEReal(workfrac, frac) && !RatIsZero(workfrac) )
+         if( RatIsLE(workfrac, frac) && !RatIsZero(workfrac) )
          {
             RatSet(coeffracs[nrounddowns], workfrac);
             if( !splitupperextend[varindex] )
@@ -2778,7 +2792,7 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
          }
          RatSetReal(tmpval, SCIPaggrRowGetValue(aggrrow, i));
          /* we round down integers with fractionality smaller than the rhs frac */
-         if( RatIsLEReal(workfrac, frac) )
+         if( RatIsLE(workfrac, frac) )
             RatRound(tmpval, tmpval, splitupperextend[varindex] ? SCIP_R_ROUND_UPWARDS : SCIP_R_ROUND_DOWNWARDS);
 
          SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
@@ -2786,6 +2800,7 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
       }
    }
 
+   RatFreeBuffer(set->buffer, &frac);
    RatFreeBuffer(set->buffer, &workfrac);
 
    /* print derivation: original row + bound constraints of rounded down integers */
@@ -2807,8 +2822,43 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
    RatFreeBufferArray(set->buffer, &coeffracs, SCIPaggrRowGetNNz(aggrrow));
    SCIPsetFreeBufferArray(set, &varrounddowns);
 
-   SCIPsetFreeCleanBufferArray(set, &contupperextend);
-   SCIPsetFreeCleanBufferArray(set, &splitupperextend);
+#ifdef SCIP_DISABLED_CODE
+   // compute the right frac exactly, should not be necessary since we get it from cutsTransformMIR
+   {
+      int j;
+      // start with rhs of aggrrow since that is what we use in the cut computation
+      RatSetReal(transrhs, SCIPaggrRowGetRhs(aggrrow));
+      // do the transformation as in cutsTransformMir, but do it exactly
+      for( j = 0; j < SCIPaggrRowGetNNz(aggrrow); j++ )
+      {
+         SCIP_Real aggrrowval;
+         SCIP_Rational* boundval;
+         SCIP_VAR* var;
+         int v;
+
+         aggrrowval = SCIPaggrRowGetValue(aggrrow, j);
+         v = SCIPaggrRowGetInds(aggrrow)[j];
+         var = SCIPprobGetVars(prob)[v];
+
+         if( contupperextend[v] )
+         {
+            boundval = SCIPvarGetUbGlobalExact(var);
+            RatAddProdReal(transrhs, boundval, -aggrrowval);
+         }
+         else
+         {
+            boundval = SCIPvarGetLbGlobalExact(var);
+            RatAddProdReal(transrhs, boundval, aggrrowval);
+         }
+      }
+
+      // transrhs = val - down(val)
+      RatDiffReal(transrhs, transrhs, floor(RatApproxReal(transrhs)));
+   }
+#endif
+
+   SCIPsetFreeBufferArray(set, &contupperextend);
+   SCIPsetFreeBufferArray(set, &splitupperextend);
    RatFreeBuffer(set->buffer, &tmpval2);
    RatFreeBuffer(set->buffer, &tmpval);
 
@@ -2832,6 +2882,17 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_ROWEXACT* rowexact;
    SCIP_VAR** vars;
    SCIP_VAR** contposvars;
+
+   /* if this aggregation depends on another no yet certified MIR cut, we need to print that first */
+   for( i = 0; i < naggrrows; i++ )
+   {
+      rowexact = SCIProwGetRowExact(aggrrows[i]);
+      assert(rowexact != NULL);
+      if( !SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact) )
+      {
+         SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, certificate, prob, aggrrows[i], 'L') );
+      }
+   }
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
    vars = SCIPprobGetVars(prob);
@@ -2874,10 +2935,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
       RatSetReal(tmpval, weights[i]);
 
       assert(rowexact != NULL);
-      if( !SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact) )
-      {
-         SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, certificate, prob, aggrrows[i], 'L') );
-      }
+      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact));
 
       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) rowexact);
 
@@ -3113,7 +3171,7 @@ SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
          mirinfo->splitvarinds[csplit] = i;
          csplit++;
       }
-      if( mirinfo->contcoefs[i] != 0.0 || mirinfo->contupperused[i] )
+      if( mirinfo->contcoefs[i] != 0.0 || mirinfo->splitcoefs[i] != 0 || mirinfo->contupperused[i] )
       {
          mirinfo->contcoefs[ccont] = mirinfo->contcoefs[i];
          mirinfo->contupperused[ccont] = mirinfo->contupperused[i];

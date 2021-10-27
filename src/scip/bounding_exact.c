@@ -1684,8 +1684,6 @@ SCIP_RETCODE projectShift(
       {
          for( i = 0; i < nrows + ncols; i++ )
          {
-            if( i < nrows && i >= nrowsps )
-               continue;
             RatMult(dualsol[i], dualsol[i], lambda1);
          }
          for( i = 0; i < nrows + ncols; i++ )

@@ -302,6 +302,10 @@ SCIP_RETCODE addCut(
             {
                for( j = 0; j < ninds; j++ )
                {
+                  if( SCIPisFeasZero(scip, weights[inds[j]]) || SCIProwIsModifiable(rows[inds[j]]) || SCIProwIsLocal(rows[inds[j]]) )
+                  {
+                     continue;
+                  }
                   /** @todo exip: if we get negative slacks to work this might need to be more sophisticated */
                   if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[inds[j]])) && weights[inds[j]] >= 0.0)
                         || (SCIPisInfinity(scip, -SCIProwGetLhs(rows[inds[j]])) && weights[inds[j]] <= 0.0) )
@@ -315,7 +319,7 @@ SCIP_RETCODE addCut(
             {
                for( j = 0; j < nrows; j++ )
                {
-                  if( !SCIPisFeasZero(scip, weights[j]) )
+                  if( !SCIPisFeasZero(scip, weights[j]) && !SCIProwIsModifiable(rows[j]) && !SCIProwIsLocal(rows[j]) )
                   {
                      /** @todo exip: if we get negative slacks to work this might need to be more sophisticated */
                      if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[j])) && weights[j] >= 0.0)
@@ -326,6 +330,8 @@ SCIP_RETCODE addCut(
                      c++;
                   }
                }
+
+               assert(c == aggrrow->nrows);
             }
             SCIP_CALL( SCIPaddCertificateAggregation(scip, cut, aggrrow, aggrrows, aggweights, aggrrow->nrows) );
             SCIPfreeBufferArray(scip, &aggweights);
@@ -735,6 +741,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          /* SCIPcalcMIR will only override the cut if its efficacy is larger than the one of the strongcg cut */
          SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
             minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+
+         /** @todo exip: remove this when we allow local cuts */
+         if( SCIPisExactSolve(scip) && cutislocal )
+            success = FALSE;
 
          if( success || strongcgsuccess )
          {
