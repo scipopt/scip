@@ -20,6 +20,8 @@
  * @author Benjamin Mueller
  * @author Felipe Serrano
  * @author Stefan Vigerske
+ *
+ * For additional documentation on this constraint handler, see also the SCIP 8 release report.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -241,8 +241,9 @@ void extInitRedCostArraysPc(
    }
 }
 
+#ifdef SCIP_DISABLED
 /** initializes to default for PC */
-static inline
+static
 void extInitRedCostArraysPcWithBase(
    const GRAPH*          graph,              /**< the graph */
    int                   base,               /**< the base */
@@ -261,6 +262,7 @@ void extInitRedCostArraysPcWithBase(
       vbase3[i] = base;
    }
 }
+#endif
 
 
 static

@@ -5913,11 +5913,14 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
          SCIP_VAR* var;
+         SCIP_CONS* constoupdate;
          int deleteconsindex = -1;
 
+         constoupdate = cons;
          var = consdata->vars[v];
          assert(var != NULL);
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+         assert(!SCIPconsIsDeleted(cons));
 
          aggregated = FALSE;
          nuplocks = SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL);
@@ -6269,7 +6272,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                }
 
                /* change pointer for deletion */
-               cons = usefulconss[consindex];
+               constoupdate = usefulconss[consindex];
                assert(deleteconsindex == -1);
             }
          }
@@ -6283,21 +6286,21 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             {
                assert(deleteconsindex < 0);
 
-               SCIP_CALL( delCoefPos(scip, cons, v) );
+               SCIP_CALL( delCoefPos(scip, constoupdate, v) );
                ++(*nchgcoefs);
             }
             else if( nuplocks == 1 && ndownlocks == 1 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
             {
                assert(deleteconsindex < 0);
 
-               SCIP_CALL( delCoefPos(scip, cons, v) );
+               SCIP_CALL( delCoefPos(scip, constoupdate, v) );
                ++(*nchgcoefs);
 
                SCIPdebugMsg(scip, "changing constraint <%s> from set-partitioning to set-packing, due to multi-aggregation\n", SCIPconsGetName(cons));
 
                chgtype[c] = TRUE;
 
-               SCIP_CALL( setSetppcType(scip, cons, SCIP_SETPPCTYPE_PACKING) );
+               SCIP_CALL( setSetppcType(scip, constoupdate, SCIP_SETPPCTYPE_PACKING) );
                ++(*nchgsides);
             }
             else
@@ -6313,10 +6316,10 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                else
                {
                   SCIPdebugMsg(scip, "2: deleting redundant constraint <%s>, due to multi-aggregation\n", SCIPconsGetName(cons));
-                  SCIPdebugPrintCons(scip, cons, NULL);
+                  SCIPdebugPrintCons(scip, constoupdate, NULL);
 
                   assert(!SCIPconsIsDeleted(cons));
-                  SCIP_CALL( SCIPdelCons(scip, cons) );
+                  SCIP_CALL( SCIPdelCons(scip, constoupdate) );
                }
                ++(*ndelconss);
             }
