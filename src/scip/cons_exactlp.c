@@ -1125,9 +1125,10 @@ SCIP_RETCODE consdataPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
+   char rationalbuffer[SCIP_MAXSTRLEN];
+
    assert(scip != NULL);
    assert(consdata != NULL);
-   char rationalbuffer[SCIP_MAXSTRLEN];
 
    /* print left hand side for ranged rows */
    if( !RatIsNegInfinity(consdata->lhs)
@@ -2358,8 +2359,6 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
    SCIP_Real sum;
    SCIP_Real mu;
    SCIP_Real inf;
-   SCIP_ROWEXACT* row;
-   SCIP_ROW* fprow;
    SCIP_Bool success;
    int v;
 
@@ -3170,14 +3169,7 @@ SCIP_RETCODE printCertificateConsLinear(
    SCIP_CERTIFICATE* certificate;
    SCIP_CONSDATA* consdata;
    SCIP_ROWEXACT* row;
-   SCIP_COLEXACT** cols;
-   SCIP_VAR* var;
-   SCIP_Rational** vals;
-   SCIP_Rational* lhs;
-   SCIP_Rational* rhs;
-   SCIP_Rational* quotient;
    SCIP_Rational* correctedside;
-   SCIP_Bool isupper;
    int* varsindex;
    int i;
    void* image;
@@ -7291,9 +7283,7 @@ SCIP_RETCODE checkCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real absviolfp;
    SCIP_Rational* activity;
-   SCIP_Rational* violation;
    SCIP_Bool success;
 
    assert(scip != NULL);
@@ -7308,7 +7298,6 @@ SCIP_RETCODE checkCons(
 
    *violated = FALSE;
    activity = consdata->activity;
-   violation = consdata->violation;
 
    /* only check exact constraint if fp cons is feasible enough */
    if( (consdata->rowexact == NULL || checklprows) && !RatIsEqual(consdata->lhs, consdata->rhs) )
@@ -7591,13 +7580,12 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMsg(scip, "adding relaxation of linear constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIPdebug( SCIP_CALL( SCIPprintRowex(scip, consdata->rowexact, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRowExact(scip, consdata->rowexact, NULL)) );
       /* if presolving is turned off, the row might be trivial */
       if ( !RatIsNegInfinity(consdata->lhs) || !RatIsInfinity(consdata->rhs) )
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->rowlhs, FALSE, cutoff) );
-         SCIP_CALL( SCIPsepastoreexAddCut(scip->sepastoreexact, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
-            scip->lpexact, consdata->rowexact) );
+         SCIP_CALL( SCIPaddRowExact(scip, consdata->rowexact) );
       }
 #ifndef NDEBUG
       else
@@ -7628,7 +7616,6 @@ SCIP_RETCODE separateCons(
    SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff was found */
    )
 {
-   SCIP_CONSDATA* consdata;
    SCIP_Bool violated;
    int oldncuts;
 
@@ -7637,9 +7624,7 @@ SCIP_RETCODE separateCons(
    assert(cons != NULL);
    assert(cutoff != NULL);
 
-   consdata = SCIPconsGetData(cons);
    assert(ncuts != NULL);
-   assert(consdata != NULL);
 
    oldncuts = *ncuts;
    *cutoff = FALSE;
@@ -13033,8 +13018,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqExactLinearcons)
    SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
-   SCIP_Real cons1scale;
-   SCIP_Real cons2scale;
    int i;
 
    assert(key1 != NULL);
