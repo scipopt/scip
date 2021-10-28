@@ -44,7 +44,7 @@
 #define CONCAVE_NLHDLR_ENFOPRIORITY    40
 
 #define DEFAULT_DETECTSUM             FALSE
-#define DEFAULT_PREFEREXTENDED        TRUE
+#define DEFAULT_EXTENDEDFORM          TRUE
 #define DEFAULT_CVXQUADRATIC_CONVEX   TRUE
 #define DEFAULT_CVXQUADRATIC_CONCAVE  FALSE
 #define DEFAULT_CVXSIGNOMIAL          TRUE
@@ -81,7 +81,7 @@ struct SCIP_NlhdlrData
 
    /* parameters */
    SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a non-quadratic sum */
-   SCIP_Bool             preferextended;     /**< whether to prefer extended formulations */
+   SCIP_Bool             extendedform;       /**< whether to create extended formulations instead of looking for maximal possible subexpression */
 
    /* advanced parameters (maybe remove some day) */
    SCIP_Bool             cvxquadratic;       /**< whether to use convexity check on quadratics */
@@ -528,7 +528,7 @@ DECL_CURVCHECK(curvCheckSignomial)
 
    /* put children that are not power on stack
     * grow child for children that are power and put this child on stack
-    * if preferextended, then require children with more than one child to be linear
+    * if extendedform, then require children to be linear
     * unless they are linear, an auxvar will be introduced for them and thus they will be handled as var here
     */
    for( i = 0; i < nfactors; ++i )
@@ -544,7 +544,7 @@ DECL_CURVCHECK(curvCheckSignomial)
       }
       assert(SCIPexprGetNChildren(child) == 0);
 
-      if( nlhdlrdata->preferextended && SCIPexprGetNChildren(child) > 1 )
+      if( nlhdlrdata->extendedform )
       {
          SCIPexprSetCurvature(child, SCIP_EXPRCURV_LINEAR);
 #ifdef SCIP_DEBUG
@@ -761,6 +761,10 @@ DECL_CURVCHECK(curvCheckProductComposite)
    /* push this h onto stack for further checking */
    SCIP_CALL( exprstackPush(scip, stack, 1, &(SCIPexprGetChildren(nlexpr)[1-fidx])) );
 
+   /* if we prefer extended formulations, then we always want h() to be linear */
+   if( nlhdlrdata->extendedform )
+      hcurv = SCIP_EXPRCURV_LINEAR;
+
    /* h-child of product should have curvature hcurv */
    SCIPexprSetCurvature(SCIPexprGetChildren(nlexpr)[1-fidx], hcurv);
 
@@ -839,11 +843,11 @@ DECL_CURVCHECK(curvCheckExprhdlr)
    assert(SCIPexprGetChildren(nlexpr) != NULL);
    assert(SCIPexprGetNChildren(nlexpr) == nchildren);
 
-   /* If more than one child and we prefer extended formulations, then require all children to be linear.
+   /* If we prefer extended formulations, then require all children to be linear.
     * Unless they are, auxvars will be introduced and they will be handles as variables, which can be an
     * advantage in the context of extended formulations.
     */
-   if( nchildren > 1 && nlhdlrdata->preferextended )
+   if( nlhdlrdata->extendedform )
    {
       int i;
       for( i = 0; i < nchildren; ++i )
@@ -2043,9 +2047,9 @@ SCIP_RETCODE SCIPincludeNlhdlrConvex(
       "whether to run convexity detection when the root of an expression is a non-quadratic sum",
       &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONVEX_NLHDLR_NAME "/preferextended",
-      "whether to prefer extended formulations",
-      &nlhdlrdata->preferextended, FALSE, DEFAULT_PREFEREXTENDED, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONVEX_NLHDLR_NAME "/extendedform",
+      "whether to create extended formulations instead of looking for maximal convex expressions",
+      &nlhdlrdata->extendedform, FALSE, DEFAULT_EXTENDEDFORM, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONVEX_NLHDLR_NAME "/cvxquadratic",
       "whether to use convexity check on quadratics",
@@ -2401,7 +2405,7 @@ SCIP_RETCODE SCIPincludeNlhdlrConcave(
       &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
 
    /* "extended" formulations of a concave expressions can give worse estimators */
-   nlhdlrdata->preferextended = FALSE;
+   nlhdlrdata->extendedform = FALSE;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" CONCAVE_NLHDLR_NAME "/cvxquadratic",
       "whether to use convexity check on quadratics",
@@ -2456,7 +2460,7 @@ SCIP_RETCODE SCIPhasExprCurvature(
    nlhdlrdata.isnlhdlrconvex = TRUE;
    nlhdlrdata.evalsol = NULL;
    nlhdlrdata.detectsum = TRUE;
-   nlhdlrdata.preferextended = FALSE;
+   nlhdlrdata.extendedform = FALSE;
    nlhdlrdata.cvxquadratic = TRUE;
    nlhdlrdata.cvxsignomial = TRUE;
    nlhdlrdata.cvxprodcomp = TRUE;
