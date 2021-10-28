@@ -15,31 +15,36 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
+
 # if changing these flags, also update GCCWARN/GXXWARN in make/make.project
-set(ADD_C_AND_CXX_FLAGS "-pedantic -Wall -W -Wno-unknown-warning-option -Wno-unknown-warning -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter")
-set(ADD_C_FLAGS "-Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized -Wno-initializer-overrides")
-set(ADD_CXX_FLAGS "-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi")
+set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wno-unknown-warning-option -Wno-unknown-warning -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
+set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized -Wno-initializer-overrides)
+set(ADD_CXX_FLAGS -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
+   add_compile_options(-fp-model precise)
    # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
    # this happens with the cplex static lib
    if(LPS MATCHES "cpx")
-     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -shared-intel ")
-     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -shared-intel ")
+       add_compile_options(-shared-intel) # for c and cxx
    endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     # require at least gcc 4.8
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
         message(WARNING "GCC version not supported, should be at least 4.8!")
     endif()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS}")
+    add_compile_options(${ADD_C_AND_CXX_FLAGS})
+    add_compile_options(
+        "$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>"
+    )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS} ")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADD_C_AND_CXX_FLAGS} ${ADD_CXX_FLAGS}")
+    add_compile_options(${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS})
+    add_compile_options(
+        "$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>"
+    )
 endif()
 
 set(SCIP_VERSION_MAJOR 8)
@@ -163,10 +168,12 @@ endif()
 
 # Visual Studio compiler with static runtime libraries
 if(MSVC AND MT)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
+    add_compile_options(
+        $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:DEBUG>>:/MTd>
+        $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RELEASE>>:/MT>
+        $<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:DEBUG>>:/MTd>
+        $<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:RELEASE>>:/MT>
+        )
 endif()
 
 #set expression interpreter file that should be used
@@ -198,8 +205,10 @@ elseif(TPI STREQUAL "omp")
     set(tpisources tpi/tpi_openmp.c)
     find_package(OpenMP REQUIRED)
     set(THREAD_LIBRARIES "")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    add_compile_options(
+        "$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>"
+    )
 else()
     message(FATAL_ERROR "TPI option has wrong value")
 endif()
@@ -444,7 +453,9 @@ if(SYM STREQUAL "bliss")
         set(sym symmetry/compute_symmetry_bliss.cpp)
         set(SYM_LIBRARIES ${BLISS_LIBRARIES})
         set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BLISS_DEFINITIONS}")
+        add_compile_options(
+            "$<$<COMPILE_LANGUAGE:CXX>:${BLISS_DEFINITIONS}>"
+        )
     else()
         message(STATUS "Finding BLISS - not found")
         set(sym symmetry/compute_symmetry_none.cpp)
