@@ -502,6 +502,8 @@
 #define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION  1 /**< strategy to select which dual columns to use for lp to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
 #define SCIP_DEFAULT_EXACT_LPINFO          FALSE/**< should the exact LP solver display status messages? */
+#define SCIP_DEFAULT_CUTMAXDENOMSIZE       10e7 /**< maximal denominator in cut coefficient, leading to slightly weaker
+                                                 *   but numerically better cuts (0: disabled) */
 
 /* certificate output */
 #define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate output file, or "-" if no output should be created */
@@ -2707,6 +2709,10 @@ SCIP_RETCODE SCIPsetCreate(
          "should the exact LP solver display status messages?",
          &(*set)->exact_lpinfo, FALSE, SCIP_DEFAULT_EXACT_LPINFO,
          NULL, NULL) );
+      SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "exact/cutmaxdenomsize",
+         "maximal denominator in cut coefficient, leading to slightly weaker but numerically better cuts (0: disabled)",
+         &(*set)->exact_cutmaxdenomsize, FALSE, SCIP_DEFAULT_CUTMAXDENOMSIZE, 0, SCIP_LONGINT_MAX, NULL, NULL) );
 #endif
 
    /* CERTIFICATE tool parameters */

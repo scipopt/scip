@@ -3284,6 +3284,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
    SCIP_Real rhschange;
 
    assert(row->fprow != NULL);
+   assert(set->exact_cutmaxdenomsize > 0);
 
    SCIPdebugMessage("approximating row ");
    SCIPdebug(SCIPprintRowExact(set->scip, row, NULL));
@@ -3298,7 +3299,6 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       SCIP_VAR* var = row->cols[i]->fpcol->var;
       SCIP_Rational* val = row->vals[i];
 
-      maxdenom = 1e7;
       maxboundval = 1e5;
 
       /** @todo exip: we only need one bound if we can control the direction we look in */
@@ -3311,7 +3311,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       if( RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval) )
          continue;
 
-      RatComputeApproximation(tmpval, val, maxdenom);
+      RatComputeApproximation(tmpval, val, set->exact_cutmaxdenomsize);
 
       RatDiff(difference, tmpval, val);
       if( RatIsPositive(difference) )
@@ -3414,7 +3414,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIProwExactAddConstant(workrow, blkmem, set, stat, eventqueue, lp, tmpval);
 
    /** @todo exip: replace this with a proper parameter */
-   if( TRUE )
+   if( set->exact_cutmaxdenomsize > 0 )
    {
       SCIP_CALL( SCIProwExactControlEncodingLength(workrow, set, stat, blkmem, eventqueue, lp) );
    }

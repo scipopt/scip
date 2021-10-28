@@ -52,7 +52,6 @@ extern "C" {
 
 static const char posinf[4] = "inf";
 static const char neginf[5] = "-inf";
-static char stringbuf[SCIP_MAXSTRLEN];
 static SCIP_Rational buffer;
 static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
 
@@ -108,7 +107,7 @@ SCIP_RETCODE RatCreateBuffer(
 SCIP_RETCODE RatCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   char*                 desc                /**< the String describing the rational */
+   const char*           desc                /**< the String describing the rational */
 )
 {
    SCIP_CALL( RatCreateBlock(mem, rational) );
@@ -349,7 +348,6 @@ void RatSetGMPArray(
    int                   len                 /** array length */
    )
 {
-   int i;
    for( int i = 0; i < len; i++ )
    {
       mpq_init(mpqaaray[i]);
@@ -364,7 +362,6 @@ void RatSetArrayGMP(
    int                   len                 /** array length */
    )
 {
-   int i;
    for( int i = 0; i < len; i++ )
    {
       RatSetGMP(ratarray[i], mpqarray[i]);
@@ -377,7 +374,6 @@ void RatClearGMPArray(
    int                   len                 /** array length */
    )
 {
-   int i;
    for( int i = 0; i < len; i++ )
    {
       mpq_clear(mpqarray[i]);
@@ -528,8 +524,6 @@ void RatSetInt(
    SCIP_Longint          denom               /**< the denominator */
    )
 {
-   char buf[SCIP_MAXSTRLEN];
-
    assert(res != NULL);
    assert(denom != 0);
 
@@ -607,7 +601,7 @@ void RatSetString(
 
          if( decimalpos != std::string::npos )
          {
-            for( int i = 0; i < exponentpos; ++i )
+            for( size_t i = 0; i < exponentpos; ++i )
                denominator.append("0");
 
             s.erase(decimalpos, 1);
@@ -1066,7 +1060,6 @@ void RatMIN(
    SCIP_Rational*        op2                 /**< the second rational */
    )
 {
-   SCIP_Bool positive;
    assert(op1 != NULL && op2 != NULL);
 
    if( op1->isinf )
@@ -1098,7 +1091,6 @@ void RatMAX(
    SCIP_Rational*        op2                 /**< the second rational */
    )
 {
-   SCIP_Bool positive;
    assert(op1 != NULL && op2 != NULL);
 
    if( op1->isinf )
@@ -1555,6 +1547,7 @@ std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
    return os;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /* convert va_arg format string into std:string */
 static
 std::string RatString(const char *format, va_list arguments)
@@ -1583,9 +1576,11 @@ std::string RatString(const char *format, va_list arguments)
          case 'f':
             dval = va_arg(arguments, SCIP_Real);
             stream << boost::format("%f") % dval;
+            break;
          case 'g':
             dval = va_arg(arguments, SCIP_Real);
             stream << boost::format("%g") % dval;
+            break;
          case 'e':
             dval = va_arg(arguments, SCIP_Real);
             stream << boost::format("%e") % dval;
@@ -1615,6 +1610,7 @@ std::string RatString(const char *format, va_list arguments)
    std::string ret = stream.str();
    return ret;
 }
+#endif
 
 /* printf extension for rationals (not supporting all format options) */
 void RatPrintf(const char *format, ...)
@@ -1756,8 +1752,6 @@ SCIP_Real RatRoundReal(
    )
 {
    SCIP_Real realapprox;
-   SCIP_Longint nom, denom;
-   SCIP_ROUNDMODE_RAT current;
 
    assert(rational != NULL);
 
@@ -1942,6 +1936,115 @@ SCIP_Real RatApproxReal(
    return retval;
 }
 
+/** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
+void RatComputeApproximation(
+   SCIP_Rational*        res,
+   SCIP_Rational*        src,
+   SCIP_Longint          maxdenom
+   )
+{
+   int done = 0;
+
+   Integer temp;
+   Integer td;
+   Integer tn;
+   Integer Dbound = maxdenom;
+
+   /* The following represent the continued fraction values a_i, the cont frac representation and p_i/q_i, the convergents */
+   Integer a0;
+   Integer ai;
+
+   /* here we use p[2]=pk, p[1]=pk-1,p[0]=pk-2 and same for q */
+   Integer p[3];
+   Integer q[3];
+
+   RatCanonicalize(src);
+
+   if(src->val == 0)
+   {
+      RatSetReal(res, 0.0);
+      return;
+   }
+
+   /* setup n and d for computing a_i the cont. frac. rep */
+   tn = numerator(src->val);
+   td = denominator(src->val);
+
+   if( td <= Dbound )
+   {
+      res->val = Rational(tn, td);
+   }
+   else
+   {
+      temp = 1;
+      divide_qr(tn, td, a0, temp);
+
+      /* if value is almost integer, we use the next best integer */
+      if( fabs(temp.convert_to<double>() / tn.convert_to<double>()) < 1.0 / maxdenom )
+      {
+         res->val = a0;
+         res->isinf = FALSE;
+         res->isfprepresentable = TRUE;
+
+         return;
+      }
+
+      tn = td;
+      td = temp;
+
+      divide_qr(tn, td, ai, temp);
+
+      tn = td;
+      td = temp;
+
+      p[1] = a0;
+      p[2] = 1 + a0 * ai;
+
+      q[1] = 1;
+      q[2] = ai;
+
+      done = 0;
+
+      /* if q is already big, skip loop */
+      if( q[2] > Dbound )
+         done = 1;
+
+      int cfcnt = 2;
+
+      while(!done && td != 0)
+      {
+         /* update everything: compute next ai, then update convergents */
+
+         /* update ai */
+         divide_qr(tn, td, ai, temp);
+         tn = td;
+         td = temp;
+
+         /* shift p,q */
+         q[0] = q[1];
+         q[1] = q[2];
+         p[0] = p[1];
+         p[1] = p[2];
+
+         /* compute next p,q */
+         p[2] = p[0] + p[1] * ai;
+         q[2] = q[0] + q[1] * ai;
+
+         if( q[2] > Dbound )
+            done = 1;
+
+         cfcnt++;
+      }
+
+      res->val = Rational(p[1],q[1]);
+   }
+
+   assert(abs(res->val - src->val) < 1e-6);
+
+   res->isinf = FALSE;
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+}
+
 /*
  * Vector arithmetic (to shorten code and provide benefits due to
  * usage of expression Templates)
@@ -2041,7 +2144,7 @@ void SCIPrationalarrayGetVal(
    assert(rationalarray != NULL);
    assert(idx >= 0);
    if( rationalarray->firstidx == -1 || idx < rationalarray->firstidx
-      || idx >= rationalarray->vals.size() + rationalarray->firstidx )
+      || (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
       RatSetInt(result, 0, 1);
    else
       RatSet(result, &rationalarray->vals[idx - rationalarray->firstidx]);
@@ -2070,7 +2173,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
       rationalarray->firstidx = idx;
       rationalarray->vals[0] = *val;
    }
-   else if( idx >= rationalarray->vals.size() + rationalarray->firstidx )
+   else if( (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
    {
       int ninserts = idx - rationalarray->vals.size() - rationalarray->firstidx + 1;
       SCIP_Rational r;
@@ -2097,7 +2200,7 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
 
    if( RatIsZero(incval) )
       return SCIP_OKAY;
-   else if( idx < rationalarray->firstidx || idx >= rationalarray->vals.size() + rationalarray->firstidx )
+   else if( idx < rationalarray->firstidx || (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
       SCIP_CALL( SCIPrationalarraySetVal(rationalarray, idx, incval) );
    else
    {

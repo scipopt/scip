@@ -3168,7 +3168,6 @@ int SCIPcertificatePrintUnsplitting(
 
          ind[0] = nodedata->derindex_inherit;
 
-         RatCreateBuffer(set->buffer, &lowerbound);
          RatCreateBuffer(set->buffer, &val);
 
          RatSet(lowerbound, nodedata->derbound_inherit);
@@ -3177,7 +3176,6 @@ int SCIPcertificatePrintUnsplitting(
          SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
          SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);
 
-         RatFreeBuffer(set->buffer, &lowerbound);
          RatFreeBuffer(set->buffer, &val);
       }
    }

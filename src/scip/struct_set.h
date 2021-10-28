@@ -608,6 +608,8 @@ struct SCIP_Set
    int                   exact_psdualcolselection; /**< strategy to select which dual columns to use for lp to compute interior point
                                               *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
    SCIP_Bool             exact_lpinfo;       /**< should exact the LP solver display status messages? */
+   SCIP_Longint          exact_cutmaxdenomsize; /**< maximal denominator in cut coefficient, leading to slightly
+                                              *   weaker but numerically better cuts (0: disabled) */
 
    /* CERTIFICATE tool settings */
    char*                 certificate_filename; /**< name of the CERTIFICATE Tool output file, or - if no output should be created */
