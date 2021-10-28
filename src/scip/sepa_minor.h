@@ -20,7 +20,7 @@
  *
  * This separator detects all principal minors of the matrix \f$ xx' \f$ for which all auxiliary variables \f$ X \f$
  * exist, i.e., two indices \f$ i \neq j \f$ such that \f$ X_{ii} \f$, \f$ X_{jj} \f$, and \f$ X_{ij} \f$ exist. Because
- * \f$ xx' - X \f$ is required to be positive semi-definite, it follows that the matrix
+ * \f$ X - xx' \f$ is required to be positive semi-definite, it follows that the matrix
  *
  * \f[
  *    A(x,X) = \begin{bmatrix} 1 & x_i & x_j \\ x_i & X_{ii} & X_{ij} \\ x_j & X_{ij} & X_{jj} \end{bmatrix}
