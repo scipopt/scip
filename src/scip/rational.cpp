@@ -1755,6 +1755,8 @@ SCIP_Real RatRoundReal(
 
    assert(rational != NULL);
 
+   realapprox = 0;
+
    if( rational->isinf )
       return (rational->val.sign() * infinity);
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )

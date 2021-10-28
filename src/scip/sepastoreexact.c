@@ -196,7 +196,6 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    )
 {
    SCIP_LP* fplp;
-   SCIP_ROW** fprows;
    SCIP_ROWEXACT* rowexact;
    int* rowdset;
    int nrowsfp;
@@ -211,13 +210,10 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
 
    assert(fplp != NULL);
 
-   fprows = SCIPlpGetRows(fplp);
    nrowsfp = SCIPlpGetNRows(fplp);
    nrowsex = SCIPlpExactGetNRows(lpexact);
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowdset, lpexact->nrows) );
-
-   assert(fprows != NULL);
 
    remove = FALSE;
 

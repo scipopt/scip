@@ -5153,7 +5153,6 @@ SCIP_RETCODE cutsSubstituteMIR(
    SCIP_ROW** rows;
    SCIP_Real QUAD(onedivoneminusf0);
    SCIP_ROUNDMODE previousroundmode;
-   SCIP_MIRINFO* mirinfo;
    int i;
 
    assert(scip != NULL);
@@ -5176,14 +5175,6 @@ SCIP_RETCODE cutsSubstituteMIR(
       SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
       SCIPintervalSetRoundingModeDownwards();
       SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
-
-      if( SCIPisCertificateActive(scip) )
-      {
-         mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
-         assert(mirinfo != NULL);
-      }
-      else
-         mirinfo = NULL;
    }
    else
    {

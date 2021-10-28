@@ -158,6 +158,7 @@ void checkLinks(
 #define checkLinks(lp) /**/
 #endif
 
+#ifndef NDEBUG
 /** checks if the exact column and its fpcol are consistent */
 SCIP_Bool colExactInSync(
    SCIP_COLEXACT*        colexact,           /**< exact column */
@@ -165,6 +166,7 @@ SCIP_Bool colExactInSync(
    SCIP_MESSAGEHDLR*     msg                 /**< message handler */
    )
 {
+
    SCIP_COL* fpcol;
 
    assert(colexact != NULL);
@@ -217,6 +219,7 @@ SCIP_Bool rowExactInSync(
 
    return TRUE;
 }
+#endif
 
 /** checks if the exact lp and lp are consistent (same number of rows/cols, and all cols/rows in sync) */
 static
@@ -226,6 +229,7 @@ SCIP_Bool lpExactInSync(
    SCIP_MESSAGEHDLR*     msg                 /**< message handler */
    )
 {
+#ifndef NDEBUG
    int i;
    SCIP_LP* fplp;
    assert(lpexact != NULL);
@@ -244,6 +248,7 @@ SCIP_Bool lpExactInSync(
    {
       assert(colExactInSync(lpexact->cols[i], set, msg));
    }
+#endif
 
    return TRUE;
 }
@@ -5675,7 +5680,6 @@ void SCIProwExactRecalcPseudoActivity(
    )
 {
    SCIP_COLEXACT* colexact;
-   SCIP_COL* col;
    SCIP_ROW* row;
 
    int i;
@@ -5690,14 +5694,13 @@ void SCIProwExactRecalcPseudoActivity(
    RatSet(rowexact->pseudoactivity, rowexact->constant);
    for( i = 0; i < row->len; ++i )
    {
-      col = row->cols[i];
       colexact = rowexact->cols[i];
 
-      assert(col != NULL);
+      assert(colexact->fpcol != NULL);
       assert(colexact != NULL);
       assert((i < row->nlpcols) == (row->linkpos[i] >= 0
-         && col->lppos >= 0));
-      assert(col->var != NULL);
+         && colexact->fpcol->lppos >= 0));
+      assert(colexact->fpcol->var != NULL);
       assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
 
       RatAddProd(rowexact->pseudoactivity, rowexact->vals[i], SCIPcolExactGetBestBound(colexact));
