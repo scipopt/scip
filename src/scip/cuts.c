@@ -2400,13 +2400,14 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunctionSafely(
    row.local = FALSE;
    row.constant = 0;
    row.rhs = rhs;
+   row.lhs = -SCIPinfinity(scip);
    row.lppos = -1;
    SCIPallocBufferArray(scip, &row.vals, row.len);
    for (int i = 0; i < row.len; i++)
    {
       row.vals[i] = SCIPvarGetObj(row.cols[i]->var);
    }
-   SCIP_CALL( SCIPaggrRowAddRowSafely(scip, aggrrow, &row, scale, -1) );
+   SCIP_CALL( SCIPaggrRowAddRowSafely(scip, aggrrow, &row, scale, 1) );
    SCIPfreeBufferArray(scip, &row.vals);
    return SCIP_OKAY;
 }

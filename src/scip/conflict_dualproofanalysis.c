@@ -39,6 +39,7 @@
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/visual.h"
+
 /* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
  * 2^53 = 9007199254740992
  */
@@ -933,6 +934,7 @@ SCIP_RETCODE createAndAddProofcons(
          consvars[i] = vars[inds[i]];
          RatSetReal(coefs_exact[i], coefs[i]);
       }
+      //SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, prob, certificate, aggrinfo->aggrrow, aggrinfo->aggrrows, aggrinfo->weights, naggrrows) );
       SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs, rhs,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
             FALSE, TRUE, TRUE, FALSE) );
