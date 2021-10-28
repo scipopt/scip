@@ -38,6 +38,8 @@
 #include "rectlu_factor.h"
 #include "rectlu.h"
 
+#pragma GCC diagnostic ignored "-Wpedantic"
+
 #ifdef SCIP_WITH_GMP
 static QSnum_type qsnum_zeroLpNum;
 static QSnum_type qsnum_oneLpNum;

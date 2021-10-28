@@ -417,6 +417,27 @@ SCIP_RETCODE SCIProwExactAddCoef(
    SCIP_Rational*        val                 /**< value of coefficient */
    );
 
+/** deletes coefficient from row */
+SCIP_RETCODE SCIProwExactDelCoef(
+   SCIP_ROWEXACT*        row,                /**< row to be changed */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_COLEXACT*        col                 /**< coefficient to be deleted */
+   );
+
+/** changes or adds a coefficient to an LP row */
+SCIP_RETCODE SCIProwExactChgCoef(
+   SCIP_ROWEXACT*        row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_COLEXACT*        col,                /**< LP column */
+   SCIP_Rational*        val                 /**< value of coefficient */
+   );
+
 /** increases value of an existing or nonexisting coefficient in an LP column */
 SCIP_RETCODE SCIProwExactIncCoef(
    SCIP_ROWEXACT*        row,                /**< LP row */
@@ -426,6 +447,17 @@ SCIP_RETCODE SCIProwExactIncCoef(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_COLEXACT*        col,                /**< LP column */
    SCIP_Rational*        incval              /**< valpelue to add to the coefficient */
+   );
+
+/** changes constant value of a row */
+SCIP_RETCODE SCIProwExactChgConstant(
+   SCIP_ROWEXACT*        row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_Rational*        constant            /**< new constant value */
    );
 
 /** returns the feasibility of a row in the current LP solution: negative value means infeasibility */
@@ -795,11 +827,6 @@ SCIP_RETCODE SCIPlpExactFreeState(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
-
-/** gets solution status of current exact LP */
-SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
-   SCIP_LPEXACT*         lpexact             /**< current LP exact data */
-    );
 
 /** starts exact LP diving and saves bounds and objective values of columns to the current nodes's values */
 SCIP_RETCODE SCIPlpExactStartDive(

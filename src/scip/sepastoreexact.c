@@ -109,6 +109,7 @@ SCIP_RETCODE SCIPsepastoreExactFree(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** informs separation storage that the setup of the initial LP starts now */
 void SCIPsepastoreExactStartInitialLP(
    SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
@@ -132,6 +133,7 @@ void SCIPsepastoreExactEndInitialLP(
 
    sepastoreexact->initiallp = FALSE;
 }
+#endif
 
 /** adds cut to separation storage and captures it */
 SCIP_RETCODE SCIPsepastoreExactAddCut(
@@ -144,7 +146,6 @@ SCIP_RETCODE SCIPsepastoreExactAddCut(
    SCIP_ROWEXACT*        cut                 /**< separated cut */
    )
 {
-   SCIP_Bool redundant;
    int pos;
 
    assert(sepastoreexact != NULL);
@@ -197,12 +198,9 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    SCIP_LP* fplp;
    SCIP_ROW** fprows;
    SCIP_ROWEXACT* rowexact;
-   SCIP_CONS* origcons;
    int* rowdset;
    int nrowsfp;
    int nrowsex;
-   int nreleases;
-   int nadded;
    int i;
    SCIP_Bool remove;
 
@@ -210,8 +208,6 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
       return SCIP_OKAY;
 
    fplp = lpexact->fplp;
-   nreleases = 0;
-   nadded = 0;
 
    assert(fplp != NULL);
 

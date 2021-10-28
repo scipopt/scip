@@ -492,7 +492,6 @@ SCIP_RETCODE addConsTerm(
          if( SCIPisExactSolve(scip) )
          {
             SCIP_VAR* scipvar;
-            SCIP_Real scipval;
             SCIP_Rational* scipvalrat;
 
             /* due to technical reasons, we do not add singleton constraints but immediately transform them to variable bounds */
@@ -1046,8 +1045,6 @@ SCIP_RETCODE addVar(
    /* create variable */
    if( SCIPisExactSolve(scip) )
    {
-      char strlb[SCIP_MAXSTRLEN];
-      char strub[SCIP_MAXSTRLEN];
       // todo: create exact variable with lbrat/ubrat
       SCIPdebugMessage("zimpl reader: added new variable");
       SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );

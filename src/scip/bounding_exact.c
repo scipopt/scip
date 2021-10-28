@@ -1206,7 +1206,6 @@ SCIP_RETCODE projectShift(
    int ncols;
    int currentrow;
    int shift;
-   int startt, endt, setupt, violt, rectlut, projt, shiftt, cleanupt;
    SCIP_Bool isfeas;
 
    /* project-and-shift method:
@@ -1249,8 +1248,6 @@ SCIP_RETCODE projectShift(
          stat->nprojshiftobjlim++;
       SCIPclockStart(stat->provedfeaspstime, set);
    }
-
-   startt = clock();
 
    SCIPdebugMessage("calling projectShift()\n");
 
@@ -1310,8 +1307,6 @@ SCIP_RETCODE projectShift(
    }
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &isupper, nrows + ncols) );
-
-   setupt = clock();
 
    /* recover the objective coefs and approximate solution value of dual solution;
     * dual vars of lhs constraints (including -inf) and rhs constraints (including +inf),
@@ -1462,8 +1457,6 @@ SCIP_RETCODE projectShift(
          isfeas = FALSE;
    }
 
-   violt = clock();
-
    /* isfeas is equal to one only if approximate dual solution is already feasible for the dual */
    if( !isfeas )
    {
@@ -1502,8 +1495,6 @@ SCIP_RETCODE projectShift(
          printf(", position=%d\n", projshiftdata->projshiftbasis[i]);
       }
 #endif
-
-      rectlut = clock();
 
       /* projection step: compute bold(y)=y^+[z 0];
        * save the corrected components in the correction vector; reset the dualsol-vector to 0
@@ -1549,7 +1540,6 @@ SCIP_RETCODE projectShift(
             }
          }
       }
-      projt = clock();
 
 #ifdef PS_OUT
       printf("updated dual solution:\n");
@@ -1677,7 +1667,6 @@ SCIP_RETCODE projectShift(
             RatAdd(dualsol[i], dualsol[i], tmp);
          }
       }
-      shiftt = clock();
 
 #ifdef PS_OUT
       printf("projected and shifted dual solution (should be an exact dual feasible solution)\n");
@@ -1846,16 +1835,6 @@ SCIP_RETCODE projectShift(
    RatFreeBuffer(set->buffer, &lambda1);
    RatFreeBuffer(set->buffer, &tmp2);
    RatFreeBuffer(set->buffer, &tmp);
-
-   endt = clock();
-   // startt, endt, setupt, violt, rectlut, projt, shiftt;
-   //printf("Time used: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
-   //printf("Setup time    : %e, percentage %e \n", ((double) (setupt - startt)) / CLOCKS_PER_SEC, ((double) (setupt - startt)/(endt - startt)) );
-   //printf("Violation time: %e, percentage %e \n", ((double) (violt - setupt)) / CLOCKS_PER_SEC, ((double) (violt - setupt)/(endt - startt))   );
-   //printf("Rectlu time   : %e, percentage %e \n", ((double) (rectlut - violt)) / CLOCKS_PER_SEC, ((double) (rectlut - violt)/(endt - startt)) );
-   //printf("Proj time     : %e, percentage %e \n", ((double) (projt - rectlut)) / CLOCKS_PER_SEC, ((double) (projt - rectlut)/(endt - startt)) );
-   //printf("Shifting time : %e, percentage %e \n", ((double) (shiftt - projt)) / CLOCKS_PER_SEC, ((double) (shiftt - projt)/(endt - startt))   );
-   //printf("Cleanup time  : %e, percentage %e \n", ((double) (endt - shiftt)) / CLOCKS_PER_SEC, ((double) (endt - shiftt)/(endt - startt))     );
 
    if( usefarkas )
       SCIPclockStop(stat->provedinfeaspstime, set);

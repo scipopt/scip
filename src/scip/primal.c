@@ -2229,11 +2229,8 @@ SCIP_RETCODE primalAddSolExact(
 {
    SCIP_Bool stored;
    /* cppcheck-suppress unassignedVariable */
-   SCIP_EVENT event;
    SCIP_Rational* obj;
-   SCIP_Real fpobj;
    SCIP_SOL* sol;
-   int pos;
 
    assert(primal != NULL);
    assert(set != NULL);
@@ -2250,7 +2247,6 @@ SCIP_RETCODE primalAddSolExact(
    SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
 
    SCIPsolGetObjExact(sol, set, transprob, origprob, obj);
-   fpobj = RatRoundReal(obj, SCIP_R_ROUND_UPWARDS);
 
    SCIPsetDebugMsg(set, "insert exact primal solution %p with obj %g at position %d (replace=%u):\n",
       (void*)sol, RatApproxReal(obj), insertpos, replace);

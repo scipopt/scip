@@ -101,6 +101,7 @@
 #include "xml/xml.h"
 
 #include "scip/scip_lp.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"

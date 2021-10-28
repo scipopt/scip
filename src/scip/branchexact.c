@@ -38,6 +38,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/branch.h"
+#include "scip/branchexact.h"
 #include "scip/solve.h"
 #include "scip/visual.h"
 #include "scip/certificate.h"
@@ -278,7 +279,6 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
  * if x' is almost integral but not at a bound, this will branch (x <= x'-1, x == x', x >= x'+1);
  * not meant for branching on a continuous variables
  */
-
 SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */

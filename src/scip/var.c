@@ -5890,7 +5890,6 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
       }
       else
       {
-         SCIP_Real oldbd;
          if( RatIsGT(aggvarlb, aggvar->exactdata->glbdom.lb) )
          {
             RatSet(varlb, aggvar->exactdata->glbdom.lb);
@@ -5913,7 +5912,6 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
    RatDebugMessage("  new bounds: <%s> [%q,%q]   <%s> [%q,%q]\n",
       var->name, var->exactdata->glbdom.lb, var->exactdata->glbdom.ub, aggvar->name, aggvar->exactdata->glbdom.lb, aggvar->exactdata->glbdom.ub);
 
-FREE:
    RatFreeBuffer(set->buffer, &aggvarub);
    RatFreeBuffer(set->buffer, &aggvarlb);
    RatFreeBuffer(set->buffer, &varub);
@@ -6251,9 +6249,6 @@ SCIP_RETCODE SCIPvarAggregateExact(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
-   SCIP_VAR** vars;
-   SCIP_Rational** coefs;
-   SCIP_Rational** constants;
    SCIP_Rational* obj;
    SCIP_Rational* tmpval;
    SCIP_Real branchfactor;
@@ -6261,9 +6256,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
    int branchpriority;
    int nlocksdown[NLOCKTYPES];
    int nlocksup[NLOCKTYPES];
-   int nvbds;
    int i;
-   int j;
 
    assert(var != NULL);
    assert(aggvar != NULL);
@@ -6775,7 +6768,6 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    SCIP_Longint classstep;
    SCIP_Longint xsol;
    SCIP_Longint ysol;
-   SCIP_Bool success;
    SCIP_VARTYPE vartype;
 
 #define MAXDNOM 1000000LL
@@ -8205,6 +8197,7 @@ SCIP_Bool SCIPvarDoNotMultaggr(
 }
 
 /** adds correct bound-data to negated variable */
+static
 SCIP_RETCODE varNegateExactData(
    SCIP_VAR*             negvar,             /**< the negated variable */
    SCIP_VAR*             origvar,            /**< the original variable */
@@ -10875,7 +10868,8 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
          if( RatIsLT(newbound, SCIPvarGetUbLocalExact(var)) )
          {
             SCIP_CALL( SCIPvarChgUbLocalExact(var, blkmem, set, stat, lpexact, branchcand, eventqueue, newbound) );
-         }SCIP_Rational* childnewbound;
+         }
+
          SCIP_CALL( varProcessChgUbGlobalExact(var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable, newbound) );
       }
       break;
@@ -17329,8 +17323,6 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
    SCIP_Rational*        constant            /**< pointer to constant c in sum a*x + c */
    )
 {
-   SCIP_Rational* tmpval;
-
    assert(var != NULL);
    assert(scalar != NULL);
    assert(constant != NULL);
@@ -18092,9 +18084,6 @@ SCIP_Rational* SCIPvarGetPseudoSolExact_rec(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   SCIP_Real pseudosol;
-   int i;
-
    assert(var != NULL);
 
    switch( SCIPvarGetStatusExact(var) )
@@ -22988,6 +22977,7 @@ SCIP_Rational* SCIPvarGetLbOriginalExact(
 
       SCIPerrorMessage("negated var not implemented yet for rational data \n");
       SCIPABORT();
+      return NULL;
    }
 }
 
@@ -23030,6 +23020,7 @@ SCIP_Rational* SCIPvarGetUbOriginalExact(
 
       SCIPerrorMessage("negated var not implemented yet for rational data \n");
       SCIPABORT();
+      return NULL;
    }
 }
 
