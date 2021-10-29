@@ -7932,7 +7932,9 @@ SCIP_RETCODE propagateCons(
 
    // If the exact LP-row does not exist, we can not write a certificate, so we should not do propagation.
    if (consdata->rowexact == NULL)
-      return SCIP_OKAY;
+   {
+      SCIPwarningMessage(scip, NULL, "Certificates will not work, because we propagate a non-zero row\n");
+   }
 
    SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &minactivity));
    SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &maxactivity));

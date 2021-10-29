@@ -1546,7 +1546,7 @@ SCIP_RETCODE tightenDualproof(
    /* it can happen that the constraints is almost globally redundant w.r.t to the maximal activity,
     * e.g., due to numerics. in this case, we want to discard the proof
     */
-   if( redundant )
+   if( !set->exact_enabled && redundant )
    {
 #ifndef NDEBUG
       SCIP_Real eps = MIN(0.01, 10.0*set->num_feastol);
