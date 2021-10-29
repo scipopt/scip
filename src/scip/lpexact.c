@@ -5701,7 +5701,7 @@ void SCIProwExactRecalcPseudoActivity(
       assert((i < row->nlpcols) == (row->linkpos[i] >= 0
          && colexact->fpcol->lppos >= 0));
       assert(colexact->fpcol->var != NULL);
-      assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetStatus(colexact->fpcol->var) == SCIP_VARSTATUS_COLUMN);
 
       RatAddProd(rowexact->pseudoactivity, rowexact->vals[i], SCIPcolExactGetBestBound(colexact));
    }
