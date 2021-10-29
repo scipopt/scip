@@ -1738,6 +1738,7 @@ SCIP_RETCODE certificateTransAggrrow(
          }
          else if( !contupperextend[varindex] && RatIsPositive(workfrac) )
          {
+            RatNegate(workfrac, workfrac);
             RatAddProd(tmpval, workfrac, SCIPvarGetLbGlobalExact(var));
             ndeletedcontvars++;
          }

@@ -45,6 +45,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
 #include "scip/struct_lp.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_certificate.h"
@@ -286,6 +287,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
    SCIP_ROUNDMODE previousroundmode;
    SCIP_VAR* var;
    SCIP_INTERVAL valinterval;
+   SCIP_ROWEXACT* rowexact;
 
    assert(inds != NULL);
    assert(vals != NULL);
@@ -296,9 +298,10 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
    SCIPintervalSetRoundingModeDownwards();
 
    *rhschange = 0;
+   rowexact = SCIProwGetRowExact(row);
 
    /* add the non-zeros to the aggregation row and keep non-zero index up to date */
-   for( i = 0 ; i < row->len; ++i )
+   for( i = 0 ; i < rowexact->len; ++i )
    {
       SCIP_Real QUAD(val);
       int probindex;
@@ -313,7 +316,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
       if( QUAD_HI(val) == SCIP_INVALID )
          QUAD_ASSIGN(val, 0.0);
 
-      SCIPintervalSet(&valinterval, row->vals[i]);
+      SCIPintervalSetBounds(&valinterval, rowexact->valsinterval[i].inf, rowexact->valsinterval[i].sup);
       SCIPintervalMulScalar(SCIPinfinity(scip), &valinterval, valinterval, scale);
       SCIPintervalAddScalar(SCIPinfinity(scip), &valinterval, valinterval, QUAD_TO_DBL(val));
 
@@ -331,19 +334,19 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
       {
          QUAD_ASSIGN(val, SCIPintervalGetInf(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
+         *rhschange = (SCIPintervalGetInf(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
          SCIPdebugMessage("Using lb %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetLbGlobal(var), -SCIPintervalGetSup(valinterval) + SCIPintervalGetInf(valinterval), *rhschange);
       }
       else if( SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) )
       {
          QUAD_ASSIGN(val, SCIPintervalGetSup(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
+         *rhschange = (SCIPintervalGetInf(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
          SCIPdebugMessage("Using ub %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetUbGlobal(var), SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval), *rhschange);
       }
       else
       {
-         SCIPerrorMessage("cannot aggregate safely with completely unbounden variables \n");
+         SCIPerrorMessage("cannot aggregate safely with completely unbounded variables \n");
          return SCIP_INVALIDDATA;
       }
 
