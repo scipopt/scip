@@ -331,7 +331,7 @@ SCIP_RETCODE addCut(
                   }
                }
 
-               assert(c == aggrrow->nrows);
+               assert(counter == aggrrow->nrows);
             }
             SCIP_CALL( SCIPaddCertificateAggregation(scip, cut, aggrrow, aggrrows, aggweights, aggrrow->nrows) );
             SCIPfreeBufferArray(scip, &aggweights);
