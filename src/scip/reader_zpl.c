@@ -740,7 +740,9 @@ SCIP_RETCODE addObjTerm(
          return SCIP_READERROR;
       }
 
-      SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, "obj", expr, 0.0, 0.0,
+      SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, "obj", expr,
+         SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? -SCIPinfinity(scip) : 0.0,
+         SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ?  SCIPinfinity(scip) : 0.0,
          readerdata->initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, readerdata->dynamicconss, FALSE) );
 
       SCIP_CALL( SCIPcreateVarBasic(scip, &objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
