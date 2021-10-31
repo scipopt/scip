@@ -599,6 +599,8 @@ Cut Selector:
   https://github.com/coin-or/GAMSlinks
 - integrated AMPL interface into main SCIP executable, that is, added possibility to use SCIP executable as solver in AMPL
   (AMPL calls solver with name of .nl file and -AMPL as arguments; SCIP will then attempt to solve the problem and write an AMPL solution file)
+- the ZIMPL interface has been updated to support ZIMPL 3.4.1;
+  the minimal required ZIMPL version is now 3.4.1
 
 ### Changed parameters
 
