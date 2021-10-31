@@ -19,9 +19,8 @@
  * @author Felipe Serrano
  * @author Antonia Chmiela
  *
- * This separator detects quadratic constraints of the form
- * x_i * x_j - x_l * x_k = 0
- * that appear implicitly (i.e., minors) and enforces them via intersection cuts.
+ * Let X be the matrix of auxiliary variables added for bilinear terms, X_{ij} = x_ix_j.
+ * The separator enforces quadratic constraints det(2x2 minor of X) = 0 via intersection cuts.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,7 +39,7 @@
 
 
 #define SEPA_NAME              "interminor"
-#define SEPA_DESC              "separator (via intersection cuts) to ensure that 2x2 minors of X (= xx') have determinant 0"
+#define SEPA_DESC              "intersection cuts separator to ensure that 2x2 minors of X (= xx') have determinant 0"
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           1.0
