@@ -235,7 +235,7 @@ mv "${OUTFILE}" $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
 mv "${ERRFILE}" $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
 
 # move a possible data file
-if [ -f "${DATFILE}" ] "{;}"
+if [ -f "${DATFILE}" ]
 then
     mv "{$DATFILE}" $SOLVERPATH/$OUTPUTDIR/$BASENAME.dat
 fi
