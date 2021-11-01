@@ -87,13 +87,13 @@ SCIP_COLEXACT** SCIProwExactGetCols(
 /** locks an unmodifiable row, which forbids further changes; has no effect on modifiable rows */
 SCIP_EXPORT
 void SCIProwExactLock(
-   SCIP_ROW*             row                 /**< LP row */
+   SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 /** unlocks a lock of an unmodifiable row; a row with no sealed lock may be modified; has no effect on modifiable rows */
 SCIP_EXPORT
 void SCIProwExactUnlock(
-   SCIP_ROW*             row                 /**< LP row */
+   SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 /** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */

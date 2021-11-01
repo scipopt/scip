@@ -94,6 +94,7 @@
 #include "scip/relax.h"
 #include "scip/reopt.h"
 #include "scip/retcode.h"
+#include "scip/sepastoreexact.h"
 #include "scip/scipbuildflags.h"
 #include "scip/scipcoreplugins.h"
 #include "scip/scipgithash.h"
@@ -303,6 +304,27 @@ SCIP_RETCODE SCIPbranchLPexact(
    SCIP_CALL( SCIPbranchExecLPexact(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
          scip->tree, scip->reopt, scip->lp, scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
          TRUE, result) );
+
+   return SCIP_OKAY;
+}
+
+/** adds row to exact separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPaddRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        rowexact            /**< exact row to add */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsepastoreExactAddCut(scip->sepastoreexact, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
+            scip->lpexact, rowexact) );
 
    return SCIP_OKAY;
 }

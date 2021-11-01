@@ -109,6 +109,7 @@ SCIP_RETCODE SCIPsepastoreExactFree(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** informs separation storage that the setup of the initial LP starts now */
 void SCIPsepastoreExactStartInitialLP(
    SCIP_SEPASTOREEXACT*  sepastoreexact      /**< separation storage */
@@ -132,9 +133,10 @@ void SCIPsepastoreExactEndInitialLP(
 
    sepastoreexact->initiallp = FALSE;
 }
+#endif
 
 /** adds cut to separation storage and captures it */
-SCIP_RETCODE SCIPsepastoreexAddCut(
+SCIP_RETCODE SCIPsepastoreExactAddCut(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -144,7 +146,6 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    SCIP_ROWEXACT*        cut                 /**< separated cut */
    )
 {
-   SCIP_Bool redundant;
    int pos;
 
    assert(sepastoreexact != NULL);
@@ -195,14 +196,10 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    )
 {
    SCIP_LP* fplp;
-   SCIP_ROW** fprows;
    SCIP_ROWEXACT* rowexact;
-   SCIP_CONS* origcons;
    int* rowdset;
    int nrowsfp;
    int nrowsex;
-   int nreleases;
-   int nadded;
    int i;
    SCIP_Bool remove;
 
@@ -210,18 +207,13 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
       return SCIP_OKAY;
 
    fplp = lpexact->fplp;
-   nreleases = 0;
-   nadded = 0;
 
    assert(fplp != NULL);
 
-   fprows = SCIPlpGetRows(fplp);
    nrowsfp = SCIPlpGetNRows(fplp);
    nrowsex = SCIPlpExactGetNRows(lpexact);
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowdset, lpexact->nrows) );
-
-   assert(fprows != NULL);
 
    remove = FALSE;
 
@@ -260,8 +252,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
       {
          assert(SCIProwGetOriginSepa(fplp->rows[i]) != NULL);
 
-         SCIP_CALL( SCIProwExactCreateFromRow(&rowexact, fplp->rows[i], blkmem, set, stat, eventqueue, prob, lpexact) );
-         SCIP_CALL( SCIPsepastoreexAddCut(sepastoreexact, blkmem, set, stat, eventqueue, lpexact, rowexact) );
+         SCIP_CALL( SCIPsepastoreExactAddCut(sepastoreexact, blkmem, set, stat, eventqueue, lpexact, rowexact) );
          SCIP_CALL( SCIPlpExactAddRow(lpexact, blkmem, set, eventqueue, rowexact, SCIProwGetLPDepth(fplp->rows[i])) );
          SCIP_CALL( SCIProwExactRelease(&rowexact, blkmem, set, lpexact) );
       }

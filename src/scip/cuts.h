@@ -102,6 +102,7 @@ SCIP_RETCODE SCIPaggrRowAddRow(
 /** add weighted row to aggregation row
  * @note this method is the variant of SCIPaggrRowAddRow that is safe to use in exact solving mode
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowAddRowSafely(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */

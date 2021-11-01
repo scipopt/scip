@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPsepastoreExactFree(
 
 
 /** adds cut to separation storage and captures it */
-SCIP_RETCODE SCIPsepastoreexAddCut(
+SCIP_RETCODE SCIPsepastoreExactAddCut(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */

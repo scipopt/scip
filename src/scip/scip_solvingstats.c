@@ -1525,7 +1525,7 @@ void SCIPgetLowerboundExact(
        * bound = -inf instead of lower bound = upper bound = +inf also in case we prove that the problem is unbounded,
        * it seems to make sense to return with lower bound = -inf, since -infinity is the only valid lower bound
        */
-      return RatSetString(result, "-inf");
+      RatSetString(result, "-inf");
    }
    else
    {
@@ -1733,7 +1733,7 @@ SCIP_Real SCIPgetUpperbound(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_Real SCIPgetUpperboundExact(
+void SCIPgetUpperboundExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Rational*        result              /**< the resulting upper bound value */
    )

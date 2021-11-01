@@ -9687,7 +9687,6 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
    SCIP_Longint numerator;
    SCIP_Longint denominator;
    SCIP_Longint updatemultiplier;
-   char numberstr[SCIP_MAXSTRLEN];
    SCIP_Rational* ratupdate;
    SCIP_Rational* ratscm;
    SCIP_Bool scalable;

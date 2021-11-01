@@ -45,6 +45,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
 #include "scip/struct_lp.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_certificate.h"
@@ -155,6 +156,7 @@ SCIP_RETCODE varVecAddScaledRowCoefs(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** add a scaled row to a dense vector indexed over the problem variables and keep the
  *  index of non-zeros up-to-date
  */
@@ -204,6 +206,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** add a scaled row to a dense vector indexed over the problem variables and keep the
  *  index of non-zeros up-to-date
@@ -284,6 +287,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
    SCIP_ROUNDMODE previousroundmode;
    SCIP_VAR* var;
    SCIP_INTERVAL valinterval;
+   SCIP_ROWEXACT* rowexact;
 
    assert(inds != NULL);
    assert(vals != NULL);
@@ -294,14 +298,12 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
    SCIPintervalSetRoundingModeDownwards();
 
    *rhschange = 0;
+   rowexact = SCIProwGetRowExact(row);
 
    /* add the non-zeros to the aggregation row and keep non-zero index up to date */
-   for( i = 0 ; i < row->len; ++i )
+   for( i = 0 ; i < rowexact->len; ++i )
    {
       SCIP_Real QUAD(val);
-      SCIP_Real val1;
-      SCIP_Real val2;
-      SCIP_Real diff;
       int probindex;
 
       probindex = row->cols[i]->var_probindex;
@@ -314,7 +316,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
       if( QUAD_HI(val) == SCIP_INVALID )
          QUAD_ASSIGN(val, 0.0);
 
-      SCIPintervalSet(&valinterval, row->vals[i]);
+      SCIPintervalSetBounds(&valinterval, rowexact->valsinterval[i].inf, rowexact->valsinterval[i].sup);
       SCIPintervalMulScalar(SCIPinfinity(scip), &valinterval, valinterval, scale);
       SCIPintervalAddScalar(SCIPinfinity(scip), &valinterval, valinterval, QUAD_TO_DBL(val));
 
@@ -332,19 +334,19 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
       {
          QUAD_ASSIGN(val, SCIPintervalGetInf(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
+         *rhschange = (SCIPintervalGetInf(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
          SCIPdebugMessage("Using lb %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetLbGlobal(var), -SCIPintervalGetSup(valinterval) + SCIPintervalGetInf(valinterval), *rhschange);
       }
       else if( SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) )
       {
          QUAD_ASSIGN(val, SCIPintervalGetSup(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
+         *rhschange = (SCIPintervalGetInf(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
          SCIPdebugMessage("Using ub %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetUbGlobal(var), SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval), *rhschange);
       }
       else
       {
-         SCIPerrorMessage("cannot aggregate safely with completely unbounden variables \n");
+         SCIPerrorMessage("cannot aggregate safely with completely unbounded variables \n");
          return SCIP_INVALIDDATA;
       }
 
@@ -666,12 +668,11 @@ SCIP_Bool removeZerosQuadSafely(
 }
 
 /** safely remove all items with |a_i| or |u_i - l_i)| below the given value
-/** safely remove all items with |a_i| or |u_i - l_i| below the given value
  *
  *  Returns TRUE if the cut became redundant.
  *  If it is a local cut, use local bounds, otherwise, use global bounds.
  *
- * * @note this method is safe for usage in exact solving mode
+ *  @note this method is safe for usage in exact solving mode
  */
 static
 SCIP_Bool removeZerosQuad(
@@ -2223,7 +2224,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeDownwards();
       if (row->lppos >= 0)
          aggrrow->slacksign[i] = -1;
-      sideval = row->lhs - row->constant;
+      sideval = userow->lhs - userow->constant;
       if( row->integral )
          sideval = ceil(sideval); /* row is integral: round left hand side up */
    }
@@ -2232,7 +2233,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       SCIPintervalSetRoundingModeUpwards();
       if (row->lppos >= 0)
          aggrrow->slacksign[i] = +1;
-      sideval = row->rhs - row->constant;
+      sideval = userow->rhs - userow->constant;
       if( row->integral )
          sideval = floor(sideval); /* row is integral: round right hand side up */
    }
@@ -2241,7 +2242,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, weight * sideval);
 
    /* add up coefficients */
-   SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, row, weight, &sidevalchg, NULL, 0) );
+   SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, userow, weight, &sidevalchg, NULL, 0) );
 
    SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, sidevalchg);
 
@@ -3981,6 +3982,7 @@ SCIP_RETCODE cutsTransformMIR(
  *
  *  @note this method is safe for usage in exact solving mode
  */
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_RETCODE cutsRoundMIRSafe(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3993,9 +3995,7 @@ SCIP_RETCODE cutsRoundMIRSafe(
    SCIP_INTERVAL         f0                  /**< fractional value of rhs */
    )
 {
-   SCIP_Real QUAD(tmp);
    SCIP_INTERVAL onedivoneminusf0;
-   SCIP_Bool upperused;
    int i;
    int firstcontvar;
    SCIP_VAR** vars;
@@ -4087,7 +4087,6 @@ SCIP_RETCODE cutsRoundMIRSafe(
          if(  fj <= SCIPintervalGetInf(f0) )
          {
             SCIPintervalSet(&cutaj, downaj);
-            upperused = FALSE;
 
             if( SCIPisCertificateActive(scip) )
                mirinfo->splitcoefs[v] = SCIPintervalGetInf(cutaj);
@@ -4099,7 +4098,6 @@ SCIP_RETCODE cutsRoundMIRSafe(
             SCIPintervalSub(SCIPinfinity(scip), &tmpinterval, tmpinterval, f0);
             SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, onedivoneminusf0);
             SCIPintervalAddScalar(SCIPinfinity(scip), &cutaj, tmpinterval, downaj);
-            upperused = TRUE;
 
             if( SCIPisCertificateActive(scip) )
             {
@@ -4274,18 +4272,16 @@ SCIP_RETCODE cutsRoundMIRSafe(
       }
       else
       {
+#ifdef SCIP_DISABLED_CODE
          SCIP_VAR** vbz;
          SCIP_Real* vbb;
          SCIP_Real* vbd;
-         SCIP_Real QUAD(zcoef);
-         int vbidx;
-         int zidx;
 
          assert(!SCIPisExactSolve(scip));
 
          /* variable bound */
          vbidx = boundtype[i];
-#ifdef SCIP_DISABLED_CODE
+
          /* change mirrhs and cutaj of integer variable z_j of variable bound */
          if( varsign[i] == +1 )
          {
@@ -4348,6 +4344,7 @@ SCIP_RETCODE cutsRoundMIRSafe(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** Calculate fractionalities \f$ f_0 := b - down(b), f_j := a^\prime_j - down(a^\prime_j) \f$, and derive MIR cut \f$ \tilde{a} \cdot x' \leq down(b) \f$
  * \f[
@@ -4415,7 +4412,6 @@ SCIP_RETCODE cutsRoundMIRRational(
 {
    SCIP_Rational* tmp;
    SCIP_Rational* onedivoneminusf0;
-   SCIP_Bool upperused;
    int i;
    int firstcontvar;
    SCIP_VAR** vars;
@@ -4505,7 +4501,6 @@ SCIP_RETCODE cutsRoundMIRRational(
          if( RatIsLE(fj, f0) )
          {
             RatSetReal(cutaj, downaj);
-            upperused = FALSE;
 
             if( SCIPisCertificateActive(scip) )
                mirinfo->splitcoefs[v] = downaj;
@@ -4517,7 +4512,6 @@ SCIP_RETCODE cutsRoundMIRRational(
             RatDiff(tmp, tmp, f0);
             RatMult(tmp, tmp, onedivoneminusf0);
             RatAddReal(cutaj, tmp, downaj);
-            upperused = TRUE;
 
             if( SCIPisCertificateActive(scip) )
             {
@@ -4709,6 +4703,7 @@ SCIP_RETCODE cutsRoundMIRRational(
       }
       else
       {
+#ifdef SCIP_DISABLED_CODE
          SCIP_VAR** vbz;
          SCIP_Real* vbb;
          SCIP_Real* vbd;
@@ -4720,7 +4715,7 @@ SCIP_RETCODE cutsRoundMIRRational(
 
          /* variable bound */
          vbidx = boundtype[i];
-#ifdef SCIP_DISABLED_CODE
+
          /* change mirrhs and cutaj of integer variable z_j of variable bound */
          if( varsign[i] == +1 )
          {
@@ -4854,7 +4849,6 @@ SCIP_RETCODE cutsRoundMIR(
 {
    SCIP_Real QUAD(tmp);
    SCIP_Real QUAD(onedivoneminusf0);
-   SCIP_Bool upperused;
    int i;
    int firstcontvar;
    SCIP_VAR** vars;
@@ -4926,14 +4920,12 @@ SCIP_RETCODE cutsRoundMIR(
          if( SCIPisLE(scip, QUAD_TO_DBL(fj), QUAD_TO_DBL(f0)) || (SCIPisExactSolve(scip) && QUAD_TO_DBL(fj) <= QUAD_TO_DBL(f0)) )
          {
             QUAD_ASSIGN_Q(cutaj, downaj);
-            upperused = FALSE;
          }
          else
          {
             SCIPquadprecSumQQ(tmp, fj, -f0);
             SCIPquadprecProdQQ(tmp, tmp, onedivoneminusf0);
             SCIPquadprecSumQQ(cutaj, tmp, downaj);
-            upperused = TRUE;
          }
 
          QUAD_SCALE(cutaj, varsign[i]);
@@ -5184,7 +5176,6 @@ SCIP_RETCODE cutsSubstituteMIR(
    SCIP_ROW** rows;
    SCIP_Real QUAD(onedivoneminusf0);
    SCIP_ROUNDMODE previousroundmode;
-   SCIP_MIRINFO* mirinfo;
    int i;
 
    assert(scip != NULL);
@@ -5207,14 +5198,6 @@ SCIP_RETCODE cutsSubstituteMIR(
       SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
       SCIPintervalSetRoundingModeDownwards();
       SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
-
-      if( SCIPisCertificateActive(scip) )
-      {
-         mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
-         assert(mirinfo != NULL);
-      }
-      else
-         mirinfo = NULL;
    }
    else
    {

@@ -54,7 +54,7 @@ SCIP_EXPORT
 SCIP_RETCODE RatCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   char*                 desc                /**< the string describing the rational */
+   const char*           desc                /**< the string describing the rational */
    );
 
 /** creates an array of rationals */
@@ -653,6 +653,14 @@ SCIP_Real RatRoundReal(
 SCIP_EXPORT
 SCIP_Real RatApproxReal(
    SCIP_Rational*        r                   /**< the rational to convert */
+   );
+
+/** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
+SCIP_EXPORT
+void RatComputeApproximation(
+   SCIP_Rational*        res,
+   SCIP_Rational*        src,
+   SCIP_Longint          maxdenom
    );
 
 SCIP_EXPORT

@@ -76,7 +76,6 @@ SCIP_Bool fpLPisIntFeasible(
    SCIP_Real primsol;
    SCIP_Bool feasible;
    SCIP_Real frac;
-   int nfracs;
    int i;
 
    assert(SCIPlpIsSolved(lp));
@@ -144,8 +143,6 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
    SCIP_Rational** rootprimal;
    SCIP_Bool lperror;
    SCIP_PROJSHIFTDATA* projshiftdata;
-   SCIP_Bool dualfeasible;
-   SCIP_Bool primalfeasible;
 
    nrows = lpexact->nrows;
    ncols = lpexact->ncols;
@@ -656,22 +653,14 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
    )
 {
-   int pos;
-   int nrows;
    int ncols;
-   int nextendedrows; /* number of extended constraints, # of cols in [A',-A',I,-I] */
-   int indx;
    int psncols;
-   int nobjnz;
    SCIP_Real lptimelimit;
-   SCIP_Bool success;
    SCIP_RETCODE retcode;
 
    /* lpiexact and data used for the aux. problem */
    SCIP_LPIEXACT* pslpiexact;
    SCIP_PROJSHIFTDATA* projshiftdata;
-   SCIP_ROWEXACT** lprows;
-   SCIP_COLEXACT** lpcols;
 
    SCIP_Rational** sol = NULL; /* either primal or dualsol */
    SCIP_Rational* objval;
@@ -689,11 +678,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       return SCIP_OKAY;
    }
 
-   nextendedrows = projshiftdata->nextendedrows;
-   nrows = lpexact->nrows;
    ncols = lpexact->ncols;
-   lprows = lpexact->rows;
-   lpcols = lpexact->cols;
 
    dvarmap = projshiftdata->dvarmap;
    ndvarmap = projshiftdata->ndvarmap;
@@ -702,8 +687,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
 
    if( !findintpoint )
    {
-      assert(projshiftdata->projshifthasray == FALSE);
-
       /* in this case we want to find an interior ray instead of an interior point
        * the problem will be modified to the following problem:
        * max:  [OBJ, 0]*[y,d]'
@@ -722,6 +705,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIP_Rational* auxval1;
       SCIP_Rational* auxval2;
       int i;
+
+      assert(projshiftdata->projshifthasray == FALSE);
 
       SCIP_CALL( RatCreateBlock(blkmem, &auxval1) );
       SCIP_CALL( RatCreateBlock(blkmem, &auxval2) );
@@ -874,21 +859,13 @@ SCIP_RETCODE projectShiftConstructLP(
    int nrows;
    int ncols;
    int nextendedrows; /* number of extended constraints, # of cols in [A',-A',I,-I] */
-   int indx;
    int psncols;
-   int nobjnz;
-   SCIP_Real lptimelimit;
-   SCIP_Bool success;
-   SCIP_RETCODE retcode;
 
    /* lpiexact and data used for the aux. problem */
    SCIP_LPIEXACT* pslpiexact;
    SCIP_PROJSHIFTDATA* projshiftdata;
    SCIP_ROWEXACT** lprows;
    SCIP_COLEXACT** lpcols;
-
-   SCIP_Rational** sol = NULL; /* either primal or dualsol */
-   SCIP_Rational* objval;
 
    /* mapping between variables used in the aux. problem and the original problem */
    int ndvarmap;
@@ -1069,7 +1046,6 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    BMS_BLKMEM*           blkmem
    )
 {
-   int i;
    SCIP_PROJSHIFTDATA* projshiftdata;
 
    assert(lpexact != NULL);
@@ -1123,7 +1099,6 @@ SCIP_RETCODE constructProjectShiftData(
    BMS_BLKMEM*           blkmem
    )
 {
-   int i;
    SCIP_PROJSHIFTDATA* projshiftdata;
 
    assert(lpexact != NULL);
@@ -1231,7 +1206,6 @@ SCIP_RETCODE projectShift(
    int ncols;
    int currentrow;
    int shift;
-   int startt, endt, setupt, violt, rectlut, projt, shiftt, cleanupt;
    SCIP_Bool isfeas;
 
    /* project-and-shift method:
@@ -1274,8 +1248,6 @@ SCIP_RETCODE projectShift(
          stat->nprojshiftobjlim++;
       SCIPclockStart(stat->provedfeaspstime, set);
    }
-
-   startt = clock();
 
    SCIPdebugMessage("calling projectShift()\n");
 
@@ -1335,8 +1307,6 @@ SCIP_RETCODE projectShift(
    }
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &isupper, nrows + ncols) );
-
-   setupt = clock();
 
    /* recover the objective coefs and approximate solution value of dual solution;
     * dual vars of lhs constraints (including -inf) and rhs constraints (including +inf),
@@ -1487,8 +1457,6 @@ SCIP_RETCODE projectShift(
          isfeas = FALSE;
    }
 
-   violt = clock();
-
    /* isfeas is equal to one only if approximate dual solution is already feasible for the dual */
    if( !isfeas )
    {
@@ -1527,8 +1495,6 @@ SCIP_RETCODE projectShift(
          printf(", position=%d\n", projshiftdata->projshiftbasis[i]);
       }
 #endif
-
-      rectlut = clock();
 
       /* projection step: compute bold(y)=y^+[z 0];
        * save the corrected components in the correction vector; reset the dualsol-vector to 0
@@ -1574,7 +1540,6 @@ SCIP_RETCODE projectShift(
             }
          }
       }
-      projt = clock();
 
 #ifdef PS_OUT
       printf("updated dual solution:\n");
@@ -1702,7 +1667,6 @@ SCIP_RETCODE projectShift(
             RatAdd(dualsol[i], dualsol[i], tmp);
          }
       }
-      shiftt = clock();
 
 #ifdef PS_OUT
       printf("projected and shifted dual solution (should be an exact dual feasible solution)\n");
@@ -1872,16 +1836,6 @@ SCIP_RETCODE projectShift(
    RatFreeBuffer(set->buffer, &tmp2);
    RatFreeBuffer(set->buffer, &tmp);
 
-   endt = clock();
-   // startt, endt, setupt, violt, rectlut, projt, shiftt;
-   //printf("Time used: %e \n", ((double) (endt - startt)) / CLOCKS_PER_SEC);
-   //printf("Setup time    : %e, percentage %e \n", ((double) (setupt - startt)) / CLOCKS_PER_SEC, ((double) (setupt - startt)/(endt - startt)) );
-   //printf("Violation time: %e, percentage %e \n", ((double) (violt - setupt)) / CLOCKS_PER_SEC, ((double) (violt - setupt)/(endt - startt))   );
-   //printf("Rectlu time   : %e, percentage %e \n", ((double) (rectlut - violt)) / CLOCKS_PER_SEC, ((double) (rectlut - violt)/(endt - startt)) );
-   //printf("Proj time     : %e, percentage %e \n", ((double) (projt - rectlut)) / CLOCKS_PER_SEC, ((double) (projt - rectlut)/(endt - startt)) );
-   //printf("Shifting time : %e, percentage %e \n", ((double) (shiftt - projt)) / CLOCKS_PER_SEC, ((double) (shiftt - projt)/(endt - startt))   );
-   //printf("Cleanup time  : %e, percentage %e \n", ((double) (endt - shiftt)) / CLOCKS_PER_SEC, ((double) (endt - shiftt)/(endt - startt))     );
-
    if( usefarkas )
       SCIPclockStop(stat->provedinfeaspstime, set);
    else
@@ -2008,8 +1962,6 @@ char chooseBoundingMethod(
    char                  lastboundmethod     /**< the last method that was chosen */
    )
 {
-   char dualboundmethod;
-
    assert(!lpexact->fplp->hasprovedbound);
 
    /* choose which bounding method to use */
@@ -2055,7 +2007,6 @@ SCIP_RETCODE boundShift(
    SCIP_COLEXACT* colexact;
    SCIP_Real* fpdual;
    SCIP_Real* fpdualcolwise;
-   SCIP_Real c;
    SCIP_Real computedbound;
    int i;
    int j;
@@ -2153,8 +2104,6 @@ SCIP_RETCODE boundShift(
    SCIPintervalSetRoundingModeDownwards();
    for( j = 0; j < lp->ncols; ++j )
    {
-      SCIP_COLEXACT* colexact;
-
       col = lp->cols[j];
       assert(col != NULL);
       assert(col->nunlinked == 0);
@@ -2198,8 +2147,6 @@ SCIP_RETCODE boundShift(
    SCIPintervalSetRoundingModeUpwards();
    for( j = 0; j < lp->ncols; ++j )
    {
-      SCIP_COLEXACT* colexact;
-
       col = lp->cols[j];
       assert(col != NULL);
       assert(col->nunlinked == 0);
@@ -2354,9 +2301,6 @@ SCIP_RETCODE boundShift(
    /* if certificate is active, save the corrected dual solution into the lpexact data */
    if( SCIPisCertificateActive(set->scip) && lp->hasprovedbound )
    {
-      SCIP_INTERVAL tmp, tmp2;
-      SCIP_Real cand1, cand2;
-      SCIP_Real value;
       /* set up the exact lpi for the current node */
       SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
       SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
@@ -2401,30 +2345,6 @@ CLEANUP:
 
    return SCIP_OKAY;
 }
-
-static
-SCIP_RETCODE projectShiftInterval(
-   void
-   )
-{
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE projectShiftRational(
-   void
-   )
-{
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE basisVerification(
-   void
-   )
-{
-   return SCIP_OKAY;
-}
 #endif
 
 /** computes a safe bound for the current floating point LP */
@@ -2449,7 +2369,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    char dualboundmethod;
    char lastboundmethod;
    SCIP_Bool abort;
-   SCIP_Real oldbound;
    int nattempts;
 
    /* if we are not in exact solving mode, just return */
@@ -2459,7 +2378,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    lastboundmethod = 'u';
    abort = FALSE;
    nattempts = 0;
-   oldbound = *safebound;
 
 #ifdef SCIP_WITH_BOOST
    assert(set->exact_enabled);

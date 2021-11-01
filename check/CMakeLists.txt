@@ -962,6 +962,7 @@ if (UNIX)
                             # I assume that this test takes longer than 2 seconds
                             #
                             )
+
 endif (UNIX)
 endif()
 
@@ -1025,3 +1026,4 @@ if(TEST_MIPEX)
         endforeach(setting)
     endforeach(instance ${instances_MIPEX})
 endif()
+set_tests_properties(FastMIP-presolving_off-bell5.mps PROPERTIES TIMEOUT 3000)

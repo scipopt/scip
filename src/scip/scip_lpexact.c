@@ -101,6 +101,7 @@
 #include "xml/xml.h"
 
 #include "scip/scip_lp.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_sol.h"
@@ -299,6 +300,30 @@ SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
    return SCIP_OKAY;
 }
 
+/** creates and captures an exact LP row from an existing fp row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateRowExactFromRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             fprow               /**< corresponding fp approximation/relaxation */
+   )
+{
+   assert(fprow != NULL);
+   assert(fprow->rowexact == NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowExactFromRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIProwExactCreateFromRow(&(fprow->rowexact), fprow, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lpexact) );
+
+   return SCIP_OKAY;
+}
+
 /** returns the feasibility of a row for the given primal solution
  *
  *  @return the feasibility of a row for the given primal solution
@@ -359,7 +384,7 @@ void SCIPgetRowSolActivityExact(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  */
-SCIP_RETCODE SCIPprintRowex(
+SCIP_RETCODE SCIPprintRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    FILE*                 file                /**< output file (or NULL for standard output) */
@@ -367,7 +392,7 @@ SCIP_RETCODE SCIPprintRowex(
 {
    assert(row != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintRowex", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIProwExactPrint(row, scip->messagehdlr, file);
 

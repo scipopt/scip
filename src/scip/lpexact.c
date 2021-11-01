@@ -36,6 +36,7 @@
 #include "scip/misc.h"
 #include "scip/prob.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
@@ -58,6 +59,7 @@
 #include <inttypes.h>
 /** @todo exip: remove this and find a clean implementation to access sepastoreex */
 #include "scip/struct_scip.h"
+#include "scip/scip_lpexact.h"
 
 /** comparison method for sorting rows by non-decreasing index */
 SCIP_DECL_SORTPTRCOMP(SCIProwExactComp)
@@ -156,6 +158,7 @@ void checkLinks(
 #define checkLinks(lp) /**/
 #endif
 
+#ifndef NDEBUG
 /** checks if the exact column and its fpcol are consistent */
 SCIP_Bool colExactInSync(
    SCIP_COLEXACT*        colexact,           /**< exact column */
@@ -163,7 +166,7 @@ SCIP_Bool colExactInSync(
    SCIP_MESSAGEHDLR*     msg                 /**< message handler */
    )
 {
-   int i;
+
    SCIP_COL* fpcol;
 
    assert(colexact != NULL);
@@ -192,7 +195,6 @@ SCIP_Bool rowExactInSync(
    SCIP_MESSAGEHDLR*     msg                 /**< message handler */
    )
 {
-   int i;
    SCIP_ROW* fprow;
    SCIP_Bool synced = TRUE;
 
@@ -217,6 +219,7 @@ SCIP_Bool rowExactInSync(
 
    return TRUE;
 }
+#endif
 
 /** checks if the exact lp and lp are consistent (same number of rows/cols, and all cols/rows in sync) */
 static
@@ -226,6 +229,7 @@ SCIP_Bool lpExactInSync(
    SCIP_MESSAGEHDLR*     msg                 /**< message handler */
    )
 {
+#ifndef NDEBUG
    int i;
    SCIP_LP* fplp;
    assert(lpexact != NULL);
@@ -244,6 +248,7 @@ SCIP_Bool lpExactInSync(
    {
       assert(colExactInSync(lpexact->cols[i], set, msg));
    }
+#endif
 
    return TRUE;
 }
@@ -344,7 +349,6 @@ void rowExactSortLP(
    )
 {
    int i;
-   int pos;
 
    assert(row != NULL);
 
@@ -1524,6 +1528,7 @@ SCIP_RETCODE colExactLink(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** removes column coefficients from corresponding rows */
 static
 SCIP_RETCODE colExactUnlink(
@@ -1562,6 +1567,7 @@ SCIP_RETCODE colExactUnlink(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** insert row coefficients in corresponding columns */
 static
@@ -3265,6 +3271,81 @@ SCIP_RETCODE SCIProwExactCreate(
    return SCIP_OKAY;
 } /*lint !e715*/
 
+static
+SCIP_RETCODE SCIProwExactControlEncodingLength(
+   SCIP_ROWEXACT*        row,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat,
+   BMS_BLKMEM*           blkmem,
+   SCIP_EVENTQUEUE*      eventqueue,
+   SCIP_LPEXACT*         lpexact
+   )
+{
+   int i;
+   SCIP_Longint maxdenom;
+   SCIP_Longint maxboundval;
+   SCIP_Rational* tmpval;
+   SCIP_Rational* difference;
+   SCIP_Real rhschange;
+
+   assert(row->fprow != NULL);
+   assert(set->exact_cutmaxdenomsize > 0);
+
+   SCIPdebugMessage("approximating row ");
+   SCIPdebug(SCIPprintRowExact(set->scip, row, NULL));
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &difference) );
+
+   rhschange = 0;
+
+   for( i = 0; i < row->len; i++ )
+   {
+      SCIP_VAR* var = row->cols[i]->fpcol->var;
+      SCIP_Rational* val = row->vals[i];
+
+      maxboundval = 1e5;
+
+      /** @todo exip: we only need one bound if we can control the direction we look in */
+      if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) || RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
+         continue;
+
+      if( RatDenominator(val) <= maxdenom )
+         continue;
+
+      if( RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval) )
+         continue;
+
+      RatComputeApproximation(tmpval, val, set->exact_cutmaxdenomsize);
+
+      RatDiff(difference, tmpval, val);
+      if( RatIsPositive(difference) )
+         RatAddProd(row->rhs, difference, SCIPvarGetUbGlobalExact(var));
+      else
+         RatAddProd(row->rhs, difference, SCIPvarGetLbGlobalExact(var));
+
+      RatSet(val, tmpval);
+      SCIPintervalSetRational(&(row->valsinterval[i]), tmpval);
+
+      SCIProwChgCoef(row->fprow, blkmem, set, eventqueue, lpexact->fplp, row->cols[i]->fpcol, RatRoundReal(tmpval, SCIP_R_ROUND_DOWNWARDS));
+
+      if( RatIsNegative(SCIPvarGetLbGlobalExact(var)) )
+      {
+         rhschange += (SCIPintervalGetInf(row->valsinterval[i]) - SCIPintervalGetSup(row->valsinterval[i])) * SCIPvarGetLbGlobal(var);
+      }
+   }
+
+   SCIProwChgRhs(row->fprow, blkmem, set, eventqueue, lpexact->fplp, RatRoundReal(row->rhs, SCIP_R_ROUND_UPWARDS) + rhschange);
+
+   RatFreeBuffer(set->buffer, &difference);
+   RatFreeBuffer(set->buffer, &tmpval);
+
+   SCIPdebugMessage("new row ");
+   SCIPdebug(SCIPprintRowExact(set->scip, row, NULL));
+
+   return SCIP_OKAY;
+}
+
 /** creates and captures an exact LP row from a fp row */
 SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
@@ -3293,12 +3374,16 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    {
       case SCIP_ROWORIGINTYPE_SEPA:
          origin = SCIProwGetOriginSepa(fprow);
+         break;
       case SCIP_ROWORIGINTYPE_CONS:
          origin = SCIProwGetOriginCons(fprow);
+         break;
       case SCIP_ROWORIGINTYPE_CONSHDLR:
          origin = SCIProwGetOriginConshdlr(fprow);
+         break;
       default:
          origin = NULL;
+         break;
    }
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
@@ -3323,17 +3408,21 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    for( i = 0; i < SCIProwGetNNonz(fprow); i++ )
    {
       SCIP_COL* col;
-      SCIP_COLEXACT* colexact;
 
       RatSetReal(tmpval, rowvals[i]);
       col = SCIProwGetCols(fprow)[i];
-      colexact = SCIPcolGetColExact(col);
 
       SCIP_CALL( SCIPvarAddToRowExact(SCIPcolGetVar(col), blkmem, set, stat, eventqueue, prob, lp, workrow, tmpval) );
    }
 
    RatSetReal(tmpval, SCIProwGetConstant(fprow));
    SCIProwExactAddConstant(workrow, blkmem, set, stat, eventqueue, lp, tmpval);
+
+   /** @todo exip: replace this with a proper parameter */
+   if( set->exact_cutmaxdenomsize > 0 )
+   {
+      SCIP_CALL( SCIProwExactControlEncodingLength(workrow, set, stat, blkmem, eventqueue, lp) );
+   }
 
    RatFreeBuffer(set->buffer, &tmplhs);
    RatFreeBuffer(set->buffer, &tmpval);
@@ -3576,8 +3665,6 @@ SCIP_RETCODE SCIPlpExactCreate(
    const char*           name                /**< problem name */
    )
 {
-   SCIP_Bool success;
-
    assert(lp != NULL);
    assert(fplp != NULL);
    assert(set != NULL);
@@ -4131,8 +4218,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    )
 {
    SCIP_RETCODE retcode;
-   SCIP_Bool needprimalray;
-   SCIP_Bool needdualray;
    SCIP_Bool overwritefplp;
    SCIP_Bool primalfeasible;
    SCIP_Bool dualfeasible;
@@ -4141,8 +4226,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    int harditlim;
    SCIP_Bool farkasvalid;
    SCIP_Bool fromscratch;
-   SCIP_Bool wasfromscratch;
-   SCIP_Longint oldnlps;
    int iterations;
 
    assert(lp != NULL);
@@ -4153,10 +4236,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
 
    retcode = SCIP_OKAY;
    *lperror = FALSE;
-
-   /* check whether we need a proof of unboundedness or infeasibility by a primal or dual ray */
-   needprimalray = TRUE;
-   needdualray = TRUE;
 
    /* to avoid complications, we just always overwrite the fp lp */
    overwritefplp = TRUE;
@@ -4175,7 +4254,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    dualfeasible = FALSE;
 
    /* solve the LP */
-   oldnlps = stat->nlps;
    SCIP_CALL( lpExactFlushAndSolve(lpexact, blkmem, set, messagehdlr, stat,
          prob, eventqueue, harditlim, fromscratch, lperror) );
    assert(!(*lperror) || !lp->solved);
@@ -4857,18 +4935,12 @@ SCIP_RETCODE SCIProwExactAddCoef(
    SCIP_Rational*        val                 /**< value of coefficient */
    )
 {
-   SCIP_ROW* row;
-   SCIP_COL* col;
-
    assert(rowexact != NULL);
    assert(colexact != NULL);
    assert(lp != NULL);
 
-   row = rowexact->fprow;
-   col = colexact->fpcol;
-
    assert(lp != NULL);
-   assert(!lp->fplp->diving || row->lppos == -1);
+   assert(!lp->fplp->diving || rowexact->fprow->lppos == -1);
 
    SCIP_CALL( rowExactAddCoef(rowexact, blkmem, set, eventqueue, lp, colexact, val, -1) );
 
@@ -5113,7 +5185,6 @@ void SCIProwExactGetSolFeasibility(
    SCIP_Rational*        result              /**< result pointer */
    )
 {
-   SCIP_Real activity;
    SCIP_Rational* temp1;
    SCIP_Rational* temp2;
 
@@ -5198,7 +5269,6 @@ void SCIProwExactGetSolActivity(
 {
    /** @todo: exip: rational solution might be necessary */
    SCIP_COLEXACT* colexact;
-   SCIP_Real inf;
    SCIP_Rational* solval;
    int i;
 
@@ -5226,8 +5296,10 @@ void SCIProwExactGetSolActivity(
          else if( RatIsInfinity(rowexact->rhs) )
             RatIsPositive(rowexact->vals[i]) ? RatSet(solval, colexact->ub) : RatSet(solval, colexact->lb);
          else
+         {
             RatAdd(solval, colexact->lb, colexact->ub);
             RatMultReal(solval, solval, 0.5);
+         }
       }
 
       RatMult(solval, solval, rowexact->vals[i]);
@@ -5373,8 +5445,6 @@ SCIP_Rational* SCIProwExactGetLPActivity(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
-   SCIP_Real inf;
-
    assert(row != NULL);
    assert(stat != NULL);
    assert(lp != NULL);
@@ -5610,7 +5680,6 @@ void SCIProwExactRecalcPseudoActivity(
    )
 {
    SCIP_COLEXACT* colexact;
-   SCIP_COL* col;
    SCIP_ROW* row;
 
    int i;
@@ -5625,15 +5694,14 @@ void SCIProwExactRecalcPseudoActivity(
    RatSet(rowexact->pseudoactivity, rowexact->constant);
    for( i = 0; i < row->len; ++i )
    {
-      col = row->cols[i];
       colexact = rowexact->cols[i];
 
-      assert(col != NULL);
+      assert(colexact->fpcol != NULL);
       assert(colexact != NULL);
       assert((i < row->nlpcols) == (row->linkpos[i] >= 0
-         && col->lppos >= 0));
-      assert(col->var != NULL);
-      assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+         && colexact->fpcol->lppos >= 0));
+      assert(colexact->fpcol->var != NULL);
+      assert(SCIPvarGetStatus(colexact->fpcol->var) == SCIP_VARSTATUS_COLUMN);
 
       RatAddProd(rowexact->pseudoactivity, rowexact->vals[i], SCIPcolExactGetBestBound(colexact));
    }
@@ -6444,6 +6512,7 @@ SCIP_RETCODE SCIPlpExactGetNRows(
    return lp->nrows;
 }
 
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_RETCODE lpexactComputeDualValidity(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -6495,6 +6564,7 @@ SCIP_RETCODE lpexactComputeDualValidity(
    RatFreeBufferArray(set->buffer, &obj, lp->ncols);
    return SCIP_OKAY;
 }
+#endif
 
 /** stores the LP solution in the columns and rows */
 SCIP_RETCODE SCIPlpExactGetSol(
@@ -7364,7 +7434,6 @@ SCIP_RETCODE SCIPlpExactshrinkCols(
    )
 {
    SCIP_COLEXACT* col;
-   SCIP_Bool recompbs = FALSE;
    int c;
 
    assert(lp != NULL);
@@ -7523,7 +7592,6 @@ SCIP_RETCODE SCIPlpExactcheckIntegralityExact(
    SCIP_COL** cols;
    SCIP_COLEXACT* colexact;
    SCIP_Real primsol;
-   SCIP_Real frac;
    SCIP_VAR* var;
    SCIP_Rational* primsolexact;
    SCIP_Bool exintegral = TRUE;

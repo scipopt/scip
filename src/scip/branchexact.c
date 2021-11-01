@@ -38,6 +38,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/branch.h"
+#include "scip/branchexact.h"
 #include "scip/solve.h"
 #include "scip/visual.h"
 #include "scip/certificate.h"
@@ -278,7 +279,6 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
  * if x' is almost integral but not at a bound, this will branch (x <= x'-1, x == x', x >= x'+1);
  * not meant for branching on a continuous variables
  */
-
 SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -571,17 +571,20 @@ SCIP_RETCODE SCIPbranchExecLPexact(
    for( i = 0; i < branchcand->nlpcands && *result != SCIP_BRANCHED; i++ )
    {
       SCIP_VAR* branchvar;
-      SCIP_Rational* tmp;
-      SCIP_Real branchval;
 
       branchvar = branchcand->lpcands[i];
 
 #ifndef NDEBUG
-      RatCreateBuffer(set->buffer, &tmp);
-      branchval = branchcand->lpcandssol[i];
-      RatSetReal(tmp, branchval);
-      assert(!RatIsIntegral(tmp));
-      RatFreeBuffer(set->buffer, &tmp);
+      {
+         SCIP_Rational* tmp;
+         SCIP_Real branchval;
+
+         RatCreateBuffer(set->buffer, &tmp);
+         branchval = branchcand->lpcandssol[i];
+         RatSetReal(tmp, branchval);
+         assert(!RatIsIntegral(tmp));
+         RatFreeBuffer(set->buffer, &tmp);
+      }
 #endif
 
       SCIP_CALL( SCIPtreeBranchVarExact(tree, reopt, blkmem, set, stat, transprob, origprob, lp,

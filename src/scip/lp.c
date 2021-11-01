@@ -2393,7 +2393,7 @@ SCIP_RETCODE rowChgCoefPos(
       /* delete existing coefficient */
       SCIP_CALL( rowDelCoefPos(row, blkmem, set, eventqueue, lp, pos) );
    }
-   else if( !SCIPsetIsEQ(set, row->vals[pos], val) )
+   else if( !SCIPsetIsEQ(set, row->vals[pos], val) || set->exact_enabled )
    {
       SCIP_Real oldval;
 
@@ -5858,7 +5858,7 @@ SCIP_RETCODE SCIProwChgLhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->lhs, lhs) )
+   if( !SCIPsetIsEQ(set, row->lhs, lhs) || set->exact_enabled )
    {
       SCIP_Real oldlhs;
 
@@ -5890,7 +5890,7 @@ SCIP_RETCODE SCIProwChgRhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->rhs, rhs) )
+   if( !SCIPsetIsEQ(set, row->rhs, rhs) || set->exact_enabled )
    {
       SCIP_Real oldrhs;
 
@@ -12307,7 +12307,7 @@ SCIP_RETCODE lpSolve(
 #ifndef NDEBUG
       /* the LP solution objective should exceed the limit in this case */
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
-      assert(SCIPsetIsGE(set, lp->lpobjval, lp->lpiobjlim));
+      assert(SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiobjlim));
 #endif
 
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;

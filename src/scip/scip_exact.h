@@ -41,6 +41,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_certificate.h"
+#include "scip/type_lpexact.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -161,9 +162,24 @@ SCIP_RETCODE SCIPforceExactSolve(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPbranchLPexact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   );
+
+/** adds row to exact separation storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        rowexact            /**< exact row to add */
    );
 
 #ifdef __cplusplus

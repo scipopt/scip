@@ -237,19 +237,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactSol)
    return SCIP_OKAY;
 }
 
-
-/** constraint enforcing method of constraint handler for relaxation solutions */
-static
-SCIP_DECL_CONSENFORELAX(consEnforelaxExactSol)
-{  /*lint --e{715}*/
-
-   /* returning feasible since we can't enforce anything */
-   *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
-
-
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsExactSol)
@@ -276,7 +263,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    SCIP_Bool lperror;
    SCIP_Bool checkfpfeasibility;
    int nintvars;
-   int nvars;
    int nfixedvars;
    int nconsprob;
    int i;
@@ -453,7 +439,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
       /* set the bounds of the variables: fixed for integers, global bounds for continuous */
       vars = SCIPgetVars(scip);
-      nvars = SCIPgetNVars(scip);
       nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
       nfixedvars = 0;
 
@@ -601,7 +586,6 @@ static
 SCIP_DECL_CONSINIT(consInitExactSol)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int nvars;
 
    assert(scip != NULL);
    assert(conshdlr != NULL );

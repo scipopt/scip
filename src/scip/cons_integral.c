@@ -64,9 +64,7 @@ SCIP_RETCODE checkIntegralityExact(
    int nbin;
    int nint;
    int v;
-   int ncols;
    SCIP_Bool integral;
-   SCIP_Bool fpintegral;
 
    assert(result != NULL);
 
@@ -74,7 +72,6 @@ SCIP_RETCODE checkIntegralityExact(
 
    /* gets primal solution vector of exact LP */
    integral = TRUE;
-   fpintegral = TRUE;
 
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &solval) );
 

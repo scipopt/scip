@@ -169,6 +169,7 @@ SCIP_RETCODE solIncArrayVal(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** increases value of variable in the exact solution's array */
 static
 SCIP_RETCODE solIncArrayValExact(
@@ -209,6 +210,7 @@ SCIP_RETCODE solIncArrayValExact(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** returns the value of the variable in the given solution */
 static
@@ -1110,8 +1112,6 @@ SCIP_RETCODE valsExactFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_SOL* fpsol;
-
    assert(valsexact != NULL);
    assert(*valsexact != NULL);
 
@@ -1723,10 +1723,11 @@ SCIP_RETCODE SCIPsolSetValExact(
 
             RatAddProd(sol->valsexact->obj, obj, val);
          }
+
+         return SCIP_OKAY;
       }
       else
          return SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetTransVar(var), val);
-
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
@@ -3074,7 +3075,7 @@ SCIP_Bool solsAreEqualExact(
 
    assert(sol1 != NULL);
    assert(sol2 != NULL);
-   assert((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) && (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL) || transprob != NULL);
+   assert(((sol1->solorigin == SCIP_SOLORIGIN_ORIGINAL) && (sol2->solorigin == SCIP_SOLORIGIN_ORIGINAL)) || transprob != NULL);
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp1) );
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp2) );
@@ -3730,7 +3731,6 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
 {
    SCIP_VAR** vars;
    SCIP_Rational* solval;
-   SCIP_Rational* obj;
    int nvars;
    int i;
 
