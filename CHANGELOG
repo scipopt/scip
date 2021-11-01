@@ -658,7 +658,7 @@ NLPI:
 - constraints/nonlinear/branching/aux, constraints/nonlinear/branching/external, constraints/nonlinear/branching/highviolfactor, constraints/nonlinear/branching/highscorefactor, constraints/nonlinear/branching/violweight, constraints/nonlinear/branching/dualweight, constraints/nonlinear/branching/pscostweight, constraints/nonlinear/branching/domainweight, constraints/nonlinear/branching/vartypeweight, constraints/nonlinear/branching/scoreagg, constraints/nonlinear/branching/violsplit, constraints/nonlinear/branching/pscostreliable
 - constraints/nonlinear/linearizeheursol
 - nlhdlr/default/enabled
-- nlhdlr/convex/enabled, nlhdlr/convex/detectsum, nlhdlr/convex/preferextended, nlhdlr/convex/cvxquadratic, nlhdlr/convex/cvxsignomial, nlhdlr/convex/cvxprodcomp, nlhdlr/convex/handletrivial
+- nlhdlr/convex/enabled, nlhdlr/convex/detectsum, nlhdlr/convex/extendedform, nlhdlr/convex/cvxquadratic, nlhdlr/convex/cvxsignomial, nlhdlr/convex/cvxprodcomp, nlhdlr/convex/handletrivial
 - nlhdlr/concave/enabled, nlhdlr/concave/detectsum, nlhdlr/concave/cvxquadratic, nlhdlr/concave/cvxsignomial, nlhdlr/concave/cvxprodcomp, nlhdlr/concave/handletrivial
 - nlhdlr/bilinear/enabled, nlhdlr/bilinear/useinteval, nlhdlr/bilinear/usereverseprop, nlhdlr/bilinear/maxseparoundsroot, nlhdlr/bilinear/maxseparounds, nlhdlr/bilinear/maxsepadepth
 - nlhdlr/perspective/enabled, nlhdlr/perspective/maxproprounds, nlhdlr/perspective/mindomreduction, nlhdlr/perspective/minviolprobing, nlhdlr/perspective/probingonlyinsepa, nlhdlr/perspective/probingfreq, nlhdlr/perspective/convexonly, nlhdlr/perspective/tightenbounds, nlhdlr/perspective/adjrefpoint
