@@ -2167,7 +2167,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
 {
    SCIP_Real sideval;
    SCIP_Bool uselhs;
-   SCIP_ROW* userow;
+   SCIP_ROW* userow = row;
    SCIP_ROWEXACT* rowexact;
    SCIP_ROUNDMODE previousroundmode;
    SCIP_Real sidevalchg;

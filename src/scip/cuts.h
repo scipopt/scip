@@ -137,7 +137,7 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    );
 
 /** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row
-/*  variant of SCIPaggrRowAddObjectiveFunction that is safe to use in exact mode */
+ *  variant of SCIPaggrRowAddObjectiveFunction that is safe to use in exact mode */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowAddObjectiveFunctionSafely(
    SCIP*                 scip,               /**< SCIP data structure */

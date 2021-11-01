@@ -358,7 +358,6 @@ struct InferInfo
 };
 typedef struct InferInfo INFERINFO;
 
-#ifdef SCIP_DISABLED_CODE
 /** converts an integer into an inference information */
 static
 INFERINFO intToInferInfo(
@@ -427,7 +426,6 @@ int getInferInt(
 {
    return inferInfoToInt(getInferInfo(proprule, pos));
 }
-#endif
 
 /*
  * memory growing methods for dynamically allocated arrays
@@ -1281,7 +1279,6 @@ SCIP_RETCODE consPrintConsSol(
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_DISABLED_CODE
 /** invalidates activity bounds, such that they are recalculated in next get */
 static
 void consdataInvalidateActivities(
@@ -1327,7 +1324,6 @@ void consdataInvalidateActivities(
    consdata->glbmaxactivityneghuge = -1;
    consdata->glbmaxactivityposhuge = -1;
 }
-#endif
 
 /** @todo exip: should this return a real-relaxation instead
  *  compute the pseudo activity of a constraint */
@@ -1386,7 +1382,7 @@ void consdataComputePseudoActivity(
 
 }
 
-#ifdef SCIP_DISABLED_CODE
+
 /** recompute the minactivity of a constraint */
 static
 void consdataRecomputeMinactivity(
@@ -1610,7 +1606,7 @@ void consdataCheckNonbinvar(
 
    consdata->hasnonbinvalid = TRUE;
 }
-#endif
+
 
 #ifdef CHECKMAXACTDELTA
 /* checks that the stored maximal activity delta (if not invalid) is correct */
@@ -1659,7 +1655,6 @@ void checkMaxActivityDelta(
 #define checkMaxActivityDelta(scip, consdata) /**/
 #endif
 
-#ifdef SCIP_DISABLED_CODE
 /** recompute maximal activity contribution for a single variable */
 static
 SCIP_RETCODE consdataRecomputeMaxActivityDelta(
@@ -1729,7 +1724,6 @@ RETURN_SCIP_OKAY:
 
    return SCIP_OKAY;
 }
-#endif
 
 /** updates activities for a change in a bound */
 static
@@ -2305,7 +2299,6 @@ SCIP_Rational* consdataGetMinAbsval(
 }
 #endif
 
-#ifdef SCIP_DISABLED_CODE
 /** calculates minimum and maximum local and global activity for constraint from scratch;
  *  additionally recalculates maximum absolute value of coefficients
  */
@@ -2467,7 +2460,6 @@ void consdataCalcActivities(
    #endif
 
 }
-#endif
 
 /** computes the activity of a row for a given solution plus a bound on the floating-point error using running error analysis */
 static
@@ -2534,7 +2526,6 @@ SCIP_Bool consdataComputeSolActivityWithErrorbound(
    return TRUE;
 }
 
-#ifdef SCIP_DISABLED_CODE
 /** gets minimal activity for constraint and given values of counters for infinite and huge contributions
  *  and (if needed) delta to subtract from stored finite part of activity in case of a residual activity
  */
@@ -2721,9 +2712,7 @@ void consdataGetActivityBounds(
 
    RatFreeBuffer(SCIPbuffer(scip), &tmpdelta);
 }
-#endif
 
-#ifdef SCIP_DISABLED_CODE
 /** calculates activity bounds for constraint after setting variable to zero */
 static
 void consdataGetReliableResidualActivity(
@@ -3141,7 +3130,6 @@ void consdataGetGlbActivityResiduals(
    RatFreeBuffer(SCIPbuffer(scip), &maxactbound);
    RatFreeBuffer(SCIPbuffer(scip), &minactbound);
 }
-#endif
 
 /** calculates the activity of the linear constraint for given solution */
 static
@@ -3421,7 +3409,6 @@ SCIP_RETCODE printCertificateConsLinearOrig(
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_DISABLED_CODE
 /** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
 static
 SCIP_DECL_SORTINDCOMP(consdataCompVar)
@@ -3653,7 +3640,7 @@ SCIP_RETCODE consdataSort(
 
    return SCIP_OKAY;
 }
-#endif
+
 
 /*
  * local linear constraint handler methods
@@ -16369,10 +16356,6 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
 static
 SCIP_DECL_CONSPROP(consPropExactLinear)
 {  /*lint --e{715}*/
-   *result = SCIP_DIDNOTFIND;
-   return SCIP_OKAY;
-
-#ifdef SCIP_DISABLED_CODE
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool rangedrowpropagation = FALSE;
    SCIP_Bool tightenbounds;
@@ -16444,10 +16427,6 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
 static
 SCIP_DECL_CONSPRESOL(consPresolExactLinear)
 {  /*lint --e{715}*/
-   *result = SCIP_DIDNOTRUN;
-   return SCIP_OKAY;
-
-#ifdef SCIP_DISABLED_CODE
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
@@ -17391,8 +17370,6 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsExactLinear)
 static
 SCIP_DECL_EVENTEXEC(eventExecExactLinear)
 {  /*lint --e{715}*/
-   return SCIP_OKAY;
-#ifdef SCIP_DISABLED_CODE
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
