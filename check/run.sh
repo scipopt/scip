@@ -231,8 +231,8 @@ date                                  >> "${ERRFILE}"
 echo                                  >> "${OUTFILE}"
 echo "=ready="                        >> "${OUTFILE}"
 
-mv "${OUTFILE}" SOLVERPATH/$OUTPUTDIR/$BASENAME.out
-mv "${ERRFILE}" SOLVERPATH/$OUTPUTDIR/$BASENAME.err
+mv "${OUTFILE}" $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
+mv "${ERRFILE}" $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
 
 # move a possible data file
 if [ -f "${DATFILE}" ] "{;}"
