@@ -1044,8 +1044,11 @@ generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_
 target_compile_definitions(scip PRIVATE SCIP_STATIC_DEFINE)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    find_package(Sanitizers)
-    add_sanitizers(scip)
+    if (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR
+        SANITIZE_UNDEFINED)
+       find_package(Sanitizers)
+       add_sanitizers(scip)
+    endif()
 endif()
 
 target_link_libraries(scip
