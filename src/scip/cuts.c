@@ -4552,7 +4552,7 @@ SCIP_RETCODE cutsRoundMIRRational(
          /* lower bound was used */
          if( boundtype[i] == -1 )
          {
-            assert(RatIsEqualReal(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbGlobal(var)));
+            assert(RatRoundReal(SCIPvarGetLbGlobalExact(var), SCIP_R_ROUND_DOWNWARDS) ==  SCIPvarGetLbGlobal(var));
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
             RatMult(tmp, cutaj, SCIPvarGetLbGlobalExact(var));
             SCIPquadprecSumQD(*cutrhs, *cutrhs, RatRoundReal(tmp, SCIP_R_ROUND_UPWARDS)); /* rhs += cutaj * SCIPvarGetLbGlobal(var) */
@@ -4569,7 +4569,7 @@ SCIP_RETCODE cutsRoundMIRRational(
          /* upper bound was used */
          if( boundtype[i] == -1 )
          {
-            assert(RatIsEqualReal(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbGlobal(var)));
+            assert(RatRoundReal(SCIPvarGetUbGlobalExact(var), SCIP_R_ROUND_UPWARDS) ==  SCIPvarGetUbGlobal(var));
             assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
             RatMult(tmp, cutaj, SCIPvarGetUbGlobalExact(var));
             SCIPquadprecSumQD(*cutrhs, *cutrhs, RatRoundReal(tmp, SCIP_R_ROUND_UPWARDS)); /* rhs += cutaj * SCIPvarGetUbGlobal(var) */
@@ -4668,7 +4668,7 @@ SCIP_RETCODE cutsRoundMIRRational(
             /* lower bound was used */
             if( boundtype[i] == -1 )
             {
-               assert(RatIsEqualReal(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbGlobal(var)));
+               assert(RatRoundReal(SCIPvarGetLbGlobalExact(var), SCIP_R_ROUND_DOWNWARDS) ==  SCIPvarGetLbGlobal(var));
                assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
                RatMult(tmprational, cutaj, SCIPvarGetLbGlobalExact(var));
                SCIPquadprecSumQD(*cutrhs, *cutrhs, RatRoundReal(tmprational, SCIP_R_ROUND_UPWARDS));
@@ -4685,7 +4685,7 @@ SCIP_RETCODE cutsRoundMIRRational(
             /* upper bound was used */
             if( boundtype[i] == -1 )
             {
-               assert(RatIsEqualReal(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbGlobal(var)));
+               assert(RatRoundReal(SCIPvarGetUbGlobalExact(var), SCIP_R_ROUND_UPWARDS) ==  SCIPvarGetUbGlobal(var));
                assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
                RatMult(tmprational, cutaj, SCIPvarGetUbGlobalExact(var));
                SCIPquadprecSumQD(*cutrhs, *cutrhs, RatRoundReal(tmprational, SCIP_R_ROUND_UPWARDS));
