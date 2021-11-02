@@ -39,6 +39,9 @@
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/visual.h"
+#include "scip/visual.h"
+#include "scip/certificate.h"
+#include "scip/scip_exact.h"
 
 /* because calculations might cancel out some values, we stop the infeasibility analysis if a value is bigger than
  * 2^53 = 9007199254740992
@@ -851,7 +854,10 @@ SCIP_RETCODE createAndAddProofcons(
       if( SCIPsetIsGT(set, globalminactivity, rhs) )
       {
          SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);
-
+         if( SCIPisCertificateActive(set->scip) )
+         {
+            // @TODO SCIPcertificatePrintActivityBound(set->scip, SCIPgetCertificate(set->scip), NULL, SCIP_BOUNDTYPE_LOWER, globalminactivity, globalminactivity, false, cons);
+         }
          SCIP_CALL( SCIPnodeCutoff(tree->path[proofset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          goto UPDATESTATISTICS;
@@ -889,7 +895,7 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* don't store global dual proofs that are too long / have too many non-zeros */
-   if( toolong )
+   if( toolong  && !set->exact_enabled)
    {
       if( applyglobal )
       {
@@ -921,12 +927,14 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_INVALIDCALL;
    if (set->exact_enabled)
    {
-      SCIP_Rational* lhs;
-      SCIP_Rational* rhs;
+      SCIP_Rational* lhs_exact;
+      SCIP_Rational* rhs_exact;
       SCIP_Rational** coefs_exact;
       SCIP_VAR** consvars;
-      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &lhs));
-      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &rhs));
+      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
+      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
+      RatSetString(lhs_exact, "-inf");
+      RatSetReal(rhs_exact, rhs);
       SCIP_CALL(RatCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz));
       SCIP_CALL(SCIPallocBufferArray(set->scip, &consvars, nnz));
       for( i = 0; i < nnz; i++ )
@@ -935,13 +943,13 @@ SCIP_RETCODE createAndAddProofcons(
          RatSetReal(coefs_exact[i], coefs[i]);
       }
       //SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, prob, certificate, aggrinfo->aggrrow, aggrinfo->aggrrows, aggrinfo->weights, naggrrows) );
-      SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs, rhs,
+      SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs_exact, rhs_exact,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
             FALSE, TRUE, TRUE, FALSE) );
       SCIPfreeBufferArray(set->scip, &consvars);
       RatFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
-      RatFreeBuffer(SCIPbuffer(set->scip), &rhs);
-      RatFreeBuffer(SCIPbuffer(set->scip), &lhs);
+      RatFreeBuffer(SCIPbuffer(set->scip), &rhs_exact);
+      RatFreeBuffer(SCIPbuffer(set->scip), &lhs_exact);
 
    }
    else
@@ -1104,7 +1112,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
    if( proofsetGetConftype(conflict->proofset) != SCIP_CONFTYPE_UNKNOWN )
    {
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-      if( SCIPproofsetGetNVars(conflict->proofset) == 1 )
+      if( SCIPproofsetGetNVars(conflict->proofset) == 1  && !set->exact_enabled )
       {
          SCIP_VAR** vars;
          SCIP_Real* coefs;
@@ -1165,7 +1173,7 @@ SCIP_RETCODE SCIPconflictFlushProofset(
          assert(proofsetGetConftype(conflict->proofsets[i]) != SCIP_CONFTYPE_UNKNOWN);
 
          /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
-         if( SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 )
+         if( SCIPproofsetGetNVars(conflict->proofsets[i]) == 1 && !set->exact_enabled)
          {
             SCIP_VAR** vars;
             SCIP_Real* coefs;

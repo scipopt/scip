@@ -380,6 +380,7 @@ void SCIPcertificatePrintSolExact(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+
 /** set the node to have its own bound proof */
 SCIP_RETCODE SCIPcertificateSetInheritanceData(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
@@ -388,7 +389,7 @@ SCIP_RETCODE SCIPcertificateSetInheritanceData(
    SCIP_Rational*        newbound            /**< the inherited bound */
    );
 
-SCIP_Longint SCIPcertificatePrintActivityBound(
+SCIP_Longint SCIPcertificatePrintActivityVarBound(
    SCIP*                 scip,
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    const char*           linename,           /**< name of the unsplitting line */
@@ -401,6 +402,11 @@ SCIP_Longint SCIPcertificatePrintActivityBound(
    );
 
 void SCIPcertificateAssertStateCorrect(SCIP* scip, SCIP_VAR* var);
+
+SCIP_RETCODE SCIPcertificateInsertVarBound(
+   SCIP_CERTIFICATE*         certificate,
+   SCIP_CERTIFICATEBOUND*    bound,
+   SCIP_CERTIFICATEBOUND**   insertedbound);
 
 #ifdef __cplusplus
 }

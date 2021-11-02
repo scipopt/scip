@@ -34,7 +34,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+#define SCIP_DEBUG
 #include "lpi/lpi.h"
 #include "scip/clock.h"
 #include "scip/conflict.h"
@@ -78,6 +78,7 @@
 #include "scip/var.h"
 #include "scip/visual.h"
 #include "scip/scip_solvingstats.h"
+#include "scip/scip_numerics.h"
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
@@ -787,7 +788,8 @@ SCIP_RETCODE addRowToAggrRow(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             weight,             /**< weight for scaling */
-   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
+   SCIP_AGGRROW*         aggrrow,             /**< aggregation row */
+   SCIP_Bool             force_old
    )
 {
    assert(set != NULL);
@@ -798,7 +800,7 @@ SCIP_RETCODE addRowToAggrRow(
    SCIP_Bool negated = weight < 0.0;
    assert( !negated || !SCIPsetIsInfinity(set, -row->lhs) );
    assert( negated || !SCIPsetIsInfinity(set, row->rhs) );
-   if( set->exact_enabled )
+   if( set->exact_enabled && !force_old )
    {
       SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1) );
    }
@@ -1085,7 +1087,7 @@ SCIP_RETCODE addLocalRows(
             continue;
 
          /* add row to dual proof */
-         SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], proofrow) );
+         SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], proofrow, false) );
 
          /* update depth where the proof is valid */
          if( *validdepth < localrowdepth[i] )
@@ -1157,6 +1159,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
 {
    SCIP_ROW** rows;
    SCIP_Real* dualfarkas;
+   SCIP_AGGRROW* farkasrow_fpdebug;
    SCIP_ROW* row;
    int* localrowinds;
    int* localrowdepth;
@@ -1196,6 +1199,10 @@ SCIP_RETCODE SCIPgetFarkasProof(
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
+   #ifdef SCIP_DEBUG
+   if (set->exact_enabled)
+      SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow_fpdebug) );
+   #endif
    BMSclearMemoryArray(dualfarkas, nrows);
 
    /* get dual Farkas values of rows */
@@ -1236,7 +1243,18 @@ SCIP_RETCODE SCIPgetFarkasProof(
 
          if( !row->local )
          {
-            SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow) );
+            SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow, false) );
+
+            #ifdef SCIP_DEBUG
+            if (set->exact_enabled) {
+               SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow_fpdebug, true) );
+               assert(farkasrow->nnz == farkasrow_fpdebug->nnz);
+               for (int i = 0; i < farkasrow->nnz; i++)
+               {
+                  assert( SCIPisEQ(set->scip, farkasrow->vals[i], farkasrow_fpdebug->vals[i]) );
+               }
+            }
+            #endif
 
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
@@ -1287,6 +1305,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
     * Due to the latter case, it might happen at least one variable contributes
     * with an infinite value to the activity (see: https://git.zib.de/integer/scip/issues/2743)
     */
+    #ifdef SCIP_DIABLED_CODE
    if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)))
    {
       /* add contribution of local rows */
@@ -1301,9 +1320,13 @@ SCIP_RETCODE SCIPgetFarkasProof(
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
+   #endif
 
   TERMINATE:
-
+  #ifdef SCIP_DEBUG
+   if (set->exact_enabled)
+      SCIPaggrRowFree(set->scip, &farkasrow_fpdebug);
+   #endif
    SCIPfreeBufferArrayNull(set->scip, &localrowdepth);
    SCIPfreeBufferArrayNull(set->scip, &localrowinds);
    SCIPsetFreeBufferArray(set, &dualfarkas);
@@ -1464,7 +1487,7 @@ SCIP_RETCODE SCIPgetDualProof(
          /* skip local row */
          if( !row->local )
          {
-            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow) );
+            SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], farkasrow, false) );
 
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )

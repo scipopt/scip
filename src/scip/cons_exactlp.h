@@ -33,6 +33,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
+#include "scip/type_certificate.h"
 #include "scip/rational.h"
 
 #ifdef __cplusplus
@@ -393,6 +394,7 @@ SCIP_RETCODE SCIPclassifyConstraintTypesExactLinear(
    );
 
 
+unsigned long certificateGetConsIndex(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_CONS* cons);
 /* @} */
 
 /* @} */
