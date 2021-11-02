@@ -37,11 +37,13 @@ if (SANITIZE_MEMORY)
             "MemorySanitizer is supported for Linux systems only.")
         set(SANITIZE_MEMORY Off CACHE BOOL
             "Enable MemorySanitizer for sanitized targets." FORCE)
+        set(${FLAG_CANDIDATES} "")
     elseif (NOT ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
         message(WARNING "MemorySanitizer disabled for target ${TARGET} because "
             "MemorySanitizer is supported for 64bit systems only.")
         set(SANITIZE_MEMORY Off CACHE BOOL
             "Enable MemorySanitizer for sanitized targets." FORCE)
+        set(${FLAG_CANDIDATES} "")
     else ()
         sanitizer_check_compiler_flags("${FLAG_CANDIDATES}" "MemorySanitizer"
             "MSan")
@@ -52,6 +54,11 @@ function (add_sanitize_memory TARGET)
     if (NOT SANITIZE_MEMORY)
         return()
     endif ()
-
     sanitizer_add_flags(${TARGET} "MemorySanitizer" "MSan")
 endfunction ()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(MSan
+   REQUIRED_VARS
+   MSan_FLAG_DETECTED
+)

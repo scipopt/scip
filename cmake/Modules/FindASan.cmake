@@ -57,3 +57,9 @@ function (add_sanitize_address TARGET)
 
     sanitizer_add_flags(${TARGET} "AddressSanitizer" "ASan")
 endfunction ()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(ASan
+   REQUIRED_VARS
+   ASan_FLAG_DETECTED
+)
