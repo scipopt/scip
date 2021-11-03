@@ -1157,7 +1157,7 @@ SCIP_Bool RatIsEqualReal(
    assert(rat != NULL);
 
    if( REALABS(real) >= infinity && rat->isinf )
-      return (real > 0 && RatIsPositive(rat));
+      return (real > 0 && RatIsPositive(rat)) || (real < 0 && RatIsNegative(rat));
 
    return !rat->isinf && rat->val == real;
 }
