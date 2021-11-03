@@ -310,9 +310,9 @@ static
 SCIP_Bool termsepaCutIsCorrect(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   int                   ncutterms,
-   const int*            cutterms,
-   int                   sinkterm,
+   int                   ncutterms,          /**< number of cut terminals */
+   const int*            cutterms,           /**< stores cut terminals */
+   int                   sinkterm,           /**< sink terminal */
    const MINCUT*         mincut              /**< minimum cut */
 )
 {
@@ -591,12 +591,12 @@ SCIP_RETCODE termsepaTraverseSinkComp(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
    SCIP_Bool             removeTerms,        /**< remove terminals reachable from sink via non-terminal paths? */
-   SCIP_Bool             updateVisitedTerms,
+   SCIP_Bool             updateVisitedTerms, /**< do update? */
    int                   ncutterms,          /**< size of the separator */
    const int*            cutterms,           /**< the separator nodes (all terminals) */
    int                   sinkterm,           /**< sink terminal of current cut */
    MINCUT*               mincut,             /**< minimum cut */
-   int*                  ncompnodes
+   int*                  ncompnodes          /**< number of nodes in component (OUT) */
 )
 {
    int* RESTRICT termcands = mincut->terms;
@@ -734,7 +734,7 @@ SCIP_RETCODE termsepaGetCompNnodes(
    const int*            cutterms,           /**< the separator nodes (all terminals) */
    int                   sinkterm,           /**< sink terminal of current cut */
    MINCUT*               mincut,             /**< minimum cut */
-   int*                  ncompnodes
+   int*                  ncompnodes          /**< number of nodes in component */
 )
 {
    const SCIP_Bool removeTerms = FALSE;
@@ -752,12 +752,12 @@ static
 SCIP_RETCODE termsepaStoreCutFinalize(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   int                   sinkterm,
+   int                   sinkterm,           /**< sink terminal */
    MINCUT*               mincut,             /**< minimum cut */
-   int                   ncutterms,
-   const int*            cutterms,
+   int                   ncutterms,          /**< number of cut terminals */
+   const int*            cutterms,           /**<  cut terminals */
    TERMSEPAS*            termsepas,          /**< terminal separator storage */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< success? */
 )
 {
    TSEPA* sepas = termsepas->sepas;
@@ -829,7 +829,7 @@ static
 SCIP_RETCODE termsepaStoreCutTry(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
-   int                   sinkterm,
+   int                   sinkterm,           /**< sink terminal */
    MINCUT*               mincut,             /**< minimum cut */
    TERMSEPAS*            termsepas           /**< terminal separator storage */
 )
@@ -1778,8 +1778,8 @@ int mincutGetNextSinkTerm(
 static
 void mincutExec(
    const GRAPH*          g,                  /**< the graph */
-   int                   sinkterm,
-   SCIP_Bool             wasRerun,
+   int                   sinkterm,           /**< sink terminal */
+   SCIP_Bool             wasRerun,           /**< not the first run? */
    MINCUT*               mincut              /**< minimum cut */
 )
 {
@@ -2162,8 +2162,8 @@ int mincut_termsepasGetN(
 const int* mincut_termsepasGetFirst(
    int                   sepasize,           /**< size */
    TERMSEPAS*            termsepas,          /**< terminal separators */
-   int*                  sinkterm,
-   int*                  nsinknodes
+   int*                  sinkterm,           /**< the sink */
+   int*                  nsinknodes          /**< number of sink-side nodes */
 )
 {
    assert(termsepas && sinkterm && nsinknodes);
@@ -2179,8 +2179,8 @@ const int* mincut_termsepasGetFirst(
 const int* mincut_termsepasGetNext(
    int                   sepasize,           /**< size */
    TERMSEPAS*            termsepas,          /**< terminal separators */
-   int*                  sinkterm,
-   int*                  nsinknodes
+   int*                  sinkterm,           /**< the sink */
+   int*                  nsinknodes          /**< number of sink-side nodes */
 )
 {
    assert(termsepas && sinkterm && nsinknodes);

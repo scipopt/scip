@@ -640,7 +640,7 @@ static
 void pcmwAdaptStarts(
    SCIP_HEURDATA*        heurdata,           /**< heurdata */
    const GRAPH*          graph,              /**< graph data structure */
-   int                   maxtmruns,          /**> number of TM runs */
+   int                   maxtmruns,          /**< number of TM runs */
    int                   bestincstart,       /**< best incumbent start vertex */
    int*                  terminalperm        /**< terminal permutation */
    )
@@ -671,7 +671,7 @@ static
 SCIP_RETCODE pcmwGetStartNodes(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real*      nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
-   int                   maxtmruns,          /**> number of TM runs */
+   int                   maxtmruns,          /**< number of TM runs */
    int                   bestincstart,       /**< best incumbent start vertex */
    GRAPH*                graph,              /**< graph data structure */
    int*                  terminalperm        /**< terminal permutation */
@@ -1147,7 +1147,7 @@ SCIP_RETCODE computeSteinerTreeDijkBMw(
    const SCIP_Real*      prize,              /**< (possibly biased) vertex prizes */
    int                   start,              /**< start vertex */
    TMBASE*               tmbase,             /**< data */
-   SCIP_Bool*            solfound
+   SCIP_Bool*            solfound            /**< solution found? (OUT) */
    )
 {
    assert(g->stp_type == STP_BRMWCSP);
@@ -2026,8 +2026,8 @@ void tmLpGetEdgeRandomizations(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heurdata */
    const GRAPH*          graph,              /**< graph data structure */
-   SCIP_Bool*            partrand,
-   SCIP_Bool*            totalrand
+   SCIP_Bool*            partrand,           /**< use partial randomization? (OUT) */
+   SCIP_Bool*            totalrand           /**< use total randomization? (OUT) */
 )
 {
    *partrand = FALSE;

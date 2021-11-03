@@ -85,8 +85,8 @@ typedef struct dual_ascent_paths
 static
 SCIP_RETCODE daconsCreateEmpty(
    SCIP*                 scip,               /**< SCIP data structure */
-   enum DACONS_Type      constype,
-   SCIP_Bool             consUseInital,
+   enum DACONS_Type      constype,           /**< constraint type to be used */
+   SCIP_Bool             consUseInital,      /**< use dual-ascent cuts as initial constraints? */
    SCIP_CONS**           cons                /**< to be initialized */
    )
 {
@@ -116,8 +116,8 @@ SCIP_RETCODE daconsCreateEmpty(
 static
 SCIP_RETCODE daconsGetParams(
    SCIP*                 scip,               /**< SCIP data structure */
-   enum DACONS_Type*     constype,
-   SCIP_Bool*            consUseInital
+   enum DACONS_Type*     constype,           /**< pointer: constraint type to be used (OUT) */
+   SCIP_Bool*            consUseInital       /**< pointer: use dual-ascent cuts as initial constraints? (OUT) */
    )
 {
    int type;
