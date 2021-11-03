@@ -194,7 +194,7 @@ SCIP_RETCODE computeSteinerTreeTM(
    GRAPH*                graph,              /**< graph data structure */
    int*                  result,             /**< solution array */
    SCIP_Real*            bestobjval,         /**< pointer to the objective value */
-   SCIP_Bool*            success
+   SCIP_Bool*            success             /**< success? */
 )
 {
    SCIP_Real* cost = NULL;
@@ -1737,11 +1737,11 @@ int daGetNruns(
 static
 SCIP_RETCODE daRoundInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             upperbound,
+   SCIP_Real             upperbound,         /**< upper bound */
    GRAPH*                graph,              /**< graph structure */
-   REDCOST*              redcostdata,         /**< reduced cost data */
-   STP_Bool*             arcsdeleted,
-   SCIP_Real*            cutoffbound
+   REDCOST*              redcostdata,        /**< reduced cost data */
+   STP_Bool*             arcsdeleted,        /**< array */
+   SCIP_Real*            cutoffbound         /**< cut-off bound */
 )
 {
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
@@ -1773,9 +1773,9 @@ SCIP_RETCODE daRoundInit(
 static
 void daRoundExit(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   ndeletions_run,
+   int                   ndeletions_run,     /**< number of deletions */
    GRAPH*                graph,              /**< graph structure */
-   int*                  nelims
+   int*                  nelims              /**< number of eliminations */
 )
 {
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);

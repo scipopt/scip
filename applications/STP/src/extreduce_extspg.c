@@ -53,9 +53,9 @@ static inline
 SCIP_Bool spg4VerticesRuleOut(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
-   int                   node_pathstart,     /**< */
-   int                   node_pathend,       /**< */
-   int                   node_other,         /**< */
+   int                   node_pathstart,     /**< start of path */
+   int                   node_pathend,       /**< end of path */
+   int                   node_other,         /**< other node */
    SCIP_Real             tree_cost,          /**< tree cost */
    int*                  pathnodes,          /**< buffer */
    EXTDATA*              extdata             /**< extension data */

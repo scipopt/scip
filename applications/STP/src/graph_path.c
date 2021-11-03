@@ -327,15 +327,15 @@ static
 void sdDcExtendTree(
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edgecosts */
-   int*                  heapsize,
-   int*                  pathdeg_free,
-   int*                  nodedeg_free,
+   int*                  heapsize,           /**< heap size */
+   int*                  pathdeg_free,       /**< currently available degree of path */
+   int*                  nodedeg_free,       /**< currently available degree of node */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
-   int*                  result,
-   int*                  soldegfree,
-   int*                  nsolterms
+   int*                  result,             /**< solution array */
+   int*                  soldegfree,         /**< per node: solution degree */
+   int*                  nsolterms           /**< number of solution terminals */
    )
 {
    int* RESTRICT heap = g->path_heap;
@@ -1296,15 +1296,15 @@ void graph_path_st(
 
 /** For DCSTP: Find a directed tree rooted in node 'start' and spanning all terminals, while respecting degree constraints */
 SCIP_RETCODE graph_path_st_dc(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edgecosts */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
    STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
-   int*                  result,
-   STP_Bool*             solFound
+   int*                  result,             /**< solution */
+   STP_Bool*             solFound            /**< pointer to store whether solution was found */
    )
 {
    const int nedges = graph_get_nEdges(g);
