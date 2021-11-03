@@ -289,7 +289,7 @@ void solGetStpSol(
 static
 void initSolNumberBounds(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata
+   SCIP_HEURDATA*        heurdata            /**< heuristic's data */
 )
 {
    assert(heurdata->nbestsols == -1 && heurdata->nbestsols_min == -1);
@@ -598,8 +598,8 @@ SCIP_RETCODE lca(
 /** computes lowest common ancestors for all pairs {vbase(v), vbase(u)} such that {u,w} is a boundary edge */
 static
 SCIP_RETCODE getLowestCommonAncestors(
-   SCIP*                 scip,
-   const GRAPH*          graph,
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
    const VNOILOC*        vnoiData,           /**< Voronoi data */
    const SOLTREE*        soltreeData,        /**< solution tree data */
    CONN*                 connectData         /**< data */
@@ -714,9 +714,9 @@ int pcmwGetSolRoot(
 /** get prize not already counted that is associated to edge, not including solution nodes or forbidden ones */
 static
 SCIP_Real pcmwGetNewEdgePrize(
-   const GRAPH*          graph,
-   const STP_Bool*       steinertree,
-   int                   edge,
+   const GRAPH*          graph,              /**< graph */
+   const STP_Bool*       steinertree,        /**< Steiner tree */
+   int                   edge,               /**< the edge */
    PCMW*                 pcmwData            /**< data */
    )
 {
@@ -862,8 +862,8 @@ SCIP_RETCODE pcmwUpdate(
 static
 STP_Bool nodeIsCrucial(
    const GRAPH*          graph,              /**< graph data structure */
-   const int*            steineredges,
-   int                   node
+   const int*            steineredges,       /**< Steiner edges */
+   int                   node                /**< node to check */
 )
 {
    assert(graph != NULL);

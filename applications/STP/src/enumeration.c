@@ -41,8 +41,8 @@
 static
 void pcmwFindMax2Terms(
    const GRAPH*          g,                  /**< graph data structure */
-   int*                  term_max,
-   int*                  term_max2
+   int*                  term_max,           /**< pointer to store maximum-prize terminal */
+   int*                  term_max2           /**< pointer to store second-maximum-prize terminal */
    )
 {
    const int pseudoroot = graph_pc_isRootedPcMw(g) ? -1 : g->source;
@@ -79,9 +79,9 @@ static
 SCIP_RETCODE tryPathPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   int                   term_start,
-   int                   term_end,
-   STP_Bool* RESTRICT    nodes_inPath
+   int                   term_start,         /**< start vertex, from which to connect */
+   int                   term_end,           /**< vertex to be reached */
+   STP_Bool* RESTRICT    nodes_inPath        /**< for each node: is in path? */
 )
 {
    PATH* path;
