@@ -499,8 +499,10 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          break;
       }
 /*
- * with the dual postsolving PaPILO introduced a substitution with more and at different location stored information
- * Therefore get at the required (primal) information regarding the Substitution type
+ * Dual-postsolving in PaPILO required introducing a postsolve-type for substitution with additional information.
+ * Further, the different Substitution-postsolving types store the required postsolving data differently (in different order) in the postsolving stack.
+ * Therefore, we need to distinguish how to parse the required data (rowLength, col, side, startRowCoefficients, lastRowCoefficients) from the postsolving stack.
+ * If these values are accessed, the procedure is the same for both.
  */
 #if (PAPILO_VERSION_MAJOR >= 2)
       case ReductionType::kSubstitutedColWithDual:
