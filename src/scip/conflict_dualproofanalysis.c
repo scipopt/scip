@@ -1013,7 +1013,7 @@ SCIP_RETCODE createAndAddProofcons(
          assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 || set->exact_enabled );
          assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear-exact") == 0 || !set->exact_enabled );
 #endif
-         side = set->exact_enabled ? SCIPgetLhsLinear(set->scip, cons) : RatRoundReal(SCIPgetLhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST);
+         side = set->exact_enabled ? RatRoundReal(SCIPgetLhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetLhsLinear(set->scip, cons);
 
          if( !SCIPsetIsInfinity(set, -side) )
          {
@@ -1029,7 +1029,7 @@ SCIP_RETCODE createAndAddProofcons(
          }
          else
          {
-            side = set->exact_enabled ? SCIPgetRhsLinear(set->scip, cons) : RatRoundReal(SCIPgetRhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST);
+            side = set->exact_enabled ? RatRoundReal(SCIPgetRhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetRhsLinear(set->scip, cons);
             assert(!SCIPsetIsInfinity(set, side));
 
             if( SCIPsetIsZero(set, side) )
