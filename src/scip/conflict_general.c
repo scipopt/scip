@@ -2044,8 +2044,8 @@ SCIP_RETCODE conflictAnalyzeLP(
    if( !valid )
       goto TERMINATE;
 
-   /* the LP is prooven to be infeasible */
-   if( SCIPlpiIsPrimalInfeasible(lpi) )
+   /* the LP is proven to be infeasible */
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       SCIP_CALL( SCIPgetFarkasProof(set, transprob, lp, lpi, tree, farkasrow, &farkasactivity, &validdepth,
          curvarlbs, curvarubs, &valid) );
