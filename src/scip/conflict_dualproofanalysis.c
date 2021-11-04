@@ -925,6 +925,8 @@ SCIP_RETCODE createAndAddProofcons(
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsbndsuccess);
    else
       return SCIP_INVALIDCALL;
+
+   SCIPdebugMessage("Create constraint from dual ray analysis\n");
    if (set->exact_enabled)
    {
       SCIP_Rational* lhs_exact;
@@ -1008,9 +1010,10 @@ SCIP_RETCODE createAndAddProofcons(
          SCIP_CONSHDLR* conshdlr = SCIPconsGetHdlr(cons);
 
          assert(conshdlr != NULL);
-         assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0);
+         assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 || set->exact_enabled );
+         assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear-exact") == 0 || !set->exact_enabled );
 #endif
-         side = SCIPgetLhsLinear(set->scip, cons);
+         side = set->exact_enabled ? SCIPgetLhsLinear(set->scip, cons) : RatRoundReal(SCIPgetLhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST);
 
          if( !SCIPsetIsInfinity(set, -side) )
          {
@@ -1026,7 +1029,7 @@ SCIP_RETCODE createAndAddProofcons(
          }
          else
          {
-            side = SCIPgetRhsLinear(set->scip, cons);
+            side = set->exact_enabled ? SCIPgetRhsLinear(set->scip, cons) : RatRoundReal(SCIPgetRhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST);
             assert(!SCIPsetIsInfinity(set, side));
 
             if( SCIPsetIsZero(set, side) )
@@ -1260,9 +1263,9 @@ void tightenCoefficients(
       }
 
       SCIPsetDebugMsg(set, "coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, nchg: %d rhs: %.15g)\n",
-            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
+            absmin, absmax, newabsmin, newabsmax, SCIPproofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
       printf("coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, nchg: %d rhs: %.15g)\n",
-            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
+            absmin, absmax, newabsmin, newabsmax, SCIPproofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
    }
 #endif
 }
@@ -1456,7 +1459,7 @@ SCIP_RETCODE tightenDualproof(
    SCIPsetDebugMsg(set, "start dual proof tightening:\n");
    SCIPsetDebugMsg(set, "-> tighten dual proof: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          nnz, nbinvars, nintvars, ncontvars);
-   debugPrintViolationInfo(set, aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
+   debugPrintViolationInfo(set, SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
    if( set->conf_sepaaltproofs && !set->exact_enabled )

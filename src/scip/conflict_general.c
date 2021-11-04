@@ -34,7 +34,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
 #include "lpi/lpi.h"
 #include "scip/clock.h"
 #include "scip/conflict.h"
@@ -808,10 +807,10 @@ SCIP_RETCODE addRowToAggrRow(
    {
       SCIP_CALL( SCIPaggrRowAddRow(set->scip, aggrrow, row, weight,  negated ? -1 : 1) );
    }
-   SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
-      row->local ? "local" : "global",
-      SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant,
-      row->lpdepth, weight, SCIPaggrRowGetRhs(aggrrow));
+   //SCIPsetDebugMsg(set, " -> add %s row <%s>[%g,%g](lp depth: %d): dual=%g -> dualrhs=%g\n",
+   //   row->local ? "local" : "global",
+   //   SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant,
+   //   row->lpdepth, weight, SCIPaggrRowGetRhs(aggrrow));
 
    return SCIP_OKAY;
 }
@@ -1086,6 +1085,18 @@ SCIP_RETCODE addLocalRows(
          if( SCIPsetIsDualfeasZero(set, dualsols[r]) )
             continue;
 
+         if ( set->exact_enabled )
+         {
+            for (int i = 0; i < row->len; i++)
+            {
+               if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
+               {
+                  (*valid) = FALSE;
+                  goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
+               }
+            }
+         }
+
          /* add row to dual proof */
          SCIP_CALL( addRowToAggrRow(set, row, -dualsols[r], proofrow, false) );
 
@@ -1241,21 +1252,20 @@ SCIP_RETCODE SCIPgetFarkasProof(
          if( SCIPsetIsDualfeasZero(set, dualfarkas[r]) )
             continue;
 
+         if ( set->exact_enabled )
+         {
+            for (int i = 0; i < row->len; i++)
+            {
+               if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
+               {
+                  (*valid) = FALSE;
+                  goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
+               }
+            }
+         }
          if( !row->local )
          {
             SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow, false) );
-
-            #ifdef SCIP_DEBUG
-            if (set->exact_enabled) {
-               SCIP_CALL( addRowToAggrRow(set, row, -dualfarkas[r], farkasrow_fpdebug, true) );
-               assert(farkasrow->nnz == farkasrow_fpdebug->nnz);
-               for (int i = 0; i < farkasrow->nnz; i++)
-               {
-                  assert( SCIPisEQ(set->scip, farkasrow->vals[i], farkasrow_fpdebug->vals[i]) );
-               }
-            }
-            #endif
-
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
@@ -1296,8 +1306,8 @@ SCIP_RETCODE SCIPgetFarkasProof(
    /* calculate the current Farkas activity, always using the best bound w.r.t. the Farkas coefficient */
    *farkasact = SCIPaggrRowGetMinActivity(set, prob, farkasrow, curvarlbs, curvarubs, &infdelta);
 
-   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
-      (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
+   //SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g [infdelta: %u], \n",
+   //   (*farkasact), SCIPaggrRowGetRhs(farkasrow), infdelta);
 
    /* The constructed proof is not valid, this can happen due to numerical reasons,
     * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r]),
@@ -1305,7 +1315,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
     * Due to the latter case, it might happen at least one variable contributes
     * with an infinite value to the activity (see: https://git.zib.de/integer/scip/issues/2743)
     */
-    #ifdef SCIP_DIABLED_CODE
+
    if( infdelta || SCIPsetIsFeasLE(set, *farkasact, SCIPaggrRowGetRhs(farkasrow)))
    {
       /* add contribution of local rows */
@@ -1320,7 +1330,15 @@ SCIP_RETCODE SCIPgetFarkasProof(
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
-   #endif
+
+   for (int i = 0; i < farkasrow->nnz; i++)
+   {
+      if ( SCIPsetIsInfinity(set, ABS(farkasrow->vals[i])) )
+      {
+         (*valid) = FALSE;
+         goto TERMINATE;
+      }
+   }
 
   TERMINATE:
   #ifdef SCIP_DEBUG
@@ -1424,6 +1442,19 @@ SCIP_RETCODE SCIPgetDualProof(
    {
       (*valid) = FALSE;
       goto TERMINATE;
+   }
+
+   if ( set->exact_enabled )
+   {
+      SCIP_COL** cols = SCIPgetLPCols(set->scip);
+      for (int i = 0; i < SCIPgetNLPCols(set->scip); i++)
+      {
+         if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(cols[i]->var)) )
+         {
+            (*valid) = FALSE;
+            goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
+         }
+      }
    }
 
    /* clear the proof */
@@ -1550,6 +1581,15 @@ SCIP_RETCODE SCIPgetDualProof(
       {
          (*valid) = FALSE;
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
+      }
+   }
+
+   for (int i = 0; i < farkasrow->nnz; i++)
+   {
+      if ( SCIPsetIsInfinity(set, ABS(farkasrow->vals[i])) )
+      {
+         (*valid) = FALSE;
+         goto TERMINATE;
       }
    }
 
@@ -1869,7 +1909,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    assert(SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsDualFeasible(lpi));
    assert(SCIPlpiIsPrimalInfeasible(lpi) || !SCIPlpDivingObjChanged(lp));
 
-   if( !SCIPlpiIsPrimalInfeasible(lpi) )
+   if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE )
    {
       SCIP_Real objval;
 
@@ -1926,9 +1966,8 @@ SCIP_RETCODE conflictAnalyzeLP(
             return SCIP_OKAY;
       }
    }
-   assert(SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsDualFeasible(lpi));
 
-   if( !SCIPlpiIsPrimalInfeasible(lpi) )
+   if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE )
    {
       SCIP_Real objval;
 
@@ -2000,7 +2039,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             valid = FALSE;
          }
       }
-   }
+   }\
 
    if( !valid )
       goto TERMINATE;

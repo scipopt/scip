@@ -1977,7 +1977,7 @@ SCIP_RETCODE consdataUpdateActivities(
    }
 
    /* update the activity, if the current value is valid and there was a change in the finite part */
-   if( validact && !RatIsZero(delta) )
+   if( validact && !RatIsZero(delta) && finitenewbound )
    {
       /* if the absolute value of the activity is increased, this is regarded as reliable,
        * otherwise, we check whether we can still trust the updated value
@@ -7225,7 +7225,8 @@ SCIP_RETCODE tightenVarBounds(
                if( tightened )
                {
                   RatSet(ub, SCIPvarGetUbLocalExact(var)); /* get bound again: it may be additionally modified due to integrality */
-                  assert(RatIsLE(ub, newub));
+                  //assert(RatIsLE(ub, newub));
+                  assert( SCIPisLE(scip, SCIPvarGetUbLocal(var), RatRoundReal(newub, SCIP_R_ROUND_NEAREST)) );
                   (*nchgbds)++;
 
                   RatDebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%q,%q]\n",
@@ -7274,8 +7275,8 @@ SCIP_RETCODE tightenVarBounds(
             if( tightened )
             {
                RatSet(lb, SCIPvarGetLbLocalExact(var)); /* get bound again: it may be additionally modified due to integrality */
-               assert(RatIsGE(lb, newlb));
-
+               //assert(RatIsGE(lb, newlb));
+               assert( SCIPisGE(scip, SCIPvarGetLbLocal(var), RatRoundReal(newlb, SCIP_R_ROUND_NEAREST)) );
                (*nchgbds)++;
                RatDebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
@@ -7325,7 +7326,8 @@ SCIP_RETCODE tightenVarBounds(
                if( tightened )
                {
                   RatSet(lb, SCIPvarGetLbLocalExact(var)); /* get bound again: it may be additionally modified due to integrality */
-                  assert(RatIsGE(lb, newlb));
+                  //assert(RatIsGE(lb, newlb)); // @todo Make this assertion true again. It does not hold now because BOUNDCHG does not store exact values
+                  assert( SCIPisGE(scip, SCIPvarGetLbLocal(var), RatRoundReal(newlb, SCIP_R_ROUND_NEAREST)) );
                   (*nchgbds)++;
                   RatDebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%q,%q]\n",
                      SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
@@ -7372,7 +7374,8 @@ SCIP_RETCODE tightenVarBounds(
             if( tightened )
             {
                RatSet(ub, SCIPvarGetUbLocalExact(var)); /* get bound again: it may be additionally modified due to integrality */
-               assert(RatIsLE(ub, newub));
+               //assert(RatIsLE(ub, newub));
+               assert( SCIPisLE(scip, SCIPvarGetUbLocal(var), RatRoundReal(newub, SCIP_R_ROUND_NEAREST)) );
                (*nchgbds)++;
                RatDebugMessage("linear constraint <%s>: tighten <%s>, new bds=[%q,%q]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);

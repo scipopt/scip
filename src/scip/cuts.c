@@ -2396,20 +2396,30 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunctionSafely(
    )
 {
    SCIP_ROW row;
+   SCIP_ROWEXACT rowexact;
+   row.rowexact = &rowexact;
    row.cols = SCIPgetLPCols(scip);
+   rowexact.cols = scip->lpexact->cols;
    row.len = SCIPgetNLPCols(scip);
+   rowexact.len = SCIPgetNLPCols(scip);
    row.local = FALSE;
    row.constant = 0;
    row.rhs = rhs;
    row.lhs = -SCIPinfinity(scip);
    row.lppos = -1;
    SCIPallocBufferArray(scip, &row.vals, row.len);
+   SCIPallocBufferArray(scip, &rowexact.valsinterval, rowexact.len);
+   SCIPallocBufferArray(scip, &rowexact.vals, rowexact.len);
    for (int i = 0; i < row.len; i++)
    {
       row.vals[i] = SCIPvarGetObj(row.cols[i]->var);
+      rowexact.vals[i] = SCIPvarGetObjExact(row.cols[i]->var);
+      SCIPintervalSetRational(&rowexact.valsinterval[i], rowexact.vals[i]);
    }
    SCIP_CALL( SCIPaggrRowAddRowSafely(scip, aggrrow, &row, scale, 1) );
    SCIPfreeBufferArray(scip, &row.vals);
+   SCIPfreeBufferArray(scip, &rowexact.valsinterval);
+   SCIPfreeBufferArray(scip, &rowexact.vals);
    return SCIP_OKAY;
 }
 
