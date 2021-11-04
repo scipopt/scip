@@ -35,16 +35,10 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         message(WARNING "GCC version not supported, should be at least 4.8!")
     endif()
     add_compile_options(${ADD_C_AND_CXX_FLAGS})
-    add_compile_options(
-        "$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>"
-        "$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>"
-    )
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(${ADD_C_AND_CXX_FLAGS} ${ADD_C_FLAGS})
-    add_compile_options(
-        "$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>"
-        "$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>"
-    )
+    add_compile_options(${ADD_C_AND_CXX_FLAGS})
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
 endif()
 
 set(SCIP_VERSION_MAJOR 8)
@@ -168,12 +162,7 @@ endif()
 
 # Visual Studio compiler with static runtime libraries
 if(MSVC AND MT)
-    add_compile_options(
-        $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:DEBUG>>:/MTd>
-        $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RELEASE>>:/MT>
-        $<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:DEBUG>>:/MTd>
-        $<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:RELEASE>>:/MT>
-        )
+    add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RELEASE>>:/MT>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:RELEASE>>:/MT>")
 endif()
 
 #set expression interpreter file that should be used
@@ -205,10 +194,7 @@ elseif(TPI STREQUAL "omp")
     set(tpisources tpi/tpi_openmp.c)
     find_package(OpenMP REQUIRED)
     set(THREAD_LIBRARIES "")
-    add_compile_options(
-        "$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>"
-        "$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>"
-    )
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>")
 else()
     message(FATAL_ERROR "TPI option has wrong value")
 endif()
@@ -453,9 +439,9 @@ if(SYM STREQUAL "bliss")
         set(sym symmetry/compute_symmetry_bliss.cpp)
         set(SYM_LIBRARIES ${BLISS_LIBRARIES})
         set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
-        add_compile_options(
-            "$<$<COMPILE_LANGUAGE:CXX>:${BLISS_DEFINITIONS}>"
-        )
+        if(BLISS_DEFINITIONS STREQUAL "")
+            add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${BLISS_DEFINITIONS}>")
+        endif()
     else()
         message(STATUS "Finding BLISS - not found")
         set(sym symmetry/compute_symmetry_none.cpp)
