@@ -8139,13 +8139,7 @@ SCIP_RETCODE propagateCons(
          consdataGetActivityBounds(scip, consdata, TRUE, minactivity, maxactivity, &minactisrelax, &maxactisrelax);
          //RatSetString(minactivity, "0");
          if( RatIsGT(minactivity, consdata->rhs) )
-         {  char buf[SCIP_MAXSTRLEN];
-            RatToString(minactivity, buf, SCIP_MAXSTRLEN);
-            SCIPinfoMessage(scip, NULL, "%s\n", buf);
-            RatToString(consdata->rhs, buf, SCIP_MAXSTRLEN);
-            SCIPinfoMessage(scip, NULL, "%s\n", buf);
-            //SCIPinfoMessage(scip, NULL, RatToString(consdata->lhs));
-            RatDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%q,%q], sides=[%q,%q]\n",
+         {  RatDebugMessage("linear constraint <%s> is infeasible (rhs): activitybounds=[%q,%q], sides=[%q,%q]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
 
             /* analyze conflict */
