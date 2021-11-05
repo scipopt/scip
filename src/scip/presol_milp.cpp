@@ -88,6 +88,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_ENABLEMULTIAGGR    TRUE      /**< should the multi-aggregation presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEPROBING      TRUE      /**< should the probing presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLESPARSIFY     FALSE     /**< should the sparsify presolver be enabled within the presolve library? */
+#define DEFAULT_FILENAME_PROBLEM   "-"       /**< default filename to store the instance before presolving */
 
 /*
  * Data structures
@@ -113,6 +114,9 @@ struct SCIP_PresolData
                                               *   factor times the number of nonzeros or rows before presolving */
    SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */
    SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
+
+   char* filename = NULL;                    /**< filename to store the instance before presolving */
+
 };
 
 using namespace papilo;
@@ -358,6 +362,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
       presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
+
+   if( 0 != strncmp(data->filename, DEFAULT_FILENAME_PROBLEM, strlen(DEFAULT_FILENAME_PROBLEM)) )
+      SCIPwriteTransProblem(scip, data->filename , NULL, FALSE);
 
    /* call the presolving */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
@@ -771,6 +778,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    /* create MILP presolver data */
    presoldata = NULL;
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
+   BMSclearMemory(presoldata);
 
    presol = NULL;
 
@@ -862,6 +870,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "presolving/" PRESOL_NAME "/enablesparsify",
          "should the sparsify presolver be enabled within the presolve library?",
          &presoldata->enablesparsify, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
+
+   SCIP_CALL(SCIPaddStringParam(scip, "presolving/" PRESOL_NAME "/filename_write_problem",
+         "filename to store the problem before MIP presolving starts",
+         &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL));
 
    return SCIP_OKAY;
 }
