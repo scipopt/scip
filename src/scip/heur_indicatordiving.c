@@ -616,6 +616,7 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving) /*lint --e{715}*/
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    SCIP_CALL( SCIPhashmapCreate( &heurdata->scvars, SCIPblkmem( scip ), SCIPgetNVars(scip) ));
 
+   heurdata->conshdlr = SCIPfindConshdlr(scip, "indicator");
    heurdata->notfound = 0;
 
    return SCIP_OKAY;
@@ -739,13 +740,17 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIP_Real* consvals;
    SCIP_Real rhs;
    int nconsvars;
+   int idxbvars; /* index of bounding variable in hashmap scdata */
    SCIP_Bool isindicatorvar;
+   SCIP_Bool issemicont;
    SCIP_Bool containsactiveindconss;
    SCIP_Bool success;
    int v;
+   int b;
 
    semicontinuousvar = NULL;
    lpsolsemicontinuous = 0.0;
+   issemicont = FALSE;
 
    heur = SCIPdivesetGetHeur(diveset);
    assert(heur != NULL);
@@ -804,7 +809,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
    for( v = 0; v < nconsvars ; v++ )
    {
-      if( consvars[v] == slackvar )
+      if( consvars[v] == slackvar ) /* note that we have exact two variables */
          continue;
 
       semicontinuousvar = consvars[v];
@@ -812,18 +817,32 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       SCIPdebugMessage( "%s lp sol %f %f\n", SCIPvarGetName( semicontinuousvar ), lpsolsemicontinuous,
                         consvals[v] );
       SCIP_CALL( varIsSemicontinuous(scip, semicontinuousvar, heurdata->scvars, &success) );
+
+      /* only allow sc variables and do the check if side is equal to constant value of the sc */
+      if( success )
+      {
+         assert(SCIPhashmapExists(heurdata->scvars, (void*) semicontinuousvar));
+         scdata = (SCVARDATA*) SCIPhashmapGetImage(heurdata->scvars, (void*) semicontinuousvar);
+
+         for( b = 0; b < scdata->nbnds; b++ )
+         {
+            if( (scdata->bvars[b] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand)))
+                  && SCIPisEQ(scip, rhs, scdata->vals0[b]) )
+            {
+               assert(scdata == NULL  || SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[b]));
+               assert(scdata == NULL  || SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[b]));
+
+               issemicont = TRUE;
+               idxbvars = b;
+               break;
+            }
+         }
+      }
    }
-   assert(semicontinuousvar != NULL);
 
-   scdata = (SCVARDATA*) SCIPhashmapGetImage(heurdata->scvars, (void*) semicontinuousvar);
-   assert(scdata == NULL  || SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[0]));
-   assert(scdata == NULL  || SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[0]));
-
-   //TODO: only allow sc variables and do the check if ub is equal to lowerbound of the sc
-   if( scdata == NULL || !SCIPisEQ(scip, rhs, scdata->vals0[0]) ||
-      !(scdata->bvars[0] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand))) )
+   /* only continue if semicontinuous variable, TODO: set useful values */
+   if( !issemicont )
    {
-      //TODO: only continue if semicontinuous variable.
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = (candsfrac > 0.5);
       SCIPfreeBufferArray(scip, &consvals);
@@ -831,22 +850,22 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       return SCIP_OKAY;
    }
 
-   //Case: Variable is at least lb1
-   if( SCIPisGE(scip, lpsolsemicontinuous, scdata->lbs1[0]) )
+   /* Case: Variable is in range [lb1,ub1] */
+   if( SCIPisGE(scip, lpsolsemicontinuous, scdata->lbs1[idxbvars]) && SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[idxbvars]))
    {
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = FALSE;
    }
-   //Case: Variable is equal to constant
-   else if( SCIPisEQ(scip, lpsolsemicontinuous, scdata->vals0[0]) )
+   /* Case: Variable is equal to constant */
+   else if( SCIPisEQ(scip, lpsolsemicontinuous, scdata->vals0[idxbvars]) )
    {
       *score = SCIPrandomGetReal(randnumgen, -1.0, 0.0);
       *roundup = TRUE;
    }
-   //Case: Variable is between constant and lb1
-   else
+   /* Case: Variable is between constant and lb1 */
+   else if( SCIPisGT(scip, lpsolsemicontinuous, scdata->vals0[idxbvars]) && SCIPisLT(scip, lpsolsemicontinuous, scdata->lbs1[idxbvars]) )
    {
-      *score = 100 * (scdata->lbs1[0] - lpsolsemicontinuous) / scdata->lbs1[0];
+      *score = 100 * (scdata->lbs1[idxbvars] - lpsolsemicontinuous) / scdata->lbs1[idxbvars];
       assert(*score>0);
 
       switch( (INDICATORDIVINGMODE)heurdata->mode )
@@ -870,10 +889,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       case 0:
          break;
       case 1:
-         if( lpsolsemicontinuous < scdata->lbs1[0] * heurdata->roundingfrac )
-            *score = 100 * (lpsolsemicontinuous / (heurdata->roundingfrac * scdata->lbs1[0]));
+         if( lpsolsemicontinuous < scdata->lbs1[idxbvars] * heurdata->roundingfrac )
+            *score = 100 * (lpsolsemicontinuous / (heurdata->roundingfrac * scdata->lbs1[idxbvars]));
          else
-            *score = 100 * (-lpsolsemicontinuous / ((1 - heurdata->roundingfrac) * scdata->lbs1[0]) + (1 / (1 - heurdata->roundingfrac)) );
+            *score = 100 * (-lpsolsemicontinuous / ((1 - heurdata->roundingfrac) * scdata->lbs1[idxbvars]) + (1 / (1 - heurdata->roundingfrac)) );
          break;
       case 2:
          *score = 100 - *score;
@@ -882,6 +901,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          return SCIP_INVALIDDATA;
       }
       assert(*score>0);
+   }
+   else
+   {
+      assert(FALSE);
    }
 
    /* free memory */
@@ -1000,8 +1023,6 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/solvemip",
          "should a MIP be solved after all indicator variables are fixed?",
          &heurdata->solvemip, FALSE, DEFAULT_SOLVEMIP, NULL, NULL) );
-
-   heurdata->conshdlr = SCIPfindConshdlr(scip, "indicator");
 
    return SCIP_OKAY;
 }
