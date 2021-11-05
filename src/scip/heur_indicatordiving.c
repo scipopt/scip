@@ -861,13 +861,11 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    if( isindicatorvar ) /* prefer indicator constraint */
    {
       SCIP_Real rhs;
-      SCIP_Real lhs;
 
       lincons = SCIPgetLinearConsIndicator(indicatorcons);
       nonoptionvar = SCIPgetSlackVarIndicator(indicatorcons);
       rhs = SCIPconsGetRhs(scip, lincons, &success);
-      lhs = SCIPconsGetLhs(scip, lincons, &success);
-      assert(SCIPisInfinity(scip, -lhs)); /* TODO allow also indicators for lower bounds */
+      assert(SCIPisInfinity(scip, -SCIPconsGetLhs(scip, lincons, &success))); /* TODO allow also indicators for lower bounds */
       side = rhs;
    }
    else
