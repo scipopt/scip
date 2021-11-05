@@ -749,7 +749,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    int b;
 
    semicontinuousvar = NULL;
+   scdata = NULL;
    lpsolsemicontinuous = 0.0;
+   idxbvars = -1;
    issemicont = FALSE;
 
    heur = SCIPdivesetGetHeur(diveset);
@@ -849,6 +851,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       SCIPfreeBufferArray(scip, &consvars);
       return SCIP_OKAY;
    }
+   assert(idxbvars >= 0);
+   assert(scdata != NULL);
 
    /* Case: Variable is in range [lb1,ub1] */
    if( SCIPisGE(scip, lpsolsemicontinuous, scdata->lbs1[idxbvars]) && SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[idxbvars]))
