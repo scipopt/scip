@@ -390,6 +390,8 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->workingaggrinfo = FALSE;
    (*certificate)->vals = NULL;
    (*certificate)->valssize = 0;
+   (*certificate)->aggrinfo = NULL;
+   (*certificate)->mirinfo = NULL;
 
    return SCIP_OKAY;
 }
@@ -835,7 +837,11 @@ void SCIPcertificateExit(
          /**@todo fix memory leak: mpq_clear and free all elements */
          SCIPhashtableRemoveAll(certificate->varboundtable);
          SCIPhashtableFree(&certificate->varboundtable);
-         BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize);
+         if( certificate->boundvals != NULL )
+         {
+            BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->boundvals,
+               certificate->boundvalsize);
+         }
       }
       if( certificate->workbound != NULL )
       {
@@ -1141,9 +1147,9 @@ void SCIPcertificatePrintProblemRational(
    BMSallocMemoryArray(&formatstr, len);
    RatToString(val, formatstr, len);
    if( isorigfile )
-      SCIPfprintf(certificate->origfile, "%s", formatstr);
+      SCIPfputs(formatstr, certificate->origfile);
    else
-      SCIPfprintf(certificate->transfile, "%s", formatstr);
+      SCIPfputs(formatstr, certificate->transfile);
 
    BMSfreeMemoryArray(&formatstr);
 }
@@ -1167,7 +1173,7 @@ void SCIPcertificatePrintProofRational(
 
    BMSallocMemoryArray(&formatstr, len);
    RatToString(val, formatstr, len);
-   SCIPfprintf(certificate->derivationfile, "%s", formatstr);
+   SCIPfputs(formatstr, certificate->derivationfile);
    BMSfreeMemoryArray(&formatstr);
 }
 
@@ -2821,10 +2827,10 @@ SCIP_RETCODE SCIPcertificateClearAggrinfo(
    int i;
    SCIP_CERTIFICATE* certificate;
 
-   if( !SCIPisCertificateActive(scip) )
-      return SCIP_OKAY;
-
    certificate = SCIPgetCertificate(scip);
+
+   if( certificate == NULL || certificate->aggrinfo == NULL )
+      return SCIP_OKAY;
 
    assert(certificate != NULL);
 
