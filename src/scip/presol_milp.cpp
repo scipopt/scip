@@ -493,12 +493,12 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
          /* SCIP has different rules for aggregation than PaPILO
           * This may result that SCIP replaces y unlike PaPILO (that replaces x)*/
-         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED)
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
          {
             SCIP_Real aggregatedScalar;
-            aggregatedScalar = SCIPvarGetAggrScalar(var);
             SCIP_Real aggregatedConst;
 
+            aggregatedScalar = SCIPvarGetAggrScalar(var);
             aggregatedConst = SCIPvarGetAggrConstant(var);
 
             /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
