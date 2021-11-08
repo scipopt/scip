@@ -724,7 +724,7 @@ Cut Selector:
 - new parameter "misc/avoidmemout" to try to avoid running into memory limit
 - cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
 - new parameter "decomposition/disablemeasures" to disable expensive measures in SCIPcomputeDecompStats()
-- new parameter "presolving/milp/filename_write_problem" filename to write the problem to a file before MILP presolving starts
+- new parameter "presolving/milp/probfilename" filename to write the problem to a file before MILP presolving starts
 
 ### Data structures
 

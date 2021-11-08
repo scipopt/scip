@@ -364,7 +364,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
 
    if( 0 != strncmp(data->filename, DEFAULT_FILENAME_PROBLEM, strlen(DEFAULT_FILENAME_PROBLEM)) )
-      SCIPwriteTransProblem(scip, data->filename , NULL, FALSE);
+   {
+      SCIP_CALL(SCIPwriteTransProblem(scip, data->filename, NULL, FALSE));
+   }
 
    /* call the presolving */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
@@ -871,9 +873,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "should the sparsify presolver be enabled within the presolve library?",
          &presoldata->enablesparsify, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
 
-   SCIP_CALL(SCIPaddStringParam(scip, "presolving/" PRESOL_NAME "/filename_write_problem",
-         "filename to store the problem before MIP presolving starts",
-         &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL));
+   SCIP_CALL( SCIPaddStringParam(scip, "presolving/" PRESOL_NAME "/probfilename",
+         "filename to store the problem before MILP presolving starts",
+         &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL) );
 
    return SCIP_OKAY;
 }
