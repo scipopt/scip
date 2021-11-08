@@ -492,7 +492,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_Real value = res.postsolve.values[first];
 
          /* SCIP has different rules for aggregation than PaPILO
-          * This may result that SCIP replaces y unlike PaPILO (that replaces x)*/
+          * As a result, SCIP might have aggregated and replaced the variable that PaPILO now wants to fix*/
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
          {
             SCIP_Real aggregatedScalar;
@@ -510,12 +510,12 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
                value = (value - aggregatedConst)/aggregatedScalar;
             var = SCIPvarGetAggrVar(var);
          }
-         /* SCIP might just fix variable for example during aggregation after boundupdate */
+
+         /* SCIP might also have fixed the variable during aggregation */
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
             break;
 
-         SCIP_CALL(SCIPfixVar(scip, var, value, &infeas, &fixed));
-
+         SCIP_CALL( SCIPfixVar(scip, var, value, &infeas, &fixed) );
          *nfixedvars += 1;
 
          assert(!infeas);
