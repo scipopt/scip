@@ -176,6 +176,8 @@ SCIP_Bool isViolatedAndNotFixed(
    }
    else
       assert(FALSE);
+
+   return FALSE;
 }
 
 /** releases all data from given hashmap filled with SCVarData and the hashmap itself */
@@ -813,7 +815,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    int idxbvars; /* index of bounding variable in hashmap scdata */
    SCIP_Bool isindicatorvar;
    SCIP_Bool isvbdvar; /* variable bounding variable in varbound */
-   SCIP_Bool issemicont;
+   SCIP_Bool issemicont; /* indicates whether variable has (maybe) required semicont. properties */
    SCIP_Bool fixconstant; /* should we fix the semicontinuous variable to its constant? */
    SCIP_Bool containsviolindconss;
    SCIP_Bool containsviolvarboundconss;
@@ -825,8 +827,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    scdata = NULL;
    lpsolsemicontinuous = 0.0;
    idxbvars = -1;
-   issemicont = FALSE;
-   fixconstant = TRUE;
+   issemicont = TRUE;
 
    heur = SCIPdivesetGetHeur(diveset);
    assert(heur != NULL);
@@ -865,7 +866,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       lincons = SCIPgetLinearConsIndicator(indicatorcons);
       nonoptionvar = SCIPgetSlackVarIndicator(indicatorcons);
       rhs = SCIPconsGetRhs(scip, lincons, &success);
-      assert(SCIPisInfinity(scip, -SCIPconsGetLhs(scip, lincons, &success))); /* TODO allow also indicators for lower bounds */
+      issemicont = (SCIPisInfinity(scip, -SCIPconsGetLhs(scip, lincons, &success)) ? TRUE : FALSE); /* TODO allow also indicators for lower bounds */
       side = rhs;
    }
    else
@@ -891,7 +892,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
    SCIP_CALL( SCIPgetConsNVars(scip, lincons, &nconsvars, &success) );
 
-   if ( nconsvars != 2 )
+   if( nconsvars != 2 || !issemicont )
    {
       *score = SCIPrandomGetReal( randnumgen, -1.0, 0.0 );
       /* try to avoid variability; decide randomly if the LP solution can contain some noise */
@@ -907,6 +908,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIP_CALL( SCIPgetConsVars(scip, lincons, consvars, nconsvars, &success) );
    SCIP_CALL( SCIPgetConsVals(scip, lincons, consvals, nconsvars, &success) );
 
+   issemicont = FALSE;
    for( v = 0; v < nconsvars ; v++ )
    {
       if( consvars[v] == nonoptionvar ) /* note that we have exact two variables */
