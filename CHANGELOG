@@ -881,6 +881,8 @@ Fixed bugs
 - added missing redundancy check to coefficient tightening routine in cons_varbound that led to wrong variable locks
 - added a check of numerics to avoid wrong reductions in cons_linear.c:simplifyInequalities()
 - fixed a bug in cons_logicor.c regarding fixed variables that were not removed
+- presol_milp.c handles variable fixings, suggested by PaPILO, more carefully to cover all cases that can appear
+
 
 Miscellaneous
 -------------

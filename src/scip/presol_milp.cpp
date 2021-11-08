@@ -487,11 +487,35 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_Bool fixed;
          int col = res.postsolve.indices[first];
 
-         SCIP_VAR* colvar = SCIPmatrixGetVar(matrix, col);
+         SCIP_VAR* var = SCIPmatrixGetVar(matrix, col);
 
          SCIP_Real value = res.postsolve.values[first];
 
-         SCIP_CALL( SCIPfixVar(scip, colvar, value, &infeas, &fixed) );
+         /* SCIP has different rules for aggregation than PaPILO
+          * As a result, SCIP might have aggregated and replaced the variable that PaPILO now wants to fix*/
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            SCIP_Real aggregatedScalar;
+            SCIP_Real aggregatedConst;
+
+            aggregatedScalar = SCIPvarGetAggrScalar(var);
+            aggregatedConst = SCIPvarGetAggrConstant(var);
+
+            /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
+            assert( SCIPisZero(scip, SCIPvarGetObj(var)) );
+            assert( !SCIPisZero(scip,  aggregatedScalar));
+            if( SCIPisInfinity(scip, value) || SCIPisInfinity(scip, -value) )
+               value = (aggregatedScalar < 0.0 ? -value : value);
+            else
+               value = (value - aggregatedConst)/aggregatedScalar;
+            var = SCIPvarGetAggrVar(var);
+         }
+
+         /* SCIP might also have fixed the variable during aggregation */
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+            break;
+
+         SCIP_CALL( SCIPfixVar(scip, var, value, &infeas, &fixed) );
          *nfixedvars += 1;
 
          assert(!infeas);
