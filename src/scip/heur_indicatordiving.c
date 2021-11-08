@@ -175,9 +175,10 @@ SCIP_Bool isViolatedAndNotFixed(
       return (!SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(binvar)) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(binvar)));
    }
    else
+   {
       assert(FALSE);
-
-   return FALSE;
+      return FALSE;
+   }
 }
 
 /** releases all data from given hashmap filled with SCVarData and the hashmap itself */
@@ -828,6 +829,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    lpsolsemicontinuous = 0.0;
    idxbvars = -1;
    issemicont = TRUE;
+   fixconstant = TRUE;
 
    heur = SCIPdivesetGetHeur(diveset);
    assert(heur != NULL);
