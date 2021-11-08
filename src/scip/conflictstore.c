@@ -892,7 +892,7 @@ SCIP_RETCODE SCIPconflictstoreClean(
    assert(conflictstore != NULL);
 
    SCIPsetDebugMsg(set, "cleaning conflict store: %d conflicts, %d dual proofs\n",
-         conflictstore->norigconfs, conflictstore->nconflicts, conflictstore->ndualrayconfs + conflictstore->ndualsolconfs);
+         conflictstore->nconflicts, conflictstore->ndualrayconfs + conflictstore->ndualsolconfs);
 
    ndelconfs = 0;
    ndeldualray = 0;

@@ -136,7 +136,7 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    /* tresult can be understood as realization of a Student-T distributed variable with
     * countx + county - 2 degrees of freedom
     */
-   tresult = (meanx - meany) / pooledvariance;
+   tresult = (meanx - meany) / SQRT(pooledvariance);
    tresult *= SQRT(countx * county / (countx + county));
 
    return tresult;
@@ -6692,7 +6692,7 @@ void SCIPprofilePrint(
 {
    int t;
 
-   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", profile, profile->capacity);
+   SCIPmessageFPrintInfo(messagehdlr, file, "Profile <%p> (capacity %d) --> ", (void*)profile, profile->capacity);
 
    for( t = 0; t < profile->ntimepoints; ++t )
    {
@@ -9754,7 +9754,51 @@ SCIP_Real SCIPselectSimpleValue(
    return val;
 }
 
+/** Performs the Newton Procedure from a given starting point to compute a root of the given function with
+ *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
+ */
+SCIP_Real SCIPcalcRootNewton(
+   SCIP_DECL_NEWTONEVAL((*function)),        /**< pointer to function for which roots are computed */
+   SCIP_DECL_NEWTONEVAL((*derivative)),      /**< pointer to derivative of above function */
+   SCIP_Real*            params,             /**< parameters needed for function (can be NULL) */
+   int                   nparams,            /**< number of parameters (can be 0) */
+   SCIP_Real             x,                  /**< starting point */
+   SCIP_Real             eps,                /**< tolerance */
+   int                   k                   /**< iteration limit */
+   )
+{
+   SCIP_Real result = x;
+   int iteration = 0;
 
+   assert(function != NULL);
+   assert(derivative != NULL);
+   assert(params != NULL || nparams == 0);
+   assert(eps > 0.0);
+   assert(k >= 0);
+   assert(x != SCIP_INVALID); /*lint !e777*/
+
+   while( iteration < k )
+   {
+      SCIP_Real deriv = derivative(result, params, nparams);
+
+      /* if we arrive at a stationary point, the procedure is aborted */
+      if( REALABS(deriv) <= eps || deriv == SCIP_INVALID ) /*lint !e777*/
+         return SCIP_INVALID;
+
+      result = result - function(result, params, nparams) / deriv;
+
+      /* if new point is within eps-range of 0, we are done */
+      if( REALABS(function(result, params, nparams)) <= eps )
+         break;
+
+      ++iteration;
+   }
+
+   if( k == iteration )
+      return SCIP_INVALID;
+   else
+      return result;
+}
 
 
 /*
@@ -10461,16 +10505,16 @@ void SCIPcomputeArraysIntersectionInt(
 
 /** computes set intersection (duplicates removed) of two void-pointer arrays that are ordered ascendingly */
 void SCIPcomputeArraysIntersectionPtr(
-   void**                array1,                   /**< pointer to first data array */
-   int                   narray1,                  /**< number of entries of first array */
-   void**                array2,                   /**< pointer to second data array */
-   int                   narray2,                  /**< number of entries of second array */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),              /**< data element comparator */
-   void**                intersectarray,           /**< intersection of array1 and array2
-                                                    *   (note: it is possible to use array1 for this input argument) */
-   int*                  nintersectarray           /**<  pointer to store number of entries of intersection array
-                                                    *   (note: it is possible to use narray1 for this input argument) */
-)
+   void**                array1,             /**< pointer to first data array */
+   int                   narray1,            /**< number of entries of first array */
+   void**                array2,             /**< pointer to second data array */
+   int                   narray2,            /**< number of entries of second array */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void**                intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**<  pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
 {
    int cnt = 0;
    int k = 0;
@@ -11219,10 +11263,10 @@ int SCIPdisjointsetGetSize(
 
 /** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
 SCIP_Bool SCIPstrAtStart(
-        const char*           s,                  /**< string to search in */
-        const char*           t,                  /**< string to search for */
-        size_t                tlen                /**< length of t */
-)
+   const char*           s,                  /**< string to search in */
+   const char*           t,                  /**< string to search for */
+   size_t                tlen                /**< length of t */
+   )
 {
    int idxctr = 0;
 

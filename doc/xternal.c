@@ -77,7 +77,7 @@
  *
  * \verbinclude output.log
  *
- * @version  7.0.2.4
+ * @version  8.0.0
  *
  * \image html scippy.png
  */
@@ -208,6 +208,7 @@
  * - @subpage SEPA    "Separators"
  * - @subpage PROP    "Propagators"
  * - @subpage BRANCH  "Branching rules"
+ * - @subpage CUTSEL  "Cut selectors"
  * - @subpage NODESEL "Node selectors"
  * - @subpage HEUR    "Primal heuristics"
  * - @subpage DIVINGHEUR "Diving heuristics"
@@ -411,7 +412,7 @@
  *          <li>See the comments for MINLP.</li>
  *          <li>In addition, use <code>constraints/nonlinear/assumeconvex = TRUE</code> to inform \SCIP about a convex
  *          problem in cases where the automated detection is not strong enough.</li>
- *          <li>Test instances are available at <code>check/instances/MINLP/circle.cip</code>.</li>
+ *          <li>Test instances are available at <code>check/instances/MINLP/circle.lp</code>.</li>
  *       </ul>
  *    </td>
  * </td>
@@ -1413,6 +1414,8 @@
  * - adding a cutting plane (result SCIP_SEPARATED),
  * - tightening the LP primal feasibility tolerance and requesting to solve the LP again (result SCIP_SOLVELP),
  * - performing a branching (result SCIP_BRANCHED).
+ *
+ * Note that in case SCIP_CONSADDED, the added constraints must be created with flag initial=TRUE.
  *
  * However, the solution is not given as a SCIP_SOL* data structure.
  *
@@ -3206,6 +3209,173 @@
  * The branching rule should use this call to clean up its branch-and-bound data.
  */
 
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page CUTSEL How to add cut selectors
+ *
+ * Cut selectors are used to select the cuts that are going to be added to the relaxation.
+ * For more information on how SCIP manages cuts, see "What is the difference between a sepastore and the cutpool?" in the
+ * \ref FAQ.
+ * \n
+ * A complete list of all cut selectors contained in this release can be found \ref CUTSELECTORS "here".
+ *
+ * We now explain how users can add their own cut selectors.
+ * Take the hybrid cut selector (src/scip/cutsel_hybrid.c) as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjCutsel wrapper
+ * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_CUTSEL... callback methods.
+ *
+ * Additional documentation for the callback methods of a cut selector can be found in the file type_cutsel.h.
+ *
+ * Here is what you have to do to implement a cut selector:
+ * -# Copy the template files src/scip/cutsel_xyz.c and src/scip/cutsel_xyz.h into files named "cutsel_mycutselector.c"
+ *    and "cutsel_mycutselector.h".
+ *    \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use SCIPincludeCutselMycutselector() in oder to include the cut selector into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mycutselector".
+ * -# Adjust the properties of the cut selector (see \ref CUTSEL_PROPERTIES).
+ * -# Define the cut selector data (see \ref CUTSEL_DATA). This is optional.
+ * -# Implement the interface methods (see \ref CUTSEL_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref CUTSEL_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref CUTSEL_ADDITIONALCALLBACKS). This is optional.
+ *
+ *
+ * @section CUTSEL_PROPERTIES Properties of a Cut Selector
+ *
+ * At the top of the new file "cutsel_mycutselector.c" you can find the cut selector properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the cut selector properties by calling the constructor
+ * of the abstract base class scip::ObjCutsel from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par CUTSEL_NAME: the name of the cut selector.
+ * This name is used in the interactive shell to address the cut selector.
+ * Additionally, if you are searching for a cut selector with SCIPfindCutsel(), this name is looked up.
+ * Names have to be unique: no two cut selectors may have the same name.
+ *
+ * \par CUTSEL_DESC: the description of the cut selector.
+ * This string is printed as a description of the cut selector in the interactive shell.
+ *
+ * \par CUTSEL_PRIORITY: the priority of the cut selector.
+ * After all cuts have been collected in the sepastore, SCIP asks the cut selectors to select cuts.
+ * The cut selectors are sorted by priority (highest goes first) and are called, in this order, until the first one
+ * succeeds.
+ * \n
+ * Note that this property only defines the default value of the priority. The user may change this value arbitrarily by
+ * adjusting the corresponding parameter setting. Whenever, even during solving, the priority of a cut selector is
+ * changed, the cut selectors are resorted by the new priorities.
+ *
+ *
+ * @section CUTSEL_DATA Cut Selector Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_CutselData".
+ * In this data structure, you can store the data of your cut selector. For example, you should store the adjustable
+ * parameters of the cut selector in this data structure.
+ * If you are using C++, you can add cut selector data as usual as object variables to your class.
+ * \n
+ * Defining cut selector data is optional. You can leave the struct empty.
+ *
+ *
+ * @section CUTSEL_INTERFACE Interface Methods
+ *
+ * At the bottom of "cutsel_mycutselector.c", you can find the interface method SCIPincludeCutselMycutselector(),
+ * which also appears in "cutsel_mycutselector.h"
+ * SCIPincludeCutselMycutselector() is called by the user, if they want to include the cut selector, i.e., if they want
+ * to use the cut selector in their application.
+ *
+ * This method only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the cut selector. For this, you can either call
+ * SCIPincludeCutsel()
+ * or SCIPincludeCutselBasic(). In the latter variant, \ref CUTSEL_ADDITIONALCALLBACKS "additional callbacks"
+ * must be added via setter functions as, e.g., SCIPsetCutselCopy(). We recommend this latter variant because
+ * it is more stable towards future SCIP versions which might have more callbacks, whereas source code using the first
+ * variant must be manually adjusted with every SCIP release containing new callbacks for cut selectors in order to compile.
+ *
+ *
+ * If you are using cut selector data, you have to allocate the memory for the data at this point.
+ * You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &cutseldata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_CutselData afterwards.
+ *
+ * You may also add user parameters for your cut selector, see the method SCIPincludeCutselHybrid() in
+ * src/scip/cutsel_hybrid.c for an example.
+ *
+ *
+ * @section CUTSEL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Cut Selector
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed together with the cut selector itself to SCIP using SCIPincludeCutsel() or SCIPincludeCutselBasic(),
+ * see @ref CUTSEL_INTERFACE.
+ *
+ * Cut selector plugins have a single fundamental callback method, namely the CUTSELSELECT method.
+ * This method has to be implemented for every cut selector; the other callback methods are optional.
+ * It implements the single contribution every selector has to provide: Selecting cuts to be added to the relaxation.
+ * In the C++ wrapper class scip::ObjCutsel, the scip_select() method is a virtual abstract member function.
+ * You have to implement it in order to be able to construct an object of your cut selector class.
+ *
+ * @subsection CUTSELSELECT
+ *
+ * The CUTSELSELECT callback should decide which cuts should be added to the relaxation.
+ * The callback receives the arrays of cuts to select from. This array must be resorted and the first nselectedcuts from
+ * the sorted array are going to be selected.
+ * In addition to the aforementioned cuts, the list of forced cuts is also given as an argument. This array can be used
+ * to help with the selection algorithm. Note, however, that this array should not be tampered with.
+ *
+ * Additional documentation for this callback can be found in type_cutsel.h.
+ *
+ * @section CUTSEL_ADDITIONALCALLBACKS Additional Callback Methods of a Cut Selector
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications. They can be used, for example, to initialize and free private data.
+ * Additional callbacks can either be passed directly with SCIPincludeCutsel() to SCIP or via specific
+ * <b>setter functions</b> after a call of SCIPincludeCutselBasic(), see also @ref CUTSEL_INTERFACE.
+ *
+ * @subsection CUTSELFREE
+ *
+ * If you are using cut selector data, you have to implement this method in order to free the cut selector data.
+ * This can be done by the following procedure:
+ *
+ * @refsnippet{src/scip/cutsel_hybrid.c,SnippetCutselFreeHybrid}
+ *
+ * If you have allocated memory for fields in your cut selector data, remember to free this memory
+ * before freeing the cut selector data itself.
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection CUTSELINIT
+ *
+ * The CUTSELINIT callback is executed after the problem is transformed.
+ * The cut selector may, for example, use this call to initialize its cut selector data.
+ *
+ * @subsection CUTSELCOPY
+ *
+ * The CUTSELCOPY callback is executed when a SCIP instance is copied, e.g., to solve a sub-SCIP. By defining this
+ * callback as <code>NULL</code> the user disables the execution of the specified cut selector for all copied SCIP
+ * instances.
+ *
+ * @subsection CUTSELEXIT
+ *
+ * The CUTSELEXIT callback is executed before the transformed problem is freed.
+ * In this method, the cut selector should free all resources that have been allocated for the solving process
+ * in CUTSELINIT.
+ *
+ * @subsection CUTSELINITSOL
+ *
+ * The CUTSELINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin.
+ * The cut selector may use this call to initialize its branch-and-bound specific data.
+ *
+ * @subsection CUTSELEXITSOL
+ *
+ * The CUTSELEXITSOL callback is executed before the branch-and-bound process is freed.
+ * The cut selector should use this call to clean up its branch-and-bound data.
+ */
+
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page NODESEL How to add node selectors
@@ -4825,52 +4995,50 @@
  * NLPIs are used to interface a solver for nonlinear programs (NLP).
  * It is used, e.g., to solve convex relaxations of the problem or to find locally optimal solutions of
  * nonlinear relaxations or subproblems.
- * The NLPI has been designed such that it can be used independently from SCIP.
+ * The NLPI has been designed such that it can be used independently of a SCIP problem.
  *
  * While the NLPI itself corresponds to the solver interface, the NLPIPROBLEM corresponds to the
  * (solver specific) representation of a concrete nonlinear program.
  * An NLP is specified as a set of indexed variables with variable bounds, an objective function,
  * and a set of constraints, where each constraint is specified as a function which is restricted to lie
  * between given left and right hand sides (possibly infinite).
- * A function consists of a linear, quadratic, and general nonlinear part.
- * The linear and quadratic parts are specified via variable indices and coefficients, while the
- * general nonlinear part is specified via an expression tree.
+ * A function consists of a linear and a nonlinear part.
+ * The linear part is specified via variable indices and coefficients, while the nonlinear part is specified via an expression.
  * That is, the user of the NLPI does not provide function evaluation callbacks but an algebraic representation of the NLP.
- * Interfaces for solvers that require function evaluations can make use of the NLPIORACLE, which
- * provides a set of methods to compute functions values, gradients, Jacobians, and Hessians for a given NLP.
+ * Interfaces for solvers that require function evaluations can make use of the \ref NLPIOracle "NLPIORACLE", which
+ * provides functionality to store a NLP and compute functions values, gradients, Jacobians, and Hessians.
  * See the interface to Ipopt for an example on how to use the NLPIORACLE.
  *
  * A complete list of all NLPIs contained in this release can be found \ref NLPIS "here".
  *
  * We now explain how users can add their own NLP solver interface.
- * Take the interface to Ipopt (src/nlpi/nlpi_ipopt.cpp) as an example.
+ * Take the interface to Ipopt (src/scip/nlpi_ipopt.cpp) as an example.
  * Unlike most other plugins, it is written in C++.
  * Additional documentation for the callback methods of an NLPI, in particular for their input parameters,
- * can be found in the file type_nlpi.h.
+ * can be found in the file \ref type_nlpi.h.
  *
  * Here is what you have to do to implement an NLPI:
- * -# Copy the template files src/nlpi/nlpi_xyz.c and src/nlpi/nlpi_xyz.h into files named "nlpi_mynlpi.c"
- *    and "nlpi_mynlpi.h".
- *    \n
+ * -# Copy the template files src/scip/nlpi_xyz.c and src/scip/nlpi_xyz.h into files named "nlpi_mysolver.c" and "nlpi_mysolver.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPcreateNlpSolverMynlpi() in order to include the NLPI into your SCIP instance,
+ * -# Use `SCIPincludeNlpSolverMysolver()` in order to include the NLPI into your SCIP instance,
  *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
- * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynlpi".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mysolver".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
  * -# Implement the interface methods (see \ref NLPI_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref NLPI_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref NLPI_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section NLPI_PROPERTIES Properties of an NLPI
  *
- * At the top of the new file "nlpi_mynlpi.c", you can find the NLPI properties.
+ * At the top of the new file "nlpi_mysolver.c", you can find the NLPI properties.
  * These are given as compiler defines.
  * The properties you have to set have the following meaning:
  *
  * \par NLPI_NAME: the name of the NLP solver interface.
  * This name is used in the interactive shell to address the NLPI.
- * Additionally, if you are searching for an NLPI with SCIPfindNLPI(), this name is looked up.
+ * Additionally, if you are searching for an NLPI with SCIPfindNlpi(), this name is looked up.
  * Names have to be unique: no two NLPIs may have the same name.
  *
  * \par NLPI_DESC: the description of the NLPI.
@@ -4885,20 +5053,20 @@
  *
  * @section NLPI_DATA NLPI Data
  *
- * Below the header "Data structures" you can find structs which are called "struct SCIP_NlpiData" and "struct SCIP_NlpiProblem".
- * In this data structure, you can store the data of your solver interface and of a specific NLP problem.
- * For example, you could store a pointer to the block memory data structure in the SCIP_NlpiData data structure
- * and store a pointer to an NLPIoracle in the SCIP_NlpiProblem data structure.
+ * Below the header "Data structures" you can find structs which are called `struct SCIP_NlpiData` and `struct SCIP_NlpiProblem`.
+ * In these data structures, you can store the data of your solver interface and of a specific NLP problem.
+ * For example, you could store a pointer to your NLP solver environment object in the `SCIP_NlpiData` data structure
+ * and store a pointer to an NLPIORACLE in the `SCIP_NlpiProblem` data structure.
  *
  * @section NLPI_INTERFACE Interface Methods
  *
- * At the bottom of "nlpi_mynlpi.c", you can find the interface method SCIPcreateNlpSolverXyz(),
- * which also appears in "nlpi_mynlpi.h".
- * \n
+ * At the bottom of "nlpi_mysolver.c", you can find the interface method SCIPincludeNlpSolverXyz(),
+ * which also appears in "nlpi_mysolver.h".
+ *
  * This method only has to be adjusted slightly.
  * It is responsible for creating an NLPI that contains all properties and callback methods of your
- * solver interface by calling the method SCIPnlpiCreate().
- * SCIPcreateNlpSolverXyz() is called by the user (e.g., SCIP), if (s)he wants to use this solver interface in his/her application.
+ * solver interface and included it into SCIP by calling the method SCIPincludeNlpi().
+ * SCIPincludeNlpSolverXyz() is called by the user (e.g., SCIP), if (s)he wants to use this solver interface in his/her application.
  *
  * If you are using NLPI data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
@@ -4912,22 +5080,14 @@
  * @section NLPI_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an NLPI
  *
  * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
- * an operational algorithm. Currently, all NLPI callbacks are fundamental.
+ * an operational algorithm. Most NLPI callbacks are fundamental.
  *
  * Additional documentation of the callback methods, in particular to their input parameters,
- * can be found in type_nlpi.h.
- *
- * @subsection NLPICOPY
- *
- * The NLPICOPY callback is executed if the plugin should be copied, e.g., when a SCIP instance is copied.
+ * can be found in \ref type_nlpi.h.
  *
  * @subsection NLPIFREE
  *
  * The NLPIFREE callback is executed if the NLP solver interface data structure should be freed, e.g., when a SCIP instance is freed.
- *
- * @subsection NLPIGETSOLVERPOINTER
- *
- * The NLPIGETSOLVERPOINTER callback can be used to pass a pointer to a solver specific data structure to the user.
  *
  * @subsection NLPICREATEPROBLEM
  *
@@ -4938,10 +5098,6 @@
  *
  * The NLPIFREEPROBLEMPOINTER callback is executed if a particular NLP problem is to be freed.
  * The callback method should free a SCIP_NlpiProblem struct here.
- *
- * @subsection NLPIGETPROBLEMPOINTER
- *
- * The NLPIGETPROBLEMPOINTER callback can be used to pass a pointer to a solver specific data structure of the NLP to the user.
  *
  * @subsection NLPIADDVARS
  *
@@ -4954,8 +5110,8 @@
  * @subsection NLPIADDCONSTRAINTS
  *
  * The NLPIADDCONSTRAINTS callback is executed if a set of constraints should be added to a particular NLP.
- * Constraints are specified by providing left and right hand sides, linear and quadratic coefficients, expression trees, and constraint names.
- * All of these arguments are optional, giving NULL for left hand sides corresponds to -infinity, giving NULL for right hand sides corresponds to +infinity.
+ * Constraints are specified by providing left- and right-hand-sides, linear coefficients, expressions, and constraint names.
+ * All of these arguments are optional, giving NULL for left-hand-sides corresponds to -infinity, giving NULL for right-hand-sides corresponds to +infinity.
  *
  * @subsection NLPISETOBJECTIVE
  *
@@ -4985,28 +5141,13 @@
  *
  * The NLPICHGLINEARCOEFS callback is executed to change the coefficients in the linear part of the objective function or a constraint of an NLP.
  *
- * @subsection NLPICHGQUADCOEFS
+ * @subsection NLPICHGEXPR
  *
- * The NLPICHGQUADCOEFS callback is executed to change the coefficients in the quadratic part of the objective function or a constraint of an NLP.
- *
- * @subsection NLPICHGEXPRTREE
- *
- * The NLPICHGEXPRTREE callback is executed to replace the expression tree of the objective function or a constraint of an NLP.
- *
- * @subsection NLPICHGNONLINCOEF
- *
- * The NLPICHGNONLINCOEF callback is executed to change a single parameter in the (parametrized) expression tree of the objective function or a constraint of an NLP.
+ * The NLPICHGEXPR callback is executed to replace the expression of the objective function or a constraint of an NLP.
  *
  * @subsection NLPICHGOBJCONSTANT
  *
  * The NLPICHGOBJCONSTANT callback is executed to change the constant offset of the objective function of an NLP.
- *
- * @subsection NLPISETINITIALGUESS
- *
- * The NLPISETINITIALGUESS callback is executed to provide primal and dual initial values for the variables and constraints of an NLP.
- * For a local solver, these values can be used as a starting point for the search.
- * It is possible to pass a NULL pointer for any of the arguments (primal values of variables, dual values of variable bounds, dual values of constraints).
- * In this case, the solver should clear previously set starting values and setup its own starting point.
  *
  * @subsection NLPISOLVE
  *
@@ -5034,45 +5175,47 @@
  * The NLPIGETSTATISTICS callback can be used to request the statistical values (number of iterations, time, ...) after an NLP solve.
  * The method should fill the provided NLPSTATISTICS data structure.
  *
- * <!-- NLPIGETWARMSTARTSIZE, NLPIGETWARMSTARTMEMO, NLPISETWARMSTARTMEMO are not documented,
-      since they are currently not used, not implemented, and likely to change with a next version. -->
+ * @section NLPI_ADDITIONALCALLBACKS Additional Callback Methods of an NLPI
  *
- * @subsection NLPIGETINTPAR
+ * The additional callback methods do not need to be implemented in every case.
  *
- * The NLPIGETINTPAR callback can be used to request the value of an integer valued NLP parameter.
+ * @subsection NLPICOPY
  *
- * @subsection NLPISETINTPAR
+ * The NLPICOPY callback is executed if the plugin should be copied, e.g., when a SCIP instance is copied.
  *
- * The NLPISETINTPAR callback is executed to set the value of an integer valued NLP parameter.
+ * It is advisable to implement this callback to make the NLP solver available in sub-SCIPs.
+ * Note that the sub-NLP heuristic solves NLPs in a sub-SCIP.
  *
- * @subsection NLPIGETREALPAR
+ * @subsection NLPIGETSOLVERPOINTER
  *
- * The NLPIGETREALPAR callback can be used to request the value of a real valued NLP parameter.
+ * The NLPIGETSOLVERPOINTER callback can be used to pass a pointer to a solver specific data structure to the user.
+ * Return NULL if you do not have a pointer to return.
  *
- * @subsection NLPISETREALPAR
+ * @subsection NLPIGETPROBLEMPOINTER
  *
- * The NLPISETREALPAR callback is executed to set the value of a real valued NLP parameter.
+ * The NLPIGETPROBLEMPOINTER callback can be used to pass a pointer to a solver specific data structure of the NLP to the user.
  *
- * @subsection NLPIGETSTRINGPAR
+ * @subsection NLPISETINITIALGUESS
  *
- * The NLPIGETSTRINGPAR callback can be used to request the value of a string valued NLP parameter.
+ * The NLPISETINITIALGUESS callback is executed to provide primal and dual initial values for the variables and constraints of an NLP.
+ * For a local solver, it is strongly advisable to implement this callback, as these values should be used as a starting point for the search.
+ * It is possible to pass a NULL pointer for any of the arguments (primal values of variables, dual values of variable bounds, dual values of constraints).
+ * In this case, the solver should clear previously set starting values and setup its own starting point.
  *
- * @subsection NLPISETSTRINGPAR
- *
- * The NLPISETSTRINGPAR callback is executed to set the value of a string valued NLP parameter.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page EXPRINT How to add interfaces to expression interpreters
  *
- * An expression interpreter is a tool to compute point-wise and interval-wise the function values, gradients, and
- * derivatives of algebraic expressions which are given in the form of an expression tree.
+ * An expression interpreter is a tool to compute point-wise the function values, gradients, and
+ * Hessians of algebraic expressions which are given in the form of an expression.
+ * Typically, this is done via automatic differentiation.
  * It is used, e.g., by an NLP solver interface to compute Jacobians and Hessians for the solver.
  *
  * The expression interpreter interface in SCIP has been implemented similar to those of the LP solver interface (LPI).
  * For one binary, exactly one expression interpreter has to be linked.
- * The expression interpreter API has been designed such that it can be used independently from SCIP.
+ * The expression interpreter API has been designed such that it can be used independently from a SCIP problem.
  *
  * A complete list of all expression interpreters contained in this release can be found \ref EXPRINTS "here".
  *
@@ -5081,89 +5224,83 @@
  * Unlike most other plugins, it is written in C++.
  *
  * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters,
- * can be found in the file \ref exprinterpret.h
+ * can be found in the file \ref exprinterpret.h.
  *
  * Here is what you have to do to implement an expression interpreter:
- * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpreti_myexprinterpret.c".
- *    \n
- *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Open the new files with a text editor.
+ * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpret_myad.c".
+ *    Make sure to adjust your Makefile such that this file is compiled and linked to your project instead of exprinterpret implementations.
+ * -# Open the new file with a text editor.
  * -# Define the expression interpreter data (see \ref EXPRINT_DATA).
  * -# Implement the interface methods (see \ref EXPRINT_INTERFACE).
  *
  *
  * @section EXPRINT_DATA Expression Interpreter Data
  *
- * In "struct SCIP_ExprInt", you can store the general data of your expression interpreter.
- * For example, you could store a pointer to the block memory data structure.
+ * In `struct SCIP_ExprInt`, you can store the general data of your expression interpreter.
+ * For example, you could store the environment of your automatic differentiation code.
  *
  * @section EXPRINT_INTERFACE Interface Methods
  *
  * The expression interpreter has to implement a set of interface method.
- * In your "exprinterpret_myexprinterpret.c", these methods are mostly dummy methods that return error codes.
+ * In your "exprinterpret_myad.c", these methods are mostly dummy methods that return error codes.
  *
  * @subsection SCIPexprintGetName
  *
- * The SCIPexprintGetName method should return the name of the expression interpreter.
+ * The SCIPexprintGetName() method should return the name of the expression interpreter.
  *
  * @subsection SCIPexprintGetDesc
  *
- * The SCIPexprintGetDesc method should return a short description of the expression interpreter, e.g., the name of the developer of the code.
+ * The SCIPexprintGetDesc() method should return a short description of the expression interpreter, e.g., the name of the developer of the code.
  *
  * @subsection SCIPexprintGetCapability
  *
- * The SCIPexprintGetCapability method should return a bitmask that indicates the capabilities of the expression interpreter,
- * i.e., whether it can evaluate gradients, Hessians, or do interval arithmetic.
+ * The SCIPexprintGetCapability() method should return a bitmask that indicates the capabilities of the expression interpreter,
+ * i.e., whether it can compute gradients and Hessians.
  *
  * @subsection SCIPexprintCreate
  *
- * The SCIPexprintCreate method is called to create an expression interpreter data structure.
- * The method should initialize a "struct SCIP_ExprInt" here.
+ * The SCIPexprintCreate() method is called to create an expression interpreter data structure.
+ * The method should initialize a `struct SCIP_ExprInt` here.
  *
  * @subsection SCIPexprintFree
  *
- * The SCIPexprintFree method is called to free an expression interpreter data structure.
- * The method should free a "struct SCIP_ExprInt" here.
+ * The SCIPexprintFree() method is called to free an expression interpreter data structure.
+ * The method should free a `struct SCIP_ExprInt` here.
  *
  * @subsection SCIPexprintCompile
  *
- * The SCIPexprintCompile method is called to initialize the data structures that are required to evaluate
- * a particular expression tree.
- * The expression interpreter can store data that is particular to a given expression tree in the tree by using
- * SCIPexprtreeSetInterpreterData().
+ * The SCIPexprintCompile() method is called to initialize the data structures that are required to evaluate a particular expression.
+ * The expression interpreter can create and return data that is particular to a given expression in the argument `exprintdata`.
  *
  * @subsection SCIPexprintFreeData
  *
- * The SCIPexprintFreeData method is called when an expression tree is freed.
- * The expression interpreter should free the given data structure.
+ * The SCIPexprintFreeData() method is called to free the data that is particular to a given expression and was possibly created in SCIPexprintCompile().
  *
- * @subsection SCIPexprintNewParametrization
+ * @subsection SCIPexprintGetExprCapability
  *
- * The SCIPexprintNewParametrization method is called when the values of the parameters in a parametrized expression tree have changed.
+ * The SCIPexprintGetExprCapability() method is called to request the capability to evaluate a specific expression by the expression interpreter.
+ *
+ * In cases of user-given expressions, higher order derivatives may not be available for the user-expression,
+ * even if the expression interpreter could handle these. This method allows to recognize that, e.g., the
+ * Hessian for an expression is not available because it contains a user expression that does not provide
+ * Hessians.
  *
  * @subsection SCIPexprintEval
  *
- * The SCIPexprintEval method is called when the value of an expression represented by an expression tree should be computed for a point.
- *
- * @subsection SCIPexprintEvalInt
- *
- * The SCIPexprintEvalInt method is called when an interval that contains the range of an expression represented by an expression tree with respect to intervals for the variables should be computed.
+ * The SCIPexprintEval() method is called when the value of an expression should be computed for a point.
  *
  * @subsection SCIPexprintGrad
  *
- * The SCIPexprintGrad method is called when the gradient of an expression represented by an expression tree should be computed for a point.
+ * The SCIPexprintGrad() method is called when the gradient of an expression represented by an expression should be computed for a point.
  *
- * @subsection SCIPexprintGradInt
+ * @subsection SCIPexprintHessianSparsity
  *
- * The SCIPexprintGradInt method is called when an interval vector that contains the range of the gradients of an expression represented by an expression tree with respect to intervals for the variables should be computed.
+ * The SCIPexprintHessianSparsity() method is called when the sparsity structure of the Hessian matrix should be computed and returned.
+ * Only the position of nonzero entries in the lower-triangular part of Hessian should be reported.
  *
- * @subsection SCIPexprintHessianSparsityDense
+ * @subsection SCIPexprintHessian
  *
- * The SCIPexprintHessianSparsityDense method is called when the sparsity structure of the Hessian matrix should be computed and returned in dense form.
- *
- * @subsection SCIPexprintHessianDense
- *
- * The SCIPexprintHessianDense method is called when the Hessian of an expression represented by an expression tree should be computed for a point.
+ * The SCIPexprintHessian() method is called when the Hessian of an expression should be computed for a point.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7459,19 +7596,9 @@
  * @brief methods to initiate and conduct LP diving
  */
 
-/**@defgroup PublicConflictMethods Conflict Analysis
- * @ingroup PublicSolveMethods
- * @brief public methods for conflict analysis
- */
-
 /**@defgroup PublicNLPMethods NLP Relaxation
  * @ingroup PublicSolveMethods
  * @brief methods for the nonlinear relaxation
- */
-
-/**@defgroup PublicExpressionTreeMethods Expression (Tree)
- * @ingroup PublicNLPMethods
- * @brief methods for expressions and expression trees
  */
 
 /**@defgroup PublicNLRowMethods Nonlinear Rows
@@ -7482,6 +7609,11 @@
 /**@defgroup PublicNLPDiveMethods NLP Diving
  * @ingroup PublicNLPMethods
  * @brief methods to initiate and conduct NLP Diving
+ */
+
+/**@defgroup PublicConflictMethods Conflict Analysis
+ * @ingroup PublicSolveMethods
+ * @brief public methods for conflict analysis
  */
 
 /**@defgroup PublicBranchingMethods Branching
@@ -7566,11 +7698,6 @@
  * @see \ref MEMORY  "Using the memory functions of SCIP" for more information
  */
 
-/**@defgroup PublicNonlinearMethods Nonlinear Data
- * @ingroup MiscellaneousMethods
- * @brief methods for nonlinear data
- */
-
 /**@defgroup PublicTimingMethods Timing
  * @ingroup MiscellaneousMethods
  * @brief  methods for timing
@@ -7629,6 +7756,11 @@
  * @brief methods for constraint handlers
  */
 
+/**@defgroup PublicCutSelectorMethods Cut Selector
+ * @ingroup PluginManagementMethods
+ * @brief methods for cut selectors
+ */
+
 /**@defgroup PublicDialogMethods Dialogs
  * @ingroup PluginManagementMethods
  * @brief public methods for user interface dialogs
@@ -7644,6 +7776,11 @@
  * @brief  methods for event handlers
  */
 
+/**@defgroup PublicExprHandlerMethods Expression Handler
+ * @ingroup PluginManagementMethods
+ * @brief  methods for expression handlers
+ */
+
 /**@defgroup PublicHeuristicMethods Primal Heuristics
  * @ingroup PluginManagementMethods
  * @brief  methods for primal heuristic plugins
@@ -7657,6 +7794,11 @@
 /**@defgroup PublicNodeSelectorMethods Node Selector
  * @ingroup PluginManagementMethods
  * @brief  methods for node selector plugin management
+ */
+
+/**@defgroup PublicNlhdlrInterfaceMethods Nonlinear Handlers
+ * @ingroup PluginManagementMethods
+ * @brief  methods for the management of nonlinear handlers
  */
 
 /**@defgroup PublicPresolverMethods Presolver
@@ -7699,9 +7841,9 @@
  * @brief methods for concurrent solver type plugins
  */
 
-/**@defgroup PublicNLPInterfaceMethods NLP interfaces
+/**@defgroup PublicNLPIInterfaceMethods NLP solver interfaces
  * @ingroup PluginManagementMethods
- * @brief  methods for the management of NLP interfaces
+ * @brief  methods for the management of NLP solver interfaces
  */
 
 /**@defgroup PublicExternalCodeMethods External Codes
@@ -7814,6 +7956,24 @@
  *
  */
 
+/**@defgroup CUTSELECTORS Cut Selectors
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default cut selectors of \SCIP
+ *
+ * A detailed description what a cut selector does and how to add a cut selector to SCIP can be found
+ * \ref CUTSEL "here".
+ */
+
+/**@defgroup CutSelectorIncludes Inclusion methods
+ * @ingroup CUTSELECTORS
+ * @brief methods to include specific cut selectors into \SCIP
+ *
+ * This module contains methods to include specific cut selectors into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default cut selectors) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup DIALOGS Dialogs
  * @ingroup PUBLICPLUGINAPI
  * @brief methods and files provided by the default dialogs of \SCIP
@@ -7851,6 +8011,29 @@
  *
  */
 
+/**@defgroup EXPRHDLRS  Expression Handlers
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default expressions handlers of \SCIP
+ */
+
+/**@defgroup ExprhdlrIncludes Inclusion methods
+ * @ingroup EXPRHDLRS
+ * @brief methods to include specific expression handlers into \SCIP
+ *
+ * This module contains methods to include specific expression handlers into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default expression handlers) using SCIPincludeDefaultPlugins()
+ *
+ */
+
+/**@defgroup EXPRINTS Expression Interpreter
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default expression interpreters of \SCIP
+ *
+ * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
+ * \ref EXPRINT "here".
+ */
+
 /**@defgroup FILEREADERS File Readers
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all file readers which are currently available.
@@ -7861,12 +8044,14 @@
  * formats.
  *
  * <table>
+ * <tr><td>\ref reader_bnd.h "BND format"</td> <td>for variable bounds</td></tr>
  * <tr><td>\ref reader_cip.h "CIP format"</td> <td>for SCIP's constraint integer programming format</td></tr>
  * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
  * <tr><td>\ref reader_diff.h "DIFF format"</td> <td>for reading a new objective function for mixed-integer programs</td></tr>
  * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc</td></tr>
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>
  * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programs</td></tr>
+ * <tr><td>\ref reader_nl.h "NL format"</td> <td>for <a href="http://www.ampl.com">AMPL</a> .nl files, e.g., mixed-integer linear and nonlinear
  * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for pseudo-Boolean optimization instances</td></tr>
  * <tr><td>\ref reader_osil.h "OSiL format"</td> <td>for mixed-integer nonlinear programs</td></tr>
  * <tr><td>\ref reader_pip.h "PIP format"</td> <td>for <a href="http://polip.zib.de/pipformat.php">mixed-integer polynomial programming problems</a></td></tr>
@@ -7902,24 +8087,6 @@
 /**@defgroup PublicSymmetryMethods Symmetry
  * @ingroup INTERNALAPI
  * @brief methods for symmetry handling
- */
-
-/**@defgroup EXPRINTS Expression Interpreter
- * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default expression interpreters of \SCIP
- *
- * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
- * \ref EXPRINT "here".
- */
-
-/**@defgroup ExprintIncludes Inclusion methods
- * @ingroup EXPRINTS
- * @brief methods to include specific expression interpreters into \SCIP
- *
- * This module contains methods to include specific expression interpreters into \SCIP.
- *
- * @note All default plugins can be included at once (including all default expression interpreters) using SCIPincludeDefaultPlugins()
- *
  */
 
 /**@defgroup FileReaderIncludes Inclusion methods
@@ -7961,6 +8128,21 @@
  * This module contains methods to include specific node selectors into \SCIP.
  *
  * @note All default plugins can be included at once (including all default node selectors) using SCIPincludeDefaultPlugins()
+ *
+ */
+
+/**@defgroup NLHDLRS  Nonlinear Handlers
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default nonlinear handlers of \SCIP
+ */
+
+/**@defgroup NlhdlrIncludes Inclusion methods
+ * @ingroup NLHDLRS
+ * @brief methods to include specific nonlinear handlers into \SCIP
+ *
+ * This module contains methods to include specific nonlinear handlers into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default nonlinear handlers) using SCIPincludeDefaultPlugins()
  *
  */
 
@@ -8009,7 +8191,7 @@
  */
 
 /**@defgroup PricerIncludes Inclusion methods
-* @ingroup PUBLICPLUGINAPI
+* @ingroup PRICERS
 * @brief methods to include specific pricers into \SCIP
 *
 * This module contains methods to include specific pricers into \SCIP.

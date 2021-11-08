@@ -54,6 +54,7 @@
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
@@ -119,6 +120,7 @@ struct SCIP_ConsData
    SCIP_VAR*             var;                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar;             /**< binary, integer or implicit integer bounding variable y */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
+   SCIP_NLROW*           nlrow;              /**< NLP row, if constraint has been added to NLP relaxation */
    unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
    unsigned int          varboundsadded:1;   /**< are the globally valid variable bounds added? */
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
@@ -324,6 +326,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
    (*consdata)->row = NULL;
+   (*consdata)->nlrow = NULL;
    (*consdata)->presolved = FALSE;
    (*consdata)->varboundsadded = FALSE;
    (*consdata)->changed = TRUE;
@@ -362,6 +365,12 @@ SCIP_RETCODE consdataFree(
    if( (*consdata)->row != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+
+   /* release the nlrow */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
    /* release variables */
@@ -437,6 +446,51 @@ SCIP_RETCODE addRelaxation(
       SCIPdebugMsg(scip, "adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
       SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, infeasible) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds varbound constraint as row to the NLP, if not added yet */
+static
+SCIP_RETCODE addNlrow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< varbound constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(SCIPisNLPConstructed(scip));
+
+   /* skip deactivated, redundant, or local constraints (the NLP does not allow for local rows at the moment) */
+   if( !SCIPconsIsActive(cons) || !SCIPconsIsChecked(cons) || SCIPconsIsLocal(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+      SCIP_VAR* vars[2];
+      SCIP_Real coefs[2];
+
+      assert(consdata->lhs <= consdata->rhs);
+
+      vars[0] = consdata->var;
+      vars[1] = consdata->vbdvar;
+
+      coefs[0] = 1.0;
+      coefs[1] = consdata->vbdcoef;
+
+      SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons),
+         0.0, 2, vars, coefs, NULL, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_LINEAR) );
+
+      assert(consdata->nlrow != NULL);
+   }
+
+   if( !SCIPnlrowIsInNLP(consdata->nlrow) )
+   {
+      SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
    }
 
    return SCIP_OKAY;
@@ -2821,9 +2875,12 @@ void prettifyConss(
          SCIP_Longint maxmult;
          SCIP_Bool success;
 
-         epsilon = SCIPepsilon(scip) * 0.9;  /* slightly decrease epsilon to be safe in rational conversion below */
-         maxmult = (SCIP_Longint)(SCIPfeastol(scip)/epsilon + SCIPfeastol(scip));
+         maxmult = (SCIP_Longint)(SCIPfeastol(scip)/SCIPepsilon(scip) + SCIPfeastol(scip));
          maxmult = MIN(maxmult, MAXSCALEDCOEF);
+
+         /* this ensures that one coefficient in the scaled constraint will be one as asserted below; 0.9 to be safe */
+         epsilon = SCIPepsilon(scip) / (SCIP_Real)maxmult;
+         epsilon *= 0.9;
 
          success = SCIPrealToRational(consdata->vbdcoef, -epsilon, epsilon , maxmult, &nominator, &denominator);
 
@@ -2839,7 +2896,7 @@ void prettifyConss(
             success = success && (denominator <= maxmult);
 
             /* scale the constraint denominator/nominator */
-            if( success && ABS(denominator) > 1 && nominator == 1)
+            if( success && ABS(denominator) > 1 && nominator == 1 )
             {
                SCIP_VAR* swapvar;
 
@@ -3665,32 +3722,49 @@ SCIP_RETCODE tightenCoefs(
           * -> c' = MAX(c - rhs + xub, lhs - xlb), rhs' = rhs - c + c'
           */
          newcoef = MAX(consdata->vbdcoef - consdata->rhs + xub, consdata->lhs - xlb);
-         newrhs = consdata->rhs - consdata->vbdcoef + newcoef;
 
-         SCIPdebugMsg(scip, "tighten varbound %.15g <= <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to %.15g <= <%s> %+.15g<%s> <= %.15g\n",
-            consdata->lhs, SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
-            consdata->lhs, SCIPvarGetName(consdata->var), newcoef, SCIPvarGetName(consdata->vbdvar), newrhs);
-
-         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-         assert(consdata->vbdcoef * newcoef > 0);
-
-         consdata->vbdcoef = newcoef;
-         consdata->rhs = MAX(newrhs, consdata->lhs);
-         (*nchgcoefs)++;
-         (*nchgsides)++;
-
-         /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
-          * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
-          * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
-          */
-         if( !SCIPisFeasIntegral(scip, oldrhs) && SCIPisFeasIntegral(scip, newrhs) )
+         /* in this case both sides are redundant and the constraint can be removed */
+         if( SCIPisLE(scip, newcoef, 0.0) )
          {
-            consdata->tightened = FALSE;
-            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds) );
-            assert(consdata->tightened);
+            assert(SCIPisFeasGE(scip, xlb, consdata->lhs) && SCIPisFeasGE(scip, xlb + consdata->vbdcoef, consdata->lhs));
+            assert(SCIPisFeasLE(scip, xub, consdata->rhs) && SCIPisFeasLE(scip, xub + consdata->vbdcoef, consdata->rhs));
+
+            SCIPdebugMsg(scip, "delete cons <%s>\n", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
          }
          else
-            consdata->tightened = (SCIPisIntegral(scip, consdata->vbdcoef) && SCIPisIntegral(scip, consdata->rhs));
+         {
+            newrhs = consdata->rhs - consdata->vbdcoef + newcoef;
+
+            SCIPdebugMsg(scip,
+                         "tighten varbound %.15g <= <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to %.15g <= <%s> %+.15g<%s> <= %.15g\n",
+                         consdata->lhs, SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef,
+                         SCIPvarGetName(consdata->vbdvar), consdata->rhs,
+                         consdata->lhs, SCIPvarGetName(consdata->var), newcoef, SCIPvarGetName(consdata->vbdvar),
+                         newrhs);
+
+            /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+            assert(consdata->vbdcoef * newcoef > 0);
+
+            consdata->vbdcoef = newcoef;
+            consdata->rhs = MAX(newrhs, consdata->lhs);
+            (*nchgcoefs)++;
+            (*nchgsides)++;
+
+            /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
+             * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
+             * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
+             */
+            if( !SCIPisFeasIntegral(scip, oldrhs) && SCIPisFeasIntegral(scip, newrhs))
+            {
+               consdata->tightened = FALSE;
+               SCIP_CALL(tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds));
+               assert(consdata->tightened);
+            }
+            else
+               consdata->tightened = (SCIPisIntegral(scip, consdata->vbdcoef) && SCIPisIntegral(scip, consdata->rhs));
+         }
       }
       else if( consdata->vbdcoef < 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs) && SCIPisFeasLT(scip, xub, consdata->rhs - consdata->vbdcoef) )
       {
@@ -3705,32 +3779,49 @@ SCIP_RETCODE tightenCoefs(
           * -> c' = MIN(c - lhs + xlb, rhs - xub), lhs' = lhs - c + c'
           */
          newcoef = MIN(consdata->vbdcoef - consdata->lhs + xlb, consdata->rhs - xub);
-         newlhs = consdata->lhs - consdata->vbdcoef + newcoef;
 
-         SCIPdebugMsg(scip, "tighten varbound %.15g <= <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to %.15g <= <%s> %+.15g<%s> <= %.15g\n",
-            consdata->lhs, SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
-            newlhs, SCIPvarGetName(consdata->var), newcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
-
-         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-         assert(consdata->vbdcoef * newcoef > 0);
-
-         consdata->vbdcoef = newcoef;
-         consdata->lhs = MIN(newlhs, consdata->rhs);
-         (*nchgcoefs)++;
-         (*nchgsides)++;
-
-         /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
-          * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
-          * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
-          */
-         if( !SCIPisFeasIntegral(scip, oldlhs) && SCIPisFeasIntegral(scip, newlhs) )
+         /* in this case both sides are redundant and the constraint can be removed */
+         if( SCIPisGE(scip, newcoef, 0.0) )
          {
-            consdata->tightened = FALSE;
-            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds) );
-            assert(consdata->tightened);
+            assert(SCIPisFeasGE(scip, xlb, consdata->lhs) && SCIPisFeasGE(scip, xlb + consdata->vbdcoef, consdata->lhs));
+            assert(SCIPisFeasLE(scip, xub, consdata->rhs) && SCIPisFeasLE(scip, xub + consdata->vbdcoef, consdata->rhs));
+
+            SCIPdebugMsg(scip, "delete cons <%s>\n", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
          }
          else
-            consdata->tightened = (SCIPisIntegral(scip, consdata->vbdcoef) && SCIPisIntegral(scip, consdata->lhs));
+         {
+            newlhs = consdata->lhs - consdata->vbdcoef + newcoef;
+
+            SCIPdebugMsg(scip,
+                         "tighten varbound %.15g <= <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to %.15g <= <%s> %+.15g<%s> <= %.15g\n",
+                         consdata->lhs, SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef,
+                         SCIPvarGetName(consdata->vbdvar), consdata->rhs,
+                         newlhs, SCIPvarGetName(consdata->var), newcoef, SCIPvarGetName(consdata->vbdvar),
+                         consdata->rhs);
+
+            /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+            assert(consdata->vbdcoef * newcoef > 0);
+
+            consdata->vbdcoef = newcoef;
+            consdata->lhs = MIN(newlhs, consdata->rhs);
+            (*nchgcoefs)++;
+            (*nchgsides)++;
+
+            /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
+             * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
+             * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
+             */
+            if( !SCIPisFeasIntegral(scip, oldlhs) && SCIPisFeasIntegral(scip, newlhs))
+            {
+               consdata->tightened = FALSE;
+               SCIP_CALL(tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds));
+               assert(consdata->tightened);
+            }
+            else
+               consdata->tightened = (SCIPisIntegral(scip, consdata->vbdcoef) && SCIPisIntegral(scip, consdata->lhs));
+         }
       }
    }
    else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
@@ -3738,75 +3829,145 @@ SCIP_RETCODE tightenCoefs(
       /* lhs <= x + c*y  =>  x >= lhs - c*y */
       if( consdata->vbdcoef > 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs - consdata->vbdcoef) )
       {
+         SCIP_Real newcoef;
+
          /* constraint has positive slack for the non-restricting case y = 1
           * -> modify coefficients such that constraint is tight in the non-restricting case y = 1 and equivalent in the restricting case y = 0
           * -> c' = lhs - xlb
           */
-         SCIPdebugMsg(scip, "tighten binary VLB <%s>[%.15g,%.15g] %+.15g<%s> >= %.15g to <%s> %+.15g<%s> >= %.15g\n",
-            SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
-            SCIPvarGetName(consdata->var), consdata->lhs - xlb, SCIPvarGetName(consdata->vbdvar), consdata->lhs);
+         newcoef = consdata->lhs - xlb;
 
-         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-         assert(consdata->vbdcoef * (consdata->lhs - xlb) > 0);
+         /* in this case the constraint is redundant and can be removed */
+         if( SCIPisLE(scip, newcoef, 0.0) )
+         {
+            assert(SCIPisFeasGE(scip, xlb, consdata->lhs) && SCIPisFeasGE(scip, xlb + consdata->vbdcoef, consdata->lhs));
 
-         consdata->vbdcoef = consdata->lhs - xlb;
-         (*nchgcoefs)++;
+            SCIPdebugMsg(scip, "delete cons <%s>\n", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "tighten binary VLB <%s>[%.15g,%.15g] %+.15g<%s> >= %.15g to <%s> %+.15g<%s> >= %.15g\n",
+                         SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar),
+                         consdata->lhs,
+                         SCIPvarGetName(consdata->var), consdata->lhs - xlb, SCIPvarGetName(consdata->vbdvar),
+                         consdata->lhs);
+
+            /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+            assert(consdata->vbdcoef * newcoef > 0);
+
+            consdata->vbdcoef = newcoef;
+            (*nchgcoefs)++;
+         }
       }
       else if( consdata->vbdcoef < 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs) )
       {
+         SCIP_Real newcoef;
+
          /* constraint has positive slack for the non-restricting case y = 0
           * -> modify coefficients such that constraint is tight in the non-restricting case y = 0 and equivalent in the restricting case y = 1
           * -> c' = c - lhs + xlb, lhs' = xlb
           */
-         SCIPdebugMsg(scip, "tighten binary VLB <%s>[%.15g,%.15g] %+.15g<%s> >= %.15g to <%s> %+.15g<%s> >= %.15g\n",
-            SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
-            SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->lhs + xlb, SCIPvarGetName(consdata->vbdvar), xlb);
+         newcoef = consdata->vbdcoef - consdata->lhs + xlb;
 
-         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-         assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->lhs + xlb) > 0);
+         /* in this case the constraint is redundant and can be removed */
+         if( SCIPisGE(scip, newcoef, 0.0) )
+         {
+            assert(SCIPisFeasGE(scip, xlb, consdata->lhs) && SCIPisFeasGE(scip, xlb + consdata->vbdcoef, consdata->lhs));
 
-         consdata->vbdcoef = consdata->vbdcoef - consdata->lhs + xlb;
-         consdata->lhs = xlb;
-         (*nchgcoefs)++;
-         (*nchgsides)++;
+            SCIPdebugMsg(scip, "delete cons <%s>\n", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "tighten binary VLB <%s>[%.15g,%.15g] %+.15g<%s> >= %.15g to <%s> %+.15g<%s> >= %.15g\n",
+                         SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar),
+                         consdata->lhs,
+                         SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->lhs + xlb,
+                         SCIPvarGetName(consdata->vbdvar), xlb);
+
+            /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+            assert(consdata->vbdcoef * newcoef > 0);
+
+            consdata->vbdcoef = newcoef;
+            consdata->lhs = xlb;
+            (*nchgcoefs)++;
+            (*nchgsides)++;
+         }
       }
    }
    else if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
    {
       /* x + c*y <= rhs  =>  x <= rhs - c*y */
-      if( consdata->vbdcoef < 0.0 && SCIPisFeasLT(scip, xub, consdata->rhs - consdata->vbdcoef) )
+      if( consdata->vbdcoef > 0.0 && SCIPisFeasLT(scip, xub, consdata->rhs) )
       {
-         /* constraint has positive slack for the non-restricting case y = 1
-          * -> modify coefficients such that constraint is tight in the non-restricting case y = 1 and equivalent in the restricting case y = 0
-          * -> c' = rhs - xub
-          */
-         SCIPdebugMsg(scip, "tighten binary VUB <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to <%s> %+.15g<%s> <= %.15g\n",
-            SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
-            SCIPvarGetName(consdata->var), consdata->rhs - xub, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
+         SCIP_Real newcoef;
 
-         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-         assert(consdata->vbdcoef * (consdata->rhs - xub) > 0);
-
-         consdata->vbdcoef = consdata->rhs - xub;
-         (*nchgcoefs)++;
-      }
-      else if( consdata->vbdcoef > 0.0 && SCIPisFeasLT(scip, xub, consdata->rhs) )
-      {
          /* constraint has positive slack for the non-restricting case y = 0
           * -> modify coefficients such that constraint is tight in the non-restricting case y = 0 and equivalent in the restricting case y = 1
           * -> c' = c - rhs + xub, rhs' = xub
           */
-         SCIPdebugMsg(scip, "tighten binary VUB <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to <%s> %+.15g<%s> <= %.15g\n",
-            SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
-            SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->rhs + xub, SCIPvarGetName(consdata->vbdvar), xub);
+         newcoef = consdata->vbdcoef - consdata->rhs + xub;
 
-         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-         assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->rhs + xub) > 0);
+         /* in this case the constraint is redundant and can be removed */
+         if( SCIPisLE(scip, newcoef, 0.0) )
+         {
+            assert(SCIPisFeasLE(scip, xub, consdata->rhs) && SCIPisFeasLE(scip, xub + consdata->vbdcoef, consdata->rhs));
 
-         consdata->vbdcoef = consdata->vbdcoef - consdata->rhs + xub;
-         consdata->rhs = xub;
-         (*nchgcoefs)++;
-         (*nchgsides)++;
+            SCIPdebugMsg(scip, "delete cons <%s>\n", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "tighten binary VUB <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to <%s> %+.15g<%s> <= %.15g\n",
+                         SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar),
+                         consdata->rhs,
+                         SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->rhs + xub,
+                         SCIPvarGetName(consdata->vbdvar), xub);
+
+            /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+            assert(consdata->vbdcoef * newcoef > 0);
+
+            consdata->vbdcoef = newcoef;
+            consdata->rhs = xub;
+            (*nchgcoefs)++;
+            (*nchgsides)++;
+         }
+      }
+      else if( consdata->vbdcoef < 0.0 && SCIPisFeasLT(scip, xub, consdata->rhs - consdata->vbdcoef) )
+      {
+         SCIP_Real newcoef;
+
+         /* constraint has positive slack for the non-restricting case y = 1
+          * -> modify coefficients such that constraint is tight in the non-restricting case y = 1 and equivalent in the restricting case y = 0
+          * -> c' = rhs - xub
+          */
+         newcoef = consdata->rhs - xub;
+
+         /* in this case the constraint is redundant and can be removed */
+         if( SCIPisGE(scip, newcoef, 0.0) )
+         {
+            assert(SCIPisFeasLE(scip, xub, consdata->rhs) && SCIPisFeasLE(scip, xub + consdata->vbdcoef, consdata->rhs));
+
+            SCIPdebugMsg(scip, "delete cons <%s>\n", SCIPconsGetName(cons));
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "tighten binary VUB <%s>[%.15g,%.15g] %+.15g<%s> <= %.15g to <%s> %+.15g<%s> <= %.15g\n",
+                         SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
+                         SCIPvarGetName(consdata->var), consdata->rhs - xub, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
+
+            /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+            assert(consdata->vbdcoef * newcoef > 0);
+
+            consdata->vbdcoef = newcoef;
+            (*nchgcoefs)++;
+         }
       }
    }
 
@@ -4146,6 +4307,24 @@ SCIP_DECL_CONSFREE(consFreeVarbound)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler */
+static
+SCIP_DECL_CONSINITSOL(consInitsolVarbound)
+{  /*lint --e{715}*/
+
+   /* add nlrow representation to NLP, if NLP had been constructed */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      int c;
+      for( c = 0; c < nconss; ++c )
+      {
+         SCIP_CALL( addNlrow(scip, conss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolVarbound)
@@ -4153,7 +4332,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolVarbound)
    SCIP_CONSDATA* consdata;
    int c;
 
-   /* release the rows of all constraints */
+   /* release the rows and nlrows of all constraints */
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -4162,6 +4341,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolVarbound)
       if( consdata->row != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+      }
+
+      if( consdata->nlrow != NULL )
+      {
+         SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
    }
 
@@ -4700,6 +4884,41 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
    return SCIP_OKAY;
 }
 
+/** constraint activation notification method of constraint handler */
+static
+SCIP_DECL_CONSACTIVE(consActiveVarbound)
+{  /*lint --e{715}*/
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
+   {
+      SCIP_CALL( addNlrow(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** constraint deactivation notification method of constraint handler */
+static
+SCIP_DECL_CONSDEACTIVE(consDeactiveVarbound)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* remove row from NLP, if still in solving
+    * if we are in exitsolve, the whole NLP will be freed anyway
+    */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPdelNlRow(scip, consdata->nlrow) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintVarbound)
@@ -4970,11 +5189,6 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
 /**@} */
 
 
-/**@name Interface methods
- *
- * @{
- */
-
 /** creates the handler for variable bound constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -5000,7 +5214,10 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyVarbound, consCopyVarbound) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveVarbound) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveVarbound) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteVarbound) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolVarbound) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolVarbound) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeVarbound) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsVarbound) );
@@ -5368,5 +5585,3 @@ SCIP_RETCODE SCIPcleanupConssVarbound(
 
    return SCIP_OKAY;
 }
-
-/**@} */

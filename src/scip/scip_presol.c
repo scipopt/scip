@@ -41,6 +41,7 @@
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
+#include "scip/struct_stat.h"
 
 /** creates a presolver and includes it in SCIP.
  *
@@ -272,4 +273,15 @@ SCIP_RETCODE SCIPsetPresolPriority(
    SCIPpresolSetPriority(presol, scip->set, priority);
 
    return SCIP_OKAY;
+}
+
+/** returns the number of presolve rounds (current or last presolve) */
+int SCIPgetNPresolRounds(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+
+   return scip->stat->npresolrounds;
 }

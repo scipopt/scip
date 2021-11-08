@@ -15,32 +15,37 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
+
+# if changing these flags, also update GCCWARN/GXXWARN in make/make.project
+set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wno-unknown-warning-option -Wno-unknown-warning -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
+set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized -Wno-initializer-overrides)
+set(ADD_CXX_FLAGS -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
    # for intel compilers we need to set the fp-model precise flag to disable incorrect floating point optimizations
-   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fp-model precise")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise")
+   add_compile_options(-fp-model precise)
    # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
    # this happens with the cplex static lib
    if(LPS MATCHES "cpx")
-     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -shared-intel ")
-     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -shared-intel ")
+       add_compile_options(-shared-intel) # for c and cxx
    endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    # require at least gcc 4.8
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
+        message(WARNING "GCC version not supported, should be at least 4.8!")
+    endif()
+    add_compile_options(${ADD_C_AND_CXX_FLAGS})
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(${ADD_C_AND_CXX_FLAGS})
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
 endif()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
-   # require at least gcc 4.8
-   if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
-     message(WARNING "GCC version not supported, should be at least 4.8!")
-   endif()
-endif()
-
-
-set(SCIP_VERSION_MAJOR 7)
+set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 2)
-set(SCIP_VERSION_SUB 4)
-set(SCIP_VERSION_API 77)
+set(SCIP_VERSION_PATCH 0)
+set(SCIP_VERSION_SUB 0)
+set(SCIP_VERSION_API 100)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -70,7 +75,7 @@ if(SCIPOptSuite_BINARY_DIR)
 endif()
 
 # path to e.g. findGMP module
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
@@ -89,6 +94,7 @@ option(GMP "should gmp be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
 option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
+option(AMPL "should ampl interface be compiled" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
 # for backward compability
@@ -102,13 +108,12 @@ option(NOBUFMEM "should buffer memory be disabled" OFF)
 option(DEBUGSOL "should the debug solution mechanism be enabled" OFF)
 option(SANITIZE_ADDRESS "should the address sanitizer be enabled in debug mode if available" OFF)
 option(SANITIZE_MEMORY "should the memory sanitizer be enabled in debug mode if available" OFF)
-option(SANITIZE_UNDEFINED "should the undefined behavior sanitizer be enabled in debug mode if available" ON)
+option(SANITIZE_UNDEFINED "should the undefined behavior sanitizer be enabled in debug mode if available" OFF)
 option(SANITIZE_THREAD "should the thread sanitizer be enabled in debug mode if available" OFF)
 option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
-option(AMPL "Enable AMPL support" OFF)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -157,17 +162,14 @@ endif()
 
 # Visual Studio compiler with static runtime libraries
 if(MSVC AND MT)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
+    add_compile_options("$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RELEASE>>:/MT>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:DEBUG>>:/MTd>$<$<AND:$<COMPILE_LANGUAGE:C>,$<CONFIG:RELEASE>>:/MT>")
 endif()
 
 #set expression interpreter file that should be used
 if(EXPRINT STREQUAL "cppad")
-    set(exprinterpret nlpi/exprinterpret_cppad.cpp)
+    set(exprinterpret scip/exprinterpret_cppad.cpp)
 elseif(EXPRINT STREQUAL "none")
-    set(exprinterpret nlpi/exprinterpret_none.c)
+    set(exprinterpret scip/exprinterpret_none.c)
 else()
     message(FATAL_ERROR "EXPRINT option has wrong value")
 endif()
@@ -192,8 +194,8 @@ elseif(TPI STREQUAL "omp")
     set(tpisources tpi/tpi_openmp.c)
     find_package(OpenMP REQUIRED)
     set(THREAD_LIBRARIES "")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    add_compile_options("$<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>")
+    add_link_options("${OpenMP_CXX_FLAGS}")
 else()
     message(FATAL_ERROR "TPI option has wrong value")
 endif()
@@ -438,7 +440,9 @@ if(SYM STREQUAL "bliss")
         set(sym symmetry/compute_symmetry_bliss.cpp)
         set(SYM_LIBRARIES ${BLISS_LIBRARIES})
         set(SYM_PIC_LIBRARIES ${BLISS_LIBRARIES})
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${BLISS_DEFINITIONS}")
+        if(BLISS_DEFINITIONS STREQUAL "")
+            add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${BLISS_DEFINITIONS}>")
+        endif()
     else()
         message(STATUS "Finding BLISS - not found")
         set(sym symmetry/compute_symmetry_none.cpp)
@@ -484,7 +488,7 @@ endif()
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
     message(STATUS "Finding ZIMPL")
-    find_package(ZIMPL CONFIG REQUIRED)
+    find_package(ZIMPL EXACT 3.5.0 CONFIG REQUIRED)
     message(STATUS "Finding ZIMPL - found")
     set(SCIP_WITH_ZIMPL ON)
     include_directories(${ZIMPL_INCLUDE_DIRS})
@@ -498,6 +502,15 @@ else()
     set(SCIP_WITH_ZIMPL OFF)
 endif()
 
+if(AMPL)
+    set(SCIP_WITH_AMPL ON)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/amplmp/include)
+    set(amplsrc scip/reader_nl.cpp amplmp/src/format.cpp amplmp/src/expr-info.cpp amplmp/src/nl-reader.cpp amplmp/src/os.cpp amplmp/src/posix.cpp)
+else()
+    message(STATUS "Support AMPL: OFF")
+    set(SCIP_WITH_AMPL OFF)
+endif()
+
 # IPOPT
 if(IPOPT)
     message(STATUS "Finding IPOPT")
@@ -507,10 +520,10 @@ if(IPOPT)
     #on debian IPOPT package needs this definition to work
     set(HAVE_CSTDDEF on)
     set(NLPI_LIBRARIES ${IPOPT_LIBRARIES})
-    set(nlpi nlpi/nlpi_ipopt.cpp)
+    set(nlpi scip/nlpi_ipopt.cpp)
 else()
     message(STATUS "Support IPOPT: OFF")
-    set(nlpi nlpi/nlpi_ipopt_dummy.c)
+    set(nlpi scip/nlpi_ipopt_dummy.c)
 endif()
 
 # WORHP
@@ -519,15 +532,15 @@ if(WORHP)
     find_package(WORHP REQUIRED)
     message(STATUS "Finding WORHP - found")
     include_directories(${WORHP_INCLUDE_DIRS})
-    set(nlpi ${nlpi} nlpi/nlpi_worhp.c)
+    set(nlpi ${nlpi} scip/nlpi_worhp.c)
     set(NLPI_LIBRARIES ${NLPI_LIBRARIES} ${WORHP_LIBRARIES})
 else()
     message(STATUS "Support WORHP: OFF")
-    set(nlpi ${nlpi} nlpi/nlpi_worhp_dummy.c)
+    set(nlpi ${nlpi} scip/nlpi_worhp_dummy.c)
 endif()
 
 # FilterSQP (with CMake, nlpi_filtersqp doesn't build anyway)
-set(nlpi ${nlpi} nlpi/nlpi_filtersqp_dummy.c)
+set(nlpi ${nlpi} scip/nlpi_filtersqp_dummy.c)
 
 # run checks to figure out how the rounding mode can be set
 include(CheckSymbolExists)
@@ -595,16 +608,6 @@ if(BUILD_TESTING)
     add_subdirectory(applications)
 
     add_custom_target(all_executables DEPENDS scip unittests examples applications)
-endif()
-
-if(AMPL)
-    #
-    # add AMPL interface
-    #
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
-    add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
-else()
-    message(STATUS "Support AMPL: OFF")
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})

@@ -49,11 +49,7 @@ if ! test -e obj/O.linux.x86_64.gnu.gcov/lib/blockmemshell/src
 then
     ln -s ../../../../src obj/O.linux.x86_64.gnu.gcov/lib/blockmemshell
 fi
-if ! test -e obj/O.linux.x86_64.gnu.gcov/lib/nlpi/src
-then
-    ln -s ../../../../src obj/O.linux.x86_64.gnu.gcov/lib/nlpi
-fi
-if ! test -e obj/O.linux.x86_64.gnu.gcov/lib/xml/src
+if test ! -e obj/O.linux.x86_64.gnu.gcov/lib/xml/src
 then
     ln -s ../../../../src obj/O.linux.x86_64.gnu.gcov/lib/xml
 fi
@@ -125,6 +121,7 @@ do
             echo "@01 ${i} ==========="
             echo "@01 ${i} ==========="                   >> "${ERRFILE}"
             echo                                          > "${TMPFILE}"
+	    echo "set emphasis benchmark"                 >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
             if test "${SETNAME}" != "default"
             then
                 echo "set load ${SETTINGS}"               >>  "${TMPFILE}"
@@ -136,7 +133,6 @@ do
             echo "set timing clocktype 1"                 >> "${TMPFILE}"
             echo "set display verblevel 4"                >> "${TMPFILE}"
             echo "set display freq ${DISPFREQ}"           >> "${TMPFILE}"
-            echo "set memory savefac 1.0"                 >> "${TMPFILE}" # avoid switching to dfs - better abort with memory error
             echo "set visual vbcfilename vbctest.vbc"     >> "${TMPFILE}"
             echo "set save ${SETFILE}"                    >> "${TMPFILE}"
             echo "read ${i}"                              >> "${TMPFILE}"
@@ -171,6 +167,7 @@ do
             echo "@01 ${i} ==========="
             echo "@01 ${i} ==========="                   >> "${ERRFILE}"
             echo > "${TMPFILE}"
+	    echo "set emphasis benchmark"                 >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
             if test "${SETNAME}" != "default"
             then
                 echo "set load ${SETTINGS}"               >> "${TMPFILE}"
@@ -182,7 +179,6 @@ do
             echo "set timing clocktype 1"                 >> "${TMPFILE}"
             echo "set display verblevel 4"                >> "${TMPFILE}"
             echo "set display freq ${DISPFREQ}"           >> "${TMPFILE}"
-            echo "set memory savefac 1.0"                 >> "${TMPFILE}" # avoid switching to dfs - better abort with memory error
             echo "set save ${SETFILE}"                    >> "${TMPFILE}"
             echo "read cipreadparsetest.cip"              >> "${TMPFILE}"
             echo "read soltest.sol"                       >> "${TMPFILE}"
@@ -208,6 +204,7 @@ do
             echo "@01 ${i} ==========="
             echo "@01 ${i} ==========="                   >> "${ERRFILE}"
             echo                                           > "${TMPFILE}"
+	    echo "set emphasis benchmark"                 >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
             if test "${SETNAME}" != "default"
             then
                 echo "set load ${SETTINGS}"               >>  "${TMPFILE}"
@@ -219,7 +216,6 @@ do
             echo "set timing clocktype 1"                 >> "${TMPFILE}"
             echo "set display verblevel 4"                >> "${TMPFILE}"
             echo "set display freq ${DISPFREQ}"           >> "${TMPFILE}"
-            echo "set memory savefac 1.0"                 >> "${TMPFILE}" # avoid switching to dfs - better abort with memory error
             echo "set save ${SETFILE}"                    >> "${TMPFILE}"
             echo "read ${i}"                              >> "${TMPFILE}"
             echo "presolve"                               >> "${TMPFILE}"

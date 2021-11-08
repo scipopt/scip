@@ -118,8 +118,7 @@ set(settings_fastMIP
     "../../../scripts/trainEstimation/periodic_report"
   )
 set(settings_MINLP
-#    "emphasis_numerics"
-    "minlp"
+    "default"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -129,16 +128,12 @@ set(settings_MINLP
     "nlpdivingsolvesubmip"
     "nlpdiving4"
     "separating_aggressive"
-)
-set(settings_Bivariate
-    "minlp"
-    "bivariate"
+    "emphasis_numerics"
 )
 
-set(settings_Bilinrelax
-    "minlp"
-    "bilinrelax"
-  )
+set(settings_branch
+    "branch_inference"
+)
 
 set(settings_Symmetry_A
     "orbitalfixing-timing0"
@@ -159,6 +154,10 @@ set(settings_Symmetry_B
     "sst_leader-maxconflicts_tiebreak-orbitmin"
     )
 
+set(settings_Symmetry_MINLP
+    "checksym"
+    )
+
 set(settings_sparsify
     "sparsifyaggr"
   )
@@ -176,6 +175,10 @@ set(settings_BendersLB
 set(settings_BendersQP
     "benders-qp"
    )
+
+set(settings_Decomp
+   "decompheurs"
+  )
 
 set(settings_Indicator
     "default"
@@ -291,19 +294,22 @@ endif()
 #
 set(instances_MINLP
     "instances/MINLP/bip_cross_min.10.10.10.1.pip\;1"
-    "instances/MINLP/circle.cip\;4.57424778"
+    "instances/MINLP/circle.lp\;4.57424778"
     "instances/MINLP/ex1266.mps\;16.3"
     "instances/MINLP/m3.osil\;37.8"
     "instances/MINLP/parincQuadratic.osil\;49920.5564"
     "instances/MINLP/tltr.mps\;48.0666666667"
     )
-set(instances_Bivariate
-    "instances/Bivariate/st_qpk1.osil\;-3"
-    "instances/Bivariate/nvs01.osil\;12.4696688"
-   )
+set(instances_branch
+    "instances/MIP/egout.mps\;568.1007"
+    "instances/MIP/MANN_a9.clq.lp\;16"
+    "instances/MIP/p0033.osil\;3089"
+    "instances/MINLP/circle.lp\;4.57424778"
+    "instances/MINLP/ex1266.mps\;16.3"
+    )
 set(instances_Bilinrelax
-    "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
-    "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
+    "instances/MINLP/pointpack04.osil\;1.00000024988836"
+    "instances/MINLP/pointpack06.osil\;0.361111675167215"
   )
 
 #
@@ -331,8 +337,8 @@ set(instances_sparsify
 # Semicontinuous instances
 #
 set(instances_Semicontinuous
-#    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
-    "instances/Semicontinuous/semicon1.mps\;1.1"
+    "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
+    "instances/MIP/semicon1.mps\;1.1"
     )
 #
 # SAT instance(s)
@@ -387,6 +393,15 @@ set(instances_Symmetry_B
     )
 
 #
+# Symmetry MINLP instances
+#
+set(instances_Symmetry_MINLP
+    "instances/MINLP/gastrans.osil.gz\;89.0858400000"
+    "instances/MINLP/tln2.osil.gz\;5.3000000000"
+    "instances/MINLP/cvxnonsep_psig40r.osil.gz\;86.5450782341784"
+    )
+
+#
 # Stochastic programming instances
 #
 set(instances_Stochastic
@@ -407,9 +422,13 @@ set(instances_BendersLB
 
 set(instances_BendersQP
     "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec.gz\;-8.22960761981176e-02"
-    "instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
+    #"instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
     "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.34740783553289e-02"
    )
+
+set(instances_Decomp
+   "instances/Decomp/exp-1-500-5-5.mps.gz\;instances/Decomp/exp-1-500-5-5.dec.gz\;65887"
+  )
 
 set(instances_Or
     "instances/Or/or_constraint.cip\;18"
@@ -506,7 +525,7 @@ if(DEFINED IPOPT_FOUND AND IPOPT_FOUND)
 else()
    set(TEST_BENDERSQP FALSE)
 endif()
-if(${TEST_BENDERSQP} AND ((NOT ${LPS} STREQUAL "msk" )))
+if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQUAL "BendersQP"))
     foreach(instance ${${instances}})
         split_decompinstance(instance)
         #
@@ -537,8 +556,8 @@ add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
-add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
-add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
+add_instancetests(instances_branch settings_branch "Branch")
+add_instancetests(instances_Bilinrelax settings_default "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
 add_instancetests(instances_sparsify settings_sparsify "Sparsify")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
@@ -547,12 +566,14 @@ add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_SymmetryConss settings_default "SymmetryConss")
 add_instancetests(instances_Symmetry_A settings_Symmetry_A "Symmetry_A")
 add_instancetests(instances_Symmetry_B settings_Symmetry_B "Symmetry_B")
+add_instancetests(instances_Symmetry_MINLP settings_Symmetry_MINLP "Symmetry_MINLP")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
 add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
+add_decompinstancetests(instances_Decomp settings_Decomp "Decomp")
 
 #
 # test writing and reading solutions
@@ -763,9 +784,7 @@ set_tests_properties(write_and_read_settings
 set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
 
-# disabled reopt on FullIns_3 until #2758 is dealt with
-# foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
-foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl)
+foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-FullIns_3)
     foreach(setting ${settings_reopt})
         configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
         add_test(NAME ${testname}-${setting}
@@ -926,5 +945,8 @@ if (UNIX)
                             # I assume that this test takes longer than 2 seconds
                             #
                             )
+
 endif (UNIX)
 endif()
+
+set_tests_properties(FastMIP-presolving_off-bell5.mps PROPERTIES TIMEOUT 3000)

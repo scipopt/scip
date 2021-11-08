@@ -82,7 +82,7 @@ PYTHON  =   none
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	7.0.2.4
+SCIP_VERSION	=	8.0.0
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -132,6 +132,7 @@ READLINE	=	true
 ZLIB		=	true
 GMP		=	true
 ZIMPL		=	false
+AMPL		=	true
 IPOPT		=	false
 FILTERSQP	=	false
 WORHP		=	false
@@ -212,25 +213,28 @@ endif
 ARFLAGS		=	cr
 DFLAGS		=	-MMD
 
-GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
-			-Wno-unknown-pragmas -Wno-unused-parameter \
-			-Wredundant-decls -Wdisabled-optimization \
-			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
-# GCCWARN is not only used for GCC!
-ifeq ($(COMP),clang)
-GCCWARN += -Wno-unknown-warning-option
-endif
-ifeq ($(COMP),gnu)
-GCCWARN += -Wno-maybe-uninitialized
-endif
+# if changing GCC/GXXWARN here, also update ADD_*_FLAGS in ../CMakeLists.txt
 
-GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
-			-Wno-unknown-pragmas -Wno-unused-parameter \
-			-Wredundant-decls -Wdisabled-optimization \
-			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
-			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow #-Wno-variadic-macros -Wold-style-cast -Wshadow -Wundef
+# enable many more warnings for GCC and CLANG on C/C++
+GCCWARN = -pedantic -Wall -W
+GXXWARN = -pedantic -Wall -W
+
+# GCC and CLANG warning flags are not all equal; so disable warnings about unknown warnings
+GCCWARN += -Wno-unknown-warning-option -Wno-unknown-warning
+GXXWARN += -Wno-unknown-warning-option -Wno-unknown-warning
+
+# enable more warnings that are not in -Wall -W (probably in -Wextra, but we don't seem to use that)
+GCCWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
+           -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+GXXWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
+           -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual
+
+# disable some warning that would be too much effort to fix, disfigure the code, or produce too many false positive
+GCCWARN += -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized
+GXXWARN += -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter -Wno-strict-overflow
+
+# there are macros where we override initializers on purpose
+GCCWARN += -Wno-initializer-overrides
 
 ifeq ($(SHARED),true)
 LIBTYPE		=	shared
@@ -256,8 +260,9 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/blockmemshell \
 			$(LIBOBJDIR)/tclique \
 			$(LIBOBJDIR)/lpi \
+			$(LIBOBJDIR)/amplmp/src \
+			$(LIBOBJDIR)/amplmp \
 			$(LIBOBJDIR)/tpi \
-			$(LIBOBJDIR)/nlpi \
 			$(LIBOBJDIR)/xml \
 			$(LIBOBJDIR)/dijkstra \
 			$(LIBOBJDIR)/symmetry \
@@ -525,11 +530,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(PAPILO),true)
-ifeq ($(OSTYPE),darwin)
-  LDFLAGS   +=  -L/usr/local/lib -l tbb
-else
-  LDFLAGS		+=	-l:libtbb.so.2
-endif
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)tbb.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 CXXFLAGS	+=	-std=c++14
 endif
 
@@ -588,11 +589,11 @@ ifeq ($(IPOPT),true)
 LINKER		=	CPP
 # we require here Ipopt >= 3.10.0
 # check whether we can find Ipopt via pkg-config
-IPOPTPC := $(shell PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig pkg-config --exists ipopt && echo true)
+IPOPTPC := $(shell PKG_CONFIG_PATH=$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig:$PKG_CONFIG_PATH pkg-config --exists ipopt && echo true)
 ifeq ($(IPOPTPC),true)
   # use pkg-config to figure out compiler and linker flags
-  FLAGS += $(shell PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig pkg-config --cflags ipopt)
-  IPOPTLIBS := $(shell PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig pkg-config --libs ipopt)
+  FLAGS += $(shell PKG_CONFIG_PATH=$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig:$PKG_CONFIG_PATH pkg-config --cflags ipopt)
+  IPOPTLIBS := $(shell PKG_CONFIG_PATH=$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/pkgconfig:$PKG_CONFIG_PATH pkg-config --libs ipopt)
 else
   # fallback:
   # - assume header files in include/coin or include/coin-or
@@ -613,14 +614,12 @@ else
 LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
 endif
 endif
-NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
 
 # define flags for FilterSQP
 ifeq ($(FILTERSQP),true)
 FILTERSQPLIBS       =       $(LINKCC_l)filtersqp.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)bqpd.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 LDFLAGS		+=	$(FILTERSQPLIBS) $(FORTRANLIBS)
-NLPILIBSHORTNAMEFILTERSQP = .filtersqp
 endif
 
 # define flags for WORHP
@@ -639,7 +638,6 @@ endif
 
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
-NLPILIBSHORTNAMECPPAD = .cppad
 endif
 
 #-----------------------------------------------------------------------------
@@ -677,10 +675,10 @@ endif
 # SCIP Library
 #-----------------------------------------------------------------------------
 
-SCIPLIBNAME	=	scip
-SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)
-SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBNAME).$(LIBEXT)
+SCIPLIBBASENAME	=	scipbase
+SCIPLIBBASE	=	$(SCIPLIBBASENAME).$(BASE)
+SCIPLIBBASEFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBBASE).$(LIBEXT)
+SCIPLIBBASESHORTLINK =	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBBASENAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -694,24 +692,15 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEX
 
 
 #-----------------------------------------------------------------------------
-# NLP interfaces and expression interpreter library
-#-----------------------------------------------------------------------------
-
-NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP)
-NLPILIB		=	$(NLPILIBNAME).$(BASE)
-NLPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
-NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIBNAME).$(LIBEXT)
-
-#-----------------------------------------------------------------------------
 # total linking part for all of SCIP
 #-----------------------------------------------------------------------------
 
 # link SCIP for C projects
-LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
 
 # link SCIP for C++ projects (including libobjscip)
-LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-			$(LINKCC_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
+			$(LINKCC_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)

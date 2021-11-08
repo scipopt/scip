@@ -52,10 +52,13 @@
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
+#include "scip/cutsel.h"
 #include "scip/table.h"
 #include "scip/prop.h"
 #include "scip/benders.h"
-#include "nlpi/nlpi.h"
+#include "scip/expr.h"
+#include "scip/nlpi.h"
+#include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
 /*
@@ -283,6 +286,7 @@
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
+#define SCIP_DEFAULT_MISC_AVOIDMEMOUT      TRUE /**< try to avoid running into memory limit by restricting plugins like heuristics? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
 #define SCIP_DEFAULT_MISC_TRANSSOLSORIG    TRUE /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
@@ -348,7 +352,8 @@
 /* Decomposition */
 #define SCIP_DEFAULT_DECOMP_BENDERSLABELS FALSE /**< should the variables be labelled for the application of Benders' decomposition */
 #define SCIP_DEFAULT_DECOMP_APPLYBENDERS  FALSE /**< if a decomposition exists, should Benders' decomposition be applied? */
-#define SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE  10000 /**< maximum number of edges in block graph computation, or -1 for no limit */
+#define SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE  10000 /**< maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation) */
+#define SCIP_DEFAULT_DECOMP_DISABLEMEASURES FALSE /**< disable expensive measures */
 
 /* Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
@@ -416,14 +421,9 @@
                                                  *   bound compared to best node's dual bound for applying local separation
                                                  *   (0.0: only on current best node, 1.0: on all nodes) */
 #define SCIP_DEFAULT_SEPA_MAXCOEFRATIO     1e+4 /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
+#define SCIP_DEFAULT_SEPA_MAXCOEFRATIOFACROWPREP 10.0 /**< maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup */
 #define SCIP_DEFAULT_SEPA_MINEFFICACY      1e-4 /**< minimal efficacy for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINEFFICACYROOT  1e-4 /**< minimal efficacy for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_MINORTHO         0.90 /**< minimal orthogonality for a cut to enter the LP */
-#define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.90 /**< minimal orthogonality for a cut to enter the LP in the root node */
-#define SCIP_DEFAULT_SEPA_OBJPARALFAC       0.1 /**< factor to scale objective parallelism of cut in score calculation */
-#define SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC  0.0 /**< factor to scale directed cutoff distance of cut in score calculation */
-#define SCIP_DEFAULT_SEPA_EFFICACYFAC       1.0 /**< factor to scale efficacy of cut in score calculation */
-#define SCIP_DEFAULT_SEPA_INTSUPPORTFAC     0.1 /**< factor to scale integral support of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
                                                  *   's'um, 'd'iscrete) */
@@ -481,6 +481,7 @@
 #define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
 #define SCIP_DEFAULT_TIME_RARECLOCKCHECK  FALSE /**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
 #define SCIP_DEFAULT_TIME_STATISTICTIMING  TRUE /**< should timing for statistic output be enabled? */
+#define SCIP_DEFAULT_TIME_NLPIEVAL        FALSE /**< should time for evaluation in NLP solves be measured? */
 
 
 /* visualization output */
@@ -823,6 +824,9 @@ void SCIPsetEnableOrDisablePluginClocks(
    for( i = set->nnodesels - 1; i >= 0; --i )
       SCIPnodeselEnableOrDisableClocks(set->nodesels[i], enabled);
 
+   for ( i = set->ncutsels - 1; i >= 0; --i )
+      SCIPcutselEnableOrDisableClocks(set->cutsels[i], enabled);
+
    for( i = set->nbranchrules - 1; i >= 0; --i )
       SCIPbranchruleEnableOrDisableClocks(set->branchrules[i], enabled);
 }
@@ -850,6 +854,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
    SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copycutselectors,   /**< should the cut selectors be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
@@ -858,6 +863,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
+   SCIP_Bool             copyexprhdlrs,      /**< should the expression handlers be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins were validly copied */
    )
@@ -871,6 +877,16 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    assert(allvalid != NULL);
 
    *allvalid = TRUE;
+
+   /* copy all dialog plugins */
+   if( copydialogs && sourceset->dialogs != NULL )
+   {
+      for( p = sourceset->ndialogs - 1; p >= 0; --p )
+      {
+         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
+         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
+      }
+   }
 
    /* copy all reader plugins */
    if( copyreaders && sourceset->readers != NULL )
@@ -958,6 +974,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all cut selector plugins */
+   if( copycutselectors && sourceset->cutsels != NULL )
+   {
+      for( p = sourceset->ncutsels - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPcutselCopyInclude(sourceset->cutsels[p], targetset) );
+      }
+   }
+
    /* copy all propagators plugins */
    if( copypropagators && sourceset->props != NULL )
    {
@@ -1013,16 +1038,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-   /* copy all dialog plugins */
-   if( copydialogs && sourceset->dialogs != NULL )
-   {
-      for( p = sourceset->ndialogs - 1; p >= 0; --p )
-      {
-         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
-         SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
-      }
-   }
-
    /* copy all table plugins */
    if( copytables && sourceset->tables != NULL )
    {
@@ -1032,15 +1047,21 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all expression handlers */
+   if( copyexprhdlrs && sourceset->exprhdlrs != NULL )
+   {
+      for( p = sourceset->nexprhdlrs - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPexprhdlrCopyInclude(sourceset->exprhdlrs[p], targetset) );
+      }
+   }
+
    /* copy all NLP interfaces */
    if( copynlpis && sourceset->nlpis != NULL )
    {
       for( p = sourceset->nnlpis - 1; p >= 0; --p )
       {
-         SCIP_NLPI* nlpicopy;
-
-         SCIP_CALL_FINALLY( SCIPnlpiCopy(SCIPblkmem(targetset->scip), sourceset->nlpis[p], &nlpicopy), (void)SCIPnlpiFree(&nlpicopy) );
-         SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
+         SCIP_CALL( SCIPnlpiCopyInclude(sourceset->nlpis[p], targetset) );
       }
    }
 
@@ -1144,6 +1165,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nconcsolvers = 0;
    (*set)->concsolverssize = 0;
    (*set)->concurrent_paramsetprefix = NULL;
+   (*set)->cutsels = NULL;
+   (*set)->ncutsels = 0;
+   (*set)->cutselssize = 0;
+   (*set)->cutselssorted = FALSE;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
@@ -1179,6 +1204,15 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->dialogs = NULL;
    (*set)->ndialogs = 0;
    (*set)->dialogssize = 0;
+   (*set)->exprhdlrs = NULL;
+   (*set)->exprhdlrvar = NULL;
+   (*set)->exprhdlrval = NULL;
+   (*set)->exprhdlrsum = NULL;
+   (*set)->exprhdlrproduct = NULL;
+   (*set)->exprhdlrpow = NULL;
+   (*set)->nexprhdlrs = 0;
+   (*set)->exprhdlrssize = 0;
+   (*set)->exprhdlrssorted = FALSE;
    (*set)->nlpis = NULL;
    (*set)->nnlpis = 0;
    (*set)->nlpissize = 0;
@@ -1934,6 +1968,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_estimexternmem, FALSE, SCIP_DEFAULT_MISC_ESTIMEXTERNMEM,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/avoidmemout",
+         "try to avoid running into memory limit by restricting plugins like heuristics?",
+         &(*set)->misc_avoidmemout, FALSE, SCIP_DEFAULT_MISC_AVOIDMEMOUT,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/transorigsols",
          "should SCIP try to transfer original solutions to the transformed space (after presolving)?",
          &(*set)->misc_transorigsols, FALSE, SCIP_DEFAULT_MISC_TRANSORIGSOLS,
@@ -2194,9 +2233,14 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "decomposition/maxgraphedge",
-         "maximum number of edges in block graph computation, or -1 for no limit",
+         "maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation)",
          &(*set)->decomp_maxgraphedge, FALSE, SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE, -1, INT_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+      "decomposition/disablemeasures",
+      "disable expensive measures",
+      &(*set)->decomp_disablemeasures, FALSE, SCIP_DEFAULT_DECOMP_DISABLEMEASURES,
+      NULL, NULL) );
 
    /* Benders' decomposition parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -2364,6 +2408,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->sepa_maxcoefratio, FALSE, SCIP_DEFAULT_SEPA_MAXCOEFRATIO, 1.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "separating/maxcoefratiofacrowprep",
+         "maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup",
+         &(*set)->sepa_maxcoefratiofacrowprep, FALSE, SCIP_DEFAULT_SEPA_MAXCOEFRATIOFACROWPREP, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "separating/minefficacy",
          "minimal efficacy for a cut to enter the LP",
          &(*set)->sepa_minefficacy, FALSE, SCIP_DEFAULT_SEPA_MINEFFICACY, 0.0, SCIP_INVALID/10.0,
@@ -2372,36 +2421,6 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/minefficacyroot",
          "minimal efficacy for a cut to enter the LP in the root node",
          &(*set)->sepa_minefficacyroot, FALSE, SCIP_DEFAULT_SEPA_MINEFFICACYROOT, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/minortho",
-         "minimal orthogonality for a cut to enter the LP",
-         &(*set)->sepa_minortho, FALSE, SCIP_DEFAULT_SEPA_MINORTHO, 0.0, 1.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/minorthoroot",
-         "minimal orthogonality for a cut to enter the LP in the root node",
-         &(*set)->sepa_minorthoroot, FALSE, SCIP_DEFAULT_SEPA_MINORTHOROOT, 0.0, 1.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/objparalfac",
-         "factor to scale objective parallelism of cut in separation score calculation",
-         &(*set)->sepa_objparalfac, TRUE, SCIP_DEFAULT_SEPA_OBJPARALFAC, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/dircutoffdistfac",
-         "factor to scale directed cutoff distance of cut in score calculation",
-         &(*set)->sepa_dircutoffdistfac, TRUE, SCIP_DEFAULT_SEPA_DIRCUTOFFDISTFAC, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/efficacyfac",
-         "factor to scale efficacy of cut in score calculation",
-         &(*set)->sepa_efficacyfac, TRUE, SCIP_DEFAULT_SEPA_EFFICACYFAC, 0.0, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "separating/intsupportfac",
-         "factor to scale integral support of cut in separation score calculation",
-         &(*set)->sepa_intsupportfac, TRUE, SCIP_DEFAULT_SEPA_INTSUPPORTFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
            "separating/minactivityquot",
@@ -2605,6 +2624,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should timing for statistic output be performed?",
          &(*set)->time_statistictiming, FALSE, SCIP_DEFAULT_TIME_STATISTICTIMING,
          paramChgdStatistictiming, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "timing/nlpieval",
+         "should time for evaluation in NLP solves be measured?",
+         &(*set)->time_nlpieval, FALSE, SCIP_DEFAULT_TIME_NLPIEVAL,
+         NULL, NULL) );
 
    /* visualization parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
@@ -2755,6 +2779,13 @@ SCIP_RETCODE SCIPsetFree(
    }
    BMSfreeMemoryArrayNull(&(*set)->sepas);
 
+   /* free cut selectors */
+   for( i = 0; i < (*set)->ncutsels; ++i)
+   {
+      SCIP_CALL( SCIPcutselFree(&(*set)->cutsels[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->cutsels);
+
    /* free propagators */
    for( i = 0; i < (*set)->nprops; ++i )
    {
@@ -2815,10 +2846,22 @@ SCIP_RETCODE SCIPsetFree(
    /* free dialogs */
    BMSfreeMemoryArrayNull(&(*set)->dialogs);
 
+   /* free expression handlers */
+   for( i = 0; i < (*set)->nexprhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPexprhdlrFree(&(*set)->exprhdlrs[i], *set, blkmem) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->exprhdlrs);
+   (*set)->exprhdlrvar = NULL;
+   (*set)->exprhdlrval = NULL;
+   (*set)->exprhdlrsum = NULL;
+   (*set)->exprhdlrproduct = NULL;
+   (*set)->exprhdlrpow = NULL;
+
    /* free NLPIs */
    for( i = 0; i < (*set)->nnlpis; ++i )
    {
-      SCIP_CALL( SCIPnlpiFree(&(*set)->nlpis[i]) );
+      SCIP_CALL( SCIPnlpiFree(&(*set)->nlpis[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
 
@@ -2847,6 +2890,9 @@ SCIP_RETCODE SCIPsetFree(
       SCIPbanditvtableFree(&(*set)->banditvtables[i]);
    }
    BMSfreeMemoryArrayNull(&(*set)->banditvtables);
+
+   /* free debugging data structure */
+   SCIP_CALL( SCIPdebugFree(*set) );
 
    BMSfreeMemory(set);
 
@@ -4186,6 +4232,64 @@ void SCIPsetSortSepasName(
    }
 }
 
+/** inserts cut selector in cut selector list */
+SCIP_RETCODE SCIPsetIncludeCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(set != NULL);
+   assert(cutsel != NULL);
+   assert(!SCIPcutselIsInitialized(cutsel));
+
+   if( set->ncutsels >= set->cutselssize )
+   {
+      set->cutselssize = SCIPsetCalcMemGrowSize(set, set->ncutsels + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->cutsels, set->cutselssize) );
+   }
+   assert(set->ncutsels < set->cutselssize);
+
+   set->cutsels[set->ncutsels] = cutsel;
+   set->ncutsels++;
+   set->cutselssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the cut selector of the given name, or NULL if not existing */
+SCIP_CUTSEL* SCIPsetFindCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      if( strcmp(SCIPcutselGetName(set->cutsels[i]), name) == 0 )
+         return set->cutsels[i];
+   }
+
+   return NULL;
+}
+
+/** sorts cut selectors by priorities */
+void SCIPsetSortCutsels(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->cutselssorted )
+   {
+      SCIPsortPtr((void**)set->cutsels, SCIPcutselComp, set->ncutsels);
+      set->cutselssorted = TRUE;
+   }
+}
+
 /** inserts propagator in propagator list */
 SCIP_RETCODE SCIPsetIncludeProp(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -4904,6 +5008,72 @@ SCIP_Bool SCIPsetExistsDialog(
    return FALSE;
 }
 
+/** inserts expression handler in expression handler list */
+SCIP_RETCODE SCIPsetIncludeExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(set != NULL);
+   assert(exprhdlr != NULL);
+
+   if( set->nexprhdlrs >= set->exprhdlrssize )
+   {
+      set->exprhdlrssize = SCIPsetCalcMemGrowSize(set, set->nexprhdlrs+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->exprhdlrs, set->exprhdlrssize) );
+   }
+   assert(set->nexprhdlrs < set->exprhdlrssize);
+
+   set->exprhdlrs[set->nexprhdlrs] = exprhdlr;
+   set->nexprhdlrs++;
+   set->exprhdlrssorted = FALSE;
+
+   if( set->exprhdlrvar == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "var") == 0 )
+      set->exprhdlrvar = exprhdlr;
+   else if( set->exprhdlrval == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0 )
+      set->exprhdlrval = exprhdlr;
+   else if( set->exprhdlrsum == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0 )
+      set->exprhdlrsum = exprhdlr;
+   else if( set->exprhdlrproduct == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "prod") == 0 )
+      set->exprhdlrproduct = exprhdlr;
+   else if( set->exprhdlrpow == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "pow") == 0 )
+      set->exprhdlrpow = exprhdlr;
+
+   return SCIP_OKAY;
+}
+
+/** returns the expression handler of the given name, or NULL if not existing */
+SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of expression handler */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nexprhdlrs; ++i )
+      if( strcmp(SCIPexprhdlrGetName(set->exprhdlrs[i]), name) == 0 )
+         return set->exprhdlrs[i];
+
+   return NULL;
+}
+
+/** sorts expression handlers by name */
+void SCIPsetSortExprhdlrs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->exprhdlrssorted )
+   {
+      SCIPsortPtr((void**)set->exprhdlrs, SCIPexprhdlrComp, set->nexprhdlrs);
+      set->exprhdlrssorted = TRUE;
+   }
+}
+
 /** inserts NLPI in NLPI list */
 SCIP_RETCODE SCIPsetIncludeNlpi(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5062,6 +5232,12 @@ SCIP_RETCODE SCIPsetInitPlugins(
       SCIP_CALL( SCIPsepaInit(set->sepas[i], set) );
    }
 
+   /* cut selectors */
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselInit(set->cutsels[i], set) );
+   }
+
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
@@ -5110,6 +5286,14 @@ SCIP_RETCODE SCIPsetInitPlugins(
    {
       SCIP_CALL( SCIPtableInit(set->tables[i], set) );
    }
+
+   /* expression handlers */
+   for( i = 0; i < set->nexprhdlrs; ++i )
+      SCIPexprhdlrInit(set->exprhdlrs[i], set);
+
+   /* NLP solver interfaces */
+   for( i = 0; i < set->nnlpis; ++i )
+      SCIPnlpiInit(set->nlpis[i]);
 
    return SCIP_OKAY;
 }
@@ -5167,6 +5351,12 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->nsepas; ++i )
    {
       SCIP_CALL( SCIPsepaExit(set->sepas[i], set) );
+   }
+
+   /* cut selectors */
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselExit(set->cutsels[i], set) );
    }
 
    /* propagators */
@@ -5354,6 +5544,12 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPsepaInitsol(set->sepas[i], set) );
    }
 
+   /* cut selectors */
+   for( i =0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselInitsol(set->cutsels[i], set) );
+   }
+
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
@@ -5447,6 +5643,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->nsepas; ++i )
    {
       SCIP_CALL( SCIPsepaExitsol(set->sepas[i], set) );
+   }
+
+   /* cut selectors */
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselExitsol(set->cutsels[i], set) );
    }
 
    /* propagators */
@@ -5645,6 +5847,20 @@ int SCIPsetGetSepaMaxcuts(
       return set->sepa_maxcutsroot;
    else
       return set->sepa_maxcuts;
+}
+
+/** returns the maximal ratio between coefficients to ensure in rowprep cleanup */
+SCIP_Real SCIPsetGetSepaMaxCoefRatioRowprep(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Real maxcoefrange;
+
+   maxcoefrange = set->sepa_maxcoefratiofacrowprep / set->num_feastol;
+   if( maxcoefrange < 1.0 )
+      maxcoefrange = 1.0;
+
+   return maxcoefrange;
 }
 
 /** returns user defined objective value (in original space) for reference purposes */

@@ -494,12 +494,12 @@ void SCIPencodeDualBitNeg(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SCIP_DUALPACKETSIZE == 16);
+   assert(SCIP_DUALPACKETSIZE == 16); /*lint !e506*/
 
    rest = count % (int)SCIP_DUALPACKETSIZE;
    nfull = count - rest;
 
-   for( i = 0; i < nfull; i += (int)SCIP_DUALPACKETSIZE, inp += (int)SCIP_DUALPACKETSIZE )
+   for( i = 0; i < nfull; i += (int)SCIP_DUALPACKETSIZE, inp += (int)SCIP_DUALPACKETSIZE ) /*lint !e679*/
    {
       assert(inp != NULL);
       assert(out != NULL);
@@ -527,7 +527,7 @@ void SCIPencodeDualBitNeg(
       assert(out != NULL);
 
       for( i = 0; i < rest; i++ )
-         m |= mask[i][-inp[i]];
+         m |= mask[i][-inp[i]];  /*lint !e661*/
       *out = m;
    }
 }
@@ -548,7 +548,7 @@ void SCIPdecodeDualBitNeg(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SCIP_DUALPACKETSIZE == 16);
+   assert(SCIP_DUALPACKETSIZE == 16); /*lint !e506*/
 
    rest = count % (int)SCIP_DUALPACKETSIZE;
    nfull = count - rest;
@@ -1248,7 +1248,7 @@ const char* SCIPlpiGetSolverName(
    int technical;
 
    GRBversion(&majorversion, &minorversion, &technical);
-   sprintf(grbname, "Gurobi %d.%d.%d", majorversion, minorversion, technical);
+   (void) snprintf(grbname, 100, "Gurobi %d.%d.%d", majorversion, minorversion, technical);
    return grbname;
 }
 
@@ -1278,6 +1278,10 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer). May be NULL iff ncols is 0. */
    )
 {  /*lint --e{715}*/
+   assert( lpi != NULL );
+   assert( ncols >= 0 );
+   assert( ncols == 0 || intInfo != NULL );
+
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -1326,8 +1330,8 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_OBJSEN           objsen              /**< objective sense */
    )
 {
-   assert(sizeof(SCIP_Real) == sizeof(double)); /* Gurobi only works with doubles as floating points */
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* Gurobi only works with ints as bools */
+   assert(sizeof(SCIP_Real) == sizeof(double)); /*lint !e506*/ /* Gurobi only works with doubles as floating points */
+   assert(sizeof(SCIP_Bool) == sizeof(int));    /*lint !e506*/ /* Gurobi only works with ints as bools */
    assert(lpi != NULL);
    assert(name != NULL);
 #ifdef SCIP_REUSEENV
@@ -2652,8 +2656,9 @@ SCIP_RETCODE SCIPlpiGetRows(
                if ( lpi->rngrowmap[i] >= 0 )
                   theend--;
 
-               memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
-               memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val)); /*lint !e776*/
+               assert( theend >= thebeg );
+               memmove(&ind[newnz], &ind[thebeg], ((size_t) (theend - thebeg)) * sizeof(*ind)); /*lint !e776 !e571*/
+               memmove(&val[newnz], &val[thebeg], ((size_t) (theend - thebeg)) * sizeof(*val)); /*lint !e776 !e571*/
                beg[i - firstrow] = newnz; /*lint !e661*/
                newnz += theend - thebeg;
             }
@@ -2683,6 +2688,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol);
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -2704,6 +2710,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow);
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -3967,7 +3974,7 @@ SCIP_Bool SCIPlpiIsStable(
       SCIP_RETCODE retcode;
 
       retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
-      if ( retcode != SCIP_OKAY )
+      if ( retcode != SCIP_OKAY ) /*lint !e774*/
       {
          SCIPABORT();
          return FALSE; /*lint !e527*/
@@ -4083,10 +4090,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    return SCIP_OKAY;
 }
 
-/** gets objective value of solution
- *
- *  @note if the solution status is iteration limit reached (GRB_ITERATION_LIMIT), the objective value was not computed
- */
+/** gets objective value of solution */
 SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_Real*            objval              /**< stores the objective value */
@@ -4112,36 +4116,42 @@ SCIP_RETCODE SCIPlpiGetObjval(
    assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
 #endif
 
-   ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
+   /* obtain objective value */
+   ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval);
+   assert( ret == 0 || ret == GRB_ERROR_DATA_NOT_AVAILABLE );
+   SCIP_UNUSED(ret);
 
-   if( ret == GRB_ERROR_DATA_NOT_AVAILABLE )
+   /* return minus infinity if value not available and we reached the iteration limit (see lpi_cpx) */
+   if( lpi->solstat == GRB_ITERATION_LIMIT )
    {
-      /* return minus infinity if value not available and we reached an iteration limit (see lpi_cpx) */
-      if( lpi->solstat == GRB_ITERATION_LIMIT )
-         *objval = -SCIPlpiInfinity(lpi);
+      (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval);
+   }
+   else if( lpi->solstat == GRB_CUTOFF )
+   {
+      SCIP_Real cutoff;
+
+      /* if we reached the cutoff, then OBJBOUND seems to be -infinity; we set the value to the cutoff in this case */
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &cutoff) );
+      *objval = cutoff;
+
+#ifdef SCIP_DISABLED_CODE
       /**@todo The following is some kind of hack which works with the current SCIP implementation and should be fixed.  In
-       * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queries (e.g., objval,
+       * the case that the LP status is GRB_CUTOFF it might be that certain attributes cannot be queried (e.g., objval,
        * primal and dual solution), in this case we just return the installed cutoff value minus some epsilon. This is some
        * kind of hack for the code in conflict.c:7595 were some extra code handles CPLEX' FASTMIP case that is similar to
        * this case.
        */
-      else if( lpi->solstat == GRB_CUTOFF )
-      {
-         SCIP_Real dval;
-         SCIP_OBJSEN objsense;
+      SCIP_Real dval;
+      SCIP_OBJSEN objsense;
 
-         SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
-         SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsense) );
+      SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, &dval) );
 
-         if( objsense == SCIP_OBJSEN_MINIMIZE )
-            *objval = dval - 1e-06;
-         else
-            *objval = dval + 1e-06;
-      }
-   }
-   else
-   {
-      CHECK_ZERO( lpi->messagehdlr, ret );
+      if( objsense == SCIP_OBJSEN_MINIMIZE )
+         *objval = dval - 1e-06;
+      else
+         *objval = dval + 1e-06;
+#endif
    }
 
    return SCIP_OKAY;
@@ -4908,6 +4918,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(coef != NULL);
+   SCIP_UNUSED( binvrow );
 
    SCIPdebugMessage("getting binv-row %d\n", r);
 
@@ -5201,7 +5212,7 @@ SCIP_RETCODE SCIPlpiSetState(
    if ( lpistate->nrngrows > 0 && lpistate->ncols < ncols )
    {
       /* New columns have been added: need to move range variable information */
-      memmove(&lpi->cstat[ncols], &lpi->cstat[lpistate->ncols], lpistate->nrngrows * sizeof(*lpi->cstat));
+      memmove(&lpi->cstat[ncols], &lpi->cstat[lpistate->ncols], (size_t) lpistate->nrngrows * sizeof(*lpi->cstat)); /*lint !e571*/
    }
 
    /* extend the basis to the current LP beyond the previously existing columns */
@@ -5331,7 +5342,7 @@ SCIP_RETCODE SCIPlpiWriteState(
          SCIPerrorMessage("Basis file name too long.\n");
          return SCIP_LPERROR;
       }
-      snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
+      (void) snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
       CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
    }
 
@@ -5750,6 +5761,17 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** interrupts the currently ongoing lp solve or disables the interrupt */ /*lint -e{715}*/
+SCIP_RETCODE SCIPlpiInterrupt(
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SCIP_Bool             interrupt           /**< TRUE if interrupt should be set, FALSE if it should be disabled */
+   )
+{  /*lint --e{715}*/
+   assert(lpi != NULL);
 
    return SCIP_OKAY;
 }

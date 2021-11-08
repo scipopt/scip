@@ -805,6 +805,7 @@ SCIP_RETCODE aggregation(
 
    assert(scip != NULL);
    assert(aggrdata != NULL);
+   assert(aggrdata->aggrrow != NULL);
    assert(sepa != NULL);
    assert(rowlhsscores != NULL);
    assert(rowrhsscores != NULL);
@@ -1550,6 +1551,14 @@ SCIP_RETCODE SCIPincludeSepaAggregation(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyAggregation) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeAggregation) );
+
+   /* mark main separator as a parent */
+   SCIPsetSepaIsParentsepa(scip, sepa);
+
+   /* set pointer from child separators to main separator */
+   SCIPsetSepaParentsepa(scip, sepadata->flowcover, sepa);
+   SCIPsetSepaParentsepa(scip, sepadata->cmir, sepa);
+   SCIPsetSepaParentsepa(scip, sepadata->knapsackcover, sepa);
 
    /* add cmir separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

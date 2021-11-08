@@ -7,4 +7,3 @@ constraints/components/maxdepth = 5
 # maximum number of nodes to be solved in subproblems during presolving
 # [type: longint, advanced: FALSE, range: [-1,9223372036854775807], default: 10000]
 constraints/components/nodelimit = 1
-

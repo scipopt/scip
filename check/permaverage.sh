@@ -34,5 +34,5 @@ done
 
 export LC_NUMERIC=C
 
-awk -f permaverage.awk "${AWKARGS}" "${FILES}"
-
+# the variables AWKARGS and FILES need to be without quotation marks here
+awk -f permaverage.awk ${AWKARGS} ${FILES}

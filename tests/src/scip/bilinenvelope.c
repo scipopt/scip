@@ -19,6 +19,7 @@
  */
 
 #include "scip/scip.h"
+#include "scip/nlhdlr_bilinear.h"
 
 #include "include/scip_test.h"
 
@@ -31,7 +32,7 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0, TRUE) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 0, FALSE) );
 }
 
 static

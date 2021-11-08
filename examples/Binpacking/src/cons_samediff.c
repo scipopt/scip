@@ -121,7 +121,7 @@ void consdataPrint(
    ids = SCIPprobdataGetIds(probdata);
    assert(ids != NULL);
 
-   SCIPinfoMessage(scip, file, "%s(%d,%d) at node %d\n",
+   SCIPinfoMessage(scip, file, "%s(%d,%d) at node %" SCIP_LONGINT_FORMAT "\n",
       consdata->type == SAME ? "same" : "diff",
       ids[consdata->itemid1], ids[consdata->itemid2], SCIPnodeGetNumber(consdata->node) );
 }

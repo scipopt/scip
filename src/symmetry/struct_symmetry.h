@@ -25,6 +25,7 @@
 
 #include "scip/scip.h"
 #include "symmetry/type_symmetry.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +42,30 @@ struct SYM_Vartype
    int                   color;              /**< store color */
 };
 
-/** data for symmetry group computation */
+/** data of operators that are considered to be equivalent */
+struct SYM_Optype
+{
+   SCIP_EXPR*            expr;               /**< the underlying expression */
+   int                   level;              /**< level of operator in its expression tree */
+   int                   color;              /**< store color */
+};
+
+/** data of constants that are considered to be equivalent */
+struct SYM_Consttype
+{
+   SCIP_Real             value;              /**< value of constant */
+   int                   color;              /**< store color */
+};
+
+/** data of coefficients that are considered to be equivalent */
+struct SYM_Rhstype
+{
+   SCIP_Real             lhs;                /**< value of left-hand-side */
+   SCIP_Real             rhs;                /**< value of right-hand-side */
+   int                   color;              /**< store color */
+};
+
+/** data for symmetry group computation on linear constraints */
 struct SYM_Matrixdata
 {
    SCIP_Real*            matcoef;            /**< nonzero coefficients appearing in the matrix */
@@ -62,6 +86,14 @@ struct SYM_Matrixdata
    int                   nuniquevars;        /**< number of unique variable types */
    int                   nuniquerhs;         /**< number of unique rhs types */
    int                   nuniquemat;         /**< number of unique matrix coefficients */
+};
+
+/** data for symmetry group computation on nonlinear constraints */
+struct SYM_Exprdata
+{
+   int                   nuniqueconstants;   /**< number of unique constants */
+   int                   nuniqueoperators;   /**< number of unique operators */
+   int                   nuniquecoefs;       /**< number of unique coefficients */
 };
 
 #ifdef __cplusplus

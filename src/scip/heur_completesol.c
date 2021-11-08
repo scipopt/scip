@@ -743,7 +743,7 @@ SCIP_RETCODE setupAndSolve(
    /* copy complete SCIP instance */
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapf, NULL, "completesol", NULL, NULL, 0, FALSE, FALSE, FALSE,
          TRUE, &valid) );
-   SCIPdebugMsg(scip, "Copying the SCIP instance returned with valid=%d.\n", valid);
+   SCIPdebugMsg(scip, "Copying the SCIP instance returned with valid=%u.\n", valid);
 
    /* create event handler for LP events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecCompletesol, NULL) );
