@@ -645,21 +645,10 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             /* if the constraints where replaced, we need to add the failed substitution as an equality to SCIP */
             tmpvars.clear();
             tmpvals.clear();
-            if( rowlen == 2 )
+            for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
-               tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients]));
-               tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients + 1]));
-
-               tmpvals.push_back(res.postsolve.values[startRowCoefficients]);
-               tmpvals.push_back(res.postsolve.values[startRowCoefficients + 1]);
-            }
-            else
-            {
-               for( int j = first + 1; j < last; ++j )
-               {
-                  tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
-                  tmpvals.push_back(res.postsolve.values[j]);
-               }
+               tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
+               tmpvals.push_back(res.postsolve.values[j]);
             }
 
             SCIP_CONS* cons;
