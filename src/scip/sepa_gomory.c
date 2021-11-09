@@ -201,8 +201,7 @@ SCIP_RETCODE addCut(
    int*                  naddedcuts,         /**< pointer to store number of added cuts */
    int                   ninds,              /**< number of inds in aggregation row (only used for certificate) */
    int*                  inds,               /**< indices of aggregation rows (only used for certificate) */
-   SCIP_Real*            weights,            /**< weights used for aggregation (only used for certificate) */
-   SCIP_AGGRROW*         aggrrow             /**< aggregation row (only used for certificate) */
+   SCIP_Real*            weights             /**< weights used for aggregation (only used for certificate) */
    )
 {
    int j;
@@ -287,56 +286,7 @@ SCIP_RETCODE addCut(
          /* add aggregation information to certificate for later use */
          if( SCIPisCertificateActive(scip) )
          {
-            SCIP_ROW** aggrrows;
-            SCIP_Real* aggweights;
-            SCIP_ROW** rows;
-            int nrows;
-            int counter = 0;
-
-            nrows = SCIPgetNLPRows(scip);
-            rows = SCIPgetLPRows(scip);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &aggrrows, nrows) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &aggweights, nrows) );
-            if( ninds != -1 )
-            {
-               for( j = 0; j < ninds; j++ )
-               {
-                  if( SCIPisFeasZero(scip, weights[inds[j]]) || SCIProwIsModifiable(rows[inds[j]]) || SCIProwIsLocal(rows[inds[j]]) )
-                  {
-                     continue;
-                  }
-                  /** @todo exip: if we get negative slacks to work this might need to be more sophisticated */
-                  if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[inds[j]])) && weights[inds[j]] >= 0.0)
-                        || (SCIPisInfinity(scip, -SCIProwGetLhs(rows[inds[j]])) && weights[inds[j]] <= 0.0) )
-                     continue;
-                  aggweights[counter] = weights[inds[j]];
-                  aggrrows[counter] = rows[inds[j]];
-                  counter++;
-               }
-            }
-            else
-            {
-               for( j = 0; j < nrows; j++ )
-               {
-                  if( !SCIPisFeasZero(scip, weights[j]) && !SCIProwIsModifiable(rows[j]) && !SCIProwIsLocal(rows[j]) )
-                  {
-                     /** @todo exip: if we get negative slacks to work this might need to be more sophisticated */
-                     if( (SCIPisInfinity(scip, SCIProwGetRhs(rows[j])) && weights[j] >= 0.0)
-                           || (SCIPisInfinity(scip, -SCIProwGetLhs(rows[j])) && weights[j] <= 0.0) )
-                        continue;
-                     aggweights[counter] = weights[j];
-                     aggrrows[counter] = rows[j];
-                     counter++;
-                  }
-               }
-
-               assert(counter == aggrrow->nrows);
-            }
-            SCIP_CALL( SCIPaddCertificateAggregation(scip, cut, aggrrow, aggrrows, aggweights, aggrrow->nrows) );
-            SCIPfreeBufferArray(scip, &aggweights);
-            SCIPfreeBufferArray(scip, &aggrrows);
-
+            SCIPstoreCertificateActiveAggregationInfo(scip, cut);
             SCIPstoreCertificateActiveMirInfo(scip, cut);
          }
       }
@@ -739,7 +689,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          {
             assert(allowlocal || !cutislocal); /*lint !e644*/
             SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
-                  cutislocal, cutrank, TRUE, &cutoff, &naddedcuts, ninds, inds, binvrow, aggrrow) );
+                  cutislocal, cutrank, TRUE, &cutoff, &naddedcuts, ninds, inds, binvrow) );
             cutefficacy = 0.0;
             strongcgsuccess = FALSE;
             if( cutoff )
@@ -764,11 +714,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                strongcgsuccess = FALSE;   /* Set strongcgsuccess to FALSE, since the MIR cut has overriden the strongcg cut. */
 
             SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
-                  cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts, ninds, inds, binvrow, aggrrow) );
+                  cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts, ninds, inds, binvrow) );
          }
       }
       if( SCIPisCertificateActive(scip) )
       {
+         SCIP_CALL( SCIPfreeCertificateActiveAggregationInfo(scip) );
          SCIP_CALL( SCIPfreeCertificateActiveMirInfo(scip) );
       }
    }

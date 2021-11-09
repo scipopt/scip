@@ -120,7 +120,8 @@ struct SCIP_Certificate
    SCIP_Longint          derindex_root;      /**< index of root bound in certificate */
    SCIP_Bool             rootinfeas;         /**< is the root node infeasible */
    SCIP_Bool             objintegral;        /**< is the objective always integral? copy this so we don't need the prob everywhere */
-   SCIP_Bool             workingmirinfo;   /**< true if mirinfos under construction and not sparsely stored, false otherwise */
+   SCIP_Bool             workingmirinfo;     /**< true if mirinfo is under construction and not sparsely stored, false otherwise */
+   SCIP_Bool             workingaggrinfo;     /**< true if aggrinfo is under construction (last entry not in hashmap), false otherwise */
    SCIP_Rational**       vals;               /**< we maintain an array for solvals so we don't have to reallocate at every bounding call */
    int                   valssize;           /**< the size of the vals array */
 };

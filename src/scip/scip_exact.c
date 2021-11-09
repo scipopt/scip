@@ -202,7 +202,6 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
 /** agg aggregation information to certificate for one row */
 SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row,                /**< new row, that info should be stored for */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
@@ -212,7 +211,7 @@ SCIP_RETCODE SCIPaddCertificateAggregation(
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, row, aggrrow, aggrrows, weights, naggrrows) );
+   SCIP_CALL( SCIPcertificateNewAggrInfo(scip, aggrrow, aggrrows, weights, naggrrows) );
 
    return SCIP_OKAY;
 }

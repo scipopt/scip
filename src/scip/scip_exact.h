@@ -113,7 +113,6 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row,                /**< new row, that info should be stored for */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
@@ -127,6 +126,13 @@ SCIP_RETCODE SCIPaddCertificateMirInfo(
    );
 
 SCIP_EXPORT
+SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row that aggregation information is stored for */
+   );
+
+
+SCIP_EXPORT
 SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< row that mirinfo is stored for */
@@ -134,6 +140,11 @@ SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
 
 SCIP_EXPORT
 SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

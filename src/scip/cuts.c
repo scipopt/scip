@@ -2629,7 +2629,8 @@ SCIP_RETCODE addOneRowSafely(
    SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
    int                   negslack,           /**< should negative slack variables allowed to be used? (0: no, 1: only for integral rows, 2: yes) */
    int                   maxaggrlen,         /**< maximal length of aggregation row */
-   SCIP_Bool*            rowtoolong          /**< is the aggregated row too long */
+   SCIP_Bool*            rowtoolong,         /**< is the aggregated row too long */
+   SCIP_Bool*            rowused             /**< was the row really added? */
    )
 {
    SCIP_Real sideval;
@@ -2642,6 +2643,7 @@ SCIP_RETCODE addOneRowSafely(
 
    assert( rowtoolong != NULL );
    *rowtoolong = FALSE;
+   *rowused = FALSE;
 
    if( SCIPisFeasZero(scip, weight) || SCIProwIsModifiable(row) || (SCIProwIsLocal(row) && !allowlocal) )
    {
@@ -2726,6 +2728,7 @@ SCIP_RETCODE addOneRowSafely(
 
    /* ensure the array for storing the row information is large enough */
    i = aggrrow->nrows++;
+   *rowused = TRUE;
    if( aggrrow->nrows > aggrrow->rowssize )
    {
       int newsize = SCIPcalcMemGrowSize(scip, aggrrow->nrows);
@@ -2773,11 +2776,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    )
 {
    SCIP_ROW** rows;
+   SCIP_ROW** usedrows;
    SCIP_VAR** vars;
+   SCIP_Real* usedweights;
    int nrows;
    int nvars;
    int k;
    SCIP_Bool rowtoolong;
+   SCIP_Bool rowused;
 
    assert( scip != NULL );
    assert( aggrrow != NULL );
@@ -2791,6 +2797,12 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 
    SCIPdebugMessage("Summing up %d rows in aggrrow \n", nrowinds);
 
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &usedrows, nrows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &usedweights, nrows) );
+   }
+
    if( rowinds != NULL && nrowinds > -1 )
    {
       for( k = 0; k < nrowinds; ++k )
@@ -2803,11 +2815,16 @@ SCIP_RETCODE SCIPaggrRowSumRows(
          {
             SCIPdebugMessage("Adding %g times row: ", weights[rowinds[k]]);
             SCIPdebug(SCIPprintRow(scip, rows[rowinds[k]], NULL));
-            SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+            SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused) );
+            if( rowused )
+            {
+               usedrows[aggrrow->nrows - 1] = rows[rowinds[k]];
+               usedweights[aggrrow->nrows - 1] = weights[rowinds[k]];
+            }
          }
 
          if( rowtoolong )
-            return SCIP_OKAY;
+            break;
       }
    }
    else
@@ -2824,11 +2841,16 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             {
                SCIPdebugMessage("Adding %g times row: ", weights[k]);
                SCIPdebug(SCIPprintRow(scip, rows[k], NULL));
-               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong) );
+               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused) );
+               if( rowused )
+               {
+                  usedrows[aggrrow->nrows - 1] = rows[k];
+                  usedweights[aggrrow->nrows - 1] = weights[k];
+               }
             }
 
             if( rowtoolong )
-               return SCIP_OKAY;
+               break;
          }
       }
    }
@@ -2837,6 +2859,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 
    SCIPdebugMessage("resulting aggrrow \n");
    SCIPdebug(SCIPaggrRowPrint(scip, aggrrow, NULL));
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPaddCertificateAggregation(scip, aggrrow, usedrows, usedweights, aggrrow->nrows) );
+
+      SCIPfreeBufferArray(scip, &usedweights);
+      SCIPfreeBufferArray(scip, &usedrows);
+   }
 
    return SCIP_OKAY;
 }

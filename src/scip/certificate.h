@@ -330,7 +330,6 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
 /** create a new aggregation info for a row */
 SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row,                /**< new row, that info should be stored for */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */

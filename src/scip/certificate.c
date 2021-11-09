@@ -389,8 +389,11 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->rootinfeas = FALSE;
    (*certificate)->objintegral = FALSE;
    (*certificate)->workingmirinfo = FALSE;
+   (*certificate)->workingaggrinfo = FALSE;
    (*certificate)->vals = NULL;
    (*certificate)->valssize = 0;
+   (*certificate)->aggrinfo = NULL;
+   (*certificate)->mirinfo = NULL;
 
    return SCIP_OKAY;
 }
@@ -836,7 +839,11 @@ void SCIPcertificateExit(
          /**@todo fix memory leak: mpq_clear and free all elements */
          SCIPhashtableRemoveAll(certificate->varboundtable);
          SCIPhashtableFree(&certificate->varboundtable);
-         BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize);
+         if( certificate->boundvals != NULL )
+         {
+            BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->boundvals,
+               certificate->boundvalsize);
+         }
       }
       if( certificate->workbound != NULL )
       {
@@ -1158,9 +1165,9 @@ void SCIPcertificatePrintProblemRational(
    BMSallocMemoryArray(&formatstr, len);
    RatToString(val, formatstr, len);
    if( isorigfile )
-      SCIPfprintf(certificate->origfile, "%s", formatstr);
+      SCIPfputs(formatstr, certificate->origfile);
    else
-      SCIPfprintf(certificate->transfile, "%s", formatstr);
+      SCIPfputs(formatstr, certificate->transfile);
 
    BMSfreeMemoryArray(&formatstr);
 }
@@ -1184,7 +1191,7 @@ void SCIPcertificatePrintProofRational(
 
    BMSallocMemoryArray(&formatstr, len);
    RatToString(val, formatstr, len);
-   SCIPfprintf(certificate->derivationfile, "%s", formatstr);
+   SCIPfputs(formatstr, certificate->derivationfile);
    BMSfreeMemoryArray(&formatstr);
 }
 
@@ -2821,10 +2828,10 @@ SCIP_RETCODE SCIPcertificateClearAggrinfo(
    int i;
    SCIP_CERTIFICATE* certificate;
 
-   if( !SCIPisCertificateActive(scip) )
-      return SCIP_OKAY;
-
    certificate = SCIPgetCertificate(scip);
+
+   if( certificate == NULL || certificate->aggrinfo == NULL )
+      return SCIP_OKAY;
 
    assert(certificate != NULL);
 
@@ -2883,7 +2890,6 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row,                /**< new row, that info should be stored for */
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
@@ -2895,7 +2901,6 @@ SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIP_CERTIFICATE* certificate;
 
    assert(scip != NULL );
-   assert(row != NULL );
 
    certificate = SCIPgetCertificate(scip);
 
@@ -2925,7 +2930,6 @@ SCIP_RETCODE SCIPcertificateNewAggrInfo(
    }
 
    /* link the node to its nodedata in the corresponding hashmap */
-   SCIP_CALL( SCIPhashmapSetImage(certificate->aggrinfohash, row, (void*)info) );
    if( certificate->aggrinfosize == certificate->naggrinfos )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &certificate->aggrinfo, certificate->aggrinfosize, certificate->aggrinfosize + 100) );
@@ -2934,6 +2938,7 @@ SCIP_RETCODE SCIPcertificateNewAggrInfo(
    certificate->aggrinfo[certificate->naggrinfos] = info;
    info->arpos = certificate->naggrinfos;
    certificate->naggrinfos++;
+   certificate->workingaggrinfo = TRUE;
 
    return SCIP_OKAY;
 }
@@ -2983,6 +2988,34 @@ SCIP_RETCODE SCIPcertificateNewMirInfo(
 
    certificate->nmirinfos++;
    certificate->workingmirinfo = TRUE;
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row that aggregation-info is stored for */
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+   SCIP_AGGREGATIONINFO* aggrinfo;
+
+   assert(SCIPisExactSolve(scip));
+
+   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+
+   certificate = SCIPgetCertificate(scip);
+
+   assert(certificate != NULL);
+   assert(certificate->workingaggrinfo);
+
+   aggrinfo = certificate->aggrinfo[certificate->naggrinfos - 1];
+   certificate->workingaggrinfo = FALSE;
+
+   assert(aggrinfo != NULL);
+
+   SCIP_CALL( SCIPhashmapSetImage(certificate->aggrinfohash, (void*) row, (void*) aggrinfo) );
 
    return SCIP_OKAY;
 }
@@ -3089,6 +3122,38 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    SCIPfreeBlockMemory(scip, &mirinfo);
    certificate->nmirinfos--;
    certificate->workingmirinfo = FALSE;
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+   SCIP_AGGREGATIONINFO* aggrinfo;
+
+   assert(SCIPisExactSolve(scip));
+
+   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+
+   certificate = SCIPgetCertificate(scip);
+
+   assert(certificate != NULL);
+
+
+   /* if the mirinfo is used it gets tranformed into sparse format, don't free it in that case */
+   if( !certificate->workingaggrinfo )
+      return SCIP_OKAY;
+
+   aggrinfo = certificate->aggrinfo[certificate->naggrinfos - 1];
+
+   assert(aggrinfo != NULL);
+
+   SCIP_CALL( SCIPcertificateFreeAggrInfo(scip->set, certificate, scip->lp, aggrinfo, NULL) );
+
+   certificate->workingaggrinfo = FALSE;
 
    return SCIP_OKAY;
 }
