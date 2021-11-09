@@ -47,6 +47,7 @@ uname -a                            > "${ERRFILE}"
 
 # function to copy back the results and delete temporary files
 function cleanup {
+    echo "=ready="                      >> "${OUTFILE}"
     echo                                >> "${OUTFILE}"
     echo "start moving files"           >> "${OUTFILE}"
     date                                >> "${OUTFILE}"
