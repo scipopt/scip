@@ -645,7 +645,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             /* if the constraints where replaced, we need to add the failed substitution as an equality to SCIP */
             tmpvars.clear();
             tmpvals.clear();
-            for( int j = first + 1; j < last; ++j )
+            for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
                tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
                tmpvals.push_back(res.postsolve.values[j]);
