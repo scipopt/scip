@@ -396,9 +396,9 @@ set(instances_Symmetry_B
 # Symmetry MINLP instances
 #
 set(instances_Symmetry_MINLP
-    "instances/MINLP/gastrans.osil.gz\;89.0858400000"
-    "instances/MINLP/tln2.osil.gz\;5.3000000000"
-    "instances/MINLP/cvxnonsep_psig40r.osil.gz\;86.5450782341784"
+    "instances/MINLP/gastrans.osil\;89.0858400000"
+    "instances/MINLP/tln2.osil\;5.3000000000"
+    "instances/MINLP/cvxnonsep_psig40r.osil\;86.5450782341784"
     )
 
 #
@@ -421,13 +421,13 @@ set(instances_BendersLB
    )
 
 set(instances_BendersQP
-    "instances/Benders/classical_20_0.mps.gz\;instances/Benders/classical_20.dec.gz\;-8.22960761981176e-02"
-    #"instances/Benders/classical_30_0.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.98150796362468e-02"
-    "instances/Benders/classical_30_15.mps.gz\;instances/Benders/classical_30.dec.gz\;-7.34740783553289e-02"
+    "instances/Benders/classical_20_0.mps\;instances/Benders/classical_20.dec\;-8.22960761981176e-02"
+    #"instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
+    "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34740783553289e-02"
    )
 
 set(instances_Decomp
-   "instances/Decomp/exp-1-500-5-5.mps.gz\;instances/Decomp/exp-1-500-5-5.dec.gz\;65887"
+   "instances/Decomp/exp-1-500-5-5.mps\;instances/Decomp/exp-1-500-5-5.dec\;65887"
   )
 
 set(instances_Or
