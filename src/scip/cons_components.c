@@ -456,10 +456,10 @@ SCIP_RETCODE createSubscip(
    /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
 #ifdef SCIP_MORE_DEBUG /* we print statistics later, so we need to copy statistics tables */
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 #endif
 
    /* the plugins were successfully copied */
@@ -661,6 +661,7 @@ SCIP_RETCODE solveSubscip(
 {
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
+   SCIP_Bool avoidmemout;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -682,10 +683,19 @@ SCIP_RETCODE solveSubscip(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 0.0)
+   /* check if mem limit needs to be avoided */
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
+
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemout == TRUE)
+    * to create a copy of SCIP, including external memory usage */
+   if( avoidmemout && memorylimit <= 0.0 )
    {
-      SCIPdebugMessage("--> not solved (not enough memory or time left)\n");
+      SCIPdebugMessage("--> not solved (not enough memory left)\n");
+      return SCIP_OKAY;
+   }
+   else if( timelimit <= 0.0 )
+   {
+      SCIPdebugMessage("--> not solved (not enough time left)\n");
       return SCIP_OKAY;
    }
 
@@ -2531,11 +2541,6 @@ SCIP_DECL_CONSINITSOL(consInitsolComponents)
 #define consEnfopsComponents NULL
 #define consCheckComponents NULL
 
-/**@name Interface methods
- *
- * @{
- */
-
 /** creates the components constraint handler and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2599,5 +2604,3 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
 
    return SCIP_OKAY;
 }
-
-/**@} */

@@ -46,11 +46,13 @@
 #include "scip/type_reader.h"
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
+#include "scip/type_cutsel.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_benders.h"
+#include "scip/type_expr.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus
@@ -75,6 +77,7 @@ struct SCIP_Set
    SCIP_PRESOL**         presols;            /**< presolvers */
    SCIP_RELAX**          relaxs;             /**< relaxators */
    SCIP_SEPA**           sepas;              /**< separators */
+   SCIP_CUTSEL**         cutsels;            /**< cut selectors */
    SCIP_PROP**           props;              /**< propagators */
    SCIP_PROP**           props_presol;       /**< propagators (sorted by presol priority) */
    SCIP_HEUR**           heurs;              /**< primal heuristics */
@@ -86,6 +89,12 @@ struct SCIP_Set
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
+   SCIP_EXPRHDLR**       exprhdlrs;          /**< expression handlers */
+   SCIP_EXPRHDLR*        exprhdlrvar;        /**< expression handler for variables (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrval;        /**< expression handler for constant values (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrsum;        /**< expression handler for sums (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrproduct;    /**< expression handler for products (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrpow;        /**< expression handler for power (for quick access) */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
    SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
    SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */
@@ -109,6 +118,8 @@ struct SCIP_Set
    int                   relaxssize;         /**< size of relaxs array */
    int                   nsepas;             /**< number of separators */
    int                   sepassize;          /**< size of sepas array */
+   int                   ncutsels;           /**< number of cut selectors */
+   int                   cutselssize;        /**< size of cutsels array */
    int                   nprops;             /**< number of propagators */
    int                   propssize;          /**< size of props array */
    int                   nheurs;             /**< number of primal heuristics */
@@ -127,6 +138,8 @@ struct SCIP_Set
    int                   tablessize;         /**< size of tables array */
    int                   ndialogs;           /**< number of dialogs */
    int                   dialogssize;        /**< size of dialogs array */
+   int                   nexprhdlrs;         /**< number of expression handlers */
+   int                   exprhdlrssize;      /**< size of expression handlers array */
    int                   nnlpis;             /**< number of NLPIs */
    int                   nlpissize;          /**< size of NLPIs array */
    int                   nconcsolvertypes;   /**< number of concurrent solver types */
@@ -150,6 +163,7 @@ struct SCIP_Set
    SCIP_Bool             relaxsnamesorted;   /**< are the relaxators sorted by name? */
    SCIP_Bool             sepassorted;        /**< are the separators sorted by priority? */
    SCIP_Bool             sepasnamesorted;    /**< are the separators sorted by name? */
+   SCIP_Bool             cutselssorted;      /**< are the cutsels sorted by priority? */
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
    SCIP_Bool             propspresolsorted;  /**< are the propagators in prop_presol sorted? */
    SCIP_Bool             propsnamesorted;    /**< are the propagators sorted by name? */
@@ -160,6 +174,7 @@ struct SCIP_Set
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
+   SCIP_Bool             exprhdlrssorted;    /**< are the expression handlers sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             benderssorted;      /**< are the Benders' algorithms sorted by activity and priority? */
    SCIP_Bool             bendersnamesorted;  /**< are the Benders' algorithms sorted by name? */
@@ -374,6 +389,7 @@ struct SCIP_Set
    SCIP_Bool             misc_improvingsols; /**< should only solutions be checked which improve the primal bound */
    SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
    SCIP_Bool             misc_estimexternmem;/**< should the usage of external memory be estimated? */
+   SCIP_Bool             misc_avoidmemout;   /**< try to avoid running into memory limit by restricting plugins like heuristics? */
    SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
    SCIP_Bool             misc_transsolsorig; /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
@@ -449,7 +465,8 @@ struct SCIP_Set
    SCIP_Bool             decomp_benderslabels; /**< should the variables be labeled for the application of Benders'
                                                 *   decomposition */
    SCIP_Bool             decomp_applybenders;  /**< if a decomposition exists, should Benders' decomposition be applied*/
-   int                   decomp_maxgraphedge;  /**< maximum number of edges in block graph computation, or -1 for no limit */
+   int                   decomp_maxgraphedge;  /**< maximum number of edges in block graph computation (-1: no limit, 0: disable block graph computation) */
+   SCIP_Bool             decomp_disablemeasures; /**< disable expensive measures */
 
    /* Benders' decomposition settings */
    SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */
@@ -511,14 +528,11 @@ struct SCIP_Set
                                               *   compared to best node's dual bound for applying local separation
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
    SCIP_Real             sepa_maxcoefratio;  /**< maximal ratio between coefficients in strongcg, cmir, and flowcover cuts */
+   SCIP_Real             sepa_maxcoefratiofacrowprep; /**< maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup */
    SCIP_Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the LP */
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
-   SCIP_Real             sepa_efficacyfac;   /**< factor to scale efficacy of cut in score calc. */
-   SCIP_Real             sepa_dircutoffdistfac;/**< factor to scale directed cutoff distance of cut in score calc. */
-   SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in score calc. */
-   SCIP_Real             sepa_intsupportfac; /**< factor to scale integral support of cut in score calculation */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
                                                 *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
@@ -571,6 +585,7 @@ struct SCIP_Set
    SCIP_Bool             time_reading;       /**< belongs reading time to solving time? */
    SCIP_Bool             time_rareclockcheck;/**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
    SCIP_Bool             time_statistictiming;  /**< should timing for statistic output be enabled? */
+   SCIP_Bool             time_nlpieval;      /**< should time for evaluation in NLP solves be measured? */
 
    /* tree compression parameters (for reoptimization) */
    SCIP_Bool             compr_enable;       /**< should automatic tree compression after presolving be enabled? (only for reoptimization) */

@@ -13,7 +13,7 @@ Building SCIP using CMake {#CMAKE}
 
 [CMake](https://cmake.org/) is a build system generator that can create, e.g., Makefiles for UNIX and Mac or Visual Studio project files for Windows.
 
-CMake provides an [extensive documentation](https://cmake.org/cmake/help/latest/manual/cmake.1.html) explaining available features and use cases as well as an [FAQ section](https://cmake.org/Wiki/CMake_FAQ).
+CMake provides an [extensive documentation](https://cmake.org/cmake/help/latest/manual/cmake.1.html) explaining available features and use cases as well as an [FAQ section](https://gitlab.kitware.com/cmake/community/-/wikis/FAQ).
 It's recommended to use the latest stable CMake version available.  `cmake --help` is also a good first step to see available options and usage information.
 
 Windows and platform independent build instructions
@@ -49,6 +49,18 @@ make install                                                                  # 
 Note: For a full ctest run `ctest` instead of `make check` after compilation.
 
 CMake checks for available third-party libraries like GMP or ZLIB and sets up the configuration accordingly.
+
+Note: Here is a list of apt package requirements for ubuntu or debian users that want to build the entire SCIP Optimization Suite from source tarball:
+```
+apt-get install wget cmake g++ m4 xz-utils libgmp-dev unzip zlib1g-dev libboost-program-options-dev libboost-serialization-dev libboost-regex-dev libboost-iostreams-dev libtbb-dev libreadline-dev pkg-config git liblapack-dev libgsl-dev flex bison libcliquer-dev gfortran file dpkg-dev libopenblas-dev rpm
+```
+Additionally the following dependencies need to be downloaded, compiled and installed:
+ - [Bliss](https://github.com/ds4dm/Bliss)
+ - [Hmetis](http://glaros.dtc.umn.edu/gkhome/metis/hmetis/download)
+ - [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/download)
+ - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
+ - [Gmp](https://gmplib.org/#DOWNLOAD)
+During the cmake configuration of the SCIP Optimization Suite the can be specified, see [CMake](@ref CMAKE).
 
 Modifying a CMake configuration
 -------------------------------
@@ -91,6 +103,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `SYM`                  | `bliss`, `none`                    | --                         | for bliss, specify `BLISS_DIR`                                     |
 | `WORHP`                | `on`, `off`                        | `WORHP=[true,false]`       | should worhp be linked; specify `WORHP_DIR` if not found automatically |
 | `ZIMPL`                | `on`, `off`                        | `ZIMPL=[true, false]`      | specify `ZIMPL_DIR` if not found automatically                     |
+| `AMPL`                 | `on`, `off`                        | `AMPL=[true, false]`       |                                                                    |
 | `READLINE`             | `on`, `off`                        | `READLINE=[true, false]`   |                                                                    |
 | `..._DIR`              | `<custom/path/to/.../package>`     | --                         | e.g. `IPOPT_DIR`, `CPLEX_DIR`, `WORHP_DIR`, `Readline_DIR` ...     |
 | `CMAKE_INSTALL_PREFIX` | `\<path\>`                         | `INSTALLDIR=\<path\>`      |                                                                    |
@@ -163,7 +176,6 @@ For instance, there are some examples that can be built with `make examples` or 
 | install         | install SCIP                                          |                                       |
 | coverage        | run the test suite and create a coverage report       | build flag `-DCOVERAGE=on`            |
 | liblpi          | build the LPI library                                 |                                       |
-| libnlpi         | build the NLPI library                                |                                       |
 | libobjscip      | build the ObjSCIP library for the C++ wrapper classes |                                       |
 
 Building SCIP using the Makefile system {#MAKE}
@@ -234,12 +246,12 @@ The following settings are supported:
 | parameter and default | options              | description                                                                                      |
 |-----------------------|----------------------|--------------------------------------------------------------------------------------------------|
 | `ARCH`                | `sparc`, `x86`, `x86_64`, `mips`, `hppa`, `ppc`, `pwr4`, ... | the architecture: try to autodetect                      |
+| `AMPL=true`           | `false`              | to enable or disable AMPL .nl file reader and support for using SCIP executable as solver in AMPL|
 | `COMP=gnu`            | `clang`, `intel`     | Use Gnu, Clang or Intel compiler.                                                                |
 | `EXPRINT=cppad`       | `none`               | to use CppAD as expressions interpreter                                                          |
 | `FILTERSQP=false`     | `true`               | to enable or disable FilterSQP interface                                                         |
-| `GAMS=false`          | `true`               | to disable or enable reading of GAMS model files (needs GAMS; only for models that do one solve) |
 | `GMP=true`            | `false`              | to enable or disable GMP library for exact counting and Zimpl support                            |
-| `IPOPT=false`         | `true`               | to disable or enable IPOPT interface (needs IPOPT >= 3.12)                                       |
+| `IPOPT=false`         | `true`               | to disable or enable IPOPT interface (needs IPOPT >= 3.12.0)                                     |
 | `LPS=spx`             | `spx1`, `cpx`, `grb`, `xprs`, `msk`, `clp`, `glop`, `qso`, `none` | determines the LP-Solver, should be installed seperately. Options to use SoPlex (> version 2.0), SoPlex (>= version 1.4), CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt as LP solver, no LP solver  |
 | `LPSOPT=opt`          | `dbg`, `opt-gccold`  | Choose the debug or optimized version (or old GCC optimized) version of the LP-solver (currently only available for SoPlex and CLP). |
 | `NOBLKBUFMEM=true`    | `false`              | Turns the internal SCIP block and buffer memory off or on. This way the code can be checked by valgrind or similar tools. |
@@ -600,8 +612,8 @@ make[1]: Entering directory '/sw/scip'
 
 - preparing missing soft-link 'lib/ipopt.linux.x86_64.gnu.opt':
 > Enter soft-link target file or directory for 'lib/ipopt.linux.x86_64.gnu.opt' (return if not needed):
-> /sw/ia64_lx26/ipopt-3.12.0/
--> creating softlink 'lib/ipopt.linux.x86_64.gnu.opt' -> '/sw/ia64_lx26/ipopt-3.12.0/'
+> /sw/ia64_lx26/ipopt-3.12.5/
+-> creating softlink 'lib/ipopt.linux.x86_64.gnu.opt' -> '/sw/ia64_lx26/ipopt-3.12.5/'
 
 make[1]: Leaving directory '/sw/scip'
 ```

@@ -15,10 +15,10 @@
 
 /**@file   xternal_stp.c
  * @brief  main document page
- * @author Daniel Rehfeldt
  * @author Gerald Gamrath
  * @author Thorsten Koch
  * @author Stephen Maher
+ * @author Daniel Rehfeldt
  * @author Yuji Shinano
  * @author Michael Winkler
  */
@@ -26,45 +26,51 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page STP_MAIN STP
- * @author Daniel Rehfeldt
  * @author Gerald Gamrath
  * @author Thorsten Koch
  * @author Stephen Maher
+ * @author Daniel Rehfeldt
  * @author Yuji Shinano
  * @author Michael Winkler
  *
- * This application contains the branch-and-cut based solver SCIP-Jack for Steiner tree problems, realized within the framework
- * \SCIP, see: "A generic approach to solving the Steiner tree problem and variants" by D. Rehfeldt. The following plugins are implemented:
+ * This application contains the branch-and-cut based solver SCIP-Jack for Steiner tree and related problems, realized within the framework
+ * \SCIP. See the doctoral thesis: "Faster algorithms for Steiner tree and related problems: From theory to practice"
+ * by Daniel Rehfeldt for more details. See also https://scipjack.zib.de. This application includes (among others):
  *
- * - a problem reader, which parses the problem out of a .stp file
- *   (reader_stp.c)
+ * - problem readers, which parse the problem out of .stp or .gr files
+ *   (reader_stp.c, reader_gr.c)
  * - a (global) problem data structure, containing all necessary information including the graph, which creates the model within \SCIP (probdata_stp.c)
- * - shortest path based construction heuristics (heur_tm.c)
- * - reduction based construction heuristics (heur_prune.c, heur_ascendprune, heur_slackprune)
- * - improvment heuristics (heur_local.c)
- * - a recombination heuristic (heur_rec.c)
- * - basic reduction techniques (reduce_simple.c)
- * - alternative-based reduction techniques (reduce_alt.c)
- * - bound-based reduction techniques (reduce_bnd.c)
+ * - various algorithms and data structures for handling Steiner tree graphs (graph_base.c, graph_edge.c, graph_history.c, graph_mcut.c, graph_path.c, graph_save.c, graph_stats.c, graph_tpath.c, graph_util.c
+ *   graph_delpseudo.c, graph_grid.c, graph_load.c, graph_node.c, graph_pcbase.c, graph_sdpath.c, graph_sub.c, graph_trans.c, graph_vnoi.c)
+ * - decomposition methods (bidecomposition.c, cons_stpcomponents.c)
+ * - algorithms to solve fixed-parameter tractable (sub-)problems (dpborder_base.c, dpborder_core.c, dpborder_util.c, dpterms_base.c, dpterms_core.c,
+ *   dpterms_util.c, enumeration.c)
+ * - various primal heuristics (heur_tm.c, heur_prune.c, heur_ascendprune.c, heur_slackprune.c, heur_local.c, heur_rec.c)
+ * - a dual heuristic (dualascent.c)
+ * - various reduction techniques (reduce_alt.c, reduce_bnd.c, reduce_ext.c,  reduce_pcsimple.c, reduce_sdcomp.c, reduce_sdutil.c, reduce_simple.c,
+ *   reduce_termsepa.c,reduce_termsepafull.c, reduce_base.c, reduce_da.c, reduce_path.c, reduce_sd.c, reduce_sdgraph.c, reduce_sepa.c,
+ *   reduce_sol.c, reduce_termsepada.c, reduce_util.c)
+ * - extended reduction techniques (extreduce_base.c, extreduce_contract.c, extreduce_data.c, extreduce_dist.c, extreduce_extmst.c, extreduce_mldists.c,
+ *   extreduce_util.c, extreduce_bottleneck.c, extreduce_core.c, extreduce_dbg.c, extreduce_extmstbiased.c, extreduce_extspg.c, extreduce_redcosts.c)
  * - a constraint handler, which checks solutions for feasibility and separates any violated model constraints (cons_stp.c)
- * - a propagator, which attempts to fix (edge) variables to zero utilizing their reduced costs (prop_stp.c)
- * - an event handler, which simply writes each incumbent solution to a file -- if activated (event_bestsol.c)
+ * - a propagator, which attempts to fix (edge) variables, or detects infeasiblity (prop_stp.c)
+ * - relaxation handlers, for example to detect and efficiently solve fixed-parameter tractable instances (relax_stp.c, relax_stpdp.c, relax_stpenum.c)
+ * - a branching rule (branch_stp.c)
+ * - generic data-structures and algorithms (stpvector.h, stpbitset.h, stpprioqueue.c, misc_stp.c, mst.c)
  *
  *
- *
- * In the following the problem is introduced and the solving process is delineated. Furthermore, the two main plugins are
- * sketched.
+ * In the following, the problem is introduced and the solving process is delineated. Next, two main plugins are
+ * sketched. Finally, information on reading a problem and on writing a solution found by SCIP-Jack is given.
  *
  * -# \subpage STP_PROBLEM "Problem description and solving approach"
  * -# \subpage STP_PROBLEMDATA "Main problem data, creating the problem"
  * -# \subpage STP_CONS "Separating violated constraints"
- * -# \subpage STP_MINCUT "Graph minimum cut routine"
- * -# \subpage STP_MISC "Miscellaneous methods used for Steiner tree problems"
+ * -# \subpage STP_READWRITE "Reading and writing"
  *
  * Installation
  * ------------
  *
- * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file"
+ * See the @ref INSTALL_APPLICATIONS_EXAMPLES "Install file", application "stp" (for Make) or "scipstp" (for CMake)
  */
 
 /**@page STP_PROBLEM Problem description and solving approach
@@ -80,13 +86,14 @@
  * </CENTER>
  *
  *
- * The solving approach of SCIP-Jack can be dissected into three major components:
+ * The solving approach of SCIP-Jack is based on three major components:
  *
- * First, problem specific preprocessing is extremely important. Apart from some pathological instances
+ * First, (problem-specific) reduction techniqes are extremely important. Apart from some pathological instances
  * specifically constructed to defy presolving techniques, preprocessing is often able to significantly
- * reduce instances or even solve them.
+ * reduce instances or even solve them. Additionally, reduction techniques are used for domain propagation.
  *
- * Second, heuristics are needed, especially for hard instances, to find good or even optimal solutions.
+ * Second, primal heuristics are needed, especially for hard instances, to find good or even optimal solutions.
+ * In particular, primal heuristics are important for bound-based reduction methods.
  *
  * Finally, the core of our approach is constituted by a branch-and-cut procedure used to compute lower bounds and prove optimality.
  *
@@ -143,6 +150,12 @@
  *
  * -maximum-weight connected subgraph problems,
  *
+ * -rooted maximum-weight connected subgraph problems,
+ *
+ * -maximum-weight connected subgraph problems with budget constraints,
+ *
+ * -partial-terminal node-weighted Steiner tree problems,
+ *
  * -degree-constrained Steiner tree problems,
  *
  * -group Steiner tree problems, and
@@ -150,7 +163,29 @@
  * -hop-honstrained directed Steiner tree problems.
  *
  * A more detailed description of SCIP-Jack and its various components can be found in
- * "SCIP-Jack – A solver for STP and variants with parallelization extensions" by Gerald Gamrath et. al.
+ * "Faster algorithms for Steiner tree and related problems: From theory to practice" by Daniel Rehfeldt.
  *
+ *
+ */
+
+/**@page STP_READWRITE Reading and writing
+ *
+ * Problem instances can be read in both in the .stp format described here: http://steinlib.zib.de/format.php,
+ * and the (somewhat simpler) .gr format described here: https://pacechallenge.org/2018/steiner-tree/. To run SCIP-Jack from the command line use
+ *
+ * bin/stp -f filename.stp
+ *
+ * Note that the solution shown by SCIP does not correspond to the actual solution computed by SCIP-Jack,
+ * because SCIP-Jack performs preprocessing prior to building the SCIP problem (for performance and memory reasons).
+ * The solution value shown by SCIP is correct, however.
+ * To get the solution computed by SCIP-Jack, create a file called (for example) "write.set" in folder ./settings with content
+ *
+ * stp/logfile = "use_probname"
+ *
+ * Then call
+ *
+ * bin/stp -f filename.stp -s settings/write.set
+ *
+ * The solution will be written to the file "filename.stplog". Alternatively, you can set the logfile parameter via the interactive shell.
  *
  */

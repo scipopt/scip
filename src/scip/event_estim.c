@@ -2209,13 +2209,13 @@ SCIP_RETCODE getEstimCompletion(
 {
    SCIP_Real completed;
 
+   *estim = -1.0;
+
    SCIP_CALL( getSearchCompletion(eventhdlrdata, &completed) );
 
    completed = MIN(completed, 1.0);
 
-   if( completed <= 0.0 )
-      *estim = -1.0;
-   else
+   if( completed > 0.0 )
       *estim = SCIPgetNNodes(scip) / completed;
 
    return SCIP_OKAY;
@@ -3002,7 +3002,7 @@ SCIP_Real SCIPgetTreesizeEstimation(
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    TSPOS tspos = TSPOS_NONE;
-   SCIP_Real estim = -1.0;
+   SCIP_Real estim;
 
    assert(scip != NULL);
 

@@ -60,29 +60,107 @@ include $(SCIPDIR)/make/make.project
 
 MAINNAME	=	stp
 CMAINOBJ	=	cmain.o \
+			bidecomposition.o \
+			completegraph.o \
 			cons_stp.o \
-			grphbase.o \
-			grphload.o \
-			grphmcut.o \
-			grphpath.o \
-			grphsave.o \
+			cons_stpcomponents.o \
+			dpborder_base.o \
+			dpborder_core.o \
+			dpborder_util.o \
+			dpterms_base.o \
+			dpterms_core.o \
+			dpterms_util.o \
+			dualascent.o \
+			enumeration.o \
+			extreduce_base.o \
+			extreduce_bottleneck.o \
+			extreduce_contract.o \
+			extreduce_core.o \
+			extreduce_data.o \
+			extreduce_dbg.o \
+			extreduce_dist.o \
+			extreduce_extmst.o \
+			extreduce_extmstbiased.o \
+			extreduce_extspg.o \
+			extreduce_mldists.o \
+			extreduce_redcosts.o \
+			extreduce_util.o \
+			graph_history.o \
+			graph_base.o \
+			graph_delpseudo.o \
+			graph_edge.o \
+			graph_grid.o \
+			graph_load.o \
+			graph_mcut.o \
+			graph_node.o \
+			graph_path.o \
+			graph_sdpath.o \
+			graph_pcbase.o \
+			graph_save.o \
+			graph_stats.o \
+			graph_sub.o \
+			graph_tpath.o \
+			graph_trans.o \
+			graph_util.o \
+			graph_vnoi.o \
 			heur_ascendprune.o \
+			heur_lurkprune.o \
 			heur_slackprune.o \
 			heur_tm.o \
 			heur_local.o \
 			heur_prune.o \
 			heur_rec.o \
+			mincut.o \
 			misc_stp.o \
+			mst.o \
 			probdata_stp.o \
 			event_bestsol.o \
 			dialog_stp.o \
 			reader_stp.o \
 			reader_gr.o \
+			redcosts.o \
 			pricer_stp.o \
-			reduce.o \
+			reduce_base.o \
 			reduce_alt.o \
 			reduce_bnd.o \
+			reduce_da.o \
+			reduce_ext.o \
+			reduce_path.o \
+			reduce_pcsimple.o \
+			reduce_sd.o \
+			reduce_sdcomp.o \
+			reduce_sdgraph.o \
+			reduce_sepa.o \
+			reduce_sdutil.o \
 			reduce_simple.o \
+			reduce_sol.o \
+			reduce_termsepa.o \
+			reduce_termsepada.o \
+			reduce_termsepafull.o \
+			reduce_util.o \
+			relax_stp.o \
+			relax_stpenum.o \
+			relax_stpdp.o \
+			sepaspecial.o \
+			shortestpath.o \
+			solhistory.o \
+			solpool.o \
+			solstp.o \
+			stpprioqueue.o \
+			stptest_base.o \
+			stptest_da.o \
+			stptest_extreduce.o \
+			stptest_extutils.o \
+			stptest_graph.o \
+			stptest_graphpath.o \
+			stptest_heurlocal.o \
+			stptest_heurtm.o \
+			stptest_misc.o \
+			stptest_pcreduce.o \
+			stptest_reducesd.o \
+			stptest_reducesepa.o \
+			stptest_reduceutils.o \
+			substpsolver.o \
 			prop_stp.o \
 			branch_stp.o \
 			validate.o
@@ -206,7 +284,7 @@ tags:
 
 -include	$(MAINOBJFILES:.o=.d)
 
-$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
+$(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 

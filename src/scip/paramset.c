@@ -89,7 +89,7 @@ SCIP_RETCODE paramTestBool(
 
    if( value != TRUE && value != FALSE )
    {
-      SCIPerrorMessage("Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n", value, param->name);
+      SCIPerrorMessage("Invalid value <%u> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n", value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -176,7 +176,7 @@ SCIP_RETCODE paramTestChar(
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
-      SCIPerrorMessage("Invalid value <%x> for char parameter <%s>.\n", (int)value, param->name);
+      SCIPerrorMessage("Invalid value <%d> for char parameter <%s>.\n", (int)value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -223,7 +223,7 @@ SCIP_RETCODE paramTestString(
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
       {
-         SCIPerrorMessage("Invalid character <%x> in string parameter <%s> at position %d.\n", (int)value[i], param->name, i);
+         SCIPerrorMessage("Invalid character <%d> in string parameter <%s> at position %u.\n", (int)value[i], param->name, i);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -2388,6 +2388,11 @@ SCIP_RETCODE emphasisParse(
       SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
       globalemphasis = TRUE;
    }
+   else if ( strcmp(paramname, "benchmark") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_BENCHMARK, FALSE) );
+      globalemphasis = TRUE;
+   }
 
    /* check whether rest of line is clean */
    if ( globalemphasis )
@@ -3485,7 +3490,7 @@ SCIP_RETCODE paramsetSetSeparatingDefault(
 
    /* explicitly reset individual parameters */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/linear/separateall") );
-   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/minorthoroot") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "cutselection/hybrid/minorthoroot") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxroundsrootsubrun") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxaddrounds") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "separating/maxcutsroot") );
@@ -3644,7 +3649,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
    }
 
    /* explicitly change general separating parameters */
-   SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/minorthoroot", 0.1, quiet) );
+   SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "cutselection/hybrid/minorthoroot", 0.1, quiet) );
    SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxroundsrootsubrun", 5, quiet) );
    SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxaddrounds", 5, quiet) );
    SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/maxcutsroot", 5000, quiet) );
@@ -3731,13 +3736,6 @@ SCIP_RETCODE paramsetSetSeparatingFast(
    {
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/mcf/freq", -1, quiet) );
    }
-#ifndef NDEBUG
-   if( SCIPsetFindSepa(set, "strongcg") != NULL )
-#endif
-   {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/strongcg/maxroundsroot", 10, quiet) );
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "separating/strongcg/maxsepacutsroot", 200, quiet) );
-   }
 
    return SCIP_OKAY;
 }
@@ -3805,6 +3803,7 @@ SCIP_RETCODE paramsetSetSeparatingOff(
  *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_NUMERICS to solve problems which cause numerical issues
+ *  - \ref SCIP_PARAMEMPHASIS_BENCHMARK to not try to avoid running into memory limit
  */
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -3814,13 +3813,11 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   /* reset all parameter to default */
-   SCIP_CALL( SCIPparamsetSetToDefaults(paramset, set, messagehdlr) );
-
    switch( paramemphasis )
    {
    case SCIP_PARAMEMPHASIS_DEFAULT:
-      /* the default values are already set */
+      /* reset all parameter to default */
+      SCIP_CALL( SCIPparamsetSetToDefaults(paramset, set, messagehdlr) );
       break;
 
    case SCIP_PARAMEMPHASIS_COUNTER:
@@ -4044,13 +4041,26 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques", FALSE, quiet) );
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities", FALSE, quiet) );
 
-      /* Reduce the max coefratio to prevent the creation of potentially numerical unstable constraints */
+      /* Reduce the max coefratio to prevent the creation of potentially numerical unstable cuts */
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratio", 100.0, quiet) );
-#ifdef SCIP_WITH_PRESOLVELIB
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratiofacrowprep", 1.0, quiet) );
+
+#ifdef SCIP_WITH_PAPILO
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/hugebound", 1e6, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/markowitztolerance", 0.1, quiet) );
 #endif
 
+      /* weaken domain propagation of nonlinear constraints by increasing relaxation of variable bounds and constraint sides */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/conssiderelaxamount", 1e-7, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/varboundrelaxamount", 1e-7, quiet) );
+
+      break;
+
+   case SCIP_PARAMEMPHASIS_BENCHMARK:
+
+      /* turn off memory saving mode and do not try to avoid memory limit */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "memory/savefac", 1.0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "misc/avoidmemout", FALSE, quiet) );
       break;
 
    default:

@@ -75,6 +75,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
    SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copycutselectors,   /**< should the cut selectors be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
@@ -83,6 +84,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
+   SCIP_Bool             copyexprhdlrs,      /**< should the expression handlers be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins  were validly copied */
    );
@@ -657,6 +659,23 @@ void SCIPsetSortSepasName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** inserts cut selector in cut selector list */
+SCIP_RETCODE SCIPsetIncludeCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
+/** returns the cut selector of the given name, or NULL if not existing */
+SCIP_CUTSEL* SCIPsetFindCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
+   );
+
+/** sorts cut selectors by priorities */
+void SCIPsetSortCutsels(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts propagator in propagator list */
 SCIP_RETCODE SCIPsetIncludeProp(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -839,6 +858,23 @@ SCIP_Bool SCIPsetExistsDialog(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
+/** inserts expression handler in expression handler list */
+SCIP_RETCODE SCIPsetIncludeExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** returns the expression handler of the given name, or NULL if not existing */
+SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of expression handler */
+   );
+
+/** sorts expression handlers by name */
+void SCIPsetSortExprhdlrs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts NLPI in NLPI list */
 SCIP_RETCODE SCIPsetIncludeNlpi(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -994,6 +1030,11 @@ int SCIPsetGetPriceMaxvars(
 int SCIPsetGetSepaMaxcuts(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             root                /**< are we at the root node? */
+   );
+
+/** returns the maximal ratio between coefficients to ensure in rowprep cleanup */
+SCIP_Real SCIPsetGetSepaMaxCoefRatioRowprep(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns user defined objective value (in original space) for reference purposes */
@@ -1718,6 +1759,9 @@ SCIP_Bool SCIPsetGetSubscipsOff(
 
 
 /** prints a debug message */
+#ifdef __GNUC__
+__attribute__((format(printf, 4, 5)))
+#endif
 SCIP_EXPORT
 void SCIPsetPrintDebugMessage(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1728,6 +1772,9 @@ void SCIPsetPrintDebugMessage(
    );
 
 /** prints a debug message without precode */
+#ifdef __GNUC__
+__attribute__((format(printf, 2, 3)))
+#endif
 SCIP_EXPORT
 void SCIPsetDebugMessagePrint(
    SCIP_SET*             set,                /**< global SCIP settings */

@@ -890,7 +890,11 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
 
    /* nothing to do for empty search space */
    if( nsubspacevars == 0 )
+   {
+      SCIPfreeBufferArray(scip, &subspacevars);
+      SCIPfreeBufferArray(scip, &fracspace);
       return SCIP_OKAY;
+   }
 
    assert(0 < nsubspacevars && nsubspacevars <= nvars);
 

@@ -37,11 +37,13 @@
 #include "heur_prune.h"
 #include "heur_slackprune.h"
 #include "heur_local.h"
-#include "grph.h"
+#include "graph.h"
+#include "reduce.h"
 #include "heur_tm.h"
 #include "cons_stp.h"
 #include "scip/pub_misc.h"
 #include "probdata_stp.h"
+#include "solstp.h"
 #include "math.h"
 
 #define HEUR_NAME             "rec"
@@ -72,10 +74,6 @@
 
 #define COST_MAX_POLY_x0 500
 #define COST_MIN_POLY_x0 100
-
-#ifdef WITH_UG
-int getUgRank(void);
-#endif
 
 
 /*
@@ -127,7 +125,7 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
 static
 int edgecostmultiplier(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP_Real             avg                 /**< number of solutions containing this edge */
    )
 {
@@ -165,9 +163,555 @@ int edgecostmultiplier(
    return factor;
 }
 
+
+static inline
+void marksolverts(
+   const GRAPH* g,
+   IDX* curr,
+   const int* unodemap,
+   STP_Bool* RESTRICT stvertex
+   )
+{
+   while( curr != NULL )
+   {
+      const int i = curr->index;
+
+      stvertex[unodemap[g->orghead[i]]] = TRUE;
+      stvertex[unodemap[g->orgtail[i]]] = TRUE;
+
+      curr = curr->parent;
+   }
+}
+
+
+static
+void setHeurdataNUsedSols(
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
+   int                   nsols,              /**< number of solutions */
+   SCIP_Bool             restrictheur        /**< restrict heuristic? */
+)
+{
+   int randn;
+
+   if( restrictheur )
+      randn = SCIPrandomGetInt(heurdata->randnumgen, 0, 3);
+   else
+      randn = SCIPrandomGetInt(heurdata->randnumgen, 0, 6);
+
+   if( (randn <= 2) || (nsols < 3) )
+      heurdata->nusedsols = 2;
+   else if( (randn <= 4) || (nsols < 4) )
+      heurdata->nusedsols = 3;
+   else
+      heurdata->nusedsols = 4;
+}
+
+
+/** compute (heuristic) solution on reduced (and merged) problem */
+static
+SCIP_RETCODE retransformReducedProbSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data */
+   const GRAPH*          solgraph,           /**< graph data */
+   const int*            edgeancestor,       /**< ancestor to edge */
+   const int*            soledges,           /**< old solution edges */
+   int*                  newsoledges,        /**< new solution edges */
+   STP_Bool*             stnodes             /**< new solution nodes */
+)
+{
+   STP_Bool* solnodes;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+   const int nedges = graph->edges;
+   const int nnodes = graph->knots;
+
+   for( int i = 0; i < nedges; i++ )
+       newsoledges[i] = UNKNOWN;
+
+    for( int i = 0; i < nnodes; i++ )
+       stnodes[i] = FALSE;
+
+    if( pcmw )
+    {
+       SCIP_CALL( SCIPallocBufferArray(scip, &solnodes, solgraph->orgknots) );
+
+       for( int i = 0; i < solgraph->orgknots; i++ )
+          solnodes[i] = FALSE;
+    }
+
+   if( solgraph->terms > 1 )
+   {
+      assert(soledges != NULL);
+      for( int e = 0; e < solgraph->edges; e++ )
+      {
+         if( soledges[e] == CONNECT )
+         {
+            /* iterate through list of ancestors */
+            if( graph->stp_type != STP_DCSTP )
+            {
+               IDX* curr = graph_edge_getAncestors(solgraph, e);
+
+               while( curr != NULL )
+               {
+                  const int i = edgeancestor[curr->index];
+
+                  stnodes[graph->head[i]] = TRUE;
+                  stnodes[graph->tail[i]] = TRUE;
+
+                  if( pcmw )
+                  {
+                     assert(solgraph->orghead[curr->index] < solgraph->orgknots);
+                     assert(solgraph->orgtail[curr->index] < solgraph->orgknots);
+
+                     solnodes[solgraph->orghead[curr->index]] = TRUE;
+                     solnodes[solgraph->orgtail[curr->index]] = TRUE;
+                  }
+
+                  curr = curr->parent;
+               }
+            }
+            else
+            {
+               IDX* curr = graph_edge_getAncestors(solgraph, e);
+               while( curr != NULL )
+               {
+                  int i = edgeancestor[curr->index];
+                  newsoledges[i] = CONNECT;
+
+                  curr = curr->parent;
+               }
+            }
+         }
+      }
+   } /* if( solgraph->terms > 1 ) */
+
+   /* retransform edges fixed during graph reduction */
+   if( graph->stp_type != STP_DCSTP )
+   {
+      IDX* curr = graph_getFixedges(solgraph);
+
+      while( curr != NULL )
+      {
+         const int i = edgeancestor[curr->index];
+
+         stnodes[graph->head[i]] = TRUE;
+         stnodes[graph->tail[i]] = TRUE;
+         if( pcmw )
+         {
+            assert(solgraph->orghead[curr->index] < solgraph->orgknots);
+            assert(solgraph->orgtail[curr->index] < solgraph->orgknots);
+
+            solnodes[solgraph->orghead[curr->index]] = TRUE;
+            solnodes[solgraph->orgtail[curr->index]] = TRUE;
+         }
+
+         curr = curr->parent;
+      }
+   }
+   else
+   {
+      IDX* curr = graph_getFixedges(solgraph);
+
+      while( curr != NULL )
+      {
+         const int i = edgeancestor[curr->index];
+         newsoledges[i] = CONNECT;
+      }
+   }
+
+   if( pcmw )
+   {
+      STP_Bool* pcancestoredges;
+      SCIP_CALL(SCIPallocBufferArray(scip, &pcancestoredges, solgraph->orgedges));
+
+      for( int k = 0; k < solgraph->orgedges; k++ )
+         pcancestoredges[k] = FALSE;
+
+      SCIP_CALL(
+            solstp_markPcancestors(scip, solgraph->pcancestors, solgraph->orgtail, solgraph->orghead, solgraph->orgknots, solnodes, pcancestoredges, NULL, NULL, NULL ));
+
+      for( int k = 0; k < solgraph->orgedges; k++ )
+         if( pcancestoredges[k] )
+         {
+            const int i = edgeancestor[k];
+            stnodes[graph->tail[i]] = TRUE;
+            stnodes[graph->head[i]] = TRUE;
+         }
+
+      SCIPfreeBufferArray(scip, &pcancestoredges);
+      SCIPfreeBufferArrayNull(scip, &solnodes);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** compute (heuristic) solution on reduced (and merged) problem */
+static
+SCIP_RETCODE computeReducedProbSolutionBiased(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   const GRAPH*          graph,              /**< graph data */
+   GRAPH*                solgraph,           /**< graph data */
+   const int*            edgeweight,         /**< for each edge: number of solution that contain this edge */
+   const int*            edgeancestor,       /**< ancestor to edge edge */
+   SCIP_VAR**            vars,               /**< variables or NULL */
+   SCIP_Bool             usestppool,         /**< using STP pool? */
+   int*                  soledges,           /**< solution edges */
+   SCIP_Bool*            success             /**< success? */
+)
+{
+   SCIP_Real* cost;
+   SCIP_Real* costrev;
+   SCIP_Real* prize = NULL;
+   SCIP_Real* nodepriority;
+   const int nsolnodes = solgraph->knots;
+   const int nsoledges = solgraph->edges;
+   const int probtype = graph->stp_type;
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsoledges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsoledges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nsolnodes) );
+
+   for( int i = 0; i < nsolnodes; i++ )
+      nodepriority[i] = 0.0;
+
+   BMScopyMemoryArray(cost, solgraph->cost, nsoledges);
+
+   for( int e = 0; e < nsoledges; e++ )
+   {
+      IDX* curr = graph_edge_getAncestors(solgraph, e);
+      SCIP_Real avg = 0.0;
+      int i = 0;
+      SCIP_Bool fixed = FALSE;
+
+      while( curr != NULL )
+      {
+         i++;
+         avg += edgeweight[curr->index];
+         if( !usestppool && SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5
+               && SCIPvarGetUbGlobal(vars[flipedge(edgeancestor[curr->index])] ) < 0.5 )
+            fixed = TRUE;
+
+         curr = curr->parent;
+      }
+
+      if( i > 0 )
+      {
+         avg /= (double) i;
+         assert(avg >= 1.0);
+      }
+
+      /* is an ancestor edge fixed? */
+      if( fixed )
+      {
+         cost[e] = MAX(cost[e], BLOCKED);
+
+         nodepriority[solgraph->head[e]] /= 2.0;
+         nodepriority[solgraph->tail[e]] /= 2.0;
+      }
+
+      nodepriority[solgraph->head[e]] += avg - 1.0;
+      nodepriority[solgraph->tail[e]] += avg - 1.0;
+
+      cost[e] *= edgecostmultiplier(scip, heurdata, avg);
+   }
+
+   /* adapted prizes */
+   if( pcmw )
+   {
+      assert(solgraph->extended);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &prize, nsolnodes) );
+
+      for( int k = 0; k < nsolnodes; k++ )
+      {
+         if( Is_pseudoTerm(solgraph->term[k]) )
+         {
+            const int term = graph_pc_getTwinTerm(solgraph, k);
+            const int root2termedge = graph_pc_getRoot2PtermEdge(solgraph, term);
+
+            assert(term >= 0 && root2termedge >= 0);
+            assert(solgraph->source != k);
+            assert(Is_term(solgraph->term[term]));
+            assert(solgraph->cost[root2termedge] > 0.0);
+
+            prize[k] = cost[root2termedge];
+         }
+         else
+         {
+            prize[k] = solgraph->prize[k];
+         }
+      }
+   }
+
+   for( int e = 0; e < nsoledges; e++ )
+   {
+      costrev[e] = cost[flipedge(e)];
+      soledges[e] = UNKNOWN;
+   }
+
+   {
+      SCIP_Real hopfactor = 0.1;
+
+      SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata, solgraph, NULL, prize, soledges, heurdata->ntmruns,
+         solgraph->source, cost, costrev, &hopfactor, nodepriority, success) );
+
+      assert(*success || probtype == STP_DHCSTP || probtype == STP_DCSTP || SCIPisStopped(scip));
+      assert(*success == FALSE || solstp_isValid(scip, solgraph, soledges));
+   }
+
+   SCIPfreeBufferArrayNull(scip, &prize);
+
+   /* run local heuristic with original costs! */
+   if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
+         && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_NWPTSPG )
+   {
+      SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, soledges) );
+      assert(solstp_isValid(scip, solgraph, soledges));
+   }
+
+   SCIPfreeBufferArray(scip, &nodepriority);
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
+
+   return SCIP_OKAY;
+}
+
+
+/** compute (heuristic) solution on reduced (and merged) problem */
+static
+SCIP_RETCODE computeReducedProbSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   const GRAPH*          graph,              /**< graph data */
+   GRAPH*                solgraph,           /**< graph data */
+   REDSOL*               redsol,             /**< reduction solution */
+   const int*            edgeweight,         /**< for each edge: number of solution that contain this edge */
+   const int*            edgeancestor,       /**< ancestor to edge edge */
+   SCIP_VAR**            vars,               /**< variables or NULL */
+   SCIP_Bool             usestppool,         /**< using STP pool? */
+   int*                  soledges,           /**< solution edges */
+   SCIP_Bool*            success             /**< success? */
+)
+{
+   assert(soledges != NULL);
+   assert(graph_valid(scip, solgraph));
+
+   SCIPdebugMessage("REC: graph not completely reduced, nodes: %d, edges: %d, terminals: %d \n",
+         solgraph->knots, solgraph->edges, solgraph->terms);
+
+   SCIP_CALL( graph_path_init(scip, solgraph) );
+
+   SCIP_CALL( computeReducedProbSolutionBiased(scip, heurdata, graph, solgraph, edgeweight,
+         edgeancestor, vars, usestppool, soledges, success) );
+
+ //  printf("solval_bias=%f \n", solstp_getObj(solgraph, soledges, 0.0));
+
+   if( reduce_solUsesNodesol(redsol) )
+   {
+      SCIP_Real solval_red;
+      int* soledges_red;
+      SCIP_CALL(SCIPallocBufferArray(scip, &soledges_red, solgraph->edges));
+      SCIP_CALL(reduce_solGetEdgesol(scip, solgraph, redsol, &solval_red, soledges_red));
+
+      SCIPdebugMessage("solval_red=%f solval_bias=%f\n", solval_red, solstp_getObj(solgraph, soledges, 0.0));
+
+      if( LT(solval_red, FARAWAY) )
+      {
+         const SCIP_Real solval_bias = solstp_getObj(solgraph, soledges, 0.0);
+         assert(solstp_isValid(scip, solgraph, soledges_red));
+         assert(EQ(solval_red, solstp_getObj(solgraph, soledges_red, 0.0)));
+
+         if( LT(solval_red, solval_bias) )
+         {
+            assert(LT(solstp_getObj(solgraph, soledges_red, 0.0), solstp_getObj(solgraph, soledges, 0.0)));
+
+            BMScopyMemoryArray(soledges, soledges_red, solgraph->edges);
+            SCIPdebugMessage("updating best solution value: %f->%f \n", solval_bias, solval_red);
+         }
+      }
+      else
+      {
+       //  graph_printInfo(solgraph);
+       //  assert(0);
+
+      }
+
+      SCIPfreeBufferArray(scip, &soledges_red);
+   }
+   else
+   {
+      assert(!graph_typeIsSpgLike(graph));
+      assert(!graph_pc_isPcMw(graph) || graph->stp_type == STP_RMWCSP);
+   }
+
+   graph_path_exit(scip, solgraph);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialize solution vector and objective of incumbent */
+static
+void initializeIncumbent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const STPSOLPOOL*     pool,               /**< solution pool or NULL */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nsols,              /**< number of solutions in pool (SCIP or STP) */
+   int                   newsolindex,        /**< index of new solution */
+   double*               incumentobj,        /**< pointer to incumbent value */
+   int*                  incumbentedges      /**< edges of solution to be used as recombination root */
+)
+{
+   const STP_Bool usestppool = (pool != NULL);
+   const int nedges = graph->edges;
+
+   if( usestppool )
+   {
+      int i;
+      STPSOL** poolsols = pool->sols;
+
+      assert(pool->nedges == graph->edges);
+
+      for( i = 0; i < nsols; i++ )
+         if( newsolindex == poolsols[i]->index )
+            break;
+      assert(i < nsols);
+
+      BMScopyMemoryArray(incumbentedges, poolsols[i]->soledges, nedges);
+   }
+   else
+   {
+      SCIP_SOL* newsol;
+      SCIP_SOL** sols = SCIPgetSols(scip);
+      int i;
+
+      assert(sols != NULL);
+
+      for( i = 0; i < nsols; i++ )
+         if( newsolindex == SCIPsolGetIndex(sols[i]) )
+            break;
+      assert(i < nsols);
+
+      newsol = sols[i];
+
+      for( int e = 0; e < nedges; e++ )
+         if( SCIPisEQ(scip, SCIPgetSolVal(scip, newsol, vars[e]), 1.0) )
+            incumbentedges[e] = CONNECT;
+         else
+            incumbentedges[e] = UNKNOWN;
+   }
+
+   /* get objective value of incumbent */
+   *incumentobj = solstp_getObjBounded(graph, incumbentedges, 0.0, nedges);
+}
+
+
+#ifndef NDEBUG
+/** any edge of given solution deleted? */
+static
+SCIP_Bool poolSolIsUnreduced(
+   const GRAPH*          graph,              /**< graph structure */
+   const int             solindex,           /**< the index */
+   const STPSOLPOOL*     pool                /**< the pool */
+)
+{
+   const int nedges = graph->edges;
+   STPSOL* const poolsol = pool->sols[solindex];
+
+   assert(pool);
+   assert(solindex >= 0 && solindex < pool->size);
+
+   for( int i = 0; i < nedges; i += 2 )
+   {
+      if( graph->oeat[i] != EAT_FREE )
+         continue;
+
+      if( (poolsol->soledges[i] == CONNECT || poolsol->soledges[i + 1] == CONNECT) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+#endif
+
+
+/** store solution in (SCIP or STP) pool */
+static
+SCIP_RETCODE poolAddSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   STPSOLPOOL*           pool,               /**< STP solution pool or NULL */
+   SCIP_HEUR*            heur,               /**< heuristic or NULL */
+   const SCIP_Real       incumentobj,        /**< objective of solution to be added */
+   const int*            incumbentedges,     /**< edge array of solution to be added */
+   int                   nedges,             /**< nedges */
+   int*                  newsolindex,        /**< index of new solution */
+   SCIP_Bool*            soladded            /**< solution added? */
+)
+{
+   SCIPdebugMessage("REC: better solution found ...  ");
+
+   if( pool != NULL )
+   {
+      const int maxindex = pool->maxindex;
+      SCIP_CALL( solpool_addSol(scip, incumentobj, incumbentedges, pool, soladded) );
+
+      if( *soladded )
+      {
+         assert(pool->maxindex == maxindex + 1);
+         *newsolindex = maxindex + 1;
+         SCIPdebugMessage("and added! \n");
+      }
+      else
+      {
+         *newsolindex = -1;
+      }
+   }
+   else
+   {
+      SCIP_Real* nval = NULL;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &nval, nedges) );
+
+      for( int e = 0; e < nedges; e++ )
+      {
+         if( incumbentedges[e] == CONNECT )
+            nval[e] = 1.0;
+         else
+            nval[e] = 0.0;
+      }
+
+      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, soladded) );
+
+      if( *soladded )
+      {
+         SCIP_SOL** sols = SCIPgetSols(scip);
+         const int nsols = SCIPgetNSols(scip);
+         int idx = -1;
+
+         SCIPdebugMessage("and added! \n");
+
+         assert(nsols > 0);
+
+         for( int i = 1; i < nsols; i++ )
+            if( SCIPsolGetIndex(sols[i]) > idx )
+               idx = SCIPsolGetIndex(sols[i]);
+
+         assert(idx >= 0);
+         *newsolindex = idx;
+      }
+      SCIPfreeBufferArray(scip, &nval);
+
+   }
+   return SCIP_OKAY;
+}
+
+
 /** select solutions to be merged */
 static
-SCIP_RETCODE selectdiffsols(
+SCIP_RETCODE solgraphSelectSolsDiff(
    SCIP*                 scip,               /**< SCIP data structure */
    const STPSOLPOOL*     pool,               /**< solution pool or NULL */
    const GRAPH*          graph,              /**< graph data structure */
@@ -192,6 +736,7 @@ SCIP_RETCODE selectdiffsols(
    const int nedges = graph->edges;
    const int nusedsols = heurdata->nusedsols;
    const SCIP_Bool usestppool = (pool != NULL);
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
 
    assert(selection != NULL);
    assert(graph != NULL);
@@ -242,6 +787,7 @@ SCIP_RETCODE selectdiffsols(
    solselected[pos] = TRUE;
    selection[nselectedsols++] = pos;
 
+   // mark current solution
    for( int e = 0; e < nedges; e += 2 )
       soledges[e / 2] = (incumbentedges[e] == CONNECT
                       || incumbentedges[e + 1] == CONNECT);
@@ -250,7 +796,7 @@ SCIP_RETCODE selectdiffsols(
 
    if( !usestppool )
    {
-      int sqrtnallsols = (int) sqrt((double) nsols);
+      const int sqrtnallsols = (int) sqrt((double) nsols);
 
       if( sqrtnallsols >= REC_MIN_NSOLS && sqrtnallsols < maxnsols )
          maxnsols = sqrtnallsols;
@@ -258,6 +804,7 @@ SCIP_RETCODE selectdiffsols(
 
    SCIPrandomPermuteIntArray(heurdata->randnumgen, perm, 0, maxnsols);
 
+   // check solutions to be merged
    for( int i = 0; i < nsols; i++ )
    {
       if( solselected[perm[i]] == FALSE )
@@ -292,8 +839,8 @@ SCIP_RETCODE selectdiffsols(
                   const int tail = graph->tail[e];
                   const int head = graph->head[e];
 
-                  /* no dummy edge? */
-                  if( !(Is_term(graph->term[tail]) && Is_term(graph->term[head])) )
+                  /* no edge between root and dummy terminal? */
+                  if( !pcmw || !(Is_term(graph->term[tail]) && Is_term(graph->term[head])) )
                      eqnedges++;
                }
             }
@@ -333,7 +880,7 @@ SCIP_RETCODE selectdiffsols(
 
 /** select solutions to be merged */
 static
-SCIP_RETCODE selectsols(
+SCIP_RETCODE solgraphSelectSols(
    SCIP*                 scip,               /**< SCIP data structure */
    const STPSOLPOOL*     pool,               /**< solution pool or NULL */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
@@ -427,7 +974,7 @@ SCIP_RETCODE selectsols(
 
    if( !usestppool )
    {
-      int sqrtnallsols = (int) sqrt(nsols);
+      const int sqrtnallsols = (int) sqrt(nsols);
 
       if( sqrtnallsols >= REC_MIN_NSOLS && sqrtnallsols < maxnsols )
          maxnsols = sqrtnallsols;
@@ -460,6 +1007,167 @@ SCIP_RETCODE selectsols(
    return SCIP_OKAY;
 }
 
+
+/** adapt merged solution graph for PC/MW */
+static
+void solgraphAdaptForPcMw(
+   const GRAPH*          graph,              /**< graph structure */
+   STP_Bool*             solnode,            /**< solution nodes array */
+   int*                  nsolnodes,          /**< number of nodes pointer */
+   STP_Bool*             soledge,            /**< solution edges array  */
+   int*                  nsoledges           /**< number of edges pointer */
+   )
+{
+   const int rpcmw = graph_pc_isRootedPcMw(graph);
+   const int oldroot = graph->source;
+   const int nnodes = graph->knots;
+
+   assert(solnode && soledge && nsolnodes && nsoledges);
+   assert(graph->extended);
+   assert(solnode[oldroot]);
+
+   /* remove unnecessary dummy edges and add necessary ones */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      /* dummy terminal other than the root? */
+      if( solnode[k] && graph_pc_knotIsDummyTerm(graph, k) && k != oldroot )
+      {
+         const int edgeroot = graph_pc_getRoot2PtermEdge(graph, k);
+         const int edge2pterm = graph->term2edge[k];
+         const int pterm = graph->head[edge2pterm];
+
+         assert(graph->grad[k] == 2 && edge2pterm >= 0 && Is_pseudoTerm(graph->term[pterm]));
+
+         if( !solnode[pterm] )
+         {
+            assert(soledge[edgeroot / 2]);
+            assert(!soledge[edge2pterm / 2]);
+
+            soledge[edgeroot / 2] = FALSE;
+            solnode[k] = FALSE;
+            (*nsoledges)--;
+            (*nsolnodes)--;
+         }
+         else if( !soledge[edgeroot / 2] )
+         {
+            soledge[edgeroot / 2] = TRUE;
+            (*nsoledges)++;
+         }
+      }
+
+      /* pseudo terminal? */
+      if( solnode[k] && Is_pseudoTerm(graph->term[k]) )
+      {
+         const int edge2term = graph->term2edge[k];
+         const int term = graph->head[edge2term];
+
+         if( !rpcmw )
+         {
+            const int edgeroot = graph_pc_getRoot2PtermEdge(graph, k);
+
+            if( !soledge[edgeroot / 2] )
+            {
+               soledge[edgeroot / 2] = TRUE;
+               (*nsoledges)++;
+            }
+         }
+
+         if( !solnode[term] )
+         {
+            const int edgeroot2term = graph_pc_getRoot2PtermEdge(graph, term);
+
+            solnode[term] = TRUE;
+            (*nsolnodes)++;
+
+            assert(!soledge[edge2term / 2]);
+            assert(!soledge[edgeroot2term / 2]);
+
+            soledge[edge2term / 2] = TRUE;
+            soledge[edgeroot2term / 2] = TRUE;
+            (*nsoledges) += 2;
+         }
+      }
+   }
+
+   assert(*nsolnodes >= 1);
+   assert(*nsoledges >= 0);
+}
+
+
+/** adapt merged solution graph for DCSTP */
+static
+void solgraphAdaptForDCSTP(
+   const GRAPH*          graph,              /**< graph structure */
+   const STP_Bool*       solnode,            /**< solution nodes array */
+   STP_Bool*             soledge,            /**< solution edges array  */
+   int*                  nsoledges           /**< number of edges pointer */
+   )
+{
+   const int nnodes = graph->knots;
+
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(graph->term[k]) )
+      {
+         assert(solnode[k]);
+         for( int i = graph->outbeg[k]; i != EAT_LAST; i = graph->oeat[i] )
+         {
+            if( solnode[graph->head[i]] && !soledge[i / 2] )
+            {
+               soledge[i / 2] = TRUE;
+               (*nsoledges)++;
+            }
+         }
+      }
+   }
+}
+
+
+
+/** add additional edges to solution graph */
+static
+void solgraphAddEdges(
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure */
+   const STP_Bool*       solnode,            /**< solution nodes array */
+   STP_Bool*             soledge,            /**< solution edges array  */
+   int*                  nsoledges           /**< number of edges pointer */
+   )
+{
+   const int nedges = graph->edges;
+
+   int naddedges = 0;
+   const int offset = SCIPrandomGetInt(heurdata->randnumgen, 0, nedges - 1);
+
+   for( int e = 0; e < nedges && naddedges <= (int)(REC_ADDEDGE_FACTOR * (*nsoledges)); e += 2 )
+   {
+      const int newedge = (e + offset) % nedges;
+      int tail;
+      int head;
+
+      if( soledge[newedge / 2] )
+         continue;
+
+      // todo if fixed to zero, continue?
+      if( graph->oeat[newedge] == EAT_FREE )
+         continue;
+
+      tail = graph->tail[newedge];
+      head = graph->head[newedge];
+
+      if( solnode[tail] && solnode[head] )
+      {
+         soledge[newedge / 2] = TRUE;
+         naddedges++;
+      }
+   }
+   SCIPdebugMessage("additional edges %d (orig: %d )\n", naddedges, *nsoledges);
+
+   (*nsoledges) += naddedges;
+}
+
+
 /** merge selected solutions to a new graph */
 static
 SCIP_RETCODE buildsolgraph(
@@ -482,8 +1190,7 @@ SCIP_RETCODE buildsolgraph(
    STPSOL** poolsols = NULL;
    SCIP_VAR** vars = NULL;
    int* solselection;
-   const SCIP_Bool pcmw = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP
-                        || graph->stp_type == STP_RPCSPG || graph->stp_type == STP_RMWCSP );
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    const SCIP_Bool usestppool = (pool != NULL);
 
    assert(scip != NULL);
@@ -510,9 +1217,9 @@ SCIP_RETCODE buildsolgraph(
 
    /* select solutions to be merged */
    if( pcmw || graph->stp_type == STP_DCSTP )
-      SCIP_CALL( selectdiffsols(scip, pool, graph, heurdata, vars, incumbentedges, incumbentindex, solselection, success) );
+      SCIP_CALL( solgraphSelectSolsDiff(scip, pool, graph, heurdata, vars, incumbentedges, incumbentindex, solselection, success) );
    else
-      SCIP_CALL( selectsols(scip, pool, heurdata, incumbentindex, solselection, randomize) );
+      SCIP_CALL( solgraphSelectSols(scip, pool, heurdata, incumbentindex, solselection, randomize) );
 
    if( *success )
    {
@@ -583,109 +1290,22 @@ SCIP_RETCODE buildsolgraph(
             }
          }
       }
-      if( pcmw ) /* todo this probably won't work for RMWCSP */
+
+      /* need to adapt solution graph for PC/MW? */
+      if( pcmw )
       {
-         const int oldroot = graph->source;
-         for( int i = graph->outbeg[oldroot]; i != EAT_LAST; i = graph->oeat[i] )
-         {
-            if( Is_gterm(graph->term[graph->head[i]]) )
-            {
-               const int ihalf = i / 2;
-               const int head = graph->head[i];
-               if( soledge[ihalf] == FALSE )
-               {
-                  nsoledges++;
-                  soledge[ihalf] = TRUE;
-                  if( !solnode[head] && SCIPisEQ(scip, graph->cost[flipedge(i)], FARAWAY) )
-                  {
-                     solnode[head] = TRUE;
-                     nsolnodes++;
-                  }
-                  assert(solnode[graph->head[i]]);
-               }
-
-               if( Is_pterm(graph->term[head]) )
-               {
-                  int e2;
-                  for( e2 = graph->outbeg[head]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
-                     if( Is_term(graph->term[graph->head[e2]]) && graph->head[e2] != oldroot )
-                        break;
-
-                  assert(e2 != EAT_LAST);
-
-                  if( soledge[e2 / 2] == FALSE )
-                  {
-                     nsoledges++;
-                     soledge[e2 / 2] = TRUE;
-                  }
-               }
-               else
-               {
-                  int e2;
-                  assert(Is_term(graph->term[head]));
-                  for( e2 = graph->outbeg[head]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
-                     if( Is_pterm(graph->term[graph->head[e2]]) && graph->head[e2] != oldroot )
-                        break;
-
-                  assert(e2 != EAT_LAST);
-
-                  if( soledge[e2 / 2] == FALSE )
-                  {
-                     nsoledges++;
-                     soledge[e2 / 2] = TRUE;
-                  }
-               }
-            }
-         }
+         solgraphAdaptForPcMw(graph, solnode, &nsolnodes, soledge, &nsoledges);
       }
 
       /* add additional edges? */
       if( addedges )
       {
-         int naddedges = 0;
-
-         for( int e = 0; e < nedges && naddedges <= (int)(REC_ADDEDGE_FACTOR * nsoledges); e += 2 )
-         {
-            int tail;
-            int head;
-
-            if( soledge[e / 2] )
-               continue;
-            // todo if fixed to zero, continue?
-            if( graph->oeat[e] == EAT_FREE )
-               continue;
-
-            tail = graph->tail[e];
-            head = graph->head[e];
-
-            if( solnode[tail] && solnode[head] )
-            {
-               soledge[e / 2] = TRUE;
-               naddedges++;
-            }
-         }
-         SCIPdebugMessage("additional edges %d (orig: %d )\n", naddedges, nsoledges);
-
-         nsoledges += naddedges;
+         solgraphAddEdges(heurdata, graph, solnode, soledge, &nsoledges);
       }
 
       if( graph->stp_type == STP_GSTP )
       {
-         for( int k = 0; k < nnodes; k++ )
-         {
-            if( Is_term(graph->term[k]) )
-            {
-               assert(solnode[k]);
-               for( int i = graph->outbeg[k]; i != EAT_LAST; i = graph->oeat[i] )
-               {
-                  if( solnode[graph->head[i]] && !soledge[i / 2] )
-                  {
-                     soledge[i / 2] = TRUE;
-                     nsoledges++;
-                  }
-               }
-            }
-         }
+         solgraphAdaptForDCSTP(graph, solnode, soledge, &nsoledges);
       }
 
       /* initialize new graph */
@@ -698,7 +1318,7 @@ SCIP_RETCODE buildsolgraph(
 
       if( pcmw )
       {
-         SCIP_CALL( graph_pc_init(scip, newgraph, nsolnodes, nsolnodes) );
+         SCIP_CALL( graph_pc_initSubgraph(scip, newgraph) );
       }
 
       newgraph->hoplimit = graph->hoplimit;
@@ -709,10 +1329,13 @@ SCIP_RETCODE buildsolgraph(
          {
             if( pcmw )
             {
-               if( (!Is_term(graph->term[i])) )
-                  newgraph->prize[j] = graph->prize[i];
-               else
-                  newgraph->prize[j] = 0.0;
+               assert(graph->extended);
+
+               newgraph->prize[j] = graph->prize[i];
+#ifndef NDEBUG
+               if( graph_pc_knotIsDummyTerm(graph, i) && i != graph->source )
+                  assert(0.0 == newgraph->prize[j]);
+#endif
             }
 
             graph_knot_add(newgraph, graph->term[i]);
@@ -724,16 +1347,18 @@ SCIP_RETCODE buildsolgraph(
       {
          newgraph->extended = TRUE;
          newgraph->norgmodelknots = newgraph->knots - newgraph->terms;
+
+         if( graph_pc_isRootedPcMw(graph) )
+            newgraph->norgmodelknots += graph_pc_nFixedTerms(graph);
       }
 
       SCIPdebugMessage("REC: sol graph with nodes: %d, edges: %d, terminals: %d  \n", nsolnodes, 2 * nsoledges, newgraph->terms);
 
       /* set root */
       newgraph->source = dnodemap[graph->source];
-      if( newgraph->stp_type == STP_RPCSPG || newgraph->stp_type == STP_RMWCSP )
-         newgraph->prize[newgraph->source] = FARAWAY;
 
       assert(newgraph->source >= 0);
+      assert(!graph_pc_isRootedPcMw(graph) || newgraph->prize[newgraph->source] == FARAWAY);
 
       /* copy max degrees*/
       if( graph->stp_type == STP_DCSTP )
@@ -757,19 +1382,10 @@ SCIP_RETCODE buildsolgraph(
       {
          if( soledge[i / 2] )
          {
-            const int orgtail = graph->tail[i];
-            const int orghead = graph->head[i];
-
             (*edgeancestor)[j++] = i;
             (*edgeancestor)[j++] = i + 1;
 
-            if( pcmw )
-            {
-               assert(newgraph->term2edge != NULL);
-               graph_pc_updateTerm2edge(newgraph, graph, dnodemap[orgtail], dnodemap[orghead], orgtail, orghead);
-            }
-
-            graph_edge_add(scip, newgraph, dnodemap[orgtail], dnodemap[orghead], graph->cost[i], graph->cost[i + 1]);
+            graph_edge_addSubgraph(scip, graph, dnodemap, i, newgraph);
 
             /* (*edgeweight)[e]: number of solutions containing edge e */
             for( int k = 0; k < selectedsols; k++ )
@@ -799,226 +1415,43 @@ SCIP_RETCODE buildsolgraph(
       }
 
       assert(j == 2 * nsoledges);
+
+      SCIP_CALL( graph_pc_finalizeSubgraph(scip, newgraph) );
+
       SCIPfreeBufferArray(scip, &soledge);
       SCIPfreeBufferArray(scip, &dnodemap);
       SCIPfreeBufferArray(scip, &solnode);
+
+      if( !graph_valid(scip, newgraph) )
+      {
+         assert(usestppool);
+
+         for( int k = 1; k < selectedsols; k++ )
+         {
+            assert(!poolSolIsUnreduced(graph, solselection[k], pool));
+         }
+
+         graph_free(scip, &newgraph, TRUE);
+
+         *success = FALSE;
+      }
+
+      assert(!pcmw || graph_pc_nFixedTerms(graph) == graph_pc_nFixedTerms(newgraph));
    }
 
    SCIPfreeBufferArray(scip, &solselection);
-   assert(graph_valid(newgraph));
+
+   assert(*success || newgraph == NULL);
+
    *solgraph = newgraph;
 
    return SCIP_OKAY;
 }
 
-static
-void marksolverts(
-   GRAPH* g,
-   IDX* curr,
-   int* unodemap,
-   STP_Bool* stvertex
-   )
-{
-   while( curr != NULL )
-   {
-      int i = curr->index;
-
-      stvertex[unodemap[ g->orghead[i] ]] = TRUE;
-      stvertex[unodemap[ g->orgtail[i] ]] = TRUE;
-
-      curr = curr->parent;
-   }
-}
-
-static
-SCIP_Bool isInPool(
-   const int*            soledges,           /**< edge array of solution to be checked */
-   const STPSOLPOOL*     pool                /**< the pool */
-)
-{
-   STPSOL** poolsols = pool->sols;
-   const int poolsize = pool->size;
-   const int nedges = pool->nedges;
-
-   for( int i = 0; i < poolsize; i++ )
-   {
-      int j;
-      const int* pooledges = poolsols[i]->soledges;
-      assert(pooledges != NULL);
-
-      for( j = 0; j < nedges; j++ )
-         if( pooledges[j] != soledges[j] )
-            break;
-
-      /* pooledges == soledges? */
-      if( j == nedges )
-      {
-         SCIPdebugMessage("Pool: solution is already contained \n");
-         return TRUE;
-      }
-   }
-   return FALSE;
-}
 
 /*
  * primal heuristic specific interface methods
  */
-
-
-/** get solution from index */
-STPSOL* SCIPStpHeurRecSolfromIdx(
-   STPSOLPOOL*           pool,               /**< the pool */
-   const int             soindex             /**< the index */
-      )
-{
-   int i;
-   int size;
-
-   assert(pool != NULL);
-   assert(soindex >= 0 && soindex <= pool->maxindex);
-
-   size = pool->size;
-
-   for( i = 0; i < size; i++ )
-      if( pool->sols[i]->index == soindex )
-         break;
-
-   if( i == size )
-      return NULL;
-   else
-      return pool->sols[i];
-}
-
-/** initializes STPSOL pool */
-SCIP_RETCODE SCIPStpHeurRecInitPool(
-   SCIP*                 scip,               /**< SCIP data structure */
-   STPSOLPOOL**          pool,               /**< the pool */
-   const int             nedges,             /**< number of edges of solutions to be stored in the pool */
-   const int             maxsize             /**< capacity of pool */
-   )
-{
-   STPSOLPOOL* dpool;
-
-   assert(pool != NULL);
-   assert(nedges > 0);
-   assert(maxsize > 0);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, pool) );
-
-   dpool = *pool;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(dpool->sols), maxsize) );
-
-   for( int i = 0; i < maxsize; i++ )
-      dpool->sols[i] = NULL;
-
-   dpool->size = 0;
-   dpool->nedges = nedges;
-   dpool->maxsize = maxsize;
-   dpool->maxindex = -1;
-
-   return SCIP_OKAY;
-}
-
-
-/** frees STPSOL pool */
-void SCIPStpHeurRecFreePool(
-   SCIP*                 scip,               /**< SCIP data structure */
-   STPSOLPOOL**          pool                /**< the pool */
-   )
-{
-   STPSOLPOOL* dpool = *pool;
-   const int poolsize = dpool->size;
-
-   assert(pool != NULL);
-   assert(dpool != NULL);
-   assert(poolsize == dpool->maxsize || dpool->sols[poolsize] == NULL);
-
-   for( int i = poolsize - 1; i >= 0; i-- )
-   {
-      STPSOL* sol = dpool->sols[i];
-
-      assert(sol != NULL);
-
-      SCIPfreeMemoryArray(scip, &(sol->soledges));
-      SCIPfreeBlockMemory(scip, &sol);
-   }
-
-   SCIPfreeMemoryArray(scip, &(dpool->sols));
-   SCIPfreeBlockMemory(scip, pool);
-}
-
-
-/** tries to add STPSOL to pool */
-SCIP_RETCODE SCIPStpHeurRecAddToPool(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const SCIP_Real       obj,                /**< objective of solution to be added */
-   const int*            soledges,           /**< edge array of solution to be added */
-   STPSOLPOOL*           pool,               /**< the pool */
-   SCIP_Bool*            success             /**< has solution been added? */
-   )
-{
-   STPSOL** poolsols = pool->sols;
-   STPSOL* sol;
-   int i;
-   int poolsize = pool->size;
-   const int nedges = pool->nedges;
-   const int poolmaxsize = pool->maxsize;
-
-   assert(scip != NULL);
-   assert(pool != NULL);
-   assert(poolsols != NULL);
-   assert(poolsize >= 0);
-   assert(poolmaxsize >= 0);
-   assert(poolsize <= poolmaxsize);
-
-   *success = FALSE;
-
-   /* is solution in pool? */
-   if( isInPool(soledges, pool) )
-      return SCIP_OKAY;
-
-   SCIPdebugMessage("Pool: add to pool (current size: %d, max: %d) \n", poolsize, poolmaxsize);
-
-   /* enlarge pool if possible */
-   if( poolsize < poolmaxsize )
-   {
-      SCIPdebugMessage("Pool: alloc memory at position %d \n", poolsize);
-
-      SCIP_CALL( SCIPallocBlockMemory(scip, &(poolsols[poolsize])) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(poolsols[poolsize]->soledges), nedges) );
-
-      poolsize++;
-      pool->size++;
-   }
-   /* pool is full; new solution worse than worst solution in pool? */
-   else if( SCIPisGT(scip, obj, poolsols[poolsize - 1]->obj) )
-   {
-      return SCIP_OKAY;
-   }
-
-   /* overwrite last element of pool (either empty or inferior to current solution) */
-   sol = poolsols[poolsize - 1];
-   assert(sol != NULL);
-   sol->obj = obj;
-   sol->index = ++(pool->maxindex);
-   BMScopyMemoryArray(sol->soledges, soledges, nedges);
-
-   /* shift solution up */
-   for( i = poolsize - 1; i >= 1; i-- )
-   {
-      if( SCIPisGT(scip, obj, poolsols[i - 1]->obj) )
-         break;
-
-      poolsols[i] = poolsols[i - 1];
-   }
-
-   poolsols[i] = sol;
-   SCIPdebugMessage("Pool: put new solution to position %d \n", i);
-   *success = TRUE;
-
-   return SCIP_OKAY;
-}
-
 
 
 /** runs STP recombination heuristic */
@@ -1032,20 +1465,18 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    int*                  newsolindex,        /**< index of new solution */
    int                   runs,               /**< number of runs */
    int                   nsols,              /**< number of solutions in pool (SCIP or STP) */
-   SCIP_Bool             restrictheur,       /**< use restricted version of heur? */
+   SCIP_Bool             restrictheur,       /**< use restricted version of heuristic? */
    SCIP_Bool*            solfound            /**< new solution found? */
 )
 {
    int* newsoledges;
    int* incumbentedges;
    SCIP_Real incumentobj;
-   SCIP_Real hopfactor = 0.1;
 
    const STP_Bool usestppool = (pool != NULL);
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
    const int probtype = graph->stp_type;
-   const SCIP_Bool pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG || probtype == STP_RMWCSP );
    STP_Bool* stnodes;
 
    assert(runs >= 0);
@@ -1061,49 +1492,8 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    SCIP_CALL( SCIPallocBufferArray(scip, &incumbentedges, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, nnodes) );
 
-   /*
-    * initialize incumbent solution
-    */
-
-   if( usestppool )
-   {
-      int i;
-      STPSOL** poolsols = pool->sols;
-
-      assert(pool->nedges == nedges);
-
-      for( i = 0; i < nsols; i++ )
-         if( *newsolindex == poolsols[i]->index )
-            break;
-      assert(i < nsols);
-
-      BMScopyMemoryArray(incumbentedges, poolsols[i]->soledges, nedges);
-   }
-   else
-   {
-      SCIP_SOL* newsol;
-      SCIP_SOL** sols = SCIPgetSols(scip);
-      int i;
-
-      assert(sols != NULL);
-
-      for( i = 0; i < nsols; i++ )
-         if( *newsolindex == SCIPsolGetIndex(sols[i]) )
-            break;
-      assert(i < nsols);
-
-      newsol = sols[i];
-
-      for( int e = 0; e < nedges; e++ )
-         if( SCIPisEQ(scip, SCIPgetSolVal(scip, newsol, vars[e]), 1.0) )
-            incumbentedges[e] = CONNECT;
-         else
-            incumbentedges[e] = UNKNOWN;
-   }
-
-   /* get objective value of incumbent */
-   incumentobj = graph_sol_getObj(graph->cost, incumbentedges, 0.0, nedges);
-
+   /* initialize solution vector (edges) and objective of incumbent */
+   initializeIncumbent(scip, pool, graph, vars, nsols, *newsolindex, &incumentobj, incumbentedges);
    SCIPdebugMessage("REC: incumbent obj: %f \n", incumentobj);
 
    if( heur == NULL )
@@ -1117,388 +1507,114 @@ SCIP_RETCODE SCIPStpHeurRecRun(
    /* main loop (for recombination) */
    for( int v = 0, failcount = 0; v < CYCLES_PER_RUN * runs && !SCIPisStopped(scip); v++ )
    {
-      GRAPH* solgraph;
-      IDX* curr;
+      GRAPH* solgraph = NULL;
       int* edgeweight;
       int* edgeancestor;
-      SCIP_Real pobj;
       SCIP_Bool success;
-      SCIP_Bool randomize;
-      int randn;
+      const SCIP_Bool randomize = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1);
+      const SCIP_Bool addmoreedges = (SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1);
 
-      if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1 )
-         randomize = TRUE;
-      else
-         randomize = FALSE;
-
-      if( restrictheur )
-         randn = SCIPrandomGetInt(heurdata->randnumgen, 0, 3);
-      else
-         randn = SCIPrandomGetInt(heurdata->randnumgen, 0, 6);
-
-      if( (randn <= 2) || (nsols < 3) )
-         heurdata->nusedsols = 2;
-      else if( (randn <= 4) || (nsols < 4) )
-         heurdata->nusedsols = 3;
-      else
-         heurdata->nusedsols = 4;
-
+      /* compute number of solutions to merge (and save in heurdata->nsols) */
+      setHeurdataNUsedSols(heurdata, nsols, restrictheur);
       SCIPdebugMessage("REC: merge %d solutions \n", heurdata->nusedsols);
 
       /* build a new graph, consisting of several solutions */
       SCIP_CALL( buildsolgraph(scip, pool, heurdata, graph, &solgraph, incumbentedges, newsolindex,
-            &edgeancestor, &edgeweight, &success, randomize, TRUE) );
+            &edgeancestor, &edgeweight, &success, randomize, addmoreedges) );
 
       /* valid graph built? */
       if( success )
       {
-         IDX** ancestors;
+         REDSOL* redsol = NULL;
          GRAPH* psolgraph;
-         STP_Bool* solnodes = NULL;
          int* soledges = NULL;
-         SCIP_HEURDATA* tmheurdata;
-         int nsoledges;
+         SCIP_Real pobj;
 
          SCIPdebugMessage("REC: solution successfully built \n");
-
-         assert(SCIPfindHeur(scip, "TM") != NULL);
-         tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
-
-         assert(graph_valid(solgraph));
+         assert(graph_valid(scip, solgraph));
 
          /* reduce new graph */
-         if( probtype == STP_RPCSPG || probtype == STP_DHCSTP || probtype == STP_DCSTP
-             || probtype == STP_NWSPG || probtype == STP_SAP || probtype == STP_RMWCSP )
-            SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 5, FALSE) );
+         /* NOTE for MW the reductions seem to be quite expensive */
+         if( !graph_typeIsUndirected(solgraph) || probtype == STP_DCSTP
+              || probtype == STP_RMWCSP )
+         {
+            SCIP_CALL( reduce_solInit(scip, solgraph, FALSE, &redsol) );
+            SCIP_CALL( reduce_exec(scip, solgraph, redsol, 0, 5, FALSE) );
+         }
          else
-            SCIP_CALL( reduce(scip, &solgraph, &pobj, 2, 5, FALSE) );
+         {
+            const int minnreds = 5;
+            SCIP_CALL( reduce_solInit(scip, solgraph, TRUE, &redsol) );
+            SCIP_CALL( reduce_exec(scip, solgraph, redsol,
+                  STP_REDUCTION_ADVANCED, minnreds, FALSE) );
+         }
 
-         SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, FALSE) );
+         SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, redsol, FALSE) );
 
          solgraph = psolgraph;
-         ancestors = solgraph->ancestors;
-         nsoledges = solgraph->edges;
 
-         /* if graph reduction solved the whole problem, solgraph has only one node */
+         /* if graph reduction solved the whole problem, solgraph has only one terminal */
          if( solgraph->terms > 1 )
          {
-            SCIP_Real* cost;
-            SCIP_Real* costrev;
-            SCIP_Real* orgprize = NULL;
-            SCIP_Real* nodepriority;
-            SCIP_Real maxcost;
-            int best_start;
-            const int nsolnodes = solgraph->knots;
+            SCIP_CALL( SCIPallocBufferArray(scip, &soledges, solgraph->edges) );
 
-            SCIPdebugMessage("REC: graph not completely reduced, nodes: %d, edges: %d, terminals: %d \n", solgraph->knots, nsoledges, solgraph->terms);
-
-            /* allocate memory */
-            SCIP_CALL( SCIPallocBufferArray(scip, &soledges, nsoledges) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsoledges) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsoledges) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nsolnodes) );
-
-            if( pcmw )
-               SCIP_CALL( SCIPallocBufferArray(scip, &orgprize, nsolnodes) );
-
-            for( int i = 0; i < nsolnodes; i++ )
-               nodepriority[i] = 0.0;
-
-            /*
-             * 1. modify edge costs
-             */
-
-            /* copy edge costs */
-            BMScopyMemoryArray(cost, solgraph->cost, nsoledges);
-
-            maxcost = 0.0;
-            for( int e = 0; e < nsoledges; e++ )
-            {
-               SCIP_Real avg = 0.0;
-               int i = 0;
-               SCIP_Bool fixed = FALSE;
-
-               curr = ancestors[e];
-
-               if( curr != NULL )
-               {
-                  while( curr != NULL )
-                  {
-                     i++;
-                     avg += edgeweight[curr->index];
-                     if( !usestppool && SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5 )
-                        fixed = TRUE;
-
-                     curr = curr->parent;
-                  }
-                  avg = avg / (double) i;
-                  assert(avg >= 1);
-               }
-               /* is an ancestor edge fixed? */
-               if( fixed )
-               {
-                  cost[e] = BLOCKED;
-
-                  nodepriority[solgraph->head[e]] /= 2.0;
-                  nodepriority[solgraph->tail[e]] /= 2.0;
-               }
-
-               nodepriority[solgraph->head[e]] += avg - 1.0;
-               nodepriority[solgraph->tail[e]] += avg - 1.0;
-
-               cost[e] *= edgecostmultiplier(scip, heurdata, avg);
-
-               if( probtype == STP_DHCSTP && SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
-                  maxcost = cost[e];
-            }
-
-            /* adapted prizes */
-            if( pcmw )
-            {
-               const int solgraphroot = solgraph->source;
-               SCIP_Real* const prize = solgraph->prize;
-
-               assert(prize != NULL);
-               assert(orgprize != NULL);
-               assert(solgraph->extended);
-
-#ifndef NDEBUG
-               graph_pc_2org(solgraph);
-               assert(graph_pc_term2edgeConsistent(solgraph));
-               graph_pc_2trans(solgraph);
-#endif
-
-               for( int k = 0; k < nsolnodes; k++ )
-               {
-                  if( Is_pterm(solgraph->term[k]) && k != solgraphroot )
-                  {
-                     int e;
-                     const int term = solgraph->head[solgraph->term2edge[k]];
-                     orgprize[k] = prize[k];
-
-                     assert(term >= 0);
-                     assert(Is_term(solgraph->term[term]));
-
-                     for( e = solgraph->inpbeg[term]; e != EAT_LAST; e = solgraph->ieat[e] )
-                        if( solgraph->tail[e] == solgraphroot )
-                           break;
-
-                     assert(e != EAT_LAST);
-
-                     prize[k] = cost[e];
-                     assert(solgraph->cost[e] > 0);
-                  }
-               }
-            }
-
-            for( int e = 0; e < nsoledges; e++ )
-            {
-               costrev[e] = cost[flipedge(e)];
-               soledges[e] = UNKNOWN;
-            }
-
-            /* initialize shortest path algorithm */
-            SCIP_CALL( graph_path_init(scip, solgraph) );
-
-            /*
-             *  2. compute solution
-             */
-
-            // todo: run prune heuristic with changed weights!
-
-            /* run TM heuristic */
-            SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, solgraph, NULL, &best_start, soledges, heurdata->ntmruns,
-                  solgraph->source, cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
-
-            assert(SCIPisStopped(scip) || success);
-            assert(SCIPisStopped(scip) || graph_sol_valid(scip, solgraph, soledges));
-
-            /* reset vertex weights */
-            if( pcmw )
-            {
-               SCIP_Real* const prize = solgraph->prize;
-
-               assert(orgprize != NULL);
-
-               for( int k = 0; k < nsolnodes; k++ )
-                  if( Is_pterm(solgraph->term[k]) && k != solgraph->source )
-                     prize[k] = orgprize[k];
-
-               SCIPfreeBufferArray(scip, &orgprize);
-            }
-
-            assert(graph_valid(solgraph));
-
-            /* run local heuristic (with original costs) */
-            if( !SCIPisStopped(scip) && probtype != STP_DHCSTP && probtype != STP_DCSTP
-                  && probtype != STP_SAP && probtype != STP_NWSPG && probtype != STP_RMWCSP )
-            {
-               SCIP_CALL( SCIPStpHeurLocalRun(scip, solgraph, solgraph->cost, soledges) );
-               assert(graph_sol_valid(scip, solgraph, soledges));
-            }
-
-            graph_path_exit(scip, solgraph);
-
-            SCIPfreeBufferArray(scip, &nodepriority);
-            SCIPfreeBufferArray(scip, &costrev);
-            SCIPfreeBufferArray(scip, &cost);
-         } /* graph->terms > 1 */
-
-         for( int i = 0; i < nedges; i++ )
-            newsoledges[i] = UNKNOWN;
-
-         for( int i = 0; i < nnodes; i++ )
-            stnodes[i] = FALSE;
-
-         if( pcmw )
-         {
-            SCIP_CALL( SCIPallocBufferArray(scip, &solnodes, solgraph->orgknots) );
-
-            for( int i = 0; i < solgraph->orgknots; i++ )
-               solnodes[i] = FALSE;
+            SCIP_CALL( computeReducedProbSolution(scip, heurdata, graph, solgraph, redsol, edgeweight,
+                  edgeancestor, vars, usestppool, soledges, &success) );
          }
+         assert(success || probtype == STP_DHCSTP || probtype == STP_DCSTP || SCIPisStopped(scip));
 
-         /*
-          *  retransform solution found by heuristic
-          */
+         reduce_solFree(scip, &redsol);
 
-         if( solgraph->terms > 1 )
-         {
-            assert(soledges != NULL);
-            for( int e = 0; e < nsoledges; e++ )
-            {
-               if( soledges[e] == CONNECT )
-               {
-                  /* iterate through list of ancestors */
-                  if( probtype != STP_DCSTP )
-                  {
-                     curr = ancestors[e];
+         /*  retransform solution (soledges or single vertex) found above */
+         if( success )
+            SCIP_CALL( retransformReducedProbSolution(scip, graph, solgraph, edgeancestor, soledges, newsoledges, stnodes) );
 
-                     while( curr != NULL )
-                     {
-                        int i = edgeancestor[curr->index];
-
-                        stnodes[graph->head[i]] = TRUE;
-                        stnodes[graph->tail[i]] = TRUE;
-
-                        if( pcmw )
-                        {
-                           assert(solgraph->orghead[curr->index] < solgraph->orgknots);
-                           assert(solgraph->orgtail[curr->index] < solgraph->orgknots);
-
-                           solnodes[solgraph->orghead[curr->index]] = TRUE;
-                           solnodes[solgraph->orgtail[curr->index]] = TRUE;
-                        }
-
-                        curr = curr->parent;
-                     }
-                  }
-                  else
-                  {
-                     curr = ancestors[e];
-                     while( curr != NULL )
-                     {
-                        int i = edgeancestor[curr->index];
-                        newsoledges[i] = CONNECT;
-
-                        curr = curr->parent;
-                     }
-                  }
-               }
-            }
-         } /* if( solgraph->terms > 1 ) */
-
-         /* retransform edges fixed during graph reduction */
-         if( probtype != STP_DCSTP )
-         {
-            curr = solgraph->fixedges;
-
-            while( curr != NULL )
-            {
-               const int i = edgeancestor[curr->index];
-
-               stnodes[graph->head[i]] = TRUE;
-               stnodes[graph->tail[i]] = TRUE;
-               if( pcmw )
-               {
-                  assert(solgraph->orghead[curr->index] < solgraph->orgknots);
-                  assert(solgraph->orgtail[curr->index] < solgraph->orgknots);
-
-                  solnodes[solgraph->orghead[curr->index]] = TRUE;
-                  solnodes[solgraph->orgtail[curr->index]] = TRUE;
-               }
-
-               curr = curr->parent;
-            }
-         }
-         else
-         {
-            curr = solgraph->fixedges;
-            while( curr != NULL )
-            {
-               const int i = edgeancestor[curr->index];
-               newsoledges[i] = CONNECT;
-            }
-         }
-
-         if( pcmw )
-         {
-            STP_Bool* pcancestoredges;
-            SCIP_CALL( SCIPallocBufferArray(scip, &pcancestoredges, solgraph->orgedges) );
-
-            for( int k = 0; k < solgraph->orgedges; k++ )
-               pcancestoredges[k] = FALSE;
-
-            SCIP_CALL( graph_sol_markPcancestors(scip, solgraph->pcancestors, solgraph->orgtail, solgraph->orghead, solgraph->orgknots,
-                  solnodes, pcancestoredges, NULL, NULL, NULL ) );
-
-            for( int k = 0; k < solgraph->orgedges; k++ )
-               if( pcancestoredges[k] )
-               {
-                  const int i = edgeancestor[k];
-                  stnodes[graph->tail[i]] = TRUE;
-                  stnodes[graph->head[i]] = TRUE;
-               }
-
-            SCIPfreeBufferArray(scip, &pcancestoredges);
-            SCIPfreeBufferArray(scip, &solnodes);
-         }
-
+         SCIPfreeBufferArrayNull(scip, &soledges);
          SCIPfreeMemoryArray(scip, &edgeancestor);
 
          graph_free(scip, &solgraph, TRUE);
 
-         /* prune solution (in the original graph) */
-         if( pcmw )
-            SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, newsoledges, stnodes) );
-         else if( probtype == STP_DCSTP )
-            SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, graph, newsoledges, stnodes) );
-         else
-            SCIP_CALL( SCIPStpHeurTMPrune(scip, graph, graph->cost, 0, newsoledges, stnodes) );
+         if( success )
+         {
+            /* prune solution (in the original graph) */
+            if( probtype == STP_DCSTP )
+               SCIP_CALL( SCIPStpHeurTMBuildTreeDc(scip, graph, newsoledges, stnodes) );
+            else
+               SCIP_CALL( solstp_prune(scip, graph, newsoledges, stnodes) );
 
-         assert(graph_sol_valid(scip, graph, newsoledges));
-         pobj = graph_sol_getObj(graph->cost, newsoledges, 0.0, nedges);
+            assert(solstp_isValid(scip, graph, newsoledges) || SCIPisStopped(scip));
+            pobj = solstp_getObjBounded(graph, newsoledges, 0.0, nedges);
+         }
+         else
+         {
+            assert(probtype == STP_DHCSTP || SCIPisStopped(scip) || probtype == STP_DCSTP);
+            pobj = FARAWAY;
+         }
 
          SCIPdebugMessage("REC: new obj: %f \n", pobj);
 
-         /* improved incumbent solution? */
+         /* new solution better than incumbent? */
          if( !SCIPisStopped(scip) && SCIPisLT(scip, pobj, incumentobj) )
          {
             SCIPdebugMessage("...is better! \n");
             incumentobj = pobj;
-            *solfound = TRUE;
             BMScopyMemoryArray(incumbentedges, newsoledges, nedges);
+
+            if( (!restrictheur && failcount >= 1) || !(*solfound) )
+               failcount--;
+
+            *solfound = TRUE;
          }
          else
          {
             failcount++;
          }
-
-         SCIPfreeBufferArrayNull(scip, &soledges);
       }
-      else
+      else // no new graph could be built
       {
+         assert(solgraph == NULL);
          failcount++;
+         SCIPdebugMessage("REC: no new graph could be build \n");
       }
 
       SCIPfreeMemoryArray(scip, &edgeweight);
@@ -1509,83 +1625,25 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          SCIPdebugMessage("REC: too many fails, exit! \n");
          break;
       }
-   }
+   } /* main recombination loop */
 
-   SCIPfreeBufferArray(scip, &stnodes);
 
    /* improving solution found? */
    if( *solfound )
    {
-      /*
-       * store best solution in pool
-       */
-
-      SCIPdebugMessage("REC: better solution found ...  ");
-
-      if( usestppool )
-      {
-         const int maxindex = pool->maxindex;
-         SCIP_CALL( SCIPStpHeurRecAddToPool(scip, incumentobj, incumbentedges, pool, solfound) );
-
-         if( *solfound )
-         {
-            assert(pool->maxindex == maxindex + 1);
-            *newsolindex = maxindex + 1;
-            SCIPdebugMessage("and added! \n");
-         }
-         else
-         {
-            *newsolindex = -1;
-         }
-      }
-      else
-      {
-         SCIP_SOL* sol = NULL;
-         SCIP_Real* nval = NULL;
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &nval, nedges) );
-
-         for( int e = 0; e < nedges; e++ )
-         {
-            if( newsoledges[e] == CONNECT )
-               nval[e] = 1.0;
-            else
-               nval[e] = 0.0;
-         }
-
-         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, solfound) );
-
-         if( *solfound )
-         {
-            SCIP_SOL** sols = SCIPgetSols(scip);
-            int idx = -1;
-
-            SCIPdebugMessage("and added! \n");
-
-            nsols = SCIPgetNSols(scip);
-
-            assert(nsols > 0);
-
-            for( int i = 1; i < nsols; i++ )
-               if( SCIPsolGetIndex(sols[i]) > idx )
-                  idx = SCIPsolGetIndex(sols[i]);
-
-            assert(idx >= 0);
-
-            *newsolindex = idx;
-         }
-         SCIPfreeBufferArray(scip, &nval);
-
-      }
+      SCIP_CALL( poolAddSol(scip, pool, heur, incumentobj, incumbentedges, nedges, newsolindex, solfound) );
    }
    else
    {
       *newsolindex = -1;
    }
 
+   SCIPdebugMessage("incumbentobj=%f newsolobj=%f \n", solstp_getObjBounded(graph, incumbentedges, 0.0, nedges), solstp_getObjBounded(graph, newsoledges, 0.0, nedges));
+   SCIPdebugMessage("incumentobj=%f \n", incumentobj);
+
+   SCIPfreeBufferArray(scip, &stnodes);
    SCIPfreeBufferArray(scip, &incumbentedges);
    SCIPfreeBufferArray(scip, &newsoledges);
-
 
    return SCIP_OKAY;
 }
@@ -1601,16 +1659,14 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP_Bool*            success             /**< solution improved? */
    )
 {
-   SCIP_HEURDATA* tmheurdata;
+   REDSOL* redsol;
    GRAPH* newgraph;
    int* unodemap;
    STP_Bool* solnodes;
-   SCIP_Real dummy;
    int j;
    int nsolterms;
    int nsoledges;
    int nsolnodes;
-   int best_start;
    const int root = graph->source;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
@@ -1625,7 +1681,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    *success = FALSE;
    assert(graph->stp_type == STP_MWCSP);
-   assert(graph_valid(graph));
+   assert(graph_valid(scip, graph));
 
    /* killed solution edge? */
    for( int e = 0; e < nedges; e++ )
@@ -1651,7 +1707,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          if( tail == root )
          {
             /* there might be only one node */
-            if( Is_pterm(graph->term[head]) )
+            if( Is_pseudoTerm(graph->term[head]) )
             {
                stvertex[head] = 1;
                nsolterms++;
@@ -1664,7 +1720,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          assert(!stvertex[head] );
          stvertex[head] = 1;
 
-         if( Is_pterm(graph->term[head]) )
+         if( Is_pseudoTerm(graph->term[head]) )
             nsolterms++;
          nsolnodes++;
       }
@@ -1688,7 +1744,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    newgraph->extended = TRUE;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &unodemap, nsolnodes) );
-   SCIP_CALL( graph_pc_init(scip, newgraph, nsolnodes, nsolnodes) );
+   SCIP_CALL( graph_pc_initSubgraph(scip, newgraph) );
 
    j = 0;
    for( int i = 0; i < nnodes; i++ )
@@ -1698,7 +1754,11 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          if( (!Is_term(graph->term[i])) )
             newgraph->prize[j] = graph->prize[i];
          else
+         {
+            assert(SCIPisZero(scip, graph->prize[i]));
+
             newgraph->prize[j] = 0.0;
+         }
 
          graph_knot_add(newgraph, graph->term[i]);
          unodemap[j] = i;
@@ -1719,45 +1779,36 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    /* add edges */
    for( int i = 0; i < nedges; i += 2 )
       if( stvertex[graph->tail[i]] && stvertex[graph->head[i]] && graph->oeat[i] != EAT_FREE )
-      {
-         const int tail = graph->tail[i];
-         const int head = graph->head[i];
-         const int dtail = dnodemap[tail];
-         const int dhead = dnodemap[head];
-
-         graph_pc_updateTerm2edge(newgraph, graph, dtail, dhead, tail, head);
-         graph_edge_add(scip, newgraph, dtail, dhead, graph->cost[i], graph->cost[i + 1]);
-      }
+         graph_edge_addSubgraph(scip, graph, dnodemap, i, newgraph);
 
    assert(newgraph->edges == nsoledges);
+
+   SCIP_CALL( graph_pc_finalizeSubgraph(scip, newgraph) );
 
 
    /*** step 2: presolve ***/
 
    newgraph->norgmodelknots = nsolnodes;
 
-   dummy = 0.0;
-   SCIP_CALL( reduce(scip, &newgraph, &dummy, 1, 5, FALSE) );
+   SCIP_CALL( reduce_solInit(scip, newgraph, FALSE, &redsol) );
+
+   SCIP_CALL( reduce_exec(scip, newgraph, redsol, 1, 5, FALSE) );
+
+   reduce_solFree(scip, &redsol);
 
 
    /*** step 3: compute solution on new graph ***/
 
-
-   /* get TM heuristic data */
-   assert(SCIPfindHeur(scip, "TM") != NULL);
-   tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
-
    SCIP_CALL( graph_path_init(scip, newgraph) );
 
    /* compute Steiner tree to obtain upper bound */
-   best_start = newgraph->source;
-   SCIP_CALL( SCIPStpHeurTMRun(scip, tmheurdata, newgraph, NULL, &best_start, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost,
-         newgraph->cost, &dummy, NULL, 0.0, success, FALSE) );
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
+      newgraph, NULL, NULL, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost, newgraph->cost, NULL, NULL, success) );
 
    graph_path_exit(scip, newgraph);
 
    assert(*success);
-   assert(graph_sol_valid(scip, newgraph, newresult));
+   assert(solstp_isValid(scip, newgraph, newresult));
 
 
    /*** step 4: retransform solution to original graph ***/
@@ -1767,10 +1818,10 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    for( int e = 0; e < nsoledges; e++ )
       if( newresult[e] == CONNECT )
-         marksolverts(newgraph, newgraph->ancestors[e], unodemap, stvertex);
+         marksolverts(newgraph, graph_edge_getAncestors(newgraph, e), unodemap, stvertex);
 
    /* retransform edges fixed during graph reduction */
-   marksolverts(newgraph, newgraph->fixedges, unodemap, stvertex);
+   marksolverts(newgraph, graph_getFixedges(newgraph), unodemap, stvertex);
 
    for( int k = 0; k < nsolnodes; k++ )
       if( stvertex[unodemap[k]] )
@@ -1788,7 +1839,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
          solnodes[dnodemap[k]] = TRUE;
       }
 
-   SCIP_CALL( graph_sol_markPcancestors(scip, newgraph->pcancestors, newgraph->orgtail, newgraph->orghead, nsolnodes, solnodes, NULL, NULL, NULL, NULL ) );
+   SCIP_CALL( solstp_markPcancestors(scip, newgraph->pcancestors, newgraph->orgtail, newgraph->orghead, nsolnodes, solnodes, NULL, NULL, NULL, NULL ) );
 
    for( int k = 0; k < nsolnodes; k++ )
       if( solnodes[k] )
@@ -1796,28 +1847,27 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    SCIPfreeBufferArray(scip, &solnodes);
 
-   for( int e = 0; e < nedges; e++ )
-      newresult[e] = UNKNOWN;
+   assert(graph_pc_isPcMw(graph));
 
-   SCIP_CALL( SCIPStpHeurTMPrunePc(scip, graph, graph->cost, newresult, stvertex) );
+   SCIP_CALL( solstp_prune(scip, graph, newresult, stvertex) );
 
    /* solution better than original one?  */
 
-   if( SCIPisLT(scip, graph_sol_getObj(graph->cost, newresult, 0.0, nedges),
-         graph_sol_getObj(graph->cost, result, 0.0, nedges)) )
+   if( SCIPisLT(scip, solstp_getObjBounded(graph, newresult, 0.0, nedges),
+         solstp_getObjBounded(graph, result, 0.0, nedges)) )
    {
       *success = TRUE;
-      SCIPdebugMessage("success %f < %f \n", graph_sol_getObj(graph->cost, newresult, 0.0, nedges), graph_sol_getObj(graph->cost, result, 0.0, nedges));
+      SCIPdebugMessage("success %f < %f \n", solstp_getObjBounded(graph, newresult, 0.0, nedges), solstp_getObjBounded(graph, result, 0.0, nedges));
    }
    else
    {
-      SCIPdebugMessage("no improvements %f >= %f \n", graph_sol_getObj(graph->cost, newresult, 0.0, nedges), graph_sol_getObj(graph->cost, result, 0.0, nedges));
+      SCIPdebugMessage("no improvements %f >= %f \n", solstp_getObjBounded(graph, newresult, 0.0, nedges), solstp_getObjBounded(graph, result, 0.0, nedges));
       *success = FALSE;
    }
 
-   assert(graph_sol_valid(scip, graph, newresult));
+   assert(solstp_isValid(scip, graph, newresult));
 
-   if( !graph_sol_valid(scip, graph, newresult) )
+   if( !solstp_isValid(scip, graph, newresult) )
       *success = FALSE;
 
    SCIPfreeBufferArray(scip, &unodemap);
@@ -1951,6 +2001,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    int newsolindex;
    int nreadysols;
    int bestsolindex;
+   int nwaitingsols;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -1972,12 +2023,12 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    probtype = graph->stp_type;
    *result = SCIP_DIDNOTRUN;
 
-   if( probtype == STP_RMWCSP )
+   if( probtype == STP_BRMWCSP )
       return SCIP_OKAY;
 
    SCIPdebugMessage("REC: checking ... \n");
 
-   pcmw = (probtype == STP_PCSPG || probtype == STP_MWCSP || probtype == STP_RPCSPG || probtype == STP_RMWCSP);
+   pcmw = graph_pc_isPcMw(graph);
    nallsols = SCIPgetNSolsFound(scip);
    nreadysols = SCIPgetNSols(scip);
 
@@ -1988,18 +2039,24 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    if( probtype == STP_DCSTP )
       return SCIP_OKAY;
 
-   /* suspend heuristic? */
-   if( pcmw || probtype == STP_DHCSTP || probtype == STP_DCSTP )
+   nwaitingsols = heurdata->nwaitingsols;
+
+   if( graph_pc_isPc(graph) && SCIPprobdataProbIsAdversarial(scip) )
+   {
+      nwaitingsols--;
+   }
+
+   /* suspend heuristic?
+    * todo case distinction not really needed anymore... */
+   if( pcmw || probtype == STP_DHCSTP )
    {
       int i;
       if( heurdata->ncalls == 0 )
          i = 0;
       else if( heurdata->maxfreq )
          i = 1;
-      else if( probtype == STP_RPCSPG || probtype == STP_DCSTP )
-         i = MIN(2 * heurdata->nwaitingsols, 2 * heurdata->nfailures);
       else
-         i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
+         i = MIN(nwaitingsols, heurdata->nfailures);
 
       if( nallsols <= heurdata->nlastsols + i )
          return SCIP_OKAY;
@@ -2010,7 +2067,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       if( heurdata->maxfreq )
          i = 1;
       else
-         i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
+         i = MIN(nwaitingsols, heurdata->nfailures);
 
       if( nallsols <= heurdata->nlastsols + i && heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          return SCIP_OKAY;
@@ -2021,6 +2078,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    assert(vars != NULL);
    assert(vars[0] != NULL);
 
+   *result = SCIP_DIDNOTFIND;
    heurdata->ncalls++;
 
    restrictheur = (graph->terms > BOUND_MAXNTERMINALS && graph->edges > BOUND_MAXNEDGES);
@@ -2148,10 +2206,6 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
 
    heurdata->nusedsols = DEFAULT_NUSEDSOLS;
    heurdata->randseed = DEFAULT_RANDSEED;
-
-#ifdef WITH_UG
-   heurdata->randseed += getUgRank();
-#endif
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed, TRUE) );

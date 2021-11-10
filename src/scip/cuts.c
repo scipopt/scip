@@ -18,6 +18,7 @@
  * @brief  methods for aggregation of rows
  * @author Jakob Witzig
  * @author Leona Gottwald
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -207,7 +208,7 @@ SCIP_Real calcEfficacy(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real norm;
+   SCIP_Real norm = 0.0;
    SCIP_Real activity = 0.0;
    int i;
 
@@ -217,10 +218,45 @@ SCIP_Real calcEfficacy(
 
    vars = SCIPgetVars(scip);
 
-   for( i = 0; i < cutnnz; ++i )
-      activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+   switch( scip->set->sepa_efficacynorm )
+   {
+   case 'e':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         norm += SQR(cutcoefs[i]);
+      }
+      norm = SQRT(norm);
+      break;
+   case 'm':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         SCIP_Real absval;
 
-   norm = SCIPgetVectorEfficacyNorm(scip, cutcoefs, cutnnz);
+         activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         absval = REALABS(cutcoefs[i]);
+         norm = MAX(norm, absval);
+      }
+      break;
+   case 's':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         norm += REALABS(cutcoefs[i]);
+      }
+      break;
+   case 'd':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         if( !SCIPisZero(scip, cutcoefs[i]) )
+            norm = 1.0;
+      }
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", scip->set->sepa_efficacynorm);
+      assert(FALSE); /*lint !e506*/
+   }
 
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
@@ -299,7 +335,7 @@ SCIP_Real calcEfficacyDenseStorageQuad(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real norm;
+   SCIP_Real norm = 0.0;
    SCIP_Real activity = 0.0;
    SCIP_Real QUAD(coef);
    int i;
@@ -311,18 +347,54 @@ SCIP_Real calcEfficacyDenseStorageQuad(
 
    vars = SCIPgetVars(scip);
 
-   for( i = 0; i < cutnnz; ++i )
+   switch( scip->set->sepa_efficacynorm )
    {
-      QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
-      activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
-   }
+   case 'e':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
+         activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         norm += SQR(QUAD_TO_DBL(coef));
+      }
+      norm = SQRT(norm);
+      break;
+   case 'm':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         SCIP_Real absval;
 
-   norm = calcEfficacyNormQuad(scip, cutcoefs, cutinds, cutnnz);
+         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
+         activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         absval = REALABS(QUAD_TO_DBL(coef));
+         norm = MAX(norm, absval);
+      }
+      break;
+   case 's':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
+         activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         norm += REALABS(QUAD_TO_DBL(coef));
+      }
+      break;
+   case 'd':
+      for( i = 0; i < cutnnz; ++i )
+      {
+         QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[i]);
+         activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
+         if( !SCIPisZero(scip, QUAD_TO_DBL(coef)) )
+            norm = 1.0;
+      }
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c.'\n", scip->set->sepa_efficacynorm);
+      assert(FALSE); /*lint !e506*/
+   }
 
    return (activity - cutrhs) / MAX(1e-6, norm);
 }
 
-/** safely remove all items with |a_i| or |u_i - l_i)| below the given value
+/** safely remove all items with |a_i| or |u_i - l_i| below the given value
  *
  *  Returns TRUE if the cut became redundant.
  *  If it is a local cut, use local bounds, otherwise, use global bounds.
@@ -370,11 +442,11 @@ SCIP_Bool removeZerosQuad(
       else
          isfixed = FALSE;
 
-      if( EPSZ(QUAD_TO_DBL(val), minval) || isfixed )
+      if( isfixed || EPSZ(QUAD_TO_DBL(val), minval) )
       {
          if( REALABS(QUAD_TO_DBL(val)) > QUAD_EPSILON )
          {
-            /* adjust left and right hand sides with max contribution */
+            /* adjust right hand side with max contribution */
             if( QUAD_TO_DBL(val) < 0.0 )
             {
                if( SCIPisInfinity(scip, ub) )
@@ -415,7 +487,7 @@ SCIP_Bool removeZerosQuad(
    return FALSE;
 }
 
-/** safely remove all items with |a_i| or |u_i - l_i)| below the given value
+/** safely remove all items with |a_i| or |u_i - l_i| below the given value
  *
  *  Returns TRUE if the cut became redundant.
  *  If it is a local cut, use local bounds, otherwise, use global bounds.
@@ -1617,6 +1689,7 @@ void SCIPaggrRowFree(
    )
 {
    int nvars;
+
    assert(scip != NULL);
    assert(aggrrow != NULL);
 
@@ -2433,253 +2506,6 @@ SCIP_Real SCIPaggrRowGetRhs(
    return QUAD_TO_DBL(aggrrow->rhs);
 }
 
-/** filters the given array of cuts to enforce a maximum parallelism constraints
- *  for the given cut; moves filtered cuts to the end of the array and returns number of selected cuts */
-static
-int filterWithParallelism(
-   SCIP_ROW*             cut,                /**< cut to filter orthogonality with */
-   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
-   SCIP_Real*            scores,             /**< array with scores of cuts to perform selection algorithm */
-   int                   ncuts,              /**< number of cuts in given array */
-   SCIP_Real             goodscore,          /**< threshold for the score to be considered a good cut */
-   SCIP_Real             goodmaxparall,      /**< maximal parallelism for good cuts */
-   SCIP_Real             maxparall           /**< maximal parallelism for all cuts that are not good */
-   )
-{
-   int i;
-
-   assert( cut != NULL );
-   assert( ncuts == 0 || cuts != NULL );
-   assert( ncuts == 0 || scores != NULL );
-
-   for( i = ncuts - 1; i >= 0; --i )
-   {
-      SCIP_Real thisparall;
-      SCIP_Real thismaxparall;
-
-      thisparall = SCIProwGetParallelism(cut, cuts[i], 'e');
-      thismaxparall = scores[i] >= goodscore ? goodmaxparall : maxparall;
-
-      if( thisparall > thismaxparall )
-      {
-         --ncuts;
-         SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
-         SCIPswapReals(&scores[i], &scores[ncuts]);
-      }
-   }
-
-   return ncuts;
-}
-
-/** move the cut with the highest score to the first position in the array; there must be at least one cut */
-static
-void selectBestCut(
-   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
-   SCIP_Real*            scores,             /**< array with scores of cuts to perform selection algorithm */
-   int                   ncuts               /**< number of cuts in given array */
-   )
-{
-   int i;
-   int bestpos;
-   SCIP_Real bestscore;
-
-   assert(ncuts > 0);
-   assert(cuts != NULL);
-   assert(scores != NULL);
-
-   bestscore = scores[0];
-   bestpos = 0;
-
-   for( i = 1; i < ncuts; ++i )
-   {
-      if( scores[i] > bestscore )
-      {
-         bestpos = i;
-         bestscore = scores[i];
-      }
-   }
-
-   SCIPswapPointers((void**) &cuts[bestpos], (void**) &cuts[0]);
-   SCIPswapReals(&scores[bestpos], &scores[0]);
-}
-
-/** perform a cut selection algorithm for the given array of cuts; the array is partitioned
- *  so that the selected cuts come first and the remaining ones are at the end of the array
- */
-SCIP_RETCODE SCIPselectCuts(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
-   SCIP_Real             goodscorefac,       /**< factor of best score among the given cuts to consider a cut good
-                                              *   and filter with less strict settings of the maximum parallelism */
-   SCIP_Real             badscorefac,        /**< factor of best score among the given cuts to consider a cut bad
-                                              *   and discard it regardless of its parallelism to other cuts */
-   SCIP_Real             goodmaxparall,      /**< maximum parallelism for good cuts */
-   SCIP_Real             maxparall,          /**< maximum parallelism for non-good cuts */
-   SCIP_Real             dircutoffdistweight,/**< weight of directed cutoff distance in score calculation */
-   SCIP_Real             efficacyweight,     /**< weight of efficacy (shortest cutoff distance) in score calculation */
-   SCIP_Real             objparalweight,     /**< weight of objective parallelism in score calculation */
-   SCIP_Real             intsupportweight,   /**< weight of integral support in score calculation */
-   int                   ncuts,              /**< number of cuts in given array */
-   int                   nforcedcuts,        /**< number of forced cuts at start of given array */
-   int                   maxselectedcuts,    /**< maximal number of cuts to select */
-   int*                  nselectedcuts       /**< pointer to return number of selected cuts */
-   )
-{
-   int i;
-   SCIP_Real* scores;
-   SCIP_Real goodscore;
-   SCIP_Real badscore;
-   SCIP_Real efficacyfac;
-   SCIP_SOL* sol;
-
-   assert( nselectedcuts != NULL );
-
-   /* if all cuts are forced cuts, no selection is required */
-   if( nforcedcuts >= MIN(ncuts, maxselectedcuts) )
-   {
-      *nselectedcuts = nforcedcuts;
-      return SCIP_OKAY;
-   }
-   *nselectedcuts = 0;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &scores, ncuts) );
-
-   sol = SCIPgetBestSol(scip);
-
-   efficacyfac = efficacyweight;
-
-   goodscore = 0.0;
-
-   /* if there is an incumbent and the factor is not 0.0, compute directed cutoff distances for the incumbent */
-   if( sol != NULL && dircutoffdistweight > 0.0 )
-   {
-      for( i = 0; i < ncuts; ++i )
-      {
-         SCIP_Real objparallelism;
-         SCIP_Real intsupport;
-         SCIP_Real efficacy;
-
-         intsupport = intsupportweight != 0.0 ?
-            intsupportweight * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) : 0.0;
-
-         objparallelism = objparalweight != 0.0 ? objparalweight * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
-
-         efficacy = SCIProwGetLPEfficacy(cuts[i], scip->set, scip->stat, scip->lp);
-
-         if( SCIProwIsLocal(cuts[i]) )
-         {
-            scores[i] = dircutoffdistweight * efficacy;
-         }
-         else
-         {
-            scores[i] = SCIProwGetLPSolCutoffDistance(cuts[i], scip->set, scip->stat, sol, scip->lp);
-            scores[i] = dircutoffdistweight * MAX(scores[i], efficacy);
-         }
-
-         efficacy *= efficacyfac;
-         scores[i] += objparallelism + intsupport + efficacy;
-
-         /* add small term to prefer global pool cuts */
-         scores[i] += SCIProwIsInGlobalCutpool(cuts[i]) ? 1e-4 : 0.0;
-
-         if( randnumgen != NULL )
-            scores[i] += SCIPrandomGetReal(randnumgen, 0.0, 1e-6);
-
-         goodscore = MAX(goodscore, scores[i]);
-      }
-   }
-   else
-   {
-      /* in case there is no solution add the directed cutoff distance weight to the efficacy weight
-       * since the efficacy underestimates the directed cuttoff distance
-       */
-      efficacyfac += dircutoffdistweight;
-      for( i = 0; i < ncuts; ++i )
-      {
-         SCIP_Real objparallelism;
-         SCIP_Real intsupport;
-         SCIP_Real efficacy;
-
-         intsupport = intsupportweight > 0.0 ?
-            intsupportweight * SCIProwGetNumIntCols(cuts[i], scip->set) / (SCIP_Real) SCIProwGetNNonz(cuts[i]) : 0.0;
-
-         objparallelism = objparalweight > 0.0 ? objparalweight * SCIProwGetObjParallelism(cuts[i], scip->set, scip->lp) : 0.0;
-
-         efficacy = efficacyfac > 0.0 ?
-            efficacyfac * SCIProwGetLPEfficacy(cuts[i], scip->set, scip->stat, scip->lp) : 0.0;
-
-         scores[i] = objparallelism + intsupport + efficacy;
-
-         /* add small term to prefer global pool cuts */
-         scores[i] += SCIProwIsInGlobalCutpool(cuts[i]) ? 1e-4 : 0.0;
-
-         if( randnumgen != NULL )
-            scores[i] += SCIPrandomGetReal(randnumgen, 0.0, 1e-6);
-
-         goodscore = MAX(goodscore, scores[i]);
-      }
-   }
-
-   /* compute values for filtering cuts */
-   badscore = goodscore * badscorefac;
-   goodscore *= goodscorefac;
-
-   /* perform cut selection algorithm for the cuts */
-   {
-      int nnonforcedcuts;
-      SCIP_ROW** nonforcedcuts;
-      SCIP_Real* nonforcedscores;
-
-      /* adjust pointers to the beginning of the non-forced cuts */
-      nnonforcedcuts = ncuts - nforcedcuts;
-      nonforcedcuts = cuts + nforcedcuts;
-      nonforcedscores = scores + nforcedcuts;
-
-      /* select the forced cuts first */
-      *nselectedcuts = nforcedcuts;
-      for( i = 0; i < nforcedcuts && nnonforcedcuts > 0; ++i )
-      {
-         nnonforcedcuts = filterWithParallelism(cuts[i], nonforcedcuts, nonforcedscores, nnonforcedcuts, goodscore, goodmaxparall, maxparall);
-      }
-
-      /* if the maximal number of cuts was exceeded after selecting the forced cuts, we can stop here */
-      if( *nselectedcuts >= maxselectedcuts )
-         goto TERMINATE;
-
-      /* now greedily select the remaining cuts */
-      while( nnonforcedcuts > 0 )
-      {
-         SCIP_ROW* selectedcut;
-
-         selectBestCut(nonforcedcuts, nonforcedscores, nnonforcedcuts);
-         selectedcut = nonforcedcuts[0];
-
-         /* if the best cut of the remaining cuts is considered bad, we discard it and all remaining cuts */
-         if( nonforcedscores[0] < badscore )
-            goto TERMINATE;
-
-         ++(*nselectedcuts);
-
-         /* if the maximal number of cuts was selected, we can stop here */
-         if( *nselectedcuts == maxselectedcuts )
-            goto TERMINATE;
-
-         /* move the pointers to the next position and filter the remaining cuts to enforce the maximum parallelism constraint */
-         ++nonforcedcuts;
-         ++nonforcedscores;
-         --nnonforcedcuts;
-
-         nnonforcedcuts = filterWithParallelism(selectedcut, nonforcedcuts, nonforcedscores, nnonforcedcuts, goodscore, goodmaxparall, maxparall);
-      }
-   }
-
-  TERMINATE:
-   SCIPfreeBufferArray(scip, &scores);
-
-   return SCIP_OKAY;
-}
-
 /* =========================================== c-MIR =========================================== */
 
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
@@ -3205,7 +3031,7 @@ SCIP_RETCODE cutsTransformMIR(
    nvars = SCIPgetNVars(scip);
    firstcontvar = nvars - SCIPgetNContVars(scip);
 
-   /* determine the best bounds for the continous variables */
+   /* determine the best bounds for the continuous variables */
    for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
    {
       SCIP_CALL( determineBestBounds(scip, vars[cutinds[i]], sol, boundswitch, usevbds ? 2 : 0, allowlocal, fixintegralrhs,
@@ -3257,7 +3083,7 @@ SCIP_RETCODE cutsTransformMIR(
 
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
-      /* due to variable bound usage for the continous variables cancellation may have occurred */
+      /* due to variable bound usage for the continuous variables cancellation may have occurred */
       if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(coef, 0.0);
@@ -3268,7 +3094,7 @@ SCIP_RETCODE cutsTransformMIR(
          continue;
       }
 
-      /* determine the best bounds for the integral variable, usevbd can be set to 0 here as vbds are only used for continous variables */
+      /* determine the best bounds for the integral variable, usevbd can be set to 0 here as vbds are only used for continuous variables */
       SCIP_CALL( determineBestBounds(scip, vars[v], sol, boundswitch, 0, allowlocal, fixintegralrhs,
             ignoresol, boundsfortrans, boundtypesfortrans,
             bestlbs + i, bestubs + i, bestlbtypes + i, bestubtypes + i, selectedbounds + i, freevariable) );
@@ -3945,7 +3771,7 @@ SCIP_RETCODE cutsSubstituteMIR(
       }
    }
 
-   /* relax rhs to zero, if it's very close to */
+   /* relax rhs to zero, if it's very close to 0 */
    if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
@@ -3980,20 +3806,22 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to the aggrrow; must be positive */
    SCIP_AGGRROW*         aggrrow,            /**< aggrrow to compute MIR cut for */
-   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
-   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
-   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
-   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut if its efficacy improves cutefficacy */
+   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut if its efficacy improves cutefficacy */
+   int*                  cutinds,            /**< array to store the indices of non-zero coefficients in the cut if its efficacy improves cutefficacy */
+   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut if its efficacy improves cutefficacy */
    SCIP_Real*            cutefficacy,        /**< pointer to store efficacy of cut, or NULL */
-   int*                  cutrank,            /**< pointer to return rank of generated cut */
-   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
-   SCIP_Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   int*                  cutrank,            /**< pointer to return rank of generated cut or NULL if it improves cutefficacy */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally if it improves cutefficacy */
+   SCIP_Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut and it improves cutefficacy */
    )
 {
    int i;
    int nvars;
+   int tmpnnz;
    int* varsign;
    int* boundtype;
+   int* tmpinds;
    SCIP_Real* tmpcoefs;
 
    SCIP_Real QUAD(rhs);
@@ -4001,6 +3829,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real QUAD(f0);
    SCIP_Bool freevariable;
    SCIP_Bool localbdsused;
+   SCIP_Bool tmpislocal;
 
    assert(aggrrow != NULL);
    assert(SCIPisPositive(scip, scale));
@@ -4014,19 +3843,20 @@ SCIP_RETCODE SCIPcalcMIR(
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, nvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &tmpcoefs, QUAD_ARRAY_SIZE(nvars)) );
 
    /* initialize cut with aggregation */
-   *cutnnz = aggrrow->nnz;
-   *cutislocal = aggrrow->local;
+   tmpnnz = aggrrow->nnz;
+   tmpislocal = aggrrow->local;
 
    SCIPquadprecProdQD(rhs, aggrrow->rhs, scale);
 
-   if( *cutnnz > 0 )
+   if( tmpnnz > 0 )
    {
-      BMScopyMemoryArray(cutinds, aggrrow->inds, *cutnnz);
+      BMScopyMemoryArray(tmpinds, aggrrow->inds, tmpnnz);
 
-      for( i = 0; i < *cutnnz; ++i )
+      for( i = 0; i < tmpnnz; ++i )
       {
          SCIP_Real QUAD(coef);
          int k = aggrrow->inds[i];
@@ -4056,13 +3886,13 @@ SCIP_RETCODE SCIPcalcMIR(
        *   a_{zu_j} := a_{zu_j} + a_j * bu_j
        */
       SCIP_CALL( cutsTransformMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, FALSE,
-            boundsfortrans, boundtypesfortrans, minfrac, maxfrac, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, &freevariable, &localbdsused) );
+            boundsfortrans, boundtypesfortrans, minfrac, maxfrac, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, &freevariable, &localbdsused) );
       assert(allowlocal || !localbdsused);
-      *cutislocal = *cutislocal || localbdsused;
+      tmpislocal = tmpislocal || localbdsused;
 
       if( freevariable )
          goto TERMINATE;
-      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
    }
 
    /* Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
@@ -4110,10 +3940,10 @@ SCIP_RETCODE SCIPcalcMIR(
 
    QUAD_ASSIGN_Q(rhs, downrhs);
 
-   if( *cutnnz > 0 )
+   if( tmpnnz > 0 )
    {
-      SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, varsign, boundtype, QUAD(f0)) );
-      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
+      SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, QUAD(f0)) );
+      SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
    }
 
    /* substitute aggregated slack variables:
@@ -4131,45 +3961,57 @@ SCIP_RETCODE SCIPcalcMIR(
     * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
     */
    SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
-         aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0)) );
-   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE) );
+         aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, QUAD(f0)) );
+   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
 
    if( postprocess )
    {
       /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
        * prevent numerical rounding errors
        */
-      SCIP_CALL( postprocessCutQuad(scip, *cutislocal, cutinds, tmpcoefs, cutnnz, QUAD(&rhs), success) );
+      SCIP_CALL( postprocessCutQuad(scip, tmpislocal, tmpinds, tmpcoefs, &tmpnnz, QUAD(&rhs), success) );
    }
    else
    {
-      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), *cutislocal, tmpcoefs, QUAD(&rhs), cutnnz, cutinds);
+      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), tmpislocal, tmpcoefs, QUAD(&rhs), &tmpnnz, tmpinds);
    }
 
-   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE) );
+   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
 
    if( *success )
    {
-      *cutrhs = QUAD_TO_DBL(rhs);
+      SCIP_Real mirefficacy = calcEfficacyDenseStorageQuad(scip, sol, tmpcoefs, QUAD_TO_DBL(rhs), tmpinds, tmpnnz);
 
-      /* clean tmpcoefs and go back to double precision */
-      for( i = 0; i < *cutnnz; ++i )
+      if( SCIPisEfficacious(scip, mirefficacy) && (cutefficacy == NULL || mirefficacy > *cutefficacy) )
       {
-         SCIP_Real QUAD(coef);
-         int j = cutinds[i];
+         BMScopyMemoryArray(cutinds, tmpinds, tmpnnz);
+         *cutnnz = tmpnnz;
+         *cutrhs = QUAD_TO_DBL(rhs);
+         *cutislocal = tmpislocal;
 
-         QUAD_ARRAY_LOAD(coef, tmpcoefs, j);
+         /* clean tmpcoefs and go back to double precision */
+         for( i = 0; i < *cutnnz; ++i )
+         {
+            SCIP_Real QUAD(coef);
+            int j = cutinds[i];
 
-         cutcoefs[i] = QUAD_TO_DBL(coef);
-         QUAD_ASSIGN(coef, 0.0);
-         QUAD_ARRAY_STORE(tmpcoefs, j, coef);
+            QUAD_ARRAY_LOAD(coef, tmpcoefs, j);
+
+            cutcoefs[i] = QUAD_TO_DBL(coef);
+            QUAD_ASSIGN(coef, 0.0);
+            QUAD_ARRAY_STORE(tmpcoefs, j, coef);
+         }
+
+         if( cutefficacy != NULL )
+            *cutefficacy = mirefficacy;
+
+         if( cutrank != NULL )
+            *cutrank = aggrrow->rank + 1;
       }
-
-      if( cutefficacy != NULL )
-         *cutefficacy = calcEfficacy(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz);
-
-      if( cutrank != NULL )
-         *cutrank = aggrrow->rank + 1;
+      else
+      {
+         *success = FALSE;
+      }
    }
 
   TERMINATE:
@@ -4178,14 +4020,15 @@ SCIP_RETCODE SCIPcalcMIR(
       SCIP_Real QUAD(tmp);
 
       QUAD_ASSIGN(tmp, 0.0);
-      for( i = 0; i < *cutnnz; ++i )
+      for( i = 0; i < tmpnnz; ++i )
       {
-         QUAD_ARRAY_STORE(tmpcoefs, cutinds[i], tmp);
+         QUAD_ARRAY_STORE(tmpcoefs, tmpinds[i], tmp);
       }
    }
 
    /* free temporary memory */
    SCIPfreeCleanBufferArray(scip, &tmpcoefs);
+   SCIPfreeBufferArray(scip, &tmpinds);
    SCIPfreeBufferArray(scip, &boundtype);
    SCIPfreeBufferArray(scip, &varsign);
 
@@ -5014,7 +4857,7 @@ struct SNF_Relaxation
    int*                  origcontvars;       /**< associated original continuous var for all vars in relaxed set */
    SCIP_Real*            aggrcoefsbin;       /**< aggregation coefficient of the original binary var used to define the
                                               *   continuous variable in the relaxed set */
-   SCIP_Real*            aggrcoefscont;      /**< aggregation coefficient of the original continous var used to define the
+   SCIP_Real*            aggrcoefscont;      /**< aggregation coefficient of the original continuous var used to define the
                                               *   continuous variable in the relaxed set */
    SCIP_Real*            aggrconstants;      /**< aggregation constant used to define the continuous variable in the relaxed set */
 } SNF_RELAXATION;
@@ -5660,7 +5503,7 @@ SCIP_RETCODE constructSNFRelaxation(
 
             SCIPdebugMsg(scip, "    --> bestlb used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=1), rhs=%g-(%g*%g)=%g\n",
                snf->transvarcoefs[snf->ntransvars] == 1 ? "+" : "-", snf->ntransvars, snf->ntransvars, snf->transvarvubcoefs[snf->ntransvars],
-               snf->ntransvars, QUAD_TO_DBL(transrhs) + QUAD_TO_DBL(rowcoeftimesbestsub), QUAD_TO_DBL(rowcoef), bestsub, QUAD_TO_DBL(transrhs));
+               snf->ntransvars, QUAD_TO_DBL(transrhs) + QUAD_TO_DBL(rowcoeftimesbestsub), QUAD_TO_DBL(rowcoef), bestsub[i], QUAD_TO_DBL(transrhs));
          }
          else
          {
@@ -6948,6 +6791,8 @@ SCIP_Real evaluateLiftingFunction(
    SCIP_Real xpluslambda;
    int i;
 
+   assert( liftingdata != NULL );
+
    xpluslambda = x + liftingdata->lambda;
 
    i = 0;
@@ -7072,6 +6917,15 @@ SCIP_RETCODE computeLiftingData(
    SCIP_Real QUAD(sumN2mC2GT);
    SCIP_Real QUAD(sumC1LE);
    SCIP_Real QUAD(sumC2);
+
+#ifndef NDEBUG
+   /* for debugging */
+   liftingdata->m = NULL;
+   liftingdata->M = NULL;
+   liftingdata->lambda = SCIP_INVALID;
+   liftingdata->t = 0;
+   liftingdata->mp = SCIP_INVALID;
+#endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &liftingdata->m, snf->ntransvars) );
 
@@ -7211,6 +7065,12 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
    SCIP_CALL( computeLiftingData(scip, snf, flowcoverstatus, lambda, &liftingdata, success) );
    if( ! *success )
       return SCIP_OKAY;
+   assert( liftingdata.m != NULL );
+   assert( liftingdata.M != NULL );
+   assert( liftingdata.lambda != SCIP_INVALID ); /*lint !e777*/
+   assert( liftingdata.r >= 0 );
+   assert( liftingdata.t >= 0 );
+   assert( liftingdata.mp != SCIP_INVALID ); /*lint !e777*/
 
    QUAD_ASSIGN(rhs, liftingdata.d1);
 
@@ -7443,7 +7303,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
 
    *cutrhs = QUAD_TO_DBL(rhs);
 
-   /* relax rhs to zero, if it's very close to */
+   /* relax rhs to zero, if it's very close to 0 */
    if( *cutrhs < 0.0 && *cutrhs >= SCIPepsilon(scip) )
       *cutrhs = 0.0;
 
@@ -7632,7 +7492,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
    vars = SCIPgetVars(scip);
    firstnonbinvar = SCIPgetNBinVars(scip);
 
-   /* determine best bounds for the continous and general integer variables such that they will have
+   /* determine best bounds for the continuous and general integer variables such that they will have
     * a positive coefficient in the transformation */
    for( i = 0; i < *nnz && cutinds[i] >= firstnonbinvar; ++i )
    {
@@ -7715,7 +7575,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       assert(v < firstnonbinvar);
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
-      /* due to variable bound usage for bound substitution of continous variables cancellation may have occurred */
+      /* due to variable bound usage for bound substitution of continuous variables cancellation may have occurred */
       if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
       {
          /* do not increase i, since last element is copied to the i-th position */
@@ -8008,6 +7868,7 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    SCIP_Real QUAD(tmp);
    SCIP_Real QUAD(hfrac);
    SCIP_Real cutcoef;
+   SCIP_Real hreal;
    int h;
 
    /* the lifted value is at least the coeficient (a_k) divided by \bar{a} because the largest value
@@ -8023,7 +7884,14 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    if( QUAD_TO_DBL(hfrac) < 1 )
       return 0.0;
 
-   h = (int)floor(QUAD_TO_DBL(hfrac) + QUAD_EPSILON);
+   /* we perform h = MIN(h, coversize) in floating-point first because on some instances h was seen to exceed the range
+    * of int */
+   hreal = floor(QUAD_TO_DBL(hfrac) + QUAD_EPSILON);
+   if( hreal > (SCIP_Real)coversize )
+      h = coversize;
+   else
+      h = (int)hreal;
+
    SCIPquadprecSumQD(hfrac, hfrac, -h);
 
    assert(h > 0);
@@ -8040,7 +7908,7 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
 
    /* decrease by one to make sure rounding errors or coefficients that are larger than the right hand side by themselves
     * did not push h too far */
-   h = MIN(h, coversize) - 1;
+   h--;
 
    /* now increase coefficient to its lifted value based on its size relative to the S^- values.
     * The coefficient a_i is lifted to the unique integer h such that S^-(h) < a_i <= S^-(h+1).
@@ -8450,7 +8318,7 @@ SCIP_RETCODE cutsTransformStrongCG(
    nvars = SCIPgetNVars(scip);
    firstcontvar = nvars - SCIPgetNContVars(scip);
 
-   /* determine best bounds for the continous variables such that they will have a positive coefficient in the transformation */
+   /* determine best bounds for the continuous variables such that they will have a positive coefficient in the transformation */
    for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
    {
       SCIP_Real QUAD(coef);
@@ -8479,7 +8347,7 @@ SCIP_RETCODE cutsTransformStrongCG(
          SCIP_Real simplebound;
 
          /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
-         SCIP_CALL( findBestUb(scip, vars[cutinds[i]], sol, usevbds ? 2 : 0, allowlocal, bestbds + i, &simplebound, boundtype + i) );
+         SCIP_CALL( findBestUb(scip, vars[v], sol, usevbds ? 2 : 0, allowlocal, bestbds + i, &simplebound, boundtype + i) );
 
           /* cannot create transformation for strongcg cut */
          if( SCIPisInfinity(scip, bestbds[i]) )
@@ -8519,7 +8387,7 @@ SCIP_RETCODE cutsTransformStrongCG(
       assert(v < firstcontvar);
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
-      /* due to variable bound usage for the continous variables cancellation may have occurred */
+      /* due to variable bound usage for the continuous variables cancellation may have occurred */
       if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
       {
          QUAD_ASSIGN(coef, 0.0);
@@ -8531,7 +8399,7 @@ SCIP_RETCODE cutsTransformStrongCG(
          continue;
       }
 
-      /* determine the best bounds for the integral variable, usevbd can be set to FALSE here as vbds are only used for continous variables */
+      /* determine the best bounds for the integral variable, usevbd can be set to 0 here as vbds are only used for continuous variables */
       SCIP_CALL( determineBestBounds(scip, vars[v], sol, boundswitch, 0, allowlocal, FALSE, FALSE, NULL, NULL,
             &bestlb, &bestub, &bestlbtype, &bestubtype, &selectedbound, freevariable) );
 
@@ -8569,21 +8437,21 @@ SCIP_RETCODE cutsTransformStrongCG(
       QUAD_ASSIGN(*cutrhs, 0.0);
 
   TERMINATE:
-   /*free temporary memory */
+   /* free temporary memory */
    SCIPfreeBufferArray(scip, &bestbds);
 
    return SCIP_OKAY;
 }
 
-/** Calculate fractionalities \f$ f_0 := b - down(b) \f$, \f$ f_j := a^\prime_j - down(a^\prime_j) \f$ and
- *   integer \f$ k >= 1 \f$ with \f$ 1/(k + 1) <= f_0 < 1/k \f$ and \f$ (=> k = up(1/f_0) + 1) \f$
- *   integer \f$ 1 <= p_j <= k \f$ with \f$ f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k)\f$ \f$ (=> p_j = up( k*(f_j - f_0)/(1 - f_0) )) \f$
- * and derive strong CG cut \f$ \tilde{a}*x^\prime <= down(b) \f$
+/** Calculate fractionalities \f$ f_0 := b - down(b) \f$, \f$ f_j := a^\prime_j - down(a^\prime_j) \f$,
+ *   integer \f$ k \geq 1 \f$ with \f$ 1/(k + 1) \leq f_0 < 1/k \f$  \f$ (\Rightarrow k = up(1/f_0) - 1) \f$ and
+ *   integer \f$ 1 \leq p_j \leq k \f$ with \f$ f_0 + ((p_j - 1) \cdot (1 - f_0)/k) < f_j \leq f_0 + (p_j (1 - f_0)/k)\f$ \f$ (\Rightarrow p_j = up( k\,(f_j - f_0)/(1 - f_0) )) \f$
+ * and derive strong CG cut \f$ \tilde{a} x^\prime \leq down(b) \f$
  * \f[
  * \begin{array}{rll}
- * integers : &  \tilde{a}_j = down(a^\prime_j)                &, if \qquad f_j <= f_0 \\
+ * integers : &  \tilde{a}_j = down(a^\prime_j)                &, if \qquad f_j \leq f_0 \\
  *            &  \tilde{a}_j = down(a^\prime_j) + p_j/(k + 1)  &, if \qquad f_j >  f_0 \\
- * continuous:&  \tilde{a}_j = 0                               &, if \qquad a^\prime_j >= 0 \\
+ * continuous:&  \tilde{a}_j = 0                               &, if \qquad a^\prime_j \geq 0 \\
  *            &  \mbox{no strong CG cut found}                 &, if \qquad a^\prime_j <  0
  * \end{array}
  * \f]
@@ -8620,7 +8488,7 @@ SCIP_RETCODE cutsTransformStrongCG(
  *     \tilde{a}_j * du_j == -\hat{a}_j * du_j &
  * \end{array}
  * \f]
- *  to the rhs, and update the VB variable coefficients:
+ * to the rhs, and update the VB variable coefficients:
  * \f[
  * \begin{array}{ll}
  *    \hat{a}_{zl_j} := \hat{a}_{zl_j} - \tilde{a}_j * bl_j == \hat{a}_{zl_j} - \hat{a}_j * bl_j,& \mbox{or} \\
@@ -8666,14 +8534,17 @@ SCIP_RETCODE cutsRoundStrongCG(
    firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    vars = SCIPgetVars(scip);
 #ifndef NDEBUG
-   /*in debug mode check, that all continuous variables of the aggrrow come before the integral variables */
+   /* in debug mode check, that all continuous variables of the aggrrow come before the integral variables */
    i = 0;
    while( i < *nnz && cutinds[i] >= firstcontvar )
+   {
+      assert(SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_CONTINUOUS);
       ++i;
-
+   }
    while( i < *nnz )
    {
       assert(cutinds[i] < firstcontvar);
+      assert(SCIPvarGetType(vars[cutinds[i]]) != SCIP_VARTYPE_CONTINUOUS);
       ++i;
    }
 #endif
@@ -8686,6 +8557,8 @@ SCIP_RETCODE cutsRoundStrongCG(
       SCIP_Real QUAD(downaj);
       SCIP_Real QUAD(cutaj);
       SCIP_Real QUAD(fj);
+      SCIP_Real QUAD(tmp);
+      SCIP_Real bound;
       int v;
 
       v = cutinds[i];
@@ -8705,7 +8578,7 @@ SCIP_RETCODE cutsRoundStrongCG(
       SCIPquadprecSumQQ(fj, aj, -downaj);
 
       if( SCIPisLE(scip, QUAD_TO_DBL(fj), QUAD_TO_DBL(f0)) )
-         QUAD_ASSIGN_Q(cutaj, downaj); /* a^_j */
+         QUAD_ASSIGN_Q(cutaj, downaj); /* a_j */
       else
       {
          SCIP_Real pj;
@@ -8737,89 +8610,72 @@ SCIP_RETCODE cutsRoundStrongCG(
       /* integral var uses standard bound */
       assert(boundtype[i] < 0);
 
-      /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
+      /* move the constant term  -\tilde{a}_j * lb_j == -a_j * lb_j , or  \tilde{a}_j * ub_j == -a_j * ub_j  to the rhs */
       if( varsign[i] == +1 )
       {
-         SCIP_Real QUAD(tmp);
-
          /* lower bound was used */
          if( boundtype[i] == -1 )
-         {
-            assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbGlobal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
-         }
+            bound = SCIPvarGetLbGlobal(var);
          else
-         {
-            assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbLocal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
-         }
+            bound = SCIPvarGetLbLocal(var);
+         assert(!SCIPisInfinity(scip, -bound));
       }
       else
       {
-         SCIP_Real QUAD(tmp);
-
          /* upper bound was used */
          if( boundtype[i] == -1 )
-         {
-            assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbGlobal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
-         }
+            bound = SCIPvarGetUbGlobal(var);
          else
-         {
-            assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbLocal(var));
-            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
-         }
+            bound = SCIPvarGetUbLocal(var);
+         assert(!SCIPisInfinity(scip, bound));
       }
+      SCIPquadprecProdQD(tmp, cutaj, bound);
+      SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
    }
 
-   /* now process the continuous variables; postpone deletetion of zeros till all continuous variables have been processed */
+   /* now process the continuous variables; postpone deletion of zeros until all continuous variables have been processed */
    aggrrowintstart = i + 1;
 
 #ifndef NDEBUG
    /* in a strong CG cut, cut coefficients of continuous variables are always zero; check this in debug mode */
    for( i = 0; i < aggrrowintstart; ++i )
    {
+      SCIP_Real QUAD(aj);
+      SCIP_VAR* var;
       int v;
 
       v = cutinds[i];
       assert(firstcontvar <= v && v < SCIPgetNVars(scip));
 
-      {
-         SCIP_VAR* var;
-         SCIP_Real QUAD(aj);
+      var = vars[v];
+      assert(var != NULL);
+      assert(!SCIPvarIsIntegral(var));
+      assert(SCIPvarGetProbindex(var) == v);
+      assert(varsign[i] == +1 || varsign[i] == -1);
 
-         var = vars[v];
-         assert(var != NULL);
-         assert(!SCIPvarIsIntegral(var));
-         assert(SCIPvarGetProbindex(var) == v);
-         assert(varsign[i] == +1 || varsign[i] == -1);
+      /* calculate the coefficient in the retransformed cut */
+      QUAD_ARRAY_LOAD(aj, cutcoefs, v);
+      QUAD_SCALE(aj, varsign[i]);
 
-         /* calculate the coefficient in the retransformed cut */
-         QUAD_ARRAY_LOAD(aj, cutcoefs, v);
-         QUAD_SCALE(aj, varsign[i]);
-
-         assert(QUAD_TO_DBL(aj) >= 0.0);
-      }
+      assert(QUAD_TO_DBL(aj) >= 0.0);
    }
 #endif
 
-   /* move integer variables to the empty position of the continuous variables */
+   /* set continuous variable coefficients to 0 */
    if( aggrrowintstart > 0 )
    {
       SCIP_Real QUAD(tmp);
       assert(aggrrowintstart <= *nnz);
 
+      /* explicitly set continuous variable coefficients to 0 */
       QUAD_ASSIGN(tmp, 0.0);
-
       for( i = 0; i < aggrrowintstart; ++i )
       {
          QUAD_ARRAY_STORE(cutcoefs, cutinds[i], tmp);
       }
 
+      /* fill empty positions of the continuous variables by integral variables; copy all indices to the front or only
+       * use the indices at the end, whatever is faster */
       *nnz -= aggrrowintstart;
       if( *nnz < aggrrowintstart )
       {
@@ -8836,20 +8692,20 @@ SCIP_RETCODE cutsRoundStrongCG(
 
 /** substitute aggregated slack variables:
  *
- *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
- *  variable only appears in its own row: \f$ a^\prime_r = scale * weight[r] * slacksign[r] \f$.
+ *  The coefficient of the slack variable \f$s_r\f$ is equal to the row's weight times the slack's sign, because the slack
+ *  variable only appears in its own row: \f$ a^\prime_r = scale \cdot weight[r] \cdot slacksign[r] \f$.
  *
- *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
- * \f[
- * \begin{array}{rll}
- *    integers:  & \hat{a}_r = \tilde{a}_r = down(a^\prime_r)                  &, if \qquad f_r <= f0 \\
- *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + p_r/(k + 1)    &, if \qquad f_r >  f0 \\
- *    continuous:& \hat{a}_r = \tilde{a}_r = 0                                 &, if \qquad a^\prime_r >= 0 \\
- *               & \mbox{no strong CG cut found}                               &, if \qquad a^\prime_r <  0
- * \end{array}
- * \f]
+ *  Depending on the slack's type (integral or continuous), its coefficient in the cut calculates as follows:
+ *  \f[
+ *  \begin{array}{rll}
+ *    integers:  & \hat{a}_r = \tilde{a}_r = down(a^\prime_r),                  & if \qquad f_r \leq f_0 \\
+ *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + p_r/(k + 1),    & if \qquad f_r >  f_0 \\
+ *    continuous:& \hat{a}_r = \tilde{a}_r = 0,                                 & if \qquad a^\prime_r \geq 0 \\
+ *               & \mbox{no strong CG cut found},                               & if \qquad a^\prime_r <  0
+ *  \end{array}
+ *  \f]
  *
- *  Substitute \f$ \hat{a}_r * s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
+ *  Substitute \f$ \hat{a}_r \cdot s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
  */
 static
 SCIP_RETCODE cutsSubstituteStrongCG(
@@ -8911,7 +8767,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       /* get the slack's coefficient a'_r in the aggregated row */
       SCIPquadprecProdDD(ar, slacksign[i] * scale, weights[i]);
 
-      /* calculate slack variable's coefficient a^_r in the cut */
+      /* calculate slack variable's coefficient a_r in the cut */
       if( row->integral )
       {
          /* slack variable is always integral: */
@@ -8945,11 +8801,11 @@ SCIP_RETCODE cutsSubstituteStrongCG(
 
       /* depending on the slack's sign, we have
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
-       * substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
+       * substitute a_r * s_r by adding a_r times the slack's definition to the cut.
        */
       mul = -slacksign[i] * QUAD_TO_DBL(cutar);
 
-      /* add the slack's definition multiplied with a^_j to the cut */
+      /* add the slack's definition multiplied with a_j to the cut */
       SCIP_CALL( varVecAddScaledRowCoefsQuad(cutinds, cutcoefs, nnz, row, mul) );
 
       /* move slack's constant to the right hand side */
@@ -8957,7 +8813,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       {
          SCIP_Real rhs;
 
-         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
+         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, row->rhs));
          rhs = row->rhs - row->constant;
          if( row->integral )
@@ -8973,7 +8829,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       {
          SCIP_Real lhs;
 
-         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
+         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -row->lhs));
          lhs = row->lhs - row->constant;
          if( row->integral )
@@ -8987,7 +8843,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       }
    }
 
-   /* relax rhs to zero, if it's very close to */
+   /* relax rhs to zero, if it's very close to 0 */
    if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
@@ -9054,6 +8910,14 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    *success = FALSE;
 
+   /* check whether a negative continuous slack variable in a non-integral row is present in the aggregation, since then
+    * no strongcg cut can be generated */
+   for( i = 0; i < aggrrow->nrows; ++i )
+   {
+      if( aggrrow->rowweights[i] * aggrrow->slacksign[i] < 0.0 && !scip->lp->rows[aggrrow->rowsinds[i]]->integral )
+         return SCIP_OKAY;
+   }
+
    /* allocate temporary memory */
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
@@ -9113,7 +8977,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    /* Calculate
     *  - fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j)
     *  - integer k >= 1 with 1/(k + 1) <= f_0 < 1/k
-    *    (=> k = up(1/f_0) + 1)
+    *    (=> k = up(1/f_0) - 1)
     *  - integer 1 <= p_j <= k with f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k)
     *    (=> p_j = up( (f_j - f_0)/((1 - f_0)/k) ))
     * and derive strong CG cut
@@ -9121,7 +8985,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
     * integers :  a~_j = down(a'_j)                , if f_j <= f_0
     *             a~_j = down(a'_j) + p_j/(k + 1)  , if f_j >  f_0
     * continuous: a~_j = 0                         , if a'_j >= 0
-    *             no strong CG cut found          , if a'_j <  0
+    *             no strong CG cut found           , if a'_j <  0
     *
     * Transform inequality back to a^*x <= rhs:
     *
@@ -9170,15 +9034,15 @@ SCIP_RETCODE SCIPcalcStrongCG(
     *    a'_r = scale * weight[r] * slacksign[r].
     *
     * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
-    *   integers :  a^_r = a~_r = (k + 1) * down(a'_r)        , if f_r <= f0
-    *               a^_r = a~_r = (k + 1) * down(a'_r) + p_r  , if f_r >  f0
-    *   continuous: a^_r = a~_r = 0                           , if a'_r >= 0
-    *               a^_r = a~_r = a'_r/(1 - f0)               , if a'_r <  0
+    *   integers :  a_r = a~_r = (k + 1) * down(a'_r)        , if f_r <= f0
+    *               a_r = a~_r = (k + 1) * down(a'_r) + p_r  , if f_r >  f0
+    *   continuous: a_r = a~_r = 0                           , if a'_r >= 0
+    *               a_r = a~_r = a'_r/(1 - f0)               , if a'_r <  0
     *
-    * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
+    * Substitute a_r * s_r by adding a_r times the slack's definition to the cut.
     */
    SCIP_CALL( cutsSubstituteStrongCG(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
-                          aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0), k) );
+         aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), cutinds, cutnnz, QUAD(f0), k) );
    SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), cutinds, *cutnnz, FALSE, FALSE));
 
    /* remove all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to

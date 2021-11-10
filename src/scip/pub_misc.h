@@ -49,7 +49,7 @@
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_misc_linear.h"
-#include "scip/pub_misc_nonlinear.h"
+#include "scip/pub_misc_rowprep.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -1860,6 +1860,20 @@ SCIP_Real SCIPselectSimpleValue(
    SCIP_Real             lb,                 /**< lower bound of the interval */
    SCIP_Real             ub,                 /**< upper bound of the interval */
    SCIP_Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
+   );
+
+/** Performs the Newton Procedure from a given starting point to compute a root of the given function with
+ *  specified precision and maximum number of iterations. If the procedure fails, SCIP_INVALID is returned.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPcalcRootNewton(
+   SCIP_DECL_NEWTONEVAL((*function)),       /**< pointer to function for which roots are computed */
+   SCIP_DECL_NEWTONEVAL((*derivative)),      /**< pointer to derivative of above function */
+   SCIP_Real*            params,            /**< parameters needed for function (can be NULL) */
+   int                   nparams,           /**< number of parameters (can be 0) */
+   SCIP_Real             x,                 /**< starting point */
+   SCIP_Real             eps,               /**< tolerance */
+   int                   k                  /**< iteration limit */
    );
 
 /* The C99 standard defines the function (or macro) isfinite.

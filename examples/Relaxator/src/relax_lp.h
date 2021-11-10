@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   relax_lp.h
- * @ingroup RELAXATORS
  * @brief  lp relaxator
  * @author Benjamin Mueller
  */

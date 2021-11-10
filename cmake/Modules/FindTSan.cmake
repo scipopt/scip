@@ -63,3 +63,9 @@ function (add_sanitize_thread TARGET)
 
     sanitizer_add_flags(${TARGET} "ThreadSanitizer" "TSan")
 endfunction ()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(TSan
+   REQUIRED_VARS
+   TSan_FLAG_DETECTED
+)

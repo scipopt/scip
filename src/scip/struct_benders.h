@@ -95,7 +95,8 @@ struct SCIP_Benders
    int                   numthreads;         /**< the number of threads to use when solving the subproblem */
    SCIP_Bool             execfeasphase;      /**< should a feasibility phase be executed during the root node, i.e.
                                                   adding slack variables to constraints to ensure feasibility */
-   SCIP_Real             slackvarcoef;       /**< the objective coefficient of the slack variables in the subproblem */
+   SCIP_Real             slackvarcoef;       /**< the initial objective coefficient of the slack variables in the subproblem */
+   SCIP_Real             maxslackvarcoef;    /**< the maximal objective coefficient of the slack variables in the subproblem */
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
 
    /* information for heuristics */

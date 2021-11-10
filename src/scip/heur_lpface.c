@@ -425,12 +425,14 @@ SCIP_RETCODE setSubscipLimits(
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
    SCIP_Longint nodelimit;
+   SCIP_Bool avoidmemout;
 
    *success = TRUE;
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
 
    if( ! SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
@@ -442,8 +444,9 @@ SCIP_RETCODE setSubscipLimits(
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0 )
+   /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemout == FALSE)
+    * to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0 || (avoidmemout && memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0) )
    {
       *success = FALSE;
       return SCIP_OKAY;
@@ -504,17 +507,6 @@ SCIP_RETCODE setSubscipParameters(
    if( SCIPfindBranchrule(subscip, "inference") != NULL && ! SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
-   }
-
-   /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
-    * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
-    * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
-    * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
-    * made for the original SCIP
-    */
-   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && ! SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
    }
 
    /* enable conflict analysis, disable analysis of boundexceeding LPs, and restrict conflict pool */
@@ -755,8 +747,8 @@ SCIP_RETCODE setupSubscipLpface(
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
-      SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
       /* get name of the original problem and add the string "_lpfacesub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));
 
@@ -1231,6 +1223,9 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
       assert(heurdata->subscipdata->subscip == NULL);
 
+      /* allocate memory to hold sub-SCIP variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
       SCIP_CALL( SCIPallocBufferArray(scip, &fixvars, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &fixvals, nvars) );
 
@@ -1240,15 +1235,13 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       {
          SCIPfreeBufferArray(scip, &fixvals);
          SCIPfreeBufferArray(scip, &fixvars);
+         SCIPfreeBufferArray(scip, &subvars);
 
          *result = SCIP_DIDNOTRUN;
          return SCIP_OKAY;
       }
 
       SCIPdebugMsg(scip, "Creating new sub-Problem for LP face heuristic\n");
-
-      /* allocate memory to hold sub-SCIP variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
       /* initialize the subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );

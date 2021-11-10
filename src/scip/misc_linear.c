@@ -196,13 +196,13 @@ SCIP_RETCODE SCIPgetConsVals(
 
    if( !(*success) )
    {
-      SCIPwarningMessage(scip, "Cannot return value array for constraint of type\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s>\n", conshdlrname);
       return SCIP_OKAY;
    }
 
    if( varssize < nvars )
    {
-      SCIPwarningMessage(scip, "Cannot return value array for constraint of type (insufficient memory provided)\n", conshdlrname);
+      SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s> (insufficient memory provided)\n", conshdlrname);
       *success = FALSE;
       return SCIP_OKAY;
    }
@@ -434,10 +434,6 @@ SCIP_ROW* SCIPconsGetRow(
    else if( strcmp(conshdlrname, "varbound") == 0 )
    {
       return SCIPgetRowVarbound(scip, cons);
-   }
-   else
-   {
-      SCIPwarningMessage(scip, "Cannot return row for constraint of type <%s>\n", conshdlrname);
    }
 
    return NULL;

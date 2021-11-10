@@ -224,17 +224,19 @@ do
                 export TIMELIMIT
                 export EXECNAME
 
+                if test "${SLURMACCOUNT}" == "default"
+                then
+                    SLURMACCOUNT="${ACCOUNT}"
+                fi
+
                 WRITESETTINGS="false"
                 if test "${INIT}" = "true"
                 then
                     if test "${SOLVER}" = "scip"
                     then
                         WRITESETTINGS="true"
+                        echo -e "#!/usr/bin/env bash \n ${EXECNAME} -s ${SETTINGS} -c 'set save ${CHECKSETFILE} quit'" > write-settings.sh
                     fi
-                fi
-                if test "${WRITESETTINGS}" = "true"
-                then
-                    echo -e "#!/usr/bin/env bash \n ${EXECNAME} -s ${SETTINGS} -c 'set save ${CHECKSETFILE} quit'" > write-settings.sh
                 fi
 
                 # check queue type
@@ -248,12 +250,7 @@ do
 
                     if test "${WRITESETTINGS}" = "true"
                     then
-                        if test "${CLUSTERNODES}" = "all"
-                        then
-                            sbatch --job-name=write-settings --mem=${HARDMEMLIMIT} -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null write-settings.sh
-                        else
-                            sbatch --job-name=write-settings --mem=${HARDMEMLIMIT} -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null write-settings.sh
-                        fi
+                        sbatch --job-name=write-settings --mem=${HARDMEMLIMIT} -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null write-settings.sh
                     fi
 
                     if test "${CLUSTERNODES}" = "all"
@@ -265,21 +262,22 @@ do
                         sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
                     fi
                 else
+                    if test "${WRITESETTINGS}" = "true"
+                    then
+                        qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn=$PPN -N write-settings \
+                            -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null write-settings.sh
+                        rm write-settings.sh
+                    fi
+
                     # -V to copy all environment variables
                     qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn="${PPN}" -N "${JOBNAME}" \
                         -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null run.sh
+
                 fi
 
-                if test "${WRITESETTINGS}" = "true"
+                if test "$WRITESETTINGS" = "true"
                 then
-                    qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn=$PPN -N write-settings \
-                        -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null write-settings.sh
                     rm write-settings.sh
-                fi
-
-                if test "${SLURMACCOUNT}" == "default"
-                then
-                    SLURMACCOUNT="${ACCOUNT}"
                 fi
 
             done # end for SETNAME

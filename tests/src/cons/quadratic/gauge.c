@@ -20,12 +20,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_nonlinear.h"
-#include "nlpi/nlpi_ipopt.h"
-
-#include "scip/cons_quadratic.c"
-
 #include "include/scip_test.h"
+
+/* #3026 will decide whether to remove or adapt this code */
+#ifdef SCIP_DISABLED_CODE
+
+#include "scip/nlpi_ipopt.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.c"
 
 #define EPS 1e-6
 
@@ -146,3 +148,5 @@ Test(separation, gauge, .init = setup,
    /* check for memory leaks */
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
+
+#endif  /* ifdef SCIP_DISABLED_CODE */
