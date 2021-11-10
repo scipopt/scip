@@ -2393,7 +2393,7 @@ SCIP_RETCODE rowChgCoefPos(
       /* delete existing coefficient */
       SCIP_CALL( rowDelCoefPos(row, blkmem, set, eventqueue, lp, pos) );
    }
-   else if( !SCIPsetIsEQ(set, row->vals[pos], val) || set->exact_enabled )
+   else if( !SCIPsetIsEQ(set, row->vals[pos], val) || (set->exact_enabled && row->vals[pos] != val) )
    {
       SCIP_Real oldval;
 
@@ -5858,7 +5858,7 @@ SCIP_RETCODE SCIProwChgLhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->lhs, lhs) || set->exact_enabled )
+   if( !SCIPsetIsEQ(set, row->lhs, lhs) || (set->exact_enabled && row->lhs != lhs) )
    {
       SCIP_Real oldlhs;
 
@@ -5890,7 +5890,7 @@ SCIP_RETCODE SCIProwChgRhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->rhs, rhs) || set->exact_enabled )
+   if( !SCIPsetIsEQ(set, row->rhs, rhs) || (set->exact_enabled && row->rhs != rhs) )
    {
       SCIP_Real oldrhs;
 
@@ -18973,12 +18973,12 @@ SCIP_RETCODE SCIPlpGetDualDegeneracy(
                   {
                      if( SCIPsetIsEQ(set, SCIProwGetLhs(row), SCIProwGetLPActivity(row, set, stat, lp)) )
                      {
-                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasNegative(set, dualsol));
+                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasNegative(set, dualsol) || set->exact_enabled);
                         ++nfixedrows;
                      }
                      else if( SCIPsetIsEQ(set, SCIProwGetRhs(row), SCIProwGetLPActivity(row, set, stat, lp)) )
                      {
-                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasPositive(set, dualsol));
+                        assert(!SCIPlpIsDualReliable(lp) || !SCIPsetIsDualfeasPositive(set, dualsol)|| set->exact_enabled);
                         ++nfixedrows;
                      }
                   }

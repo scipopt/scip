@@ -3381,6 +3381,8 @@ SCIP_RETCODE SCIPfreeSolve(
    case SCIP_STAGE_PRESOLVED:
       /* switch stage to TRANSFORMED */
       scip->set->stage = SCIP_STAGE_TRANSFORMED;
+      /* possibly close CERTIFICATE output file */
+      SCIPcertificateExit(scip, scip->stat->certificate, scip->set, scip->messagehdlr);
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
