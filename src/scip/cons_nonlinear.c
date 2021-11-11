@@ -9531,6 +9531,8 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    conshdlrdata->lastboundrelax = ++conshdlrdata->curboundstag;
    /* set to 1 so it is larger than initial value of lastenforound in exprs */
    conshdlrdata->enforound = 1;
+   /* reset numbering for auxiliary variables */
+   conshdlrdata->auxvarid = 0;
 
    for( i = 0; i < nconss; ++i )
    {
