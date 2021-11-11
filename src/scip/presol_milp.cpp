@@ -380,39 +380,35 @@ SCIP_RETCODE doMilpPresolveRational(
    /* set up the presolvers that shall participate */
    using uptr = std::unique_ptr<PresolveMethod<papilo::Rational>>;
 
+   /* fast presolvers*/
+   presolve.addPresolveMethod( uptr( new SingletonCols<papilo::Rational>()  ) );
    presolve.addPresolveMethod( uptr( new CoefficientStrengthening<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new SimpleProbing<papilo::Rational>() ) );
    presolve.addPresolveMethod( uptr( new ConstraintPropagation<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new ImplIntDetection<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new FixContinuous<papilo::Rational>() ) );
 
+   /* medium presolver */
+   presolve.addPresolveMethod( uptr( new SimpleProbing<papilo::Rational>() ) );
    if( data->enableparallelrows )
       presolve.addPresolveMethod( uptr( new ParallelRowDetection<papilo::Rational>() ) );
-
-   presolve.addPresolveMethod( uptr( new SimpleSubstitution<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new SimplifyInequalities<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new SingletonCols<papilo::Rational>() ) );
+   /* todo: parallel cols cannot be handled by SCIP currently
+   * addPresolveMethod( uptr( new ParallelColDetection<papilo::Rational>() ) ); */
+   presolve.addPresolveMethod( uptr( new SingletonStuffing<papilo::Rational>() ) );
    presolve.addPresolveMethod( uptr( new DualFix<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new FixContinuous<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<papilo::Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SimpleSubstitution<papilo::Rational>() ) );
 
-   if( data->enablemultiaggr )
-      presolve.addPresolveMethod( uptr( new Substitution<papilo::Rational>() ) );
-
-   if( data->enableprobing )
-      presolve.addPresolveMethod( uptr( new Probing<papilo::Rational>() ) );
-
-   if( data->enablesparsify )
-      presolve.addPresolveMethod( uptr( new Sparsify<papilo::Rational>() ) );
-
+   /* exhaustive presolvers*/
+   presolve.addPresolveMethod( uptr( new ImplIntDetection<papilo::Rational>() ) );
    if( data->enabledualinfer )
       presolve.addPresolveMethod( uptr( new DualInfer<papilo::Rational>() ) );
-
-   presolve.addPresolveMethod( uptr( new SingletonStuffing<papilo::Rational>() ) );
-
+   if( data->enableprobing )
+      presolve.addPresolveMethod( uptr( new Probing<papilo::Rational>() ) );
    if( data->enabledomcol )
       presolve.addPresolveMethod( uptr( new DominatedCols<papilo::Rational>() ) );
-
-   /* todo: parallel cols cannot be handled by SCIP currently
-    * addPresolveMethod( uptr( new ParallelColDetection<papilo::Rational>() ) ); */
+   if( data->enablemultiaggr )
+      presolve.addPresolveMethod( uptr( new Substitution<papilo::Rational>() ) );
+   if( data->enablesparsify )
+      presolve.addPresolveMethod( uptr( new Sparsify<papilo::Rational>() ) );
 
    /* set tolerances */
    presolve.getPresolveOptions().feastol = 0.0;
@@ -434,7 +430,13 @@ SCIP_RETCODE doMilpPresolveRational(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
    int oldnnz = problem.getConstraintMatrix().getNnz();
+
+   /*call presolving without storing information for dual postsolve*/
+#if (PAPILO_VERSION_MAJOR >= 2)
+   PresolveResult<papilo::Rational> res = presolve.apply(problem, false);
+#else
    PresolveResult<papilo::Rational> res = presolve.apply(problem);
+#endif
    data->lastncols = problem.getNCols();
    data->lastnrows = problem.getNRows();
 
@@ -566,20 +568,47 @@ SCIP_RETCODE doMilpPresolveRational(
       {
       case ReductionType::kFixedCol:
       {
+         SCIP_Rational* tmpval;
          SCIP_Bool infeas;
          SCIP_Bool fixed;
          int col = res.postsolve.indices[first];
 
-         SCIP_VAR* colvar = SCIPmatrixGetVar(matrix, col);
+         SCIP_VAR* var = SCIPmatrixGetVar(matrix, col);
 
          papilo::Rational value = res.postsolve.values[first];
-         SCIP_Rational* tmpval;
+
          SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpval) );
          setRational(scip, tmpval, value);
 
-         RatDebugMessage("Papilo fix var %s to %q \n", SCIPvarGetName(colvar), tmpval);
+         RatDebugMessage("Papilo fix var %s to %q \n", SCIPvarGetName(var), tmpval);
 
-         SCIP_CALL( SCIPfixVarExact(scip, colvar, tmpval, &infeas, &fixed) );
+         /* SCIP has different rules for aggregation than PaPILO
+          * As a result, SCIP might have aggregated and replaced the variable that PaPILO now wants to fix*/
+         if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            SCIP_Rational* aggregatedScalar;
+            SCIP_Rational* aggregatedConst;
+
+            aggregatedScalar = SCIPvarGetAggrScalarExact(var);
+            aggregatedConst = SCIPvarGetAggrConstantExact(var);
+
+            /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
+            assert( RatIsZero(SCIPvarGetObjExact(var)) );
+            assert( !RatIsZero(aggregatedScalar));
+            if( RatIsAbsInfinity(tmpval) )
+               RatMultReal(tmpval, tmpval, RatIsNegative(aggregatedScalar) ? -1 : 1);
+            else
+            {
+               RatDiff(tmpval, tmpval, aggregatedConst);
+               RatDiv(tmpval, tmpval, aggregatedScalar);
+            }
+         }
+
+         /* SCIP might also have fixed the variable during aggregation */
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+            break;
+
+         SCIP_CALL( SCIPfixVarExact(scip, var, tmpval, &infeas, &fixed) );
 
          *nfixedvars += 1;
 
@@ -589,16 +618,56 @@ SCIP_RETCODE doMilpPresolveRational(
          assert(fixed);
          break;
       }
+/*
+ * Dual-postsolving in PaPILO required introducing a postsolve-type for substitution with additional information.
+ * Further, the different Substitution-postsolving types store the required postsolving data differently (in different order) in the postsolving stack.
+ * Therefore, we need to distinguish how to parse the required data (rowLength, col, side, startRowCoefficients, lastRowCoefficients) from the postsolving stack.
+ * If these values are accessed, the procedure is the same for both.
+ */
+#if (PAPILO_VERSION_MAJOR >= 2)
+      case ReductionType::kSubstitutedColWithDual:
+#endif
       case ReductionType::kSubstitutedCol:
       {
-         int col = res.postsolve.indices[first];
-         papilo::Rational side = res.postsolve.values[first];
-         papilo::Rational tmpval;
+         int col = 0;
+         papilo::Rational side = 0;
 
-         int rowlen = last - first - 1;
+         int rowlen = 0;
+         int startRowCoefficients = 0;
+         int lastRowCoefficients = 0;
+
+         if( type == ReductionType::kSubstitutedCol )
+         {
+            rowlen = last - first - 1;
+            col = res.postsolve.indices[first];
+            side = res.postsolve.values[first];
+
+            startRowCoefficients = first + 1;
+            lastRowCoefficients = last;
+         }
+#if (PAPILO_VERSION_MAJOR >= 2)
+         if( type == ReductionType::kSubstitutedColWithDual )
+         {
+            rowlen = (int) res.postsolve.values[first];
+            col = res.postsolve.indices[first + 3 + rowlen];
+            side = res.postsolve.values[first + 1];
+
+            startRowCoefficients = first + 3;
+            lastRowCoefficients = first + 3 + rowlen;
+
+            assert(side == res.postsolve.values[first + 2]);
+            assert(res.postsolve.indices[first + 1] == 0);
+            assert(res.postsolve.indices[first + 2] == 0);
+
+         }
+         assert( type == ReductionType::kSubstitutedCol || type == ReductionType::kSubstitutedColWithDual );
+#else
+         assert( type == ReductionType::kSubstitutedCol );
+#endif
          SCIP_Bool infeas;
          SCIP_Bool aggregated;
          SCIP_Bool redundant = FALSE;
+         SCIP_Rational* constant;
          if( rowlen == 2 )
          {
             SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 1]);
@@ -606,7 +675,6 @@ SCIP_RETCODE doMilpPresolveRational(
             papilo::Rational scalarx = res.postsolve.values[first + 1];
             papilo::Rational scalary = res.postsolve.values[first + 2];
 
-            SCIP_Rational* constant;
             SCIP_Rational* tmpscalarx;
             SCIP_Rational* tmpscalary;
             SCIP_Rational* tmpside;
@@ -640,7 +708,6 @@ SCIP_RETCODE doMilpPresolveRational(
          else
          {
             SCIP_Rational* colCoef;
-            SCIP_Rational* constant;
             SCIP_Rational* tmpside;
             SCIP_Rational** tmpvals;
             int c = 0;
@@ -736,9 +803,53 @@ SCIP_RETCODE doMilpPresolveRational(
 
          break;
       }
-      default:
       case ReductionType::kParallelCol:
          return SCIP_INVALIDRESULT;
+#if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
+#else
+      case ReductionType::kFixedInfCol: {
+         if(!constraintsReplaced)
+            continue;
+         SCIP_Bool infeas;
+         SCIP_Bool fixed;
+         SCIP_Real value = SCIPinfinity(scip);
+
+         int column = res.postsolve.indices[first];
+         bool is_negative_infinity = res.postsolve.values[first] < 0;
+         SCIP_VAR* column_variable = SCIPmatrixGetVar(matrix, column);
+
+         if( is_negative_infinity )
+         {
+            value = -SCIPinfinity(scip);
+         }
+
+         SCIP_CALL( SCIPfixVar(scip, column_variable, value, &infeas, &fixed) );
+         *nfixedvars += 1;
+
+         assert(!infeas);
+         assert(fixed);
+         break;
+      }
+#endif
+#if (PAPILO_VERSION_MAJOR >= 2)
+      case ReductionType::kVarBoundChange :
+      case ReductionType::kRedundantRow :
+      case ReductionType::kRowBoundChange :
+      case ReductionType::kReasonForRowBoundChangeForcedByRow :
+      case ReductionType::kRowBoundChangeForcedByRow :
+      case ReductionType::kSaveRow :
+      case ReductionType::kReducedBoundsCost :
+      case ReductionType::kColumnDualValue :
+      case ReductionType::kRowDualValue :
+      case ReductionType::kCoefficientChange :
+         // dual ReductionTypes should be only calculated for dual reductions and should not appear for MIP
+         SCIPerrorMessage("PaPILO: PaPILO should not return dual postsolving reductions in SCIP!!\n");
+         SCIPABORT(); /*lint --e{527}*/
+         break;
+#endif
+      default:
+         SCIPdebugMsg(scip, "PaPILO returned unknown data type: \n" );
+         continue;
       }
    }
 
