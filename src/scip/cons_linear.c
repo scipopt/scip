@@ -163,7 +163,7 @@
 #define MAXSCALEDCOEFINTEGER            0 /**< maximal coefficient value after scaling if all variables are of integral
                                            *   type
                                            */
-#define MAXACTQ                     1e+06 /**< maximal quotient between full and partial activity such that
+#define MAXACTVAL                   1e+09 /**< maximal absolute value of full and partial activities such that
                                            *   redundancy-based simplifications are allowed to be applied
                                            */
 
@@ -11782,6 +11782,9 @@ SCIP_RETCODE simplifyInequalities(
    {
       SCIP_Bool redundant = FALSE;
       SCIP_Bool numericsok;
+      SCIP_Bool rredundant;
+      SCIP_Bool lredundant;
+
 
       gcd = (SCIP_Longint)(REALABS(vals[v]) + feastol);
       assert(gcd >= 1);
@@ -11859,9 +11862,11 @@ SCIP_RETCODE simplifyInequalities(
                siderest = gcd;
          }
 
+         rredundant = hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd);
+         lredundant = haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
+
          /* early termination if the activities deceed the gcd */
-         if( (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
-               (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd) )
+         if( offsetv == -1 && (rredundant || lredundant) )
          {
             redundant = TRUE;
             break;
@@ -11890,15 +11895,16 @@ SCIP_RETCODE simplifyInequalities(
       SCIPdebugMsg(scip, "stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %" SCIP_LONGINT_FORMAT ", offset position for 'side' coefficients = %d\n",
             v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
 
-      /* to avoid inconsistencies due to numerics, check that the quotients of the full and partial activities have
-       * reasonable values */
-      numericsok = (REALABS(maxact)/REALABS(maxactsub) <= MAXACTQ && REALABS(maxactsub)/REALABS(maxact) <= MAXACTQ) &&
-            (REALABS(minact)/REALABS(minactsub) <= MAXACTQ && REALABS(minactsub)/REALABS(minact) <= MAXACTQ);
+      /* to avoid inconsistencies due to numerics, check that the full and partial activities have
+       * reasonable absolute values */
+      numericsok = REALABS(maxact) < MAXACTVAL && REALABS(maxactsub) < MAXACTVAL && REALABS(minact) < MAXACTVAL &&
+            REALABS(minactsub) < MAXACTVAL;
+
+      rredundant = hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd);
+      lredundant = haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd;
 
       /* check if we can remove redundant variables */
-      if( v < nvars && numericsok && (redundant ||
-                        (offsetv == -1 && hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd)) ||
-                        (haslhs && SCIPisFeasLT(scip, maxactsub, siderest) && minactsub >= siderest - gcd)) )
+      if( v < nvars && numericsok && (redundant || (offsetv == -1 && (rredundant || lredundant))) )
       {
          SCIP_Real oldcoef;
 

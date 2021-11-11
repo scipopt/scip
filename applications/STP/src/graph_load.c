@@ -332,7 +332,7 @@ char* strlower(
 static
 SCIP_RETCODE check_inputgraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nterms,
+   int                   nterms,             /**< number of terminals */
    GRAPH*                graph               /**< graph */
 )
 {

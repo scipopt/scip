@@ -178,7 +178,7 @@ void termcompMarkPseudoDelNodes(
 static
 SCIP_RETCODE termcompReduceWithParams(
    SCIP*                 scip,               /**< SCIP data structure */
-   DAPARAMS*             daparams,
+   DAPARAMS*             daparams,           /**< dual-ascent parameters */
    GRAPH*                g,                  /**< graph data structure */
    EXTPERMA*             extperma,           /**< extension data */
    TERMCOMP*             termcomp,           /**< component */

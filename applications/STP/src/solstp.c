@@ -1948,7 +1948,7 @@ SCIP_Real solstp_getObjCsr(
 /** gets STP solution from SCIP solution */
 void solstp_getStpFromSCIPsol(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             scipsol,
+   SCIP_SOL*             scipsol,            /**< SCIP solution data structure */
    const GRAPH*          g,                  /**< the graph */
    int*                  soledges            /**< solution (CONNECT/UNKNOWN)  */
    )
