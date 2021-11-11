@@ -383,6 +383,7 @@ set(objscipsources
     objscip/objbenderscut.cpp
     objscip/objbranchrule.cpp
     objscip/objconshdlr.cpp
+    objscip/objcutsel.cpp
     objscip/objdialog.cpp
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
