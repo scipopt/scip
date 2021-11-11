@@ -428,6 +428,7 @@ set(objscipheaders
     objscip/objbranchrule.h
     objscip/objcloneable.h
     objscip/objconshdlr.h
+    objscip/objcutsel.h
     objscip/objdialog.h
     objscip/objdisp.h
     objscip/objeventhdlr.h
