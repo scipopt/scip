@@ -266,8 +266,6 @@ SCIP_HEUR** SCIPgetHeurs(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPsetSortHeurs(scip->set);
-
    return scip->set->heurs;
 }
 
