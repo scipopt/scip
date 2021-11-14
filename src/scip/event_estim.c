@@ -2681,6 +2681,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolEstim)
    eventhdlrdata->restarthitcounter = 0;
    eventhdlrdata->weightlastreport = 0.0;
    eventhdlrdata->nreports = 0;
+   eventhdlrdata->nrestartsperformed = 0;
 
    /* reset tree data */
    SCIP_CALL( resetTreeData(scip, eventhdlrdata->treedata) );
