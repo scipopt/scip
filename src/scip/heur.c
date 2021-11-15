@@ -1067,6 +1067,9 @@ SCIP_RETCODE SCIPheurInit(
       heur->ncalls = 0;
       heur->nsolsfound = 0;
       heur->nbestsolsfound = 0;
+
+      set->heurssorted = FALSE;
+      set->heursnamesorted = FALSE;
    }
 
    if( heur->heurinit != NULL )
