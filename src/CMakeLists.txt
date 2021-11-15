@@ -383,6 +383,7 @@ set(objscipsources
     objscip/objbenderscut.cpp
     objscip/objbranchrule.cpp
     objscip/objconshdlr.cpp
+    objscip/objcutsel.cpp
     objscip/objdialog.cpp
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
@@ -427,6 +428,7 @@ set(objscipheaders
     objscip/objbranchrule.h
     objscip/objcloneable.h
     objscip/objconshdlr.h
+    objscip/objcutsel.h
     objscip/objdialog.h
     objscip/objdisp.h
     objscip/objeventhdlr.h

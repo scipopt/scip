@@ -7407,27 +7407,16 @@
   *
   * @section FILEFORMATS File formats
   *
-  *  The easiest way to load a problem into SCIP is via an input file, given in a format that SCIP can parse directly,
-  *  see \ref SHELL "the tutorial on how to use the interactive shell".
-  *  \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
-  *  problems and constraint programs. This gives researchers from different communities an easy, first access to the
-  *  \SCIP Optimization Suite. See also the \ref AVAILABLEFORMATS "list of readable file formats".
+  * The easiest way to load a problem into SCIP is via an input file, given in a format that SCIP can parse directly,
+  * see \ref SHELL "the tutorial on how to use the interactive shell".
+  * \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
+  * problems and constraint programs. This gives researchers from different communities an easy, first access to the
+  * \SCIP Optimization Suite. See also the \ref AVAILABLEFORMATS "list of readable file formats".
   *
-  * @section MODELLING Modeling languages and Matlab interface
+  * @section C_API C and C++ API
   *
-  * A natural way of formulating an optimization problem is to use a modeling language. Besides ZIMPL there are several
-  * other modeling tools with a direct interface to \SCIP. These include <a href="http://dynadec.com/">Comet</a>, a
-  * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
-  * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
-  * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
-  * The AMPL and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface is available <a
-  * href="https://github.com/coin-or/GAMSlinks">here</a>.
-  *
-  * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
-  * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
-  * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
-  * free modeling language.
-  *
+  * For \SCIP there exists an API to C and C++. Please refer to the \ref PUBLICAPI documentation
+  * for further details.
   *
   * @section CPLUSPLUS C++ wrapper classes
   *
@@ -7436,22 +7425,60 @@
   * directory of the \SCIP standard distribution. SCIP provides several examples that were written in C++, see
   * \ref EXAMPLES "Examples" and select an example written in C++.
   *
-  *
-  * @section OTHER Interfaces for other programming languages
+  * @section SCIPINTERFACES Interfaces for other programming languages
   *
   * Interfaces for other programming languages are developed and maintained independently from the SCIP Optimization Suite
   * on <a href="https://github.com/scipopt">GitHub</a> in order to provide extensions and patches faster
-  * and to collaborate on them more easily. Besides the popular interfaces for Python and Java, there is also an interface
-  * for Julia available. Contributions to these projects are very welcome.
+  * and to collaborate on them more easily.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g., <a
-  * href="http://numberjack.ucc.ie/">NUMBERJACK</a> and <a
-  * href="http://code.google.com/p/python-zibopt/">python-zibopt</a>. <a href="http://numberjack.ucc.ie/">NUMBERJACK</a>
-  * is a constraint programming platform implemented in python. It supports a variety of different solvers, one of them
-  * being the \SCIP Optimization Suite. <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
-  * by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite. <a
-  * href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization, provided by Guillaume Sagnol.
+  * - <a href="https://github.com/scipopt/PySCIPOpt">PySCIPOpt</a> for Python
+  *   PySCIPOpt can be installed via <a href="https://anaconda.org/conda-forge/pyscipopt">conda-forge</a>,
+  *   which automatically includes \SCIP.
+  *   PySCIPOpt is our open-source python API for \SCIP, using wrappers to allow users to build
+  *   their own plugins without accessing the C code of \SCIP itself.
+  *   Since Python is one of the most commonly used programming languages, especially in the field of
+  *   machine learning, the API gives easy access to the solvers functionality to incorporate \SCIP
+  *   into any python project pipeline, extract data for further analysis and computation and allow
+  *   customizing the solving process from the outside.
+  * - <a href="https://github.com/scipopt/SCIP.jl">SCIP.jl</a> for Julia
+  *   The Julia interface exposes an API identical to the SCIP-C_API and implements the
+  *   MathOptInterface used by most constrained solvers in Julia.
+  *   It can be accessed through the Julia package manager and will install a pre-built version of
+  *   \SCIP if none is provided by the user.
+  * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">separate interface</a>
+  *   available from Matlab to SCIP and SCIP-SDP.
+  * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> for Java
   *
+  * Contributions to these projects are very welcome.
+  *
+  * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g.,
+  * NUMBERJACK and python-zibopt.
+  * <a href="http://numberjack.ucc.ie/">NUMBERJACK</a> is a constraint programming platform implemented in python.
+  * It supports a variety of different solvers, one of them being the \SCIP Optimization Suite.
+  * <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
+  * by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite.
+  * <a href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization,
+  * provided by Guillaume Sagnol.
+  *
+  * @section MODELLING Modeling languages
+  *
+  * A natural way of formulating an optimization problem is to use a modeling language.
+  * Besides ZIMPL, that is a part of the \SCIP Optimization Suite,
+  * there are several other modeling tools with a direct interface to \SCIP.
+  *
+  * - <a href="https://zimpl.zib.de">ZIMPL</a>, a modeling language for constraint programming,
+  * - both <a href="http://www.ampl.com/">AMPL</a> and <a href="http://www.gams.com">GAMS</a>,
+  *   are well-suited for modeling mixed-integer linear and nonlinear optimization problems,
+  * - and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
+  * - <a href="https://jump.dev/JuMP.jl/stable/">JuMP</a> accesses SCIP through the Julia interface.
+  *
+  * The AMPL and ZIMPL interfaces are included in the \SCIP distribution,
+  * the GAMS interface is available <a href="https://github.com/coin-or/GAMSlinks">here</a>.
+  *
+  * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
+  * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
+  * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
+  * free modeling language.
   *
   */
 

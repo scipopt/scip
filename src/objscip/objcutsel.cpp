@@ -180,7 +180,8 @@ SCIP_DECL_CUTSELSELECT(cutselSelectObj)
    assert(cutseldata->objcutsel != NULL);
 
    /* call virtual method of cutsel object */
-   SCIP_CALL( cutseldata->objcutsel->scip_select(scip, cutsel, selcut) );
+   SCIP_CALL( cutseldata->objcutsel->scip_select(scip, cutsel, cuts, ncuts, forcedcuts, nforcedcuts,
+      root, maxnselectedcuts, nselectedcuts, result) );
 
    return SCIP_OKAY;
 }

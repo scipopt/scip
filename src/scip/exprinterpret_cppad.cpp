@@ -1467,7 +1467,7 @@ const char* SCIPexprintGetName(void)
 /** gets descriptive text of expression interpreter */
 const char* SCIPexprintGetDesc(void)
 {
-   return "Algorithmic Differentiation of C++ algorithms developed by B. Bell (www.coin-or.org/CppAD)";
+   return "Algorithmic Differentiation of C++ algorithms developed by B. Bell (github.com/coin-or/CppAD)";
 }
 
 /** gets capabilities of expression interpreter (using bitflags) */

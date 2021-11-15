@@ -88,6 +88,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_ENABLEMULTIAGGR    TRUE      /**< should the multi-aggregation presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEPROBING      TRUE      /**< should the probing presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLESPARSIFY     FALSE     /**< should the sparsify presolver be enabled within the presolve library? */
+#define DEFAULT_FILENAME_PROBLEM   "-"       /**< default filename to store the instance before presolving */
 
 /*
  * Data structures
@@ -113,6 +114,9 @@ struct SCIP_PresolData
                                               *   factor times the number of nonzeros or rows before presolving */
    SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */
    SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
+
+   char* filename = NULL;                    /**< filename to store the instance before presolving */
+
 };
 
 using namespace papilo;
@@ -359,6 +363,11 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    if( !SCIPisInfinity(scip, timelimit) )
       presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
 
+   if( 0 != strncmp(data->filename, DEFAULT_FILENAME_PROBLEM, strlen(DEFAULT_FILENAME_PROBLEM)) )
+   {
+      SCIP_CALL(SCIPwriteTransProblem(scip, data->filename, NULL, FALSE));
+   }
+
    /* call the presolving */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
@@ -487,11 +496,35 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_Bool fixed;
          int col = res.postsolve.indices[first];
 
-         SCIP_VAR* colvar = SCIPmatrixGetVar(matrix, col);
+         SCIP_VAR* var = SCIPmatrixGetVar(matrix, col);
 
          SCIP_Real value = res.postsolve.values[first];
 
-         SCIP_CALL( SCIPfixVar(scip, colvar, value, &infeas, &fixed) );
+         /* SCIP has different rules for aggregation than PaPILO
+          * As a result, SCIP might have aggregated and replaced the variable that PaPILO now wants to fix*/
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            SCIP_Real aggregatedScalar;
+            SCIP_Real aggregatedConst;
+
+            aggregatedScalar = SCIPvarGetAggrScalar(var);
+            aggregatedConst = SCIPvarGetAggrConstant(var);
+
+            /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
+            assert( SCIPisZero(scip, SCIPvarGetObj(var)) );
+            assert( !SCIPisZero(scip,  aggregatedScalar));
+            if( SCIPisInfinity(scip, value) || SCIPisInfinity(scip, -value) )
+               value = (aggregatedScalar < 0.0 ? -value : value);
+            else
+               value = (value - aggregatedConst)/aggregatedScalar;
+            var = SCIPvarGetAggrVar(var);
+         }
+
+         /* SCIP might also have fixed the variable during aggregation */
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+            break;
+
+         SCIP_CALL( SCIPfixVar(scip, var, value, &infeas, &fixed) );
          *nfixedvars += 1;
 
          assert(!infeas);
@@ -612,7 +645,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             /* if the constraints where replaced, we need to add the failed substitution as an equality to SCIP */
             tmpvars.clear();
             tmpvals.clear();
-            for( int j = first + 1; j < last; ++j )
+            for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
                tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
                tmpvals.push_back(res.postsolve.values[j]);
@@ -771,6 +804,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    /* create MILP presolver data */
    presoldata = NULL;
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
+   BMSclearMemory(presoldata);
 
    presol = NULL;
 
@@ -862,6 +896,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "presolving/" PRESOL_NAME "/enablesparsify",
          "should the sparsify presolver be enabled within the presolve library?",
          &presoldata->enablesparsify, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "presolving/" PRESOL_NAME "/probfilename",
+         "filename to store the problem before MILP presolving starts",
+         &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL) );
 
    return SCIP_OKAY;
 }

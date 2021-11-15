@@ -724,6 +724,7 @@ Cut Selector:
 - new parameter "misc/avoidmemout" to try to avoid running into memory limit
 - cutselection/hybrid/dircutoffdistweight, cutselection/hybrid/efficacyweight, cutselection/hybrid/intsupportweight, cutselection/hybrid/objparalweight, cutselection/hybrid/priority
 - new parameter "decomposition/disablemeasures" to disable expensive measures in SCIPcomputeDecompStats()
+- new parameter "presolving/milp/probfilename" filename to write the problem to a file before MILP presolving starts
 
 ### Data structures
 
@@ -881,6 +882,8 @@ Fixed bugs
 - added missing redundancy check to coefficient tightening routine in cons_varbound that led to wrong variable locks
 - added a check of numerics to avoid wrong reductions in cons_linear.c:simplifyInequalities()
 - fixed a bug in cons_logicor.c regarding fixed variables that were not removed
+- presol_milp.c handles variable fixings, suggested by PaPILO, more carefully to cover all cases that can appear
+
 
 Miscellaneous
 -------------
