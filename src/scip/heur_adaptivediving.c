@@ -238,6 +238,10 @@ SCIP_DECL_HEURINIT(heurInitAdaptivediving) /*lint --e{715}*/
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    heurdata->lastselection = -1;
+   if( heurdata->divesets != NULL )
+   {
+      SCIPfreeBlockMemoryArray(scip, &heurdata->divesets, heurdata->divesetssize);
+   }
 
    assert(heurdata != NULL);
 
