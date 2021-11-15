@@ -35,7 +35,7 @@
  *
  * This application contains the branch-and-cut based solver SCIP-Jack for Steiner tree and related problems, realized within the framework
  * \SCIP. See the doctoral thesis: "Faster algorithms for Steiner tree and related problems: From theory to practice"
- * by Daniel Rehfeldt for more details. This application includes (among others):
+ * by Daniel Rehfeldt for more details. See also https://scipjack.zib.de. This application includes (among others):
  *
  * - problem readers, which parse the problem out of .stp or .gr files
  *   (reader_stp.c, reader_gr.c)

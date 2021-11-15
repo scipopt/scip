@@ -1750,8 +1750,8 @@ int graph_pc_getNorgEdges(
 /** gets ratio of remaining nodes/edges */
 void graph_pc_getReductionRatios(
   const GRAPH*          graph,              /**< graph */
-  SCIP_Real*	         ratio_nodes,
-  SCIP_Real*	         ratio_edges
+  SCIP_Real*	         ratio_nodes,        /**< nodes ratio */
+  SCIP_Real*	         ratio_edges         /**< edges ratio */
 )
 {
    int nnodes_real = 0;
