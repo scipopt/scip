@@ -98,6 +98,7 @@
 #define DEFAULT_MODE                  3 /**< default parameter setting for parameter mode */
 #define DEFAULT_SEMICONTSCOREMODE     0 /**< default parameter setting for parameter semicontscoremode */
 #define DEFAULT_SOLVEMIP          FALSE /**< default parameter setting for parameter solvemip */
+#define DEFAULT_VARBOUNDS          TRUE /**< default parameter setting for parameter varbounds */
 
 enum IndicatorDivingMode
 {
@@ -139,6 +140,7 @@ struct SCIP_HeurData
    int                   notfound;           /**< calls without found solution in succession */
    SCIP_Bool             dynamicfreq;        /**< should the frequency be adjusted dynamically? */
    SCIP_Bool             solvemip;           /**< should a MIP be solved after all indicator variables are fixed? */
+   SCIP_Bool             varbounds;          /**< should varbound constraints be considered? */
    int                   nremainingindconss; /**< number of remaining indicator constraints */
 };
 
@@ -822,11 +824,14 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    int v;
    int b;
 
+   varboundcons = NULL;
    semicontinuousvar = NULL;
    scdata = NULL;
    lpsolsemicontinuous = 0.0;
    idxbvars = -1;
+   isvbdvar = FALSE;
    issemicont = TRUE;
+   containsviolvarboundconss = FALSE;
 
    heur = SCIPdivesetGetHeur(diveset);
    assert(heur != NULL);
@@ -836,13 +841,19 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    /* check if cand variable is indicator variable */
    SCIP_CALL( checkAndGetIndicator(scip, cand, &indicatorcons, &isindicatorvar,
                                   &containsviolindconss, heurdata->sol, heurdata->conshdlr[0]) );
-   SCIP_CALL( checkAndGetVarbound(scip, cand, &varboundcons, &isvbdvar,
-                                  &containsviolvarboundconss, heurdata->sol, heurdata->conshdlr[1]) );
+
+   /* check if cand variable is bounding variable */
+   if( heurdata->varbounds )
+   {
+      SCIP_CALL( checkAndGetVarbound(scip, cand, &varboundcons, &isvbdvar,
+                                     &containsviolvarboundconss, heurdata->sol, heurdata->conshdlr[1]) );
+   }
 
    /* Return if candidate variable is neither a indicator variable nor a variable bounding variable
-    * or if candidate variable is not a indicator variable but there will be indicator variables as candidate
+    * or if candidate variable is not an indicator variable but there will be indicator variables as candidate
+    * or if candidate variable is not an indicator variable and varbound constraints are not considered.
     */
-   if( !isindicatorvar && (!isvbdvar || containsviolindconss) )
+   if( !isindicatorvar && (!isvbdvar || containsviolindconss || !heurdata->varbounds) )
    {
       *score = SCIP_REAL_MIN;
       *roundup = FALSE;
@@ -1133,6 +1144,10 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/solvemip",
          "should a MIP be solved after all indicator variables are fixed?",
          &heurdata->solvemip, FALSE, DEFAULT_SOLVEMIP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/varbounds",
+         "should varbound constraints be considered?",
+         &heurdata->varbounds, FALSE, DEFAULT_VARBOUNDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
