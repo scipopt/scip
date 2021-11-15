@@ -1014,6 +1014,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
     * indicator constraint: roundup == fix to constant
     * varbound constraint: roundup == push to range
     */
+   /*lint --e{644}*/
    *roundup = isindicatorvar ? fixconstant : !fixconstant;
 
    /* free memory */
