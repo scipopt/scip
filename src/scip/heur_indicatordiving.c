@@ -157,6 +157,8 @@ SCIP_Bool isViolatedAndNotFixed(
    SCIP_VAR* binvar;
    SCIP_Real solval;
 
+   assert((strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "indicator") == 0) || (strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "varbound") == 0));
+
    if( (strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "indicator") == 0) )
    {
       if( !SCIPisViolatedIndicator(scip, cons, sol) )
@@ -167,17 +169,13 @@ SCIP_Bool isViolatedAndNotFixed(
 
       return (SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5);
    }
-   else if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "varbound") == 0 )
+   else
    {
+      /* cons is varbound constraint */
       binvar = SCIPgetVbdvarVarbound(scip, cons);
       solval = SCIPgetSolVal(scip, sol, binvar);
 
       return (!SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(binvar)) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(binvar)));
-   }
-   else
-   {
-      assert(FALSE);
-      return FALSE;
    }
 }
 
@@ -829,7 +827,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    lpsolsemicontinuous = 0.0;
    idxbvars = -1;
    issemicont = TRUE;
-   fixconstant = TRUE;
 
    heur = SCIPdivesetGetHeur(diveset);
    assert(heur != NULL);
