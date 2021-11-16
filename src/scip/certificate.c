@@ -1960,7 +1960,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    naggrrows = aggrinfo->naggrrows;
 
    /* print the aggregated row \xi - \nu \le \beta to the certificate */
-   SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, prob, certificate, aggrinfo->aggrrow, aggrinfo->aggrrows, aggrinfo->weights, naggrrows) );
+   SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, prob, certificate, aggrinfo->aggrrow, aggrinfo->aggrrows, aggrinfo->weights, naggrrows, NULL) );
 
    /* we need to tranform the aggregated row into the standard form used by the mir proof */
    SCIP_CALL( certificateTransAggrrow(set, prob, certificate, aggrinfo->aggrrow, row, aggrinfo->aggrrows, aggrinfo->weights, naggrrows) );
@@ -2616,7 +2616,7 @@ char getInequalitySense(SCIP_Bool isgreaterthan) {
    return isgreaterthan ? 'G' : 'L';
 }
 
-unsigned long certificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROW* row) {
+unsigned long SCIPcertificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROWEXACT* row) {
    return (size_t)SCIPhashmapGetImageLong(certificate->rowdatahash, row);
 }
 
@@ -2736,7 +2736,21 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    return SCIP_OKAY;
 }
 
-
+/** Print cutoff bound for objective value **/
+SCIP_RETCODE SCIPcertificatePrintCutoffBound(
+   SCIP* scip,
+   SCIP_CERTIFICATE* certificate,
+   SCIP_Rational* bound,
+   long* certificateline
+   )
+{
+   SCIPcertificatePrintProofMessage(certificate, "O%d L ", certificate->indexcounter);
+   SCIPcertificatePrintProofRational(certificate, bound, 10);
+   SCIPcertificatePrintProofMessage(certificate, " OBJ { asm } -1\n");
+   *certificateline = certificate->indexcounter;
+   certificate->indexcounter++;
+   return SCIP_OKAY;
+}
 
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificatePrintAggrrow(
@@ -2747,7 +2761,8 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows           /**< length of the arrays */
+   int                   naggrrows,          /**< length of the arrays */
+   unsigned long*        certificateline     /**< pointer to store the certificate line index or NULL */
    )
 {
    int i;
@@ -2813,6 +2828,8 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
 
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
+   if (certificateline != NULL)
+      *certificateline = certificate->indexcounter;
    certificate->indexcounter++;
 
    RatFreeBuffer(set->buffer, &tmpval);

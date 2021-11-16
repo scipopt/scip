@@ -1,4 +1,5 @@
 #include "lpi/lpi.h"
+#include "scip/certificate.h"
 #include "scip/clock.h"
 #include "scip/conflict_general.h"
 #include "scip/conflict_dualproofanalysis.h"
@@ -36,6 +37,7 @@
 #include "scip/struct_stat.h"
 #include "scip/struct_tree.h"
 #include "scip/struct_var.h"
+#include "scip/struct_certificate.h"
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/visual.h"
@@ -83,6 +85,7 @@ void proofsetClear(
    proofset->rhs = 0.0;
    proofset->validdepth = 0;
    proofset->conflicttype = SCIP_CONFTYPE_UNKNOWN;
+   proofset->certificateline = LONG_MAX;
 }
 
 /** creates a proofset */
@@ -102,6 +105,7 @@ SCIP_RETCODE proofsetCreate(
    (*proofset)->size = 0;
    (*proofset)->validdepth = 0;
    (*proofset)->conflicttype = SCIP_CONFTYPE_UNKNOWN;
+   (*proofset)->certificateline = LONG_MAX;
 
    return SCIP_OKAY;
 }
@@ -283,6 +287,14 @@ SCIP_RETCODE proofsetAddAggrrow(
    SCIP_CALL( proofsetAddSparseData(proofset, blkmem, vals, inds, nnz, SCIPaggrRowGetRhs(aggrrow)) );
 
    SCIPsetFreeBufferArray(set, &vals);
+
+   if ( set->exact_enabled && SCIPcertificateIsActive(set, SCIPgetCertificate(set->scip)))
+   {
+      assert(aggrrow->certificateline != LONG_MAX);
+      assert(proofset->certificateline == LONG_MAX); //@todo
+      proofset->certificateline = aggrrow->certificateline;
+   }
+
 
    return SCIP_OKAY;
 }
@@ -939,15 +951,21 @@ SCIP_RETCODE createAndAddProofcons(
       RatSetReal(rhs_exact, rhs);
       SCIP_CALL(RatCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz));
       SCIP_CALL(SCIPallocBufferArray(set->scip, &consvars, nnz));
+      assert(nnz > 0);
       for( i = 0; i < nnz; i++ )
       {
          consvars[i] = vars[inds[i]];
          RatSetReal(coefs_exact[i], coefs[i]);
+         assert(!RatIsAbsInfinity(coefs_exact[i]));
       }
       //SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, prob, certificate, aggrinfo->aggrrow, aggrinfo->aggrrows, aggrinfo->weights, naggrrows) );
       SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs_exact, rhs_exact,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
             FALSE, TRUE, TRUE, FALSE) );
+      if ( SCIPisCertificateActive(set->scip) )
+      {
+         SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, cons, proofset->certificateline) );
+      }
       SCIPfreeBufferArray(set->scip, &consvars);
       RatFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
       RatFreeBuffer(SCIPbuffer(set->scip), &rhs_exact);

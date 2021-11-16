@@ -334,14 +334,14 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
       {
          QUAD_ASSIGN(val, SCIPintervalGetInf(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange = (SCIPintervalGetInf(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
+         *rhschange += (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
          SCIPdebugMessage("Using lb %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetLbGlobal(var), -SCIPintervalGetSup(valinterval) + SCIPintervalGetInf(valinterval), *rhschange);
       }
       else if( SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) )
       {
          QUAD_ASSIGN(val, SCIPintervalGetSup(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange = (SCIPintervalGetInf(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
+         *rhschange += (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
          SCIPdebugMessage("Using ub %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetUbGlobal(var), SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval), *rhschange);
       }
       else
@@ -1968,6 +1968,7 @@ SCIP_RETCODE SCIPaggrRowCreate(
    (*aggrrow)->rowweights = NULL;
    (*aggrrow)->nrows = 0;
    (*aggrrow)->rowssize = 0;
+   (*aggrrow)->certificateline = LONG_MAX;
 
    return SCIP_OKAY;
 }
@@ -2181,19 +2182,23 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
 
    i = aggrrow->nrows++;
 
+   if( aggrrow->nrows > aggrrow->rowssize )
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, aggrrow->nrows);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowsinds, aggrrow->rowssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->slacksign, aggrrow->rowssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowweights, aggrrow->rowssize, newsize) );
+      aggrrow->rowssize = newsize;
+   }
    if (row->lppos >= 0)
    {
-      if( aggrrow->nrows > aggrrow->rowssize )
-      {
-         int newsize = SCIPcalcMemGrowSize(scip, aggrrow->nrows);
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowsinds, aggrrow->rowssize, newsize) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->slacksign, aggrrow->rowssize, newsize) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowweights, aggrrow->rowssize, newsize) );
-         aggrrow->rowssize = newsize;
-      }
       aggrrow->rowsinds[i] = SCIProwGetLPPos(row);
-      aggrrow->rowweights[i] = weight;
    }
+   else
+   {
+      aggrrow->rowsinds[i] = -1;
+   }
+   aggrrow->rowweights[i] = weight;
 
    if( sidetype == -1 )
    {
@@ -2225,7 +2230,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       if (row->lppos >= 0)
          aggrrow->slacksign[i] = -1;
       sideval = userow->lhs - userow->constant;
-      if( row->integral )
+      if( rowexact->integral )
          sideval = ceil(sideval); /* row is integral: round left hand side up */
    }
    else
@@ -2234,8 +2239,8 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       if (row->lppos >= 0)
          aggrrow->slacksign[i] = +1;
       sideval = userow->rhs - userow->constant;
-      if( row->integral )
-         sideval = floor(sideval); /* row is integral: round right hand side up */
+      if( rowexact->integral )
+         sideval = floor(sideval); /* row is integral: round right hand side down */
    }
 
    SCIPintervalSetRoundingModeUpwards();
@@ -2243,7 +2248,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
 
    /* add up coefficients */
    SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, userow, weight, &sidevalchg, NULL, 0) );
-
+   assert(sidevalchg >= 0);
    SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, sidevalchg);
 
    SCIPintervalSetRoundingMode(previousroundmode);
@@ -2387,41 +2392,6 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    return SCIP_OKAY;
 }
 
-/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
-SCIP_RETCODE SCIPaggrRowAddObjectiveFunctionSafely(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
-   SCIP_Real             rhs,                /**< right-hand side of the artificial row */
-   SCIP_Real             scale               /**< scalar */
-   )
-{
-   SCIP_ROW row;
-   SCIP_ROWEXACT rowexact;
-   row.rowexact = &rowexact;
-   row.cols = SCIPgetLPCols(scip);
-   rowexact.cols = scip->lpexact->cols;
-   row.len = SCIPgetNLPCols(scip);
-   rowexact.len = SCIPgetNLPCols(scip);
-   row.local = FALSE;
-   row.constant = 0;
-   row.rhs = rhs;
-   row.lhs = -SCIPinfinity(scip);
-   row.lppos = -1;
-   SCIPallocBufferArray(scip, &row.vals, row.len);
-   SCIPallocBufferArray(scip, &rowexact.valsinterval, rowexact.len);
-   SCIPallocBufferArray(scip, &rowexact.vals, rowexact.len);
-   for (int i = 0; i < row.len; i++)
-   {
-      row.vals[i] = SCIPvarGetObj(row.cols[i]->var);
-      rowexact.vals[i] = SCIPvarGetObjExact(row.cols[i]->var);
-      SCIPintervalSetRational(&rowexact.valsinterval[i], rowexact.vals[i]);
-   }
-   SCIP_CALL( SCIPaggrRowAddRowSafely(scip, aggrrow, &row, scale, 1) );
-   SCIPfreeBufferArray(scip, &row.vals);
-   SCIPfreeBufferArray(scip, &rowexact.valsinterval);
-   SCIPfreeBufferArray(scip, &rowexact.vals);
-   return SCIP_OKAY;
-}
 
 /** add weighted constraint to the aggregation row */
 SCIP_RETCODE SCIPaggrRowAddCustomCons(

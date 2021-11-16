@@ -211,6 +211,14 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
    int                   naggrrows           /**< length of the arrays */
    );
 
+/** Print cutoff bound for objective value **/
+SCIP_RETCODE SCIPcertificatePrintCutoffBound(
+   SCIP* scip,
+   SCIP_CERTIFICATE* certificate,
+   SCIP_Rational* bound,
+   long* certificateline
+   );
+
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_SET*             set,                /**< general SCIP settings */
@@ -220,7 +228,8 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows           /**< length of the arrays */
+   int                   naggrrows,           /**< length of the arrays */
+   unsigned long*        certificateline     /**< pointer to store the certificate line index or NULL */
    );
 
 /** prints a variable bound to the problem section of the certificate file and returns line index */
@@ -406,6 +415,8 @@ SCIP_RETCODE SCIPcertificateInsertVarBound(
    SCIP_CERTIFICATE*         certificate,
    SCIP_CERTIFICATEBOUND*    bound,
    SCIP_CERTIFICATEBOUND**   insertedbound);
+
+unsigned long SCIPcertificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROWEXACT* row);
 
 #ifdef __cplusplus
 }

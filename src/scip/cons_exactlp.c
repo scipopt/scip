@@ -16,6 +16,7 @@
 /**@file   cons_linear.c
  * @brief Constraint handler for exact linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Leon Eifler
+ * @authro Sander Borst
  *
  */
 
@@ -18236,6 +18237,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
       for( int i = 0; i < nvars; i++ )
       {
          coefs[i] = SCIPintervalGetSup(sourcecoefs[i]);
+         assert(!SCIPisInfinity(scip, coefs[i]) && !SCIPisInfinity(scip, -coefs[i]));
       }
    }
    else

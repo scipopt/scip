@@ -3218,6 +3218,7 @@ SCIP_RETCODE SCIProwExactCreate(
          var = cols[i]->var;
          (*row)->cols_index[i] = cols[i]->index;
          (*row)->linkpos[i] = -1;
+         SCIPintervalSetRational(&(*row)->valsinterval[i], vals[i]);
 
          if( RatIsIntegral((*row)->vals[i]) )
             (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var);
