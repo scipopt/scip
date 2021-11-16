@@ -3310,7 +3310,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) || RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
          continue;
 
-      if( RatDenominator(val) <= maxdenom )
+      if( RatDenominatorIsLE(val, maxdenom) )
          continue;
 
       if( RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval) )
