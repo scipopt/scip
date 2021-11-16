@@ -38,7 +38,7 @@
 
 #include "scip/struct_heur.h"
 
-/** compares two heuristics w. r. to their delay positions and their priority */
+/** compares two heuristics w.r.t. to their delay positions and priorities */
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
 {  /*lint --e{715}*/
    SCIP_HEUR* heur1 = (SCIP_HEUR*)elem1;
@@ -64,6 +64,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
       return heur1->delaypos - heur2->delaypos; /* prefer lower delay positions */
 }
 
+/** compares two heuristics w.r.t. to their priority values */
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompPriority)
+{
+   return SCIPheurGetPriority((SCIP_HEUR*)elem2) -
+     SCIPheurGetPriority((SCIP_HEUR*)elem1);
+}
 
 /** comparison method for sorting heuristics w.r.t. to their name */
 SCIP_DECL_SORTPTRCOMP(SCIPheurCompName)
