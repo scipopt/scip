@@ -4557,7 +4557,7 @@ SCIP_HEUR* SCIPsetFindHeur(
    return NULL;
 }
 
-/** sorts heuristics by priorities */
+/** sorts heuristics by their delay positions and priorities */
 void SCIPsetSortHeurs(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
