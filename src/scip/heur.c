@@ -48,7 +48,10 @@ SCIP_DECL_SORTPTRCOMP(SCIPheurComp)
    assert(heur2 != NULL);
 
    if( heur1->delaypos == heur2->delaypos )
-      return heur2->priority - heur1->priority; /* prefer higher priorities */
+      if( heur1->priority != heur2->priority )
+         return heur2->priority - heur1->priority; /* prefer higher priorities */
+      else
+         return (strcmp(heur1->name, heur2->name)); /* tiebreaker */
    else if( heur1->delaypos == -1 )
       return +1;                                /* prefer delayed heuristics */
    else if( heur2->delaypos == -1 )
@@ -1064,6 +1067,9 @@ SCIP_RETCODE SCIPheurInit(
       heur->ncalls = 0;
       heur->nsolsfound = 0;
       heur->nbestsolsfound = 0;
+
+      set->heurssorted = FALSE;
+      set->heursnamesorted = FALSE;
    }
 
    if( heur->heurinit != NULL )
