@@ -638,8 +638,8 @@ public:
             else if( (minimize && GTrel(objValueReal(), cpxobj, 2*opttol()))
                || (!minimize && LTrel(objValueReal(), cpxobj, 2*opttol())) )
             {
-               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", objValueReal(),
-                  _probname, minimize ? ">" : "<", cpxobj, _checknum);
+               SCIPerrorMessage("In %s: LP optimal; SoPlex value=%.10f %s CPLEX value=%.10f suboptimal (checknum=%d)\n", _probname, objValueReal(),
+                  minimize ? ">" : "<", cpxobj, _checknum);
                if( EXIT_AT_WRONG_RESULT )
                   exit(1);
             }
