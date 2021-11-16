@@ -1110,10 +1110,12 @@ void SCIPcertificatePrintProblemMessage(
 
 void SCIPcertificateAssertStateCorrect(SCIP* scip, SCIP_VAR* var)
 {
+   SCIP_CERTIFICATE* certificate;
+
    if ( !SCIPisCertificateActive(scip) )
       return;
 
-   SCIP_CERTIFICATE* certificate = SCIPgetCertificate(scip);
+   certificate = SCIPgetCertificate(scip);
    assert( certificate != NULL );
    certificate->workbound->varindex = SCIPvarGetCertificateIndex(var);
    certificate->workbound->isupper = FALSE;
@@ -2610,10 +2612,6 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    }
 
    return (certificate->indexcounter - 1);
-}
-
-char getInequalitySense(SCIP_Bool isgreaterthan) {
-   return isgreaterthan ? 'G' : 'L';
 }
 
 unsigned long SCIPcertificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROWEXACT* row) {
