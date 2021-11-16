@@ -43,6 +43,7 @@ foreach(instance ${instances})
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Primal Bound       : \\+(${optval}\\.000000*|${optvalminusone}\\.999999*)e\\+00"
                             DEPENDS applications-miniisc-build
+                            RESOURCE_LOCK libscip
                         )
     if(WIN32)
         # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,

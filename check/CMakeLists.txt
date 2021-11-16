@@ -606,7 +606,11 @@ foreach(instance ${instances_Indicator})
     add_test(NAME Indicator-solvecip-${basename}
             COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
             )
-    set_tests_properties(Indicator-solvecip-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+    set_tests_properties(Indicator-solvecip-${basename}
+        PROPERTIES
+            PASS_REGULAR_EXPRESSION "Validation         : Success"
+            DEPENDS scip-build
+        )
 endforeach(instance)
 
 
@@ -650,9 +654,9 @@ foreach(instance ${instances_MIP_write})
       )
     set_tests_properties(MIP-writeronlytest-${extension}-${basename}
       PROPERTIES
-      PASS_REGULAR_EXPRESSION ${regex}
-      DEPENDS scip-build
-      )
+        PASS_REGULAR_EXPRESSION ${regex}
+        DEPENDS scip-build
+    )
   endforeach(extension)
 endforeach(instance)
 
@@ -911,10 +915,10 @@ foreach(instance ${instances_MIP})
                                 DEPENDS scip-build
                             )
         foreach( pass_regex ${linclass_${shortbasename}} )
-        set_tests_properties(MIP-linclass-${basename}
-                            PROPERTIES
-                                PASS_REGULAR_EXPRESSION "${pass_regex}"
-                            )
+            set_tests_properties(MIP-linclass-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION "${pass_regex}"
+                                )
         endforeach()
 
     endif()
