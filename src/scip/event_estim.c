@@ -2651,6 +2651,7 @@ SCIP_DECL_EVENTINIT(eventInitEstim)
    }
 
    eventhdlrdata->lastrestartrun = 0;
+   eventhdlrdata->nrestartsperformed = 0;
 
    return SCIP_OKAY;
 }

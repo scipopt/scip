@@ -15229,6 +15229,8 @@ SCIP_DECL_CONSINIT(consInitLinear)
    assert(conshdlrdata->eventhdlr != NULL);
    assert(nconss == 0 || conss != NULL);
 
+   conshdlrdata->naddconss = 0;
+
    /* catch events for the constraints */
    for( c = 0; c < nconss; ++c )
    {
