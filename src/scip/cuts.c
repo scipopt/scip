@@ -334,14 +334,14 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
       {
          QUAD_ASSIGN(val, SCIPintervalGetInf(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange = (SCIPintervalGetInf(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
+         *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
          SCIPdebugMessage("Using lb %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetLbGlobal(var), -SCIPintervalGetSup(valinterval) + SCIPintervalGetInf(valinterval), *rhschange);
       }
       else if( SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) )
       {
          QUAD_ASSIGN(val, SCIPintervalGetSup(valinterval));
          SCIPintervalSetRoundingModeUpwards();
-         *rhschange = (SCIPintervalGetInf(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
+         *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
          SCIPdebugMessage("Using ub %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetUbGlobal(var), SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval), *rhschange);
       }
       else
