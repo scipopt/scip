@@ -19,6 +19,8 @@
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
  * @author Ksenia Bestuzheva
+ *
+ * @todo replace exp(-1.0) by 1.0/M_E
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -265,6 +267,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyEntropy)
       /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
       SCIPcaptureExpr(*simplifiedexpr);
    }
+
+   /* TODO handle -x*log(x) = 0 if x in {0,1} */
 
    return SCIP_OKAY;
 }
