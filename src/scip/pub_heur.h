@@ -44,9 +44,13 @@ extern "C" {
 
 
 
-/** compares two heuristics w. r. to their priority */
+/** compares two heuristics w.r.t. to their delay positions and priorities */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp);
+
+/** compares two heuristics w.r.t. to their priority values */
+SCIP_EXPORT
+SCIP_DECL_SORTPTRCOMP(SCIPheurCompPriority);
 
 /** comparison method for sorting heuristics w.r.t. to their name */
 SCIP_EXPORT
