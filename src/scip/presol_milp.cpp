@@ -670,10 +670,10 @@ SCIP_RETCODE doMilpPresolveRational(
          SCIP_Rational* constant;
          if( rowlen == 2 )
          {
-            SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 1]);
-            SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 2]);
-            papilo::Rational scalarx = res.postsolve.values[first + 1];
-            papilo::Rational scalary = res.postsolve.values[first + 2];
+            SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients]);
+            SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients + 1]);
+            papilo::Rational scalarx = res.postsolve.values[startRowCoefficients];
+            papilo::Rational scalary = res.postsolve.values[startRowCoefficients + 1];
 
             SCIP_Rational* tmpscalarx;
             SCIP_Rational* tmpscalary;
