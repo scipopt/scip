@@ -358,6 +358,7 @@ void getFeasiblePointsBilinear(
    /* collect inequalities */
    for( i = 0; i < noverineqs; ++i )
    {
+      SCIPdebugMsg(scip, "over-inequality  %d: %g*x <= %g*y + %g\n", i, overineqs[3*i], overineqs[3*i+1], overineqs[3*i+2]);
       ineqs[3*nineqs] = overineqs[3*i];
       ineqs[3*nineqs+1] = overineqs[3*i+1];
       ineqs[3*nineqs+2] = overineqs[3*i+2];
@@ -365,6 +366,7 @@ void getFeasiblePointsBilinear(
    }
    for( i = 0; i < nunderineqs; ++i )
    {
+      SCIPdebugMsg(scip, "under-inequality %d: %g*x <= %g*y + %g 0\n", i, underineqs[3*i], underineqs[3*i+1], underineqs[3*i+2]);
       ineqs[3*nineqs] = underineqs[3*i];
       ineqs[3*nineqs+1] = underineqs[3*i+1];
       ineqs[3*nineqs+2] = underineqs[3*i+2];
@@ -400,12 +402,15 @@ void getFeasiblePointsBilinear(
    ubx = boundsx.sup;
    lby = boundsy.inf;
    uby = boundsy.sup;
+   SCIPdebugMsg(scip, "x = [%g,%g], y=[%g,%g]\n", lbx, ubx, lby, uby);
 
    /* corner points that satisfy all inequalities */
    for( i = 0; i < 4; ++i )
    {
       SCIP_Real cx = i < 2 ? lbx : ubx;
       SCIP_Real cy = (i % 2) == 0 ? lby : uby;
+
+      SCIPdebugMsg(scip, "corner point (%g,%g) feasible? %d\n", cx, cy, isPointFeasible(scip, cx, cy, lbx, ubx, lby, uby, ineqs, nineqs));
 
       if( isPointFeasible(scip, cx, cy, lbx, ubx, lby, uby, ineqs, nineqs) )
       {
@@ -431,6 +436,7 @@ void getFeasiblePointsBilinear(
 
       for( j = 0; j < 5; ++j )
       {
+         SCIPdebugMsg(scip, "intersection point (%g,%g) feasible? %d\n", px[j], py[j], isPointFeasible(scip, px[j], py[j], lbx, ubx, lby, uby, ineqs, nineqs));
          if( isPointFeasible(scip, px[j], py[j], lbx, ubx, lby, uby, ineqs, nineqs) )
          {
             xs[*npoints] = px[j];
@@ -645,10 +651,12 @@ SCIP_INTERVAL intevalBilinear(
    /* compute the minimum and maximum over all computed points */
    inf = xs[0] * ys[0];
    sup = inf;
+   SCIPdebugMsg(scip, "point 0: (%g,%g) -> inf = sup = %g\n", xs[0], ys[0], inf);
    for( i = 1; i < npoints; ++i )
    {
       inf = MIN(inf, xs[i] * ys[i]);
       sup = MAX(sup, xs[i] * ys[i]);
+      SCIPdebugMsg(scip, "point %d: (%g,%g) -> inf = %g, sup = %g\n", i, xs[i], ys[i], inf, sup);
    }
    assert(inf <= sup);
 

@@ -1068,7 +1068,7 @@ SCIP_RETCODE SCIPnlrowPrint(
    }
 
    /* print right hand side */
-   SCIPmessageFPrintInfo(messagehdlr, file, "<= %.15g\n", nlrow->rhs);
+   SCIPmessageFPrintInfo(messagehdlr, file, " <= %.15g\n", nlrow->rhs);
 
    return SCIP_OKAY;
 }
