@@ -28,6 +28,7 @@
 #include "scip/pub_bandit_epsgreedy.h"
 #include "scip/pub_bandit_exp3.h"
 #include "scip/pub_bandit_ucb.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
