@@ -2230,8 +2230,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       if (row->lppos >= 0)
          aggrrow->slacksign[i] = -1;
       sideval = userow->lhs - userow->constant;
-      if( rowexact->integral )
-         sideval = ceil(sideval); /* row is integral: round left hand side up */
+      assert( !rowexact->integral || sideval == ceil(sideval));
    }
    else
    {
@@ -2239,8 +2238,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       if (row->lppos >= 0)
          aggrrow->slacksign[i] = +1;
       sideval = userow->rhs - userow->constant;
-      if( rowexact->integral )
-         sideval = floor(sideval); /* row is integral: round right hand side down */
+      assert( !rowexact->integral || sideval == floor(sideval));
    }
 
    SCIPintervalSetRoundingModeUpwards();

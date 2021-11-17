@@ -2742,11 +2742,22 @@ SCIP_RETCODE SCIPcertificatePrintCutoffBound(
    long* certificateline
    )
 {
+   SCIP_Rational* newbound;
+   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &newbound));
+   if ( SCIPisObjIntegral(scip) && ! RatIsIntegral(bound) )
+   {
+      RatRound(newbound, bound, SCIP_R_ROUND_DOWNWARDS);
+   }
+   else
+   {
+      RatSet(newbound, bound);
+   }
    SCIPcertificatePrintProofMessage(certificate, "O%d L ", certificate->indexcounter);
-   SCIPcertificatePrintProofRational(certificate, bound, 10);
-   SCIPcertificatePrintProofMessage(certificate, " OBJ { asm } -1\n");
-   *certificateline = certificate->indexcounter;
+   SCIPcertificatePrintProofRational(certificate, newbound, 10);
+   SCIPcertificatePrintProofMessage(certificate, " OBJ { sol } -1\n");
    certificate->indexcounter++;
+   *certificateline = certificate->indexcounter - 1;
+   RatFreeBuffer(SCIPbuffer(scip), &newbound);
    return SCIP_OKAY;
 }
 

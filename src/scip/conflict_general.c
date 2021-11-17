@@ -1393,6 +1393,11 @@ SCIP_RETCODE getObjectiveRow(
 
    RatSetString(lhsexact, "-inf");
    RatSetReal(rhsexact, rhs);
+   if ( SCIPisObjIntegral(scip) )
+   {
+      RatRound(rhsexact, rhsexact, SCIP_R_ROUND_DOWNWARDS);
+      rhs = floor(rhs);
+   }
    for (int i = 0; i < SCIPgetNLPCols(scip); i++)
    {
       vals[i] = SCIPvarGetObj(scip->lpexact->cols[i]->var);
@@ -1547,8 +1552,9 @@ SCIP_RETCODE SCIPgetDualProof(
 
    if (set->exact_enabled)
    {
-      //SCIP_CALL( SCIPaggrRowAddObjectiveFunctionSafely(set->scip, farkasrow, lp->cutoffbound, 1.0) );
-      SCIP_CALL(getObjectiveRow(set->scip, farkasrow, &objectiverow, lp->cutoffbound, 1.0));
+      double cutoffbound;
+      cutoffbound = RatRoundReal(SCIPgetCutoffboundExact(set->scip), SCIP_R_ROUND_UPWARDS);
+      SCIP_CALL(getObjectiveRow(set->scip, farkasrow, &objectiverow, cutoffbound, 1.0));
       SCIP_CALL( addRowToAggrRow(set, objectiverow, 1.0, farkasrow) );
    }
    else
@@ -1668,11 +1674,7 @@ SCIP_RETCODE SCIPgetDualProof(
       //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
       unsigned long certificateline;
       SCIP_ROW** rows;
-      SCIP_Rational* cutoffbound;
-
-      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &cutoffbound));
-      RatSetReal(cutoffbound, lp->cutoffbound);
-      SCIP_CALL(SCIPcertificatePrintCutoffBound(set->scip, SCIPgetCertificate(set->scip), cutoffbound, &certificateline));
+      SCIP_CALL(SCIPcertificatePrintCutoffBound(set->scip, SCIPgetCertificate(set->scip), SCIPgetCutoffboundExact(set->scip), &certificateline));
       SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact, certificateline);
       SCIP_CALL(SCIPallocBufferArray(set->scip, &rows, farkasrow->nrows + 1));
       rows[0] = objectiverow;
@@ -1683,14 +1685,13 @@ SCIP_RETCODE SCIPgetDualProof(
       SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, rows, farkasrow->rowweights, farkasrow->nrows, &farkasrow->certificateline);
       SCIPhashmapRemove(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact);
       SCIPfreeBufferArray(set->scip, &rows);
-      RatFreeBuffer(SCIPbuffer(set->scip), &cutoffbound);
    }
 
   TERMINATE:
 
    if (objectiverow != NULL)
    {
-      SCIProwExactRelease(&objectiverow->rowexact, set->scip->mem->probmem, set->scip->set, set->scip->lp);
+      SCIProwExactRelease(&objectiverow->rowexact, set->scip->mem->probmem, set->scip->set, set->scip->lpexact);
       SCIPreleaseRow(set->scip, &objectiverow);
    }
    SCIPfreeBufferArrayNull(set->scip, &localrowdepth);

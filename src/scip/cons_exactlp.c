@@ -7920,8 +7920,9 @@ SCIP_RETCODE addRelaxation(
       if (SCIPisCertificateActive(scip))
       {
          SCIP_CERTIFICATE* certificate;
-         unsigned long line = certificateGetConsIndex(scip, certificate, cons);
+         unsigned long line;
          certificate = SCIPgetCertificate(scip);
+         line = certificateGetConsIndex(scip, certificate, cons);
          SCIP_CALL( SCIPhashmapInsertLong(certificate->rowdatahash, consdata->rowexact, line) );
       }
       /* if presolving is turned off, the row might be trivial */
@@ -8063,12 +8064,6 @@ SCIP_RETCODE propagateCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   // If the exact LP-row does not exist, we can not write a certificate, so we should not do propagation.
-   if (consdata->rowexact == NULL)
-   {
-      SCIPwarningMessage(scip, "Certificates will not work, because we propagate a non-zero row\n");
-   }
 
    SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &minactivity));
    SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &maxactivity));
