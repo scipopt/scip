@@ -526,7 +526,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    return SCIP_OKAY;
 }
 
-/** compares two sum expressions.
+/** compares two sum expressions
  *
  *  The order of two sum expressions is a lexicographical order on the terms.
  *

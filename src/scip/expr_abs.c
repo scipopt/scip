@@ -271,7 +271,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
    }
    else
    {
-      /* overrestimator */
+      /* overestimator */
       SCIP_Real lb;
       SCIP_Real ub;
 

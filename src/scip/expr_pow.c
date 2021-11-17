@@ -1645,7 +1645,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          SCIP_CALL( SCIPcallExprSimplify(scip, expansion, simplifiedexpr, ownercreate,
                     ownercreatedata) ); /* this calls simplifySum */
 
-         /* release eveything */
+         /* release everything */
          SCIP_CALL( SCIPreleaseExpr(scip, &expansion) );
          /* release the *created* expanded children */
          for( i = 0; i < nexpandedchildren - nchildren; ++i )
