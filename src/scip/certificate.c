@@ -2739,7 +2739,7 @@ SCIP_RETCODE SCIPcertificatePrintCutoffBound(
    SCIP* scip,
    SCIP_CERTIFICATE* certificate,
    SCIP_Rational* bound,
-   long* certificateline
+   unsigned long* certificateline
    )
 {
    SCIP_Rational* newbound;

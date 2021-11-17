@@ -216,7 +216,7 @@ SCIP_RETCODE SCIPcertificatePrintCutoffBound(
    SCIP* scip,
    SCIP_CERTIFICATE* certificate,
    SCIP_Rational* bound,
-   long* certificateline
+   unsigned long* certificateline
    );
 
 /** create a new node data structure for the current node */

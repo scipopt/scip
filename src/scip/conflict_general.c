@@ -797,12 +797,13 @@ SCIP_RETCODE addRowToAggrRow(
    SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    )
 {
+   SCIP_Bool negated;
    assert(set != NULL);
    assert(row != NULL);
    assert(weight != 0.0);
 
    /* add minimal value to dual row's left hand side: y_i < 0 -> lhs, y_i > 0 -> rhs */
-   SCIP_Bool negated = weight < 0.0;
+   negated = weight < 0.0;
    assert( !negated || !SCIPsetIsInfinity(set, -row->lhs) );
    assert( negated || !SCIPsetIsInfinity(set, row->rhs) );
    if( set->exact_enabled )
@@ -1093,9 +1094,9 @@ SCIP_RETCODE addLocalRows(
 
          if ( set->exact_enabled )
          {
-            for (int i = 0; i < row->len; i++)
+            for (int j = 0; j < row->len; j++)
             {
-               if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
+               if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[j]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[j]->var)) )
                {
                   (*valid) = FALSE;
                   goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
@@ -1176,7 +1177,6 @@ SCIP_RETCODE SCIPgetFarkasProof(
 {
    SCIP_ROW** rows;
    SCIP_Real* dualfarkas;
-   SCIP_AGGRROW* farkasrow_fpdebug;
    SCIP_ROW* row;
    int* localrowinds;
    int* localrowdepth;
@@ -1349,14 +1349,14 @@ SCIP_RETCODE SCIPgetFarkasProof(
    if ( set->exact_enabled && SCIPcertificateIsActive(set, SCIPgetCertificate(set->scip)))
    {
       //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
-      SCIP_ROW** rows;
-      SCIP_CALL(SCIPallocBufferArray(set->scip, &rows, farkasrow->nrows));
+      SCIP_ROW** usedrows;
+      SCIP_CALL(SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows));
       for (int i = 0; i < farkasrow->nrows; i++)
       {
-         rows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
+         usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
       }
-      SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip), farkasrow, rows, farkasrow->rowweights, farkasrow->nrows, &farkasrow->certificateline);
-      SCIPfreeBufferArray(set->scip, &rows);
+      SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, &farkasrow->certificateline);
+      SCIPfreeBufferArray(set->scip, &usedrows);
    }
 
   TERMINATE:
@@ -1373,7 +1373,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
 
 
 /** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
-SCIP_RETCODE getObjectiveRow(
+static SCIP_RETCODE getObjectiveRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW**            row,                /**< pointer to store the row */
@@ -1673,18 +1673,18 @@ SCIP_RETCODE SCIPgetDualProof(
    {
       //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
       unsigned long certificateline;
-      SCIP_ROW** rows;
+      SCIP_ROW** usedrows;
       SCIP_CALL(SCIPcertificatePrintCutoffBound(set->scip, SCIPgetCertificate(set->scip), SCIPgetCutoffboundExact(set->scip), &certificateline));
       SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact, certificateline);
-      SCIP_CALL(SCIPallocBufferArray(set->scip, &rows, farkasrow->nrows + 1));
-      rows[0] = objectiverow;
+      SCIP_CALL(SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows + 1));
+      usedrows[0] = objectiverow;
       for (int i = 1; i < farkasrow->nrows; i++)
       {
-         rows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
+         usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
       }
-      SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, rows, farkasrow->rowweights, farkasrow->nrows, &farkasrow->certificateline);
+      SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, &farkasrow->certificateline);
       SCIPhashmapRemove(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact);
-      SCIPfreeBufferArray(set->scip, &rows);
+      SCIPfreeBufferArray(set->scip, &usedrows);
    }
 
   TERMINATE:
@@ -1729,8 +1729,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
-   if (set->exact_enabled)
-      return SCIP_OKAY;
    SCIP_VAR** vars;
    SCIP_VAR* var;
    SCIP_Real* curvarlbs;
@@ -1742,6 +1740,9 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_Real pseudoact;
    int nvars;
    int v;
+
+   if (set->exact_enabled)
+      return SCIP_OKAY;
 
    assert(conflict != NULL);
    assert(conflict->nconflictsets == 0);
