@@ -1382,14 +1382,21 @@ static SCIP_RETCODE getObjectiveRow(
    )
 {
    SCIP_Real* vals;
+   SCIP_COL** cols;
+   SCIP_COLEXACT** colsexact;
+   int nvals;
    SCIP_Rational** valsexact;
    SCIP_Rational* lhsexact;
    SCIP_Rational* rhsexact;
    SCIP_ROWEXACT* rowexact;
+
    SCIPallocBufferArray(scip, &vals, SCIPgetNLPCols(scip));
    SCIPallocBufferArray(scip, &valsexact, SCIPgetNLPCols(scip));
+   SCIPallocBufferArray(scip, &cols, SCIPgetNLPCols(scip));
+   SCIPallocBufferArray(scip, &colsexact, SCIPgetNLPCols(scip));
    SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &lhsexact));
    SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &rhsexact));
+   nvals = 0;
 
    RatSetString(lhsexact, "-inf");
    RatSetReal(rhsexact, rhs);
@@ -1400,21 +1407,31 @@ static SCIP_RETCODE getObjectiveRow(
    }
    for (int i = 0; i < SCIPgetNLPCols(scip); i++)
    {
-      vals[i] = SCIPvarGetObj(scip->lpexact->cols[i]->var);
-      valsexact[i] = SCIPvarGetObjExact(scip->lpexact->cols[i]->var);
+      SCIP_Rational* val;
+      val = SCIPvarGetObjExact(scip->lpexact->cols[i]->var);
+      if ( RatIsZero(val) )
+         continue;
+
+      vals[nvals] = SCIPvarGetObj(scip->lpexact->cols[i]->var);
+      valsexact[nvals] = val;
+      cols[nvals] = scip->lp->cols[i];
+      colsexact[nvals] = scip->lpexact->cols[i];
       assert(scip->lp->cols[i]->var == scip->lpexact->cols[i]->var);
+      nvals++;
    }
 
-   SCIPcreateRowUnspec(scip, row, "objective", SCIPgetNLPCols(scip), scip->lp->cols, vals, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE);
+   SCIPcreateRowUnspec(scip, row, "objective", nvals, cols, vals, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE);
    SCIPdebugMessage("%d == %d", SCIPgetNLPCols(scip), SCIProwGetNNonz(*row));
    SCIProwExactCreate(&rowexact, *row, NULL, scip->mem->probmem, scip->set, scip->stat,
-   scip->lpexact, SCIPgetNLPCols(scip),
-   scip->lpexact->cols, valsexact,
+   scip->lpexact, nvals,
+   colsexact, valsexact,
    lhsexact, rhsexact, SCIP_ROWORIGINTYPE_UNSPEC,   TRUE, NULL);
 
    RatFreeBuffer(SCIPbuffer(scip), &lhsexact);
    RatFreeBuffer(SCIPbuffer(scip), &rhsexact);
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &cols);
+   SCIPfreeBufferArray(scip, &colsexact);
    SCIPfreeBufferArray(scip, &valsexact);
    return SCIP_OKAY;
 }
@@ -1662,7 +1679,7 @@ SCIP_RETCODE SCIPgetDualProof(
 
    for (int i = 0; i < farkasrow->nnz; i++)
    {
-      if ( SCIPsetIsInfinity(set, ABS(farkasrow->vals[i])) )
+      if ( SCIPsetIsInfinity(set, ABS(farkasrow->vals[farkasrow->inds[i]])) )
       {
          (*valid) = FALSE;
          goto TERMINATE;
