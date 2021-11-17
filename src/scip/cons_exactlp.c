@@ -3603,16 +3603,24 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
             RatCreate(&abscont2);
             RatDiff(abscont2, SCIPvarGetUbGlobalExact(var2), SCIPvarGetLbGlobalExact(var2));
             RatMult(abscont2, consdata->vals[ind2], abscont2);
-            RatFree(&abscont1);
-            RatFree(&abscont2);
 
             if( RatIsAbsEqual(abscont1, abscont2) ) {
+               RatFree(&abscont1);
+               RatFree(&abscont2);
                return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
             }
             if( RatIsAbsGT(abscont2, abscont1) )
+            {
+               RatFree(&abscont1);
+               RatFree(&abscont2);
                return 1;
+            }
             else
+            {
+               RatFree(&abscont1);
+               RatFree(&abscont2);
                return -1;
+            }
          }
       }
    }
