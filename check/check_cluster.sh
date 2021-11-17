@@ -67,6 +67,8 @@ VISUALIZE="${28}"
 CLUSTERNODES="${29}"
 SLURMACCOUNT="${30}"
 PYTHON="${31}"
+EMPHBENCHMARK="${32}"
+
 
 # check if all variables defined (by checking the last one)
 if test -z "${PYTHON}"
@@ -103,6 +105,7 @@ then
     echo "CLUSTERNODES  = ${CLUSTERNODES}"
     echo "SLURMACCOUNT  = ${SLURMACCOUNT}"
     echo "PYTHON        = ${PYTHON}"
+    echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
     exit 1;
 fi
 
@@ -207,7 +210,7 @@ do
                 # this may modify the EXECNAME environment variable
                 . ./"${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                             "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}" "${REOPT}" "${OPTCOMMAND}" \
-                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}"
+                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}"
 
                 JOBNAME="$(capitalize ${SOLVER})${SHORTPROBNAME}"
                 # additional environment variables needed by run.sh

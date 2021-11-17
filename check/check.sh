@@ -45,6 +45,7 @@ SEEDS="${24}"
 GLBSEEDSHIFT="${25}"
 STARTPERM="${26}"
 PYTHON="${27}"
+EMPHBENCHMARK="${28}"
 
 # check if all variables defined (by checking the last one)
 if test -z "${PYTHON}"
@@ -78,6 +79,7 @@ then
     echo "GLBSEEDSHIFT  = ${GLBSEEDSHIFT}"
     echo "STARTPERM     = ${STARTPERM}"
     echo "PYTHON        = ${PYTHON}"
+    echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
     exit 1;
 fi
 
@@ -186,7 +188,7 @@ do
                 # this may modify the EXECNAME environment variable
                 . "./${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                     "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}"  "${REOPT}" "${OPTCOMMAND}" \
-                    "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}"
+                    "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}"
 
                 # additional environment variables needed by run.sh
                 export SOLVERPATH="${SCIPPATH}"
