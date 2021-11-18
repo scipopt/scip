@@ -1,6 +1,6 @@
-@page RN Release notes for SCIP NEXT
+@page RN80 Release notes for SCIP 8.0
 
-@section RNNEXT SCIP NEXT
+@section RN800 SCIP 8.0.0
 *************************
 
 Features
@@ -181,6 +181,9 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- add missing SCIP_EXPORT to SCIPexprCreateQuadratic(), thanks to Liding Xu
+- When calling SCIPdelVar() in the SCIP_STAGE_PROBLEM stage, it is now documented as the user's responsibility to ensure
+  the variable is not present in any constraints. Otherwise, SCIPsolve() now returns SCIP_INVALIDDATA.
 - removed SCIPselectCuts(), replaced by SCIPselectCutsHybrid() of the hybrid cut selector plugin
 - If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
   variable is added to the transformed problem (SCIPaddVar()).
@@ -860,9 +863,12 @@ Build system
 
 - replace flag PARASCIP by THREADSAFE
 - option AMPL is now ON by default
+- add -D_XOPEN_SOURCE=600 cflag for compilation on systems other than windows
+- add compile options directly instead of modifying CMAKE_C_FLAGS and CMAKE_CXX_FLAGS
 
 ### Makefile
 
+- prefix PKG_CONFIG_PATH with Ipopt's pkgconfig dir instead of postfixing
 - replace flag PARASCIP by THREADSAFE
 - flag AMPL is now true by default
 - libscip has been renamed to libscipbase and libscipsolver has been renamed to libscip
@@ -872,6 +878,9 @@ Build system
 Fixed bugs
 ----------
 
+- fixed domain propagation in presolving of abspower constraints
+- fixed handling of multi-aggregation in cons_symresack and cons_orbisack
+- SCIPgetLowerbound() now consistently returns infinity when status is infeasible
 - improved the likelihood that a solution that satisfies the nonlinear constraints in the transformed (presolved) problem is also feasible for the original problem
 - worked around a problem with derivatives of pow at 0 with non-integer exponents in CppAD
 - fixed that setting of feasiblity and optimiality tolerance for NLP relaxation was overwritten with defaults when solving NLP
@@ -902,74 +911,6 @@ Known bugs
 ----------
 
 @page RN70 Release notes for SCIP 7.0
-
-@section RN000 SCIP 7.0.4
-*************************
-
-Features
---------
-
-Performance improvements
-------------------------
-
-Examples and applications
--------------------------
-
-Interface changes
------------------
-
-### New and changed callbacks
-
-### Deleted and changed API methods
-
-- add missing SCIP_EXPORT to SCIPexprCreateQuadratic(), thanks to Liding Xu
-- When calling SCIPdelVar() in the SCIP_STAGE_PROBLEM stage, it is now documented as the user's responsibility to ensure
-  the variable is not present in any constraints. Otherwise, SCIPsolve() now returns SCIP_INVALIDDATA.
-
-### New API functions
-
-### Command line interface
-
-### Interfaces to external software
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
-
-Build system
-------------
-
-### Cmake
-
-- add -D_XOPEN_SOURCE=600 cflag for compilation on systems other than windows
-
-### Makefile
-
-- prefix PKG_CONFIG_PATH with Ipopt's pkgconfig dir instead of postfixing
-
-Fixed bugs
-----------
-
-- fixed domain propagation in presolving of abspower constraints
-- fixed handling of multi-aggregation in cons_symresack and cons_orbisack
-- SCIPgetLowerbound() now consistently returns infinity when status is infeasible
-
-Miscellaneous
--------------
-
-Known bugs
-----------
 
 @section RN703 SCIP 7.0.3
 *************************
