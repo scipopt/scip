@@ -1774,7 +1774,7 @@ SCIP_RETCODE separatePoint(
 
          tableaurow = (SCIP_Real *) SCIPhashmapEntryGetImage(entry);
 
-         SCIPfreeBufferArray(scip, &tableaurow);
+         SCIPfreeBufferArrayNull(scip, &tableaurow);
       }
    }
    SCIPhashmapFree(&tableau);

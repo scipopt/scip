@@ -563,7 +563,7 @@ Constraint handlers for NLP:
 - added SCIPcreateConsBasicSignpowerNonlinear() to create a nonlinear constraint that looks like the former abspower or signpower constraints
 
 Nonlinear Handler:
-- added SCIPincludeNlhdlrBilinear(), SCIPgetNlhdlrBilinearExprs(), SCIPgetNlhdlrBilinearExprsdata(), SCIPgetNlhdlrBilinearNExprs(), SCIPaddNlhdlrBilinearIneq()
+- added SCIPincludeNlhdlrBilinear(), SCIPgetExprsBilinear(), SCIPgetExprsdataBilinear(), SCIPgetNExprsBilinear(), SCIPaddIneqBilinear()
 - added SCIPincludeNlhdlrConvex(), SCIPincludeNlhdlrConcave(), SCIPhasExprCurvature()
 - added SCIPincludeNlhdlrDefault()
 - added SCIPincludeNlhdlrPerspective()
