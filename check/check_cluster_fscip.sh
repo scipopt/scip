@@ -62,6 +62,7 @@ SETCUTOFF="${27}"
 VISUALIZE="${28}"
 CLUSTERNODES="${29}"
 SLURMACCOUNT="${30}"
+EMPHBENCHMARK=${31}"
 
 SOLVER=fscip
 
@@ -99,6 +100,7 @@ then
     echo "VISUALIZE     = ${VISUALIZE}"
     echo "CLUSTERNODES  = ${CLUSTERNODES}"
     echo "SLURMACCOUNT  = ${SLURMACCOUNT}"
+    echo "EMPHBENCHMARK  = ${EMPHBENCHMARK}"
     exit 1;
 fi
 
@@ -171,7 +173,7 @@ do
             # defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
             #                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
             . ./configuration_logfiles.sh "${INIT}" "${COUNT}" "${INSTANCE}" "${BINID}" "${PERMUTE}" "${SEEDS}" "${SETNAME}" "${TSTNAME}" "${CONTINUE}" "${QUEUE}" "${p}" "${s}" \
-              "${THREADS}" "${GLBSEEDSHIFT}" "${STARTPERM}"
+              "${THREADS}" "${GLBSEEDSHIFT}" "${STARTPERM}" "${EMPHBENCHMARK}"
 
             # skip instance if log file is present and we want to continue a previously launched test run
             if test "${SKIPINSTANCE}" = "true"
