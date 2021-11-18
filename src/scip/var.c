@@ -4226,7 +4226,7 @@ SCIP_RETCODE SCIPvarFixExact(
    {
       *infeasible = !RatIsEqual(fixedval, var->exactdata->locdom.lb);
       RatDebugMessage(" -> variable already fixed to %q (fixedval=%q): infeasible=%u\n", var->exactdata->locdom.lb, fixedval, *infeasible);
-      return SCIP_OKAY;
+      goto terminate;
    }
    else if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !RatIsIntegral(fixedval))
       || RatIsLT(fixedval, var->exactdata->locdom.lb)
@@ -4234,7 +4234,7 @@ SCIP_RETCODE SCIPvarFixExact(
    {
       RatDebugMessage(" -> fixing infeasible: locdom=[%q,%q], fixedval=%q\n", var->exactdata->locdom.lb, var->exactdata->locdom.ub, fixedval);
       *infeasible = TRUE;
-      return SCIP_OKAY;
+      goto terminate;
    }
 
    switch( SCIPvarGetStatusExact(var) )
@@ -4345,6 +4345,7 @@ SCIP_RETCODE SCIPvarFixExact(
       return SCIP_INVALIDDATA;
    }
 
+terminate:
    RatFreeBuffer(set->buffer, &tmpval);
    RatFreeBuffer(set->buffer, &childfixedval);
    RatFreeBuffer(set->buffer, &obj);
