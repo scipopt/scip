@@ -52,25 +52,25 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
 
 /** returns an array of expressions that have been detected by the bilinear nonlinear handler */
 SCIP_EXPORT
-SCIP_EXPR** SCIPgetNlhdlrBilinearExprs(
+SCIP_EXPR** SCIPgetExprsBilinear(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
 /** returns an array of nonlinear handler expressions data of expressions that have been detected by the bilinear nonlinear handler */
 SCIP_EXPORT
-SCIP_NLHDLREXPRDATA** SCIPgetNlhdlrBilinearExprsdata(
+SCIP_NLHDLREXPRDATA** SCIPgetExprsdataBilinear(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
 /** returns the total number of expressions that have been detected by the bilinear nonlinear handler */
 SCIP_EXPORT
-int SCIPgetNlhdlrBilinearNExprs(
+int SCIPgetNExprsBilinear(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
 /** adds a globally valid inequality of the form \f$\text{xcoef}\cdot x \leq \text{ycoef} \cdot y + \text{constant}\f$ to a product expression of the form \f$x\cdot y\f$ */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddNlhdlrBilinearIneq(
+SCIP_RETCODE SCIPaddIneqBilinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_EXPR*            expr,               /**< product expression */
