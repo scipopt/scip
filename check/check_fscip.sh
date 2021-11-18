@@ -44,6 +44,7 @@ PERMUTE="${23}"
 SEEDS="${24}"
 GLBSEEDSHIFT="${25}"
 STARTPERM="${26}"
+EMPHBENCHMARK="${27}"
 
 # check if all variables defined (by checking the last one)
 if test -z "${STARTPERM}"
@@ -76,6 +77,7 @@ then
     echo "SEEDS         = ${SEEDS}"
     echo "GLBSEEDSHIFT  = ${GLBSEEDSHIFT}"
     echo "STARTPERM     = ${STARTPERM}"
+    echo "EMPHBENCHMARK  = ${EMPHBENCHMARK}"
     exit 1;
 fi
 
@@ -147,7 +149,7 @@ do
             # defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
             #                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
             . ./configuration_logfiles.sh "${INIT}" "${COUNT}" "${INSTANCE}" "${BINID}" "${PERMUTE}" "${SEEDS}" "${SETNAME}" \
-                "${TSTNAME}" "${CONTINUE}" "${QUEUE}" "${p}" "${s}" "${THREADS}" "${GLBSEEDSHIFT}" "${STARTPERM}"
+                "${TSTNAME}" "${CONTINUE}" "${QUEUE}" "${p}" "${s}" "${THREADS}" "${GLBSEEDSHIFT}" "${STARTPERM}" ${EMPHBENCHMARK}
 
             if test "${INSTANCE}" = "DONE"
             then

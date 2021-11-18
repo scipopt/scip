@@ -38,6 +38,8 @@ CLIENTTMPDIR=${16} # - directory for temporary files
 SOLBASENAME=${17}  # - base name for solution file
 VISUALIZE=${18}    # - true, if the branch-and-bound search should be visualized
 SOLUFILE=${19}     # - solu file, only necessary if ${SETCUTOFF} is 1
+EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
+
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
