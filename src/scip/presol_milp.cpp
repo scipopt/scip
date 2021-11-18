@@ -602,6 +602,7 @@ SCIP_RETCODE doMilpPresolveRational(
                RatDiff(tmpval, tmpval, aggregatedConst);
                RatDiv(tmpval, tmpval, aggregatedScalar);
             }
+            var = SCIPvarGetAggrVar(var);
          }
 
          /* SCIP might also have fixed the variable during aggregation */
