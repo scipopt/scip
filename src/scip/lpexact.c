@@ -3311,7 +3311,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) || RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
          continue;
 
-      if( RatDenominator(val) <= maxdenom )
+      if( RatDenominatorIsLE(val, maxdenom) )
          continue;
 
       if( RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval) )
@@ -3423,8 +3423,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    if( set->exact_cutmaxdenomsize > 0 )
    {
       SCIP_CALL( SCIProwExactControlEncodingLength(workrow, set, stat, blkmem, eventqueue, lp) );
-      (void) SCIProwGetMaxval(workrow->fprow, set);
-      (void) SCIProwGetMinval(workrow->fprow, set);
+      SCIProwRecalcNorms(fprow, set);
    }
 
    RatFreeBuffer(set->buffer, &tmplhs);

@@ -357,6 +357,7 @@ SCIP_RETCODE doMilpPresolveRational(
    presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
    presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
    presolve.getPresolveOptions().hugeval = data->hugebound;
+   presolve.getPresolveOptions().apply_results_immediately_if_run_sequentially = false;
 
    /* removal of linear dependent equations has only an effect when constraint modifications are communicated */
    presolve.getPresolveOptions().detectlindep = allowconsmodification ? data->detectlineardependency : 0;
@@ -602,6 +603,7 @@ SCIP_RETCODE doMilpPresolveRational(
                RatDiff(tmpval, tmpval, aggregatedConst);
                RatDiv(tmpval, tmpval, aggregatedScalar);
             }
+            var = SCIPvarGetAggrVar(var);
          }
 
          /* SCIP might also have fixed the variable during aggregation */
@@ -670,10 +672,10 @@ SCIP_RETCODE doMilpPresolveRational(
          SCIP_Rational* constant;
          if( rowlen == 2 )
          {
-            SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 1]);
-            SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 2]);
-            papilo::Rational scalarx = res.postsolve.values[first + 1];
-            papilo::Rational scalary = res.postsolve.values[first + 2];
+            SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients]);
+            SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients + 1]);
+            papilo::Rational scalarx = res.postsolve.values[startRowCoefficients];
+            papilo::Rational scalary = res.postsolve.values[startRowCoefficients + 1];
 
             SCIP_Rational* tmpscalarx;
             SCIP_Rational* tmpscalary;
@@ -708,16 +710,16 @@ SCIP_RETCODE doMilpPresolveRational(
          else
          {
             SCIP_Rational* colCoef;
-            SCIP_Rational* tmpside;
+            SCIP_Rational* updatedSide;
             SCIP_Rational** tmpvals;
             int c = 0;
 
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &colCoef) );
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpside) );
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &updatedSide) );
             SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
 
-            for( int j = first + 1; j < last; ++j )
+            for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
                if( res.postsolve.indices[j] == col )
                {
@@ -735,7 +737,7 @@ SCIP_RETCODE doMilpPresolveRational(
             SCIP_CALL( SCIPgetProbvarSumExact(scip, &aggrvar, colCoef, constant) );
             assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
 
-            for( int j = first + 1; j < last; ++j )
+            for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
                if( res.postsolve.indices[j] == col )
                   continue;
@@ -744,17 +746,17 @@ SCIP_RETCODE doMilpPresolveRational(
                setRational(scip, tmpvals[c], -res.postsolve.values[j] / colCoef->val);
                c++;
             }
-            setRational(scip, tmpside, side);
-            RatDiff(tmpside, tmpside, constant);
-            RatDiv(tmpside, tmpside, colCoef);
+            setRational(scip, updatedSide, side);
+            RatDiff(updatedSide, updatedSide, constant);
+            RatDiv(updatedSide, updatedSide, colCoef);
 
-            RatDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), tmpside);
+            RatDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), updatedSide);
 
             SCIP_CALL( SCIPmultiaggregateVarExact(scip, aggrvar, tmpvars.size(),
-                  tmpvars.data(), tmpvals, tmpside, &infeas, &aggregated) );
+                  tmpvars.data(), tmpvals, updatedSide, &infeas, &aggregated) );
 
             RatFreeBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
-            RatFreeBuffer(SCIPbuffer(scip), &tmpside);
+            RatFreeBuffer(SCIPbuffer(scip), &updatedSide);
             RatFreeBuffer(SCIPbuffer(scip), &colCoef);
             RatFreeBuffer(SCIPbuffer(scip), &constant);
          }
@@ -773,9 +775,9 @@ SCIP_RETCODE doMilpPresolveRational(
             setRational(scip, tmpside, side);
 
             tmpvars.clear();
-            for( int j = first + 1; j < last; ++j )
+            for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
-               int idx = j - first - 1;
+               int idx = j - startRowCoefficients;
                tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
                setRational(scip, tmpvals[idx], res.postsolve.values[j]);
             }
@@ -812,7 +814,10 @@ SCIP_RETCODE doMilpPresolveRational(
             continue;
          SCIP_Bool infeas;
          SCIP_Bool fixed;
-         SCIP_Real value = SCIPinfinity(scip);
+         SCIP_Rational* value;
+
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &value) );
+         RatSetString(value, "inf");
 
          int column = res.postsolve.indices[first];
          bool is_negative_infinity = res.postsolve.values[first] < 0;
@@ -820,14 +825,17 @@ SCIP_RETCODE doMilpPresolveRational(
 
          if( is_negative_infinity )
          {
-            value = -SCIPinfinity(scip);
+            RatSetString(value, "-inf");
          }
 
-         SCIP_CALL( SCIPfixVar(scip, column_variable, value, &infeas, &fixed) );
+         SCIP_CALL( SCIPfixVarExact(scip, column_variable, value, &infeas, &fixed) );
          *nfixedvars += 1;
 
          assert(!infeas);
          assert(fixed);
+
+         RatFreeBuffer(SCIPbuffer(scip), &value);
+
          break;
       }
 #endif

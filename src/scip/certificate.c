@@ -830,6 +830,12 @@ void SCIPcertificateExit(
          SCIPfclose(certificate->derivationfile);
          certificate->derivationfile = NULL;
          concatCert(certificate, set->certificate_filename);
+         // if the file is empty (e.g. because we detected infeasibility in presolving) we delete it
+         if( certificate->indexcounter == 0 )
+         {
+            SCIPdebugMessage("derivation file is empty; deleting it");
+            remove(set->certificate_filename);
+         }
       }
       SCIPfclose(certificate->origfile);
       SCIPfclose(certificate->transfile);
@@ -2839,6 +2845,10 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact));
 
       key = SCIPhashmapGetImageLong(certificate->rowdatahash, (void*) rowexact);
+      /* for ranged rows, the key always corresponds to the >= part of the row;
+         therefore we need to increase it by one to get the correct key */
+      if( !RatIsAbsInfinity(rowexact->rhs) && !RatIsAbsInfinity(rowexact->lhs) && !RatIsEqual(rowexact->lhs, rowexact->rhs) && weights[i] >= 0 )
+         key += 1;
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
       SCIPcertificatePrintProofRational(certificate, tmpval, 10);

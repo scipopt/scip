@@ -1719,6 +1719,25 @@ SCIP_Longint RatDenominator(
    return result;
 }
 
+/** returns the denominator of a rational as a long */
+SCIP_Bool RatDenominatorIsLE(
+   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_Longint          val                 /**< long value to compare to */
+   )
+{
+   Integer denominator;
+
+   if( RatIsAbsInfinity(rational) )
+   {
+      SCIPerrorMessage("cannot compare denominator of infinite value");
+      return false;
+   }
+
+   denominator = boost::multiprecision::denominator(rational->val);
+
+   return denominator <= val;
+}
+
 #else
 /** returns the numerator of a rational as a long */
 SCIP_Longint Rnumerator(

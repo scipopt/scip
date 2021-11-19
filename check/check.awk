@@ -787,6 +787,9 @@ BEGIN {
 /^(Successfully verified|Infeasibility verified.)/           {
    certified = 1;
 }
+/^presolving detected infeasibility/           {
+   certified = 1;
+}
 /^Successfully checked solution for feasibility/           {
    certified_ori = 1;
 }

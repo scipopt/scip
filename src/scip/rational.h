@@ -585,13 +585,22 @@ SCIP_Bool RatIsFpRepresentable(
  */
 
 /** returns the numerator of a rational as a long */
+SCIP_EXPORT
 SCIP_Longint RatNumerator(
    SCIP_Rational*        rational            /**< the rational */
    );
 
 /** returns the denominator of a rational as a long */
+SCIP_EXPORT
 SCIP_Longint RatDenominator(
    SCIP_Rational*        rational            /**< the rational */
+   );
+
+/** returns the denominator of a rational as a long */
+SCIP_EXPORT
+SCIP_Bool RatDenominatorIsLE(
+   SCIP_Rational*        rational,           /**< the rational */
+   SCIP_Longint          val                 /**< long value to compare to */
    );
 
 /** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */

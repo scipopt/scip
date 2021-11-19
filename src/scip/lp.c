@@ -6351,6 +6351,15 @@ void SCIProwForceSort(
    rowMerge(row, set);
 }
 
+/** recalculates norms of a row */
+void SCIProwRecalcNorms(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   rowCalcNorms(row, set);
+}
+
 /** recalculates the current activity of a row */
 void SCIProwRecalcLPActivity(
    SCIP_ROW*             row,                /**< LP row */
