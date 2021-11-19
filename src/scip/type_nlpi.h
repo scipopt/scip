@@ -171,7 +171,7 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_OUTOFMEMORY   = 7,    /**< memory exceeded */
    SCIP_NLPTERMSTAT_LICENSEERROR  = 8,    /**< problems with license of NLP solver */
    SCIP_NLPTERMSTAT_OTHER         = 9     /**< other error (= this should never happen) */
-#if defined(GCC_VERSION) && GCC_VERSION >= 600  /* _attribute__ ((deprecated)) within enums not allowed for older GCCs */
+#if defined(GCC_VERSION) && GCC_VERSION >= 600 && !defined(__INTEL_COMPILER) /* _attribute__ ((deprecated)) within enums not allowed for older GCCs; ICC ignores attributes and version 2020.4.304 segfaults */
    ,/* for some backward compatibility */
    SCIP_NLPTERMSTAT_TILIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_TIMELIMIT,
    SCIP_NLPTERMSTAT_ITLIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_ITERLIMIT,
