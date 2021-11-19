@@ -44,6 +44,11 @@
 
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
 
+static SCIP_Real SCIPvarboundGetRealBound(SCIP_CERTIFICATEBOUND* bound)
+{
+   return RatRoundReal(bound->boundval, bound->isupper ? SCIP_R_ROUND_UPWARDS : SCIP_R_ROUND_DOWNWARDS);
+}
+
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyVarbound)
@@ -56,16 +61,20 @@ SCIP_DECL_HASHGETKEY(hashGetKeyVarbound)
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqVarbound)
 {
+   SCIP_CERTIFICATEBOUND* bound1;
+   SCIP_CERTIFICATEBOUND* bound2;
    assert(key1 != NULL);
    assert(key2 != NULL);
+   bound1 = key1;
+   bound2 = key2;
 
-   if( ((SCIP_CERTIFICATEBOUND*)key1)->isupper != ((SCIP_CERTIFICATEBOUND*)key2)->isupper )
+   if( bound1->isupper != bound2->isupper )
       return FALSE;
 
-   if( ((SCIP_CERTIFICATEBOUND*)key1)->varindex != ((SCIP_CERTIFICATEBOUND*)key2)->varindex )
+   if( bound1->varindex != bound2->varindex )
       return FALSE;
 
-   if( !RatIsEqual(((SCIP_CERTIFICATEBOUND*)key1)->boundval, ((SCIP_CERTIFICATEBOUND*)key2)->boundval) )
+   if( SCIPvarboundGetRealBound(bound1) != SCIPvarboundGetRealBound(bound2) )
       return FALSE;
 
    return TRUE;
