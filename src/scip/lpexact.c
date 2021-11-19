@@ -3422,7 +3422,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    if( set->exact_cutmaxdenomsize > 0 )
    {
       SCIP_CALL( SCIProwExactControlEncodingLength(workrow, set, stat, blkmem, eventqueue, lp) );
-      SCIProwRecalcNorms(row, set);
+      SCIProwRecalcNorms(fprow, set);
    }
 
    RatFreeBuffer(set->buffer, &tmplhs);
