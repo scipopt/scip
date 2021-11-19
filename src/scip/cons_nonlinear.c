@@ -3701,7 +3701,17 @@ SCIP_RETCODE initSolve(
    int                   nconss              /**< number of constraints */
    )
 {
+   SCIP_Bool assumeconvex = FALSE;
    int c;
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIP_PARAM* assumeconvexparam;
+
+      assumeconvexparam = SCIPgetParam(scip, "nlhdlr/convex/assumeconvex");
+      if( assumeconvexparam != NULL )
+         assumeconvex = SCIPparamGetBool(assumeconvexparam);
+   }
 
    for( c = 0; c < nconss; ++c )
    {
@@ -3717,22 +3727,37 @@ SCIP_RETCODE initSolve(
          assert(consdata != NULL);
          assert(consdata->expr != NULL);
 
-         /* call the curvature detection algorithm of the convex nonlinear handler
-          * Check only for those curvature that may result in a convex inequality, i.e.,
-          * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
-          * Also we can assume that we are nonlinear, so do not check for convex if already concave.
-          */
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         if( !assumeconvex )
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
-            if( success )
-               consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            /* call the curvature detection algorithm of the convex nonlinear handler
+             * Check only for those curvature that may result in a convex inequality, i.e.,
+             * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
+             * Also we can assume that we are nonlinear, so do not check for convex if already concave.
+             */
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            }
+            if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONVEX;
+            }
          }
-         if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+         else
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
-            if( success )
-               consdata->curv = SCIP_EXPRCURV_CONVEX;
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIPwarningMessage(scip, "Nonlinear constraint <%s> has finite left- and right-hand side, but nlhdlr/convex/assumeconvex is enabled.\n", SCIPconsGetName(conss[c]));
+               consdata->curv = SCIP_EXPRCURV_LINEAR;
+            }
+            else
+            {
+               consdata->curv = !SCIPisInfinity(scip, consdata->rhs) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+            }
          }
          SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
 
