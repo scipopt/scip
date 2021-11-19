@@ -204,9 +204,9 @@ echo "raw viprfile gzipped:   " `ls -lisa $VIPRRAWFILE.gz` >> $OUTFILE
 mv $VIPRFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr.gz
 mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
 mv $VIPRORIFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr_ori.gz
+fi
 #ensure no garbage is left over
 rm $CLIENTTMPDIR/${USER}-tmpdir/$BASENAME*vipr*
-fi
 
 if test -e "${SOLFILE}"
 then
