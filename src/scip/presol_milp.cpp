@@ -357,6 +357,7 @@ SCIP_RETCODE doMilpPresolveRational(
    presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
    presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
    presolve.getPresolveOptions().hugeval = data->hugebound;
+   presolve.getPresolveOptions().apply_results_immediately_if_run_sequentially = false;
 
    /* removal of linear dependent equations has only an effect when constraint modifications are communicated */
    presolve.getPresolveOptions().detectlindep = allowconsmodification ? data->detectlineardependency : 0;
@@ -776,7 +777,7 @@ SCIP_RETCODE doMilpPresolveRational(
             tmpvars.clear();
             for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
-               int idx = j - startRowCoefficients - 1;
+               int idx = j - startRowCoefficients;
                tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
                setRational(scip, tmpvals[idx], res.postsolve.values[j]);
             }
