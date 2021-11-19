@@ -4546,10 +4546,9 @@ SCIP_RETCODE cutsRoundMIRRational(
          continue;
       }
 
-      if( varsign[i] == 1 )
-         QUAD_ASSIGN(cutajquad, RatRoundReal(cutaj, SCIP_R_ROUND_DOWNWARDS));
-      else
-         QUAD_ASSIGN(cutajquad, RatRoundReal(cutaj, SCIP_R_ROUND_UPWARDS));
+
+      QUAD_ASSIGN(cutajquad, RatRoundReal(cutaj, SCIP_R_ROUND_DOWNWARDS));
+
       QUAD_ARRAY_STORE(cutcoefs, v, cutajquad);
 
       /* integral var uses standard bound */
