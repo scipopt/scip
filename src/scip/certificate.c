@@ -819,6 +819,12 @@ void SCIPcertificateExit(
          SCIPfclose(certificate->derivationfile);
          certificate->derivationfile = NULL;
          concatCert(certificate, set->certificate_filename);
+         // if the file is empty (e.g. because we detected infeasibility in presolving) we delete it
+         if( certificate->indexcounter == 0 )
+         {
+            SCIPdebugMessage("derivation file is empty; deleting it");
+            remove(set->certificate_filename);
+         }
       }
       SCIPfclose(certificate->origfile);
       SCIPfclose(certificate->transfile);
