@@ -490,6 +490,7 @@ Constraint handlers for NLP:
 - added SCIPisSolveInterrupted() to check whether SCIPinterruptSolve() has been called
 - added SCIPgetNPresolRounds()
 - added SCIPgetNUnfixedLPCols()
+- moved SCIPhistoryGetInferenceSum() and SCIPhistoryGetAvgConflictlength() from internal to public API
 
 Expression handler:
 - added SCIPincludeExprhdlr(), SCIPgetExprhdlrs(), SCIPgetNExprhdlrs(), SCIPfindExprhdlr()
