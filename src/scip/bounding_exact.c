@@ -2433,7 +2433,8 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       lastboundmethod = dualboundmethod;
 
       /* we fail if we tried all available methods, or if we had to solve the lp exactly but could not */
-      if( (lpexact->forceexactsolve && (*lperror)) || (nattempts >= 3 && !lp->hasprovedbound) || (lastboundmethod == 't') )
+      if( (lpexact->forceexactsolve && (*lperror)) || (nattempts >= 3 && !lp->hasprovedbound) || (lastboundmethod == 't')
+          || lpexact->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
       {
          SCIPdebugMessage("failed save bounding call after %d attempts to compute safe bound\n", nattempts);
          abort = TRUE;
