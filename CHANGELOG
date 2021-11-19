@@ -517,6 +517,7 @@ Constraint handlers for NLP:
 - added SCIPgetCurBoundsTagNonlinear(), SCIPgetLastBoundRelaxTagNonlinear(), SCIPincrementCurBoundsTagNonlinear()
 - added SCIPgetVarExprHashmapNonlinear()
 - added SCIPprocessRowprepNonlinear()
+- added SCIPassumeConvexNonlinear()
 - added SCIPcollectBilinTermsNonlinear(), SCIPgetBilinTermIdxNonlinear(), SCIPgetBilinTermNonlinear(), SCIPevalBilinAuxExprNonlinear(), SCIPinsertBilinearTermExistingNonlinear(), SCIPinsertBilinearTermImplicitNonlinear()
 - added SCIPcomputeFacetVertexPolyhedralNonlinear()
 - added SCIPgetExprNonlinear()
@@ -586,7 +587,6 @@ NLPI:
 - changed default of constraints/nonlinear/maxproprounds from 1 to 10
 - replaced constraints/nonlinear/enfocutsremovable by constraints/nonlinear/rownotremovable
 - replaced constraints/nonlinear/cutmaxrange by separating/maxcoefratiofacrowprep
-- replaced constraints/nonlinear/assumeconvex by nlhdlr/convex/assumeconvex
 - removed constraints/quadratic/sepafreq, constraints/quadratic/propfreq, constraints/quadratic/proptiming, constraints/quadratic/eagerfreq, constraints/quadratic/maxprerounds, constraints/quadratic/delaysepa, constraints/quadratic/delayprop, constraints/quadratic/presoltiming
 - removed constraints/quadratic/replacebinaryprod, use constraints/nonlinear/reformbinprodsfac instead
 - removed constraints/quadratic/empathy4and, use constraints/nonlinear/reformbinprodsand instead

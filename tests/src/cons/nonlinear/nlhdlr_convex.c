@@ -185,7 +185,7 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
       detect("<x1>^2+2*<x1>*<x2>+<x2>^2", SCIP_EXPRCURV_CONVEX, TRUE);
 
    /* assumeconvex */
-   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/convex/assumeconvex", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/assumeconvex", TRUE) );
    detect("<x1>*<x2>-<x3>^2", SCIP_EXPRCURV_CONVEX, FALSE);
    SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/convex/handletrivial", TRUE) );
    detect("<x1>*<x2>", SCIP_EXPRCURV_CONVEX, FALSE);

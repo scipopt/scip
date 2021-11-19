@@ -134,7 +134,7 @@ Test(curvature, assumeconvex)
    SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* assume that constraints are convex */
-   SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/convex/assumeconvex", TRUE) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/assumeconvex", TRUE) );
 
    /* create, add, and release nonlinear constraints */
    for( i = 0; i < ninputs; ++i )

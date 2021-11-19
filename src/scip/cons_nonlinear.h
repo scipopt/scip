@@ -332,6 +332,12 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
    SCIP_RESULT*          result              /**< pointer to store the result */
    );
 
+/** returns whether all nonlinear constraints are assumed to be convex */
+SCIP_EXPORT
+SCIP_Bool SCIPassumeConvexNonlinear(
+   SCIP_CONSHDLR*        conshdlr
+   );
+
 /** collects all bilinear terms for a given set of constraints
  *
  * @attention This method should only be used for unit tests that depend on SCIPgetBilinTermsNonlinear(),
