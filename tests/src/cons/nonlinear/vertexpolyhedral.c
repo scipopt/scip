@@ -13,11 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   separation_vertexpolyhedral.c
+/**@file   vertexpolyhedral.c
  * @brief  tests estimation of vertexpolyhedral functions
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/* ICC 2020.4.304 segfaults when compiling this file
+ * __INTEL_COMPILER_BUILD_DATE=20200925
+ * __INTEL_COMPILER=1910
+ * __INTEL_COMPILER_UPDATE=3
+ */
+#if !defined(__INTEL_COMPILER) || (__INTEL_COMPILER != 1910)
 
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
@@ -439,3 +446,5 @@ Test(separation, vertexpolyhedral,
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
+
+#endif  /* if !intel */
