@@ -33,6 +33,10 @@ extern "C" {
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
 
+#ifdef NDEBUG
+#include "scip/struct_expr.h"
+#endif
+
 /**@addtogroup PublicExprHandlerMethods
  * @{
  */
@@ -326,6 +330,58 @@ SCIP_Longint SCIPexprhdlrGetNSimplifications(
    );
 
 /** @} */ /* expression handler statistics */
+
+#ifdef NDEBUG
+
+/* If NDEBUG is defined, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlr_, freehdlr_) do { (exprhdlr)->copyhdlr = copyhdlr_; (exprhdlr)->freehdlr = freehdlr_; } while (FALSE)
+#define SCIPexprhdlrSetCopyFreeData(exprhdlr, copydata_, freedata_) do { (exprhdlr)->copydata = copydata_; (exprhdlr)->freedata = freedata_; } while (FALSE)
+#define SCIPexprhdlrSetPrint(exprhdlr, print_)               (exprhdlr)->print = print_
+#define SCIPexprhdlrSetParse(exprhdlr, parse_)               (exprhdlr)->parse = parse_
+#define SCIPexprhdlrSetCurvature(exprhdlr, curvature_)       (exprhdlr)->curvature = curvature_
+#define SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicity_) (exprhdlr)->monotonicity = monotonicity_
+#define SCIPexprhdlrSetIntegrality(exprhdlr, integrality_)   (exprhdlr)->integrality = integrality_
+#define SCIPexprhdlrSetHash(exprhdlr, hash_)                 (exprhdlr)->hash = hash_
+#define SCIPexprhdlrSetCompare(exprhdlr, compare_)           (exprhdlr)->compare = compare_
+#define SCIPexprhdlrSetDiff(exprhdlr, bwdiff_, fwdiff_, bwfwdiff_) do { (exprhdlr)->bwdiff = bwdiff_; (exprhdlr)->fwdiff = fwdiff_; (exprhdlr)->bwfwdiff = bwfwdiff_; } while (FALSE)
+#define SCIPexprhdlrSetIntEval(exprhdlr, inteval_)           (exprhdlr)->inteval = inteval_
+#define SCIPexprhdlrSetSimplify(exprhdlr, simplify_)         (exprhdlr)->simplify = simplify_
+#define SCIPexprhdlrSetReverseProp(exprhdlr, reverseprop_)   (exprhdlr)->reverseprop = reverseprop_
+#define SCIPexprhdlrSetEstimate(exprhdlr, initestimates_, estimate_) do { (exprhdlr)->initestimates = initestimates_; (exprhdlr)->estimate = estimate_; } while (FALSE)
+#define SCIPexprhdlrGetName(exprhdlr)              (exprhdlr)->name
+#define SCIPexprhdlrGetDescription(exprhdlr)       (exprhdlr)->desc
+#define SCIPexprhdlrGetPrecedence(exprhdlr)        (exprhdlr)->precedence
+#define SCIPexprhdlrGetData(exprhdlr)              (exprhdlr)->data
+#define SCIPexprhdlrHasPrint(exprhdlr)             ((exprhdlr)->print != NULL)
+#define SCIPexprhdlrHasBwdiff(exprhdlr)            ((exprhdlr)->bwdiff != NULL)
+#define SCIPexprhdlrHasFwdiff(exprhdlr)            ((exprhdlr)->fwdiff != NULL)
+#define SCIPexprhdlrHasIntEval(exprhdlr)           ((exprhdlr)->inteval != NULL)
+#define SCIPexprhdlrHasEstimate(exprhdlr)          ((exprhdlr)->estimate != NULL)
+#define SCIPexprhdlrHasInitEstimates(exprhdlr)     ((exprhdlr)->initestimates != NULL)
+#define SCIPexprhdlrHasSimplify(exprhdlr)          ((exprhdlr)->simplify != NULL)
+#define SCIPexprhdlrHasCurvature(exprhdlr)         ((exprhdlr)->curvature != NULL)
+#define SCIPexprhdlrHasMonotonicity(exprhdlr)      ((exprhdlr)->monotonicity != NULL)
+#define SCIPexprhdlrHasReverseProp(exprhdlr)       ((exprhdlr)->reverseprop != NULL)
+#define SCIPexprhdlrGetNCreated(exprhdlr)          (exprhdlr)->ncreated
+#define SCIPexprhdlrGetNIntevalCalls(exprhdlr)     (exprhdlr)->nintevalcalls
+#define SCIPexprhdlrGetIntevalTime(exprhdlr)       SCIPclockGetTime((exprhdlr)->intevaltime)
+#define SCIPexprhdlrGetNReversepropCalls(exprhdlr) (exprhdlr)->npropcalls
+#define SCIPexprhdlrGetReversepropTime(exprhdlr)   SCIPclockGetTime((exprhdlr)->proptime)
+#define SCIPexprhdlrGetNCutoffs(exprhdlr)          (exprhdlr)->ncutoffs
+#define SCIPexprhdlrGetNDomainReductions(exprhdlr) (exprhdlr)->ndomreds
+#define SCIPexprhdlrIncrementNDomainReductions(exprhdlr, nreductions) (exprhdlr)->ndomreds += nreductions
+#define SCIPexprhdlrGetNEstimateCalls(exprhdlr)    (exprhdlr)->nestimatecalls
+#define SCIPexprhdlrGetEstimateTime(exprhdlr)      SCIPclockGetTime((exprhdlr)->estimatetime)
+#define SCIPexprhdlrGetNBranchings(exprhdlr)       (exprhdlr)->nbranchscores
+#define SCIPexprhdlrIncrementNBranchings(exprhdlr) ++(exprhdlr)->nbranchscores
+#define SCIPexprhdlrGetNSimplifyCalls(exprhdlr)    (exprhdlr)->nsimplifycalls
+#define SCIPexprhdlrGetSimplifyTime(exprhdlr)      SCIPclockGetTime((exprhdlr)->simplifytime)
+#define SCIPexprhdlrGetNSimplifications(exprhdlr)  (exprhdlr)->nsimplified
+#endif
+
 
 /** @} */ /* expression handler methods */
 

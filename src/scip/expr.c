@@ -243,6 +243,53 @@ SCIP_RETCODE evalAndDiff(
  * Public methods
  */
 
+/* Undo the defines from pub_expr.h, which exist if NDEBUG is defined. */
+#ifdef NDEBUG
+#undef SCIPexprhdlrSetCopyFreeHdlr
+#undef SCIPexprhdlrSetCopyFreeData
+#undef SCIPexprhdlrSetPrint
+#undef SCIPexprhdlrSetParse
+#undef SCIPexprhdlrSetCurvature
+#undef SCIPexprhdlrSetMonotonicity
+#undef SCIPexprhdlrSetIntegrality
+#undef SCIPexprhdlrSetHash
+#undef SCIPexprhdlrSetCompare
+#undef SCIPexprhdlrSetDiff
+#undef SCIPexprhdlrSetIntEval
+#undef SCIPexprhdlrSetSimplify
+#undef SCIPexprhdlrSetReverseProp
+#undef SCIPexprhdlrSetEstimate
+#undef SCIPexprhdlrGetName
+#undef SCIPexprhdlrGetDescription
+#undef SCIPexprhdlrGetPrecedence
+#undef SCIPexprhdlrGetData
+#undef SCIPexprhdlrHasPrint
+#undef SCIPexprhdlrHasBwdiff
+#undef SCIPexprhdlrHasFwdiff
+#undef SCIPexprhdlrHasIntEval
+#undef SCIPexprhdlrHasEstimate
+#undef SCIPexprhdlrHasInitEstimates
+#undef SCIPexprhdlrHasSimplify
+#undef SCIPexprhdlrHasCurvature
+#undef SCIPexprhdlrHasMonotonicity
+#undef SCIPexprhdlrHasReverseProp
+#undef SCIPexprhdlrGetNCreated
+#undef SCIPexprhdlrGetNIntevalCalls
+#undef SCIPexprhdlrGetIntevalTime
+#undef SCIPexprhdlrGetNReversepropCalls
+#undef SCIPexprhdlrGetReversepropTime
+#undef SCIPexprhdlrGetNCutoffs
+#undef SCIPexprhdlrGetNDomainReductions
+#undef SCIPexprhdlrIncrementNDomainReductions
+#undef SCIPexprhdlrGetNEstimateCalls
+#undef SCIPexprhdlrGetEstimateTime
+#undef SCIPexprhdlrGetNBranchings
+#undef SCIPexprhdlrIncrementNBranchings
+#undef SCIPexprhdlrGetNSimplifyCalls
+#undef SCIPexprhdlrGetSimplifyTime
+#undef SCIPexprhdlrGetNSimplifications
+#endif
+
 /** create expression handler */
 SCIP_RETCODE SCIPexprhdlrCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
