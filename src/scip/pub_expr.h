@@ -981,6 +981,22 @@ SCIP_Bool SCIPexpriterIsEnd(
    SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
+#ifdef NDEBUG
+#define SCIPexpriterIsInit(iterator)                           (iterator)->initialized
+#define SCIPexpriterGetCurrent(iterator)                       (iterator)->curr
+#define SCIPexpriterGetStageDFS(iterator)                      (iterator)->dfsstage
+#define SCIPexpriterGetChildIdxDFS(iterator)                   (iterator)->curr->iterdata[(iterator)->iterindex].currentchild
+#define SCIPexpriterGetChildExprDFS(iterator)                  (iterator)->curr->children[(iterator)->curr->iterdata[(iterator)->iterindex].currentchild]
+#define SCIPexpriterGetParentDFS(iterator)                     (iterator)->curr->iterdata[(iterator)->iterindex].parent
+#define SCIPexpriterGetCurrentUserData(iterator)               (iterator)->curr->iterdata[(iterator)->iterindex].userdata
+#define SCIPexpriterGetChildUserDataDFS(iterator)              (iterator)->curr->children[(iterator)->curr->iterdata[(iterator)->iterindex].currentchild]->iterdata[(iterator)->iterindex].userdata
+#define SCIPexpriterGetExprUserData(iterator, expr)            (expr)->iterdata[(iterator)->iterindex].userdata
+#define SCIPexpriterSetCurrentUserData(iterator, userdata_)    (iterator)->curr->iterdata[(iterator)->iterindex].userdata = userdata_
+#define SCIPexpriterSetExprUserData(iterator, expr, userdata_) (expr)->iterdata[(iterator)->iterindex].userdata = userdata_
+#define SCIPexpriterSetChildUserData(iterator, userdata_)      (iterator)->curr->children[(iterator)->curr->iterdata[(iterator)->iterindex].currentchild]->iterdata[(iterator)->iterindex].userdata = userdata_
+#define SCIPexpriterIsEnd(iterator)                            ((iterator)->curr == NULL)
+#endif
+
 /** @} */
 
 /**@name Function Curvature */
