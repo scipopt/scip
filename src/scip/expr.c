@@ -3751,6 +3751,30 @@ CLEANUP:
 
 /* from pub_expr.h */
 
+#ifdef NDEBUG
+#undef SCIPexprGetNUses
+#undef SCIPexprGetNChildren
+#undef SCIPexprGetChildren
+#undef SCIPexprGetHdlr
+#undef SCIPexprGetData
+#undef SCIPexprSetData
+#undef SCIPexprGetOwnerData
+#undef SCIPexprGetEvalValue
+#undef SCIPexprGetEvalTag
+#undef SCIPexprGetDerivative
+#undef SCIPexprGetDot
+#undef SCIPexprGetBardot
+#undef SCIPexprGetDiffTag
+#undef SCIPexprGetActivity
+#undef SCIPexprGetActivityTag
+#undef SCIPexprSetActivity
+#undef SCIPexprGetCurvature
+#undef SCIPexprSetCurvature
+#undef SCIPexprIsIntegral
+#undef SCIPexprSetIntegrality
+#undef SCIPexprAreQuadraticExprsVariables
+#endif
+
 /** gets the number of times the expression is currently captured */
 int SCIPexprGetNUses(
    SCIP_EXPR*            expr                /**< expression */

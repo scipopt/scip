@@ -25,16 +25,16 @@
 #ifndef SCIP_PUB_EXPR_H_
 #define SCIP_PUB_EXPR_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "scip/def.h"
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
 
 #ifdef NDEBUG
 #include "scip/struct_expr.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 /**@addtogroup PublicExprHandlerMethods
@@ -644,6 +644,30 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
    );
 
 /** @} */
+
+#ifdef NDEBUG
+#define SCIPexprGetNUses(expr)                    (expr)->nuses
+#define SCIPexprGetNChildren(expr)                (expr)->nchildren
+#define SCIPexprGetChildren(expr)                 (expr)->children
+#define SCIPexprGetHdlr(expr)                     (expr)->exprhdlr
+#define SCIPexprGetData(expr)                     (expr)->exprdata
+#define SCIPexprSetData(expr, exprdata_)          (expr)->exprdata = exprdata_
+#define SCIPexprGetOwnerData(expr)                (expr)->ownerdata
+#define SCIPexprGetEvalValue(expr)                (expr)->evalvalue
+#define SCIPexprGetEvalTag(expr)                  (expr)->evaltag
+#define SCIPexprGetDerivative(expr)               (expr)->derivative
+#define SCIPexprGetDot(expr)                      (expr)->dot
+#define SCIPexprGetBardot(expr)                   (expr)->bardot
+#define SCIPexprGetDiffTag(expr)                  (expr)->difftag
+#define SCIPexprGetActivity(expr)                 (expr)->activity
+#define SCIPexprGetActivityTag(expr)              (expr)->activitytag
+#define SCIPexprSetActivity(expr, activity_, activitytag_) do { (expr)->activity = activity_; (expr)->activitytag = activitytag_; } while (FALSE)
+#define SCIPexprGetCurvature(expr)                (expr)->curvature
+#define SCIPexprSetCurvature(expr, curvature_)    (expr)->curvature = curvature_
+#define SCIPexprIsIntegral(expr)                  (expr)->isintegral
+#define SCIPexprSetIntegrality(expr, isintegral_) expr->isintegral = isintegral_
+#define SCIPexprAreQuadraticExprsVariables(expr)  (expr)->quaddata->allexprsarevars
+#endif
 
 /**@name Core Expression Handlers */
 /**@{ */

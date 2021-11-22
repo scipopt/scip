@@ -694,8 +694,8 @@ Test(propagate, forwardprop_uses_expressions_bounds)
     * NOTE: this should not be done by a user as it interferes with the way how we recognize whether activities are uptodate
     */
    SCIPincrementCurBoundsTagNonlinear(conshdlr, FALSE);
-   SCIPexprSetActivity(SCIPexprGetChildren(expr)[0], (SCIP_INTERVAL){.inf = -1.0, .sup = 0.2}, conshdlrdata->curboundstag);
-   SCIPexprSetActivity(SCIPexprGetChildren(expr)[1], (SCIP_INTERVAL){.inf = -1.0, .sup = 0.2}, conshdlrdata->curboundstag);
+   SCIPexprSetActivity(SCIPexprGetChildren(expr)[0], ((SCIP_INTERVAL){.inf = -1.0, .sup = 0.2}), conshdlrdata->curboundstag);
+   SCIPexprSetActivity(SCIPexprGetChildren(expr)[1], ((SCIP_INTERVAL){.inf = -1.0, .sup = 0.2}), conshdlrdata->curboundstag);
 
    /* new interval should be [0,2] intersected with [-2, 0.4]; note that it is important to have the activitytag
     * set to curboundstag; otherwise the explicitly set intervals are going to be overwritten
