@@ -1009,10 +1009,6 @@ SCIP_EXPRCURV SCIPexprcurvAdd(
    SCIP_EXPRCURV         curv2               /**< curvature of second summand */
    );
 
-#ifdef NDEBUG
-#define SCIPexprcurvAdd(curv1, curv2)  ((SCIP_EXPRCURV) ((curv1) & (curv2)))
-#endif
-
 /** gives the curvature for the negation of a function with given curvature */
 SCIP_EXPORT
 SCIP_EXPRCURV SCIPexprcurvNegate(
@@ -1079,6 +1075,12 @@ SCIP_EXPORT
 const char* SCIPexprcurvGetName(
    SCIP_EXPRCURV         curv                /**< curvature */
    );
+
+#ifdef NDEBUG
+#define SCIPexprcurvAdd(curv1, curv2)  ((SCIP_EXPRCURV) ((curv1) & (curv2)))
+#define SCIPexprcurvNegate(curvature)  (((curvature) == SCIP_EXPRCURV_CONCAVE) ? SCIP_EXPRCURV_CONVEX : ((curvature) == SCIP_EXPRCURV_CONVEX) ? SCIP_EXPRCURV_CONCAVE : (curvature))
+#define SCIPexprcurvMultiply(factor, curvature) (((factor) == 0.0) ? SCIP_EXPRCURV_LINEAR : (factor) > 0.0 ? (curvature) : SCIPexprcurvNegate(curvature))
+#endif
 
 /**@} */
 

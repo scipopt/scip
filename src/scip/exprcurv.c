@@ -33,7 +33,11 @@ const char* curvnames[4] =
       "linear"
    };
 
+#ifdef NDEBUG
 #undef SCIPexprcurvAdd
+#undef SCIPexprcurvNegate
+#undef SCIPexprcurvMultiply
+#endif
 
 /** gives curvature for a sum of two functions with given curvature */
 SCIP_EXPRCURV SCIPexprcurvAdd(
