@@ -395,6 +395,20 @@ SCIP_RETCODE SCIPclassifyConstraintTypesExactLinear(
 
 
 unsigned long certificateGetConsIndex(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_CONS* cons);
+
+
+SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
+   SCIP*                 scip,
+   SCIP_CONSHDLR*        conshdlr,
+   SCIP_CONS*            cons
+   );
+
+SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
+   SCIP*                 scip,
+   SCIP_CONSHDLR*        conshdlr,
+   SCIP_CONS*            cons
+   );
+
 /* @} */
 
 /* @} */

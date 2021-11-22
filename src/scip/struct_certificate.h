@@ -28,6 +28,7 @@
 
 #include "scip/def.h"
 #include "scip/type_certificate.h"
+#include "scip/type_var.h"
 #include "scip/type_misc.h"
 
 #ifdef __cplusplus
@@ -38,7 +39,7 @@ extern "C" {
 struct SCIP_CertificateBound
 {
    SCIP_Longint          fileindex;          /**< index of this bound in the certificate file */
-   int                   varindex;           /**< index of the variable */
+   SCIP_VAR*             var;           /**< variable */
    SCIP_Rational*        boundval;           /**< value of the bound */
    SCIP_Bool             isupper;            /**< is it the upper bound? */
 };

@@ -237,7 +237,7 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    const char*           boundname,          /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
+   SCIP_VAR*             var,                /**< index of the variable */
    SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    );
@@ -246,7 +246,7 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
 SCIP_Longint SCIPcertificatePrintBoundAssumption(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    const char*           assumptionname,     /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
+   SCIP_VAR*             var,                /**< variable */
    SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    );
