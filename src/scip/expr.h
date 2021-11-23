@@ -36,6 +36,10 @@
 #include "scip/struct_set.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**@name Expression Handler Methods */
 /**@{ */
 
@@ -238,6 +242,7 @@ SCIP_RETCODE SCIPexprhdlrFwDiffExpr(
  * @see SCIP_DECL_EXPREVAL
  * @see SCIP_DECL_EXPRFWDIFF
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcallExprEvalFwdiff() macro */
 SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -319,6 +324,7 @@ SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
  *
  * @see SCIP_DECL_EXPRSIMPLIFY
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPsimplifyExpr() and SCIPexprSimplify() macros */
 SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -364,6 +370,7 @@ SCIP_RETCODE SCIPexprCreate(
    );
 
 /** appends child to the children list of expr */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPappendExprChild() macro */
 SCIP_RETCODE SCIPexprAppendChild(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -375,6 +382,7 @@ SCIP_RETCODE SCIPexprAppendChild(
  *
  * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPreplaceExprChild() macro */
 SCIP_RETCODE SCIPexprReplaceChild(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -385,6 +393,7 @@ SCIP_RETCODE SCIPexprReplaceChild(
    );
 
 /** remove all children of expr */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPremoveExprChildren() macro */
 SCIP_RETCODE SCIPexprRemoveChildren(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -400,6 +409,7 @@ SCIP_RETCODE SCIPexprRemoveChildren(
  * The mapped expression (including its children) will not be copied in this case and its ownerdata will not be touched.
  * If, however, the mapexpr callback returns NULL for the targetexpr, then the expr will be copied in the usual way.
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPduplicateExpr() macro */
 SCIP_RETCODE SCIPexprCopy(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -416,6 +426,7 @@ SCIP_RETCODE SCIPexprCopy(
    );
 
 /** duplicates the given expression without its children */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPduplicateExprShallow() macro */
 SCIP_RETCODE SCIPexprDuplicateShallow(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -431,6 +442,7 @@ void SCIPexprCapture(
    );
 
 /** releases an expression (decrements usage count and possibly frees expression) */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPreleaseExpr() macro */
 SCIP_RETCODE SCIPexprRelease(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -469,6 +481,7 @@ SCIP_Bool SCIPexprIsPower(
    );
 
 /** print an expression as info-message */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPprintExpr() macro */
 SCIP_RETCODE SCIPexprPrint(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -537,6 +550,7 @@ SCIP_RETCODE SCIPexprDismantle(
  * The tag is stored together with the value and can be received via
  * SCIPexprGetEvalTag().
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPevalExpr() macro */
 SCIP_RETCODE SCIPexprEval(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -553,6 +567,7 @@ SCIP_RETCODE SCIPexprEval(
  * If an error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPevalExprGradient() macro */
 SCIP_RETCODE SCIPexprEvalGradient(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -569,6 +584,7 @@ SCIP_RETCODE SCIPexprEvalGradient(
  * If an error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPevalExprHessianDir() macro */
 SCIP_RETCODE SCIPexprEvalHessianDir(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -589,6 +605,7 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
  * @note If expression is set to be integral, then activities are tightened to integral values.
  *   Thus, ensure that the integrality information is valid (if set to TRUE; the default (FALSE) is always ok).
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPevalExprActivity() macro */
 SCIP_RETCODE SCIPexprEvalActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -601,6 +618,7 @@ SCIP_RETCODE SCIPexprEvalActivity(
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
  * @note The given expressions are assumed to be simplified.
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcompareExpr() macro */
 int SCIPexprCompare(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr1,              /**< first expression */
@@ -611,6 +629,7 @@ int SCIPexprCompare(
  *
  * @see SCIPsimplifyExpr
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPsimplifyExpr() macro */
 SCIP_RETCODE SCIPexprSimplify(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -702,5 +721,9 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    );
 
 /**@} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SCIP_EXPR_H_ */

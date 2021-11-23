@@ -32,7 +32,10 @@
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
+#include "scip/struct_mem.h"
+#include "scip/struct_stat.h"
 #include "scip/set.h"
+#include "scip/expr.h"
 #endif
 
 #ifdef __cplusplus
@@ -921,6 +924,38 @@ SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify);
  */
 SCIP_EXPORT
 SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
+
+#ifdef NDEBUG
+#define SCIPappendExprChild(scip, expr, child)               SCIPexprAppendChild((scip)->set, (scip)->mem->probmem, expr, child)
+#define SCIPreplaceExprChild(scip, expr, childidx, newchild) SCIPexprReplaceChild((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, childidx, newchild)
+#define SCIPremoveExprChildren(scip, expr)                   SCIPexprRemoveChildren((scip)->set, (scip)->stat, (scip)->mem->probmem, expr)
+#define SCIPduplicateExpr(scip, expr, copyexpr, mapexpr, mapexprdata, ownercreate, ownercreatedata) SCIPexprCopy((scip)->set, (scip)->stat, (scip)->mem->probmem, (scip)->set, (scip)->stat, (scip)->mem->probmem, expr, copyexpr, mapexpr, mapexprdata, ownercreate, ownercreatedata)
+#define SCIPduplicateExprShallow(scip, expr, copyexpr, ownercreate, ownercreatedata) SCIPexprDuplicateShallow((scip)->set, (scip)->mem->probmem, expr, copyexpr, ownercreate, ownercreatedata)
+#define SCIPcaptureExpr(expr)                                SCIPexprCapture(expr)
+#define SCIPreleaseExpr(scip, expr)                          SCIPexprRelease((scip)->set, (scip)->stat, (scip)->mem->probmem, expr)
+#define SCIPisExprVar(scip, expr)                            SCIPexprIsVar((scip)->set, expr)
+#define SCIPisExprValue(scip, expr)                          SCIPexprIsValue((scip)->set, expr)
+#define SCIPisExprSum(scip, expr)                            SCIPexprIsSum((scip)->set, expr)
+#define SCIPisExprProduct(scip, expr)                        SCIPexprIsProduct((scip)->set, expr)
+#define SCIPisExprPower(scip, expr)                          SCIPexprIsPower((scip)->set, expr)
+#define SCIPprintExpr(scip, expr, file)                      SCIPexprPrint((scip)->set, (scip)->stat, (scip)->mem->probmem, (scip)->messagehdlr, file, expr)
+#define SCIPevalExpr(scip, expr, sol, soltag)                SCIPexprEval((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, sol, soltag)
+#define SCIPgetExprNewSoltag(scip)                           (++((scip)->stat->exprlastsoltag))
+#define SCIPevalExprGradient(scip, expr, sol, soltag)        SCIPexprEvalGradient((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, sol, soltag)
+#define SCIPevalExprHessianDir(scip, expr, sol, soltag, direction) SCIPexprEvalHessianDir((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, sol, soltag, direction)
+#define SCIPevalExprActivity(scip, expr)                     SCIPexprEvalActivity((scip)->set, (scip)->stat, (scip)->mem->probmem, expr)
+#define SCIPcompareExpr(scip, expr1, expr2)                  SCIPexprCompare((scip)->set, expr1, expr2)
+#define SCIPsimplifyExpr(scip, rootexpr, simplified, changed, infeasible, ownercreate, ownercreatedata) SCIPexprSimplify((scip)->set, (scip)->stat, (scip)->mem->probmem, rootexpr, simplified, changed, infeasible, ownercreate, ownercreatedata)
+#define SCIPcallExprCurvature(scip, expr, exprcurvature, success, childcurv) SCIPexprhdlrCurvatureExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, exprcurvature, success, childcurv)
+#define SCIPcallExprMonotonicity(scip, expr, childidx, result) SCIPexprhdlrMonotonicityExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, childidx, result)
+#define SCIPcallExprEval(scip, expr, childrenvalues, val)    SCIPexprhdlrEvalExpr(SCIPexprGetHdlr(expr), (scip)->set, (scip)->mem->buffer, expr, val, childrenvalues, NULL)
+#define SCIPcallExprEvalFwdiff(scip, expr, childrenvalues, direction, val, dot) SCIPexprhdlrEvalFwDiffExpr(SCIPexprGetHdlr(expr), (scip)->set, (scip)->mem->buffer, expr, val, dot, childrenvalues, NULL, direction, NULL)
+#define SCIPcallExprInteval(scip, expr, interval, intevalvar, intevalvardata) SCIPexprhdlrIntEvalExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, interval, intevalvar, intevalvardata)
+#define SCIPcallExprEstimate(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) SCIPexprhdlrEstimateExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand)
+#define SCIPcallExprInitestimates(scip, expr, bounds, overestimate, coefs, constant, nreturned)  SCIPexprhdlrInitEstimatesExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, overestimate, coefs, constant, nreturned)
+#define SCIPcallExprSimplify(scip, expr, simplifiedexpr, ownercreate, ownercreatedata)  SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, simplifiedexpr, ownercreate, ownercreatedata)
+#define SCIPcallExprReverseprop(scip, expr, bounds, childrenbounds, infeasible) SCIPexprhdlrReversePropExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, childrenbounds, infeasible)
+#endif
 
 /** @} */
 

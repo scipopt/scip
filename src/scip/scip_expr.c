@@ -928,6 +928,38 @@ SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
 /**@name Expression Methods */
 /**@{ */
 
+#ifdef NDEBUG
+#undef SCIPappendExprChild
+#undef SCIPreplaceExprChild
+#undef SCIPremoveExprChildren
+#undef SCIPduplicateExpr
+#undef SCIPduplicateExprShallow
+#undef SCIPcaptureExpr
+#undef SCIPreleaseExpr
+#undef SCIPisExprVar
+#undef SCIPisExprValue
+#undef SCIPisExprSum
+#undef SCIPisExprProduct
+#undef SCIPisExprPower
+#undef SCIPprintExpr
+#undef SCIPevalExpr
+#undef SCIPgetExprNewSoltag
+#undef SCIPevalExprGradient
+#undef SCIPevalExprHessianDir
+#undef SCIPevalExprActivity
+#undef SCIPcompareExpr
+#undef SCIPsimplifyExpr
+#undef SCIPcallExprCurvature
+#undef SCIPcallExprMonotonicity
+#undef SCIPcallExprEval
+#undef SCIPcallExprEvalFwdiff
+#undef SCIPcallExprInteval
+#undef SCIPcallExprEstimate
+#undef SCIPcallExprInitestimates
+#undef SCIPcallExprSimplify
+#undef SCIPcallExprReverseprop
+#endif
+
 /** creates and captures an expression with given expression data and children */
 SCIP_RETCODE SCIPcreateExpr(
    SCIP*                 scip,               /**< SCIP data structure */
