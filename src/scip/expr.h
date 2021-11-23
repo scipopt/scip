@@ -31,6 +31,11 @@
 #include "scip/type_clock.h"
 #include "blockmemshell/memory.h"
 
+#ifdef NDEBUG
+#include "scip/struct_expr.h"
+#include "scip/struct_set.h"
+#endif
+
 /**@name Expression Handler Methods */
 /**@{ */
 
@@ -610,6 +615,15 @@ SCIP_RETCODE SCIPexprSimplify(
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
+
+#ifdef NDEBUG
+#define SCIPexprCapture(expr) ++(expr)->nuses
+#define SCIPexprIsVar(set, expr)     ((expr)->exprhdlr == (set)->exprhdlrvar)
+#define SCIPexprIsValue(set, expr)   ((expr)->exprhdlr == (set)->exprhdlrval)
+#define SCIPexprIsSum(set, expr)     ((expr)->exprhdlr == (set)->exprhdlrsum)
+#define SCIPexprIsProduct(set, expr) ((expr)->exprhdlr == (set)->exprhdlrproduct)
+#define SCIPexprIsPower(set, expr)   ((expr)->exprhdlr == (set)->exprhdlrpow)
+#endif
 
 /**@} */
 

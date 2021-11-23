@@ -1690,6 +1690,15 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 
 /* from expr.h */
 
+#ifdef NDEBUG
+#undef SCIPexprCapture
+#undef SCIPexprIsVar
+#undef SCIPexprIsValue
+#undef SCIPexprIsSum
+#undef SCIPexprIsProduct
+#undef SCIPexprIsPower
+#endif
+
 /** creates and captures an expression with given expression data and children */
 SCIP_RETCODE SCIPexprCreate(
    SCIP_SET*             set,                /**< global SCIP settings */
