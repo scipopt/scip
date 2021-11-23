@@ -29,6 +29,10 @@
 #include "scip/type_nlpi.h"
 #include "scip/type_misc.h"
 
+#ifdef NDEBUG
+#include "scip/struct_nlpi.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -128,6 +132,24 @@ void SCIPnlpiMergeStatistics(
    SCIP_NLPI*            sourcenlpi,         /**< NLP interface from which to add statistics */
    SCIP_Bool             reset               /**< whether to reset statistics in sourcescip */
    );
+
+#ifdef NDEBUG
+/* If NDEBUG is defined, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+#define SCIPnlpiGetData(nlpi)                  (nlpi)->nlpidata
+#define SCIPnlpiGetName(nlpi)                  (nlpi)->name
+#define SCIPnlpiGetDesc(nlpi)                  (nlpi)->description
+#define SCIPnlpiGetPriority(nlpi)              (nlpi)->priority
+#define SCIPnlpiGetNProblems(nlpi)             (nlpi)->nproblems
+#define SCIPnlpiGetProblemTime(nlpi)           SCIPclockGetTime((nlpi)->problemtime)
+#define SCIPnlpiGetNSolves(nlpi)               (nlpi)->nsolves
+#define SCIPnlpiGetSolveTime(nlpi)             (nlpi)->solvetime
+#define SCIPnlpiGetEvalTime(nlpi)              (nlpi)->evaltime
+#define SCIPnlpiGetNIterations(nlpi)           (nlpi)->niter
+#define SCIPnlpiGetNTermStat(nlpi, termstatus) (nlpi)->ntermstat[termstatus]
+#define SCIPnlpiGetNSolStat(nlpi, solstatus)   (nlpi)->nsolstat[solstatus]
+#endif
 
 /**@} */ /* Statistics */
 
