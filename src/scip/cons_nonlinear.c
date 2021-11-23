@@ -11606,6 +11606,10 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
                                   SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
       }
+      else if( !SCIPisCutApplicable(scip, row) )
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut not applicable (e.g., cut is boundchange below eps)\n"); )
+      }
       else
       {
          SCIP_Bool infeasible;
