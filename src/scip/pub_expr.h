@@ -711,6 +711,10 @@ SCIP_Real SCIPgetExponentExprPow(
    SCIP_EXPR*            expr                /**< (signed) power expression */
    );
 
+#ifdef NDEBUG
+#define SCIPgetVarExprVar(expr) ((SCIP_VAR*)SCIPexprGetData(expr))
+#endif
+
 /**@} */
 
 
