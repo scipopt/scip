@@ -776,8 +776,8 @@ SCIP_RETCODE computeOffValues(
                   }
 
                   SCIPfreeBufferArray(scip, &childvarexprs);
-#endif
                }
+#endif
             }
 
             if( issc )
