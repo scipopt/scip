@@ -3485,7 +3485,6 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
    for( int i = 0; i < nvals; i++ )
    {
       SCIP_VAR* ivar;
-      int varindex;
       bool is_upper_bound;
       SCIP_Rational* bound;
       SCIP_CERTIFICATEBOUND* certificatebound;
@@ -3493,7 +3492,6 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
       ivar = row == NULL ? consdata->vars[i] : row->cols[i]->var;
       if ( ivar == variable )
          continue;
-      varindex = SCIPvarGetCertificateIndex(ivar);
       is_upper_bound = upperboundcontribution != RatIsPositive(vals[i]);
       assert(upperboundcontribution != ismaxactivity);
       bound = is_upper_bound ? SCIPvarGetUbLocalExact(ivar) : SCIPvarGetLbLocalExact(ivar);
