@@ -2318,6 +2318,8 @@ void consdataScaleMinValue(
 
    assert(!RatIsZero(minabsval) || consdata->nvars == 0);
 
+   RatCreateBuffer(SCIPbuffer(scip), &scalingfactor);
+
    if( RatIsLTReal(minabsval, minval) )
    {
       RatSetReal(scalingfactor, minval);
@@ -2337,6 +2339,8 @@ void consdataScaleMinValue(
    }
 
    consdataInvalidateActivities(consdata);
+
+   RatFreeBuffer(SCIPbuffer(scip), &scalingfactor);
 }
 
 #ifdef SCIP_DISABLED_CODE
@@ -15891,7 +15895,7 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
-   consdataScaleMinValue(scip, targetdata, SCIPepsilon(scip));
+   consdataScaleMinValue(scip, targetdata, 2 * SCIPepsilon(scip));
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
