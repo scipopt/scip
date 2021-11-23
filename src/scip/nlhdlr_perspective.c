@@ -744,15 +744,24 @@ SCIP_RETCODE computeOffValues(
                         nlhdlrexprdata->indicators[i], &pos);
                   issc = scvdata != NULL;
                }
-               else
+               else if( SCIPisExprSum(scip, curexpr) && curexpr == expr )
                {
-                  /* curexpr is a non-variable expression, so it belongs to the non-linear part of expr
-                   * since the non-linear part of expr must be semicontinuous with respect to
-                   * nlhdlrexprdata->indicators[i], curexpr must be semicontinuous
+                  /* if expr itself is a sum, this is an exception since a sum with nonlinear terms is
+                   * allowed to have both semicontinuous and non-semicontinuous variables; we skip it here
+                   * and then analyse it term by term
                    */
-                  issc = TRUE;
+                  issc = FALSE;
+               }
 
 #ifndef NDEBUG
+               if( !SCIPisExprVar(scip, curexpr) && (!SCIPisExprSum(scip, curexpr) || curexpr != expr) )
+               {
+                  /* curexpr is a non-variable expression and does not fit the sum special case,
+                   * so it belongs to the non-linear part of expr.
+                   * Since the non-linear part of expr must be semicontinuous with respect to
+                   * nlhdlrexprdata->indicators[i], curexpr must be semicontinuous
+                   */
+
                   SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, norigvars) );
                   SCIP_CALL( SCIPgetExprVarExprs(scip, curexpr, childvarexprs, &nchildvarexprs) );
 
