@@ -109,6 +109,7 @@ SCIP_RETCODE SCIPexprhdlrParseExpr(
  *
  * @see SCIP_DECL_EXPRCURVATURE
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcallExprCurvature() macro */
 SCIP_RETCODE SCIPexprhdlrCurvatureExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -122,6 +123,7 @@ SCIP_RETCODE SCIPexprhdlrCurvatureExpr(
  *
  * @see SCIP_DECL_EXPRMONOTONICITY
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcallExprMonotonicity() macro */
 SCIP_RETCODE SCIPexprhdlrMonotonicityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -178,6 +180,7 @@ int SCIPexprhdlrCompareExpr(
  *
  * @see SCIP_DECL_EXPREVAL
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcallExprEval() macro */
 SCIP_RETCODE SCIPexprhdlrEvalExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -265,6 +268,7 @@ SCIP_RETCODE SCIPexprhdlrBwFwDiffExpr(
  *
  * @see SCIP_DECL_EXPRINTEVAL
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcallExprInteval() macro */
 SCIP_RETCODE SCIPexprhdlrIntEvalExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -278,6 +282,7 @@ SCIP_RETCODE SCIPexprhdlrIntEvalExpr(
  *
  * @see SCIP_DECL_EXPRESTIMATE
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcallExprEstimate() macro */
 SCIP_RETCODE SCIPexprhdlrEstimateExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -298,6 +303,7 @@ SCIP_RETCODE SCIPexprhdlrEstimateExpr(
  *
  * @see SCIP_DECL_EXPRINITESTIMATES
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcallExprInitestimates() macro */
 SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -328,6 +334,7 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
  *
  * @see SCIP_DECL_EXPRREVERSEPROP
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcallExprReverseprop() macro */
 SCIP_RETCODE SCIPexprhdlrReversePropExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */

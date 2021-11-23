@@ -799,8 +799,18 @@ SCIP_RETCODE hashExpr(
  * @{
  */
 
+#ifdef NDEBUG
+#undef SCIPgetExprhdlrs
+#undef SCIPgetNExprhdlrs
+#undef SCIPfindExprhdlr
+#undef SCIPgetExprhdlrVar
+#undef SCIPgetExprhdlrValue
+#undef SCIPgetExprhdlrSum
+#undef SCIPgetExprhdlrProduct
+#undef SCIPgetExprhdlrPower
+#endif
+
 /** creates the handler for an expression handler and includes it into SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */

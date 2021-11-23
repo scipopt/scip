@@ -25,13 +25,19 @@
 #ifndef SCIP_SCIP_EXPR_H_
 #define SCIP_SCIP_EXPR_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "scip/type_scip.h"
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
+
+#ifdef NDEBUG
+#include "scip/struct_scip.h"
+#include "scip/struct_set.h"
+#include "scip/set.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**@addtogroup PublicExprHandlerMethods
  * @{
@@ -97,6 +103,20 @@ SCIP_EXPORT
 SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
    SCIP*                      scip           /**< SCIP data structure */
    );
+
+#ifdef NDEBUG
+/* If NDEBUG is defined, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+#define SCIPgetExprhdlrs(scip)       (scip)->set->exprhdlrs
+#define SCIPgetNExprhdlrs(scip)      (scip)->set->nexprhdlrs
+#define SCIPfindExprhdlr(scip, name) SCIPsetFindExprhdlr((scip)->set, name)
+#define SCIPgetExprhdlrVar(scip)     (scip)->set->exprhdlrvar
+#define SCIPgetExprhdlrValue(scip)   (scip)->set->exprhdlrval
+#define SCIPgetExprhdlrSum(scip)     (scip)->set->exprhdlrsum
+#define SCIPgetExprhdlrProduct(scip) (scip)->set->exprhdlrproduct
+#define SCIPgetExprhdlrPower(scip)   (scip)->set->exprhdlrpow
+#endif
 
 /** @} */
 
