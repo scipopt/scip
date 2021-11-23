@@ -623,6 +623,13 @@ SCIP_RETCODE SCIPcertificateInit(
 
    SCIPcertificatePrintConsHeader(certificate, TRUE, ncertcons, nboundconss);
 
+   for( j = 0; j < SCIPgetNOrigConss(scip); j++ )
+   {
+      SCIP_CONS* cons;
+      cons = conss[j];
+      SCIPconsPrintCertificateOrigExactLinear(scip, SCIPconsGetHdlr(cons), cons);
+   }
+
    for( j = 0; j < nvars; j++ )
    {
       if( !RatIsAbsInfinity(SCIPvarGetLbGlobalExact(vars[j])) )
