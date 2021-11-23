@@ -517,6 +517,7 @@ Constraint handlers for NLP:
 - added SCIPgetCurBoundsTagNonlinear(), SCIPgetLastBoundRelaxTagNonlinear(), SCIPincrementCurBoundsTagNonlinear()
 - added SCIPgetVarExprHashmapNonlinear()
 - added SCIPprocessRowprepNonlinear()
+- added SCIPassumeConvexNonlinear()
 - added SCIPcollectBilinTermsNonlinear(), SCIPgetBilinTermIdxNonlinear(), SCIPgetBilinTermNonlinear(), SCIPevalBilinAuxExprNonlinear(), SCIPinsertBilinearTermExistingNonlinear(), SCIPinsertBilinearTermImplicitNonlinear()
 - added SCIPcomputeFacetVertexPolyhedralNonlinear()
 - added SCIPgetExprNonlinear()
@@ -578,7 +579,7 @@ NLPI:
 - deleted parameter "constraints/orbitope/usedynamicprop"
 - changed type of parameter "propagating/symmetry/recomputerestart" from SCIP_Bool to int with range [0,2]
 - deleted parameter "propagating/symmetry/disableofrestart"
-- removed constraints/nonlinear/linfeasshift, constraints/nonlinear/assumeconvex, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont
+- removed constraints/nonlinear/linfeasshift, constraints/nonlinear/reformulate, constraints/nonlinear/maxexpansionexponent, constraints/nonlinear/sepanlpmincont
 - removed constraints/nonlinear/upgrade/abspower
 - removed constraints/nonlinear/upgrade/and, use constraints/nonlinear/reformbinprodsand instead
 - removed constraints/nonlinear/upgrade/bivariate
