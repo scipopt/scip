@@ -2310,6 +2310,12 @@ void SCIPfreeExpriter(
 /**@name Quadratic expression functions */
 /**@{ */
 
+#ifdef NDEBUG
+#undef SCIPcheckExprQuadratic
+#undef SCIPfreeExprQuadratic
+#undef SCIPcomputeExprQuadraticCurvature
+#endif
+
 /** checks whether an expression is quadratic
  *
  * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),

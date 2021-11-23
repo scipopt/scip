@@ -1049,6 +1049,12 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
    SCIP_Bool             storeeigeninfo      /**< whether the eigenvalues and eigenvectors should be stored */
    );
 
+#ifdef NDEBUG
+#define SCIPcheckExprQuadratic(scip, expr, isquadratic)  SCIPexprCheckQuadratic((scip)->set, (scip)->mem->probmem, expr, isquadratic)
+#define SCIPfreeExprQuadratic(scip, expr)                SCIPexprFreeQuadratic((scip)->mem->probmem, expr)
+#define SCIPcomputeExprQuadraticCurvature(scip, expr, curv, assumevarfixed, storeeigeninfo)  SCIPexprComputeQuadraticCurvature((scip)->set, (scip)->mem->probmem, (scip)->mem->buffer, (scip)->messagehdlr, expr, curv, assumevarfixed, storeeigeninfo)
+#endif
+
 /** @} */
 
 /** @} */

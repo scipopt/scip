@@ -683,6 +683,7 @@ void SCIPexpriterFree(
  *
  * Use \ref SCIPexprGetQuadraticData to get data about the representation as quadratic.
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcheckExprQuadratic() macro */
 SCIP_RETCODE SCIPexprCheckQuadratic(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -695,6 +696,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
  * Reverts SCIPexprCheckQuadratic().
  * Before doing changes to an expression, it can be useful to call this function.
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPfreeExprQuadratic() macro */
 void SCIPexprFreeQuadratic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr                /**< expression */
@@ -711,6 +713,7 @@ void SCIPexprFreeQuadratic(
  * If `assumevarfixed` is given and some expressions in quadratic terms correspond to variables present in
  * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
  */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcomputeExprQuadraticCurvature() macro */
 SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
