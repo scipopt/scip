@@ -657,6 +657,7 @@ SCIP_RETCODE SCIPexprSimplify(
 /**@{ */
 
 /** creates an expression iterator */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPcreateExpriter() macro */
 SCIP_RETCODE SCIPexpriterCreate(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -664,6 +665,7 @@ SCIP_RETCODE SCIPexpriterCreate(
    );
 
 /** frees an expression iterator */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPfreeExpriter() macro */
 void SCIPexpriterFree(
    SCIP_EXPRITER**       iterator            /**< pointer to the expression iterator */
    );

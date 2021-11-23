@@ -976,6 +976,11 @@ void SCIPfreeExpriter(
    SCIP_EXPRITER**       iterator            /**< pointer to the expression iterator */
    );
 
+#ifdef NDEBUG
+#define SCIPcreateExpriter(scip, iterator)  SCIPexpriterCreate((scip)->stat, (scip)->mem->probmem, iterator)
+#define SCIPfreeExpriter(iterator)          SCIPexpriterFree(iterator)
+#endif
+
 /** @} */
 
 

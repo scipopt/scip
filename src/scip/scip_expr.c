@@ -2277,6 +2277,11 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop)
 /**@name Expression Iterator Methods */
 /**@{ */
 
+#ifdef NDEBUG
+#undef SCIPcreateExpriter
+#undef SCIPfreeExpriter
+#endif
+
 /** creates an expression iterator */
 SCIP_RETCODE SCIPcreateExpriter(
    SCIP*                 scip,               /**< SCIP data structure */
