@@ -296,6 +296,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrCompEnfo)
 
 /* nlhdlr private API functions from nlhdlr.h */
 
+#ifndef NDEBUG
+#undef SCIPnlhdlrResetNDetectionslast
+#undef SCIPnlhdlrIncrementNCutoffs
+#undef SCIPnlhdlrIncrementNSeparated
+#endif
+
 /** creates a nonlinear handler */
 SCIP_RETCODE SCIPnlhdlrCreate(
    SCIP*                 scip,               /**< SCIP data structure */
