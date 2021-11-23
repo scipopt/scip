@@ -1276,7 +1276,6 @@ SCIP_RETCODE consPrintConsSol(
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_DISABLED_CODE
 /** invalidates activity bounds, such that they are recalculated in next get */
 static
 void consdataInvalidateActivities(
@@ -1322,7 +1321,6 @@ void consdataInvalidateActivities(
    consdata->glbmaxactivityneghuge = -1;
    consdata->glbmaxactivityposhuge = -1;
 }
-#endif
 
 /** @todo exip: should this return a real-relaxation instead
  *  compute the pseudo activity of a constraint */
@@ -1497,6 +1495,7 @@ void consdataRecomputeGlbMaxactivity(
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
 }
+#endif
 
 /** calculates maximum absolute value of coefficients */
 static
@@ -1534,17 +1533,23 @@ void consdataCalcMinAbsval(
    consdata->validminabsval = TRUE;
 
    if( consdata->nvars > 0 )
+   {
       RatAbs(consdata->minabsval, consdata->vals[0]);
+      assert(!RatIsZero(consdata->vals[0]));
+   }
    else
       RatSetReal(consdata->minabsval, 0.0);
 
    for( i = 1; i < consdata->nvars; ++i )
    {
+      assert(!RatIsZero(consdata->vals[i]));
+
       if( RatIsAbsGT(consdata->minabsval, consdata->vals[i]) )
          RatAbs(consdata->minabsval, consdata->vals[i]);
    }
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** checks the type of all variables of the constraint and sets hasnonbinvar and hascontvar flags accordingly */
 static
 void consdataCheckNonbinvar(
@@ -2263,7 +2268,6 @@ void consdataUpdateChgCoef(
    consdataUpdateAddCoef(scip, consdata, var, newval, checkreliability);
 }
 
-#ifdef SCIP_DISABLED_CODE
 /** returns the maximum absolute value of all coefficients in the constraint */
 static
 SCIP_Rational* consdataGetMaxAbsval(
@@ -2295,7 +2299,45 @@ SCIP_Rational* consdataGetMinAbsval(
 
    return consdata->minabsval;
 }
-#endif
+
+static
+void consdataScaleMinValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_Real             minval              /**< minmimal value for coefficients in constraint */
+   )
+{
+   int i;
+   SCIP_Rational* scalingfactor;
+   SCIP_Rational* minabsval;
+
+   assert(scip != NULL);
+   assert(consdata != NULL);
+
+   minabsval = consdataGetMinAbsval(scip, consdata);
+
+   assert(!RatIsZero(minabsval) || consdata->nvars == 0);
+
+   if( RatIsLTReal(minabsval, minval) )
+   {
+      RatSetReal(scalingfactor, minval);
+      RatDiv(scalingfactor, scalingfactor, minabsval);
+
+      for( i = 0; i < consdata->nvars; i++ )
+      {
+         RatMult(consdata->vals[i], consdata->vals[i], scalingfactor);
+         SCIPintervalSetRational(&(consdata->valsreal[i]), consdata->vals[i]);
+      }
+
+      RatMult(consdata->rhs, consdata->rhs, scalingfactor);
+      consdata->rhsreal = RatRoundReal(consdata->rhs, SCIP_R_ROUND_UPWARDS);
+
+      RatMult(consdata->lhs, consdata->lhs, scalingfactor);
+      consdata->lhsreal = RatRoundReal(consdata->lhs, SCIP_R_ROUND_DOWNWARDS);
+   }
+
+   consdataInvalidateActivities(consdata);
+}
 
 #ifdef SCIP_DISABLED_CODE
 /** calculates minimum and maximum local and global activity for constraint from scratch;
@@ -15848,6 +15890,8 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+
+   consdataScaleMinValue(scip, targetdata, SCIPepsilon(scip));
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
