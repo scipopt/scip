@@ -301,6 +301,7 @@ struct SCIP_ConshdlrData
    char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
    SCIP_Real             branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
    char                  linearizeheursol;   /**< whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution) */
+   SCIP_Bool             assumeconvex;       /**< whether to assume that any constraint is convex */
 
    /* statistics */
    SCIP_Longint          nweaksepa;          /**< number of times we used "weak" cuts for enforcement */
@@ -3717,22 +3718,37 @@ SCIP_RETCODE initSolve(
          assert(consdata != NULL);
          assert(consdata->expr != NULL);
 
-         /* call the curvature detection algorithm of the convex nonlinear handler
-          * Check only for those curvature that may result in a convex inequality, i.e.,
-          * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
-          * Also we can assume that we are nonlinear, so do not check for convex if already concave.
-          */
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         if( !SCIPconshdlrGetData(conshdlr)->assumeconvex )
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
-            if( success )
-               consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            /* call the curvature detection algorithm of the convex nonlinear handler
+             * Check only for those curvature that may result in a convex inequality, i.e.,
+             * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
+             * Also we can assume that we are nonlinear, so do not check for convex if already concave.
+             */
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
+               SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONCAVE;
+            }
+            if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
+               if( success )
+                  consdata->curv = SCIP_EXPRCURV_CONVEX;
+            }
          }
-         if( !success && !SCIPisInfinity(scip, consdata->rhs) )
+         else
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
-            if( success )
-               consdata->curv = SCIP_EXPRCURV_CONVEX;
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIPwarningMessage(scip, "Nonlinear constraint <%s> has finite left- and right-hand side, but constraints/nonlinear/assumeconvex is enabled.\n", SCIPconsGetName(conss[c]));
+               consdata->curv = SCIP_EXPRCURV_LINEAR;
+            }
+            else
+            {
+               consdata->curv = !SCIPisInfinity(scip, consdata->rhs) ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE;
+            }
          }
          SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
 
@@ -10980,6 +10996,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution)",
          &conshdlrdata->linearizeheursol, FALSE, 'o', "oie", NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/assumeconvex",
+         "whether to assume that any constraint is convex",
+         &conshdlrdata->assumeconvex, FALSE, FALSE, NULL, NULL) );
+
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
          "signals a bound change to a nonlinear constraint", processVarEvent, NULL) );
@@ -11586,6 +11606,10 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut efficacy %g is too low (minefficacy=%g)\n",
                                   SCIPgetCutEfficacy(scip, sol, row), SCIPgetSepaMinEfficacy(scip)); )
       }
+      else if( !SCIPisCutApplicable(scip, row) )
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    cut not applicable (e.g., cut is boundchange below eps)\n"); )
+      }
       else
       {
          SCIP_Bool infeasible;
@@ -11634,6 +11658,21 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns whether all nonlinear constraints are assumed to be convex */
+SCIP_Bool SCIPassumeConvexNonlinear(
+   SCIP_CONSHDLR*        conshdlr
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->assumeconvex;
 }
 
 /** collects all bilinear terms for a given set of constraints
