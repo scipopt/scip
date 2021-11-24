@@ -412,6 +412,7 @@ SCIP_DECL_EXPRCURVATURE(curvatureAbs)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
+   /**! [SnippetExprCurvatureAbs] */
    /* expression is |child|, get domain of child */
    SCIP_CALL( SCIPevalExprActivity(scip, child) );
    childbounds = SCIPexprGetActivity(child);
@@ -427,6 +428,7 @@ SCIP_DECL_EXPRCURVATURE(curvatureAbs)
       childcurv[0] = SCIP_EXPRCURV_LINEAR;
    else /* |f(x)|, f mixed sign, is never concave nor linear */
       *success = FALSE;
+   /**! [SnippetExprCurvatureAbs] */
 
    return SCIP_OKAY;
 }
@@ -446,6 +448,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityAbs)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
+   /**! [SnippetExprMonotonicityAbs] */
    SCIP_CALL( SCIPevalExprActivity(scip, child) );
    childbounds = SCIPexprGetActivity(child);
 
@@ -455,6 +458,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityAbs)
       *result = SCIP_MONOTONE_INC;
    else
       *result = SCIP_MONOTONE_UNKNOWN;
+   /**! [SnippetExprMonotonicityAbs] */
 
    return SCIP_OKAY;
 }

@@ -276,6 +276,7 @@ SCIP_DECL_EXPREVAL(evalLog)
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
+   /**! [SnippetExprEvalLog] */
    if( SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) <= 0.0 )
    {
       SCIPdebugMsg(scip, "invalid evaluation of logarithmic expression\n");
@@ -285,6 +286,7 @@ SCIP_DECL_EXPREVAL(evalLog)
    {
       *val = log(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]));
    }
+   /**! [SnippetExprEvalLog] */
 
    return SCIP_OKAY;
 }

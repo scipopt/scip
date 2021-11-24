@@ -226,6 +226,7 @@ SCIP_DECL_EXPRPARSE(parseExp)
 
    assert(expr != NULL);
 
+   /**! [SnippetExprParseExp] */
    /* parse child expression from remaining string */
    SCIP_CALL( SCIPparseExpr(scip, &childexpr, string, endstring, ownercreate, ownercreatedata) );
    assert(childexpr != NULL);
@@ -238,6 +239,7 @@ SCIP_DECL_EXPRPARSE(parseExp)
    SCIP_CALL( SCIPreleaseExpr(scip, &childexpr) );
 
    *success = TRUE;
+   /**! [SnippetExprParseExp] */
 
    return SCIP_OKAY;
 }

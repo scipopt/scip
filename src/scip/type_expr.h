@@ -192,6 +192,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *
  *  \param[in] scip           target SCIP main data structure where to include expression handler
  *  \param[in] sourceexprhdlr expression handler in source SCIP
+ *
+ * See also \ref EXPRCOPYHDLR.
  */
 #define SCIP_DECL_EXPRCOPYHDLR(x) SCIP_RETCODE x (\
    SCIP*          scip, \
@@ -204,6 +206,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * \param[in] scip          SCIP main data structure
  * \param[in] exprhdlr      expression handler
  * \param[in] exprhdlrdata  expression handler data to be freed
+ *
+ * See also \ref EXPRFREEHDLR.
  */
 #define SCIP_DECL_EXPRFREEHDLR(x) SCIP_RETCODE x (\
    SCIP*               scip,     \
@@ -227,6 +231,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[out] targetexprdata  pointer to store the copied expression data
  *  \param[in] sourcescip       source SCIP main data structure
  *  \param[in] sourceexpr       expression in source SCIP which data is to be copied
+ *
+ * See also \ref EXPRCOPYDATA.
  */
 #define SCIP_DECL_EXPRCOPYDATA(x) SCIP_RETCODE x (\
    SCIP*           targetscip,     \
@@ -244,6 +250,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *
  *  \param[in] scip SCIP main data structure
  *  \param[in] expr the expression which data to be freed
+ *
+ * See also \ref EXPRFREEDATA.
  */
 #define SCIP_DECL_EXPRFREEDATA(x) SCIP_RETCODE x (\
    SCIP*      scip, \
@@ -263,6 +271,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] currentchild     index of current child if in stage visitingchild or visitedchild
  *  \param[in] parentprecedence precedence of parent
  *  \param[in] file             the file to print to
+ *
+ * See also \ref EXPRPRINT.
  */
 #define SCIP_DECL_EXPRPRINT(x) SCIP_RETCODE x (\
    SCIP*               scip, \
@@ -284,6 +294,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[out] endstring      buffer to store the position of string after parsing
  *  \param[out] expr           buffer to store the parsed expression
  *  \param[out] success        buffer to store whether the parsing was successful or not
+ *
+ * See also \ref EXPRPARSE.
  */
 #define SCIP_DECL_EXPRPARSE(x) SCIP_RETCODE x (\
    SCIP*          scip,                        \
@@ -305,14 +317,13 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * It can return "unknown" for a child's curvature if its curvature does not matter (though that's
  * rarely the case).
  *
- * It can be assumes that the activity evaluation of the expression has been called before
- * and that the expression has been simplified.
- *
  *  \param[in] scip          SCIP main data structure
  *  \param[in] expr          expression to check the curvature for
  *  \param[in] exprcurvature desired curvature of this expression
  *  \param[out] success      buffer to store whether the desired curvature was obtained
  *  \param[out] childcurv    array to store required curvature for each child
+ *
+ * See also \ref EXPRCURVATURE.
  */
 #define SCIP_DECL_EXPRCURVATURE(x) SCIP_RETCODE x (\
    SCIP*          scip,          \
@@ -329,6 +340,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] expr     expression to check the monotonicity for
  *  \param[in] childidx index of the considered child expression
  *  \param[out] result  buffer to store the monotonicity
+ *
+ * See also \ref EXPRMONOTONICITY.
  */
 #define SCIP_DECL_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
    SCIP*          scip,     \
@@ -344,6 +357,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] scip        SCIP main data structure
  *  \param[in] expr        expression to check the integrality for
  *  \param[out] isintegral buffer to store whether expr is integral
+ *
+ * See also \ref EXPRINTEGRALITY.
  */
 #define SCIP_DECL_EXPRINTEGRALITY(x) SCIP_RETCODE x (\
    SCIP*      scip, \
@@ -358,6 +373,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] expr           expression to be hashed
  *  \param[out] hashkey       buffer to store the hash value
  *  \param[in] childrenhashes array with hash values of children
+ *
+ * See also \ref EXPRHASH.
  */
 #define SCIP_DECL_EXPRHASH(x) SCIP_RETCODE x (\
    SCIP*         scip,    \
@@ -375,6 +392,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] scip  SCIP main data structure
  *  \param[in] expr1 first expression in comparison
  *  \param[in] expr2 second expression in comparison
+ *
+ * See also \ref EXPRCOMPARE.
  */
 #define SCIP_DECL_EXPRCOMPARE(x) int x (\
    SCIP*      scip,  \
@@ -389,6 +408,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] expr expression to be evaluated
  *  \param[out] val buffer where to store value
  *  \param[in] sol  solution that is evaluated (can be NULL)
+ *
+ * See also \ref EXPREVAL.
  */
 #define SCIP_DECL_EXPREVAL(x) SCIP_RETCODE x (\
    SCIP*      scip, \

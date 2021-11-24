@@ -216,6 +216,7 @@
  * - @subpage DIALOG  "Dialogs"
  * - @subpage DISP    "Display columns"
  * - @subpage EVENT   "Event handler"
+ * - @subpage EXPRHDLR "Expression handlers"
  * - @subpage NLPI    "Interface to NLP solvers"
  * - @subpage EXPRINT "Interfaces to expression interpreters"
  * - @subpage PARAM   "additional user parameters"
@@ -3715,26 +3716,25 @@
 
 /**@page EXPRHDLR How to add expression handlers
  *
- * Expression handlers provide functionality for basic expression types.
- * In contrast, higher level nonlinear structures are handled by nonlinearity handlers, see \ref NLHDLR.
- * \n
+ * Expression handlers define basic expression types and provide additional functionality to work with expressions,
+ * e.g., differentiation, simplification, estimation, hashing, copying, printing, parsing.
  * A complete list of all expression handlers contained in this release can be found \ref EXPRHDLRS "here".
+ * In addition to expression handlers, higher level nonlinear structures are handled by nonlinearity handlers, see \ref NLHDLR.
+ * \n
  *
  * We now explain how users can add their own expression handlers.
  * Take the expression handler for exponential expressions (src/scip/expr_exp.c) as an example.
  * As all other default plugins, it is written in C.
  *
  * Additional documentation for the callback methods of an expression handler, in particular for the input parameters,
- * can be found in the file type_expr.h.
+ * can be found in the file \ref type_expr.h.
  *
  * Here is what you have to do to implement an expression handler:
- * -# Copy the template files src/scip/expr_xyz.c and src/scip/expr_xyz.h into files "sepa_myexprhdlr.c"
- *    and "sepa_myexprhdlr.h".
-      \n
+ * -# Copy the template files `src/scip/expr_xyz.c` and `src/scip/expr_xyz.h` into files `expr_myfunc.c` and `expr_myfunc.h`, respectively. \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeExprhdlrMyexprhdlr() in order to include the expression handler into your SCIP instance,
+ * -# Use SCIPincludeExprhdlrMyfunc() in order to include the expression handler into your SCIP instance,
  *    e.g., in the main file of your project.
- * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myexprhdlr".
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myfunc".
  * -# Adjust the properties of the expression handler (see \ref EXPRHDLR_PROPERTIES).
  * -# Define the expression handler data (see \ref EXPRHDLR_DATA). This is optional.
  * -# Implement the interface methods (see \ref EXPRHDLR_INTERFACE).
@@ -3744,170 +3744,244 @@
  *
  * @section EXPRHDLR_PROPERTIES Properties of an Expression Handler
  *
- * At the top of the new file "exprhdlr_myexprhdlr.c", you can find the expression handler properties.
+ * At the top of the new file "expr_myfunc.c", you can find the expression handler properties.
  * These are given as compiler defines.
  * The properties you have to set have the following meaning:
  *
  * \par EXPRHDLR_NAME: the name of the expression handler.
  * This name is used in the interactive shell to address the expression handler.
- * Additionally, if you are searching for an expression handler with SCIPfindExprhdlr(), this name is looked up.
+ * Additionally, if you or a parsing routine is searching for an expression handler with SCIPfindExprhdlr(), this name is looked up.
  * Names have to be unique: no two expression handlers may have the same name.
  *
  * \par EXPRHDLR_DESC: the description of the expression handler.
  * This string is printed as a description of the expression handler in the interactive shell.
  *
  * \par EXPRHDLR_PRECEDENCE: the precedence of the expression handler.
- * Precedence of the expression operation relative to other expressions.
- *
- * \par EXPRHDLR_HASHKEY: hash kay of the expression.
+ * Precedence of the expression operation relative to other expressions when printing the expression.
  *
  * @section EXPRHDLR_DATA Expression Handler Data
  *
- * Below the header "Data structures" you can find a struct which is called "struct SCIP_ExprhdlrData".
+ * Below the header "Data structures" you can find a struct which is called `struct SCIP_ExprhdlrData`.
  * In this data structure, you can store the data of your expression handler. For example, you should store the adjustable
  * parameters of the expression handler in this data structure.
  * \n
  * Defining expression handler data is optional. You can leave the struct empty.
  *
- * TODO I have stopped here, the rest is just copied from SEPA.
+ * @section EXPRHDLR_INTERFACE Interface Methods
  *
- * @section SEPA_INTERFACE Interface Methods
- *
- * At the bottom of "sepa_myseparator.c", you can find the interface method SCIPincludeSepaMyseparator(),
- * which also appears in "sepa_myseparator.h"
- * SCIPincludeSepaMyseparator() is called by the user, if (s)he wants to include the separator,
+ * At the bottom of `expr_myfunc.c`, you can find the interface method `SCIPincludeExprhdlrMyfunc()`,
+ * which also appears in `expr_myfunc.h`.
+ * `SCIPincludeExprhdlrMyfunc()` is called by the user, if (s)he wants to include the expression handler,
  * i.e., if (s)he wants to use the separator in his/her application.
  *
- * This method only has to be adjusted slightly.
- * It is responsible for notifying SCIP of the presence of the separator. For this, you can either call SCIPincludeSepa(),
- * or SCIPincludeSepaBasic() since SCIP version 3.0. In the latter variant, \ref SEPA_ADDITIONALCALLBACKS "additional callbacks"
- * must be added via setter functions as, e.g., SCIPsetSepaCopy(). We recommend this latter variant because
- * it is more stable towards future SCIP versions which might have more callbacks, whereas source code using the first
- * variant must be manually adjusted with every SCIP release containing new callbacks for separators in order to compile.
+ * This method is responsible for notifying SCIP of the presence of the expression handler.
+ * For this, you must call SCIPincludeExprhdlr().
+ * The function only expects the properties and fundamental callbacks of the expression handler as arguments.
+ * \ref EXPRHDLR_ADDITIONALCALLBACKS "Additional callbacks" must be added via setter functions as, e.g., SCIPexprhdlrSetCopyFreeHdlr().
  *
- * If you are using separator data, you have to allocate the memory
- * for the data at this point. You can do this by calling:
+ * If you are using expression handler data, you have to allocate the memory for the data at this point.
+ * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &exprhdlrdata) );
  * \endcode
- * You also have to initialize the fields in "struct SCIP_SepaData" afterwards. For freeing the
- * separator data, see \ref SEPAFREE.
+ * You also have to initialize the fields in `struct SCIP_ExprhdlrData` afterwards.
+ * For freeing the expression handler data, see \ref EXPRFREEHDLR.
  *
- * You may also add user parameters for your separator, see \ref PARAM for how to add user parameters and
- * the method SCIPincludeSepaGomory() in src/scip/sepa_gomory.c for an example.
+ * You may also add user parameters for your expression handler, see \ref PARAM for how to add user parameters and
+ * the method SCIPincludeExprhdlrLog() in src/scip/expr_log.c for an example.
  *
  *
- * @section SEPA_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Separator
+ * Another interface method that can be found in `expr_myfunc.c` is `SCIPcreateExprMyfunc()`.
+ * This method is called by the user, if (s)he wants to create an expression that is handled by this expression handler.
+ * Typically, the creation function takes the operands of the expression (the children) as arguments.
+ * `SCIPcreateExprMyfunc()` may further be extended to take parameters of an expression into account.
+ * For example, SCIPcreateExprPow() receives the exponent as argument.
+ *
+ * In the implementation of `SCIPcreateExprMyfunc()`, the expression data shall be allocated and initialized, if the expression has data
+ * (like the exponent of pow expressions).
+ * Then the expression shall be created by a call to SCIPcreateExpr().
+ * This function takes the expression handler, expression data, children, and ownercreate callback as arguments.
+ * For freeing the expression data, see \ref EXPRFREEDATA.
+ *
+ * The `ownercreate` and `ownercreatedata` that are passed to `SCIPcreateExprMyfunc()` need to be passed on to SCIP.
+ * The owner of the expression that is created uses these arguments to store additional data in an expression.
+ * For most usecases, these arguments will be set to `NULL`.
+ * However, if the \ref EXPRPARSE callback is implemented, then `SCIPcreateExprMyfunc()` may need to be called with a non-NULL value
+ * for `ownercreate` and `ownercreatedata`.
+ * This will be the case if, for example, the constraint handler for nonlinear constraint parses an expression.
+ * The constraint handler will then own the expression and needs to store some data in the expression.
+ *
+ *
+ * @section EXPRHDLR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an Expression Handler
  *
  * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
  * an operational algorithm.
- * They are passed together with the separator itself to SCIP using SCIPincludeSepa() or SCIPincludeSepaBasic(),
- * see @ref SEPA_INTERFACE.
+ * They are passed to SCIP when the expression handler is created and included in SCIP via SCIPincludeExprhdlr(),
+ * see @ref EXPRHDLR_INTERFACE.
  *
- * Separator plugins have two callbacks, @ref SEPAEXECLP and @ref SEPAEXECSOL, of which at least one must be implemented.
+ * Expression handlers have one fundamental callbacks, @ref EXPREVAL, that nees to be implemented.
+ * However, expression handlers with stateful expressions (expressions that have data) not to implement also the
+ * @ref EXPRCOPYDATA and @ref EXPRFREEDATA callbacks.
  *
  * Additional documentation for the callback methods, in particular to their input parameters,
- * can be found in type_sepa.h.
+ * can be found in \ref type_expr.h.
  *
- * @subsection SEPAEXECLP
+ * @subsection EXPREVAL
  *
- * The SEPAEXECLP callback is executed during the price-and-cut loop of the subproblem processing.
- * It should try to generate general purpose cutting planes in order to separate the current LP solution.
- * The method is called in the LP solution loop, which means that a valid LP solution exists.
+ * The expression evaluation callback defines the mathematical operation that the expression handler represents.
+ * Its purpose is to evaluate an expression by taking the values of its children (operands) into account.
  *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
- * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
- * In addition to LP rows, the callback may also produce domain reductions or add additional constraints.
+ * The children of the expression can be retrieved via SCIPexprGetChildren() and SCIPexprGetNChildren().
+ * The value (a `SCIP_Real`) for each child can be retrieved via function SCIPexprGetEvalValue().
+ * The value of the expression should be stored in the argument `val` that is passed to the callback.
+ * For example, the evaluation in the expression handler for sum is doing the following:
+ * @refsnippet{src/scip/expr_sum.c,SnippetExprEvalSum}
  *
- * Overall, the SEPAEXECLP callback has the following options, which is indicated by the possible return values of
- * the 'result' variable (see type_sepa.h):
- *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
- *  - adding an additional constraint (result SCIP_CONSADDED)
- *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
- *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
- *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
- *    (result SCIP_DIDNOTFIND)
- *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
- *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
- *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ * When an expression cannot be evaluated w.r.t. the values of its children, such a domain error must be signaled
+ * to SCIP by setting `*val` to `SCIP_INVALID`.
+ * SCIP then aborts evaluation, so that it is not necessary to check in the evaluation callback whether any child
+ * has value `SCIP_INVALID`.
+ * For example, the evaluation in the expression handler for the Logarithm is doing the following:
+ * @refsnippet{src/scip/expr_log.c,SnippetExprEvalLog}
  *
- * @subsection SEPAEXECSOL
- *
- * The SEPAEXECSOL callback is executed during the separation loop on arbitrary primal solutions.
- * It should try to generate general purpose cutting planes in order to separate the given primal solution.
- * The method is not called in the LP solution loop, which means that there is no valid LP solution.
- *
- * In the standard SCIP environment, the SEPAEXECSOL callback is not used because only LP solutions are
- * separated. The SEPAEXECSOL callback provides means to support external relaxation handlers like semidefinite
- * relaxations that want to separate an intermediate primal solution vector. Thus, if you do not want to support
- * such external plugins, you do not need to implement this callback method.
- *
- * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
- * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
- * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
- *
- * Overall, the SEPAEXECSOL callback has the following options, which is indicated by the possible return values of
- * the 'result' variable (see type_sepa.h):
- *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
- *  - adding an additional constraint (result SCIP_CONSADDED)
- *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
- *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
- *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
- *    (result SCIP_DIDNOTFIND)
- *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
- *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
- *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ * The solution (`sol`) that is passed to EXPREVAL can usually be ignored.
+ * It is used by the expression handler for variables to retrieve the value of a variable expression.
  *
  *
- * @section SEPA_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
+ * @section EXPRHDLR_ADDITIONALCALLBACKS Additional Callback Methods of an Expression Handler
  *
  * The additional callback methods do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
- * Additional callbacks can either be passed directly with SCIPincludeSepa() to SCIP or via specific
- * <b>setter functions</b> after a call of SCIPincludeSepaBasic(), see also @ref SEPA_INTERFACE.
+ * Additional callbacks can be passed via specific
+ * <b>setter functions</b> after a call of SCIPincludeExprhdlr(), see also @ref EXPRHDLR_INTERFACE.
  *
- * @subsection SEPAFREE
+ * @subsection EXPRCOPYHDLR
  *
- * If you are using separator data (see \ref SEPA_DATA and \ref SEPA_INTERFACE), you have to implement this method
- * in order to free the separator data. This can be done by the following procedure:
+ * This method should include the expression handler into a given SCIP instance.
+ * It is usually called when a copy of SCIP is generated.
  *
- * @refsnippet{src/scip/sepa_gomory.c,SnippetSepaFreeGomory}
+ * By not implementing this callback, the expression handler will not be available in copied SCIP instances.
+ * If a nonlinear constraint uses expressions of this type, it will not be possible to copy them.
+ * This may deteriorate the performance of primal heuristics using sub-SCIPs.
  *
- * If you have allocated memory for fields in your separator data, remember to free this memory
- * before freeing the separator data itself.
- * If you are using the C++ wrapper class, this method is not available.
- * Instead, just use the destructor of your class to free the member variables of your class.
+ * @subsection EXPRFREEHDLR
  *
- * @subsection SEPACOPY
+ * If you are using expression handler data (see \ref EXPRHDLR_DATA and \ref EXPRHDLR_INTERFACE), you have to implement this method
+ * in order to free the expression handler data.
  *
- * The SEPACOPY callback is executed when a SCIP instance is copied, e.g. to
- * solve a sub-SCIP. By
- * defining this callback as
- * <code>NULL</code> the user disables the execution of the specified
- * separator for all copied SCIP instances. This may deteriorate the performance
- * of primal heuristics using sub-SCIPs.
+ * @subsection EXPRCOPYDATA
  *
- * @subsection SEPAINIT
+ * This method is called when creating copies of an expression within
+ * the same or between different SCIP instances. It is given the
+ * source expression, which data shall be copied, and expects that
+ * the data for the target expression is returned. This data will then be used
+ * to create a new expression.
  *
- * The SEPAINIT callback is executed after the problem is transformed.
- * The separator may, e.g., use this call to initialize its separator data.
- * The difference between the original and the transformed problem is explained in
- * "What is this thing with the original and the transformed problem about?" on \ref FAQ.
+ * If expressions that are handled by this expression handler have no data,
+ * then this callback can be omitted.
  *
- * @subsection SEPAEXIT
+ * @subsection EXPRFREEDATA
  *
- * The SEPAEXIT callback is executed before the transformed problem is freed.
- * In this method, the separator should free all resources that have been allocated for the solving process in SEPAINIT.
+ * This method is called when freeing an expression that has data.
+ * It is given an expression and shall free its expression data.
+ * It shall then call `SCIPexprSetData(expr, NULL)`.
  *
- * @subsection SEPAINITSOL
+ * This callback must be implemented for expressions that have data.
  *
- * The SEPAINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
- * begin. The separator may use this call to initialize its branch-and-bound specific data.
+ * @subsection EXPRPRINT
  *
- * @subsection SEPAEXITSOL
+ * The callback is called when an expression is printed.
+ * It is called while DFS-iterating over the expression at different stages, that is,
+ * when the expression is visited the first time, before each child of the expression is visited,
+ * after each child of the expression has been visited, and when the iterator leaves the expression
+ * for its parent.
+ * At the various stages, the expression may print a string.
+ * The given precedence of the parent expression can be used to decide whether parenthesis need to be printed.
  *
- * The SEPAEXITSOL callback is executed before the branch-and-bound process is freed. The separator should use this call
- * to clean up its branch-and-bound data, in particular to release all LP rows that it has created or captured.
+ * For example, the pow expression prints `(f(x))^p` where `f(x)` is a print of the child of the pow expression and `p` is the exponent:
+ * @refsnippet{src/scip/expr_pow.c,SnippetExprPrintPow}
+ *
+ * The pow expression handler does not take expression precedence into account yet to decide whether parenthesis around `f(x)` can be omitted.
+ * For the sum expression handler, this has been implemented:
+ * @refsnippet{src/scip/expr_sum.c,SnippetExprPrintSum}
+ *
+ * @subsection EXPRPARSE
+ *
+ * This callback is called when an expression is parsed from a string and an operator with the name of the expression handler is found.
+ * The given string points to the begin of the arguments of the expression, that is, the begin of "..." in the string `myfunc(...)`.
+ * The callback shall interpret "..." and create an expression, probably via `SCIPcreateExprMyfunc()`, and return this created expression
+ * and the position of the last character in "..." to SCIP.
+ * When creating an expression, the given `ownercreate` and `ownercreatedata` shall be passed on.
+ *
+ * The string "..." likely contains one or several other expression that will be the children of the `myfunc` expression.
+ * `SCIPparseExpr()` shall be used to parse these expressions.
+ *
+ * For an expression that takes only one argument and has no parameters, the parsing routine is straight-forward.
+ * For example:
+ * @refsnippet{src/scip/expr_exp.c,SnippetExprParseExp}
+ *
+ * For an expression that has additional data, the parsing routine is slighly more complex:
+ * @refsnippet{src/scip/expr_pow.c,SnippetExprParseSignpower}
+ *
+ * @subsection EXPRCURVATURE
+ *
+ * This callback is called when an expression is checked for convexity or concavity.
+ * It is important to note that the callback is given a desired curvature (convex, concave, or both (=linear))
+ * and the callback is required to return whether the given expression has the desired curvature.
+ * In addition, it can state conditions on the curvature of the children under which the desired curvature
+ * can be achieved and it can take bounds on the children into account.
+ * SCIPevalExprActivity() and SCIPexprGetActivity() shall be used to evaluate and get bounds on a child expression.
+ *
+ * The implementation in the absolute-value expression handler suites as examples:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprCurvatureAbs}
+ *
+ * @subsection EXPRMONOTONICITY
+ *
+ * This callback is called when an expression is checked for its monotonicity with respect to a given child.
+ * It is given the index of the child and shall return whether the expression is monotone increasing or decreasing with respect to this child,
+ * that is, when assuming all other children to be fixed.
+ * Bounds on the children can be taken into account.
+ * These can be evaluated and obtained via SCIPevalExprActivity() and SCIPexprGetActivity().
+ *
+ * The implementation in the absolute-value expression handler suites as examples:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprMonotonicityAbs}
+ *
+ * @subsection EXPRINTEGRALITY
+ *
+ * This callback is called when an expression is checked for integrality, that is,
+ * whether the expression evaluates always to an integral value in a feasible solution.
+ * An implementation usually uses SCIPexprIsIntegral() to check whether children evaluate to an integral value.
+ *
+ * For example, a sum expression is returned to be integral if all coefficients and all children are integral:
+ * @refsnippet{src/scip/expr_sum.c,SnippetExprIntegralitySum}
+ *
+ * @subsection EXPRHASH
+ *
+ * This callback is called when a hash value is computed for an expression.
+ * The hash is used to quickly identify expression that may be equal (or better: to identify expressions that cannot be pairwise equal).
+ *
+ * The hash shall be unique to the expression as likely as positive.
+ * To achieve this, the hashing algorithm shall use the expression type, expression data, and hash of children as input.
+ * It must also be deterministic in this input.
+ *
+ * For example, for the sum expression, the coefficients and the hashes of all children are taken into account:
+ * @refsnippet{src/scip/expr_sum.c,SnippetExprHashSum}
+ *
+ * `EXPRHDLR_HASHKEY` is a constant that is unique to the sum expression handler.
+ *
+ * @subsection EXPRCOMPARE
+ *
+ * This callback is called when two expression (expr1 and expr2) that are handled by the expression handlers need to be compared.
+ * The method shall impose an order on expression and thus must return
+ * - -1 if expr1 < expr2,
+ * -  0 if expr1 = expr2, or
+ * -  1 if expr1 > expr2.
+ *
+ * The callback may use SCIPcompareExpr() to compare children of expr1 and expr2.
+ *
+ * For example, for pow expressions, the order is given by the order of the children.
+ * If the children are equal, then the order of the exponents is used:
+ * @refsnippet{src/scip/expr_pow.c,SnippetExprComparePow}
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
