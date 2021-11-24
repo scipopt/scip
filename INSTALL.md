@@ -1,3 +1,5 @@
+If you want to compile SCIP yourself, it is recommended to download the SCIP Optimization Suite tarball from [scipopt.org](https://scipopt.org/index.php#download) as it contains also the LP solver [SoPlex](https://soplex.zib.de) and the presolver [PaPILO](https://github.com/scipopt/papilo).
+
 We provide two different systems to compile the code:
 - the newer [CMake](@ref CMAKE) build system (recommended for new users)
 - the traditional [Makefile](@ref MAKE) system.
