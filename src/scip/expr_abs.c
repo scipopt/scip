@@ -56,7 +56,8 @@ SCIP_RETCODE computeCutsAbs(
 
    *nreturned = 0;
 
-   if( ! overestimate )
+   /**! [SnippetExprInitestimatesAbs] */
+   if( !overestimate )
    {
       /* compute left tangent -x <= z */
       coefs[*nreturned][0] = -1.0;
@@ -112,6 +113,7 @@ SCIP_RETCODE computeCutsAbs(
          }
       }
    }
+   /**! [SnippetExprInitestimatesAbs] */
 
    return SCIP_OKAY;
 }
@@ -257,6 +259,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
    SCIPdebugMsg(scip, "%sestimate |child| over locdom=[%g,%g] glbdom=[%g,%g]\n", overestimate ? "over" : "under",
       localbounds[0].inf, localbounds[0].sup, globalbounds[0].inf, globalbounds[0].sup);
 
+   /**! [SnippetExprEstimateAbs] */
    if( !overestimate )
    {
       *constant = 0.0;
@@ -324,6 +327,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
          return SCIP_OKAY;
       }
    }
+   /**! [SnippetExprEstimateAbs] */
 
    SCIPdebugMsg(scip, "-> %g * <child> %+g, local=%u branchcand=%u\n", *coefs, *constant, *islocal, *branchcand);
 
@@ -359,6 +363,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropAbs)
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(bounds.inf >= 0.0);  /* bounds should have been intersected with activity, which is >= 0 */
 
+   /**! [SnippetExprReversepropAbs] */
    /* abs(x) in I -> x \in (-I \cup I) \cap bounds(x) */
    right = bounds;  /* I */
    SCIPintervalSetBounds(&left, -right.sup, -right.inf); /* -I */
@@ -373,6 +378,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropAbs)
     * this works also if left or right is empty
     */
    SCIPintervalUnify(&childrenbounds[0], left, right);
+   /**! [SnippetExprReversepropAbs] */
 
    return SCIP_OKAY;
 }

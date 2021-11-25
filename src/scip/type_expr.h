@@ -425,10 +425,14 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *   \frac{\partial \text{expr}}{\partial \text{child}_{\text{childidx}}}
  * \f]
  *
+ * See \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details.
+ *
  *  \param[in] scip     SCIP main data structure
  *  \param[in] expr     expression to be differentiated
  *  \param[in] childidx index of the child
  *  \param[out] val     buffer to store the partial derivative w.r.t. the childidx-th children
+ *
+ * See also \ref EXPRBWDIFF.
  */
 #define SCIP_DECL_EXPRBWDIFF(x) SCIP_RETCODE x (\
    SCIP*      scip,     \
@@ -458,6 +462,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] expr      expression to be differentiated
  *  \param[out] dot      buffer to store derivative value
  *  \param[in] direction direction of the derivative (useful only for var expressions)
+ *
+ * See also \ref EXPRFWDIFF.
  */
 #define SCIP_DECL_EXPRFWDIFF(x) SCIP_RETCODE x (\
    SCIP*      scip, \
@@ -467,8 +473,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 
 /** derivative evaluation callback for Hessian directions (backward over forward)
  *
- * The method computes the total derivative, w.r.t its children, of the partial derivative of expr w.r.t childidx.
- * Equivalently, it computes the partial derivative w.r.t childidx of the total derivative.
+ * The method computes the total derivative, w.r.t. its children, of the partial derivative of expr w.r.t. childidx.
+ * Equivalently, it computes the partial derivative w.r.t. childidx of the total derivative.
  *
  * The expr should be interpreted as an operator \f$ \text{expr}(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$
  * are the children of the expr.
@@ -482,7 +488,7 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * \f]
  *
  * where \f$ u \f$ is the direction and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
- * which can be accessed via SCIPexprGetDot.
+ * which can be accessed via SCIPexprGetDot().
  *
  * Thus, if \f$ n = 1 \f$ (i.e. if expr represents an univariate operator), the method should return
  * \f[
@@ -496,6 +502,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] childidx  index of the child
  *  \param[out] bardot   buffer to store derivative value
  *  \param[in] direction direction of the derivative (useful only for var expressions)
+ *
+ * See also \ref EXPRBWFWDIFF.
  */
 #define SCIP_DECL_EXPRBWFWDIFF(x) SCIP_RETCODE x (\
    SCIP*      scip,     \
@@ -513,6 +521,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[out] interval      buffer where to store interval
  *  \param[in] intevalvar     callback to be called when interval evaluating a variable
  *  \param[in] intevalvardata data to be passed to intevalvar callback
+ *
+ * See also \ref EXPRINTEVAL.
  */
 #define SCIP_DECL_EXPRINTEVAL(x) SCIP_RETCODE x (\
    SCIP*          scip,                      \
@@ -547,6 +557,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[out] islocal     buffer to store whether estimator is valid locally only
  *  \param[out] success     buffer to indicate whether an estimator could be computed
  *  \param[out] branchcand  array to indicate which children to consider for branching
+ *
+ * See also \ref EXPRESTIMATE.
  */
 #define SCIP_DECL_EXPRESTIMATE(x) SCIP_RETCODE x (\
    SCIP*          scip,         \
@@ -578,6 +590,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[out] coefs       buffer to store coefficients of computed estimators
  *  \param[out] constant    buffer to store constant of computed estimators
  *  \param[out] nreturned   buffer to store number of estimators that have been computed
+ *
+ * See also \ref EXPRINITESTIMATES.
  */
 #define SCIP_DECL_EXPRINITESTIMATES(x) SCIP_RETCODE x ( \
    SCIP*          scip,                                 \
@@ -600,6 +614,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] ownercreate     function to call to create ownerdata
  *  \param[in] ownercreatedata data to pass to ownercreate
  *  \param[out] simplifiedexpr buffer to store the simplified expression
+ *
+ * See also \ref EXPRSIMPLIFY and SCIPsimplifyExpr().
  */
 #define SCIP_DECL_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
    SCIP*          scip,                        \
@@ -623,6 +639,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  \param[in] bounds             the bounds on the expression that should be propagated
  *  \param[in,out] childrenbounds array to store computed bounds for children, initialized with current activity
  *  \param[out] infeasible        buffer to store whether a children bounds were propagated to an empty interval
+ *
+ * See also \ref EXPRREVERSEPROP.
  */
 #define SCIP_DECL_EXPRREVERSEPROP(x) SCIP_RETCODE x (\
    SCIP*          scip,           \

@@ -3905,6 +3905,8 @@
  * For the sum expression handler, this has been implemented:
  * @refsnippet{src/scip/expr_sum.c,SnippetExprPrintSum}
  *
+ * If this callback is not implemented, the expression is printed as `<hdlrname>(<child1>, <child2>, ...)`.
+ *
  * @subsection EXPRPARSE
  *
  * This callback is called when an expression is parsed from a string and an operator with the name of the expression handler is found.
@@ -3923,6 +3925,9 @@
  * For an expression that has additional data, the parsing routine is slighly more complex:
  * @refsnippet{src/scip/expr_pow.c,SnippetExprParseSignpower}
  *
+ * If this callback is not implemented, the expression cannot be parsed.
+ * For instance, `.cip` files with nonlinear constraints that use this expression cannot be read.
+ *
  * @subsection EXPRCURVATURE
  *
  * This callback is called when an expression is checked for convexity or concavity.
@@ -3935,6 +3940,8 @@
  * The implementation in the absolute-value expression handler suites as examples:
  * @refsnippet{src/scip/expr_abs.c,SnippetExprCurvatureAbs}
  *
+ * If this callback is not implemented, the expression is assumed to be indefinite.
+ *
  * @subsection EXPRMONOTONICITY
  *
  * This callback is called when an expression is checked for its monotonicity with respect to a given child.
@@ -3946,6 +3953,8 @@
  * The implementation in the absolute-value expression handler suites as examples:
  * @refsnippet{src/scip/expr_abs.c,SnippetExprMonotonicityAbs}
  *
+ * If this callback is not implemented, the expression is assumed to be not monotone in any child.
+ *
  * @subsection EXPRINTEGRALITY
  *
  * This callback is called when an expression is checked for integrality, that is,
@@ -3954,6 +3963,8 @@
  *
  * For example, a sum expression is returned to be integral if all coefficients and all children are integral:
  * @refsnippet{src/scip/expr_sum.c,SnippetExprIntegralitySum}
+ *
+ * If this callback is not implemented, the expression is assumed to be not integral.
  *
  * @subsection EXPRHASH
  *
@@ -3969,6 +3980,8 @@
  *
  * `EXPRHDLR_HASHKEY` is a constant that is unique to the sum expression handler.
  *
+ * If this callback is not implemented, a hash is computed from the expression handler name and the hashes of all children.
+ *
  * @subsection EXPRCOMPARE
  *
  * This callback is called when two expression (expr1 and expr2) that are handled by the expression handlers need to be compared.
@@ -3982,6 +3995,156 @@
  * For example, for pow expressions, the order is given by the order of the children.
  * If the children are equal, then the order of the exponents is used:
  * @refsnippet{src/scip/expr_pow.c,SnippetExprComparePow}
+ *
+ * If this callback is not implemented, a comparison is done based on the children of expr1 and expr2 only.
+ * If the expression is stateful, it must implement this callback.
+ *
+ * @subsection EXPRBWDIFF
+ *
+ * This callback is called when the gradient or Hessian of a function that is represented by an expression is computed.
+ *
+ * The method shall compute the partial derivative of the expression w.r.t. a child with specified childidx.
+ * That is, it should return
+ * \f[
+ *   \frac{\partial \text{expr}}{\partial \text{child}_{\text{childidx}}}
+ * \f]
+ *
+ * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentation of expressions.
+ *
+ * For the product expression, backward differentiation is implemented as follows:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprBwdiffProduct}
+ *
+ * If this callback is not implemented, gradients and Hessian of functions that involve this expression cannot be computed.
+ * This can be hurtful for performance as routines (in particular primal heuristics) that rely on solving NLPs cannot be used.
+ * Also linear relaxation routines that rely on gradient evaluation (e.g., nlhdlr_convex) cannot be used.
+ *
+ * @subsection EXPRFWDIFF
+ *
+ * This callback is called when the Hessian of a function that is represented by an expression is computed.
+ * It may also be used for computations of first derivatives.
+ *
+ * The method shall evaluate the directional derivative of the expression when interpreted as an operator
+ *   \f$ f(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$ are the children.
+ * The directional derivative is
+ * \f[
+ *    \sum_{i = 1}^n \frac{\partial f}{\partial c_i} D_u c_i,
+ * \f]
+ * where \f$ u \f$ is the direction (given to the callback) and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
+ * which can be accessed via SCIPexprGetDot().
+ * The point as which to compute the derivative is given by SCIPexprGetEvalValue().
+ *
+ * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentation of expressions.
+ *
+ * For a product, \f$f(x) = c\prod_i x_i\f$, the directional derivative is \f$c\sum_j \prod_{i\neq j} x_i x^{\text{dot}}_j\f$:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprFwdiffProduct}
+ *
+ * If this callback is not implemented, routines (in particular primal heuristics) that rely on solving NLPs cannot be used, as they currently rely on using forward differentation for gradient computations.
+ *
+ * @subsection EXPRBWFWDIFF
+ *
+ * This callback is called when the Hessian of a function that is represented by an expression is computed.
+ *
+ * The method computes the total derivative, w.r.t. its children, of the partial derivative of expr w.r.t. childidx.
+ * Equivalently, it computes the partial derivative w.r.t. childidx of the total derivative.
+ *
+ * The expression should be interpreted as an operator \f$ f(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$ are the children,
+ * and the method should return
+ * \f[
+ *    \sum_{i = 1}^n \frac{\partial^2 f}{\partial c_i} \partial c_{\text{childidx}} D_u c_i,
+ * \f]
+ * where \f$ u \f$ is the direction (given to the callback) and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
+ * which can be accessed via SCIPexprGetDot().
+ *
+ * Thus, if \f$ n = 1 \f$ (i.e., the expression represents an univariate operator), the method should return
+ * \f[
+ *    f^{\prime \prime}(\text{SCIPexprGetEvalValue}(c)) D_u c.
+ * \f]
+ *
+ * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentation of expressions.
+ *
+ * For a product, \f$f(x) = c\prod_i x_i\f$, the directional derivative is
+ * \f$c\partial_k \sum_j \prod_{i \neq j} x_i x^{\text{dot}}_j = c\sum_{j \neq k} \prod_{i \neq j, k} x_i x^{\text{dot}}_j\f$:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprBwfwdiffProduct}
+ *
+ * If this callback is not implemented, there is currently no particular performance impact.
+ * In a future version, not implementing this callback would mean that Hessians are not available for NLP solvers, in which case they may have to work with approximations.
+ *
+ * @subsection EXPRINTEVAL
+ *
+ * This callback is called when bounds on an expression need to be computed.
+ * It shall compute an (as tight as possible) overestimate on the range that the expression values take w.r.t. to bounds (given as \ref SCIP_INTERVAL) for the children.
+ * The latter can be accessed via SCIPexprGetActivity().
+ *
+ * Often, interval evaluation is implemented as evaluation, but with numbers replaced by intervals.
+ * For example, for products:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprIntevalProduct}
+ *
+ * If this callback is not implemented, the performance of domain propagation for nonlinear constraints and other routines that rely on bounds on expressions will be impacted severly.
+ *
+ * @subsection EXPRESTIMATE
+ *
+ * While \ref EXPRINTERVAL computes constant under- and overestimators,
+ * this callback is called when linear under- or overestimators need to be computed.
+ * The estimator shall be as tight as possible at a given point and must be valid w.r.t. given (local) bounds.
+ * If the value of the estimator in the reference point is smaller (larger) than a given targetvalue
+ * when underestimating (overestimating), then no estimator needs to be computed.
+ * Note, that targetvalue can be infinite if any estimator will be accepted.
+ *
+ * The callback shall also indicate whether the estimator is also valid with given global bounds and for which
+ * child a reduction in the local bounds (usually by branching) would improve the estimator.
+ *
+ * For the absolute-value expression, the under- and overestimators are computed as follows:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprEstimateAbs}
+ *
+ * If this callback is not implemented, updating the linear relaxation for nonlinear constraints that use this expression will not be possible, which has a severe impact on performance.
+ *
+ * @subsection EXPRINITESTIMATES
+ *
+ * This callback is similar to \ref EXPRESTIMATE, but is not given a reference point.
+ * It can also return several (up to \ref SCIP_EXPR_MAXINITESTIMATES many) estimators.
+ * A usecase for this callback is the construction of an initial linear relaxation of nonlinear constraints.
+ *
+ * For the absolute-value expression, the following initial under- and overestimators are computed:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprInitestimatesAbs}
+ *
+ * If this callback is not implemented, the initial linear relaxation for nonlinear constraints may be less tight.
+ * This can have a minor effect on performance, as long as \ref EXPRESTIMATE has been implemented.
+ *
+ * @subsection EXPRSIMPLIFY
+ *
+ * This callback shall try to simplify an expression by applying algebraic transformations.
+ * It shall return the simplified (and equivalent) expression.
+ * It can assume that children have been simplified.
+ * If no simplification is possible, then it can return the original expression, but needs to capture it.
+ * When creating a new expression, it shall pass on the given ownerdata creation callback and its data.
+ *
+ * A simplification that should be implemented by every expression handler at the moment is constant-folding, i.e.,
+ * returning a value-expression if every child is a value expression.
+ * For an example, the simplification for the exponentation expression is implemented as
+ * @refsnippet{src/scip/expr_exp.c,SnippetExprSimplifyExp}
+ *
+ * See also SCIPsimplifyExpr() for more information on implemented simplification rules.
+ *
+ * If this callback is not implemented, reducing the problem size when variables are fixed may not be possible, which can have an impact on performance.
+ * (Also bugs may show up.)
+ *
+ * @subsection EXPRREVERSEPROP
+ *
+ * This callback is called when given bounds on an expression shall be propagated over the children of an expression.
+ * Already existing bounds on the children (see \ref EXPRINTEVAL) shall be used.
+ * That is, the method shall compute an interval overestimate on
+ * \f[
+ *   \{ x_i : f(c_1,\ldots,c_{i-1},x_i,c_{i+1},\ldots,c_n) \in \text{bounds} \}
+ * \f]
+ * for each child \f$i\f$, given bounds on f and initial intervals \f$c_i, i=1,\ldots,n,\f$.
+ *
+ * For univariate expression, the implementation can be rather straight-forward, e.g., for absolute value:
+ * @refsnippet{src/scip/expr_abs.c,SnippetExprReversepropAbs}
+ *
+ * For multivariate expressions, it can be more complicated, e.g., for products:
+ * @refsnippet{src/scip/expr_product.c,SnippetExprReversepropProduct}
+ *
+ * If this callback is not implemented, the performance of domain propagation for nonlinear constraints will be impacted severly.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

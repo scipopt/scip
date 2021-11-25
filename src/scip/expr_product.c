@@ -1564,6 +1564,9 @@ SCIP_DECL_EXPRFWDIFF(fwdiffProduct)
 
    assert(SCIPexprGetData(expr) != NULL);
 
+   /* TODO add special handling for nchildren == 2 */
+
+   /**! [SnippetExprFwdiffProduct] */
    *dot = 0.0;
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
    {
@@ -1595,6 +1598,7 @@ SCIP_DECL_EXPRFWDIFF(fwdiffProduct)
          *dot += partial * SCIPexprGetDot(child);
       }
    }
+   /**! [SnippetExprFwdiffProduct] */
 
    return SCIP_OKAY;
 }
@@ -1623,6 +1627,9 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffProduct)
    assert(!SCIPisExprValue(scip, partialchild));
    assert(SCIPexprGetEvalValue(partialchild) != SCIP_INVALID);
 
+   /* TODO add special handling for nchildren == 2 */
+
+   /**! [SnippetExprBwfwdiffProduct] */
    *bardot = 0.0;
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
    {
@@ -1657,6 +1664,7 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffProduct)
          *bardot += partial * SCIPexprGetDot(child);
       }
    }
+   /**! [SnippetExprBwfwdiffProduct] */
 
    return SCIP_OKAY;
 }
@@ -1676,6 +1684,9 @@ SCIP_DECL_EXPRBWDIFF(bwdiffProduct)
    assert(!SCIPisExprValue(scip, child));
    assert(SCIPexprGetEvalValue(child) != SCIP_INVALID);
 
+   /* TODO add special handling for nchildren == 2 */
+
+   /**! [SnippetExprBwdiffProduct] */
    if( !SCIPisZero(scip, SCIPexprGetEvalValue(child)) )
    {
       *val = SCIPexprGetEvalValue(expr) / SCIPexprGetEvalValue(child);
@@ -1693,6 +1704,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffProduct)
          *val *= SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[i]);
       }
    }
+   /**! [SnippetExprBwdiffProduct] */
 
    return SCIP_OKAY;
 }
@@ -1709,6 +1721,7 @@ SCIP_DECL_EXPRINTEVAL(intevalProduct)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
+   /**! [SnippetExprIntevalProduct] */
    SCIPintervalSet(interval, exprdata->coefficient);
 
    SCIPdebugMsg(scip, "inteval %p with %d children: %.20g", (void*)expr, SCIPexprGetNChildren(expr), exprdata->coefficient);
@@ -1730,6 +1743,7 @@ SCIP_DECL_EXPRINTEVAL(intevalProduct)
       SCIPdebugMsgPrint(scip, " *[%.20g,%.20g]", childinterval.inf, childinterval.sup);
    }
    SCIPdebugMsgPrint(scip, " = [%.20g,%.20g]\n", interval->inf, interval->sup);
+   /**! [SnippetExprIntevalProduct] */
 
    return SCIP_OKAY;
 }
@@ -1928,6 +1942,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropProduct)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
+   /**! [SnippetExprReversepropProduct] */
    SCIPintervalSet(&zero, 0.0);
 
    /* f = const * prod_k c_k => c_i solves c_i * (const * prod_{j:j!=i} c_j) = f */
@@ -1975,6 +1990,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropProduct)
          return SCIP_OKAY;
       }
    }
+   /**! [SnippetExprReversepropProduct] */
 
    return SCIP_OKAY;
 }

@@ -169,6 +169,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyExp)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
+   /**! [SnippetExprSimplifyExp] */
    /* check for value expression */
    if( SCIPisExprValue(scip, child) )
    {
@@ -181,6 +182,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyExp)
       /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
       SCIPcaptureExpr(*simplifiedexpr);
    }
+   /**! [SnippetExprSimplifyExp] */
 
    return SCIP_OKAY;
 }
