@@ -65,6 +65,12 @@ if( CRITERION_FOUND )
         get_filename_component(testName ${testSrc} NAME_WE)
         get_filename_component(dir ${testSrc} DIRECTORY)
 
+        # intel compiler segfaults on cons_nonlinear, so skip these tests when compiler is intel
+        if((CMAKE_CXX_COMPILER_ID MATCHES "Intel") AND (${dir} STREQUAL "cons/nonlinear"))
+            continue()
+        endif()
+
+
         #
         # replace forward slashes by hyphens
         #
