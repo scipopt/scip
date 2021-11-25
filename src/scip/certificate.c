@@ -44,44 +44,6 @@
 
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
 
-/** gets the key of the given element */
-static
-SCIP_DECL_HASHGETKEY(hashGetKeyVarbound)
-{  /*lint --e{715}*/
-   /* the key is the element itself */
-   return elem;
-}
-
-/** returns TRUE iff both keys are equal */
-static
-SCIP_DECL_HASHKEYEQ(hashKeyEqVarbound)
-{
-   assert(key1 != NULL);
-   assert(key2 != NULL);
-
-   if( ((SCIP_CERTIFICATEBOUND*)key1)->isupper != ((SCIP_CERTIFICATEBOUND*)key2)->isupper )
-      return FALSE;
-
-   if( ((SCIP_CERTIFICATEBOUND*)key1)->varindex != ((SCIP_CERTIFICATEBOUND*)key2)->varindex )
-      return FALSE;
-
-   if( !RatIsEqual(((SCIP_CERTIFICATEBOUND*)key1)->boundval, ((SCIP_CERTIFICATEBOUND*)key2)->boundval) )
-      return FALSE;
-
-   return TRUE;
-}
-
-/** returns the hash value of the key */
-static
-SCIP_DECL_HASHKEYVAL(hashKeyValVarbound)
-{
-   SCIP_CERTIFICATEBOUND* bound;
-
-   bound = (SCIP_CERTIFICATEBOUND*)key;
-
-   return ((((unsigned int)(10*RatApproxReal(bound->boundval))) << 22) + (bound->varindex << 2) + (unsigned int)bound->isupper);
-}
-
 /** updates file size */
 static
 void updateFilesize(
@@ -90,40 +52,6 @@ void updateFilesize(
    )
 {
    certificate->filesize += nchars/1048576.0;
-}
-
-static
-long long getVarBoundFileIndex(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_VAR*             var,                /**< variable */
-   SCIP_Rational*        multiplier,         /**< dual multiplier (farkascoef or redcost) */
-   SCIP_Bool             global              /**< is the global or local bound required */
-   )
-{
-   void* image;
-
-   if( RatIsNegative(multiplier) )
-   {
-      certificate->workbound->isupper = TRUE;
-      RatSet(certificate->workbound->boundval, global ? SCIPvarGetUbGlobalExact(var) : SCIPvarGetUbLocalExact(var));
-   }
-   else
-   {
-      certificate->workbound->isupper = FALSE;
-      RatSet(certificate->workbound->boundval, global ? SCIPvarGetLbGlobalExact(var) : SCIPvarGetLbLocalExact(var));
-   }
-   certificate->workbound->varindex = SCIPvarGetCertificateIndex(var);
-
-   image = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
-
-   if( image == NULL )
-   {
-      SCIPerrorMessage("col not in varbound-table \n");
-      SCIPABORT();
-      return -1;
-   }
-
-   return ((SCIP_CERTIFICATEBOUND*)image)->fileindex;
 }
 
 /** checks whether node is a left node or not */
@@ -155,83 +83,30 @@ SCIP_Bool certificateIsLeftNode(
       return FALSE;
 }
 
-/** print variable bound assumption into certificate if not already present and add it to varboundtable,
+/** print variable bound assumption into certificate,
  *  return index of this bound in the certificate file
  */
 static
 SCIP_Longint printBoundAssumption(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   int                   varindex,           /**< index of the variable */
+   SCIP_VAR*             var,                /**< variable to print assumption for */
    SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_BOUNDTYPE        boundtype           /**< is it the upper bound? */
    )
 {
-   SCIP_CERTIFICATEBOUND* image;
-   SCIP_CERTIFICATEBOUND* foundbound;
-
    /* check whether output should be created */
    if ( certificate->origfile == NULL )
       return SCIP_OKAY;
 
-   /* install bound information in working structure */
-   certificate->workbound->fileindex = certificate->indexcounter;
-   certificate->workbound->varindex = varindex;
-   RatSet(certificate->workbound->boundval, boundval);
-   certificate->workbound->isupper = boundtype == SCIP_BOUNDTYPE_UPPER ? TRUE : FALSE;
+   /** @todo: it could be better to seperate the printing from insertion of variable bound */
+   SCIPcertificatePrintProofMessage(certificate, "A%lld %c ", certificate->indexcounter, (boundtype == SCIP_BOUNDTYPE_LOWER) ? 'G' : 'L');
 
-   /* check if an assumption with this current working structure exists, NULL if not.
-    * If the assumption already exists, then we only check that it has the good values. If the assumption does not exists,
-    * then we insert the new assumption into the hashtable storing all variable bound assumptions and finally print it
-    */
-   image = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
+   SCIPcertificatePrintProofRational(certificate, boundval, 10);
+   SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { asm } -1\n", SCIPvarGetCertificateIndex(var));
+   certificate->indexcounter++;
 
-   if( image != NULL )
-   {
-      foundbound = (SCIP_CERTIFICATEBOUND*)image;
-
-      SCIPdebugMessage("Found bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         foundbound->fileindex, varindex, (certificate->workbound->isupper ? "<=" : ">="), RatApproxReal(boundval));
-
-      assert(foundbound->fileindex >= 0);
-      assert(foundbound->varindex == varindex);
-      assert(RatIsEqual(foundbound->boundval, boundval));
-      assert(foundbound->isupper == certificate->workbound->isupper);
-
-      return foundbound->fileindex;
-   }
-   else
-   {
-      SCIP_CERTIFICATEBOUND* insertbound;
-
-      SCIPdebugMessage("Print bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         certificate->workbound->fileindex, varindex, (certificate->workbound->isupper  ? "<=" : ">="), RatApproxReal(boundval));
-
-      /* insertion */
-      SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-      SCIP_CALL( RatCreateBlock(certificate->blkmem, &insertbound->boundval) );
-      RatSet(insertbound->boundval, boundval);
-
-      /* ensure size and insert boundval in array to be able to free it at the end */
-      if( certificate->nboundvals >= certificate->boundvalsize )
-      {
-         BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
-         certificate->boundvalsize += 100;
-      }
-      certificate->boundvals[certificate->nboundvals] = insertbound;
-      certificate->nboundvals++;
-
-      SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, insertbound) );
-
-      /** @todo: it could be better to seperate the printing from insertion of variable bound */
-      SCIPcertificatePrintProofMessage(certificate, "A%lld %c ", insertbound->fileindex, (certificate->workbound->isupper ? 'L' : 'G'));
-
-      SCIPcertificatePrintProofRational(certificate, boundval, 10);
-      SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { asm } -1\n", varindex);
-      certificate->indexcounter++;
-
-      return insertbound->fileindex;
-   }
+   return certificate->indexcounter - 1;
 }
 
 /** free nodedata of corresponding node */
@@ -360,7 +235,6 @@ SCIP_RETCODE SCIPcertificateCreate(
    SCIP_ALLOC( BMSallocMemory(certificate) );
 
    (*certificate)->messagehdlr = messagehdlr;
-   (*certificate)->varboundtable = NULL;
    (*certificate)->workbound = NULL;
    (*certificate)->blkmem = NULL;
    (*certificate)->indexcounter = 0;
@@ -373,9 +247,6 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->derivationfilename = NULL;
    (*certificate)->filesize = 0.0;
    (*certificate)->rowdatahash = NULL;
-   (*certificate)->boundvals = NULL;
-   (*certificate)->boundvalsize = 0;
-   (*certificate)->nboundvals = 0;
    (*certificate)->naggrinfos = 0;
    (*certificate)->nmirinfos = 0;
    (*certificate)->aggrinfosize = 0;
@@ -611,11 +482,11 @@ SCIP_RETCODE SCIPcertificateInit(
    {
       if( !RatIsAbsInfinity(SCIPvarGetLbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, TRUE, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, TRUE, NULL, vars[j], SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
       }
       if( !RatIsAbsInfinity(SCIPvarGetUbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, TRUE, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, TRUE, NULL, vars[j], SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
       }
    }
 
@@ -762,11 +633,11 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
    {
       if( !RatIsAbsInfinity(SCIPvarGetLbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, vars[j], SCIPvarGetLbGlobalExact(vars[j]), FALSE) );
       }
       if( !RatIsAbsInfinity(SCIPvarGetUbGlobalExact(vars[j])) )
       {
-         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, SCIPvarGetCertificateIndex(vars[j]), SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
+         SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, vars[j], SCIPvarGetUbGlobalExact(vars[j]), TRUE) );
       }
    }
 
@@ -833,22 +704,7 @@ void SCIPcertificateExit(
 
       BMSfreeMemoryArray(&certificate->derivationfilename);
       BMSfreeMemoryArray(&certificate->origfilename);
-      if( certificate->varboundtable != NULL )
-      {
-         for( i = 0; i < certificate->nboundvals; i++ )
-         {
-            RatFreeBlock(certificate->blkmem, &certificate->boundvals[i]->boundval);
-            BMSfreeBlockMemory(certificate->blkmem, &certificate->boundvals[i]);
-         }
-         /**@todo fix memory leak: mpq_clear and free all elements */
-         SCIPhashtableRemoveAll(certificate->varboundtable);
-         SCIPhashtableFree(&certificate->varboundtable);
-         if( certificate->boundvals != NULL )
-         {
-            BMSfreeBlockMemoryArray(certificate->blkmem, &certificate->boundvals,
-               certificate->boundvalsize);
-         }
-      }
+
       if( certificate->workbound != NULL )
       {
          RatFreeBlock(certificate->blkmem, &certificate->workbound->boundval);
@@ -899,6 +755,19 @@ SCIP_Bool SCIPcertificateIsActive(
    return (set->exact_enabled && certificate != NULL && (certificate->transfile != NULL || strcmp(set->certificate_filename, "-")) );
 }
 
+/** returns whether the certificate output is activated? */
+SCIP_Bool SCIPsetCertificateEnabled(
+   SCIP_SET*             set                 /**< SCIP settings */
+   )
+{
+   if( !set->exact_enabled )
+      return FALSE;
+   if( (set->certificate_filename[0] == '-' && set->certificate_filename[1] == '\0') )
+      return FALSE;
+
+   return TRUE;
+}
+
 /** returns current certificate file size in MB */
 SCIP_Real SCIPcertificateGetFilesize(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
@@ -908,6 +777,17 @@ SCIP_Real SCIPcertificateGetFilesize(
       return 0.0;
    else
       return certificate->filesize;
+}
+
+/** returns current certificate index (return -1 if certificate not active) */
+SCIP_Longint SCIPcertificateGetCurrentIndex(
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   )
+{
+   if( certificate == NULL || certificate->transfile == NULL)
+      return -1;
+   else
+      return certificate->indexcounter;
 }
 
 /** sets the objective function used when printing dual bounds */
@@ -932,9 +812,6 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    /* create a hash table for the variable bounds (we work on the tranformed problem) */
    if( isorigfile )
    {
-      SCIP_CALL( SCIPhashtableCreate(&certificate->varboundtable, blkmem, nvars,
-            hashGetKeyVarbound, hashKeyEqVarbound, hashKeyValVarbound, NULL) );
-
       /* create working memory for bound struct */
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &certificate->workbound) );
       SCIP_CALL( RatCreateBlock(blkmem, &certificate->workbound->boundval) );
@@ -1616,33 +1493,22 @@ SCIP_RETCODE certificatePrintContPositive(
    {
       int varindex;
       SCIP_VAR* var;
+      SCIP_Longint boundindex;
       /** @todo exip: perform line breaking before exceeding maximum line length */
       var = vars[mirinfo->contvarinds[i]];
       varindex = SCIPvarGetCertificateIndex(var);
-      /* install bound information in working struct */
-      certificate->workbound->fileindex = certificate->indexcounter;
-      certificate->workbound->varindex = varindex;
+
       if( mirinfo->contupperused[i] )
       {
-         RatSet(certificate->workbound->boundval, SCIPvarGetUbLocalExact(var));
-         certificate->workbound->isupper = TRUE;
+         boundindex = SCIPvarGetUbCertificateIndexGlobal(var);
       }
       else
       {
-         RatSet(certificate->workbound->boundval, SCIPvarGetLbLocalExact(var));
-         certificate->workbound->isupper = FALSE;
+         boundindex = SCIPvarGetLbCertificateIndexGlobal(var);
       }
 
-      image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
-      if( image == NULL )
       {
-         SCIPerrorMessage("variable bound not found in certifiacte \n");
-         SCIPABORT();
-         return SCIP_ERROR;
-      }
-      else
-      {
-         SCIPcertificatePrintProofMessage(certificate, " %lld ", ((SCIP_CERTIFICATEBOUND*) image)->fileindex);
+         SCIPcertificatePrintProofMessage(certificate, " %lld ", boundindex);
          SCIPcertificatePrintProofRational(certificate, vals[i], 10);
       }
    }
@@ -1784,7 +1650,8 @@ SCIP_RETCODE certificateTransAggrrow(
                   RatMult(tmpval2, tmpval2, SCIPvarGetUbLocalExact(var));
                RatAdd(tmpval, tmpval, tmpval2);
 
-               RatSetReal(tmpval2, -1);
+               varrounddowns[nrounddowns] = global ? SCIPvarGetUbCertificateIndexGlobal(var) : SCIPvarGetUbCertificateIndexLocal(var);
+               nrounddowns++;
             }
             else
             {
@@ -1795,10 +1662,9 @@ SCIP_RETCODE certificateTransAggrrow(
                   RatMult(tmpval2, tmpval2, SCIPvarGetLbLocalExact(var));
                RatDiff(tmpval, tmpval, tmpval2);
 
-               RatSetReal(tmpval2, 1);
+               varrounddowns[nrounddowns] = global ? SCIPvarGetLbCertificateIndexGlobal(var) : SCIPvarGetLbCertificateIndexLocal(var);
+               nrounddowns++;
             }
-            varrounddowns[nrounddowns] = getVarBoundFileIndex(certificate, var, tmpval2, global);
-            nrounddowns++;
          }
       }
    }
@@ -2031,62 +1897,33 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
    const char*           boundname,          /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
+   SCIP_VAR*             var,                /**< variable to print the bound cons for */
    SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    )
 {
-   void* image;
+   SCIP_Longint varindex;
 
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
       return SCIP_OKAY;
 
+   varindex = SCIPvarGetCertificateIndex(var);
+
    if( !isorigfile )
    {
-      /* install bound information in working struct */
-      certificate->workbound->fileindex = certificate->indexcounter;
-      certificate->workbound->varindex = varindex;
-      RatSet(certificate->workbound->boundval, boundval);
-      certificate->workbound->isupper = isupper;
+      certificate->indexcounter++;
+      certificate->conscounter++;
 
-      SCIPdebugMessage("Printing bound at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         certificate->indexcounter, varindex, (isupper ? "<=" : ">="), RatApproxReal(boundval));
+      if( isupper )
+         SCIPvarSetUbCertificateIndexGlobal(var, certificate->indexcounter - 1);
+      else
+         SCIPvarSetLbCertificateIndexGlobal(var, certificate->indexcounter - 1);
 
-      /* bounds in the problem should be created only once, but row singletons get handled as bounds, as well */
-      image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
-
-      if( image != NULL )
-      {
-         SCIPdebugMessage("Duplicate bound in certificate hashtable. Ignoring \n");
-         assert(RatIsEqual(boundval, ((SCIP_CERTIFICATEBOUND*) image)->boundval));
-
-         //return SCIP_OKAY;
-      }
-      /* add the new bound */
-      {
-         SCIP_CERTIFICATEBOUND* insertbound;
-
-         SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-         SCIP_CALL( RatCopy(certificate->blkmem, &insertbound->boundval, boundval) );
-         /* ensure size and insert boundval in array to be able to free it at the end */
-         if( certificate->nboundvals >= certificate->boundvalsize )
-         {
-            BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
-            certificate->boundvalsize += 100;
-         }
-         certificate->boundvals[certificate->nboundvals] = insertbound;
-         certificate->nboundvals++;
-
-         SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
-         certificate->indexcounter++;
-         certificate->conscounter++;
-
-         if( boundname == NULL )
-            SCIPcertificatePrintProblemMessage(certificate, isorigfile, "B%d %c ", certificate->indexcounter - 1, (isupper ? 'L' : 'G'));
-         else
-            SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", boundname, (isupper ? 'L' : 'G'));
-      }
+      if( boundname == NULL )
+         SCIPcertificatePrintProblemMessage(certificate, isorigfile, "B%d %c ", certificate->indexcounter - 1, (isupper ? 'L' : 'G'));
+      else
+         SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", boundname, (isupper ? 'L' : 'G'));
    }
    else
    {
@@ -2101,78 +1938,6 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, " 1 %d 1\n", varindex);
 
    return SCIP_OKAY;
-}
-
-/** checks whether variable bound assumption is present; prints it if not; returns index */
-SCIP_Longint SCIPcertificatePrintBoundAssumption(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const char*           assumptionname,     /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
-   SCIP_Rational*        boundval,           /**< value of the bound */
-   SCIP_Bool             isupper             /**< is it the upper bound? */
-   )
-{
-   void* image;
-
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
-      return 0;
-
-   /* install bound information in working struct */
-   certificate->workbound->fileindex = certificate->indexcounter;
-   certificate->workbound->varindex = varindex;
-   RatSet(certificate->workbound->boundval, boundval);
-   certificate->workbound->isupper = isupper;
-
-   image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
-   if( image != NULL )
-   {
-      SCIP_CERTIFICATEBOUND* foundbound;
-
-      foundbound = (SCIP_CERTIFICATEBOUND*)image;
-
-      SCIPdebugMessage("Found bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         foundbound->fileindex, varindex, (isupper ? "<=" : ">="), RatApproxReal(boundval));
-
-      assert(foundbound->fileindex >= 0);
-      assert(foundbound->varindex == varindex);
-      assert(RatIsEqual(foundbound->boundval, boundval));
-      assert(foundbound->isupper == isupper);
-      return foundbound->fileindex;
-   }
-   else
-   {
-      SCIP_CERTIFICATEBOUND* insertbound;
-
-      SCIPdebugMessage("Print bound assumption at line %" SCIP_LONGINT_FORMAT ": <variable %d> %s approx. %g\n",
-         certificate->workbound->fileindex, varindex, (isupper ? "<=" : ">="), RatApproxReal(boundval));
-
-      SCIP_ALLOC( BMSduplicateBlockMemory(certificate->blkmem, &insertbound, certificate->workbound) );
-      SCIP_CALL( RatCopy(certificate->blkmem, &insertbound->boundval, boundval) );
-
-      /* ensure size and insert boundval in array to be able to free it at the end */
-      if( certificate->nboundvals >= certificate->boundvalsize )
-      {
-         BMSreallocBlockMemoryArray(certificate->blkmem, &certificate->boundvals, certificate->boundvalsize, certificate->boundvalsize + 100);
-         certificate->boundvalsize += 100;
-      }
-      certificate->boundvals[certificate->nboundvals] = insertbound;
-      certificate->nboundvals++;
-
-      SCIP_CALL( SCIPhashtableInsert(certificate->varboundtable, (void*)insertbound) );
-
-      certificate->indexcounter++;
-
-      if( assumptionname == NULL )
-         SCIPcertificatePrintProofMessage(certificate, "A%d %c ", insertbound->fileindex, (isupper ? 'L' : 'G'));
-      else
-        SCIPcertificatePrintProofMessage(certificate,  "%s %c ", assumptionname, (isupper ? 'L' : 'G'));
-
-      SCIPcertificatePrintProofRational(certificate, boundval, 10);
-      SCIPcertificatePrintProofMessage(certificate,  " 1 %d 1 { asm } -1\n", varindex);
-
-      return insertbound->fileindex;
-   }
 }
 
 /** installs updated node data in parent node */
@@ -2308,6 +2073,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    for( i = 0; i < lpexact->ncols; ++i )
    {
       SCIP_COLEXACT* col = lpexact->cols[i];
+      SCIP_VAR* var = SCIPcolExactGetVar(col);
+
       if( usefarkas )
          val = col->farkascoef;
       else
@@ -2322,7 +2089,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          else
             RatSet(vals[len], val);
 
-         ind[len] = getVarBoundFileIndex(certificate, SCIPcolExactGetVar(col), vals[len], FALSE);
+         ind[len] = RatIsNegative(vals[len]) ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
 
          RatDebugMessage("Column %d for var %s has index %l and farkas coef %q \n", col->index, col->var->name, ind[len], val);
 
@@ -2355,7 +2122,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          }
          else if( key == 0 && SCIProwExactGetNNonz(row) == 1 )
          {
-            key = getVarBoundFileIndex(certificate, SCIPcolExactGetVar(SCIProwExactGetCols(row)[0]), val, FALSE);
+            SCIP_VAR* var = SCIPcolExactGetVar(SCIProwExactGetCols(row)[0]);
+            key = ind[len] = RatIsNegative(val) ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
          }
 
          assert(key != 0);
@@ -2412,13 +2180,19 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    return SCIP_OKAY;
 }
 
-/** Print a dual bound from the pseudo solution */
+/** Print a dual bound from the pseudo solution
+ *  in case of a bound change (branching), this happens before the bound change is processed;
+ *  therefore we add the option to give on varindex, boundchgindex pair to pass directly to the method
+ */
 SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             lowerchanged,       /**< to the modified indices address a change in lb or ub? */
+   int                   modifiedvarindex,   /**< index of modified variable, or -1 */
+   SCIP_Longint          boundchangeindex,   /**< index of unprocessed bound change in the certificate, or -1 */
    SCIP_Real             psval               /**< the pseudo obj value (or inf to use exact lp value) */
    )
 {
@@ -2430,11 +2204,11 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    int duallen;
    int i;
    int nnonzeros;
-   void* image;
 
    assert(certificate != NULL);
    assert(prob != NULL);
    assert(set != NULL);
+   assert((modifiedvarindex >= 0 && boundchangeindex >= 0) || (modifiedvarindex == -1 && boundchangeindex == -1) );
 
    /* only print if not -infinity and certificate is active */
    if( !set->exact_enabled || !SCIPcertificateIsActive(set, certificate) || SCIPsetIsInfinity(set, -psval) )
@@ -2473,20 +2247,19 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
          assert(!RatIsAbsInfinity(bounds[nnonzeros]));
 
          /* retrieve the line in the certificate of the bound */
-         RatSet(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
-         certificate->workbound->varindex = SCIPvarGetCertificateIndex(vars[i]);
-         certificate->workbound->isupper = RatIsNegative(obj);
-
-         image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
-
-         if( image != NULL )
-            dualind[nnonzeros] = ((SCIP_CERTIFICATEBOUND*)image)->fileindex;
+         if( RatIsPositive(obj) )
+         {
+            dualind[nnonzeros] = SCIPvarGetLbCertificateIndexLocal(vars[i]);
+            if( lowerchanged && modifiedvarindex == SCIPvarGetCertificateIndex(vars[i]) )
+               dualind[nnonzeros] = boundchangeindex;
+         }
          else
          {
-            SCIPerrorMessage("Bound should be present in certificate \n");
-            SCIPABORT();
-            return SCIP_ERROR;
+            dualind[nnonzeros] = SCIPvarGetUbCertificateIndexLocal(vars[i]);
+            if( !lowerchanged && modifiedvarindex == SCIPvarGetCertificateIndex(vars[i]) )
+               dualind[nnonzeros] = boundchangeindex;
          }
+
          nnonzeros++;
       }
    }
@@ -2664,7 +2437,7 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
 
    if( branchvar != NULL )
    {
-      nodedata->assumptionindex_self = printBoundAssumption(set, certificate, SCIPvarGetCertificateIndex(branchvar),
+      nodedata->assumptionindex_self = printBoundAssumption(set, certificate, branchvar,
          branchbound, boundtype);
    }
 
@@ -2674,9 +2447,9 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
 
       if( branchvar != NULL )
       {
-         if( boundtype == SCIP_BOUNDTYPE_LOWER )
-            nodedataparent->assumptionindex_right = nodedata->assumptionindex_self;
          if( boundtype == SCIP_BOUNDTYPE_UPPER )
+            nodedataparent->assumptionindex_right = nodedata->assumptionindex_self;
+         if( boundtype == SCIP_BOUNDTYPE_LOWER )
             nodedataparent->assumptionindex_left = nodedata->assumptionindex_self;
       }
    }

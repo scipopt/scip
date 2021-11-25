@@ -35,6 +35,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "scip/cons.h"
+#include "scip/certificate.h"
 #include "scip/event.h"
 #include "scip/history.h"
 #include "scip/implics.h"
@@ -707,6 +708,15 @@ SCIP_RETCODE SCIPboundchgApply(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the lbchginfos array of the variable! */
          }
+
+         if( SCIPsetCertificateEnabled(set) )
+         {
+            assert(var->exactdata->locdom.lbcertificateidx != -1);
+            assert(boundchg->certificateindex != -1);
+
+            var->lbchginfos[var->nlbchginfos - 1].oldcertindex = var->exactdata->locdom.lbcertificateidx;
+            var->exactdata->locdom.lbcertificateidx = boundchg->certificateindex;
+         }
       }
       else
       {
@@ -773,6 +783,14 @@ SCIP_RETCODE SCIPboundchgApply(
                SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the ubchginfos array of the variable! */
+         }
+
+         if( SCIPsetCertificateEnabled(set) )
+         {
+            assert(var->exactdata->locdom.ubcertificateidx != -1);
+            assert(boundchg->certificateindex != -1);
+            var->ubchginfos[var->nubchginfos - 1].oldcertindex = var->exactdata->locdom.ubcertificateidx;
+            var->exactdata->locdom.ubcertificateidx = boundchg->certificateindex;
          }
       }
       else
@@ -858,6 +876,10 @@ SCIP_RETCODE SCIPboundchgUndo(
       /* in case all bound changes are removed the local bound should match the global bound */
       assert(var->nlbchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.lb, var->glbdom.lb));
 
+      /* in case certificate is used, set back the certificate line index */
+      if( SCIPsetCertificateEnabled(set) )
+         var->exactdata->locdom.lbcertificateidx = var->lbchginfos[var->nlbchginfos].oldcertindex;
+
       break;
 
    case SCIP_BOUNDTYPE_UPPER:
@@ -878,6 +900,10 @@ SCIP_RETCODE SCIPboundchgUndo(
 
       /* in case all bound changes are removed the local bound should match the global bound */
       assert(var->nubchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.ub, var->glbdom.ub));
+
+      /* in case certificate is used, set back the certificate line index */
+      if( SCIPsetCertificateEnabled(set) )
+         var->exactdata->locdom.ubcertificateidx = var->ubchginfos[var->nubchginfos].oldcertindex;
 
       break;
 
@@ -948,6 +974,20 @@ SCIP_RETCODE boundchgApplyGlobal(
    {
       *cutoff = TRUE;
       return SCIP_OKAY;
+   }
+
+   if( SCIPsetCertificateEnabled(set) )
+   {
+      if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+         var->exactdata->glbdom.lbcertificateidx = boundchg->certificateindex;
+         var->exactdata->locdom.lbcertificateidx = boundchg->certificateindex;
+      }
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         var->exactdata->glbdom.ubcertificateidx = boundchg->certificateindex;
+         var->exactdata->locdom.ubcertificateidx = boundchg->certificateindex;
+      }
    }
 
    /* apply bound change */
@@ -1407,6 +1447,19 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
    /**@todo globally apply holelist changes - how can this be done without confusing pointer updates? */
 
    return SCIP_OKAY;
+}
+
+/** adds certificate line number to domain changes */
+void SCIPdomchgAddCurrentCertificateIndex(
+   SCIP_DOMCHG*          domchg,             /**< pointer to domain change data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   )
+{
+   if( !SCIPcertificateIsActive(set, certificate) )
+      return;
+
+   domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1].certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
 }
 
 /** adds bound change to domain changes */
@@ -24006,4 +24059,76 @@ void SCIPvarSetCertificateIndex(
    assert(index >= 0);
 
    var->exactdata->certificateindex = index;
+}
+
+/** sets index of variable in vipr-certificate */
+void SCIPvarSetUbCertificateIndexGlobal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   int                   index               /**< the index */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+   assert(index >= 0);
+
+   var->exactdata->glbdom.ubcertificateidx = index;
+   var->exactdata->locdom.ubcertificateidx = index;
+}
+
+/** sets index of variable in vipr-certificate */
+void SCIPvarSetLbCertificateIndexGlobal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   int                   index               /**< the index */
+   )
+{
+   assert(var != NULL);
+   assert(var->exactdata != NULL);
+   assert(index >= 0);
+
+   var->exactdata->glbdom.lbcertificateidx = index;
+   var->exactdata->locdom.lbcertificateidx = index;
+}
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   )
+{
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->locdom.lbcertificateidx != -1);
+
+   return var->exactdata->locdom.lbcertificateidx;
+}
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   )
+{
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->locdom.ubcertificateidx != -1);
+
+   return var->exactdata->locdom.ubcertificateidx;
+}
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   )
+{
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->glbdom.lbcertificateidx != -1);
+
+   return var->exactdata->glbdom.lbcertificateidx;
+}
+
+/**< returns index of variable bound in vipr certificate */
+SCIP_Longint SCIPvarGetUbCertificateIndexGlobal(
+   SCIP_VAR*             var                 /**< variable to get index for */
+   )
+{
+   assert(var->exactdata != NULL);
+   assert(var->exactdata->glbdom.ubcertificateidx != -1);
+
+   return var->exactdata->glbdom.ubcertificateidx;
 }
