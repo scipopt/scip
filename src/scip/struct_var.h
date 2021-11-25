@@ -89,7 +89,7 @@ struct SCIP_BoundChg
       SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */
       SCIP_INFERENCEDATA inferencedata;      /**< data for infered bound changes */
    } data;
-   SCIP_Longint          certificateindex;      /**< line in certificate for this bound change (-1 if not used) */
+   SCIP_Longint          certificateindex;   /**< line in certificate for this bound change (-1 if not used) */
    SCIP_VAR*             var;                /**< active variable to change the bounds for */
    unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
