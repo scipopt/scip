@@ -266,10 +266,12 @@ BEGIN {
       prob = prob "." b[i];
 
    if( useshortnames && length(prob) > namelength )
-      shortprob = substr(prob, length(prob)-namelength-1, namelength);
+   {
+      # take latest #namelength characters of instancename
+      shortprob = substr(prob, length(prob)-namelength+1, namelength);
+   }
    else
       shortprob = prob;
-
    # Escape _ for TeX
    n = split(prob, a, "_");
    pprob = a[1];

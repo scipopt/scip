@@ -155,7 +155,7 @@ do
             then
                 wait
                 #echo "${EVALFILE}"
-                ./evalcheck_cluster.sh "${EVALFILE}"
+                ./evalcheck_cluster.sh "${EVALFILE}" useshortnames=0
                 continue
             fi
 
