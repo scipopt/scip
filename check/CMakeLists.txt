@@ -217,6 +217,12 @@ set(settings_Or
     "presolving_separating_heuristics_off_randombranching"
 )
 
+#
+# consecutive solve instances
+#
+set(instances_MIP_consecSolve
+    "instances/MIP/blend2.mps\;7.598985"
+    )
 
 #
 # read/write instances
@@ -914,16 +920,59 @@ foreach(instance ${instances_MIP})
                             PROPERTIES
                                 DEPENDS scip-build
                             )
-        foreach( pass_regex ${linclass_${shortbasename}} )
-            set_tests_properties(MIP-linclass-${basename}
-                                PROPERTIES
-                                    PASS_REGULAR_EXPRESSION "${pass_regex}"
-                                )
+        set(pass_regex )
+        foreach( regexp ${linclass_${shortbasename}} )
+            string(CONCAT pass_regex "${pass_regex}" "${regexp}" ".*")
         endforeach()
-
+        set_tests_properties(MIP-linclass-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "${pass_regex}"
+                            )
     endif()
 
 endforeach()
+
+#
+# add tests for checking consistency across consecutive solves
+#
+set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
+file(MAKE_DIRECTORY ${shell_tmp_dir})
+
+foreach(instance ${instances_MIP_consecSolve})
+    split_instance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/consecutivesolve.bat.in
+      interactiveshell/consecutivesolve-${basename}.bat)
+
+    #
+    # add a test for creating two log files from consecutive solves;
+    # this test acts as a setup for the next test
+    #
+    add_test(NAME MIP-consecutivesolve-${basename}-setup
+            COMMAND $<TARGET_FILE:scip> -b
+            ${PROJECT_BINARY_DIR}/check/interactiveshell/consecutivesolve-${basename}.bat
+            )
+    set_tests_properties(MIP-consecutivesolve-${basename}-setup
+                        PROPERTIES
+                            DEPENDS scip-build
+                            FIXTURES_SETUP consecutivesolve-${basename}
+                        )
+
+    #
+    # add a test for comparing two log files from consecutive solves
+    #
+    add_test(NAME MIP-consecutivesolve-${basename}-comparison
+      COMMAND ${CMAKE_COMMAND} -E compare_files
+      ${shell_tmp_dir}/${basename}_r1.stats ${shell_tmp_dir}/${basename}_r2.stats
+            )
+    set_tests_properties(MIP-consecutivesolve-${basename}-comparison
+                        PROPERTIES
+                            DEPENDS MIP-consecutivesolve-${basename}-setup
+                            FIXTURES_REQUIRED consecutivesolve-${basename}
+                        )
+endforeach(instance)
 
 #
 # add a test for handling of the SIGTERM signal. The test uses the timeout command that
