@@ -1456,10 +1456,16 @@ void SCIPdomchgAddCurrentCertificateIndex(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
+   SCIP_BOUNDCHG* change;
+
    if( !SCIPcertificateIsActive(set, certificate) )
       return;
 
-   domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1].certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
+   change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);
+
+   SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, change->boundtype, change->newbound);
+
+   change->certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
 }
 
 /** adds bound change to domain changes */
