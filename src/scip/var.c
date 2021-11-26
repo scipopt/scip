@@ -711,9 +711,6 @@ SCIP_RETCODE SCIPboundchgApply(
 
          if( SCIPsetCertificateEnabled(set) )
          {
-            assert(var->exactdata->locdom.lbcertificateidx != -1);
-            assert(boundchg->certificateindex != -1);
-
             var->lbchginfos[var->nlbchginfos - 1].oldcertindex = var->exactdata->locdom.lbcertificateidx;
             var->exactdata->locdom.lbcertificateidx = boundchg->certificateindex;
          }
@@ -787,8 +784,6 @@ SCIP_RETCODE SCIPboundchgApply(
 
          if( SCIPsetCertificateEnabled(set) )
          {
-            assert(var->exactdata->locdom.ubcertificateidx != -1);
-            assert(boundchg->certificateindex != -1);
             var->ubchginfos[var->nubchginfos - 1].oldcertindex = var->exactdata->locdom.ubcertificateidx;
             var->exactdata->locdom.ubcertificateidx = boundchg->certificateindex;
          }
