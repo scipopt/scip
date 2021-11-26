@@ -64,7 +64,6 @@
 struct SCIP_ExprData
 {
    SCIP_Real             coefficient;        /**< coefficient */
-   SCIP_ROW*             row;                /**< row created during initLP() */
 };
 
 struct SCIP_ExprhdlrData
@@ -97,24 +96,6 @@ SCIP_DECL_VERTEXPOLYFUN(prodfunction)
       ret *= args[i];
 
    return ret;
-}
-
-/** create expression data */
-static
-SCIP_RETCODE createData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRDATA**       exprdata,           /**< pointer where to store expression data */
-   SCIP_Real             coefficient         /**< coefficient of product */
-   )
-{
-   assert(exprdata != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, exprdata) );
-
-   (*exprdata)->coefficient  = coefficient;
-   (*exprdata)->row          = NULL;
-
-   return SCIP_OKAY;
 }
 
 static
@@ -1409,7 +1390,7 @@ SCIP_DECL_EXPRCOPYDATA(copydataProduct)
    sourceexprdata = SCIPexprGetData(sourceexpr);
    assert(sourceexprdata != NULL);
 
-   SCIP_CALL( createData(targetscip, targetexprdata, sourceexprdata->coefficient) );
+   SCIP_CALL( SCIPduplicateBlockMemory(targetscip, targetexprdata, sourceexprdata) );
 
    return SCIP_OKAY;
 }
@@ -2140,10 +2121,12 @@ SCIP_RETCODE SCIPcreateExprProduct(
 {
    SCIP_EXPRDATA* exprdata;
 
-   SCIP_CALL( createData(scip, &exprdata, coefficient) );
+   /**! [SnippetCreateExprProduct] */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &exprdata) );
+   exprdata->coefficient  = coefficient;
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrProduct(scip), exprdata, nchildren, children, ownercreate,
-         ownercreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprhdlrProduct(scip), exprdata, nchildren, children, ownercreate, ownercreatedata) );
+   /**! [SnippetCreateExprProduct] */
 
    return SCIP_OKAY;
 }
