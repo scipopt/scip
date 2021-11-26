@@ -35,13 +35,13 @@
 
 /* TODO: fill in the necessary data */
 
-/** expression data */
-struct SCIP_ExprData
+/** expression handler data */
+struct SCIP_ExprhdlrData
 {
 };
 
-/** expression handler data */
-struct SCIP_ExprhdlrData
+/** expression data */
+struct SCIP_ExprData
 {
 };
 

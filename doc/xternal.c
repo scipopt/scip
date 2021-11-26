@@ -3719,7 +3719,7 @@
  * Expression handlers define basic expression types and provide additional functionality to work with expressions,
  * e.g., differentiation, simplification, estimation, hashing, copying, printing, parsing.
  * A complete list of all expression handlers contained in this release can be found \ref EXPRHDLRS "here".
- * In addition to expression handlers, higher level nonlinear structures are handled by nonlinearity handlers, see \ref NLHDLR.
+ * In addition to expression handlers, higher level nonlinear structures are handled by nonlinear handlers, see \ref NLHDLR.
  * \n
  *
  * We now explain how users can add their own expression handlers.
@@ -3732,19 +3732,19 @@
  * Here is what you have to do to implement an expression handler:
  * -# Copy the template files `src/scip/expr_xyz.c` and `src/scip/expr_xyz.h` into files `expr_myfunc.c` and `expr_myfunc.h`, respectively. \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
- * -# Use SCIPincludeExprhdlrMyfunc() in order to include the expression handler into your SCIP instance,
+ * -# Use `SCIPincludeExprhdlrMyfunc()` in order to include the expression handler into your SCIP instance,
  *    e.g., in the main file of your project.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myfunc".
  * -# Adjust the properties of the expression handler (see \ref EXPRHDLR_PROPERTIES).
- * -# Define the expression handler data (see \ref EXPRHDLR_DATA). This is optional.
+ * -# Define the expression handler data and expression data (see \ref EXPRHDLR_DATA). This is optional.
  * -# Implement the interface methods (see \ref EXPRHDLR_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref EXPRHDLR_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref EXPRHDLR_ADDITIONALCALLBACKS). This is optional.
+ * -# Implement the additional callback methods (see \ref EXPRHDLR_ADDITIONALCALLBACKS), where necessary.
  *
  *
  * @section EXPRHDLR_PROPERTIES Properties of an Expression Handler
  *
- * At the top of the new file "expr_myfunc.c", you can find the expression handler properties.
+ * At the top of the new file `expr_myfunc.c`, you can find the expression handler properties.
  * These are given as compiler defines.
  * The properties you have to set have the following meaning:
  *
@@ -3759,15 +3759,19 @@
  * \par EXPRHDLR_PRECEDENCE: the precedence of the expression handler.
  * Precedence of the expression operation relative to other expressions when printing the expression.
  *
- * @section EXPRHDLR_DATA Expression Handler Data
+ * @section EXPRHDLR_DATA Expression Handler Data and Expression Data
  *
- * Below the header "Data structures" you can find a struct which is called `struct SCIP_ExprhdlrData`.
- * In this data structure, you can store the data of your expression handler. For example, you should store the adjustable
- * parameters of the expression handler in this data structure.
+ * Below the header "Data structures" you can find structs called `struct SCIP_ExprhdlrData` and `struct SCIP_ExprData`.
+ * In this first data structure, you can store the data of your expression handler.
+ * For example, you should store the adjustable parameters of the expression handler in this data structure.
+ * In the second data structure, you can store data that is unique to an expression.
+ * For example, the pow expression handler stores the exponent in this data structure.
  * \n
- * Defining expression handler data is optional. You can leave the struct empty.
+ * Defining expression handler data and expression data is optional. You can leave these structs empty.
  *
  * @section EXPRHDLR_INTERFACE Interface Methods
+ *
+ * @subsection EXPRHDLR_INCLUDE SCIPincludeExprhdlrMyfunc()
  *
  * At the bottom of `expr_myfunc.c`, you can find the interface method `SCIPincludeExprhdlrMyfunc()`,
  * which also appears in `expr_myfunc.h`.
@@ -3787,9 +3791,12 @@
  * You also have to initialize the fields in `struct SCIP_ExprhdlrData` afterwards.
  * For freeing the expression handler data, see \ref EXPRFREEHDLR.
  *
- * You may also add user parameters for your expression handler, see \ref PARAM for how to add user parameters and
- * the method SCIPincludeExprhdlrLog() in src/scip/expr_log.c for an example.
+ * You may also add user parameters for your expression handler, see \ref PARAM for how to add user parameters.
  *
+ * For the logarithm expression handler, the include methods is as follows:
+ * @refsnippet{src/scip/expr_log.c,SnippetIncludeExprhdlrLog}
+ *
+ * @subsection EXPRHDLR_CREATEEXPR SCIPcreateExprMyfunc()
  *
  * Another interface method that can be found in `expr_myfunc.c` is `SCIPcreateExprMyfunc()`.
  * This method is called by the user, if (s)he wants to create an expression that is handled by this expression handler.
@@ -3811,6 +3818,9 @@
  * This will be the case if, for example, the constraint handler for nonlinear constraint parses an expression.
  * The constraint handler will then own the expression and needs to store some data in the expression.
  *
+ * For the product expression handler, the expression create function is as follows:
+ * @refsnippet{src/scip/expr_product.c,SnippetCreateExprProduct}
+ *
  *
  * @section EXPRHDLR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an Expression Handler
  *
@@ -3819,9 +3829,9 @@
  * They are passed to SCIP when the expression handler is created and included in SCIP via SCIPincludeExprhdlr(),
  * see @ref EXPRHDLR_INTERFACE.
  *
- * Expression handlers have one fundamental callbacks, @ref EXPREVAL, that nees to be implemented.
- * However, expression handlers with stateful expressions (expressions that have data) not to implement also the
- * @ref EXPRCOPYDATA and @ref EXPRFREEDATA callbacks.
+ * Expression handlers have one fundamental callback, @ref EXPREVAL, that nees to be implemented.
+ * However, expression handlers with stateful expressions (expressions that have data) need to implement also the
+ * @ref EXPRCOPYDATA, @ref EXPRFREEDATA, and @ref EXPRCOMPARE callbacks.
  *
  * Additional documentation for the callback methods, in particular to their input parameters,
  * can be found in \ref type_expr.h.
@@ -3839,7 +3849,7 @@
  *
  * When an expression cannot be evaluated w.r.t. the values of its children, such a domain error must be signaled
  * to SCIP by setting `*val` to `SCIP_INVALID`.
- * SCIP then aborts evaluation, so that it is not necessary to check in the evaluation callback whether any child
+ * SCIP then aborts evaluation. It is thus not necessary to check in the evaluation callback whether any child
  * has value `SCIP_INVALID`.
  * For example, the evaluation in the expression handler for the Logarithm is doing the following:
  * @refsnippet{src/scip/expr_log.c,SnippetExprEvalLog}
@@ -3853,7 +3863,7 @@
  * The additional callback methods do not need to be implemented in every case. However, some of them have to be
  * implemented for most applications, they can be used, for example, to initialize and free private data.
  * Additional callbacks can be passed via specific
- * <b>setter functions</b> after a call of SCIPincludeExprhdlr(), see also @ref EXPRHDLR_INTERFACE.
+ * <b>setter functions</b> after a call of SCIPincludeExprhdlr(), see also @ref EXPRHDLR_INCLUDE.
  *
  * @subsection EXPRCOPYHDLR
  *
@@ -3866,7 +3876,7 @@
  *
  * @subsection EXPRFREEHDLR
  *
- * If you are using expression handler data (see \ref EXPRHDLR_DATA and \ref EXPRHDLR_INTERFACE), you have to implement this method
+ * If you are using expression handler data (see \ref EXPRHDLR_DATA and \ref EXPRHDLR_INCLUDE), you have to implement this method
  * in order to free the expression handler data.
  *
  * @subsection EXPRCOPYDATA
@@ -3890,7 +3900,7 @@
  *
  * @subsection EXPRPRINT
  *
- * The callback is called when an expression is printed.
+ * This callback is called when an expression is printed.
  * It is called while DFS-iterating over the expression at different stages, that is,
  * when the expression is visited the first time, before each child of the expression is visited,
  * after each child of the expression has been visited, and when the iterator leaves the expression
@@ -3901,7 +3911,7 @@
  * For example, the pow expression prints `(f(x))^p` where `f(x)` is a print of the child of the pow expression and `p` is the exponent:
  * @refsnippet{src/scip/expr_pow.c,SnippetExprPrintPow}
  *
- * The pow expression handler does not take expression precedence into account yet to decide whether parenthesis around `f(x)` can be omitted.
+ * The pow expression handler does not yet take expression precedence into account to decide whether the parenthesis around `f(x)` can be omitted.
  * For the sum expression handler, this has been implemented:
  * @refsnippet{src/scip/expr_sum.c,SnippetExprPrintSum}
  *
@@ -3915,14 +3925,15 @@
  * and the position of the last character in "..." to SCIP.
  * When creating an expression, the given `ownercreate` and `ownercreatedata` shall be passed on.
  *
- * The string "..." likely contains one or several other expression that will be the children of the `myfunc` expression.
+ * The string "..." likely contains one or several other expressions that will be the children of the `myfunc` expression.
  * `SCIPparseExpr()` shall be used to parse these expressions.
  *
  * For an expression that takes only one argument and has no parameters, the parsing routine is straight-forward.
  * For example:
  * @refsnippet{src/scip/expr_exp.c,SnippetExprParseExp}
  *
- * For an expression that has additional data, the parsing routine is slighly more complex:
+ * For an expression that has additional data, the parsing routine is slighly more complex.
+ * For the signpower expression, this parses `signpower(<child>,<exponent>)`:
  * @refsnippet{src/scip/expr_pow.c,SnippetExprParseSignpower}
  *
  * If this callback is not implemented, the expression cannot be parsed.
@@ -3937,7 +3948,7 @@
  * can be achieved and it can take bounds on the children into account.
  * SCIPevalExprActivity() and SCIPexprGetActivity() shall be used to evaluate and get bounds on a child expression.
  *
- * The implementation in the absolute-value expression handler suites as examples:
+ * The implementation in the absolute-value expression handler serves as examples:
  * @refsnippet{src/scip/expr_abs.c,SnippetExprCurvatureAbs}
  *
  * If this callback is not implemented, the expression is assumed to be indefinite.
@@ -3946,11 +3957,11 @@
  *
  * This callback is called when an expression is checked for its monotonicity with respect to a given child.
  * It is given the index of the child and shall return whether the expression is monotone increasing or decreasing with respect to this child,
- * that is, when assuming all other children to be fixed.
+ * that is, when assuming that all other children are fixed.
  * Bounds on the children can be taken into account.
  * These can be evaluated and obtained via SCIPevalExprActivity() and SCIPexprGetActivity().
  *
- * The implementation in the absolute-value expression handler suites as examples:
+ * The implementation in the absolute-value expression handler serves as examples:
  * @refsnippet{src/scip/expr_abs.c,SnippetExprMonotonicityAbs}
  *
  * If this callback is not implemented, the expression is assumed to be not monotone in any child.
@@ -3969,7 +3980,7 @@
  * @subsection EXPRHASH
  *
  * This callback is called when a hash value is computed for an expression.
- * The hash is used to quickly identify expression that may be equal (or better: to identify expressions that cannot be pairwise equal).
+ * The hash is used to quickly identify expressions that may be equal (or better: to identify expressions that cannot be pairwise equal).
  *
  * The hash shall be unique to the expression as likely as positive.
  * To achieve this, the hashing algorithm shall use the expression type, expression data, and hash of children as input.
@@ -3984,9 +3995,9 @@
  *
  * @subsection EXPRCOMPARE
  *
- * This callback is called when two expression (expr1 and expr2) that are handled by the expression handlers need to be compared.
- * The method shall impose an order on expression and thus must return
- * - -1 if expr1 < expr2,
+ * This callback is called when two expressions (expr1 and expr2) that are handled by the expression handlers need to be compared.
+ * The method shall impose an order on expressions and thus must return
+ * - -1 if expr1 < expr2, or
  * -  0 if expr1 = expr2, or
  * -  1 if expr1 > expr2.
  *
@@ -4015,13 +4026,12 @@
  * @refsnippet{src/scip/expr_product.c,SnippetExprBwdiffProduct}
  *
  * If this callback is not implemented, gradients and Hessian of functions that involve this expression cannot be computed.
- * This can be hurtful for performance as routines (in particular primal heuristics) that rely on solving NLPs cannot be used.
- * Also linear relaxation routines that rely on gradient evaluation (e.g., nlhdlr_convex) cannot be used.
+ * This can be hurtful for performance because linear relaxation routines that rely on gradient evaluation (e.g., nlhdlr_convex) cannot be used.
  *
  * @subsection EXPRFWDIFF
  *
  * This callback is called when the Hessian of a function that is represented by an expression is computed.
- * It may also be used for computations of first derivatives.
+ * It may also be used to compute first derivatives.
  *
  * The method shall evaluate the directional derivative of the expression when interpreted as an operator
  *   \f$ f(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$ are the children.
@@ -4031,7 +4041,7 @@
  * \f]
  * where \f$ u \f$ is the direction (given to the callback) and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
  * which can be accessed via SCIPexprGetDot().
- * The point as which to compute the derivative is given by SCIPexprGetEvalValue().
+ * The point at which to compute the derivative is given by SCIPexprGetEvalValue().
  *
  * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentation of expressions.
  *
@@ -4072,25 +4082,25 @@
  * @subsection EXPRINTEVAL
  *
  * This callback is called when bounds on an expression need to be computed.
- * It shall compute an (as tight as possible) overestimate on the range that the expression values take w.r.t. to bounds (given as \ref SCIP_INTERVAL) for the children.
+ * It shall compute an (as tight as possible) overestimate on the range that the expression values take w.r.t. bounds (given as \ref SCIP_INTERVAL) for the children.
  * The latter can be accessed via SCIPexprGetActivity().
  *
- * Often, interval evaluation is implemented as evaluation, but with numbers replaced by intervals.
+ * Often, interval evaluation is implemented analog to evaluation with numbers.
  * For example, for products:
  * @refsnippet{src/scip/expr_product.c,SnippetExprIntevalProduct}
  *
- * If this callback is not implemented, the performance of domain propagation for nonlinear constraints and other routines that rely on bounds on expressions will be impacted severly.
+ * If this callback is not implemented, the performance of domain propagation for nonlinear constraints and other routines that rely on bounds of expressions will be impacted severly.
  *
  * @subsection EXPRESTIMATE
  *
- * While \ref EXPRINTERVAL computes constant under- and overestimators,
+ * While \ref EXPRINTEVAL computes constant under- and overestimators,
  * this callback is called when linear under- or overestimators need to be computed.
  * The estimator shall be as tight as possible at a given point and must be valid w.r.t. given (local) bounds.
  * If the value of the estimator in the reference point is smaller (larger) than a given targetvalue
  * when underestimating (overestimating), then no estimator needs to be computed.
  * Note, that targetvalue can be infinite if any estimator will be accepted.
  *
- * The callback shall also indicate whether the estimator is also valid with given global bounds and for which
+ * The callback shall also indicate whether the estimator is also valid w.r.t. given global bounds and for which
  * child a reduction in the local bounds (usually by branching) would improve the estimator.
  *
  * For the absolute-value expression, the under- and overestimators are computed as follows:
@@ -4126,7 +4136,7 @@
  * See also SCIPsimplifyExpr() for more information on implemented simplification rules.
  *
  * If this callback is not implemented, reducing the problem size when variables are fixed may not be possible, which can have an impact on performance.
- * (Also bugs may show up.)
+ * (Also bugs may show up as this situation is untested.)
  *
  * @subsection EXPRREVERSEPROP
  *
@@ -4136,9 +4146,9 @@
  * \f[
  *   \{ x_i : f(c_1,\ldots,c_{i-1},x_i,c_{i+1},\ldots,c_n) \in \text{bounds} \}
  * \f]
- * for each child \f$i\f$, given bounds on f and initial intervals \f$c_i, i=1,\ldots,n,\f$.
+ * for each child \f$i\f$, given bounds on f and initial intervals \f$c_i, i=1,\ldots,n,\f$, for the children.
  *
- * For univariate expression, the implementation can be rather straight-forward, e.g., for absolute value:
+ * For univariate expressions, the implementation can be rather straight-forward, e.g., for absolute value:
  * @refsnippet{src/scip/expr_abs.c,SnippetExprReversepropAbs}
  *
  * For multivariate expressions, it can be more complicated, e.g., for products:

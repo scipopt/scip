@@ -385,7 +385,7 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 /** expression compare callback
  *
  * the method receives two expressions, expr1 and expr2. Must return
- * -1 if expr1 < expr2,
+ * -1 if expr1 < expr2, or
  *  0 if expr1 = expr2, or
  *  1 if expr1 > expr2.
  *
