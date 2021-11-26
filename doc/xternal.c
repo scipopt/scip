@@ -217,7 +217,8 @@
  * - @subpage DISP    "Display columns"
  * - @subpage EVENT   "Event handler"
  * - @subpage EXPRHDLR "Expression handlers"
- * - @subpage NLPI    "Interface to NLP solvers"
+ * - @subpage NLHDLR  "Nonlinear handlers"
+ * - @subpage NLPI    "Interfaces to NLP solvers"
  * - @subpage EXPRINT "Interfaces to expression interpreters"
  * - @subpage PARAM   "additional user parameters"
  * - @subpage TABLE   "Statistics tables"
@@ -3720,11 +3721,10 @@
  * e.g., differentiation, simplification, estimation, hashing, copying, printing, parsing.
  * A complete list of all expression handlers contained in this release can be found \ref EXPRHDLRS "here".
  * In addition to expression handlers, higher level nonlinear structures are handled by nonlinear handlers, see \ref NLHDLR.
- * \n
  *
  * We now explain how users can add their own expression handlers.
  * Take the expression handler for exponential expressions (src/scip/expr_exp.c) as an example.
- * As all other default plugins, it is written in C.
+ * As most other default plugins, it is written in C.
  *
  * Additional documentation for the callback methods of an expression handler, in particular for the input parameters,
  * can be found in the file \ref type_expr.h.
@@ -3776,7 +3776,7 @@
  * At the bottom of `expr_myfunc.c`, you can find the interface method `SCIPincludeExprhdlrMyfunc()`,
  * which also appears in `expr_myfunc.h`.
  * `SCIPincludeExprhdlrMyfunc()` is called by the user, if (s)he wants to include the expression handler,
- * i.e., if (s)he wants to use the separator in his/her application.
+ * i.e., if (s)he wants to use the expression handler in his/her application.
  *
  * This method is responsible for notifying SCIP of the presence of the expression handler.
  * For this, you must call SCIPincludeExprhdlr().
@@ -3829,7 +3829,7 @@
  * They are passed to SCIP when the expression handler is created and included in SCIP via SCIPincludeExprhdlr(),
  * see @ref EXPRHDLR_INTERFACE.
  *
- * Expression handlers have one fundamental callback, @ref EXPREVAL, that nees to be implemented.
+ * Expression handlers have one fundamental callback, @ref EXPREVAL, that need to be implemented.
  * However, expression handlers with stateful expressions (expressions that have data) need to implement also the
  * @ref EXPRCOPYDATA, @ref EXPRFREEDATA, and @ref EXPRCOMPARE callbacks.
  *
@@ -3932,7 +3932,7 @@
  * For example:
  * @refsnippet{src/scip/expr_exp.c,SnippetExprParseExp}
  *
- * For an expression that has additional data, the parsing routine is slighly more complex.
+ * For an expression that has additional data, the parsing routine is slightly more complex.
  * For the signpower expression, this parses `signpower(<child>,<exponent>)`:
  * @refsnippet{src/scip/expr_pow.c,SnippetExprParseSignpower}
  *
@@ -4020,7 +4020,7 @@
  *   \frac{\partial \text{expr}}{\partial \text{child}_{\text{childidx}}}
  * \f]
  *
- * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentation of expressions.
+ * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentiation of expressions.
  *
  * For the product expression, backward differentiation is implemented as follows:
  * @refsnippet{src/scip/expr_product.c,SnippetExprBwdiffProduct}
@@ -4043,12 +4043,12 @@
  * which can be accessed via SCIPexprGetDot().
  * The point at which to compute the derivative is given by SCIPexprGetEvalValue().
  *
- * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentation of expressions.
+ * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentiation of expressions.
  *
  * For a product, \f$f(x) = c\prod_i x_i\f$, the directional derivative is \f$c\sum_j \prod_{i\neq j} x_i x^{\text{dot}}_j\f$:
  * @refsnippet{src/scip/expr_product.c,SnippetExprFwdiffProduct}
  *
- * If this callback is not implemented, routines (in particular primal heuristics) that rely on solving NLPs cannot be used, as they currently rely on using forward differentation for gradient computations.
+ * If this callback is not implemented, routines (in particular primal heuristics) that rely on solving NLPs cannot be used, as they currently rely on using forward differentiation for gradient computations.
  *
  * @subsection EXPRBWFWDIFF
  *
@@ -4070,7 +4070,7 @@
  *    f^{\prime \prime}(\text{SCIPexprGetEvalValue}(c)) D_u c.
  * \f]
  *
- * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentation of expressions.
+ * See also \ref SCIP_EXPR_DIFF "Differentiation methods in scip_expr.h" for more details on automatic differentiation of expressions.
  *
  * For a product, \f$f(x) = c\prod_i x_i\f$, the directional derivative is
  * \f$c\partial_k \sum_j \prod_{i \neq j} x_i x^{\text{dot}}_j = c\sum_{j \neq k} \prod_{i \neq j, k} x_i x^{\text{dot}}_j\f$:
@@ -4089,7 +4089,7 @@
  * For example, for products:
  * @refsnippet{src/scip/expr_product.c,SnippetExprIntevalProduct}
  *
- * If this callback is not implemented, the performance of domain propagation for nonlinear constraints and other routines that rely on bounds of expressions will be impacted severly.
+ * If this callback is not implemented, the performance of domain propagation for nonlinear constraints and other routines that rely on bounds of expressions will be impacted severely.
  *
  * @subsection EXPRESTIMATE
  *
@@ -4130,7 +4130,7 @@
  *
  * A simplification that should be implemented by every expression handler at the moment is constant-folding, i.e.,
  * returning a value-expression if every child is a value expression.
- * For an example, the simplification for the exponentation expression is implemented as
+ * For an example, the simplification for the exponentiation expression is implemented as
  * @refsnippet{src/scip/expr_exp.c,SnippetExprSimplifyExp}
  *
  * See also SCIPsimplifyExpr() for more information on implemented simplification rules.
@@ -4154,7 +4154,290 @@
  * For multivariate expressions, it can be more complicated, e.g., for products:
  * @refsnippet{src/scip/expr_product.c,SnippetExprReversepropProduct}
  *
- * If this callback is not implemented, the performance of domain propagation for nonlinear constraints will be impacted severly.
+ * If this callback is not implemented, the performance of domain propagation for nonlinear constraints will be impacted severely.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page NLHDLR How to add nonlinear handlers
+ *
+ * Nonlinear handlers define the extended formulations of nonlinear constraints and provide domain propagation and separation routines on this extended formulation.
+ * In difference to \ref EXPRHDLR "expression handlers", they do not define a function, but instead identify a
+ * structure in an existing expression and provide bound tightening and separation on this structure similar to \ref EXPRINTEVAL, \ref EXPRREVERSEPROP, \ref EXPRINITESTIMATES, and \ref EXPRESTIMATE.
+ * The structure typically consists of a composition of expressions.
+ *
+ * Nonlinear handlers are a new plugin type in SCIP and may still have some rough edges.
+ * They resemble constraint handlers in some sense, but are specific to the handling of nonlinear constraints.
+ * We suggest to read section "New Handler for Nonlinear Constraints" in the SCIP 8.0 release report (2021)
+ * to understand the role and use of nonlinear handlers before attempting to implement one.
+ *
+ * A complete list of all nonlinear handlers contained in this release can be found \ref NLHDLRS "here".
+ * In difference to many other plugins in SCIP, nonlinear handlers are not handled by the SCIP core but by the constraint handler for nonlinear constraints.
+ *
+ * We now explain how users can add their own nonlinear handlers.
+ * Additional documentation for the callback methods of a nonlinear handler, in particular for the input parameters,
+ * can be found in the file \ref type_nlhdlr.h.
+ *
+ * Here is what you have to do to implement a nonlinear handler:
+ * -# Copy the template files `src/scip/nlhdlr_xyz.c` and `src/scip/nlhdlr_xyz.h` into files `nlhdlr_mystruct.c` and `nlhdlr_mystruct.h`, respectively. \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mystruct".
+ * -# Adjust the properties of the nonlinear handler (see \ref NLHDLR_PROPERTIES).
+ * -# Define the nonlinear handler data and nonlinear handler expression data (see \ref NLHDLR_DATA). This is optional.
+ * -# Implement the interface methods (see \ref NLHDLR_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref NLHDLR_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref NLHDLR_ADDITIONALCALLBACKS), where necessary.
+ *
+ *
+ * @section NLHDLR_PROPERTIES Properties of a Nonlinear Handler
+ *
+ * At the top of the new file `nlhdlr_mystruct.c`, you can find the nonlinear handler properties.
+ * These are given as compiler defines.
+ * The properties you have to set have the following meaning:
+ *
+ * \par NLHDLR_NAME: the name of the nonlinear handler.
+ * This name is used in the interactive shell to address the nonlinear handler.
+ * Additionally, if you are searching for a nonlinear handler with SCIPfindNlhdlrNonlinear(), this name is looked up.
+ * Names have to be unique: no two nonlinear handlers may have the same name.
+ *
+ * \par NLHDLR_DESC: the description of the nonlinear handler.
+ * This string is printed as a description of the nonlinear handler in the interactive shell.
+ *
+ * \par NLHDLR_DETECTPRIORITY: the priority of the nonlinear handler when detecting structure.
+ * This priority decides when the \ref NLHDLRDETECT callback of the nonlinear handler is called, relative to other nonlinear handlers, on an expression.
+ * Typically, the priority should be strictly positive.
+ * This is because the nonlinear handler "default" (having detection priority 0) will not become active on expressions that are already handled by other nonlinear handlers.
+ *
+ * \par NLHDLR_ENFOPRIORITY: the priority of the nonlinear handler when enforcing constraints in the extended formulations.
+ * This priority decides when the callbacks that help on domain propagation and separation are called for an expression for which the nonlinear handler detected a structure.
+ * A high priority means that the nonlinear handler will be called before others.
+ * The nonlinear handler "default" has enforcement priority 0.
+ *
+ * @section NLHDLR_DATA Nonlinear Handler Data and Nonlinear Handler Expression Data
+ *
+ * Below the header "Data structures" you can find structs called `struct SCIP_NlhdlrData` and `struct SCIP_NlhdlrExprData`.
+ * In this first data structure, you can store the data of your nonlinear handler.
+ * For example, you should store the adjustable parameters of the nonlinear handler in this data structure.
+ * In the second data structure, you can store data that is unique to an expression for which the nonlinear handler detected a structure.
+ * For example, the nonlinear handler for quotients stores a representation of a detected quotient in this data structure.
+ * \n
+ * Defining nonlinear handler data and nonlinear handler expression data is optional. You can leave these structs empty.
+ *
+ * @section NLHDLR_INTERFACE Interface Methods
+ *
+ * At the bottom of `nlhdlr_mystruct.c`, you can find the interface method `SCIPincludeNlhdlrXyz()`,
+ * which also appears in `nlhdlr_mystruct.h`.
+ * `SCIPincludeNlhdlrXyz()` is called by the user, if (s)he wants to include the nonlinear handler,
+ * i.e., if (s)he wants to use the nonlinear handler in his/her application.
+ *
+ * This method is responsible for notifying SCIP of the presence of the nonlinear handler.
+ * For this, you must call SCIPincludeNlhdlrNonlinear().
+ * The function only expects the properties and fundamental callbacks of the nonlinear handler as arguments.
+ * \ref NLHDLR_ADDITIONALCALLBACKS "Additional callbacks" must be added via setter functions as, e.g., SCIPnlhdlrSetCopyHdlr().
+ *
+ * If you are using nonlinear handler data, you have to allocate the memory for the data at this point and initialize it.
+ * For freeing the nonlinear handler data, see \ref NLHDLRFREEHDLRDATA.
+ * You may also add user parameters or statistic tables for your nonlinear handler, see \ref PARAM for how to add user parameters.
+ *
+ * For the bilinear nonlinear handler, the include method is as follows:
+ * @refsnippet{src/scip/nlhdlr_bilinear.c,SnippetIncludeNlhdlrBilinear}
+ *
+ *
+ * @section NLHDLR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Nonlinear Handler
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed to SCIP when the nonlinear handler is created and included in SCIP via SCIPincludeNlhdlrNonlinear(),
+ * see @ref NLHDLR_INTERFACE.
+ *
+ * Nonlinear handlers have two fundamental callbacks that need to be implemented.
+ * Additional documentation for the callback methods, in particular to their input parameters,
+ * can be found in \ref type_nlhdlr.h.
+ *
+ * @subsection NLHDLRDETECT
+ *
+ * This callback is called by the handler for nonlinear constraints when extended formulations are constructed.
+ * The result of this callback determines the extended formulation.
+ *
+ * The nonlinear handler shall analyze the given expression (`expr`) and decide whether it wants to contribute
+ * in enforcing the relation between this expression and its descendants (e.g., children) via
+ * linear under- or overestimation, cut generation, and/or activity computation and propagation.
+ * For linear under- or overestimation and cut generation, an auxiliary variable (`auxvar`) can be assumed to
+ * be associated with the expression and auxiliary variables may be requested for descendant expressions.
+ *
+ * We distinguish the following enforcement methods:
+ * - \ref SCIP_NLHDLR_METHOD_SEPABELOW : linear underestimation of `expr` or cut generation for the relation `expr` &le; `auxvar` (denoted as "below")
+ * - \ref SCIP_NLHDLR_METHOD_SEPAABOVE : linear overestimation of `expr` or cut generation for the relation `expr` &ge; `auxvar` (denoted as "above")
+ * - \ref SCIP_NLHDLR_METHOD_ACTIVITY  : domain propagation (i.e., constant under/overestimation) for the relation `expr` = `auxvar`.
+ *
+ * On input, parameter `enforcing` indicates for any of these methods, whether
+ * - it is not necessary to have such a method, e.g., because no `auxvar` will exist for `expr`, or no one uses or sets activities of this expression,
+ *   or because analysis of the expression has shown that a relation like `expr` &ge; `auxvar` is not necessary to be satisfied,
+ * - or there already exists a nonlinear handler that will provide this method in an "enforcement" sense, that is,
+ *   it believes that no one else could provide this method in a stronger sense. (This is mainly used by the nonlinear handler "default" to check whether
+ *   it should still reach out to the expression handler or whether it would be dominated by some nonlinear handler.)
+ *
+ * The DETECT callback shall augment the `enforcing` bitmask by setting the enforcement methods it wants to provide in an "enforcement" sense.
+ *
+ * Additionally, the `participating` bitmask shall be set if the nonlinear handler wants to be called on this expression at all.
+ * Here, it shall set all methods that it wants to provide, which are those set in `enforcing`, but additionally those where it wants
+ * to participate but leave enforcement to another nonlinear handler.
+ * This can be useful for nonlinear handlers that do not implement a complete enforcement, e.g., a handler that only contributes
+ * cutting planes in some situations only.
+ *
+ * A nonlinear handler will be called only for those callbacks that it mentioned in `participating`, which is
+ * - \ref NLHDLRENFO and/or \ref NLHDLRESTIMATE will be called with `overestimate==FALSE` if \ref SCIP_NLHDLR_METHOD_SEPABELOW has been set
+ * - \ref NLHDLRENFO and/or \ref NLHDLRESTIMATE will be called with `overestimate==TRUE`  if \ref SCIP_NLHDLR_METHOD_SEPAABOVE has been set
+ * - \ref NLHDLRINTEVAL and/or \ref NLHDLRREVERSEPROP will be called if \ref SCIP_NLHDLR_METHOD_ACTIVITY has been set
+ *
+ * If \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE has been set, then at least one of the
+ * callbacks \ref NLHDLRENFO and \ref NLHDLRESTIMATE needs to be implemented.
+ * Also \ref NLHDLREVALAUX will be called in this case.
+ * If \ref SCIP_NLHDLR_METHOD_ACTIVITY has been set, then at least one of \ref NLHDLRINTEVAL and \ref NLHDLRREVERSEPROP needs to be implemented.
+ * If the nonlinear handler chooses not to participate, then it must not set `nlhdlrexprdata` and can leave `participating` at its
+ * initial value (\ref SCIP_NLHDLR_METHOD_NONE).
+ *
+ * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
+ * @ref SCIPregisterExprUsageNonlinear() for every subexpression that it will use and indicate whether
+ * - it will use an auxiliary variable in \ref NLHDLRENFO or \ref NLHDLRESTIMATE,
+ * - it will use activity for some subexpressions when computing estimators or cuts, and
+ * - it will use activity for some subexpressions when in \ref NLHDLRINTEVAL or \ref NLHDLRREVERSEPROP.
+ *
+ * Note that auxiliary variables do not exist in subexpressions during DETECT and are not created by a call to @ref SCIPregisterExprUsageNonlinear().
+ * They will be available when the \ref NLHDLRINITSEPA callback is called.
+ *
+ * For an example, see the implementation of the DETECT callback for the nonlinear handler for quotients (src/scip/nlhdlr_quotient.c).
+ *
+ * @subsection NLHDLREVALAUX
+ *
+ * This callback is called by the constraint handler for nonlinear constraints when he violation of constraints in the extended formulation
+ * (`expr` &le;/&ge; `auxvar`) needs to be evaluated.
+ * During constraint enforcement, this violation value is used to decide whether estimation and separation callbacks should be called.
+ *
+ * The method shall evaluate the expression w.r.t. the auxiliary variables that were introduced by the nonlinear handler (if any).
+ * It can be assumed that the expression itself has been evaluated in the given sol.
+ *
+ * For an example, see the evaluation for the quotient nonlinear handler:
+ * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrEvalauxQuotient}
+*
+ * @section NLHDLR_ADDITIONALCALLBACKS Additional Callback Methods of a Nonlinear Handler
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications, they can be used, for example, to initialize and free private data.
+ * Additional callbacks can be passed via specific
+ * <b>setter functions</b> after a call of SCIPincludeNlhdlrNonlinear(), see also @ref NLHDLR_INTERFACE.
+ *
+ * @subsection NLHDLRCOPYHDLR
+ *
+ * This callback is called when doing a copy of the constraint handler for nonlinear constraints.
+ * It shall include the nonlinear handler into the copy of the constraint handler.
+ *
+ * @subsection NLHDLRFREEHDLRDATA
+ *
+ * If you are using nonlinear handler data (see \ref NLHDLR_DATA and \ref NLHDLR_INTERFACE), you have to implement this method
+ * in order to free the nonlinear handler data.
+ *
+ * @subsection NLHDLRFREEEXPRDATA
+ *
+ * If you are using nonlinear handler expression data (see \ref NLHDLR_DATA and \ref NLHDLRDETECT), you have to implement this method
+ * in order to free the nonlinear handler expression data.
+ * This method is called when an extended formulation is freed.
+ *
+ * @subsection NLHDLRINIT
+ *
+ * This callback is called when the constraint handler for nonlinear constraints is initialized, that is, after the problem was transformed.
+ * The nonlinear handler can use this callback to initialize or reset some data for the upcoming solve.
+ *
+ * @subsection NLHDLREXIT
+ *
+ * This callback is called when the constraint handler for nonlinear constraints is deinitialized, that is, before the transformed problem is freed.
+ * The nonlinear handler can use this callback to free some data that was used for the previous solve only.
+ *
+ * @subsection NLHDLRINTEVAL
+ *
+ * This callback is called when bounds on a given expression shall be computed.
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_ACTIVITY in \ref NLHDLRDETECT.
+ * The method is given the currently available bounds to the expression and can return possibly tighter bounds.
+ *
+ * For a univariate quotient ((ax+b)/(cx+d)), the interval evaluation is implemented as follows:
+ * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrIntevalQuotient}
+ *
+ * @subsection NLHDLRREVERSEPROP
+ *
+ * This callback is called when bounds on a given expression shall be propagated to its successors.
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_ACTIVITY in \ref NLHDLRDETECT.
+ * The tighter intervals should be passed to the corresponding expression via SCIPtightenExprIntervalNonlinear().
+ *
+ * For a univariate quotient ((ax+b)/(cx+d)), reverse propagation is implemented as follows:
+ * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrReversepropQuotient}
+ *
+ * @subsection NLHDLRINITSEPA
+ *
+ * This callback is called when the constraint handler for nonlinear constraints initializes the LP relaxation (@ref CONSINITLP).
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT.
+ * The method shall initialize the separation data of the nonlinear handler, if any, and add initial cuts to the LP relaxation.
+ * It can assume that auxiliary variables are available for expressions for which auxiliary variables were requested via SCIPregisterExprUsageNonlinear() in \ref NLHDLRDETECT.
+ *
+ * @subsection NLHDLREXITSEPA
+ *
+ * This callback is called when the solving process is finished and the branch and bound process data is freed (@ref CONSEXITSOL).
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT and \ref NLHDLRINITSEPA was called.
+ * The method shall deinitialize the separation data of the nonlinear handler, if any.
+ *
+ * @subsection NLHDLRENFO
+ *
+ * This callback is called when the constraint handler requires that the relaxation between the given expression and its auxiliary variable
+ * (`expr` &le; `auxvar`  or  `expr` &ge; `auxvar`) is violated by a given solution and this solution needs to be separated.
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT.
+ *
+ * The nonlinear handler can enforce `expr` &le;/&ge; `auxvar` by
+ * - separation, i.e., finding an affine hyperplane (a cut) that separates the given point, or
+ * - bound tightening, i.e., changing bounds on a variable so that the given point is outside the updated domain, or
+ * - adding branching scores to potentially split the current problem into two subproblems.
+ *
+ * If parameter `inenforcement` is FALSE, then only the first option (separation) is allowed.
+ *
+ * If the nonlinear handler always separates by computing a linear under- or overestimator of `expr`,
+ * then it is usually easier to implement the \ref NLHDLRESTIMATE callback instead.
+ *
+ * Note, that the nonlinear handler may also choose to separate for a relaxation of the mentioned sets,
+ * e.g., `expr` &le; upperbound(`auxvar`)  or  `expr` &ge; lowerbound(`auxvar`).
+ * This is especially useful in situations where `expr` is the root expression of a constraint
+ * and it is sufficient to satisfy `lhs` &le; `expr` &le; `rhs`.
+ * The constraint handler ensures that `lhs` &le; lowerbound(`auxvar`) and upperbound(`auxvar`) &le; `rhs`.
+ *
+ * The constraint handler may call this callback first with `allowweakcuts` = FALSE and repeat later with
+ * `allowweakcuts` = TRUE, if it didn't succeed to enforce a solution without using weak cuts.
+ * If in enforcement and the nonlinear handler cannot enforce by separation or bound tightening, it should register
+ * branching scores for those expressions where branching may help to compute tighter cuts in children.
+ *
+ * The nonlinear handler must set `result` to \ref SCIP_SEPARATED if it added a cut,
+ * to \ref SCIP_REDUCEDDOM if it added a bound change, and
+ * to \ref SCIP_BRANCHED if it added branching scores.
+ * Otherwise, it may set result to \ref SCIP_DIDNOTRUN or \ref SCIP_DIDNOTFIND.
+ *
+ * @subsection NLHDLRESTIMATE
+ *
+ * This callback is called when the constraint handler requires that the relaxation between the given expression and its auxiliary variable
+ * (`expr` &le; `auxvar`  or  `expr` &ge; `auxvar`) is violated by a given solution and this solution needs to be separated.
+ * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT.
+ * This method is a simpler alternative to \ref NLHDLRENFO and is called if \ref NLHDLRENFO is not implemented or does not succeed.
+ *
+ * The method shall compute one or several linear under- or overestimator of `expr` that are as tight as possible at a given point.
+ * If the value of the estimator in the solution is smaller (larger) than a given targetvalue
+ * when underestimating (overestimating), then no estimator needs to be computed.
+ * Note, that targetvalue can be infinite if any estimator will be accepted.
+ * If successful, it shall store the estimators in the given `rowpreps` data structure and set the
+ * `rowprep->local` flag accordingly (SCIProwprepSetLocal()).
+ * The sidetype of a rowprep must be set to \ref SCIP_SIDETYPE_LEFT if overestimating and
+ * \ref SCIP_SIDETYPE_RIGHT if underestimating.
+ *
+ * The callback may also be required to indicate for which expression a reduction in the local bounds (usually by branching) would improve the estimator.
+ * This is done by a call to SCIPaddExprsViolScoreNonlinear().
+ *
+ * For the quotient nonlinear handler, the estimators are computed as follows:
+ * @refsnippet{src/scip/nlhdlr_quotient.c,SnippetNlhdlrEstimateQuotient}
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
