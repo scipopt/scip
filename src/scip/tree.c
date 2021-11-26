@@ -2046,6 +2046,9 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
+      if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
+
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
       if( !SCIPtreeProbing(tree) && newpseudoobjval > SCIPnodeGetLowerbound(node)
@@ -2057,7 +2060,9 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
          RatSetReal(bound, newbound);
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact,
-         node, set, transprob, newpseudoobjval) );
+               node, set, transprob, inferboundtype == SCIP_BOUNDTYPE_LOWER,
+               SCIPvarGetCertificateIndex(var), SCIPcertificateGetCurrentIndex(stat->certificate) - 1,
+               newpseudoobjval) );
          RatSetReal(bound, oldbound);
       }
 
@@ -2072,6 +2077,9 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype,
             infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER,
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
+
+      if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
    }
 
    assert(node->domchg != NULL);
@@ -2346,6 +2354,9 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
+      if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
+
       /* update the child's lower bound (pseudoobjval is safe, so can use the fp version) */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lpexact->fplp, set, transprob, var, oldboundreal, newboundreal, boundtype);
       if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(set, stat->certificate) )
@@ -2355,8 +2366,9 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
          SCIP_Rational* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
          RatSet(bound, newbound);
-         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lpexact,
-         node, set, transprob, newpseudoobjval) );
+         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lpexact, node, set, transprob,
+               inferboundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetCertificateIndex(var),
+               SCIPcertificateGetCurrentIndex(stat->certificate) -1, newpseudoobjval) );
          RatSet(bound, oldbound);
       }
 
@@ -2371,6 +2383,9 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, boundtype,
             infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER,
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
+
+      if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
    }
 
    assert(node->domchg != NULL);

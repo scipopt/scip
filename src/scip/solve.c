@@ -2879,7 +2879,7 @@ SCIP_RETCODE applyBounding(
 
       if( pseudoobjval == SCIPnodeGetLowerbound(focusnode) && focusnode->number != 1 )
       {
-         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set, transprob, pseudoobjval) );
+         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set, transprob, FALSE, -1, -1, pseudoobjval) );
       }
       /* check for infeasible node by bounding */
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
@@ -3936,7 +3936,7 @@ SCIP_RETCODE propAndSolve(
       if( focusnode->parent == NULL )
       {
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set,
-            transprob, SCIPlpGetPseudoObjval(lp, set, transprob)) );
+            transprob, FALSE, -1, -1, SCIPlpGetPseudoObjval(lp, set, transprob)) );
       }
 
       *lpsolved = TRUE;
@@ -4237,7 +4237,7 @@ SCIP_RETCODE solveNode(
          if( *cutoff && set->exact_enabled && !SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set, transprob)) )
          {
             SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set,
-                        transprob, SCIPsetInfinity(set)) );
+                        transprob, FALSE, -1, -1, SCIPsetInfinity(set)) );
          }
 
          /* propagate domains before lp solving and solve relaxation and lp */
