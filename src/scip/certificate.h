@@ -83,10 +83,30 @@ SCIP_Bool SCIPcertificateIsActive(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
-/** returns current certificate file size in MB */
+/** returns whether the certificate output is activated? */
+SCIP_Bool SCIPsetCertificateEnabled(
+   SCIP_SET*             set                 /**< SCIP settings */
+   );
+
+/** returns current certificate index (return -1 if certificate not active) */
 SCIP_Real SCIPcertificateGetFilesize(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
+
+/** returns current certificate index*/
+SCIP_Longint SCIPcertificateGetCurrentIndex(
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   );
+
+#ifndef NDEBUG
+/** checks if information is consistent with printed certificate line */
+SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_VAR*             var,                /**< variable that gets changed */
+   SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
+   SCIP_Real             newbound            /**< new bound */
+   );
+#endif
 
 /** sets the objective function used when printing dual bounds */
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
@@ -227,16 +247,7 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    const char*           boundname,          /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
-   SCIP_Rational*        boundval,           /**< value of the bound */
-   SCIP_Bool             isupper             /**< is it the upper bound? */
-   );
-
-/** checks whether variable bound assumption is present; prints it if not; returns index */
-SCIP_Longint SCIPcertificatePrintBoundAssumption(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   const char*           assumptionname,     /**< name of the bound constraint */
-   int                   varindex,           /**< index of the variable */
+   SCIP_VAR*             var,                /**< variable to print the bound cons for */
    SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    );
@@ -276,6 +287,9 @@ SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             lowerchanged,       /**< to the modified indices address a change in lb or ub? */
+   int                   modifiedvarindex,   /**< index of modified variable, or -1 */
+   SCIP_Longint          boundchangeindex,   /**< index of unprocessed bound change in the certificate, or -1 */
    SCIP_Real             psval               /**< the pseudo obj value */
    );
 
