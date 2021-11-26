@@ -89,6 +89,7 @@ struct SCIP_BoundChg
       SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */
       SCIP_INFERENCEDATA inferencedata;      /**< data for infered bound changes */
    } data;
+   SCIP_Longint          certificateindex;   /**< line in certificate for this bound change (-1 if not used) */
    SCIP_VAR*             var;                /**< active variable to change the bounds for */
    unsigned int          boundchgtype:2;     /**< bound change type: branching decision or infered bound change */
    unsigned int          boundtype:1;        /**< type of bound for var: lower or upper bound */
@@ -109,6 +110,7 @@ struct SCIP_BdChgInfo
 {
    SCIP_Real             oldbound;           /**< old value for bound */
    SCIP_Real             newbound;           /**< new value for bound */
+   SCIP_Longint          oldcertindex;       /**< certificate line for old bound (-1 if certificate is not used) */
    SCIP_VAR*             var;                /**< active variable that changed the bounds */
    SCIP_INFERENCEDATA    inferencedata;      /**< data for infered bound changes */
    SCIP_BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
@@ -170,6 +172,8 @@ struct SCIP_DomExact
 {
    SCIP_Rational*        lb;                 /**< exact lower bound of variables */
    SCIP_Rational*        ub;                 /**< exact upper bound of variables */
+   SCIP_Longint          lbcertificateidx;   /**< certificate index of lower bound (-1 if not set or no certificate active) */
+   SCIP_Longint          ubcertificateidx;   /**< certificate index of upper bound (-1 if not set or no certificate active) */
 };
 
 /** original variable information */
