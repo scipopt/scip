@@ -2249,7 +2249,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
          nodedataparent->derindex_left = fileindex;
          RatSet(nodedataparent->derbound_left, newbound);
       }
-      if( RatIsNegInfinity(newbound) )
+      if( RatIsNegInfinity(newbound) || newbound == NULL )
       {
          nodedataparent->derindex_left = fileindex;
          nodedataparent->leftinfeas = TRUE;
@@ -2263,7 +2263,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
          nodedataparent->derindex_right = fileindex;
          RatSet(nodedataparent->derbound_right, newbound);
       }
-      if( RatIsNegInfinity(newbound) )
+      if( RatIsNegInfinity(newbound) || newbound == NULL )
       {
          nodedataparent->rightinfeas = TRUE;
          nodedataparent->derindex_right = fileindex;
@@ -3282,7 +3282,7 @@ int SCIPcertificatePrintUnsplitting(
 
       assert(nodedata->derindex_right < certificate->indexcounter - 1);
       assert(nodedata->derindex_left < certificate->indexcounter - 1);
-
+      assert( RatIsGE(lowerbound, SCIPnodeGetLowerboundExact(node)) );
       SCIPcertificatePrintProofMessage(certificate, " { uns %d %d  %d %d  } -1\n", nodedata->derindex_left, nodedata->assumptionindex_left,
          nodedata->derindex_right, nodedata->assumptionindex_right);
       SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
@@ -3363,3 +3363,39 @@ void SCIPcertificatePrintRtpInfeas(
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "RTP infeas\n");
  }
+
+SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_VAR* var, SCIP_Rational* lb, SCIP_Rational* ub)
+{
+   SCIP_Rational* lowerbound;
+   SCIP_CERTIFICATEBOUND* tmp;
+   unsigned long lowerboundindex, upperboundindex;
+   if ( lb == NULL )
+      lb = SCIPvarGetLbLocalExact(var);
+   if ( ub == NULL )
+      ub = SCIPvarGetUbLocalExact(var);
+   assert( RatIsGT(lb, ub) );
+   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &lowerbound));
+
+   SCIPcertificatePrintProofMessage(certificate, "BoundConflict%d ", certificate->indexcounter);
+   SCIPcertificatePrintProofMessage(certificate, "G ");
+   SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
+   SCIPcertificatePrintProofMessage(certificate, " 0 0 ");
+
+   certificate->workbound->var = var;
+   certificate->workbound->isupper = false;
+   RatSet(certificate->workbound->boundval, lb);
+   tmp = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
+   lowerboundindex = tmp->fileindex;
+
+   certificate->workbound->isupper = true;
+   RatSet(certificate->workbound->boundval, ub);
+   upperboundindex = tmp->fileindex;
+
+
+   SCIPcertificatePrintProofMessage(certificate, " { lin 2 %d 1 %d -1 } -1\n", lowerboundindex, upperboundindex);
+   RatDiff(lowerbound, lb, ub);
+   RatFreeBuffer(SCIPbuffer(scip), &lowerbound);
+
+   SCIPcertificateUpdateParentData(certificate, SCIPgetCurrentNode(scip), certificate->indexcounter, NULL);
+   certificate->indexcounter++;
+}

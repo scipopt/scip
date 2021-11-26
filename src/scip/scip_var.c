@@ -6524,6 +6524,8 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    if( RatIsLT(adjustedBound, lb) )
    {
       *infeasible = TRUE;
+      if (SCIPisCertificateActive(scip))
+         SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, NULL, adjustedBound);
       goto RETURN_SCIP_OKAY;
    }
 
@@ -6642,6 +6644,8 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    if( RatIsGT(adjustedBound, ub) )
    {
       *infeasible = TRUE;
+      if (SCIPisCertificateActive(scip))
+         SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, adjustedBound, NULL);
       goto RETURN_SCIP_OKAY;
    }
 

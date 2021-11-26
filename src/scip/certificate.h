@@ -418,6 +418,7 @@ SCIP_RETCODE SCIPcertificateInsertVarBound(
 
 unsigned long SCIPcertificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROWEXACT* row);
 
+SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_VAR* var, SCIP_Rational* lb, SCIP_Rational* ub);
 #ifdef __cplusplus
 }
 #endif
