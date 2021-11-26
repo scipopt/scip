@@ -7472,137 +7472,23 @@ SCIP_RETCODE createRows(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real* valsrhsrelax;
-   SCIP_Real* valslhsrelax;
-   SCIP_Real rhsrelax;
-   SCIP_Real lhsrelax;
-   SCIP_VAR* var;
-   SCIP_Rational* ub;
-   SCIP_Rational* lb;
-   SCIP_Real lbreal;
-   SCIP_Real ubreal;
-   SCIP_ROUNDMODE roundmode;
-   int i;
-   int* sideindexpostprocess;
-   int npostprocess;
+   SCIP_Bool onerowrelax;
+   SCIP_Bool hasfprelax;
 
    assert(scip != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
+
    assert(consdata != NULL);
    assert(consdata->rowexact == NULL);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &valsrhsrelax, consdata->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &valslhsrelax, consdata->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &sideindexpostprocess, consdata->nvars) );
+   /** create empty fp-rows */
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowrhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
+      SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   npostprocess = 0;
-   consdata->hasfprelax = TRUE;
-   consdata->onerowrelax = TRUE;
-   rhsrelax = consdata->rhsreal;
-   lhsrelax = consdata->lhsreal;
-   roundmode = SCIPintervalGetRoundingMode();
-
-   for( i = 0; i < consdata->nvars; i++ )
-   {
-      var = consdata->vars[i];
-      ub = SCIPvarGetUbGlobalExact(var);
-      lb = SCIPvarGetLbGlobalExact(var);
-      lbreal = SCIPvarGetLbGlobal(var);
-      ubreal = SCIPvarGetUbGlobal(var);
-
-      /* coefficient is exactly representable as fp number */
-      if( consdata->valsreal[i].inf == consdata->valsreal[i].sup )
-      {
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-         valsrhsrelax[i] = consdata->valsreal[i].inf;
-      }
-      /* unbounded variable with non fp-representable coefficient: var would need to be split in pos/neg to be relaxable */
-      else if( RatIsInfinity(ub) && RatIsNegInfinity(lb) )
-      {
-         consdata->hasfprelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-      }
-      /* negative upper or positive lower bounds are good */
-      else if( !RatIsInfinity(ub) && RatIsNegative(ub) )
-      {
-         consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-         valsrhsrelax[i] = consdata->valsreal[i].sup;
-      }
-      /* negative upper or positive lower bounds are good */
-      else if( !RatIsNegInfinity(lb) && RatIsPositive(lb) )
-      {
-         consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].sup;
-         valsrhsrelax[i] = consdata->valsreal[i].inf;
-      }
-      else if( !RatIsInfinity(ub) )
-      {
-         consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-         valsrhsrelax[i] = consdata->valsreal[i].sup;
-         sideindexpostprocess[npostprocess] = i;
-         npostprocess++;
-      }
-      else
-      {
-         assert(!RatIsInfinity(lb));
-         consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].sup;
-         valsrhsrelax[i] = consdata->valsreal[i].inf;
-         sideindexpostprocess[npostprocess] = i;
-         npostprocess++;
-      }
-   }
-
-   SCIPintervalSetRoundingModeUpwards();
-
-   /* change the sides where necessary (do not do it immediately to not change rounding mode too often) */
-   for( i = 0; i < npostprocess; i++ )
-   {
-      int idx;
-      idx = sideindexpostprocess[i];
-
-      if( valslhsrelax[idx] == consdata->valsreal[idx].inf )
-         rhsrelax += ubreal >= 0 ? (consdata->valsreal[idx].sup - consdata->valsreal[idx].inf) * ubreal : 0;
-      else
-         rhsrelax -= lbreal <= 0 ? (consdata->valsreal[idx].sup - consdata->valsreal[idx].inf) * lbreal : 0;
-   }
-
-   SCIPintervalSetRoundingModeDownwards();
-   for( i = 0; i < npostprocess; i++ )
-   {
-      int idx;
-      idx = sideindexpostprocess[i];
-
-      if( valslhsrelax[idx] == consdata->valsreal[idx].sup ) //  upper bound was used
-         lhsrelax -= ubreal >= 0 ? (consdata->valsreal[i].sup - consdata->valsreal[i].inf) * ubreal : 0;
-      else
-         lhsrelax += lbreal <= 0 ? (consdata->valsreal[i].sup - consdata->valsreal[i].inf) * lbreal : 0;
-   }
-
-   SCIPintervalSetRoundingMode(roundmode);
-
-   /* only create one row if possible, or if relaxation did not work at all */
-   if( !consdata->hasfprelax || consdata->onerowrelax )
-   {
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rowlhs, cons, SCIPconsGetName(cons), lhsrelax, rhsrelax,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-      SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rowlhs, consdata->nvars, consdata->vars, valslhsrelax) );
-   }
-   /* create two fp-rows for row relaxation */
-   else
-   {
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rowrhs, cons, SCIPconsGetName(cons), lhsrelax, rhsrelax,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-      SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rowrhs, consdata->nvars, consdata->vars, valsrhsrelax) );
-
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rowlhs, cons, SCIPconsGetName(cons), lhsrelax, rhsrelax,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-      SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rowlhs, consdata->nvars, consdata->vars, valslhsrelax) );
-   }
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowlhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
+      SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    /** create exact row */
    SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->rowlhs, consdata->rowrhs,
@@ -7610,9 +7496,17 @@ SCIP_RETCODE createRows(
 
    SCIP_CALL( SCIPaddVarsToRowExact(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
 
-   SCIPfreeBufferArray(scip, &sideindexpostprocess);
-   SCIPfreeBufferArray(scip, &valslhsrelax);
-   SCIPfreeBufferArray(scip, &valsrhsrelax);
+   onerowrelax = TRUE;
+   hasfprelax = TRUE;
+
+   SCIP_CALL( SCIPgenerateFpRowsFromRowExact(scip, consdata->rowexact, consdata->rowlhs,
+      consdata->rowrhs, &onerowrelax, &hasfprelax) );
+
+   consdata->onerowrelax = onerowrelax;
+   consdata->hasfprelax = hasfprelax;
+
+   if( !(consdata->hasfprelax) || consdata->onerowrelax )
+      consdata->rowrhs = NULL;
 
    return SCIP_OKAY;
 }

@@ -5471,7 +5471,12 @@ SCIP_RETCODE SCIProwFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*row)->linkpos, (*row)->size);
 
    if( (*row)->rowexact != NULL )
-      (*row)->rowexact->fprow = NULL;
+   {
+      if( *row == (*row)->rowexact->fprow )
+         (*row)->rowexact->fprow = NULL;
+      else
+         (*row)->rowexact->fprowrhs = NULL;
+   }
 
    BMSfreeBlockMemory(blkmem, row);
 

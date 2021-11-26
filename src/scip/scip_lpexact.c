@@ -324,6 +324,34 @@ SCIP_RETCODE SCIPcreateRowExactFromRow(
    return SCIP_OKAY;
 }
 
+/** generates two fprows that are a relaxation of the exact row wrt the lhs/rhs, respectively
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Bool SCIPgenerateFpRowsFromRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        row,                /**< SCIP exact row */
+   SCIP_ROW*             rowlhs,             /**< fp row-relaxation wrt lhs */
+   SCIP_ROW*             rowrhs,             /**< fp row-relaxation wrt rhs */
+   SCIP_Bool*            onerowrelax,        /**< is one row enough to represent the exact row */
+   SCIP_Bool*            hasfprelax          /**< is it possible to generate relaxations at all for this row? */
+   )
+{
+   assert(row != NULL);
+   assert(rowlhs != NULL);
+   assert(rowrhs != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgenerateFpRowsFromRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIProwExactGenerateFpRows(scip->mem->probmem, scip->set, scip->stat,  scip->eventqueue, scip->lpexact, scip->transprob, row, rowlhs, rowrhs, onerowrelax, hasfprelax) );
+
+   return SCIP_OKAY;
+}
+
 /** returns the feasibility of a row for the given primal solution
  *
  *  @return the feasibility of a row for the given primal solution
