@@ -3486,23 +3486,15 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
    {
       SCIP_VAR* ivar;
       bool is_upper_bound;
-      SCIP_Rational* bound;
-      SCIP_CERTIFICATEBOUND* certificatebound;
+      SCIP_Longint certificateindex;
       assert(!RatIsAbsInfinity(vals[i]));
       ivar = row == NULL ? consdata->vars[i] : row->cols[i]->var;
       if ( ivar == variable )
          continue;
       is_upper_bound = upperboundcontribution != RatIsPositive(vals[i]);
       assert(upperboundcontribution != ismaxactivity);
-      bound = is_upper_bound ? SCIPvarGetUbLocalExact(ivar) : SCIPvarGetLbLocalExact(ivar);
-
-      RatSet(certificate->workbound->boundval, bound);
-      certificate->workbound->var = ivar;
-      certificate->workbound->isupper = is_upper_bound;
-
-      certificatebound = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
-      assert( certificatebound != NULL );
-      SCIPcertificatePrintProofMessage(certificate, " %d ", certificatebound->fileindex);
+      certificateindex = is_upper_bound ? SCIPvarGetUbCertificateIndexLocal(ivar) :  SCIPvarGetLbCertificateIndexLocal(ivar);
+      SCIPcertificatePrintProofMessage(certificate, " %d ", certificateindex);
       SCIPcertificatePrintProofRational(certificate, vals[i], 10);
    }
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
@@ -3530,11 +3522,6 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
       SCIPcertificatePrintProofMessage(certificate, " 1 %d 1", SCIPvarGetCertificateIndex(variable));
       SCIPcertificatePrintProofMessage(certificate, " { rnd 1 %d 1 } -1\n", certificate->indexcounter - 2);
    }
-
-   certificate->workbound->var = variable;
-   certificate->workbound->isupper = boundtype == SCIP_BOUNDTYPE_UPPER;
-   certificate->workbound->fileindex = certificate->indexcounter - 1;
-   SCIPcertificateInsertVarBound(certificate, certificate->workbound, NULL);
 
    return (certificate->indexcounter - 1);
 }

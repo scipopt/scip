@@ -1017,13 +1017,6 @@ void SCIPcertificateAssertStateCorrect(SCIP* scip, SCIP_VAR* var)
 
    certificate = SCIPgetCertificate(scip);
    assert( certificate != NULL );
-   certificate->workbound->var = var;
-   certificate->workbound->isupper = FALSE;
-   RatSet(certificate->workbound->boundval, SCIPvarGetLbLocalExact(var));
-   assert ( RatIsNegInfinity(certificate->workbound->boundval) || SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound) != NULL );
-   certificate->workbound->isupper = TRUE;
-   RatSet(certificate->workbound->boundval, SCIPvarGetUbLocalExact(var));
-   assert( RatIsInfinity(certificate->workbound->boundval) || SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound) != NULL );
 }
 
 /** prints a string to the proof section of the certificate file */
@@ -1939,13 +1932,11 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_Bool             isupper             /**< is it the upper bound? */
    )
 {
-   SCIP_Longint varindex;
 
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
       return SCIP_OKAY;
 
-   varindex = SCIPvarGetCertificateIndex(var);
 
    if( !isorigfile )
    {
@@ -1999,7 +1990,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
 
-   if( RatIsLT(newbound, nodedata->derbound_inherit) )
+   if( newbound != NULL && RatIsLT(newbound, nodedata->derbound_inherit) )
       return SCIP_OKAY;
 
    /* If the node is the root node, then when only update the index and bound */
@@ -2024,12 +2015,12 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
    if( certificateIsLeftNode(certificate, node) )
    {
       nodedataparent->leftfilled = TRUE;
-      if( RatIsGT(newbound, nodedataparent->derbound_left) )
+      if( newbound != NULL && RatIsGT(newbound, nodedataparent->derbound_left) && !nodedataparent->leftinfeas )
       {
          nodedataparent->derindex_left = fileindex;
          RatSet(nodedataparent->derbound_left, newbound);
       }
-      if( RatIsNegInfinity(newbound) || newbound == NULL )
+      if( newbound == NULL || RatIsInfinity(newbound) )
       {
          nodedataparent->derindex_left = fileindex;
          nodedataparent->leftinfeas = TRUE;
@@ -2038,12 +2029,12 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
    else
    {
       nodedataparent->rightfilled = TRUE;
-      if( RatIsGT(newbound, nodedataparent->derbound_right) )
+      if( newbound != NULL && RatIsGT(newbound, nodedataparent->derbound_right) && !nodedataparent->rightinfeas )
       {
          nodedataparent->derindex_right = fileindex;
          RatSet(nodedataparent->derbound_right, newbound);
       }
-      if( RatIsNegInfinity(newbound) || newbound == NULL )
+      if( newbound == NULL || RatIsInfinity(newbound) )
       {
          nodedataparent->rightinfeas = TRUE;
          nodedataparent->derindex_right = fileindex;
@@ -3054,7 +3045,7 @@ int SCIPcertificatePrintUnsplitting(
 
       certificate->indexcounter++;
 
-      SCIPcertificatePrintProofMessage(certificate, "U%d ", certificate->indexcounter - 1);
+      SCIPcertificatePrintProofMessage(certificate, "Unsplit%d ", certificate->indexcounter - 1);
 
       if( infeas )
       {
@@ -3152,38 +3143,31 @@ void SCIPcertificatePrintRtpInfeas(
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "RTP infeas\n");
  }
 
-SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_VAR* var, SCIP_Rational* lb, SCIP_Rational* ub)
+SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_VAR* var, SCIP_Rational* lb, SCIP_Rational* ub, SCIP_Longint lbindex, SCIP_Longint ubindex)
 {
    SCIP_Rational* lowerbound;
-   SCIP_CERTIFICATEBOUND* tmp;
-   unsigned long lowerboundindex, upperboundindex;
    if ( lb == NULL )
+   {
       lb = SCIPvarGetLbLocalExact(var);
+      lbindex = SCIPvarGetLbCertificateIndexLocal(var);
+   }
    if ( ub == NULL )
+   {
       ub = SCIPvarGetUbLocalExact(var);
+      ubindex = SCIPvarGetUbCertificateIndexLocal(var);
+   }
    assert( RatIsGT(lb, ub) );
    SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &lowerbound));
 
    SCIPcertificatePrintProofMessage(certificate, "BoundConflict%d ", certificate->indexcounter);
    SCIPcertificatePrintProofMessage(certificate, "G ");
-   SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
-   SCIPcertificatePrintProofMessage(certificate, " 0 0 ");
-
-   certificate->workbound->var = var;
-   certificate->workbound->isupper = false;
-   RatSet(certificate->workbound->boundval, lb);
-   tmp = SCIPhashtableRetrieve(certificate->varboundtable, certificate->workbound);
-   lowerboundindex = tmp->fileindex;
-
-   certificate->workbound->isupper = true;
-   RatSet(certificate->workbound->boundval, ub);
-   upperboundindex = tmp->fileindex;
-
-
-   SCIPcertificatePrintProofMessage(certificate, " { lin 2 %d 1 %d -1 } -1\n", lowerboundindex, upperboundindex);
    RatDiff(lowerbound, lb, ub);
+   SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
+   SCIPcertificatePrintProofMessage(certificate, " 0 { lin 2 %d 1 %d -1 } -1\n", lbindex, ubindex);
+
    RatFreeBuffer(SCIPbuffer(scip), &lowerbound);
 
    SCIPcertificateUpdateParentData(certificate, SCIPgetCurrentNode(scip), certificate->indexcounter, NULL);
    certificate->indexcounter++;
+   return SCIP_OKAY;
 }

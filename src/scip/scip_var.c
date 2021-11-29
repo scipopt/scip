@@ -78,6 +78,7 @@
 #include "scip/struct_tree.h"
 #include "scip/struct_var.h"
 #include "scip/tree.h"
+#include "scip/certificate.h"
 #include "scip/var.h"
 #include <ctype.h>
 
@@ -6525,7 +6526,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    {
       *infeasible = TRUE;
       if (SCIPisCertificateActive(scip))
-         SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, NULL, adjustedBound);
+         SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, NULL, adjustedBound, -1, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) - 1);
       goto RETURN_SCIP_OKAY;
    }
 
@@ -6645,7 +6646,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    {
       *infeasible = TRUE;
       if (SCIPisCertificateActive(scip))
-         SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, adjustedBound, NULL);
+         SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, adjustedBound, NULL, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) - 1, -1);
       goto RETURN_SCIP_OKAY;
    }
 
