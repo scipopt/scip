@@ -3502,22 +3502,18 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
    certificate->indexcounter++;
    SCIPcertificatePrintProofMessage(certificate, "ACT_L%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
    SCIPcertificatePrintProofRational(certificate, newbound, 10);
-   RatInvert(certificate->workbound->boundval, val);
    SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { lin 1 %d ", SCIPvarGetCertificateIndex(variable), certificate->indexcounter - 2);
-   RatNegate(certificate->workbound->boundval, certificate->workbound->boundval);
-   SCIPcertificatePrintProofRational(certificate, certificate->workbound->boundval, 10);
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
-   RatSet(certificate->workbound->boundval, newbound);
 
    if( !RatIsAbsInfinity(newbound) && SCIPvarGetType(variable) != SCIP_VARTYPE_CONTINUOUS && !RatIsIntegral(newbound) )
    {
       certificate->indexcounter++;
 
       SCIPcertificatePrintProofMessage(certificate, "ACT_R%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
-      RatRound(certificate->workbound->boundval, newbound, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_R_ROUND_DOWNWARDS : SCIP_R_ROUND_UPWARDS);
+      RatRound(newbound, newbound, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_R_ROUND_DOWNWARDS : SCIP_R_ROUND_UPWARDS);
 
-      SCIPcertificatePrintProofRational(certificate, certificate->workbound->boundval, 10);
+      SCIPcertificatePrintProofRational(certificate, newbound, 10);
 
       SCIPcertificatePrintProofMessage(certificate, " 1 %d 1", SCIPvarGetCertificateIndex(variable));
       SCIPcertificatePrintProofMessage(certificate, " { rnd 1 %d 1 } -1\n", certificate->indexcounter - 2);
