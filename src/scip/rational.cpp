@@ -1514,15 +1514,20 @@ void RatMessage(
    SCIP_Rational*        rational            /**< the rational to print */
    )
 {
-   char buf[SCIP_MAXSTRLEN];
    assert(rational != NULL);
 
-   if( SCIP_MAXSTRLEN == RatToString(rational, buf, SCIP_MAXSTRLEN) )
+   if( rational->isinf )
    {
-      SCIPerrorMessage("WARNING: Rational does not fit in line \n.");
+      if( rational->val.sign() > 0 )
+         SCIPmessageFPrintInfo(msg, file, "inf");
+      else
+         SCIPmessageFPrintInfo(msg, file, "-inf");
    }
-
-   SCIPmessageFPrintInfo(msg, file, "%s", buf);
+   else
+   {
+      std::string s = rational->val.str();
+      SCIPmessageFPrintInfo(msg, file, "%s", s.c_str());
+   }
 }
 
 /** print a rational to command line (for debugging) */
