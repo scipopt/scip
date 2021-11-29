@@ -25,13 +25,17 @@
 #ifndef SCIP_PUB_EXPR_H_
 #define SCIP_PUB_EXPR_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "scip/def.h"
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
+
+#ifdef NDEBUG
+#include "scip/struct_expr.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**@addtogroup PublicExprHandlerMethods
  * @{
@@ -327,6 +331,58 @@ SCIP_Longint SCIPexprhdlrGetNSimplifications(
 
 /** @} */ /* expression handler statistics */
 
+#ifdef NDEBUG
+
+/* If NDEBUG is defined, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlr_, freehdlr_) do { (exprhdlr)->copyhdlr = copyhdlr_; (exprhdlr)->freehdlr = freehdlr_; } while (FALSE)
+#define SCIPexprhdlrSetCopyFreeData(exprhdlr, copydata_, freedata_) do { (exprhdlr)->copydata = copydata_; (exprhdlr)->freedata = freedata_; } while (FALSE)
+#define SCIPexprhdlrSetPrint(exprhdlr, print_)               (exprhdlr)->print = print_
+#define SCIPexprhdlrSetParse(exprhdlr, parse_)               (exprhdlr)->parse = parse_
+#define SCIPexprhdlrSetCurvature(exprhdlr, curvature_)       (exprhdlr)->curvature = curvature_
+#define SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicity_) (exprhdlr)->monotonicity = monotonicity_
+#define SCIPexprhdlrSetIntegrality(exprhdlr, integrality_)   (exprhdlr)->integrality = integrality_
+#define SCIPexprhdlrSetHash(exprhdlr, hash_)                 (exprhdlr)->hash = hash_
+#define SCIPexprhdlrSetCompare(exprhdlr, compare_)           (exprhdlr)->compare = compare_
+#define SCIPexprhdlrSetDiff(exprhdlr, bwdiff_, fwdiff_, bwfwdiff_) do { (exprhdlr)->bwdiff = bwdiff_; (exprhdlr)->fwdiff = fwdiff_; (exprhdlr)->bwfwdiff = bwfwdiff_; } while (FALSE)
+#define SCIPexprhdlrSetIntEval(exprhdlr, inteval_)           (exprhdlr)->inteval = inteval_
+#define SCIPexprhdlrSetSimplify(exprhdlr, simplify_)         (exprhdlr)->simplify = simplify_
+#define SCIPexprhdlrSetReverseProp(exprhdlr, reverseprop_)   (exprhdlr)->reverseprop = reverseprop_
+#define SCIPexprhdlrSetEstimate(exprhdlr, initestimates_, estimate_) do { (exprhdlr)->initestimates = initestimates_; (exprhdlr)->estimate = estimate_; } while (FALSE)
+#define SCIPexprhdlrGetName(exprhdlr)              (exprhdlr)->name
+#define SCIPexprhdlrGetDescription(exprhdlr)       (exprhdlr)->desc
+#define SCIPexprhdlrGetPrecedence(exprhdlr)        (exprhdlr)->precedence
+#define SCIPexprhdlrGetData(exprhdlr)              (exprhdlr)->data
+#define SCIPexprhdlrHasPrint(exprhdlr)             ((exprhdlr)->print != NULL)
+#define SCIPexprhdlrHasBwdiff(exprhdlr)            ((exprhdlr)->bwdiff != NULL)
+#define SCIPexprhdlrHasFwdiff(exprhdlr)            ((exprhdlr)->fwdiff != NULL)
+#define SCIPexprhdlrHasIntEval(exprhdlr)           ((exprhdlr)->inteval != NULL)
+#define SCIPexprhdlrHasEstimate(exprhdlr)          ((exprhdlr)->estimate != NULL)
+#define SCIPexprhdlrHasInitEstimates(exprhdlr)     ((exprhdlr)->initestimates != NULL)
+#define SCIPexprhdlrHasSimplify(exprhdlr)          ((exprhdlr)->simplify != NULL)
+#define SCIPexprhdlrHasCurvature(exprhdlr)         ((exprhdlr)->curvature != NULL)
+#define SCIPexprhdlrHasMonotonicity(exprhdlr)      ((exprhdlr)->monotonicity != NULL)
+#define SCIPexprhdlrHasReverseProp(exprhdlr)       ((exprhdlr)->reverseprop != NULL)
+#define SCIPexprhdlrGetNCreated(exprhdlr)          (exprhdlr)->ncreated
+#define SCIPexprhdlrGetNIntevalCalls(exprhdlr)     (exprhdlr)->nintevalcalls
+#define SCIPexprhdlrGetIntevalTime(exprhdlr)       SCIPclockGetTime((exprhdlr)->intevaltime)
+#define SCIPexprhdlrGetNReversepropCalls(exprhdlr) (exprhdlr)->npropcalls
+#define SCIPexprhdlrGetReversepropTime(exprhdlr)   SCIPclockGetTime((exprhdlr)->proptime)
+#define SCIPexprhdlrGetNCutoffs(exprhdlr)          (exprhdlr)->ncutoffs
+#define SCIPexprhdlrGetNDomainReductions(exprhdlr) (exprhdlr)->ndomreds
+#define SCIPexprhdlrIncrementNDomainReductions(exprhdlr, nreductions) (exprhdlr)->ndomreds += nreductions
+#define SCIPexprhdlrGetNEstimateCalls(exprhdlr)    (exprhdlr)->nestimatecalls
+#define SCIPexprhdlrGetEstimateTime(exprhdlr)      SCIPclockGetTime((exprhdlr)->estimatetime)
+#define SCIPexprhdlrGetNBranchings(exprhdlr)       (exprhdlr)->nbranchscores
+#define SCIPexprhdlrIncrementNBranchings(exprhdlr) ++(exprhdlr)->nbranchscores
+#define SCIPexprhdlrGetNSimplifyCalls(exprhdlr)    (exprhdlr)->nsimplifycalls
+#define SCIPexprhdlrGetSimplifyTime(exprhdlr)      SCIPclockGetTime((exprhdlr)->simplifytime)
+#define SCIPexprhdlrGetNSimplifications(exprhdlr)  (exprhdlr)->nsimplified
+#endif
+
+
 /** @} */ /* expression handler methods */
 
 /**@defgroup PublicExprMethods Expressions
@@ -589,6 +645,30 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 
 /** @} */
 
+#ifdef NDEBUG
+#define SCIPexprGetNUses(expr)                    (expr)->nuses
+#define SCIPexprGetNChildren(expr)                (expr)->nchildren
+#define SCIPexprGetChildren(expr)                 (expr)->children
+#define SCIPexprGetHdlr(expr)                     (expr)->exprhdlr
+#define SCIPexprGetData(expr)                     (expr)->exprdata
+#define SCIPexprSetData(expr, exprdata_)          (expr)->exprdata = exprdata_
+#define SCIPexprGetOwnerData(expr)                (expr)->ownerdata
+#define SCIPexprGetEvalValue(expr)                (expr)->evalvalue
+#define SCIPexprGetEvalTag(expr)                  (expr)->evaltag
+#define SCIPexprGetDerivative(expr)               (expr)->derivative
+#define SCIPexprGetDot(expr)                      (expr)->dot
+#define SCIPexprGetBardot(expr)                   (expr)->bardot
+#define SCIPexprGetDiffTag(expr)                  (expr)->difftag
+#define SCIPexprGetActivity(expr)                 (expr)->activity
+#define SCIPexprGetActivityTag(expr)              (expr)->activitytag
+#define SCIPexprSetActivity(expr, activity_, activitytag_) do { (expr)->activity = activity_; (expr)->activitytag = activitytag_; } while (FALSE)
+#define SCIPexprGetCurvature(expr)                (expr)->curvature
+#define SCIPexprSetCurvature(expr, curvature_)    (expr)->curvature = curvature_
+#define SCIPexprIsIntegral(expr)                  (expr)->isintegral
+#define SCIPexprSetIntegrality(expr, isintegral_) expr->isintegral = isintegral_
+#define SCIPexprAreQuadraticExprsVariables(expr)  (expr)->quaddata->allexprsarevars
+#endif
+
 /**@name Core Expression Handlers */
 /**@{ */
 /* these are here to have them accessible also in the expr core
@@ -630,6 +710,10 @@ SCIP_EXPORT
 SCIP_Real SCIPgetExponentExprPow(
    SCIP_EXPR*            expr                /**< (signed) power expression */
    );
+
+#ifdef NDEBUG
+#define SCIPgetVarExprVar(expr) ((SCIP_VAR*)SCIPexprGetData(expr))
+#endif
 
 /**@} */
 
@@ -901,6 +985,22 @@ SCIP_Bool SCIPexpriterIsEnd(
    SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
+#ifdef NDEBUG
+#define SCIPexpriterIsInit(iterator)                           (iterator)->initialized
+#define SCIPexpriterGetCurrent(iterator)                       (iterator)->curr
+#define SCIPexpriterGetStageDFS(iterator)                      (iterator)->dfsstage
+#define SCIPexpriterGetChildIdxDFS(iterator)                   (iterator)->curr->iterdata[(iterator)->iterindex].currentchild
+#define SCIPexpriterGetChildExprDFS(iterator)                  (iterator)->curr->children[(iterator)->curr->iterdata[(iterator)->iterindex].currentchild]
+#define SCIPexpriterGetParentDFS(iterator)                     (iterator)->curr->iterdata[(iterator)->iterindex].parent
+#define SCIPexpriterGetCurrentUserData(iterator)               (iterator)->curr->iterdata[(iterator)->iterindex].userdata
+#define SCIPexpriterGetChildUserDataDFS(iterator)              (iterator)->curr->children[(iterator)->curr->iterdata[(iterator)->iterindex].currentchild]->iterdata[(iterator)->iterindex].userdata
+#define SCIPexpriterGetExprUserData(iterator, expr)            (expr)->iterdata[(iterator)->iterindex].userdata
+#define SCIPexpriterSetCurrentUserData(iterator, userdata_)    (iterator)->curr->iterdata[(iterator)->iterindex].userdata = userdata_
+#define SCIPexpriterSetExprUserData(iterator, expr, userdata_) (expr)->iterdata[(iterator)->iterindex].userdata = userdata_
+#define SCIPexpriterSetChildUserData(iterator, userdata_)      (iterator)->curr->children[(iterator)->curr->iterdata[(iterator)->iterindex].currentchild]->iterdata[(iterator)->iterindex].userdata = userdata_
+#define SCIPexpriterIsEnd(iterator)                            ((iterator)->curr == NULL)
+#endif
+
 /** @} */
 
 /**@name Function Curvature */
@@ -912,10 +1012,6 @@ SCIP_EXPRCURV SCIPexprcurvAdd(
    SCIP_EXPRCURV         curv1,              /**< curvature of first summand */
    SCIP_EXPRCURV         curv2               /**< curvature of second summand */
    );
-
-#ifdef NDEBUG
-#define SCIPexprcurvAdd(curv1, curv2)  ((SCIP_EXPRCURV) ((curv1) & (curv2)))
-#endif
 
 /** gives the curvature for the negation of a function with given curvature */
 SCIP_EXPORT
@@ -983,6 +1079,12 @@ SCIP_EXPORT
 const char* SCIPexprcurvGetName(
    SCIP_EXPRCURV         curv                /**< curvature */
    );
+
+#ifdef NDEBUG
+#define SCIPexprcurvAdd(curv1, curv2)  ((SCIP_EXPRCURV) ((curv1) & (curv2)))
+#define SCIPexprcurvNegate(curvature)  (((curvature) == SCIP_EXPRCURV_CONCAVE) ? SCIP_EXPRCURV_CONVEX : ((curvature) == SCIP_EXPRCURV_CONVEX) ? SCIP_EXPRCURV_CONCAVE : (curvature))
+#define SCIPexprcurvMultiply(factor, curvature) (((factor) == 0.0) ? SCIP_EXPRCURV_LINEAR : (factor) > 0.0 ? (curvature) : SCIPexprcurvNegate(curvature))
+#endif
 
 /**@} */
 

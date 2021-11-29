@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "scip/type_nlpi.h"
+#include "scip/type_clock.h"
 
 #ifdef __cplusplus
 extern "C" {
