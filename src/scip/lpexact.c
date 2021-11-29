@@ -6830,9 +6830,12 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
    SCIP_CALL( SCIPlpiExactGetSol(lp->lpiexact, NULL, primsol, dualsol, activity, redcost) );
+
+   /* avoid adding infinity to the bounding error */
+   if( !RatIsInfinity(lp->lpobjval) )
+      stat->boundingerrorexlp += REALABS(lp->fplp->lpobjval - RatRoundReal(lp->lpobjval, SCIP_R_ROUND_DOWNWARDS));
    if( overwritefplp )
    {
-      stat->boundingerrorexlp += REALABS(lp->fplp->lpobjval - RatRoundReal(lp->lpobjval, SCIP_R_ROUND_DOWNWARDS));
       lp->fplp->lpobjval = RatRoundReal(lp->lpobjval, SCIP_R_ROUND_DOWNWARDS);
       lp->fplp->lpsolstat = lp->lpsolstat;
       lp->fplp->primalfeasible = lp->primalfeasible;
