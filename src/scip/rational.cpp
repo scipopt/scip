@@ -1979,6 +1979,8 @@ void RatComputeApproximation(
    Integer p[3];
    Integer q[3];
 
+   int sign;
+
    RatCanonicalize(src);
 
    if(src->val == 0)
@@ -1991,9 +1993,16 @@ void RatComputeApproximation(
    tn = numerator(src->val);
    td = denominator(src->val);
 
+   /* scale to positive to avoid unnecessary complications */
+   sign = tn.sign();
+   tn *= sign;
+
+   assert(td >= 0);
+   assert(tn >= 0);
+
    if( td <= Dbound )
    {
-      res->val = Rational(tn, td);
+      res->val = Rational(tn, td) * sign;
    }
    else
    {
@@ -2003,7 +2012,7 @@ void RatComputeApproximation(
       /* if value is almost integer, we use the next best integer */
       if( fabs(temp.convert_to<double>() / tn.convert_to<double>()) < 1.0 / maxdenom )
       {
-         res->val = a0;
+         res->val = a0 * sign;
          res->isinf = FALSE;
          res->isfprepresentable = TRUE;
 
@@ -2057,7 +2066,7 @@ void RatComputeApproximation(
          cfcnt++;
       }
 
-      res->val = Rational(p[1],q[1]);
+      res->val = Rational(p[1],q[1]) * sign;
    }
 
    assert(abs(res->val - src->val) < 1e-6);
