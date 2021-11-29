@@ -99,6 +99,15 @@ SCIP_Longint SCIPcertificateGetCurrentIndex(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
+#ifndef NDEBUG
+/** checks if information is consistent with printed certificate line */
+SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_VAR*             var,                /**< variable that gets changed */
+   SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
+   SCIP_Real             newbound            /**< new bound */
+   );
+#endif
 
 /** sets the objective function used when printing dual bounds */
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(

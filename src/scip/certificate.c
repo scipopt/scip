@@ -99,6 +99,13 @@ SCIP_Longint printBoundAssumption(
    if ( certificate->origfile == NULL )
       return SCIP_OKAY;
 
+#ifndef NDEBUG
+   certificate->lastinfo->isbound = TRUE;
+   certificate->lastinfo->boundtype = boundtype;
+   certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
+   RatSet(certificate->lastinfo->boundval, boundval);
+#endif
+
    /** @todo: it could be better to seperate the printing from insertion of variable bound */
    SCIPcertificatePrintProofMessage(certificate, "A%lld %c ", certificate->indexcounter, (boundtype == SCIP_BOUNDTYPE_LOWER) ? 'G' : 'L');
 
@@ -235,7 +242,7 @@ SCIP_RETCODE SCIPcertificateCreate(
    SCIP_ALLOC( BMSallocMemory(certificate) );
 
    (*certificate)->messagehdlr = messagehdlr;
-   (*certificate)->workbound = NULL;
+   (*certificate)->lastinfo = NULL;
    (*certificate)->blkmem = NULL;
    (*certificate)->indexcounter = 0;
    (*certificate)->indexcounter_ori = 0;
@@ -724,10 +731,10 @@ void SCIPcertificateExit(
       BMSfreeMemoryArray(&certificate->derivationfilename);
       BMSfreeMemoryArray(&certificate->origfilename);
 
-      if( certificate->workbound != NULL )
+      if( certificate->lastinfo != NULL )
       {
-         RatFreeBlock(certificate->blkmem, &certificate->workbound->boundval);
-         BMSfreeBlockMemory(certificate->blkmem, &certificate->workbound);
+         RatFreeBlock(certificate->blkmem, &certificate->lastinfo->boundval);
+         BMSfreeBlockMemory(certificate->blkmem, &certificate->lastinfo);
       }
 
       if( certificate->rowdatahash)
@@ -809,6 +816,38 @@ SCIP_Longint SCIPcertificateGetCurrentIndex(
       return certificate->indexcounter;
 }
 
+#ifndef NDEBUG
+/** checks if information is consistent with printed certificate line */
+SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_VAR*             var,                /**< variable that gets changed */
+   SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
+   SCIP_Real             newbound            /**< new bound */
+   )
+{
+   SCIP_Bool consistent;
+
+   assert(certificate != NULL);
+
+   consistent = TRUE;
+   consistent = consistent && certificate->lastinfo->isbound;
+   consistent = consistent && certificate->lastinfo->varindex == SCIPvarGetCertificateIndex(var);
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_LOWER;
+      consistent = consistent && RatRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_DOWNWARDS) == newbound;
+   }
+   else
+   {
+      consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_UPPER;
+      consistent = consistent && RatRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_UPWARDS) == newbound;
+   }
+
+   return consistent;
+
+}
+#endif
+
 /** sets the objective function used when printing dual bounds */
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
@@ -832,8 +871,8 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    if( isorigfile )
    {
       /* create working memory for bound struct */
-      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &certificate->workbound) );
-      SCIP_CALL( RatCreateBlock(blkmem, &certificate->workbound->boundval) );
+      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &certificate->lastinfo) );
+      SCIP_CALL( RatCreateBlock(blkmem, &certificate->lastinfo->boundval) );
    }
 
    nnonz = 0;
@@ -1270,7 +1309,10 @@ void SCIPcertificatePrintCons(
    if( isorigfile )
       certificate->indexcounter_ori++;
    else
+   {
       certificate->indexcounter++;
+      certificate->lastinfo->isbound = FALSE;
+   }
 
    if( !isorigfile )
    {
@@ -1314,6 +1356,7 @@ SCIP_RETCODE SCIPcertificatePrintRow(
       SCIPcertificatePrintProofRational(certificate, val, 10);
    }
    certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1401,6 +1444,7 @@ SCIP_RETCODE certificatePrintMirSplit(
    SCIPcertificatePrintProofMessage(certificate, " { asm } -1 \n");
 
    certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
 
    SCIPcertificatePrintProofMessage(certificate, "A%d_split %c ", certificate->indexcounter, 'G');
 
@@ -1422,6 +1466,7 @@ SCIP_RETCODE certificatePrintMirSplit(
    SCIPcertificatePrintProofMessage(certificate, " { asm } -1 \n");
 
    certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
 
    RatFreeBufferArray(set->buffer, &vals, mirinfo->nsplitvars);
    RatFreeBuffer(set->buffer, &splitrhs);
@@ -1547,6 +1592,7 @@ SCIP_RETCODE certificatePrintContPositive(
 #endif
 
    certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
 
    RatFreeBufferArray(set->buffer, &vals, mirinfo->ncontvars);
    RatFreeBuffer(set->buffer, &splitrhs);
@@ -1759,6 +1805,7 @@ SCIP_RETCODE certificateTransAggrrow(
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
    certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
 
    RatFreeBufferArray(set->buffer, &coeffracs, SCIPaggrRowGetNNz(aggrrow));
    SCIPsetFreeBufferArray(set, &varrounddowns);
@@ -1943,6 +1990,13 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
       certificate->indexcounter++;
       certificate->conscounter++;
 
+#ifndef NDEBUG
+      certificate->lastinfo->isbound = TRUE;
+      certificate->lastinfo->boundtype = isupper ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
+      certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
+      RatSet(certificate->lastinfo->boundval, boundval);
+#endif
+
       if( isupper )
          SCIPvarSetUbCertificateIndexGlobal(var, certificate->indexcounter - 1);
       else
@@ -2124,7 +2178,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          /* update farkasrhs */
          if( usefarkas )
          {
-            val = certificate->workbound->boundval;
+            val = RatIsNegative(vals[len]) ? SCIPvarGetUbLocalExact(var) : SCIPvarGetLbLocalExact(var);
             RatAddProd(farkasrhs, vals[len], val);
          }
          len++;
@@ -2366,6 +2420,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
       return 0;
 
    certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
 
    if( linename == NULL )
    {
@@ -2412,6 +2467,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    if( !RatIsNegInfinity(lowerbound) && certificate->objintegral && !RatIsIntegral(lowerbound) )
    {
       certificate->indexcounter++;
+      certificate->lastinfo->isbound = FALSE;
 
       SCIPcertificatePrintProofMessage(certificate, "R%d G ", certificate->indexcounter - 1);
       updateFilesize(certificate, 4.0 + ceil(log10(certificate->indexcounter - 1 + 1)));
@@ -2657,6 +2713,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    if (certificateline != NULL)
       *certificateline = certificate->indexcounter;
    certificate->indexcounter++;
+   certificate->lastinfo->isbound = FALSE;
 
    RatFreeBuffer(set->buffer, &tmpval);
 
@@ -3044,6 +3101,7 @@ int SCIPcertificatePrintUnsplitting(
          infeas = TRUE;
 
       certificate->indexcounter++;
+      certificate->lastinfo->isbound = FALSE;
 
       SCIPcertificatePrintProofMessage(certificate, "Unsplit%d ", certificate->indexcounter - 1);
 

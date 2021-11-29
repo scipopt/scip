@@ -711,9 +711,6 @@ SCIP_RETCODE SCIPboundchgApply(
 
          if( SCIPsetCertificateEnabled(set) )
          {
-            assert(var->exactdata->locdom.lbcertificateidx != -1);
-            assert(boundchg->certificateindex != -1);
-
             var->lbchginfos[var->nlbchginfos - 1].oldcertindex = var->exactdata->locdom.lbcertificateidx;
             var->exactdata->locdom.lbcertificateidx = boundchg->certificateindex;
          }
@@ -787,8 +784,6 @@ SCIP_RETCODE SCIPboundchgApply(
 
          if( SCIPsetCertificateEnabled(set) )
          {
-            assert(var->exactdata->locdom.ubcertificateidx != -1);
-            assert(boundchg->certificateindex != -1);
             var->ubchginfos[var->nubchginfos - 1].oldcertindex = var->exactdata->locdom.ubcertificateidx;
             var->exactdata->locdom.ubcertificateidx = boundchg->certificateindex;
          }
@@ -1456,10 +1451,16 @@ void SCIPdomchgAddCurrentCertificateIndex(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
+   SCIP_BOUNDCHG* change;
+
    if( !SCIPcertificateIsActive(set, certificate) )
       return;
 
-   domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1].certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
+   change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);
+
+   SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, change->boundtype, change->newbound);
+
+   change->certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
 }
 
 /** adds bound change to domain changes */

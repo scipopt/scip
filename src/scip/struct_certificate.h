@@ -38,10 +38,10 @@ extern "C" {
 /** data structure for hashing bounds of variables in a certificate file */
 struct SCIP_CertificateBound
 {
-   SCIP_Longint          fileindex;          /**< index of this bound in the certificate file */
    SCIP_VAR*             var;           /**< variable */
    SCIP_Rational*        boundval;           /**< value of the bound */
-   SCIP_Bool             isupper;            /**< is it the upper bound? */
+   SCIP_BOUNDTYPE        boundtype;          /**< is it the upper bound? */
+   SCIP_Bool             isbound;            /**< is the last printed index a bound? if it is not, the other information is not useful */
 };
 
 struct SCIP_AggregationInfo
@@ -95,12 +95,12 @@ struct SCIP_Certificate
    SCIP_HASHMAP*         aggrinfohash;       /**< Hashmap storing aggregation information of rows */
    SCIP_HASHMAP*         mirinfohash;      /**< Hashmap storing split disjunctions */
    SCIP_AGGREGATIONINFO** aggrinfo;          /**< array to store the aggregation info to avoid memory leaks */
-   SCIP_MIRINFO**      mirinfo;          /**< array to store the split info to avoid memory leaks */
+   SCIP_MIRINFO**        mirinfo;          /**< array to store the split info to avoid memory leaks */
    SCIP_Longint          aggrinfosize;       /**< size of aggrinfo array */
    SCIP_Longint          naggrinfos;         /**< number of elements in aggrinfo array */
    SCIP_Longint          mirinfosize;      /**< size of mirinfo array */
    SCIP_Longint          nmirinfos;        /**< number of elements in mirinfo array */
-   SCIP_CERTIFICATEBOUND* workbound;         /**< temporary memory for hashing bound information */
+   SCIP_CERTIFICATEBOUND* lastinfo;          /**< information on last printed certificate index */
    BMS_BLKMEM*           blkmem;             /**< SCIP block memory */
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
    SCIP_Longint          indexcounter_ori;   /**< counter for line indices in origial problem vipr file */
