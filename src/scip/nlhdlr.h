@@ -27,6 +27,14 @@
 
 #include "scip/pub_nlhdlr.h"
 
+#ifndef NDEBUG
+#include "scip/struct_nlhdlr.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** creates a nonlinear handler */
 SCIP_RETCODE SCIPnlhdlrCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -104,5 +112,15 @@ void SCIPnlhdlrPrintStatistics(
    int                   nnlhdlrs,           /**< number of nonlinear handlers */
    FILE*                 file                /**< file handle, or NULL for standard out */
    );
+
+#ifndef NDEBUG
+#define SCIPnlhdlrResetNDetectionslast(nlhdlr)  (nlhdlr)->ndetectionslast = 0
+#define SCIPnlhdlrIncrementNCutoffs(nlhdlr)     ++(nlhdlr)->ncutoffs
+#define SCIPnlhdlrIncrementNSeparated(nlhdlr)   ++(nlhdlr)->nseparated
+#endif
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SCIP_NLHDLR_H_ */

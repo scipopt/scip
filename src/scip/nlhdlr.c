@@ -37,6 +37,28 @@
  * @{
  */
 
+#ifdef NDEBUG
+/* Undo the defines from pub_nlhdlr.h, which exist if NDEBUG is defined. */
+#undef SCIPnlhdlrSetCopyHdlr
+#undef SCIPnlhdlrSetFreeHdlrData
+#undef SCIPnlhdlrSetFreeExprData
+#undef SCIPnlhdlrSetInitExit
+#undef SCIPnlhdlrSetProp
+#undef SCIPnlhdlrSetSepa
+#undef SCIPnlhdlrGetName
+#undef SCIPnlhdlrGetDesc
+#undef SCIPnlhdlrGetDetectPriority
+#undef SCIPnlhdlrGetEnfoPriority
+#undef SCIPnlhdlrIsEnabled
+#undef SCIPnlhdlrGetData
+#undef SCIPnlhdlrHasIntEval
+#undef SCIPnlhdlrHasReverseProp
+#undef SCIPnlhdlrHasInitSepa
+#undef SCIPnlhdlrHasExitSepa
+#undef SCIPnlhdlrHasEnfo
+#undef SCIPnlhdlrHasEstimate
+#endif
+
 /** sets the copy handler callback of a nonlinear handler */
 void SCIPnlhdlrSetCopyHdlr(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
@@ -273,6 +295,12 @@ SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrCompEnfo)
 /** @} */
 
 /* nlhdlr private API functions from nlhdlr.h */
+
+#ifndef NDEBUG
+#undef SCIPnlhdlrResetNDetectionslast
+#undef SCIPnlhdlrIncrementNCutoffs
+#undef SCIPnlhdlrIncrementNSeparated
+#endif
 
 /** creates a nonlinear handler */
 SCIP_RETCODE SCIPnlhdlrCreate(

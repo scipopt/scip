@@ -32,6 +32,14 @@
 #include "scip/type_sepa.h"
 #include "scip/type_var.h"
 
+#ifdef NDEBUG
+#include "scip/struct_misc.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**@defgroup RowPrep Linear Inequality
  * @ingroup DataStructures
  * @brief a linear inequality that is prepared to become a SCIP_ROW
@@ -168,8 +176,23 @@ void SCIProwprepRecordModifications(
    );
 
 #ifdef NDEBUG
+/* If NDEBUG is defined, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+#define SCIProwprepGetNVars(rowprep)  (rowprep)->nvars
+#define SCIProwprepGetVars(rowprep)   (rowprep)->vars
+#define SCIProwprepGetCoefs(rowprep)  (rowprep)->coefs
+#define SCIProwprepGetSide(rowprep)   (rowprep)->side
+#define SCIProwprepGetSidetype(rowprep) (rowprep)->sidetype
+#define SCIProwprepIsLocal(rowprep)   (rowprep)->local
+#define SCIProwprepGetName(rowprep)   (rowprep)->name
+#define SCIProwprepGetNModifiedVars(rowprep) (rowprep)->nmodifiedvars
+#define SCIProwprepGetModifiedVars(rowprep) (rowprep)->modifiedvars
 #define SCIProwprepAddSide(rowprep, sideadd)  ((rowprep)->side += (sideadd))
 #define SCIProwprepAddConstant(rowprep, constant)  SCIProwprepAddSide(rowprep, -(constant))
+#define SCIProwprepSetSidetype(rowprep, sidetype_) (rowprep)->sidetype = sidetype_
+#define SCIProwprepSetLocal(rowprep, islocal) (rowprep)->local = islocal
+#define SCIProwprepRecordModifications(rowprep) (rowprep)->recordmodifications = TRUE
 #endif
 
 /** prints a rowprep */
@@ -377,5 +400,9 @@ SCIP_RETCODE SCIPgetRowprepRowSepa(
    );
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __SCIP_PUB_MISC_ROWPREP_H__ */

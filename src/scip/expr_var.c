@@ -27,6 +27,10 @@
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
 
+#ifdef NDEBUG
+#undef SCIPgetVarExprVar
+#endif
+
 #define EXPRHDLR_NAME         "var"
 #define EXPRHDLR_DESC         "SCIP variable expression"
 #define EXPRHDLR_PRECEDENCE   0

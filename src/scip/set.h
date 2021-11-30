@@ -865,6 +865,7 @@ SCIP_RETCODE SCIPsetIncludeExprhdlr(
    );
 
 /** returns the expression handler of the given name, or NULL if not existing */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPfindExprhdlr() macro */
 SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name                /**< name of expression handler */

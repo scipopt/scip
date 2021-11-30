@@ -1733,6 +1733,23 @@ SCIP_RETCODE SCIPnlrowIsRedundant(
    return SCIP_OKAY;
 }
 
+#ifdef NDEBUG
+/* Undo the defines from pub_nlhdlr.h, which exist if NDEBUG is defined. */
+#undef SCIPnlrowGetConstant
+#undef SCIPnlrowGetNLinearVars
+#undef SCIPnlrowGetLinearVars
+#undef SCIPnlrowGetLinearCoefs
+#undef SCIPnlrowGetExpr
+#undef SCIPnlrowGetLhs
+#undef SCIPnlrowGetRhs
+#undef SCIPnlrowGetCurvature
+#undef SCIPnlrowSetCurvature
+#undef SCIPnlrowGetName
+#undef SCIPnlrowGetNLPPos
+#undef SCIPnlrowIsInNLP
+#undef SCIPnlrowGetDualsol
+#endif
+
 /** gets constant */
 SCIP_Real SCIPnlrowGetConstant(
    SCIP_NLROW*           nlrow               /**< NLP row */

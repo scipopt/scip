@@ -455,6 +455,22 @@ void SCIPexpriterFree(
  * public functions (pub_expr.h)
  */
 
+#ifdef NDEBUG
+#undef SCIPexpriterIsInit
+#undef SCIPexpriterGetCurrent
+#undef SCIPexpriterGetStageDFS
+#undef SCIPexpriterGetChildIdxDFS
+#undef SCIPexpriterGetChildExprDFS
+#undef SCIPexpriterGetParentDFS
+#undef SCIPexpriterGetCurrentUserData
+#undef SCIPexpriterGetChildUserDataDFS
+#undef SCIPexpriterGetExprUserData
+#undef SCIPexpriterSetCurrentUserData
+#undef SCIPexpriterSetExprUserData
+#undef SCIPexpriterSetChildUserData
+#undef SCIPexpriterIsEnd
+#endif
+
 /** returns whether expression iterator is currently initialized */
 SCIP_Bool SCIPexpriterIsInit(
    SCIP_EXPRITER*        iterator            /**< expression iterator */
