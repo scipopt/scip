@@ -3290,6 +3290,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
 
    assert(row->fprow != NULL);
    assert(set->exact_cutmaxdenomsize > 0);
+   assert(set->exact_cutapproxmaxboundval >= 0);
 
    SCIPdebugMessage("approximating row ");
    SCIPdebug(SCIPprintRowExact(set->scip, row, NULL));
@@ -3304,7 +3305,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       SCIP_VAR* var = row->cols[i]->fpcol->var;
       SCIP_Rational* val = row->vals[i];
 
-      maxboundval = 1e5;
+      maxboundval = set->exact_cutapproxmaxboundval;
 
       /** @todo exip: we only need one bound if we can control the direction we look in */
       if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) || RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
@@ -3313,7 +3314,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       if( RatDenominatorIsLE(val, maxdenom) )
          continue;
 
-      if( RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval) )
+      if( (maxboundval > 0) && (RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval)) )
          continue;
 
       RatComputeApproximation(tmpval, val, set->exact_cutmaxdenomsize);

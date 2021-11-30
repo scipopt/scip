@@ -499,11 +499,13 @@
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
 #define SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY 3 /**< frequency at which safe dual bounding method is interleaved with exact LP
                                                  *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
-#define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION  1 /**< strategy to select which dual columns to use for lp to compute interior point
+#define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy to select which dual columns to use for lp to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
-#define SCIP_DEFAULT_EXACT_LPINFO          FALSE/**< should the exact LP solver display status messages? */
-#define SCIP_DEFAULT_CUTMAXDENOMSIZE       10e7 /**< maximal denominator in cut coefficient, leading to slightly weaker
+#define SCIP_DEFAULT_EXACT_LPINFO         FALSE /**< should the exact LP solver display status messages? */
+#define SCIP_DEFAULT_CUTMAXDENOMSIZE    1048576 /**< maximal denominator in cut coefficient, leading to slightly weaker (default is 2^200)
                                                  *   but numerically better cuts (0: disabled) */
+#define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000 /**< maximal absolute bound value for wich cut coefficient should
+                                                 *   be approximated with bounded denominator (0: no restriction) */
 
 /* certificate output */
 #define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate output file, or "-" if no output should be created */
@@ -2709,10 +2711,14 @@ SCIP_RETCODE SCIPsetCreate(
          "should the exact LP solver display status messages?",
          &(*set)->exact_lpinfo, FALSE, SCIP_DEFAULT_EXACT_LPINFO,
          NULL, NULL) );
-      SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "exact/cutmaxdenomsize",
          "maximal denominator in cut coefficient, leading to slightly weaker but numerically better cuts (0: disabled)",
          &(*set)->exact_cutmaxdenomsize, FALSE, SCIP_DEFAULT_CUTMAXDENOMSIZE, 0, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "exact/curapproxmaxboundval",
+         "maximal absolute bound value for wich cut coefficient should be approximated with bounded denominator (0: no restriction)",
+         &(*set)->exact_cutapproxmaxboundval, FALSE, SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL, 0, SCIP_LONGINT_MAX, NULL, NULL) );
 #endif
 
    /* CERTIFICATE tool parameters */
