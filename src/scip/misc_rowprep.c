@@ -513,6 +513,24 @@ void rowprepCleanupSide(
       *viol = SCIP_INVALID;
 }
 
+#ifdef NDEBUG
+/* Undo the defines from pub_misc_rowprep.h, which exist if NDEBUG is defined. */
+#undef SCIProwprepGetNVars
+#undef SCIProwprepGetVars
+#undef SCIProwprepGetCoefs
+#undef SCIProwprepGetSide
+#undef SCIProwprepGetSidetype
+#undef SCIProwprepIsLocal
+#undef SCIProwprepGetName
+#undef SCIProwprepGetNModifiedVars
+#undef SCIProwprepGetModifiedVars
+#undef SCIProwprepAddSide
+#undef SCIProwprepAddConstant
+#undef SCIProwprepSetSidetype
+#undef SCIProwprepSetLocal
+#undef SCIProwprepRecordModifications
+#endif
+
 /** creates a SCIP_ROWPREP datastructure
  *
  * Initial row represents 0 &le; 0.

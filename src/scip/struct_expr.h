@@ -28,6 +28,7 @@
 #include "scip/type_expr.h"
 #include "scip/type_clock.h"
 #include "scip/type_stat.h"
+#include "blockmemshell/memory.h"
 
 /** generic data and callback methods of an expression handler */
 struct SCIP_Exprhdlr

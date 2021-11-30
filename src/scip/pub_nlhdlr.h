@@ -25,13 +25,17 @@
 #ifndef SCIP_PUB_NLHDLR_H_
 #define SCIP_PUB_NLHDLR_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "scip/def.h"
 #include "scip/type_scip.h"
 #include "scip/type_nlhdlr.h"
+
+#ifdef NDEBUG
+#include "scip/struct_nlhdlr.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**@addtogroup PublicNlhdlrInterfaceMethods
  * @{
@@ -161,6 +165,30 @@ SCIP_Bool SCIPnlhdlrHasEstimate(
  * if handlers have same detection priority, then compare by name
  */
 SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrComp);
+
+#ifdef NDEBUG
+/* If NDEBUG is defined, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+#define SCIPnlhdlrSetCopyHdlr(nlhdlr, copy)               (nlhdlr)->copyhdlr = copy
+#define SCIPnlhdlrSetFreeHdlrData(nlhdlr, freehdlrdata_)  (nlhdlr)->freehdlrdata = freehdlrdata_
+#define SCIPnlhdlrSetFreeExprData(nlhdlr, freeexprdata_)  (nlhdlr)->freeexprdata = freeexprdata_
+#define SCIPnlhdlrSetInitExit(nlhdlr, init_, exit_)       do { (nlhdlr)->init = init_; nlhdlr->exit = exit_; } while (FALSE)
+#define SCIPnlhdlrSetProp(nlhdlr, inteval_, reverseprop_) do { (nlhdlr)->inteval = inteval_; nlhdlr->reverseprop = reverseprop_; } while (FALSE)
+#define SCIPnlhdlrSetSepa(nlhdlr, initsepa_, enfo_, estimate_, exitsepa_) do { (nlhdlr)->initsepa = initsepa_; (nlhdlr)->enfo = enfo_; (nlhdlr)->estimate = estimate_; (nlhdlr)->exitsepa = exitsepa_; } while (FALSE);
+#define SCIPnlhdlrGetName(nlhdlr) (nlhdlr)->name
+#define SCIPnlhdlrGetDesc(nlhdlr) (nlhdlr)->desc
+#define SCIPnlhdlrGetDetectPriority(nlhdlr) (nlhdlr)->detectpriority
+#define SCIPnlhdlrGetEnfoPriority(nlhdlr) (nlhdlr)->enfopriority
+#define SCIPnlhdlrIsEnabled(nlhdlr)  (nlhdlr)->enabled
+#define SCIPnlhdlrGetData(nlhdlr) (nlhdlr)->data
+#define SCIPnlhdlrHasIntEval(nlhdlr) ((nlhdlr)->inteval != NULL)
+#define SCIPnlhdlrHasReverseProp(nlhdlr) ((nlhdlr)->reverseprop != NULL)
+#define SCIPnlhdlrHasInitSepa(nlhdlr) ((nlhdlr)->initsepa != NULL)
+#define SCIPnlhdlrHasExitSepa(nlhdlr) ((nlhdlr)->exitsepa != NULL)
+#define SCIPnlhdlrHasEnfo(nlhdlr) ((nlhdlr)->enfo != NULL)
+#define SCIPnlhdlrHasEstimate(nlhdlr) ((nlhdlr)->estimate != NULL)
+#endif
 
 /** @} */
 
