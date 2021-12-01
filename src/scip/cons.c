@@ -3870,7 +3870,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             lastnusefulpropconss = conshdlr->nusefulpropconss;
 
             /* get the array of the constraints to be processed */
-            conss = conshdlr->propconss + firstcons;
+            conss = nconss > 0 ? (conshdlr->propconss + firstcons) : NULL;
 
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
             oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
