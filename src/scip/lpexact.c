@@ -3299,13 +3299,16 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
    SCIP_CALL( RatCreateBuffer(set->buffer, &difference) );
 
    rhschange = 0;
+   maxboundval = set->exact_cutapproxmaxboundval;
+   maxdenom = set->exact_cutmaxdenomsize;
+
+   assert(maxdenom >= 0);
+   assert(maxboundval >= 0);
 
    for( i = 0; i < row->len; i++ )
    {
       SCIP_VAR* var = row->cols[i]->fpcol->var;
       SCIP_Rational* val = row->vals[i];
-
-      maxboundval = set->exact_cutapproxmaxboundval;
 
       /** @todo exip: we only need one bound if we can control the direction we look in */
       if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) || RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
@@ -3317,7 +3320,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       if( (maxboundval > 0) && (RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval)) )
          continue;
 
-      RatComputeApproximation(tmpval, val, set->exact_cutmaxdenomsize);
+      RatComputeApproximation(tmpval, val, maxdenom);
 
       RatDiff(difference, tmpval, val);
       if( RatIsPositive(difference) )
