@@ -44,7 +44,6 @@ Expressions:
   Removed complex expression types sum, product, linear, quadratic, polynomial.
   Removed support for parameterized expressions.
 - Added support for expression types sin, cos, and entropy. Added an expression type that stores a SCIP variable.
-- Removed writing of nonlinear constraints in GAMS reader for now.
 - Added handling of sin and cos expressions in OSiL reader.
 - Added handling of sin, cos, and tan expressions in ZIMPL reader.
 - Added expression handler plugin type, removed user expression type.

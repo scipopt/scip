@@ -25,15 +25,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#ifdef CLASSIC_NONLINEAR_CONSHDLR  /* TODO code disabled with this define needs to be update to work with new cons_nonlinear, see #3014 */
-#include "scip/pub_expr.h"
-#include "scip/cons_abspower.h"
-#include "scip/cons_bivariate.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
-#include "scip/cons_soc.h"
-#include "scip/pub_nlp.h"
-#endif
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -60,7 +52,7 @@
 
 
 #define READER_NAME             "gmsreader"
-#define READER_DESC             "file writer for MI(NL)(SOC)Ps in GAMS file format"
+#define READER_DESC             "file writer for (MI)(N)LPs in GAMS file format"
 #define READER_EXTENSION        "gms"
 
 
@@ -82,9 +74,10 @@ static const char badchars[] = "#*+/-@$[](){}";
 static
 SCIP_RETCODE getActiveVariables(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< vars array to get active variables for */
-   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   SCIP_VAR***           vars,               /**< pointer to vars array to get active variables for */
+   SCIP_Real**           scalars,            /**< pointer to scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   int*                  varssize,           /**< pointer to length of vars and scalars array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
@@ -94,30 +87,36 @@ SCIP_RETCODE getActiveVariables(
 
    assert( scip != NULL );
    assert( vars != NULL );
+   assert( *vars != NULL );
    assert( scalars != NULL );
+   assert( *scalars != NULL );
    assert( nvars != NULL );
+   assert( varssize != NULL );
+   assert( *varssize >= *nvars );
    assert( constant != NULL );
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *varssize, constant, &requiredsize, TRUE) );
 
-      if( requiredsize > *nvars )
+      if( requiredsize > *varssize )
       {
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
-         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
+         *varssize = SCIPcalcMemGrowSize(scip, requiredsize);
+         SCIP_CALL( SCIPreallocBufferArray(scip, vars, *varssize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, scalars, *varssize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-         assert( requiredsize <= *nvars );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *varssize, constant, &requiredsize, TRUE) );
+         assert(requiredsize <= *varssize);
       }
    }
    else
    {
       for( v = 0; v < *nvars; ++v )
       {
-         SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
+         SCIP_CALL( SCIPvarGetOrigvarSum(&(*vars)[v], &(*scalars)[v], constant) );
       }
    }
+
    return SCIP_OKAY;
 }
 
@@ -135,7 +134,7 @@ void clearLine(
    linebuffer[0] = '\0';
 }
 
-/** ends the given line with '\\0' and prints it to the given file stream */
+/** ends the given line with '\\0' and prints it to the given file stream, with a newline at the end */
 static
 void endLine(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -153,6 +152,28 @@ void endLine(
    {
       linebuffer[(*linecnt)] = '\0';
       SCIPinfoMessage(scip, file, "%s\n", linebuffer);
+      clearLine(linebuffer, linecnt);
+   }
+}
+
+/** ends the given line with '\\0' and prints it to the given file stream, without a newline at the end */
+static
+void endLineNoNewline(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   char*                 linebuffer,         /**< line */
+   int*                  linecnt             /**< number of characters in line */
+   )
+{
+   assert( scip != NULL );
+   assert( linebuffer != NULL );
+   assert( linecnt != NULL );
+   assert( 0 <= *linecnt && *linecnt < GMS_MAX_LINELEN );
+
+   if( (*linecnt) > 0 )
+   {
+      linebuffer[(*linecnt)] = '\0';
+      SCIPinfoMessage(scip, file, "%s", linebuffer);
       clearLine(linebuffer, linecnt);
    }
 }
@@ -189,27 +210,6 @@ void appendLine(
    if( (*linecnt) > GMS_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
 }
-
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-/** appends extension to line and prints it to the give file stream if the
- *  line exceeded the length given in the define GMS_PRINTLEN
- *  indents the line by some spaces if it is a new line */
-static
-void appendLineWithIndent(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   char*                 linebuffer,         /**< line */
-   int*                  linecnt,            /**< number of characters in line */
-   const char*           extension           /**< string to extend the line */
-   )
-{
-   if( *linecnt == 0 )
-      /* we start a new line; therefore we indent line */
-      appendLine(scip, file, linebuffer, linecnt, "     ");
-
-   appendLine(scip, file, linebuffer, linecnt, extension);
-}
-#endif
 
 /** checks string for occurences of bad symbols and replace those by '_' */
 static
@@ -286,6 +286,7 @@ SCIP_RETCODE printActiveVariables(
    SCIP_VAR** activevars = NULL;
    SCIP_Real* activevals = NULL;
    int nactivevars;
+   int activevarssize;
    SCIP_Real activeconstant = 0.0;
 
    assert( scip != NULL );
@@ -318,9 +319,10 @@ SCIP_RETCODE printActiveVariables(
          for( v = 0; v < nactivevars; ++v )
             activevals[v] = 1.0;
       }
+      activevarssize = nactivevars;
 
       /* retransform given variables to active variables */
-      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activevarssize, &activeconstant, transformed) );
 
       assert( nactivevars == 0 || activevals != NULL );
 
@@ -520,6 +522,7 @@ SCIP_RETCODE printLinearCons(
    SCIP_Real* activevals = NULL;
    int nactivevars;
    SCIP_Real activeconstant = 0.0;
+   int activevarssize;
 
    assert( scip != NULL );
    assert( rowname != NULL );
@@ -548,9 +551,10 @@ SCIP_RETCODE printLinearCons(
          for( v = 0; v < nactivevars; ++v )
             activevals[v] = 1.0;
       }
+      activevarssize = nactivevars;
 
       /* retransform given variables to active variables */
-      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+      SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activevarssize, &activeconstant, transformed) );
    }
 
    /* print row(s) in GAMS format */
@@ -588,331 +592,6 @@ SCIP_RETCODE printLinearCons(
    return SCIP_OKAY;
 }
 
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-/* print quadratic row in GAMS format to file stream (performing retransformation to active variables) */
-static
-SCIP_RETCODE printQuadraticRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           rowname,            /**< row name */
-   const char*           rownameextension,   /**< row name extension */
-   const char*           type,               /**< row type ("=e=", "=l=", or "=g=") */
-   int                   nlinvars,           /**< number of linear terms */
-   SCIP_VAR**            linvars,            /**< variables in linear part */ 
-   SCIP_Real*            lincoeffs,          /**< coefficients of variables in linear part */ 
-   int                   nquadvarterms,      /**< number of quadratic variable terms */
-   SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
-   int                   nbilinterms,        /**< number of bilinear terms */
-   SCIP_BILINTERM*       bilinterms,         /**< bilinear terms */
-   SCIP_Real             rhs,                /**< right hand side */
-   SCIP_Bool             transformed         /**< transformed constraint? */
-   )
-{
-   int t;
-   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
-   int linecnt;
-
-   SCIP_VAR* var;
-   char consname[GMS_MAX_NAMELEN + 3]; /* four extra characters for ' ..' */
-   char buffer[GMS_MAX_PRINTLEN];
-
-   assert( scip != NULL );
-   assert( strlen(rowname) > 0 || strlen(rownameextension) > 0 );
-   assert( strcmp(type, "=e=") == 0 || strcmp(type, "=l=") == 0 || strcmp(type, "=g=") == 0 );
-   assert( nlinvars == 0 || (linvars != NULL && lincoeffs != NULL) );
-   assert( nquadvarterms == 0 || quadvarterms != NULL );
-   assert( nbilinterms == 0 || bilinterms != NULL );
-   assert( nquadvarterms > 0 || nbilinterms == 0 );
-
-   clearLine(linebuffer, &linecnt);
-
-   /* start each line with a space */
-   appendLine(scip, file, linebuffer, &linecnt, " ");
-
-   /* print row name */
-   (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s%s ..", rowname, rownameextension);
-   SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN + 3, buffer) );
-
-   appendLine(scip, file, linebuffer, &linecnt, consname);
-
-   /* print linear terms */
-   if( nlinvars > 0 )
-   {
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", nlinvars, linvars, lincoeffs, transformed) );
-   }
-
-   /* print linear coefficients of quadratic terms */
-   for( t = 0; t < nquadvarterms; ++t )
-   {
-      var = quadvarterms[t].var;
-      assert( var != NULL );
-
-      if( !SCIPisZero(scip, quadvarterms[t].lincoef) )
-      {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*", quadvarterms[t].lincoef);
-
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, NULL, 1, &var, NULL, transformed) );
-      }
-   }
-
-   /* print square coefficients of quadratic terms */
-   for( t = 0; t < nquadvarterms; ++t )
-   {
-      var = quadvarterms[t].var;
-      assert( var != NULL );
-
-      if( !SCIPisZero(scip, quadvarterms[t].sqrcoef) )
-      {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*sqr", quadvarterms[t].sqrcoef);
-
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, NULL, 1, &var, NULL, transformed) );
-      }
-   }
-
-   /* print bilinear terms */
-   for( t = 0; t < nbilinterms; ++t )
-   {
-      if( !SCIPisZero(scip, bilinterms[t].coef) )
-      {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*", bilinterms[t].coef);
-
-         /* print first variable (retransformed to active variables) */
-         var = bilinterms[t].var1;
-         assert( var != NULL );
-
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, "", 1, &var, NULL, transformed) );
-
-         /* print second variable (retransformed to active variables) */
-         var = bilinterms[t].var2;
-         assert( var != NULL );
-
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "*", " ", 1, &var, NULL, transformed) );
-      }
-   }
-
-   /* print right hand side */
-   if( linecnt == 0 )
-      /* we start a new line; therefore we tab this line */
-      appendLine(scip, file, linebuffer, &linecnt, "     ");
-
-   if( SCIPisZero(scip, rhs) )
-      rhs = 0.0;
-
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s %.15g;", (nlinvars == 0 && nquadvarterms == 0) ? "0 " : "", type, rhs);
-
-   appendLine(scip, file, linebuffer, &linecnt, buffer);
-
-   endLine(scip, file, linebuffer, &linecnt);
-
-   return SCIP_OKAY;
-}
-
-
-/** prints given quadratic constraint information in GAMS format to file stream */
-static
-SCIP_RETCODE printQuadraticCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           rowname,            /**< name of the row */
-   int                   nlinvars,           /**< number of linear terms */
-   SCIP_VAR**            linvars,            /**< variables in linear part */ 
-   SCIP_Real*            lincoeffs,          /**< coefficients of variables in linear part */ 
-   int                   nquadvarterms,      /**< number of quadratic variable terms */
-   SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
-   int                   nbilinterms,        /**< number of bilinear terms */
-   SCIP_BILINTERM*       bilinterms,         /**< bilinear terms */
-   SCIP_Real             lhs,                /**< left hand side */
-   SCIP_Real             rhs,                /**< right hand side */
-   SCIP_Bool             transformed         /**< transformed constraint? */
-   )
-{
-   assert( scip != NULL );
-   assert( rowname != NULL );
-   assert( nlinvars == 0 || (linvars != NULL && lincoeffs != NULL) );
-   assert( nquadvarterms == 0 || quadvarterms != NULL );
-   assert( nbilinterms == 0 || bilinterms != NULL );
-   assert( nquadvarterms > 0 || nbilinterms == 0 );
-   assert( lhs <= rhs );
-
-   if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
-      return SCIP_OKAY;
-
-   /* print row(s) in GAMS format */
-   if( SCIPisEQ(scip, lhs, rhs) )
-   {
-      assert( !SCIPisInfinity(scip, rhs) );
-
-      /* print equality constraint */
-      SCIP_CALL( printQuadraticRow(scip, file, rowname, "", "=e=",
-         nlinvars, linvars, lincoeffs,
-         nquadvarterms, quadvarterms,
-         nbilinterms, bilinterms, rhs, transformed) );
-   }
-   else
-   {
-      if( !SCIPisInfinity(scip, -lhs) )
-      {
-         /* print inequality ">=" */
-         SCIP_CALL( printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
-            nlinvars, linvars, lincoeffs,
-            nquadvarterms, quadvarterms,
-            nbilinterms, bilinterms, lhs, transformed) );
-      }
-      if( !SCIPisInfinity(scip, rhs) )
-      {
-         /* print inequality "<=" */
-         SCIP_CALL( printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
-            nlinvars, linvars, lincoeffs,
-            nquadvarterms, quadvarterms,
-            nbilinterms, bilinterms, rhs, transformed) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** check GAMS limitations on SOC constraints
- * returns true of constraint can be written as conic equation in GAMS (using equation type =C=)
- */
-static
-SCIP_Bool isGAMSprintableSOC(
-   int                   nlhsvars,           /**< number of variables on left hand side */
-   SCIP_VAR**            lhsvars,            /**< variables on left hand side */
-   SCIP_Real*            lhscoeffs,          /**< coefficients of variables on left hand side, or NULL if == 1.0 */
-   SCIP_Real*            lhsoffsets,         /**< offsets of variables on left hand side, or NULL if == 0.0 */
-   SCIP_Real             lhsconstant,        /**< constant on left hand side */
-   SCIP_VAR*             rhsvar,             /**< variable on right hand side */
-   SCIP_Real             rhscoef,            /**< coefficient of variable on right hand side */
-   SCIP_Real             rhsoffset           /**< offset of variable on right hand side */
-   )
-{
-   int i;
-
-   assert(nlhsvars == 0 || lhsvars != NULL);
-
-   if( rhscoef != 1.0 )
-      return FALSE;
-
-   if( rhsoffset != 0.0 )
-      return FALSE;
-
-   if( rhsvar == NULL )
-      return FALSE;
-
-   if( !SCIPvarIsActive(rhsvar) )
-      return FALSE;
-
-   if( lhsconstant != 0.0 )
-      return FALSE;
-
-   if( nlhsvars < 2 )
-      return FALSE;
-
-   for( i = 0; i < nlhsvars; ++i )
-   {
-      if( lhscoeffs [i] != 1.0 )
-         return FALSE;
-
-      if( lhsoffsets[i] != 0.0 )
-         return FALSE;
-
-      if( !SCIPvarIsActive(lhsvars[i]) )
-         return FALSE;
-   }
-
-   return TRUE;
-}
-
-/* print second order cone row in GAMS format to file stream (performing retransformation to active variables)
- * The constraints are of the following form:
- * \f[
- *    \left\{ x \;:\; \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1}) \right\}.
- * \f]
- * */
-static
-SCIP_RETCODE printSOCCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           rowname,            /**< row name */
-   int                   nlhsvars,           /**< number of variables on left hand side */
-   SCIP_VAR**            lhsvars,            /**< variables on left hand side */
-   SCIP_Real*            lhscoeffs,          /**< coefficients of variables on left hand side, or NULL if == 1.0 */
-   SCIP_Real*            lhsoffsets,         /**< offsets of variables on left hand side, or NULL if == 0.0 */
-   SCIP_Real             lhsconstant,        /**< constant on left hand side */
-   SCIP_VAR*             rhsvar,             /**< variable on right hand side */
-   SCIP_Real             rhscoef,            /**< coefficient of variable on right hand side */
-   SCIP_Real             rhsoffset,          /**< offset of variable on right hand side */
-   SCIP_Bool             transformed         /**< transformed constraint? */
-   )
-{
-   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
-   int linecnt;
-
-   char consname[GMS_MAX_NAMELEN + 3]; /* four extra characters for ' ..' */
-   char buffer[GMS_MAX_PRINTLEN];
-
-   assert( scip != NULL );
-   assert( strlen(rowname) > 0 );
-   assert( nlhsvars == 0 || lhsvars != NULL );
-
-   clearLine(linebuffer, &linecnt);
-
-   /* start each line with a space */
-   appendLine(scip, file, linebuffer, &linecnt, " ");
-
-   /* print row name */
-   (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s ..", rowname);
-   SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN + 3, buffer) );
-
-   appendLine(scip, file, linebuffer, &linecnt, consname);
-
-   if( !isGAMSprintableSOC(nlhsvars, lhsvars, lhscoeffs, lhsoffsets, lhsconstant, rhsvar, rhscoef, rhsoffset) )
-   {
-      int t;
-
-      /* print right-hand side on left */
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "sqr(%.15g +", rhsoffset);
-
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, ")", 1, &rhsvar, &rhscoef, transformed) );
-
-      appendLine(scip, file, linebuffer, &linecnt, " =g= ");
-
-      /* print left-hand side on right */
-
-      if( lhsconstant != 0.0 )
-      {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", lhsconstant);
-
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
-      }
-
-      for( t = 0; t < nlhsvars; ++t )
-      {
-         assert( lhsvars[t] != NULL );
-
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "+ sqr(%.15g * (%.15g + ", lhscoeffs ? lhscoeffs[t] : 1.0, lhsoffsets ? lhsoffsets[t] : 0.0);
-
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, "))", 1, &lhsvars[t], NULL, transformed) );
-      }
-   }
-   else
-   {
-      /* print right-hand side on left */
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", 1, &rhsvar, &rhscoef, transformed) );
-
-      appendLine(scip, file, linebuffer, &linecnt, " =c= ");
-
-      /* print left-hand side on right */
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", nlhsvars, lhsvars, lhscoeffs, transformed) );
-   }
-
-   appendLine(scip, file, linebuffer, &linecnt, ";");
-
-   endLine(scip, file, linebuffer, &linecnt);
-
-   return SCIP_OKAY;
-}
-#endif
 
 /* print indicator constraint in some GAMS format to file stream (performing retransformation to active variables)
  * The constraints are of the following form:
@@ -1104,261 +783,7 @@ SCIP_RETCODE printSOSCons(
    return SCIP_OKAY;
 }
 
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-/* print signpower row in GAMS format to file stream (performing retransformation to active variables) */
-static
-SCIP_RETCODE printSignpowerRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           rowname,            /**< row name */
-   const char*           rownameextension,   /**< row name extension */
-   const char*           type,               /**< row type ("=e=", "=l=", or "=g=") */
-   SCIP_VAR*             nonlinvar,          /**< nonlinear variable */
-   SCIP_VAR*             linvar,             /**< linear variable, may be NULL */
-   SCIP_Real             exponent,           /**< exponent of nonlinear variable */
-   SCIP_Real             offset,             /**< offset of nonlinear variable */
-   SCIP_Real             coeflinear,         /**< coefficient of linear variable */
-   SCIP_Real             rhs,                /**< right hand side */
-   SCIP_Bool             transformed,        /**< transformed constraint? */
-   SCIP_Bool             signpowerallowed,   /**< allowed to use signpower operator in GAMS? */
-   SCIP_Bool*            nsmooth             /**< buffer to store whether we printed a nonsmooth function */
-   )
-{
-   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
-   int linecnt;
-   SCIP_Bool nisoddint;
-   SCIP_Bool fixedsign;
-
-   char consname[GMS_MAX_NAMELEN + 3]; /* four extra characters for ' ..' */
-   char buffer[GMS_MAX_PRINTLEN];
-
-   assert( scip != NULL );
-   assert( strlen(rowname) > 0 || strlen(rownameextension) > 0 );
-   assert( strcmp(type, "=e=") == 0 || strcmp(type, "=l=") == 0 || strcmp(type, "=g=") == 0 );
-   assert( nonlinvar != NULL );
-   assert( exponent > 1.0 );
-   assert( nsmooth != NULL );
-
-   clearLine(linebuffer, &linecnt);
-
-   /* start each line with a space */
-   appendLine(scip, file, linebuffer, &linecnt, " ");
-
-   /* print row name */
-   (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s%s ..", rowname, rownameextension);
-   SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN + 3, buffer) );
-
-   appendLine(scip, file, linebuffer, &linecnt, consname);
-
-   /* print nonlinear term
-    * if not signpowerallowed, then signpow(x,n) is printed as x*abs(x) if n == 2, x*(abs(x)**(n-1)) if n is not 2 and not an odd integer, and as power(x,n) if n is an odd integer
-    * if signpowerallowed, then signpow(x,n) is printed as power(x,n) if n is an odd integer and as signpower(x,n) otherwiser
-    */
-   nisoddint = SCIPisIntegral(scip, exponent) && ((int)SCIPfloor(scip, exponent+0.5))%2 == 1;
-   fixedsign = !SCIPisNegative(scip, SCIPvarGetLbGlobal(nonlinvar)) || !SCIPisPositive(scip, SCIPvarGetUbGlobal(nonlinvar));
-   if( !nisoddint && !fixedsign )
-   {
-      if( signpowerallowed )
-      {
-         if( offset != 0.0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "signpower(%g ", offset);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ",", 1, &nonlinvar, NULL, transformed) );
-         }
-         else
-         {
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "signpower(", ",", 1, &nonlinvar, NULL, transformed) );
-         }
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
-      }
-      else
-      {
-         if( offset != 0.0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "(%g ", offset);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ") * ", 1, &nonlinvar, NULL, transformed) );
-         }
-         else
-         {
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, NULL, " * ", 1, &nonlinvar, NULL, transformed) );
-         }
-
-         if( exponent == 2.0)
-         {
-            if( offset != 0.0 )
-            {
-               (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
-               appendLine(scip, file, linebuffer, &linecnt, buffer);
-               SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
-            }
-            else
-            {
-               SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "abs", NULL, 1, &nonlinvar, NULL, transformed) );
-            }
-         }
-         else
-         {
-            if( offset != 0.0 )
-            {
-               (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "abs(%g ", offset);
-               appendLine(scip, file, linebuffer, &linecnt, buffer);
-               SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
-            }
-            else
-            {
-               SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "abs", NULL, 1, &nonlinvar, NULL, transformed) );
-            }
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "**%g", exponent-1.0);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-         }
-      }
-      *nsmooth = TRUE;
-   }
-   else if( nisoddint || !SCIPisNegative(scip, SCIPvarGetLbGlobal(nonlinvar)) )
-   {
-      if( exponent == 2.0 )
-      {
-         if( offset != 0.0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "sqr(%g ", offset);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ")", 1, &nonlinvar, NULL, transformed) );
-         }
-         else
-         {
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "sqr", NULL, 1, &nonlinvar, NULL, transformed) );
-         }
-      }
-      else
-      {
-         if( offset != 0.0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "power(%g ", offset);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", ",", 1, &nonlinvar, NULL, transformed) );
-         }
-         else
-         {
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "power(", ",", 1, &nonlinvar, NULL, transformed) );
-         }
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
-      }
-   }
-   else
-   {
-      assert(fixedsign && !SCIPisPositive(scip, SCIPvarGetUbGlobal(nonlinvar)));
-      if( exponent == 2.0 )
-      {
-         if( offset != 0.0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "-sqr(%g ", -offset);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "-", ")", 1, &nonlinvar, NULL, transformed) );
-         }
-         else
-         {
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "-sqr(-", ")", 1, &nonlinvar, NULL, transformed) );
-         }
-      }
-      else
-      {
-         if( offset != 0.0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "-power(%g ", -offset);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "-", ",", 1, &nonlinvar, NULL, transformed) );
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-         }
-         else
-         {
-            SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "-power(-", ",", 1, &nonlinvar, NULL, transformed) );
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%g)", exponent);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-         }
-      }
-   }
-
-   /* print linear term */
-   if( linvar != NULL )
-   {
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, " +", "", 1, &linvar, &coeflinear, transformed) );
-   }
-
-   /* print right hand side */
-   if( linecnt == 0 )
-   {
-      /* we start a new line; therefore we tab this line */
-      appendLine(scip, file, linebuffer, &linecnt, "     ");
-   }
-
-   if( SCIPisZero(scip, rhs) )
-      rhs = 0.0;
-
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s %.15g;", type, rhs);
-
-   appendLine(scip, file, linebuffer, &linecnt, buffer);
-
-   endLine(scip, file, linebuffer, &linecnt);
-
-   return SCIP_OKAY;
-}
-
-/* print signpower cons in GAMS format to file stream (performing retransformation to active variables)
- */
-static
-SCIP_RETCODE printSignpowerCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           rowname,            /**< row name */
-   SCIP_VAR*             nonlinvar,          /**< nonlinear variable */
-   SCIP_VAR*             linvar,             /**< linear variable, may be NULL */
-   SCIP_Real             exponent,           /**< exponent of nonlinear variable */
-   SCIP_Real             offset,             /**< offset of nonlinear variable */
-   SCIP_Real             coeflinear,         /**< coefficient of linear variable */
-   SCIP_Real             lhs,                /**< left hand side */
-   SCIP_Real             rhs,                /**< right hand side */
-   SCIP_Bool             transformed,        /**< transformed constraint? */
-   SCIP_Bool             signpowerallowed,   /**< allowed to use signpower operator in GAMS? */
-   SCIP_Bool*            nsmooth             /**< buffer to store whether we printed a nonsmooth function */
-   )
-{
-   assert( scip != NULL );
-   assert( strlen(rowname) > 0 );
-
-   /* print row(s) in GAMS format */
-   if( SCIPisEQ(scip, lhs, rhs) )
-   {
-      assert( !SCIPisInfinity(scip, rhs) );
-
-      /* print equality constraint */
-      SCIP_CALL( printSignpowerRow(scip, file, rowname, "", "=e=",
-         nonlinvar, linvar, exponent, offset, coeflinear, rhs, transformed, signpowerallowed, nsmooth) );
-   }
-   else
-   {
-      if( !SCIPisInfinity(scip, -lhs) )
-      {
-         /* print inequality ">=" */
-         SCIP_CALL( printSignpowerRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
-            nonlinvar, linvar, exponent, offset, coeflinear, lhs, transformed, signpowerallowed, nsmooth) );
-      }
-      if( !SCIPisInfinity(scip, rhs) )
-      {
-         /* print inequality "<=" */
-         SCIP_CALL( printSignpowerRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
-            nonlinvar, linvar, exponent, offset, coeflinear, rhs, transformed, signpowerallowed, nsmooth) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/* prints expression in GAMS format to file stream */
+/** prints expression in GAMS format to file stream */
 static
 SCIP_RETCODE printExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1367,398 +792,193 @@ SCIP_RETCODE printExpr(
    int*                  linecnt,            /**< number of characters in line so far */
    SCIP_Bool*            nsmooth,            /**< buffer to store whether we printed a nonsmooth function */
    SCIP_Bool             transformed,        /**< expression belongs to transformed constraint? */
-   SCIP_EXPR*            expr,               /**< expression to print */
-   SCIP_VAR**            exprvars            /**< variables of expression */
+   SCIP_EXPR*            expr                /**< expression to print */
    )
 {
-   char buffer[GMS_MAX_PRINTLEN];
+   SCIP_EXPRITER* it;
+   SCIP_EXPRITER_STAGE stage;
+   int currentchild;
+   unsigned int parentprecedence;
+   long int fpos;
+   SCIP_VAR** activevars = NULL;
+   SCIP_Real* activecoefs = NULL;
+   int nactivevars;
+   int activevarssize;
+   SCIP_Real activeconstant = 0.0;
+   char varname[GMS_MAX_NAMELEN];
+   unsigned int sumprecedence;
 
    assert(scip != NULL);
    assert(linebuffer != NULL);
    assert(linecnt != NULL);
-   assert(expr != NULL);
    assert(nsmooth != NULL);
+   assert(expr != NULL);
 
-   switch( SCIPexprGetOperator(expr) )
+   if( file == NULL )
+      file = stdout;
+
+   appendLine(scip, file, linebuffer, linecnt, " ");
+
+   /* store file position at begin of current line */
+   fpos = ftell(file) - *linecnt;
+
+   /* print out current buffer, as we print the expression directly to file */
+   endLineNoNewline(scip, file, linebuffer, linecnt);
+
+   activevarssize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &activevars, activevarssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &activecoefs, activevarssize) );
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ALLSTAGES);
+
+   sumprecedence = SCIPexprhdlrGetPrecedence(SCIPgetExprhdlrSum(scip));
+
+   while( !SCIPexpriterIsEnd(it) )
    {
-      case SCIP_EXPR_VARIDX:
+      stage = SCIPexpriterGetStageDFS(it);
+
+      if( stage == SCIP_EXPRITER_VISITEDCHILD || stage == SCIP_EXPRITER_VISITINGCHILD )
+         currentchild = SCIPexpriterGetChildIdxDFS(it);
+      else
+         currentchild = -1;
+
+      if( SCIPexpriterGetParentDFS(it) != NULL )
+         parentprecedence = SCIPexprhdlrGetPrecedence(SCIPexprGetHdlr(SCIPexpriterGetParentDFS(it)));
+      else
+         parentprecedence = 0;
+
+      /* print a newline, if we have printed at least GMS_PRINTLEN chars since the last newline */
+      if( ftell(file) > fpos + GMS_PRINTLEN )
       {
-         SCIP_Real one;
-
-         assert(exprvars != NULL);
-
-         one = 1.0;
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, linecnt, "",  "",  1, &exprvars[SCIPexprGetOpIndex(expr)], &one, transformed) );
-
-         break;
+         SCIPinfoMessage(scip, file, "\n     ");
+         /* store file position at begin of current line again; the -5 is for the whitespace we printed already */
+         fpos = ftell(file) - 5;
       }
 
-      case SCIP_EXPR_PARAM:
+      if( SCIPisExprVar(scip, expr) )
       {
-         SCIPwarningMessage(scip, "parameterized expression in GAMS writer. GAMS file will not compile.\n");
-
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "param%d", SCIPexprGetOpIndex(expr));
-         appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-
-         break;
-      }
-
-      case SCIP_EXPR_CONST:
-      {
-         if( SCIPexprGetOpReal(expr) < 0.0 )
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "(%.15g)", SCIPexprGetOpReal(expr));
-         else
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", SCIPexprGetOpReal(expr));
-         appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-
-         break;
-      }
-
-      case SCIP_EXPR_PLUS:
-      {
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-         appendLineWithIndent(scip, file, linebuffer, linecnt, " + ");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[1], exprvars) );
-         appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-         break;
-      }
-
-      case SCIP_EXPR_MINUS:
-      {
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-         appendLineWithIndent(scip, file, linebuffer, linecnt, " - ");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[1], exprvars) );
-         appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-         break;
-      }
-
-      case SCIP_EXPR_MUL:
-      {
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-         appendLineWithIndent(scip, file, linebuffer, linecnt, " * ");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[1], exprvars) );
-         appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-         break;
-      }
-
-      case SCIP_EXPR_DIV:
-      {
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-         appendLineWithIndent(scip, file, linebuffer, linecnt, " / ");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[1], exprvars) );
-         appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-         break;
-      }
-
-      case SCIP_EXPR_REALPOWER:
-      {
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ")**(%.15g)", SCIPexprGetRealPowerExponent(expr));
-         appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-         break;
-      }
-
-      case SCIP_EXPR_INTPOWER:
-      {
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "power(");
-         SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ", %d)", SCIPexprGetIntPowerExponent(expr));
-         appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-         break;
-      }
-
-      case SCIP_EXPR_SIGNPOWER:
-      {
-         SCIP_Real exponent;
-         SCIP_Bool nisoddint;
-
-         /* signpow(x,y) is printed as x*abs(x) if y == 2, x*(abs(x) ** (y-1)) if y is not 2 and not an odd integer, and as intpower(x,y) if y is an odd integer
-          * but if reading/gmsreader/signpower is TRUE, then we print as signpower(x,y), unless y is odd integer
+         /* special handler for variables:
+          * - map to active variables
+          * - pass variable name through printConformName
           */
-         exponent = SCIPexprGetSignPowerExponent(expr);
-         nisoddint = (((SCIP_Real)((int)exponent)) == exponent) && (((int)exponent)%2 == 1); /*lint !e777*/
-
-         if( !nisoddint )
+         if( stage == SCIP_EXPRITER_ENTEREXPR )
          {
-            SCIP_Bool signpowerallowed;
+            activevars[0] = SCIPgetVarExprVar(expr);
+            activecoefs[0] = 1.0;
+            nactivevars = 1;
 
-            SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/signpower", &signpowerallowed) );
+            SCIP_CALL( getActiveVariables(scip, &activevars, &activecoefs, &nactivevars, &activevarssize, &activeconstant, transformed) );
 
-            if( signpowerallowed )
+            if( nactivevars == 1 && activecoefs[0] == 1.0 && activeconstant == 0.0 )
             {
-               appendLineWithIndent(scip, file, linebuffer, linecnt, " * signpower(");
-               SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-               (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ", %.15g)", exponent);
-               appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
+               SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[0])) );
+               SCIPinfoMessage(scip, file, "%s", varname);
             }
             else
             {
-               appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-               SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-               appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
+               SCIP_Bool needsign = FALSE;
+               int i;
 
-               if( exponent == 2.0)
+               /* do as in print of expr_sum: an opening parenthesis may be required */
+               if( sumprecedence <= parentprecedence )
+                  SCIPinfoMessage(scip, file, "(");
+
+               if( activeconstant != 0.0 )
                {
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, " * abs(");
-                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
+                  SCIPinfoMessage(scip, file, "%.15g", activeconstant);
+                  needsign = TRUE;
                }
-               else
+               for( i = 0; i < nactivevars; ++i )
                {
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, " * abs(");
-                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-                  (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ")**(%g)", SCIPexprGetRealPowerExponent(expr)-1.0);
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
+                  if( REALABS(activecoefs[i]) != 1.0 )
+                  {
+                     SCIPinfoMessage(scip, file, needsign ? "%+.15g*" : "%.15g*", activecoefs[i]);
+                  }
+                  else if( activecoefs[i] == 1.0 && needsign )
+                  {
+                     SCIPinfoMessage(scip, file, "+");
+                  }
+                  else if( activecoefs[i] == -1.0 )
+                  {
+                     SCIPinfoMessage(scip, file, "-");
+                  }
+
+                  SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[0])) );
+                  SCIPinfoMessage(scip, file, "%s", varname);
+
+                  needsign = TRUE;
+
+                  /* check whether it is time for a linebreak */
+                  if( ftell(file) > fpos + GMS_PRINTLEN )
+                  {
+                     SCIPinfoMessage(scip, file, "\n     ");
+                     fpos = ftell(file) - 5;
+                  }
                }
+
+               if( sumprecedence <= parentprecedence )
+                  SCIPinfoMessage(scip, file, ")");
             }
-            *nsmooth = TRUE;
+         }
+      }
+      else if( SCIPisExprPower(scip, expr) )
+      {
+         /* special handler for power */
+         SCIP_Real exponent = SCIPgetExponentExprPow(expr);
+
+         if( exponent == 2.0 )
+         {
+            /* write squares as "sqr(child)" */
+            if( stage == SCIP_EXPRITER_ENTEREXPR )
+               SCIPinfoMessage(scip, file, "sqr(");
+            else if( stage == SCIP_EXPRITER_LEAVEEXPR )
+               SCIPinfoMessage(scip, file, ")");
+         }
+         else if( EPSISINT(exponent, 0.0) )  /*lint !e835*/
+         {
+            /* write integer powers as "power(child, exponent)" */
+            if( stage == SCIP_EXPRITER_ENTEREXPR )
+               SCIPinfoMessage(scip, file, "power(");
+            else if( stage == SCIP_EXPRITER_LEAVEEXPR )
+               SCIPinfoMessage(scip, file, ",%g)", exponent);
+         }
+         else if( exponent == 0.5 )
+         {
+            /* write square roots as "sqrt(child)" */
+            if( stage == SCIP_EXPRITER_ENTEREXPR )
+               SCIPinfoMessage(scip, file, "sqrt(");
+            else if( stage == SCIP_EXPRITER_LEAVEEXPR )
+               SCIPinfoMessage(scip, file, ")");
          }
          else
          {
-            appendLineWithIndent(scip, file, linebuffer, linecnt, " * power(");
-            SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ", %.15g)", exponent);
-            appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
+            /* write any other power as "(child)**exponent" */
+            if( stage == SCIP_EXPRITER_ENTEREXPR )
+               SCIPinfoMessage(scip, file, "(");
+            else if( stage == SCIP_EXPRITER_LEAVEEXPR )
+               SCIPinfoMessage(scip, file, exponent >= 0.0 ? ")**%.15g" : ")**(%.15g)", exponent);
          }
-
-         break;
       }
-
-      case SCIP_EXPR_ABS:
-      case SCIP_EXPR_SIGN:
-         *nsmooth = TRUE; /*lint -fallthrough*/
-      case SCIP_EXPR_SQUARE:
-      case SCIP_EXPR_SQRT:
-      case SCIP_EXPR_EXP:
-      case SCIP_EXPR_LOG:
-      case SCIP_EXPR_SIN:
-      case SCIP_EXPR_COS:
-      case SCIP_EXPR_TAN:
-      /* case SCIP_EXPR_ERF: */
-      /* case SCIP_EXPR_ERFI: */
-      case SCIP_EXPR_MIN:
-      case SCIP_EXPR_MAX:
+      else
       {
-         int i;
-
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(", SCIPexpropGetName(SCIPexprGetOperator(expr)));
-         appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-
-         for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
-         {
-            SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[i], exprvars) );
-            if( i + 1 < SCIPexprGetNChildren(expr) )
-               appendLineWithIndent(scip, file, linebuffer, linecnt, ", ");
-         }
-
-         appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-         break;
+         /* for any other expression, use the print callback of the exprhdlr */
+         SCIP_CALL( SCIPcallExprPrint(scip, expr, stage, currentchild, parentprecedence, file) );
       }
 
-      case SCIP_EXPR_SUM:
-      case SCIP_EXPR_PRODUCT:
-      {
-         switch( SCIPexprGetNChildren(expr) )
-         {
-            case 0:
-            {
-               appendLineWithIndent(scip, file, linebuffer, linecnt, SCIPexprGetOperator(expr) == SCIP_EXPR_SUM ? "0" : "1");
-               break;
-            }
-            case 1:
-            {
-               SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[0], exprvars) );
-               break;
-            }
-            default:
-            {
-               int i;
-               char opstr[GMS_MAX_PRINTLEN];
+      expr = SCIPexpriterGetNext(it);
+   }
 
-               (void) SCIPsnprintf(opstr, GMS_MAX_PRINTLEN, SCIPexprGetOperator(expr) == SCIP_EXPR_SUM ? " + " : " * ");
-               appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-               for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
-               {
-                  if( i > 0 )
-                  {
-                     appendLineWithIndent(scip, file, linebuffer, linecnt, opstr);
-                  }
-                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[i], exprvars) );
-               }
-               appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-            }
-         }
-         break;
-      }
+   SCIPfreeExpriter(&it);
 
-      case SCIP_EXPR_LINEAR:
-      {
-         SCIP_Real constant;
-         int i;
-
-         constant = SCIPexprGetLinearConstant(expr);
-
-         if( SCIPexprGetNChildren(expr) == 0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", constant);
-            appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-            break;
-         }
-
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-
-         if( constant != 0.0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", constant);
-            appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-         }
-
-         for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g * ", SCIPexprGetLinearCoefs(expr)[i]);
-            appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-            SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[i], exprvars) );
-         }
-
-         appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-         break;
-      }
-
-      case SCIP_EXPR_QUADRATIC:
-      {
-         SCIP_Real constant;
-         int i;
-         SCIP_QUADELEM* quadelems;
-         SCIP_Real* lincoefs;
-
-         constant = SCIPexprGetQuadConstant(expr);
-
-         if( SCIPexprGetNChildren(expr) == 0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", constant);
-            appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-            break;
-         }
-
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-
-         if( constant != 0.0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", constant);
-            appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-         }
-
-         lincoefs = SCIPexprGetQuadLinearCoefs(expr);
-         if( lincoefs != NULL )
-            for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
-            {
-               (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g * ", lincoefs[i]);
-               appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-               SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[i], exprvars) );
-            }
-
-         quadelems = SCIPexprGetQuadElements(expr);
-         for( i = 0; i < SCIPexprGetNQuadElements(expr); ++i )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g * ", quadelems[i].coef);
-            appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-
-            if( quadelems[i].idx1 == quadelems[i].idx2 )
-            {
-               appendLineWithIndent(scip, file, linebuffer, linecnt, "sqr(");
-               SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[quadelems[i].idx1], exprvars) );
-               appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-            }
-            else
-            {
-               SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[quadelems[i].idx1], exprvars) );
-               appendLineWithIndent(scip, file, linebuffer, linecnt, " * ");
-               SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[quadelems[i].idx2], exprvars) );
-            }
-         }
-
-         appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-         break;
-      }
-
-      case SCIP_EXPR_POLYNOMIAL:
-      {
-         SCIP_EXPRDATA_MONOMIAL* monomdata;
-         SCIP_Real exponent;
-         int i;
-         int j;
-
-         appendLineWithIndent(scip, file, linebuffer, linecnt, "(");
-
-         if( SCIPexprGetPolynomialConstant(expr) != 0.0 || SCIPexprGetNMonomials(expr) == 0 )
-         {
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", SCIPexprGetPolynomialConstant(expr));
-            appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-         }
-
-         for( i = 0; i < SCIPexprGetNMonomials(expr); ++i )
-         {
-            monomdata = SCIPexprGetMonomials(expr)[i];
-            assert(monomdata != NULL);
-
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g", SCIPexprGetMonomialCoef(monomdata));
-            appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-
-            for( j = 0; j < SCIPexprGetMonomialNFactors(monomdata); ++j )
-            {
-               appendLineWithIndent(scip, file, linebuffer, linecnt, "*");
-
-               exponent = SCIPexprGetMonomialExponents(monomdata)[j];
-               if( exponent == 1.0 )
-               {
-                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
-               }
-               else if( exponent == 2.0 )
-               {
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, "sqr(");
-                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-               }
-               else if( exponent == 0.5 )
-               {
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, "sqrt(");
-                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-               }
-               else if( ((SCIP_Real)((int)exponent)) == exponent ) /*lint !e777*/
-               {
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, "power(");
-                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
-                  (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, ", %d)", (int)SCIPround(scip, exponent));
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-               }
-               else
-               {
-                  SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
-                  (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " ** %.15g", exponent);
-                  appendLineWithIndent(scip, file, linebuffer, linecnt, buffer);
-               }
-            }
-         }
-
-         appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
-         break;
-      }
-
-      default:
-         SCIPerrorMessage("unexpected operand %d in expression\n", SCIPexprGetOperator(expr));
-         return SCIP_OKAY;
-   } /*lint !e788*/
+   SCIPfreeBufferArray(scip, &activecoefs);
+   SCIPfreeBufferArray(scip, &activevars);
 
    return SCIP_OKAY;
 }
 
-/* print nonlinear row in GAMS format to file stream */
+/** print nonlinear row in GAMS format to file stream */
 static
 SCIP_RETCODE printNonlinearRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1766,12 +986,7 @@ SCIP_RETCODE printNonlinearRow(
    const char*           rowname,            /**< row name */
    const char*           rownameextension,   /**< row name extension */
    const char*           type,               /**< row type ("=e=", "=l=", or "=g=") */
-   int                   nlinvars,           /**< number of linear terms */
-   SCIP_VAR**            linvars,            /**< variables in linear part */
-   SCIP_Real*            lincoeffs,          /**< coefficients of variables in linear part */
-   int                   nexprtrees,         /**< number of expression trees */
-   SCIP_EXPRTREE**       exprtrees,          /**< expression trees */
-   SCIP_Real*            exprtreecoefs,      /**< expression tree coefficients */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed,        /**< transformed constraint? */
    SCIP_Bool*            nsmooth             /**< buffer to store whether we printed a nonsmooth function */
@@ -1779,11 +994,8 @@ SCIP_RETCODE printNonlinearRow(
 {
    char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
    int linecnt;
-
-   char consname[GMS_MAX_NAMELEN + 3]; /* four extra characters for ' ..' */
+   char consname[GMS_MAX_NAMELEN + 3];
    char buffer[GMS_MAX_PRINTLEN];
-
-   int i;
 
    assert( scip != NULL );
    assert( strlen(rowname) > 0 || strlen(rownameextension) > 0 );
@@ -1797,39 +1009,12 @@ SCIP_RETCODE printNonlinearRow(
    /* print row name */
    (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s%s ..", rowname, rownameextension);
    SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN + 3, buffer) );
-
    appendLine(scip, file, linebuffer, &linecnt, consname);
 
-   /* print nonlinear terms
-    */
-   for( i = 0; i < nexprtrees; ++i )
-   {
-      assert(exprtrees[i] != NULL);
-      if( exprtreecoefs[i] != 0.0 )
-      {
-         (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%+g * (", exprtreecoefs[i]);
-         appendLineWithIndent(scip, file, linebuffer, &linecnt, buffer);
-         SCIP_CALL( printExpr(scip, file, linebuffer, &linecnt, nsmooth, transformed, SCIPexprtreeGetRoot(exprtrees[i]), SCIPexprtreeGetVars(exprtrees[i])) );
-         appendLineWithIndent(scip, file, linebuffer, &linecnt, ")");
-      }
-   }
-
-   /* print linear terms, do after nonlinear since nonlinear may not print sign in beginning */
-   if( nlinvars > 0 )
-   {
-      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", nlinvars, linvars, lincoeffs, transformed) );
-   }
+   SCIP_CALL( printExpr(scip, file, linebuffer, &linecnt, nsmooth, transformed, expr) );
 
    /* print right hand side */
-   if( linecnt == 0 )
-      /* we start a new line; therefore we tab this line */
-      appendLine(scip, file, linebuffer, &linecnt, "     ");
-
-   if( SCIPisZero(scip, rhs) )
-      rhs = 0.0;
-
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s %.15g;", type, rhs);
-
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s %.15g;", type, rhs);
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
    endLine(scip, file, linebuffer, &linecnt);
@@ -1837,19 +1022,13 @@ SCIP_RETCODE printNonlinearRow(
    return SCIP_OKAY;
 }
 
-/* print nonlinear row in GAMS format to file stream (performing retransformation to active linear variables)
- * */
+/** print nonlinear row in GAMS format to file stream (performing retransformation to active linear variables) */
 static
 SCIP_RETCODE printNonlinearCons(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           rowname,            /**< row name */
-   int                   nlinvars,           /**< number of linear terms */
-   SCIP_VAR**            linvars,            /**< variables in linear part */
-   SCIP_Real*            lincoeffs,          /**< coefficients of variables in linear part */
-   int                   nexprtrees,         /**< number of expression trees */
-   SCIP_EXPRTREE**       exprtrees,          /**< expression trees */
-   SCIP_Real*            exprtreecoefs,      /**< expression tree coefficients */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed,        /**< transformed constraint? */
@@ -1865,28 +1044,24 @@ SCIP_RETCODE printNonlinearCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* print equality constraint */
-      SCIP_CALL( printNonlinearRow(scip, file, rowname, "", "=e=",
-         nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, rhs, transformed, nsmooth) );
+      SCIP_CALL( printNonlinearRow(scip, file, rowname, "", "=e=", expr, rhs, transformed, nsmooth) );
    }
    else
    {
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
-         SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
-            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, lhs, transformed, nsmooth) );
+         SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=", expr, lhs, transformed, nsmooth) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
-         SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
-            nlinvars, linvars, lincoeffs, nexprtrees, exprtrees, exprtreecoefs, rhs, transformed, nsmooth) );
+         SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=", expr, rhs, transformed, nsmooth) );
       }
    }
 
    return SCIP_OKAY;
 }
-#endif
 
 /** method check if the variable names are not longer than GMS_MAX_NAMELEN */
 static
@@ -2007,17 +1182,11 @@ SCIP_RETCODE checkConsnames(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-      if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 )
+      if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "nonlinear") == 0 )
       {
-         SCIP_Real lhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetLhsQuadratic(scip, cons);
-         SCIP_Real rhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetRhsQuadratic(scip, cons);
-#else
-      if( strcmp(conshdlrname, "linear") == 0 )
-      {
-         SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
-         SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
-#endif
+         SCIP_Real lhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetLhsNonlinear(cons);
+         SCIP_Real rhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetRhsNonlinear(cons);
+
          if( SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN )
          {
             SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
@@ -2161,11 +1330,9 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Real ub;
    SCIP_Bool freeints;
    SCIP_Bool nondefbounds;
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
    SCIP_Bool nlcons;
    SCIP_Bool nqcons;
    SCIP_Bool nsmooth;
-#endif
    SCIP_Bool discrete;
    SCIP_Bool rangedrow;
    SCIP_Bool indicatorsosdef;
@@ -2423,20 +1590,9 @@ SCIP_RETCODE SCIPwriteGms(
       rangedrow = strcmp(conshdlrname, "linear") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsLinear(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-      rangedrow = rangedrow || (strcmp(conshdlrname, "quadratic") == 0
-         && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons))
-         && !SCIPisEQ(scip, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons)));
       rangedrow = rangedrow || (strcmp(conshdlrname, "nonlinear") == 0
-         && !SCIPisInfinity(scip, -SCIPgetLhsNonlinear(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsNonlinear(scip, cons))
-         && !SCIPisEQ(scip, SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons)));
-      rangedrow = rangedrow || (strcmp(conshdlrname, "abspower") == 0
-         && !SCIPisInfinity(scip, -SCIPgetLhsAbspower(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsAbspower(scip, cons))
-         && !SCIPisEQ(scip, SCIPgetLhsAbspower(scip, cons), SCIPgetRhsAbspower(scip, cons)));
-      rangedrow = rangedrow || (strcmp(conshdlrname, "bivariate") == 0
-         && !SCIPisInfinity(scip, -SCIPgetLhsBivariate(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsBivariate(scip, cons))
-         && !SCIPisEQ(scip, SCIPgetLhsBivariate(scip, cons), SCIPgetRhsBivariate(scip, cons)));
-#endif
+         && !SCIPisInfinity(scip, -SCIPgetLhsNonlinear(cons)) && !SCIPisInfinity(scip, SCIPgetRhsNonlinear(cons))
+         && !SCIPisEQ(scip, SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons)));
       rangedrow = rangedrow || (strcmp(conshdlrname, "varbound") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsVarbound(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsVarbound(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons)));
@@ -2444,11 +1600,7 @@ SCIP_RETCODE SCIPwriteGms(
       /* we declare only those constraints which we can print in GAMS format */
       if( strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "setppc") != 0
           && strcmp(conshdlrname, "linear") != 0 && strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-          && strcmp(conshdlrname, "quadratic") != 0
-          && strcmp(conshdlrname, "soc") != 0 && strcmp(conshdlrname, "abspower") != 0 && strcmp(conshdlrname, "bivariate") != 0
           && strcmp(conshdlrname, "nonlinear") != 0
-#endif
           && strcmp(conshdlrname, "varbound") != 0
           && strcmp(conshdlrname, "indicator") != 0 )
       {
@@ -2513,11 +1665,9 @@ SCIP_RETCODE SCIPwriteGms(
    }
 
    /* print constraints */
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
    nlcons = FALSE;
    nqcons = FALSE;
    nsmooth = FALSE;
-#endif
    discrete = nbinvars > 0 || nintvars > 0;
    indicatorsosdef = FALSE;
    for( c = 0; c < nconss; ++c )
@@ -2565,71 +1715,14 @@ SCIP_RETCODE SCIPwriteGms(
                SCIPgetNVarsLogicor(scip, cons), SCIPgetVarsLogicor(scip, cons), NULL,
                1.0, SCIPinfinity(scip), transformed) );
       }
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-      else if( strcmp(conshdlrname, "quadratic") == 0 )
-      {
-         SCIP_CALL( printQuadraticCons(scip, file, consname,
-               SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-               SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
-               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
-               SCIPgetLhsQuadratic(scip, cons),  SCIPgetRhsQuadratic(scip, cons), transformed) );
-
-         nlcons = TRUE;
-      }
       else if( strcmp(conshdlrname, "nonlinear") == 0 )
       {
-         /* cons_nonlinear does not have exprtree's at hand during presolve */
-         if( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE
-             && SCIPgetExprgraphNonlinear(scip,conshdlr) != NULL )
-         {
-            SCIP_EXPRTREE* exprtree;
-            SCIP_Real coef;
-
-            SCIP_CALL( SCIPexprgraphGetTree(SCIPgetExprgraphNonlinear(scip,conshdlr), SCIPgetExprgraphNodeNonlinear(scip,cons), &exprtree) );
-            coef = 1.0;
-            SCIP_CALL( printNonlinearCons(scip, file, consname,
-                  SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
-                  1, &exprtree, &coef,
-                  SCIPgetLhsNonlinear(scip, cons),  SCIPgetRhsNonlinear(scip, cons), transformed, &nsmooth) );
-
-            SCIP_CALL( SCIPexprtreeFree(&exprtree) );
-         }
-         else
-         {
-            SCIP_CALL( printNonlinearCons(scip, file, consname,
-                  SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
-                  SCIPgetNExprtreesNonlinear(scip, cons), SCIPgetExprtreesNonlinear(scip, cons), SCIPgetExprtreeCoefsNonlinear(scip, cons),
-                  SCIPgetLhsNonlinear(scip, cons),  SCIPgetRhsNonlinear(scip, cons), transformed, &nsmooth) );
-         }
+         SCIP_CALL( printNonlinearCons(scip, file, consname,
+            SCIPgetExprNonlinear(cons), SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed, &nsmooth) );
+         /* TODO check if quadratic */
          nlcons = TRUE;
          nqcons = TRUE;
       }
-      else if( strcmp(conshdlrname, "bivariate") == 0 )
-      {
-         SCIP_EXPRTREE* exprtree;
-         SCIP_VAR* linvar;
-         SCIP_Real lincoef;
-         int exprdegree;
-         SCIP_Real one;
-
-         exprtree = SCIPgetExprtreeBivariate(scip, cons);
-         assert(exprtree != NULL);
-
-         linvar  = SCIPgetLinearVarBivariate(scip, cons);
-         lincoef = SCIPgetLinearCoefBivariate(scip, cons);
-         one = 1.0;
-         SCIP_CALL( printNonlinearCons(scip, file, consname,
-            linvar == NULL ? 0 : 1, &linvar, &lincoef,
-            1, &exprtree, &one,
-            SCIPgetLhsBivariate(scip, cons),  SCIPgetRhsBivariate(scip, cons), transformed, &nsmooth) );
-
-         SCIP_CALL( SCIPexprtreeGetMaxDegree(exprtree, &exprdegree) );
-         if( exprdegree > 1 )
-            nlcons = TRUE;
-         if( exprdegree > 2)
-            nqcons = TRUE;
-      }
-#endif
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
          consvars = SCIPgetVarsSetppc(scip, cons);
@@ -2669,35 +1762,12 @@ SCIP_RETCODE SCIPwriteGms(
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
       }
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-      else if( strcmp(conshdlrname, "soc") == 0 )
-      {
-         SCIP_CALL( printSOCCons(scip, file, consname,
-            SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
-            SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons), transformed) );
-
-         nlcons = nlcons || !isGAMSprintableSOC(SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
-            SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons));
-      }
-#endif
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
          SCIP_CALL( printIndicatorCons(scip, file, consname,
             SCIPgetBinaryVarIndicator(cons), SCIPgetSlackVarIndicator(cons), &indicatorsosdef,
             transformed) );
       }
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
-      else if( strcmp(conshdlrname, "abspower") == 0 )
-      {
-         SCIP_CALL( printSignpowerCons(scip, file, consname,
-            SCIPgetNonlinearVarAbspower(scip, cons), SCIPgetLinearVarAbspower(scip, cons),
-            SCIPgetExponentAbspower(scip, cons), SCIPgetOffsetAbspower(scip, cons), SCIPgetCoefLinearAbspower(scip, cons),
-            SCIPgetLhsAbspower(scip, cons),  SCIPgetRhsAbspower(scip, cons), transformed, signpowerallowed, &nsmooth) );
-
-         nlcons = TRUE;
-         nqcons = TRUE;
-      }
-#endif
       else if( strcmp(conshdlrname, "SOS1") == 0 )
       {
          SCIP_CALL( printSOSCons(scip, file, consname,
@@ -2722,10 +1792,8 @@ SCIP_RETCODE SCIPwriteGms(
 
       SCIPinfoMessage(scip, file, "\n");
    }
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
    /* if at most quadratic, then cannot have nonsmooth functions */
    assert(nlcons || !nsmooth);
-#endif
 
    /* print model creation */
    SCIPinfoMessage(scip, file, "Model m / all /;\n\n");
@@ -2735,12 +1803,8 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "option limcol = 0;\n\n");
 
    /* print solve command */
-#ifdef CLASSIC_NONLINEAR_CONSHDLR
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
          discrete ? "MI" : "", nlcons ? (nqcons ? ((nsmooth && !discrete) ? "DNLP" : "NLP") : "QCP") : (discrete > 0 ? "P" : "LP"));
-#else
-   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, discrete ? "MIP" : "LP");
-#endif
 
    if( objvar != NULL )
    {
