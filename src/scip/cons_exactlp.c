@@ -1533,6 +1533,7 @@ void consdataRecomputeGlbMaxactivity(
    /* the activity was just computed from scratch, mark it to be reliable */
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
 }
+#endif
 
 #ifdef SCIP_DISABLED_CODE
 /** calculates maximum absolute value of coefficients */
@@ -1571,18 +1572,24 @@ void consdataCalcMinAbsval(
    consdata->validminabsval = TRUE;
 
    if( consdata->nvars > 0 )
+   {
       RatAbs(consdata->minabsval, consdata->vals[0]);
+      assert(!RatIsZero(consdata->vals[0]));
+   }
    else
       RatSetReal(consdata->minabsval, 0.0);
 
    for( i = 1; i < consdata->nvars; ++i )
    {
+      assert(!RatIsZero(consdata->vals[i]));
+
       if( RatIsAbsGT(consdata->minabsval, consdata->vals[i]) )
          RatAbs(consdata->minabsval, consdata->vals[i]);
    }
 }
 #endif
 
+#ifdef SCIP_DISABLED_CODE
 /** checks the type of all variables of the constraint and sets hasnonbinvar and hascontvar flags accordingly */
 static
 void consdataCheckNonbinvar(
@@ -2254,7 +2261,6 @@ void consdataUpdateChgCoef(
    consdataUpdateAddCoef(scip, consdata, var, newval, checkreliability);
 }
 
-#ifdef SCIP_DISABLED_CODE
 /** returns the maximum absolute value of all coefficients in the constraint */
 static
 SCIP_Rational* consdataGetMaxAbsval(
@@ -2286,7 +2292,49 @@ SCIP_Rational* consdataGetMinAbsval(
 
    return consdata->minabsval;
 }
-#endif
+
+static
+void consdataScaleMinValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_Real             minval              /**< minmimal value for coefficients in constraint */
+   )
+{
+   int i;
+   SCIP_Rational* scalingfactor;
+   SCIP_Rational* minabsval;
+
+   assert(scip != NULL);
+   assert(consdata != NULL);
+
+   minabsval = consdataGetMinAbsval(scip, consdata);
+
+   assert(!RatIsZero(minabsval) || consdata->nvars == 0);
+
+   RatCreateBuffer(SCIPbuffer(scip), &scalingfactor);
+
+   if( RatIsLTReal(minabsval, minval) )
+   {
+      RatSetReal(scalingfactor, minval);
+      RatDiv(scalingfactor, scalingfactor, minabsval);
+
+      for( i = 0; i < consdata->nvars; i++ )
+      {
+         RatMult(consdata->vals[i], consdata->vals[i], scalingfactor);
+         SCIPintervalSetRational(&(consdata->valsreal[i]), consdata->vals[i]);
+      }
+
+      RatMult(consdata->rhs, consdata->rhs, scalingfactor);
+      consdata->rhsreal = RatRoundReal(consdata->rhs, SCIP_R_ROUND_UPWARDS);
+
+      RatMult(consdata->lhs, consdata->lhs, scalingfactor);
+      consdata->lhsreal = RatRoundReal(consdata->lhs, SCIP_R_ROUND_DOWNWARDS);
+   }
+
+   consdataInvalidateActivities(consdata);
+
+   RatFreeBuffer(SCIPbuffer(scip), &scalingfactor);
+}
 
 /** calculates minimum and maximum local and global activity for constraint from scratch;
  *  additionally recalculates maximum absolute value of coefficients
@@ -7801,137 +7849,23 @@ SCIP_RETCODE createRows(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real* valsrhsrelax;
-   SCIP_Real* valslhsrelax;
-   SCIP_Real rhsrelax;
-   SCIP_Real lhsrelax;
-   SCIP_VAR* var;
-   SCIP_Rational* ub;
-   SCIP_Rational* lb;
-   SCIP_Real lbreal;
-   SCIP_Real ubreal;
-   SCIP_ROUNDMODE roundmode;
-   int i;
-   int* sideindexpostprocess;
-   int npostprocess;
+   SCIP_Bool onerowrelax;
+   SCIP_Bool hasfprelax;
 
    assert(scip != NULL);
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
+
    assert(consdata != NULL);
    assert(consdata->rowexact == NULL);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &valsrhsrelax, consdata->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &valslhsrelax, consdata->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &sideindexpostprocess, consdata->nvars) );
+   /** create empty fp-rows */
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowrhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
+      SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   npostprocess = 0;
-   consdata->hasfprelax = TRUE;
-   consdata->onerowrelax = TRUE;
-   rhsrelax = consdata->rhsreal;
-   lhsrelax = consdata->lhsreal;
-   roundmode = SCIPintervalGetRoundingMode();
-
-   for( i = 0; i < consdata->nvars; i++ )
-   {
-      var = consdata->vars[i];
-      ub = SCIPvarGetUbGlobalExact(var);
-      lb = SCIPvarGetLbGlobalExact(var);
-      lbreal = SCIPvarGetLbGlobal(var);
-      ubreal = SCIPvarGetUbGlobal(var);
-
-      /* coefficient is exactly representable as fp number */
-      if( consdata->valsreal[i].inf == consdata->valsreal[i].sup )
-      {
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-         valsrhsrelax[i] = consdata->valsreal[i].inf;
-      }
-      /* unbounded variable with non fp-representable coefficient: var would need to be split in pos/neg to be relaxable */
-      else if( RatIsInfinity(ub) && RatIsNegInfinity(lb) )
-      {
-         consdata->hasfprelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-      }
-      /* negative upper or positive lower bounds are good */
-      else if( !RatIsInfinity(ub) && RatIsNegative(ub) )
-      {
-         consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-         valsrhsrelax[i] = consdata->valsreal[i].sup;
-      }
-      /* negative upper or positive lower bounds are good */
-      else if( !RatIsNegInfinity(lb) && RatIsPositive(lb) )
-      {
-         consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].sup;
-         valsrhsrelax[i] = consdata->valsreal[i].inf;
-      }
-      else if( !RatIsInfinity(ub) )
-      {
-         consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].inf;
-         valsrhsrelax[i] = consdata->valsreal[i].sup;
-         sideindexpostprocess[npostprocess] = i;
-         npostprocess++;
-      }
-      else
-      {
-         assert(!RatIsInfinity(lb));
-         consdata->onerowrelax = FALSE;
-         valslhsrelax[i] = consdata->valsreal[i].sup;
-         valsrhsrelax[i] = consdata->valsreal[i].inf;
-         sideindexpostprocess[npostprocess] = i;
-         npostprocess++;
-      }
-   }
-
-   SCIPintervalSetRoundingModeUpwards();
-
-   /* change the sides where necessary (do not do it immediately to not change rounding mode too often) */
-   for( i = 0; i < npostprocess; i++ )
-   {
-      int idx;
-      idx = sideindexpostprocess[i];
-
-      if( valslhsrelax[idx] == consdata->valsreal[idx].inf )
-         rhsrelax += ubreal >= 0 ? (consdata->valsreal[idx].sup - consdata->valsreal[idx].inf) * ubreal : 0;
-      else
-         rhsrelax -= lbreal <= 0 ? (consdata->valsreal[idx].sup - consdata->valsreal[idx].inf) * lbreal : 0;
-   }
-
-   SCIPintervalSetRoundingModeDownwards();
-   for( i = 0; i < npostprocess; i++ )
-   {
-      int idx;
-      idx = sideindexpostprocess[i];
-
-      if( valslhsrelax[idx] == consdata->valsreal[idx].sup ) //  upper bound was used
-         lhsrelax -= ubreal >= 0 ? (consdata->valsreal[i].sup - consdata->valsreal[i].inf) * ubreal : 0;
-      else
-         lhsrelax += lbreal <= 0 ? (consdata->valsreal[i].sup - consdata->valsreal[i].inf) * lbreal : 0;
-   }
-
-   SCIPintervalSetRoundingMode(roundmode);
-
-   /* only create one row if possible, or if relaxation did not work at all */
-   if( !consdata->hasfprelax || consdata->onerowrelax )
-   {
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rowlhs, cons, SCIPconsGetName(cons), lhsrelax, rhsrelax,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-      SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rowlhs, consdata->nvars, consdata->vars, valslhsrelax) );
-   }
-   /* create two fp-rows for row relaxation */
-   else
-   {
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rowrhs, cons, SCIPconsGetName(cons), lhsrelax, rhsrelax,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-      SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rowrhs, consdata->nvars, consdata->vars, valsrhsrelax) );
-
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->rowlhs, cons, SCIPconsGetName(cons), lhsrelax, rhsrelax,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-      SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rowlhs, consdata->nvars, consdata->vars, valslhsrelax) );
-   }
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowlhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
+      SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    /** create exact row */
    SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->rowlhs, consdata->rowrhs,
@@ -7939,9 +7873,17 @@ SCIP_RETCODE createRows(
 
    SCIP_CALL( SCIPaddVarsToRowExact(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
 
-   SCIPfreeBufferArray(scip, &sideindexpostprocess);
-   SCIPfreeBufferArray(scip, &valslhsrelax);
-   SCIPfreeBufferArray(scip, &valsrhsrelax);
+   onerowrelax = TRUE;
+   hasfprelax = TRUE;
+
+   SCIP_CALL( SCIPgenerateFpRowsFromRowExact(scip, consdata->rowexact, consdata->rowlhs,
+      consdata->rowrhs, &onerowrelax, &hasfprelax) );
+
+   consdata->onerowrelax = onerowrelax;
+   consdata->hasfprelax = hasfprelax;
+
+   if( !(consdata->hasfprelax) || consdata->onerowrelax )
+      consdata->rowrhs = NULL;
 
    return SCIP_OKAY;
 }
@@ -16224,6 +16166,8 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
+
+   consdataScaleMinValue(scip, targetdata, 2 * SCIPepsilon(scip));
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,

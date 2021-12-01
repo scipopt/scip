@@ -267,6 +267,21 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
+/** populate data of two empty fp rows with data from exact row */
+SCIP_RETCODE SCIProwExactGenerateFpRows(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_ROWEXACT*        row,                /**< SCIP row */
+   SCIP_ROW*             rowlhs,             /**< fp row-relaxation wrt lhs */
+   SCIP_ROW*             rowrhs,             /**< fp row-relaxation wrt rhs */
+   SCIP_Bool*            onerowrelax,        /**< is one row enough to represent the exact row */
+   SCIP_Bool*            hasfprelax          /**< is it possible to generate relaxations at all for this row? */
+   );
+
 /** applies all cached changes to the LP solver */
 SCIP_RETCODE SCIPlpExactFlush(
    SCIP_LPEXACT*         lp,                 /**< current exact LP data */

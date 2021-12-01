@@ -610,6 +610,8 @@ struct SCIP_Set
    SCIP_Bool             exact_lpinfo;       /**< should exact the LP solver display status messages? */
    SCIP_Longint          exact_cutmaxdenomsize; /**< maximal denominator in cut coefficient, leading to slightly
                                               *   weaker but numerically better cuts (0: disabled) */
+   SCIP_Longint          exact_cutapproxmaxboundval; /**< maximal absolute bound value for wich cut coefficient should
+                                              *   be approximated with bounded denominator (0: no restriction) */
 
    /* CERTIFICATE tool settings */
    char*                 certificate_filename; /**< name of the CERTIFICATE Tool output file, or - if no output should be created */

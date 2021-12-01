@@ -301,7 +301,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
    rowexact = SCIProwGetRowExact(row);
 
    /* add the non-zeros to the aggregation row and keep non-zero index up to date */
-   for( i = 0 ; i < rowexact->len; ++i )
+   for( i = 0 ; i < row->len; ++i )
    {
       SCIP_Real QUAD(val);
       int probindex;

@@ -1759,7 +1759,6 @@ SCIP_RETCODE projectShift(
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
           && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
-         stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
          *safebound = computedbound;
          stat->nfailprojshift++;
          stat->nprojshiftobjlimfail++;
@@ -2277,7 +2276,6 @@ SCIP_RETCODE boundShift(
          stat->nboundshiftobjlim++;
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
-         stat->boundingerrorbs += REALABS(lp->lpobjval - computedbound);
          *safebound = computedbound;
          stat->nfailboundshift++;
          stat->nboundshiftobjlimfail++;
