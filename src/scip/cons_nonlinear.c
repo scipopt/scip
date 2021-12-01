@@ -10297,6 +10297,8 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
    /* simplify root expression if the constraint has been added after presolving */
    if( SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE )
    {
+      SCIP_Bool replacedroot;
+
       if( !consdata->issimplified )
       {
          SCIP_EXPR* simplified;
@@ -10309,6 +10311,10 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
          consdata->expr = simplified;
          consdata->issimplified = TRUE;
       }
+
+      /* ensure each variable is represented by one variable expression only (need this for storeVarExprs() with simplified=TRUE below) */
+      SCIP_CALL( SCIPreplaceCommonSubexpressions(scip, &consdata->expr, 1, &replacedroot) );
+      assert(!replacedroot);  /* root expression cannot have been equal to one of its subexpressions */
 
       /* ensure that varexprs in consdata->expr are the one from var2expr hashmap */
       {
