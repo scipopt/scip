@@ -501,7 +501,7 @@ Expression:
 - added SCIPcompareExpr(), SCIPhashExpr()
 - added SCIPsimplifyExpr(), SCIPreplaceCommonSubexpressions()
 - added SCIPgetExprNVars(), SCIPgetExprVarExprs()
-- added SCIPcallExprCurvature(), SCIPcallExprMonotonicity(), SCIPcallExprEval(), SCIPcallExprEvalFwdiff(), SCIPcallExprInteval(), SCIPcallExprEstimate(), SCIPcallExprInitestimates(), SCIPcallExprSimplify(), SCIPcallExprReverseprop()
+- added SCIPcallExprPrint(), SCIPcallExprCurvature(), SCIPcallExprMonotonicity(), SCIPcallExprEval(), SCIPcallExprEvalFwdiff(), SCIPcallExprInteval(), SCIPcallExprEstimate(), SCIPcallExprInitestimates(), SCIPcallExprSimplify(), SCIPcallExprReverseprop()
 - added SCIPexprcurvPowerInv(), SCIPexprcurvMonomialInv()
 
 Expression iterator:

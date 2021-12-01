@@ -2105,6 +2105,20 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    return SCIP_OKAY;
 }
 
+/** calls the print callback for an expression
+ *
+ * @see SCIP_DECL_EXPRPRINT
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRPRINT(SCIPcallExprPrint)
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPexprhdlrPrintExpr(SCIPexprGetHdlr(expr), scip->set, scip->messagehdlr, expr, stage, currentchild, parentprecedence, file) );
+
+   return SCIP_OKAY;
+}
+
 /** calls the curvature callback for an expression
  *
  * @see SCIP_DECL_EXPRCURVATURE
