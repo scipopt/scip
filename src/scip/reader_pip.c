@@ -1908,7 +1908,7 @@ void appendLine(
 }
 
 
-/* print row in PIP format to file stream */
+/** print linear or quadratic row in PIP format to file stream */
 static
 SCIP_RETCODE printRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2230,7 +2230,7 @@ void printSignomial(
    }
 }
 
-/** print row in PIP format to file stream */
+/** print polynomial row in PIP format to file stream */
 static
 void printRowNl(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2294,6 +2294,54 @@ void printRowNl(
    if( linecnt == 0 )
       appendLine(scip, file, linebuffer, &linecnt, " ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
+
+   endLine(scip, file, linebuffer, &linecnt);
+}
+
+/** print "and" constraint as row in PIP format to file stream */
+static
+void printRowAnd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   SCIP_CONS*            cons                /**< "and" constraint */
+   )
+{
+   char linebuffer[PIP_MAX_PRINTLEN+1] = { '\0' };
+   int linecnt;
+   int i;
+
+   assert(scip != NULL);
+   assert(rowname != NULL);
+   assert(cons != NULL);
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   /* print row name */
+   if( strlen(rowname) > 0 )
+   {
+      appendLine(scip, file, linebuffer, &linecnt, rowname);
+      appendLine(scip, file, linebuffer, &linecnt, ":");
+   }
+
+   for( i = 0; i < SCIPgetNVarsAnd(scip, cons); ++i )
+   {
+      appendLine(scip, file, linebuffer, &linecnt, " ");
+      appendLine(scip, file, linebuffer, &linecnt, SCIPvarGetName(SCIPgetVarsAnd(scip, cons)[i]));
+   }
+
+   appendLine(scip, file, linebuffer, &linecnt, " - ");
+   appendLine(scip, file, linebuffer, &linecnt, SCIPvarGetName(SCIPgetResultantAnd(scip, cons)));
+
+   /* we start a new line; therefore we tab this line */
+   if( linecnt == 0 )
+      appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   /* print right hand side */
+   appendLine(scip, file, linebuffer, &linecnt, " = 0");
 
    endLine(scip, file, linebuffer, &linecnt);
 }
@@ -2910,8 +2958,7 @@ SCIP_RETCODE SCIPwritePip(
       }
       else if( strcmp(conshdlrname, "and") == 0 )
       {
-         /* TODO add support for AND constraints */
-         SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname);
+         printRowAnd(scip, file, consname, cons);
 
          consAnd[nConsAnd++] = cons;
       }
