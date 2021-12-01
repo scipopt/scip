@@ -3503,7 +3503,13 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
    SCIPcertificatePrintProofMessage(certificate, "ACT_L%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
    SCIPcertificatePrintProofRational(certificate, newbound, 10);
    SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { lin 1 %d ", SCIPvarGetCertificateIndex(variable), certificate->indexcounter - 2);
-   SCIPcertificatePrintProofMessage(certificate, " } -1\n");
+   RatInvert(val, val);
+   RatNegate(val, val);
+   SCIPcertificatePrintProofRational(certificate, val, 10);
+   // Return val to its original state:
+   RatNegate(val, val);
+   RatInvert(val, val);
+   SCIPcertificatePrintProofMessage(certificate, " } -1\n", SCIPvarGetCertificateIndex(variable), certificate->indexcounter - 2);
 
 
    if( !RatIsAbsInfinity(newbound) && SCIPvarGetType(variable) != SCIP_VARTYPE_CONTINUOUS && !RatIsIntegral(newbound) )
