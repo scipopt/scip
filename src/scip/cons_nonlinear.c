@@ -721,6 +721,7 @@ SCIP_RETCODE storeVarExprs(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int varexprssize;
    int i;
 
    assert(consdata != NULL);
@@ -732,16 +733,29 @@ SCIP_RETCODE storeVarExprs(
    assert(consdata->varexprs == NULL);
    assert(consdata->nvarexprs == 0);
 
-   /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNTotalVars() */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip)) );
+   /* get an upper bound on number of variable expressions */
+   if( consdata->issimplified )
+   {
+      /* if simplified, then we should have removed inactive variables and replaced common subexpressions,
+       * so we cannot have more variable expression than the number of active variables
+       */
+      varexprssize = SCIPgetNVars(scip);
+   }
+   else
+   {
+      SCIP_CALL( SCIPgetExprNVars(scip, consdata->expr, &varexprssize) );
+   }
+
+   /* create array to store all variable expressions */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, varexprssize) );
 
    SCIP_CALL( SCIPgetExprVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
-   assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
+   assert(varexprssize >= consdata->nvarexprs);
 
    /* shrink array if there are less variables in the expression than in the problem */
-   if( SCIPgetNTotalVars(scip) > consdata->nvarexprs )
+   if( varexprssize > consdata->nvarexprs )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip), consdata->nvarexprs) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, varexprssize, consdata->nvarexprs) );
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -749,7 +763,7 @@ SCIP_RETCODE storeVarExprs(
    assert(conshdlrdata->var2expr != NULL);
 
    /* ensure that for every variable an entry exists in the var2expr hashmap
-    * when removing duplicate subexpressions it can happen than a var->varexpr map was removed from the hashmap
+    * when removing duplicate subexpressions it can happen that a var->varexpr map was removed from the hashmap
     */
    for( i = 0; i < consdata->nvarexprs; ++i )
    {
