@@ -48,6 +48,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
+#include "scip/expr_abs.h"
 #include <string.h>
 
 
@@ -791,6 +792,7 @@ SCIP_RETCODE printExpr(
    char*                 linebuffer,         /**< line buffer of length GMS_MAX_PRINTLEN */
    int*                  linecnt,            /**< number of characters in line so far */
    SCIP_Bool*            nsmooth,            /**< buffer to store whether we printed a nonsmooth function */
+   SCIP_Bool*            nqcons,             /**< buffer to update whether we are still quadratic */
    SCIP_Bool             transformed,        /**< expression belongs to transformed constraint? */
    SCIP_EXPR*            expr                /**< expression to print */
    )
@@ -812,6 +814,7 @@ SCIP_RETCODE printExpr(
    assert(linebuffer != NULL);
    assert(linecnt != NULL);
    assert(nsmooth != NULL);
+   assert(nqcons != NULL);
    assert(expr != NULL);
 
    if( file == NULL )
@@ -943,6 +946,8 @@ SCIP_RETCODE printExpr(
                SCIPinfoMessage(scip, file, "power(");
             else if( stage == SCIP_EXPRITER_LEAVEEXPR )
                SCIPinfoMessage(scip, file, ",%g)", exponent);
+            /* if power but not square, then we are no longer quadratic */
+            *nqcons = FALSE;
          }
          else if( exponent == 0.5 )
          {
@@ -951,6 +956,7 @@ SCIP_RETCODE printExpr(
                SCIPinfoMessage(scip, file, "sqrt(");
             else if( stage == SCIP_EXPRITER_LEAVEEXPR )
                SCIPinfoMessage(scip, file, ")");
+            *nqcons = FALSE;
          }
          else
          {
@@ -959,12 +965,29 @@ SCIP_RETCODE printExpr(
                SCIPinfoMessage(scip, file, "(");
             else if( stage == SCIP_EXPRITER_LEAVEEXPR )
                SCIPinfoMessage(scip, file, exponent >= 0.0 ? ")**%.15g" : ")**(%.15g)", exponent);
+            *nqcons = FALSE;
          }
       }
       else
       {
          /* for any other expression, use the print callback of the exprhdlr */
          SCIP_CALL( SCIPcallExprPrint(scip, expr, stage, currentchild, parentprecedence, file) );
+
+         if( !*nsmooth )
+         {
+            /* check for expression types that require changing modeltype from NLP to DNLP: currently only abs */
+            if( SCIPisExprAbs(scip, expr) )
+            {
+               *nsmooth = TRUE;
+               *nqcons = FALSE;
+            }
+         }
+
+         /* if still quadratic, then check whether expression type is one that cannot occur in quadratics
+          * allowed are sum, product, value, var, and power; the latter two were handled above
+          */
+         if( *nqcons && !SCIPisExprSum(scip, expr) && !SCIPisExprProduct(scip, expr) && !SCIPisExprValue(scip, expr) )
+            *nqcons = FALSE;
       }
 
       expr = SCIPexpriterGetNext(it);
@@ -989,7 +1012,8 @@ SCIP_RETCODE printNonlinearRow(
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed,        /**< transformed constraint? */
-   SCIP_Bool*            nsmooth             /**< buffer to store whether we printed a nonsmooth function */
+   SCIP_Bool*            nsmooth,            /**< buffer to store whether we printed a nonsmooth function */
+   SCIP_Bool*            nqcons              /**< buffer to update whether we are still quadratic */
    )
 {
    char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
@@ -1011,7 +1035,7 @@ SCIP_RETCODE printNonlinearRow(
    SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN + 3, buffer) );
    appendLine(scip, file, linebuffer, &linecnt, consname);
 
-   SCIP_CALL( printExpr(scip, file, linebuffer, &linecnt, nsmooth, transformed, expr) );
+   SCIP_CALL( printExpr(scip, file, linebuffer, &linecnt, nsmooth, nqcons, transformed, expr) );
 
    /* print right hand side */
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s %.15g;", type, rhs);
@@ -1032,7 +1056,8 @@ SCIP_RETCODE printNonlinearCons(
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed,        /**< transformed constraint? */
-   SCIP_Bool*            nsmooth             /**< buffer to store whether we printed a nonsmooth function */
+   SCIP_Bool*            nsmooth,            /**< buffer to store whether we printed a nonsmooth function */
+   SCIP_Bool*            nqcons              /**< buffer to update whether we are still quadratic */
    )
 {
    assert( scip != NULL );
@@ -1044,20 +1069,28 @@ SCIP_RETCODE printNonlinearCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* print equality constraint */
-      SCIP_CALL( printNonlinearRow(scip, file, rowname, "", "=e=", expr, rhs, transformed, nsmooth) );
+      SCIP_CALL( printNonlinearRow(scip, file, rowname, "", "=e=", expr, rhs, transformed, nsmooth, nqcons) );
    }
    else
    {
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
-         SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=", expr, lhs, transformed, nsmooth) );
+         SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=", expr, lhs, transformed, nsmooth, nqcons) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
-         SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=", expr, rhs, transformed, nsmooth) );
+         SCIP_CALL( printNonlinearRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=", expr, rhs, transformed, nsmooth, nqcons) );
       }
+   }
+
+   if( *nqcons )
+   {
+      /* if we are still at most quadratic, check whether that is still the case when considering current constraint */
+      SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, nqcons) );
+      if( *nqcons )
+         *nqcons = SCIPexprAreQuadraticExprsVariables(expr);
    }
 
    return SCIP_OKAY;
@@ -1330,9 +1363,9 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Real ub;
    SCIP_Bool freeints;
    SCIP_Bool nondefbounds;
-   SCIP_Bool nlcons;
-   SCIP_Bool nqcons;
-   SCIP_Bool nsmooth;
+   SCIP_Bool nlcons = FALSE;  /* whether there are nonlinear constraints */
+   SCIP_Bool nqcons = TRUE;   /* whether nonlinear constraints are at most quadratic */
+   SCIP_Bool nsmooth = FALSE; /* whether there are nonsmooth nonlinear constraints */
    SCIP_Bool discrete;
    SCIP_Bool rangedrow;
    SCIP_Bool indicatorsosdef;
@@ -1665,9 +1698,6 @@ SCIP_RETCODE SCIPwriteGms(
    }
 
    /* print constraints */
-   nlcons = FALSE;
-   nqcons = FALSE;
-   nsmooth = FALSE;
    discrete = nbinvars > 0 || nintvars > 0;
    indicatorsosdef = FALSE;
    for( c = 0; c < nconss; ++c )
@@ -1718,10 +1748,8 @@ SCIP_RETCODE SCIPwriteGms(
       else if( strcmp(conshdlrname, "nonlinear") == 0 )
       {
          SCIP_CALL( printNonlinearCons(scip, file, consname,
-            SCIPgetExprNonlinear(cons), SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed, &nsmooth) );
-         /* TODO check if quadratic */
+            SCIPgetExprNonlinear(cons), SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed, &nsmooth, &nqcons) );
          nlcons = TRUE;
-         nqcons = TRUE;
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
@@ -1804,7 +1832,7 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* print solve command */
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
-         discrete ? "MI" : "", nlcons ? (nqcons ? ((nsmooth && !discrete) ? "DNLP" : "NLP") : "QCP") : (discrete > 0 ? "P" : "LP"));
+         discrete ? "MI" : "", nlcons ? (nqcons ? "QCP" : ((nsmooth && !discrete) ? "DNLP" : "NLP")) : (discrete > 0 ? "P" : "LP"));
 
    if( objvar != NULL )
    {

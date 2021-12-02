@@ -57,6 +57,13 @@ SCIP_RETCODE SCIPcreateExprAbs(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
+/** indicates whether expression is of abs-type */
+SCIP_EXPORT
+SCIP_Bool SCIPisExprAbs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /** @}
   * @}
   */

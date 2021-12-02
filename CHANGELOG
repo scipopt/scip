@@ -470,7 +470,7 @@ Expression handler:
 - added SCIPprintExpressionHandlerStatistics()
 - added SCIPincludeExprhdlrEntropy(), SCIPcreateExprEntropy()
 - added SCIPincludeExprhdlrErf(), SCIPcreateExprErf()
-- added SCIPcreateExprAbs(), SCIPincludeExprhdlrAbs()
+- added SCIPcreateExprAbs(), SCIPincludeExprhdlrAbs(), SCIPisExprAbs()
 - added SCIPcreateExprExp(), SCIPincludeExprhdlrExp(), SCIPisExprExp()
 - added SCIPcreateExprLog(), SCIPincludeExprhdlrLog(), SCIPisExprLog()
 - added SCIPcreateExprPow(), SCIPcreateExprSignpower(), SCIPincludeExprhdlrPow(), SCIPincludeExprhdlrSignpower(), SCIPisExprSignpower(), SCIPgetExponentExprPow(), SCIPisExprPower()
