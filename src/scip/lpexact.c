@@ -3611,8 +3611,8 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
       /* we created the fprows directly from the exact row, so we should only have active variables inside it */
       assert(SCIProwGetConstant(rowlhs) == 0.0);
       assert(SCIProwGetConstant(rowrhs) == 0.0);
-      SCIProwChgConstant(rowlhs, blkmem, set, stat, eventqueue, lpexact->fplp, RatRoundReal(row->constant, SCIP_R_ROUND_DOWNWARDS) );
-      SCIProwChgConstant(rowrhs, blkmem, set, stat, eventqueue, lpexact->fplp, RatRoundReal(row->constant, SCIP_R_ROUND_UPWARDS) );
+      SCIProwChgConstant(rowlhs, blkmem, set, stat, eventqueue, lpexact->fplp, RatRoundReal(row->constant, SCIP_R_ROUND_UPWARDS) );
+      SCIProwChgConstant(rowrhs, blkmem, set, stat, eventqueue, lpexact->fplp, RatRoundReal(row->constant, SCIP_R_ROUND_DOWNWARDS) );
    }
 
    row->fprelaxable = *hasfprelax;
