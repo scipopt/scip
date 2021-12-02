@@ -906,6 +906,7 @@ Miscellaneous
 - The define NPARASCIP has been replaced by SCIP_THREADSAFE
 - Parameters are not reset to their default values before activating an emphasis setting; this now allows to combine
   different emphasis settings.
+- If a lazy bound is set to a value that is tighter than the current global bound, then the global bound is now tightened accordingly.
 
 Known bugs
 ----------
