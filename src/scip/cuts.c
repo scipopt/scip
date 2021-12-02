@@ -2168,7 +2168,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
 {
    SCIP_Real sideval;
    SCIP_Bool uselhs;
-   SCIP_ROW* userow = row;
+   SCIP_ROW* userow;
    SCIP_ROWEXACT* rowexact;
    SCIP_ROUNDMODE previousroundmode;
    SCIP_Real sidevalchg;
@@ -2224,10 +2224,22 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
 
    previousroundmode = SCIPintervalGetRoundingMode();
 
+   if( !SCIProwExactHasFpRelax(rowexact) )
+   {
+      SCIPerrorMessage("cannot aggregate row that admits no fp relaxation");
+      SCIPABORT();
+   }
+   else if( SCIProwExactGetRowRhs(rowexact) != NULL && !uselhs )
+      userow = SCIProwExactGetRowRhs(rowexact);
+   else
+      userow = rowexact->fprow;
+
    if( uselhs )
    {
       SCIPintervalSetRoundingModeDownwards();
-      if (row->lppos >= 0)
+      userow = rowexact->fprow;
+
+      if (userow->lppos >= 0)
          aggrrow->slacksign[i] = -1;
       sideval = userow->lhs - userow->constant;
       assert( !rowexact->integral || sideval == ceil(sideval));
@@ -2235,7 +2247,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    else
    {
       SCIPintervalSetRoundingModeUpwards();
-      if (row->lppos >= 0)
+      if (userow->lppos >= 0)
          aggrrow->slacksign[i] = +1;
       sideval = userow->rhs - userow->constant;
       assert( !rowexact->integral || sideval == floor(sideval));

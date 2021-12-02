@@ -806,6 +806,7 @@ SCIP_RETCODE addRowToAggrRow(
    negated = weight < 0.0;
    assert( !negated || !SCIPsetIsInfinity(set, -row->lhs) );
    assert( negated || !SCIPsetIsInfinity(set, row->rhs) );
+
    if( set->exact_enabled )
    {
       SCIP_CALL( SCIPaggrRowAddRowSafely(set->scip, aggrrow, row, weight, negated ? -1 : 1) );
