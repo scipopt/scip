@@ -452,8 +452,8 @@ SCIP_VARTYPE SCIPvarGetType(
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
  *  (2) variable type is integer or implicit integer and 
- *      (i)  the lazy lower bound or the global lower bound is greater than or equal to zero
- *      (ii) the lazy upper bound or the global upper bound is less than or equal to one
+ *      (i)  the global lower bound is greater than or equal to zero
+ *      (ii) the global upper bound is less than or equal to one
  */
 SCIP_EXPORT
 SCIP_Bool SCIPvarIsBinary(
@@ -958,7 +958,7 @@ void SCIPvarMarkRelaxationOnly(
 #define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)
 #define SCIPvarGetType(var)             ((SCIP_VARTYPE)((var)->vartype))
 #define SCIPvarIsBinary(var)            ((var)->vartype == SCIP_VARTYPE_BINARY || \
-      ((var)->vartype != SCIP_VARTYPE_CONTINUOUS && MAX((var)->glbdom.lb, (var)->lazylb) >= 0.0  && MIN((var)->glbdom.ub, (var)->lazyub) <= 1.0))
+      ((var)->vartype != SCIP_VARTYPE_CONTINUOUS && (var)->glbdom.lb >= 0.0 && (var)->glbdom.ub <= 1.0))
 #define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS)
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemovable(var)         (var)->removable
