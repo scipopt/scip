@@ -4001,7 +4001,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
       for (k = 0; k < *nvarsorder; ++k)
       {
-         /* Add element from lexorder to hashset.
+         /* add element from lexorder to hashmap.
           * Use insert, as duplicate entries in lexorder is not permitted. */
          assert( ! SCIPhashmapExists(varsinlexorder, (void*) (long) (*lexorder)[k]) ); /* Use int as pointer */
          SCIP_CALL( SCIPhashmapInsertInt(varsinlexorder, (void*) (long) (*lexorder)[k], k) );
