@@ -540,6 +540,7 @@ set(scipheaders
     scip/event_estim.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
+    scip/expr.h
     scip/expr_abs.h
     scip/expr_entropy.h
     scip/expr_erf.h
@@ -630,6 +631,7 @@ set(scipheaders
     scip/nlhdlr_quadratic.h
     scip/nlhdlr_quotient.h
     scip/nlhdlr_soc.h
+    scip/nlhdlr.h
     scip/nlp.h
     scip/nlpi.h
     scip/nlpioracle.h
