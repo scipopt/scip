@@ -5022,6 +5022,16 @@ SCIP_RETCODE SCIPsolveCIP(
          /* focus selected node */
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
                lp, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
+         if (SCIPisCertificateActive(set->scip))
+         {
+            if( !SCIPisLPConstructed(set->scip))
+            {
+               SCIP_Bool cutoff = FALSE;
+               SCIP_CALL( SCIPconstructLP(set->scip, &cutoff) );
+               assert(!cutoff);
+               SCIP_CALL( SCIPcertificateInitTransFile(set->scip) );
+            }
+         }
          if( cutoff )
             stat->ndelayedcutoffs++;
 

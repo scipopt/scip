@@ -1534,7 +1534,6 @@ void consdataRecomputeGlbMaxactivity(
    consdata->lastglbmaxactivity = consdata->glbmaxactivity;
 }
 
-#ifdef SCIP_DISABLED_CODE
 /** calculates maximum absolute value of coefficients */
 static
 void consdataCalcMaxAbsval(
@@ -1586,7 +1585,6 @@ void consdataCalcMinAbsval(
          RatAbs(consdata->minabsval, consdata->vals[i]);
    }
 }
-#endif
 
 
 /** checks the type of all variables of the constraint and sets hasnonbinvar and hascontvar flags accordingly */

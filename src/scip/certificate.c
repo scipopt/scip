@@ -270,6 +270,7 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->valssize = 0;
    (*certificate)->aggrinfo = NULL;
    (*certificate)->mirinfo = NULL;
+   (*certificate)->transfile_initialized = false;
 
    return SCIP_OKAY;
 }
@@ -537,13 +538,12 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
 
    assert(scip != NULL);
    assert(scip->set->certificate_filename != NULL);
-
    certificate = SCIPgetCertificate(scip);
    blkmem = SCIPblkmem(scip);
 
    assert(certificate != NULL);
 
-   if( !(scip->set->exact_enabled) || (scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') )
+   if( !(scip->set->exact_enabled) || (scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') || certificate->transfile_initialized )
       return SCIP_OKAY;
 
    if( certificate->origfile == NULL || certificate->derivationfile == NULL )
@@ -553,6 +553,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
       return SCIP_FILECREATEERROR;
    }
 
+   certificate->transfile_initialized = true;
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    nboundconss = 0;
    for ( j = 0 ; j < nvars ; j++ )

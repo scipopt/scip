@@ -2786,7 +2786,6 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_SOLVING:
          /* reset display */
          SCIPstatResetDisplay(scip->stat);
-         SCIP_CALL( SCIPcertificateInitTransFile(scip) );
 
          /* continue solution process */
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,

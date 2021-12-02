@@ -108,6 +108,7 @@ struct SCIP_Certificate
    SCIP_FILE*            origfile;           /**< file to store original problem definition */
    SCIP_FILE*            transfile;          /**< file to store transformed problem (after presolving) */
    SCIP_FILE*            derivationfile;     /**< file to store derivations temporarily */
+   SCIP_Bool             transfile_initialized; /**< boolean to store if the transfile has been initialized */
    char*                 derivationfilename; /**< name of the derivation file */
    char*                 origfilename;       /**< name of the original problem file */
    SCIP_Real             filesize;           /**< size of derivation file in MB */
