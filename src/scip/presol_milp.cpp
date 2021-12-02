@@ -563,6 +563,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_Real constant = 0.0;
          if( rowlen == 2 )
          {
+            SCIP_Real updatedSide;
             SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients]);
             SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[startRowCoefficients + 1]);
             SCIP_Real scalarx = res.postsolve.values[startRowCoefficients];
@@ -574,9 +575,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_CALL( SCIPgetProbvarSum(scip, &vary, &scalary, &constant) );
             assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
 
-            side -= constant;
+            updatedSide = side - constant;
 
-            SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, side, &infeas, &redundant, &aggregated) );
+            SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, updatedSide, &infeas, &redundant, &aggregated) );
          }
          else
          {
