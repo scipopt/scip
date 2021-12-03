@@ -703,10 +703,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL, NULL,
             minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
-         /** @todo exip: remove this when we allow local cuts */
-         if( SCIPisExactSolve(scip) && cutislocal )
-            success = FALSE;
-
          if( success || strongcgsuccess )
          {
             assert(allowlocal || !cutislocal); /*lint !e644*/

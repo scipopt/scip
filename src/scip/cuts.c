@@ -279,7 +279,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
    SCIP_ROW*             row,                /**< row coefficients to add to variable vector */
    SCIP_Real             scale,              /**< scale for adding given row to variable vector */
    SCIP_Real*            rhschange,          /**< change in rhs due to variable conjugation */
-   SCIP_MIRINFO*         mirinfo,          /**< certificate split-information, NULL if not needed */
+   SCIP_MIRINFO*         mirinfo,            /**< certificate split-information, NULL if not needed */
    SCIP_Real             splitscale          /**< possible scaling for mirinfo of certificate */
    )
 {
@@ -3644,6 +3644,8 @@ SCIP_RETCODE cutsTransformMIR(
 
    if( SCIPisExactSolve(scip) )
    {
+      if( SCIPisCertificateActive(scip)   )
+         mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
       previousroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeUpwards();
    }
@@ -3706,6 +3708,16 @@ SCIP_RETCODE cutsTransformMIR(
          varsign[i] = -1;
 
          performBoundSubstitution(scip, cutinds, cutcoefs, QUAD(cutrhs), nnz, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
+      }
+
+      if( SCIPisCertificateActive(scip) )
+      {
+         if( boundtype[i] == -2 )
+         {
+            mirinfo->localbdused[v] = TRUE;
+            mirinfo->nlocalvars++;
+         }
+         mirinfo->upperused[v] = (varsign[i] == -1);
       }
    }
 
@@ -3770,6 +3782,16 @@ SCIP_RETCODE cutsTransformMIR(
          varsign[i] = -1;
 
          performBoundSubstitutionSimple(scip, cutcoefs, QUAD(cutrhs), boundtype[i], bestubs[i], v, localbdsused);
+      }
+
+      if( SCIPisCertificateActive(scip) )
+      {
+         if( boundtype[i] == -2 )
+         {
+            mirinfo->localbdused[v] = TRUE;
+            mirinfo->nlocalvars++;
+         }
+         mirinfo->upperused[v] = (varsign[i] == -1);
       }
    }
 
@@ -3905,28 +3927,8 @@ SCIP_RETCODE cutsTransformMIR(
       SCIPintervalSetRoundingModeUpwards();
       /* we need to track which bounds were used for the complementation of variables */
       if( SCIPisCertificateActive(scip) )
-      {
-         /** @todo exip: either change to quad-array or transform cutcoefs to double array */
-         mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
          mirinfo->rhs = QUAD_TO_DBL(*cutrhs);
-         /** @todo exip: this needs to be adapted if we allow local cuts */
-         mirinfo->global = !allowlocal || TRUE;
-         for( i = 0; i < *nnz; i++ )
-         {
-            SCIP_VAR* var;
-            int v;
 
-            v = cutinds[i];
-            var = SCIPgetVars(scip)[v];
-            if( varsign[i] == -1 )
-               mirinfo->contupperused[v] = TRUE;
-            else
-               mirinfo->contupperused[v] = FALSE;
-
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-               mirinfo->splitupperused[v] = mirinfo->contupperused[v];
-         }
-      }
       SCIPintervalSetRoundingMode(previousroundmode);
    }
 
@@ -4099,7 +4101,7 @@ SCIP_RETCODE cutsRoundMIRSafe(
             SCIPintervalSet(&cutaj, downaj);
 
             if( SCIPisCertificateActive(scip) )
-               mirinfo->splitcoefs[v] = SCIPintervalGetInf(cutaj);
+               mirinfo->splitcoefficients[v] = SCIPintervalGetInf(cutaj);
          }
          else
          {
@@ -4111,9 +4113,8 @@ SCIP_RETCODE cutsRoundMIRSafe(
 
             if( SCIPisCertificateActive(scip) )
             {
-               mirinfo->splitcoefs[v] = QUAD_TO_DBL(downaj);
-               mirinfo->splitcoefs[v] += 1.0;
-               mirinfo->contcoefs[v] = mirinfo->splitcoefs[v] - QUAD_TO_DBL(aj);
+               mirinfo->splitcoefficients[v] = QUAD_TO_DBL(downaj);
+               mirinfo->splitcoefficients[v] += 1.0;
             }
          }
 
@@ -4208,11 +4209,6 @@ SCIP_RETCODE cutsRoundMIRSafe(
       else
       {
          SCIPintervalMulScalar(SCIPinfinity(scip), &cutaj, onedivoneminusf0, QUAD_TO_DBL(aj)); /* cutaj = varsign[i] * aj * onedivoneminusf0; // a^_j */
-
-         if( SCIPisCertificateActive(scip) )
-         {
-            mirinfo->contcoefs[v] = -QUAD_TO_DBL(aj) * varsign[i];
-         }
       }
 
       /* remove zero cut coefficients from cut; move a continuous var from the beginning
@@ -4230,10 +4226,6 @@ SCIP_RETCODE cutsRoundMIRSafe(
          varsign[i] = varsign[ndelcontvars];
          boundtype[i] = boundtype[ndelcontvars];
          ++ndelcontvars;
-         if( SCIPisCertificateActive(scip) )
-         {
-            mirinfo->contcoefs[v] = -QUAD_TO_DBL(aj) * varsign[i];
-         }
          continue;
       }
 
@@ -4513,7 +4505,7 @@ SCIP_RETCODE cutsRoundMIRRational(
             RatSetReal(cutaj, downaj);
 
             if( SCIPisCertificateActive(scip) )
-               mirinfo->splitcoefs[v] = downaj;
+               mirinfo->splitcoefficients[v] = downaj;
          }
          else
          {
@@ -4525,9 +4517,8 @@ SCIP_RETCODE cutsRoundMIRRational(
 
             if( SCIPisCertificateActive(scip) )
             {
-               mirinfo->splitcoefs[v] = QUAD_TO_DBL(downaj);
-               mirinfo->splitcoefs[v] += 1.0;
-               mirinfo->contcoefs[v] = mirinfo->splitcoefs[v] - QUAD_TO_DBL(aj);
+               mirinfo->splitcoefficients[v] = QUAD_TO_DBL(downaj);
+               mirinfo->splitcoefficients[v] += 1.0;
             }
          }
 
@@ -4632,11 +4623,6 @@ SCIP_RETCODE cutsRoundMIRRational(
       {
          RatSet(cutaj, onedivoneminusf0);
          RatMultReal(cutaj, cutaj, QUAD_TO_DBL(aj)); /* cutaj = varsign[i] * aj * onedivoneminusf0; // a^_j */
-
-         if( SCIPisCertificateActive(scip) )
-         {
-            mirinfo->contcoefs[v] = -QUAD_TO_DBL(aj) * varsign[i];
-         }
       }
 
       /* remove zero cut coefficients from cut; move a continuous var from the beginning
@@ -4653,10 +4639,6 @@ SCIP_RETCODE cutsRoundMIRRational(
          varsign[i] = varsign[ndelcontvars];
          boundtype[i] = boundtype[ndelcontvars];
          ++ndelcontvars;
-         if( SCIPisCertificateActive(scip) )
-         {
-            mirinfo->contcoefs[v] = -QUAD_TO_DBL(aj) * varsign[i];
-         }
 
          RatFreeBuffer(SCIPbuffer(scip), &tmprational);
          RatFreeBuffer(SCIPbuffer(scip), &cutaj);

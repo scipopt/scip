@@ -55,17 +55,14 @@ struct SCIP_AggregationInfo
 
 struct SCIP_MirInfo
 {
-   SCIP_Real*            splitcoefs;         /**< coefficients in the split, saved in the complemented variable space */
-   SCIP_Real*            contcoefs;          /**< coefficients of continous part, saved in the complemented variable space */
-   int*                  splitvarinds;       /**< indices of variables in split */
-   int*                  contvarinds;        /**< indices of variables in split */
-   SCIP_Bool*            splitupperused;     /**< TRUE if ub was used to complemented variable, FALSE if lb was used */
-   SCIP_Bool*            contupperused;      /**< TRUE if ub was used to complemented variable, FALSE if lb was used */
+   SCIP_Real*            splitcoefficients;  /**< coefficients in the split, saved in the complemented variable space */
+   int*                  varinds;            /**< indices of variables in split */
+   SCIP_Bool*            upperused;          /**< TRUE if ub was used to complement variable, FALSE if lb was used */
+   SCIP_Bool*            localbdused;        /**< TRUE if local bound was used to complement variable, FALSE if global was used */
    int                   nsplitvars;         /**< number of variables in the split */
-   int                   ncontvars;          /**< number of variables in the split */
+   int                   nlocalvars;         /**< number of local bounds used in transformation */
    SCIP_Real             rhs;                /**< rhs of the split disjunction */
    SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */
-   SCIP_Bool             global;             /**< is the cut valid globally? (relevant for which bounds to use in rounding)*/
 };
 
 struct SCIP_Certnodedata
