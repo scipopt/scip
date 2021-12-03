@@ -69,7 +69,6 @@ then
     echo "DEBUGTOOL     = ${DEBUGTOOL}"
     echo "CLIENTTMPDIR  = ${CLIENTTMPDIR}"
     echo "REOPT         = ${REOPT}"
-    echo "PERMUTE       = ${PERMUTE}"
     echo "OPTCOMMAND    = ${OPTCOMMAND}"
     echo "SETCUTOFF     = ${SETCUTOFF}"
     echo "MAXJOBS       = ${MAXJOBS}"

@@ -951,6 +951,7 @@ Fixed bugs
 - fixed a bug in cons_logicor.c regarding fixed variables that were not removed
 - presol_milp.c handles variable fixings, suggested by PaPILO, more carefully to cover all cases that can appear
 - fixed several reproducability bugs that led to different solving paths across multiple runs with one SCIP environment
+- fixed check of limits/absgap, which was incorrectly applied to the scaled objective of the transformed problem
 
 Miscellaneous
 -------------
