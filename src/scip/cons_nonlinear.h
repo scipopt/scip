@@ -264,6 +264,27 @@ SCIP_RETCODE SCIPcreateConsBasicQuadraticNonlinear(
    SCIP_Real             rhs                 /**< right hand side of quadratic equation */
    );
 
+/** creates and captures a nonlinear constraint that is a second-order cone constraint with all its constraint flags set to their default values
+ *
+ * \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
+ *
+ *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateConsBasicSOCNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables on left hand side of constraint (n) */
+   SCIP_VAR**            vars,               /**< array with variables on left hand side (x_i) */
+   SCIP_Real*            coefs,              /**< array with coefficients of left hand side variables (alpha_i), or NULL if all 1.0 */
+   SCIP_Real*            offsets,            /**< array with offsets of variables (beta_i), or NULL if all 0.0 */
+   SCIP_Real             constant,           /**< constant on left hand side (gamma) */
+   SCIP_VAR*             rhsvar,             /**< variable on right hand side of constraint (x_{n+1}) */
+   SCIP_Real             rhscoeff,           /**< coefficient of variable on right hand side (alpha_{n+1}) */
+   SCIP_Real             rhsoffset           /**< offset of variable on right hand side (beta_{n+1}) */
+   );
+
 /** creates and captures a signpower nonlinear constraint with all its constraint flags set to their default values
  *
  * \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
