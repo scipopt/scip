@@ -406,8 +406,8 @@ Constraint handlers for NLP:
 - removed SCIPaddBilinearIneqQuadratic(), use SCIPinsertBilinearTermImplicitNonlinear() instead
 - renamed SCIPcreateConsQuadratic() to SCIPcreateConsQuadraticNonlinear() and removed argument stickingatnode
 - removed SCIPincludeConshdlrSOC()
-- deprecated SCIPcreateConsSOC(), use SCIPcreateConsNonlinear() instead
-- deprecated SCIPcreateConsBasicSOC(), use SCIPcreateConsBasicNonlinear() instead
+- replaced SCIPcreateConsBasicSOC() by SCIPcreateConsBasicSOCNonlinear()
+- deprecated SCIPcreateConsSOC(), use SCIPcreateConsBasicSOCNonlinear() instead
 - deprecated SCIPgetNlRowSOC(), use SCIPgetNlRowNonlinear() instead
 - removed SCIPgetNLhsVarsSOC(), SCIPgetLhsVarsSOC(), SCIPgetLhsCoefsSOC(), SCIPgetLhsOffsetsSOC(), SCIPgetLhsConstantSOC(), SCIPgetRhsVarSOC(), SCIPgetRhsCoefSOC(), SCIPgetRhsOffsetSOC(), use SCIPisSOCNonlinear() instead
 - removed SCIPaddToNlpiProblemSOC()
