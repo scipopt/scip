@@ -4931,6 +4931,7 @@ SCIP_RETCODE SCIPchgVarUbNode(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  *
@@ -4942,7 +4943,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarLbGlobal", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarLbGlobal", FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
@@ -4968,6 +4969,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
       break;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
       SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
       break;
@@ -5018,6 +5020,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  *
@@ -5029,7 +5032,7 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarUbGlobal", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarUbGlobal", FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
@@ -5055,6 +5058,7 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
       break;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
       SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
       break;
@@ -5095,8 +5099,13 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
 
 /** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet
  *
- *  lazy bounds are bounds, that are enforced by constraints and the objective function; hence, these bounds do not need
- *  to be put into the LP explicitly.
+ *  Lazy bounds are bounds that are already enforced by constraints and the objective function.
+ *  Setting a lazy lower bound has the consequence that for variables which lower bound equals the lazy lower bound,
+ *  the lower bound does not need to be passed on to the LP solver.
+ *  This is especially useful in a column generation (branch-and-price) setting.
+ *
+ *  @attention If the variable has a global lower bound below lazylb, then the global lower bound is tightened to
+ *     lazylb by a call to SCIPchgVarLbGlobal().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -5107,8 +5116,6 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
- *
- *  @note lazy bounds are useful for branch-and-price since the corresponding variable bounds are not part of the LP
  */
 SCIP_RETCODE SCIPchgVarLbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5121,6 +5128,11 @@ SCIP_RETCODE SCIPchgVarLbLazy(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarLbLazy", FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   if( SCIPisGT(scip, lazylb, SCIPvarGetLbGlobal(var)) )
+   {
+      SCIP_CALL( SCIPchgVarLbGlobal(scip, var, lazylb) );
+   }
+
    SCIP_CALL( SCIPvarChgLbLazy(var, scip->set, lazylb) );
 
    return SCIP_OKAY;
@@ -5128,8 +5140,13 @@ SCIP_RETCODE SCIPchgVarLbLazy(
 
 /** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet
  *
- *  lazy bounds are bounds, that are enforced by constraints and the objective function; hence, these bounds do not need
- *  to be put into the LP explicitly.
+ *  Lazy bounds are bounds that are already enforced by constraints and the objective function.
+ *  Setting a lazy upper bound has the consequence that for variables which upper bound equals the lazy upper bound,
+ *  the upper bound does not need to be passed on to the LP solver.
+ *  This is especially useful in a column generation (branch-and-price) setting.
+ *
+ *  @attention If the variable has a global upper bound above lazyub, then the global upper bound is tightened to
+ *     lazyub by a call to SCIPchgVarUbGlobal().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -5140,8 +5157,6 @@ SCIP_RETCODE SCIPchgVarLbLazy(
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
- *
- *  @note lazy bounds are useful for branch-and-price since the corresponding variable bounds are not part of the LP
  */
 SCIP_RETCODE SCIPchgVarUbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5153,6 +5168,11 @@ SCIP_RETCODE SCIPchgVarUbLazy(
    assert(var != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarUbLazy", FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( SCIPisLT(scip, lazyub, SCIPvarGetUbGlobal(var)) )
+   {
+      SCIP_CALL( SCIPchgVarUbGlobal(scip, var, lazyub) );
+   }
 
    SCIP_CALL( SCIPvarChgUbLazy(var, scip->set, lazyub) );
 
