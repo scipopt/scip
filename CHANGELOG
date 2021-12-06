@@ -3557,6 +3557,7 @@ Fixed bugs
 - fix bug which lead to wrong global bound tightenings in prop_genvbounds.c
 - fix call to random generator for Windows operating systems in misc.c
 - fixed again a bug in backward propagation of linear expressions in expression graph
+- fixed bug in prop_symmetry.c, where an incorrect weak symmetry handling constraint got added.
 
 - NLP:
   - fixed bug in heur_nlpdiving.c: wrong counting of fix variables
