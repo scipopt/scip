@@ -517,12 +517,13 @@ void graph_path_exit(
    GRAPH*                g                   /**< graph data structure */
    )
 {
-   assert(g != NULL);
-   assert(g->path_heap  != NULL);
-   assert(g->path_state != NULL);
+   assert(g);
+#ifndef WITH_UG
+   assert(g->path_heap && g->path_state);
+#endif
 
-   SCIPfreeMemoryArray(scip, &(g->path_state));
-   SCIPfreeMemoryArray(scip, &(g->path_heap));
+   SCIPfreeMemoryArrayNull(scip, &(g->path_state));
+   SCIPfreeMemoryArrayNull(scip, &(g->path_heap));
 }
 
 /*---------------------------------------------------------------------------*/

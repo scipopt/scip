@@ -3824,6 +3824,9 @@ SCIP_RETCODE localRun(
    if( graph->grad[root] == 0 || graph->terms == 1 )
       return SCIP_OKAY;
 
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    if( mwpc )
    {
       assert(graph->extended);

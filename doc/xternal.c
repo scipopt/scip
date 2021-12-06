@@ -2155,7 +2155,7 @@
  * Therefore, these bounds do not need to be added to the LP explicitly, which has the advantage that the pricing routine does not need to
  * care about the corresponding dual values.
  * We call these bounds lazy bounds, they may be set by SCIPchgVarLbLazy() and SCIPchgVarUbLazy() for upper or lower bounds, respectively.
- * If the lazy bound is tighter than the local bound, the corresponding bound is not put into the LP.
+ * If the lazy bound equals the local bound, the corresponding bound is not put into the LP.
  * In diving mode, lazy bounds are explicitly put into the LP, because changing the objective (which is only possible in diving)
  * might reverse the implicitly given bounds. When diving is finished, the bounds are again removed from the LP.
  */
