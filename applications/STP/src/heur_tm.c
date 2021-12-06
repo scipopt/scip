@@ -3453,9 +3453,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    beststart = bestincstart;
    (*success) = FALSE;
 
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("executing TM for graph (reduced info) \n");
    graph_printInfoReduced(graph);

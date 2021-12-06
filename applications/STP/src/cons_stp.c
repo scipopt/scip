@@ -1213,12 +1213,14 @@ void SCIPStpConshdlrSetGraph(
 
    conshdlr = SCIPfindConshdlr(scip, "stp");
    assert(conshdlr != NULL);
+#ifdef WITH_UG
+   if( SCIPconshdlrGetNConss(conshdlr) == 0 )
+      return;
+#endif
+
    assert(SCIPconshdlrGetNConss(conshdlr) > 0);
-
    consdata = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[0]);
-
    assert(consdata != NULL);
-
    consdata->graph = SCIPprobdataGetGraph2(scip);
    assert(consdata->graph != NULL);
 }

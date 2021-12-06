@@ -1978,8 +1978,11 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       GRAPH* orggraphcopy;
       SCIP_CALL( graph_copy(scip, sourcedata->orggraph, &orggraphcopy) );
       SCIP_CALL( graph_path_init(scip, orggraphcopy) );
-      SCIP_CALL( graph_initPseudoAncestors(scip, orggraphcopy) );
-      SCIP_CALL( graph_copyPseudoAncestors(scip, sourcedata->orggraph, orggraphcopy) );
+      if( orggraphcopy->knots > 1 )
+      {
+         SCIP_CALL( graph_initPseudoAncestors(scip, orggraphcopy) );
+         SCIP_CALL( graph_copyPseudoAncestors(scip, sourcedata->orggraph, orggraphcopy) );
+      }
       (*targetdata)->orggraph = orggraphcopy;
    }
 #endif
@@ -2867,8 +2870,11 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
       probdata->orggraph = graph;
       graph = newgraph;
       probdata->graph = newgraph;
-      SCIP_CALL( graph_initPseudoAncestors(scip, probdata->graph) );
-      SCIP_CALL( graph_copyPseudoAncestors(scip, probdata->orggraph, probdata->graph) );
+      if( newgraph->knots > 1 )
+      {
+         SCIP_CALL( graph_initPseudoAncestors(scip, probdata->graph) );
+         SCIP_CALL( graph_copyPseudoAncestors(scip, probdata->orggraph, probdata->graph) );
+      }
    }
 #endif
 
