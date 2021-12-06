@@ -3104,7 +3104,7 @@ int SCIPcertificatePrintUnsplitting(
       certificate->indexcounter++;
       certificate->lastinfo->isbound = FALSE;
 
-      SCIPcertificatePrintProofMessage(certificate, "Unsplit%d ", certificate->indexcounter - 1);
+      SCIPcertificatePrintProofMessage(certificate, "UnsplitNode%d_%d ", SCIPnodeGetNumber(node), certificate->indexcounter - 1);
 
       if( infeas )
       {

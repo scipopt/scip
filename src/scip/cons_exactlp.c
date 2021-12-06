@@ -8031,6 +8031,59 @@ SCIP_RETCODE separateCons(
    return SCIP_OKAY;
 }
 
+static SCIP_RETCODE CertificatePrintActivityConflict(SCIP* scip, SCIP_CONS* cons, SCIP_CONSDATA* consdata, SCIP_Bool rhs)
+{
+   SCIP_Rational* side;
+   SCIP_Rational* activity;
+   SCIP_Rational* diff;
+   SCIP_CERTIFICATE* certificate;
+   SCIP_Longint conscertificateindex;
+
+   if (!SCIPisCertificateActive(scip))
+      return SCIP_OKAY;
+   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &diff));
+   certificate = SCIPgetCertificate(scip);
+
+   if ( rhs )
+   {
+      side = consdata->rhs;
+      activity = consdata->minactivity;
+      assert( RatIsGT(activity, side) );
+   }
+   else
+   {
+      side = consdata->lhs;
+      activity = consdata->maxactivity;
+      assert( RatIsLT(activity, side) );
+   }
+   RatDiff(diff, activity, side);
+   conscertificateindex = SCIPhashmapGetImageLong(certificate->rowdatahash, cons);
+   assert(conscertificateindex != LONG_MAX);
+
+   SCIPcertificatePrintProofMessage(certificate, "ActivityConflict%d ", certificate->indexcounter);
+   SCIPcertificatePrintProofMessage(certificate, rhs ? "G " : "L ");
+
+   SCIPcertificatePrintProofRational(certificate, diff, 10);
+   SCIPcertificatePrintProofMessage(certificate, " 0 { lin %d %d -1", consdata->nvars + 1, conscertificateindex);
+   for( int i = 0; i < consdata->nvars; i++ )
+   {
+      SCIP_VAR* var;
+      bool is_upper_bound;
+      SCIP_Longint certificateindex;
+      var = consdata->vars[i];
+      is_upper_bound = rhs != RatIsPositive(consdata->vals[i]);
+      certificateindex = is_upper_bound ? SCIPvarGetUbCertificateIndexLocal(var) :  SCIPvarGetLbCertificateIndexLocal(var);
+      SCIPcertificatePrintProofMessage(certificate, " %d ", certificateindex);
+      SCIPcertificatePrintProofRational(certificate, consdata->vals[i], 10);
+   }
+   SCIPcertificatePrintProofMessage(certificate, " } -1\n");
+
+   RatFreeBuffer(SCIPbuffer(scip), &diff);
+
+   SCIPcertificateUpdateParentData(certificate, SCIPgetCurrentNode(scip), certificate->indexcounter, NULL);
+   certificate->indexcounter++;
+   return SCIP_OKAY;
+}
 
 /** propagation method for linear constraints */
 static
@@ -8142,7 +8195,7 @@ SCIP_RETCODE propagateCons(
 
             /* analyze conflict */
             //SCIP_CALL( analyzeConflict(scip, cons, TRUE) ); @TODO implement conflict analysis
-
+            SCIP_CALL( CertificatePrintActivityConflict(scip, cons, consdata, TRUE) );
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
@@ -8153,7 +8206,7 @@ SCIP_RETCODE propagateCons(
 
             /* analyze conflict */
             // SCIP_CALL( analyzeConflict(scip, cons, FALSE) ); @TODO implement conflict analysis
-
+            SCIP_CALL( CertificatePrintActivityConflict(scip, cons, consdata, FALSE) );
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *cutoff = TRUE;
          }
