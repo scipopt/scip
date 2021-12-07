@@ -108,6 +108,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `AMPL`                 | `on`, `off`                        | `AMPL=[true, false]`       |                                                                    |
 | `READLINE`             | `on`, `off`                        | `READLINE=[true, false]`   |                                                                    |
 | `..._DIR`              | `<custom/path/to/.../package>`     | --                         | e.g. `IPOPT_DIR`, `CPLEX_DIR`, `WORHP_DIR`, `Readline_DIR` ...     |
+| `BOOST_ROOT`           | `<custom/path/to/.../boost>`       | --                         | hint for location of boost                                         |
 | `CMAKE_INSTALL_PREFIX` | `\<path\>`                         | `INSTALLDIR=\<path\>`      |                                                                    |
 | `SHARED`               | `on`, `off`                        | `SHARED=[true, false]`     |                                                                    |
 | `CXXONLY`              | `on`, `off`                        | --                         | use a C++ compiler for all source files                            |
