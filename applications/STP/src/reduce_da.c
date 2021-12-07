@@ -1089,6 +1089,8 @@ void findRootsMark(
 {
    int realterm = -1;
    SCIP_Bool mark = FALSE;
+   const SCIP_Real objgap = MAX(upperbound - lpobjval, 0.0);
+   const SCIP_Real objgap_best = MAX(upperbound - bestlpobjval, 0.0);
 
    assert(!graph->extended && transgraph->extended);
    assert(graph->grad[pseudoterm] == 2);
@@ -1117,7 +1119,7 @@ void findRootsMark(
    if( rerun && isfixedterm[realterm] )
       return;
 
-   if( SCIPisGT(scip, cost[pseudoedge], upperbound - lpobjval) || SCIPisGT(scip, bestcost[pseudoedge], upperbound - bestlpobjval) )
+   if( SCIPisGT(scip, cost[pseudoedge], objgap) || SCIPisGT(scip, bestcost[pseudoedge], objgap_best) )
    {
       mark = TRUE;
    }
@@ -1162,7 +1164,7 @@ void findRootsMark(
             }
          }
 
-         if( SCIPisGT(scip, costsum, upperbound - lpobjval) || SCIPisGT(scip, bestcostsum, upperbound - bestlpobjval) )
+         if( SCIPisGT(scip, costsum, objgap) || SCIPisGT(scip, bestcostsum, objgap_best) )
             mark = TRUE;
       }
    }
