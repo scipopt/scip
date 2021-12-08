@@ -3719,10 +3719,10 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          if( lastinfeasible && *result == SCIP_FEASIBLE )
             *result = SCIP_INFEASIBLE;
       }
-      else if (objinfeasible)
+      else if( objinfeasible )
       {
          /*
-          * Even if the handler has no constraints, the solution might still be infeasible due to violating lower bound.
+          * Even if nothing is enforced, the solution might still be infeasible due to violating lower bound.
           * Make sure the result is updated in this case as well.
           */
          *result = SCIP_INFEASIBLE;
