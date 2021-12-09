@@ -75,6 +75,11 @@
 #define COST_MAX_POLY_x0 500
 #define COST_MIN_POLY_x0 100
 
+#ifdef WITH_UG
+int getUgRank(void);
+#endif
+
+
 
 /*
  * Data structures
@@ -506,8 +511,6 @@ SCIP_RETCODE computeReducedProbSolution(
    SCIP_CALL( computeReducedProbSolutionBiased(scip, heurdata, graph, solgraph, edgeweight,
          edgeancestor, vars, usestppool, soledges, success) );
 
- //  printf("solval_bias=%f \n", solstp_getObj(solgraph, soledges, 0.0));
-
    if( reduce_solUsesNodesol(redsol) )
    {
       SCIP_Real solval_red;
@@ -530,12 +533,6 @@ SCIP_RETCODE computeReducedProbSolution(
             BMScopyMemoryArray(soledges, soledges_red, solgraph->edges);
             SCIPdebugMessage("updating best solution value: %f->%f \n", solval_bias, solval_red);
          }
-      }
-      else
-      {
-       //  graph_printInfo(solgraph);
-       //  assert(0);
-
       }
 
       SCIPfreeBufferArray(scip, &soledges_red);
@@ -1968,6 +1965,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolRec)
    heurdata->bestsolindex = -1;
    heurdata->nfailures = 0;
 
+#ifdef WITH_UG
+   heurdata->randseed += getUgRank();
+#endif
 
    return SCIP_OKAY;
 }
@@ -2206,6 +2206,10 @@ SCIP_RETCODE SCIPStpIncludeHeurRec(
 
    heurdata->nusedsols = DEFAULT_NUSEDSOLS;
    heurdata->randseed = DEFAULT_RANDSEED;
+
+#ifdef WITH_UG
+   heurdata->randseed += getUgRank();
+#endif
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, heurdata->randseed, TRUE) );
