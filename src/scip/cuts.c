@@ -2650,7 +2650,7 @@ SCIP_RETCODE addOneRowSafely(
       SCIPerrorMessage("cannot aggregate row that admits no fp relaxation");
       SCIPABORT();
    }
-   else if( SCIProwExactGetRowRhs(rowexact) != NULL && weight < 0.0 )
+   else if( SCIProwExactGetRowRhs(rowexact) != NULL && weight >= 0.0 )
       userow = SCIProwExactGetRowRhs(rowexact);
    else
       userow = row;

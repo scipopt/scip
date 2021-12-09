@@ -1442,7 +1442,7 @@ SCIP_RETCODE certificatePrintMirSplit(
 }
 
 static
-SCIP_RETCODE certificatePrintWeakDerStart(
+SCIP_RETCODE certificatePrintWeakDerStartMirinfo(
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
    SCIP_VAR**            vars,               /**< SCIP variables */
    SCIP_MIRINFO*         mirinfo             /**< active mirinfo to work with to get indices of local varibales, NULL if global bounds should be used */
@@ -1469,7 +1469,62 @@ SCIP_RETCODE certificatePrintWeakDerStart(
          var = vars[mirinfo->varinds[i]];
          index = mirinfo->upperused[i] ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
          boundval = mirinfo->upperused[i] ? SCIPvarGetUbLocalExact(var) : SCIPvarGetLbLocalExact(var);
-         SCIPcertificatePrintProofMessage(certificate, " %d %d ", SCIPvarGetCertificateIndex(var), index);
+         SCIPcertificatePrintProofMessage(certificate, " %c %d %d ", mirinfo->upperused? 'U' : 'L', (var), index);
+         SCIPcertificatePrintProofRational(certificate, boundval, 10);
+      }
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " } ");
+
+   return SCIP_OKAY;
+}
+
+/** prints all local bounds that differ from their global bounds as the bounds to take into account */
+static
+SCIP_RETCODE certificatePrintWeakDerStartComplete(
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_ROW*             row                 /**< row that needs to be certified */
+   )
+{
+   int i;
+   int nboundentries;
+
+   nboundentries = 0;
+
+   /* count the number of needed entries */
+   for( i = 0; i < SCIProwGetNNonz(row); i++ )
+   {
+      SCIP_VAR* var = SCIPcolGetVar(SCIProwGetCols(row)[i]);
+      if( !RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
+         nboundentries++;
+      if( !RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
+         nboundentries++;
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " { lin weak { %d", nboundentries);
+
+   for( i = 0; i < SCIProwGetNNonz(row) && nboundentries > 0; i++ )
+   {
+      SCIP_VAR* var = SCIPcolGetVar(SCIProwGetCols(row)[i]);
+
+      if( !RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
+      {
+         SCIP_Longint index;
+         SCIP_Rational* boundval;
+
+         index = SCIPvarGetLbCertificateIndexLocal(var);
+         boundval = SCIPvarGetLbLocalExact(var);
+         SCIPcertificatePrintProofMessage(certificate, " L %d %d ", SCIPvarGetCertificateIndex(var), index);
+         SCIPcertificatePrintProofRational(certificate, boundval, 10);
+      }
+      if( !RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
+      {
+         SCIP_Longint index;
+         SCIP_Rational* boundval;
+
+         index = SCIPvarGetUbCertificateIndexLocal(var);
+         boundval = SCIPvarGetUbLocalExact(var);
+         SCIPcertificatePrintProofMessage(certificate, " U %d %d ", SCIPvarGetCertificateIndex(var), index);
          SCIPcertificatePrintProofRational(certificate, boundval, 10);
       }
    }
@@ -1669,7 +1724,7 @@ SCIP_RETCODE certificateTransAggrrow(
    RatFreeBuffer(set->buffer, &workfrac);
 
    /* print derivation: original row + bound constraints of rounded down integers */
-   certificatePrintWeakDerStart(certificate, vars, mirinfo);
+   certificatePrintWeakDerStartMirinfo(certificate, vars, mirinfo);
    SCIPcertificatePrintProofMessage(certificate, " %d", 1 + nrounddowns);
    SCIPcertificatePrintProofMessage(certificate, " %d 1 ", certificate->indexcounter - 1);
 
@@ -1748,7 +1803,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIP_Longint leftdisjunctionindex;
    SCIP_Longint rightdisjunctionindex;
    SCIP_Rational* frac;
-   SCIP_VAR** vars;
    SCIP_MIRINFO* mirinfo;
    int arraypos;
 
@@ -1764,7 +1818,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIP_CALL( RatCreateBuffer(set->buffer, &frac) );
 
    rowexact = SCIProwGetRowExact(row);
-   vars = SCIPprobGetVars(prob);
 
    /* get aggregation info and print aggregation row to certificate */
    aggrinfo = (SCIP_AGGREGATIONINFO*) SCIPhashmapGetImage(certificate->aggrinfohash, (void*) row);
@@ -1791,7 +1844,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    SCIPcertificatePrintRow(certificate, rowexact);
 
-   certificatePrintWeakDerStart(certificate, vars, mirinfo);
+   certificatePrintWeakDerStartComplete(certificate, row);
 
    /* 1 * (\xi \le \lfloor \beta \rfloor) */
    SCIPcertificatePrintProofMessage(certificate, "1 %d ", leftdisjunctionindex);
@@ -1804,7 +1857,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintRow(certificate, rowexact);
 
-   certificatePrintWeakDerStart(certificate, vars, mirinfo);
+   certificatePrintWeakDerStartComplete(certificate, row);
    SCIPcertificatePrintProofMessage(certificate, " 2 ");
 
    /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
@@ -2543,7 +2596,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
    }
 
-   certificatePrintWeakDerStart(certificate, vars, NULL);
+   certificatePrintWeakDerStartMirinfo(certificate, vars, NULL);
    SCIPcertificatePrintProofMessage(certificate, " %d", naggrrows);
    for( i = 0; i < naggrrows; i++ )
    {
