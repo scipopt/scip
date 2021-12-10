@@ -59,6 +59,7 @@
 #include "scip/reopt.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_lp.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
@@ -5026,7 +5027,6 @@ SCIP_RETCODE SCIPsolveCIP(
          {
             if( !SCIPisLPConstructed(set->scip))
             {
-               SCIP_Bool cutoff = FALSE;
                SCIP_CALL( SCIPconstructLP(set->scip, &cutoff) );
                assert(!cutoff);
                SCIP_CALL( SCIPcertificateInitTransFile(set->scip) );
