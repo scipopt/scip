@@ -3570,6 +3570,15 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
       SCIPcertificatePrintProofMessage(certificate, " { rnd 1 %d 1 } -1\n", certificate->indexcounter - 2);
    }
 
+   #ifndef NDEBUG
+      certificate->lastinfo->isbound = TRUE;
+      certificate->lastinfo->boundtype = boundtype;
+      certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(variable);
+      certificate->lastinfo->isglobal = FALSE;
+      certificate->lastinfo->certificateindex = certificate->indexcounter - 1;
+      RatSet(certificate->lastinfo->boundval, newbound);
+   #endif
+
    return (certificate->indexcounter - 1);
 }
 

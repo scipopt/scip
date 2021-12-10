@@ -103,6 +103,8 @@ SCIP_Longint printBoundAssumption(
    certificate->lastinfo->isbound = TRUE;
    certificate->lastinfo->boundtype = boundtype;
    certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
+   certificate->lastinfo->isglobal = FALSE;
+   certificate->lastinfo->certificateindex = certificate->indexcounter;
    RatSet(certificate->lastinfo->boundval, boundval);
 #endif
 
@@ -823,7 +825,8 @@ SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_VAR*             var,                /**< variable that gets changed */
    SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
-   SCIP_Real             newbound            /**< new bound */
+   SCIP_Real             newbound,           /**< new bound */
+   SCIP_Bool             needsglobal         /**< if the bound needs to be global */
    )
 {
    SCIP_Bool consistent;
@@ -843,7 +846,8 @@ SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
       consistent = consistent && certificate->lastinfo->boundtype == SCIP_BOUNDTYPE_UPPER;
       consistent = consistent && RatRoundReal(certificate->lastinfo->boundval, SCIP_R_ROUND_UPWARDS) == newbound;
    }
-
+   consistent = consistent && (!needsglobal || certificate->lastinfo->isglobal);
+   consistent = consistent && certificate->lastinfo->certificateindex == certificate->indexcounter - 1;
    return consistent;
 
 }
@@ -1995,6 +1999,8 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
       certificate->lastinfo->isbound = TRUE;
       certificate->lastinfo->boundtype = isupper ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER;
       certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
+      certificate->lastinfo->isglobal = TRUE;
+      certificate->lastinfo->certificateindex = certificate->indexcounter - 1;
       RatSet(certificate->lastinfo->boundval, boundval);
 #endif
 
@@ -3227,6 +3233,71 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(SCIP* scip, SCIP_CERTIF
    RatFreeBuffer(SCIPbuffer(scip), &lowerbound);
 
    SCIPcertificateUpdateParentData(certificate, SCIPgetCurrentNode(scip), certificate->indexcounter, NULL);
+   certificate->indexcounter++;
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPcertificatePrintGlobalBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< Whether we have an upper bound or a lower bound */
+   SCIP_Rational*        value,              /**< value of the bound */
+   SCIP_Longint          certificateindex    /**< index in the certificate */
+   )
+{
+   SCIP_RETCODE res;
+
+   assert(SCIPisExactSolve(scip));
+
+   if( !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+   assert(certificate != NULL);
+
+   switch (var->varstatus)
+   {
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_ORIGINAL:
+         assert(false);
+         SCIPABORT();
+         return 0;
+      case SCIP_VARSTATUS_NEGATED:
+         RatMultReal(value, value, -1);
+         res = SCIPcertificatePrintGlobalBound(scip, certificate, var->negatedvar, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER, value, certificateindex);
+         RatMultReal(value, value, -1);
+         return res;
+         break;
+      case SCIP_VARSTATUS_AGGREGATED:
+         RatDiv(value, value, var->exactdata->aggregate.scalar);
+         assert(RatIsZero(var->exactdata->aggregate.constant));
+         res = SCIPcertificatePrintGlobalBound(scip, certificate, var->data.aggregate.var, (boundtype == SCIP_BOUNDTYPE_UPPER) == RatIsPositive(var->exactdata->aggregate.scalar) ? SCIP_BOUNDTYPE_UPPER: SCIP_BOUNDTYPE_LOWER, value, certificateindex);
+         RatMult(value, value, var->exactdata->aggregate.scalar);
+         return res;
+         break;
+      case SCIP_VARSTATUS_COLUMN:
+         break;
+      default:
+         assert(false);
+         SCIPABORT();
+         return 0;
+   }
+
+   #ifndef NDEBUG
+      certificate->lastinfo->isbound = TRUE;
+      certificate->lastinfo->boundtype = boundtype;
+      certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
+      certificate->lastinfo->isglobal = TRUE;
+      certificate->lastinfo->certificateindex = certificate->indexcounter;
+      RatSet(certificate->lastinfo->boundval, value);
+   #endif
+
+   SCIPcertificatePrintProofMessage(certificate, "GlobalBound_%d %c ", certificate->indexcounter,
+      boundtype == SCIP_BOUNDTYPE_UPPER ? 'L' : 'G');
+   SCIPcertificatePrintProofRational(certificate, value, 10);
+   SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 ", SCIPvarGetCertificateIndex(var));
+   SCIPcertificatePrintProofMessage(certificate, "{ lin 1 %d 1 } -1 global\n", certificateindex);
+
    certificate->indexcounter++;
    return SCIP_OKAY;
 }

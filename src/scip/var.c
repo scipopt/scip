@@ -978,11 +978,14 @@ SCIP_RETCODE boundchgApplyGlobal(
          var->exactdata->glbdom.lbcertificateidx = boundchg->certificateindex;
          var->exactdata->locdom.lbcertificateidx = boundchg->certificateindex;
       }
-      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      else if( boundtype == SCIP_BOUNDTYPE_UPPER )
       {
          var->exactdata->glbdom.ubcertificateidx = boundchg->certificateindex;
          var->exactdata->locdom.ubcertificateidx = boundchg->certificateindex;
       }
+      #ifndef NDEBUG
+         assert(SCIPcertificateEnsureLastBoundInfoConsistent(SCIPgetCertificate(set->scip), var, boundtype, newbound, TRUE));
+      #endif
    }
 
    /* apply bound change */
@@ -1458,9 +1461,9 @@ void SCIPdomchgAddCurrentCertificateIndex(
 
    change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);
 
-#ifndef NDEBUG
-   SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, change->boundtype, change->newbound);
-#endif
+   #ifndef NDEBUG
+      assert(SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, change->boundtype, change->newbound, FALSE));
+   #endif
 
    change->certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
 }

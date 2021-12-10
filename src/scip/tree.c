@@ -2158,7 +2158,10 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       oldlb = SCIPvarGetLbLocalExact(var);
       oldub = SCIPvarGetUbLocalExact(var);
    }
-
+   if (set->stage > SCIP_STAGE_PRESOLVING && useglobal && SCIPsetCertificateEnabled(set))
+   {
+      SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var, boundtype, newbound, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1);
+   }
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE

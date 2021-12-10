@@ -105,7 +105,8 @@ SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_VAR*             var,                /**< variable that gets changed */
    SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
-   SCIP_Real             newbound            /**< new bound */
+   SCIP_Real             newbound,           /**< new bound */
+   SCIP_Bool             needsglobal         /**< if the bound needs to be global */
    );
 #endif
 
@@ -428,6 +429,16 @@ void SCIPcertificateAssertStateCorrect(SCIP* scip, SCIP_VAR* var);
 unsigned long SCIPcertificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROWEXACT* row);
 
 SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_VAR* var, SCIP_Rational* lb, SCIP_Rational* ub, SCIP_Longint lbindex, SCIP_Longint ubindex);
+
+SCIP_RETCODE SCIPcertificatePrintGlobalBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< Whether we have an upper bound or a lower bound */
+   SCIP_Rational*        value,              /**< value of the bound */
+   SCIP_Longint          certificateindex    /**< index in the certificate */
+   );
+
 #ifdef __cplusplus
 }
 #endif
