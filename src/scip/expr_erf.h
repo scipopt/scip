@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_erf.h
- * @ingroup EXPRHDLRS
  * @brief  handler for Gaussian error function expressions
  * @author Benjamin Mueller
  */
@@ -30,9 +29,7 @@
 extern "C" {
 #endif
 
-/**@addtogroup EXPRHDLRS
- *
- * @{
+/** @{
  *
  * @name Gaussian error function expression
  *
@@ -59,10 +56,7 @@ SCIP_RETCODE SCIPcreateExprErf(
   * @}
   */
 
-/** creates the handler for erf expressions and includes it into SCIP
- *
- * @ingroup ExprhdlrIncludes
- */
+/** creates the handler for erf expressions and includes it into SCIP */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprhdlrErf(
    SCIP*                 scip                /**< SCIP data structure */
