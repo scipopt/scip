@@ -426,7 +426,7 @@ SCIP_Longint SCIPcertificatePrintActivityVarBound(
 
 void SCIPcertificateAssertStateCorrect(SCIP* scip, SCIP_VAR* var);
 
-unsigned long SCIPcertificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROWEXACT* row);
+unsigned long SCIPcertificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROWEXACT* row, SCIP_Bool rhs);
 
 SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(SCIP* scip, SCIP_CERTIFICATE* certificate, SCIP_VAR* var, SCIP_Rational* lb, SCIP_Rational* ub, SCIP_Longint lbindex, SCIP_Longint ubindex);
 

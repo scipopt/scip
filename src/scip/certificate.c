@@ -2490,8 +2490,15 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    return (certificate->indexcounter - 1);
 }
 
-unsigned long SCIPcertificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROWEXACT* row) {
-   return (size_t)SCIPhashmapGetImageLong(certificate->rowdatahash, row);
+unsigned long SCIPcertificateGetRowIndex(SCIP_CERTIFICATE* certificate, SCIP_ROWEXACT* row, SCIP_Bool rhs) {
+
+   SCIP_Longint ret = SCIPhashmapGetImageLong(certificate->rowdatahash, row);
+   assert( ret != LONG_MAX );
+   /* for ranged rows, the key always corresponds to the >= part of the row;
+         therefore we need to increase it by one to get the correct key */
+   if( !RatIsAbsInfinity(row->rhs) && !RatIsAbsInfinity(row->lhs) && !RatIsEqual(row->lhs, row->rhs) && rhs)
+      ret += 1;
+   return ret;
 }
 
 
@@ -2705,11 +2712,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
       assert(rowexact != NULL);
       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact));
 
-      key = SCIPhashmapGetImageLong(certificate->rowdatahash, (void*) rowexact);
-      /* for ranged rows, the key always corresponds to the >= part of the row;
-         therefore we need to increase it by one to get the correct key */
-      if( !RatIsAbsInfinity(rowexact->rhs) && !RatIsAbsInfinity(rowexact->lhs) && !RatIsEqual(rowexact->lhs, rowexact->rhs) && weights[i] >= 0 )
-         key += 1;
+      key = SCIPcertificateGetRowIndex(certificate, (void*) rowexact, weights[i] >= 0);
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
@@ -3264,7 +3267,10 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
          return 0;
       case SCIP_VARSTATUS_NEGATED:
          RatMultReal(value, value, -1);
+         assert( SCIPvarGetNegationConstant(var) == 1 );
+         RatAddReal(value, value, 1.0);
          res = SCIPcertificatePrintGlobalBound(scip, certificate, var->negatedvar, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER, value, certificateindex);
+         RatAddReal(value, value, -1.0);
          RatMultReal(value, value, -1);
          return res;
          break;
