@@ -2859,7 +2859,6 @@ SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
 
    /* make the mirinfo sparse again */
    SCIPallocBlockMemoryArray(scip, &(mirinfo->varinds), mirinfo->nsplitvars);
-
    for( i = 0; i < mirinfo->nsplitvars; i++ )
    {
       if( mirinfo->splitcoefficients[i] != 0.0 || mirinfo->upperused[i] || mirinfo->localbdused[i] )
