@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_erf.h
+ * @ingroup EXPRHDLRS
  * @brief  handler for Gaussian error function expressions
  * @author Benjamin Mueller
  */
@@ -29,11 +30,20 @@
 extern "C" {
 #endif
 
-/** creates the handler for erf expressions and includes it into SCIP */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprhdlrErf(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+/**@addtogroup EXPRHDLRS
+ *
+ * @{
+ *
+ * @name Gaussian error function expression
+ *
+ * This expression handler provides the Gaussian error function, that is
+ *
+ * \f[
+ *   x \mapsto \frac{2}{\sqrt{\pi}}\int_0^x \exp(-t^2) dt.
+ * \f]
+ *
+ * @{
+ */
 
 /** creates an erf expression */
 SCIP_EXPORT
@@ -43,6 +53,19 @@ SCIP_RETCODE SCIPcreateExprErf(
    SCIP_EXPR*            child,              /**< child expression */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
+   );
+
+/** @}
+  * @}
+  */
+
+/** creates the handler for erf expressions and includes it into SCIP
+ *
+ * @ingroup ExprhdlrIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeExprhdlrErf(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

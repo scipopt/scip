@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   expr_erf.c
+ * @ingroup DEFPLUGINS_EXPR
  * @brief  handler for Gaussian error function expressions
  * @author Benjamin Mueller
  */
@@ -277,33 +278,6 @@ SCIP_DECL_EXPRINTEGRALITY(integralityErf)
    return SCIP_OKAY;
 }
 
-/** creates the handler for erf expressions and includes it SCIP */
-SCIP_RETCODE SCIPincludeExprhdlrErf(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_EXPRHDLR* exprhdlr;
-
-   /* include expression handler */
-   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalErf, NULL) );
-   assert(exprhdlr != NULL);
-
-   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrErf, NULL);
-   SCIPexprhdlrSetSimplify(exprhdlr, simplifyErf);
-   SCIPexprhdlrSetCompare(exprhdlr, compareErf);
-   SCIPexprhdlrSetParse(exprhdlr, parseErf);
-   SCIPexprhdlrSetIntEval(exprhdlr, intevalErf);
-   SCIPexprhdlrSetEstimate(exprhdlr, NULL, estimateErf);
-   SCIPexprhdlrSetReverseProp(exprhdlr, reversepropErf);
-   SCIPexprhdlrSetHash(exprhdlr, hashErf);
-   SCIPexprhdlrSetDiff(exprhdlr, bwdiffErf, NULL, NULL);
-   SCIPexprhdlrSetCurvature(exprhdlr, curvatureErf);
-   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityErf);
-   SCIPexprhdlrSetIntegrality(exprhdlr, integralityErf);
-
-   return SCIP_OKAY;
-}
-
 /** creates an erf expression */
 SCIP_RETCODE SCIPcreateExprErf(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -328,6 +302,33 @@ SCIP_RETCODE SCIPcreateExprErf(
 
    /* create expression */
    SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, NULL, 1, &child, ownercreate, ownercreatedata) );
+
+   return SCIP_OKAY;
+}
+
+/** creates the handler for erf expressions and includes it SCIP */
+SCIP_RETCODE SCIPincludeExprhdlrErf(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_EXPRHDLR* exprhdlr;
+
+   /* include expression handler */
+   SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalErf, NULL) );
+   assert(exprhdlr != NULL);
+
+   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrErf, NULL);
+   SCIPexprhdlrSetSimplify(exprhdlr, simplifyErf);
+   SCIPexprhdlrSetCompare(exprhdlr, compareErf);
+   SCIPexprhdlrSetParse(exprhdlr, parseErf);
+   SCIPexprhdlrSetIntEval(exprhdlr, intevalErf);
+   SCIPexprhdlrSetEstimate(exprhdlr, NULL, estimateErf);
+   SCIPexprhdlrSetReverseProp(exprhdlr, reversepropErf);
+   SCIPexprhdlrSetHash(exprhdlr, hashErf);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffErf, NULL, NULL);
+   SCIPexprhdlrSetCurvature(exprhdlr, curvatureErf);
+   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityErf);
+   SCIPexprhdlrSetIntegrality(exprhdlr, integralityErf);
 
    return SCIP_OKAY;
 }
