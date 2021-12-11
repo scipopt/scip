@@ -65,9 +65,10 @@ OPTCOMMAND="${26}"
 SETCUTOFF="${27}"
 VISUALIZE="${28}"
 CLUSTERNODES="${29}"
-SLURMACCOUNT="${30}"
-PYTHON="${31}"
-EMPHBENCHMARK="${32}"
+EXCLUDENODES="${30}"
+SLURMACCOUNT="${31}"
+PYTHON="${32}"
+EMPHBENCHMARK="${33}"
 
 
 # check if all variables defined (by checking the last one)
@@ -103,6 +104,7 @@ then
     echo "SETCUTOFF     = ${SETCUTOFF}"
     echo "VISUALIZE     = ${VISUALIZE}"
     echo "CLUSTERNODES  = ${CLUSTERNODES}"
+    echo "EXCLUDENODES  = ${EXCLUDENODES}"
     echo "SLURMACCOUNT  = ${SLURMACCOUNT}"
     echo "PYTHON        = ${PYTHON}"
     echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
@@ -256,13 +258,21 @@ do
                         sbatch --job-name=write-settings --mem=${HARDMEMLIMIT} -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null write-settings.sh
                     fi
 
-                    if test "${CLUSTERNODES}" = "all"
+                    if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                     then
                         echo sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
                         sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
-                    else
+                    elif test "${CLUSTERNODES}" != "all" && test "${EXCLUDENODES}" = "none"
+                    then
                         echo sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
                         sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
+                    elif test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" != "none"
+                    then
+                        echo sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                    else
+                        echo sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        sbatch --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
                     fi
                 else
                     if test "${WRITESETTINGS}" = "true"

@@ -3732,10 +3732,15 @@ SCIP_RETCODE SCIPStpIncludeHeurTM(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeTM) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitTM) );
 
+
    heurdata->ncalls = 0;
    heurdata->nlpiterations = -1;
    heurdata->nexecs = 0;
    heurdata->randseed = DEFAULT_RANDSEED;
+
+#ifdef WITH_UG
+   heurdata->randseed += getUgRank();
+#endif
 
    /* add TM primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/evalruns",
