@@ -61,8 +61,9 @@ OPTCOMMAND="${26}"
 SETCUTOFF="${27}"
 VISUALIZE="${28}"
 CLUSTERNODES="${29}"
-SLURMACCOUNT="${30}"
-EMPHBENCHMARK="${31}"
+EXCLUDENODES="${30}"
+SLURMACCOUNT="${31}"
+EMPHBENCHMARK="${32}"
 
 SOLVER=fscip
 
@@ -99,6 +100,7 @@ then
     echo "SETCUTOFF     = ${SETCUTOFF}"
     echo "VISUALIZE     = ${VISUALIZE}"
     echo "CLUSTERNODES  = ${CLUSTERNODES}"
+    echo "EXCLUDENODES  = ${EXCLUDENODES}"
     echo "SLURMACCOUNT  = ${SLURMACCOUNT}"
     echo "EMPHBENCHMARK  = ${EMPHBENCHMARK}"
     exit 1;
@@ -218,11 +220,17 @@ do
                 fi
 
                 # CLUSTERNODES will never be empty (see check on top)
-                if test "${CLUSTERNODES}" = "all"
+                if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                 then
                     sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run_fscip.sh
-                else
+                elif test "${CLUSTERNODES}" != "all" && test "${EXCLUDENODES}" = "none"
+                then
                     sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run_fscip.sh
+                elif test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" != "none"
+                then
+                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run_fscip.sh
+                else
+                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run_fscip.sh
                 fi
                 else
                     # -V to copy all environment variables
