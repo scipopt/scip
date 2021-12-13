@@ -300,8 +300,16 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* communicate the random seed */
    presolve.getPresolveOptions().randomseed = SCIPinitializeRandomSeed(scip, (unsigned int)data->randomseed);
 
+#ifdef PAPILO_TBB
    /* set number of threads to be used for presolve */
    presolve.getPresolveOptions().threads = data->threads;
+#else
+   if (data->threads != DEFAULT_THREADS)
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+                      "PaPILO can utilize only multiple threads if it is build with TBB.\n");
+   presolve.getPresolveOptions().threads = 1;
+#endif
+
 
    /* disable dual reductions that are not permitted */
    if( !complete )
