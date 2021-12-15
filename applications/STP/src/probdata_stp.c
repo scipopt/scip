@@ -2029,7 +2029,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->xval, sourcedata->nvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->edgevars, sourcedata->nvars) );
 
-      for( v = sourcedata->nvars - 1; v >= 0; --v )
+      for( v = 0; v < sourcedata->nvars; v++ )
       {
          SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcedata->edgevars[v], &((*targetdata)->edgevars[v]), varmap, consmap, global, &success) );
          assert(success);
