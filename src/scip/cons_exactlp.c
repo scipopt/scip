@@ -15789,7 +15789,8 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
-   consdataScaleMinValue(scip, targetdata, 2 * SCIPepsilon(scip));
+   if( sourcedata->nvars > 0 )
+      consdataScaleMinValue(scip, targetdata, 2 * SCIPepsilon(scip));
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
