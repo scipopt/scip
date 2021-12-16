@@ -4813,6 +4813,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
 
       /* set the status of the floating point lp also to timelimit to avoid using the uncorrected bound */
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      lp->solved = TRUE;
       break;
 
    case SCIP_LPSOLSTAT_ERROR:
