@@ -906,17 +906,6 @@ SCIP_RETCODE createAndAddProofcons(
       toolong = (toolong && (nnz > set->conf_maxvarsfac * transprob->nvars));
    }
 
-   /* don't store global dual proofs that are too long / have too many non-zeros */
-   if( toolong  && !set->exact_enabled)
-   {
-      if( applyglobal )
-      {
-         SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
-               eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
-      }
-      return SCIP_OKAY;
-   }
-
    /* check if conflict contains variables that are invalid after a restart to label it appropriately */
    hasrelaxvar = FALSE;
    contonly = TRUE;
@@ -941,6 +930,11 @@ SCIP_RETCODE createAndAddProofcons(
    SCIPdebugMessage("Create constraint from dual ray analysis\n");
    if (set->exact_enabled)
    {
+      /* don't store global dual proofs that are too long / have too many non-zeros */
+      if( toolong  )
+      {
+         return SCIP_OKAY;
+      }
       SCIP_Rational* lhs_exact;
       SCIP_Rational* rhs_exact;
       SCIP_Rational** coefs_exact;
@@ -970,10 +964,19 @@ SCIP_RETCODE createAndAddProofcons(
       RatFreeBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz);
       RatFreeBuffer(SCIPbuffer(set->scip), &rhs_exact);
       RatFreeBuffer(SCIPbuffer(set->scip), &lhs_exact);
-
    }
    else
    {
+      /* don't store global dual proofs that are too long / have too many non-zeros */
+      if( toolong  )
+      {
+         if( applyglobal )
+         {
+            SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
+                  eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
+         }
+         return SCIP_OKAY;
+      }
       SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
             FALSE, TRUE, TRUE, FALSE) );
@@ -982,6 +985,7 @@ SCIP_RETCODE createAndAddProofcons(
          int v = inds[i];
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[v], coefs[i]) );
       }
+
    }
 
    /* do not upgrade linear constraints of size 1 */
