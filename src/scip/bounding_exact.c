@@ -1861,10 +1861,10 @@ char chooseInitialBoundingMethod(
 
    dualboundmethod = 'u';
 
-   if( set->scip->stat->nnodes == 1 )
-      dualboundmethod = 'e';
+   //if( set->scip->stat->nnodes == 1 )
+   //   dualboundmethod = 'e';
    /* first, check if we need to solve exactly */
-   else if( lpexact->forceexactsolve || SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   if( lpexact->forceexactsolve || SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       dualboundmethod = 'e';
    /* if the LP was solved to optimality and there are no fractional variables we solve exactly to generate a feasible
     * solution
