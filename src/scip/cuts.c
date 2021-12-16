@@ -280,7 +280,8 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
    SCIP_Real             scale,              /**< scale for adding given row to variable vector */
    SCIP_Real*            rhschange,          /**< change in rhs due to variable conjugation */
    SCIP_MIRINFO*         mirinfo,            /**< certificate split-information, NULL if not needed */
-   SCIP_Real             splitscale          /**< possible scaling for mirinfo of certificate */
+   SCIP_Real             splitscale,         /**< possible scaling for mirinfo of certificate */
+   SCIP_Bool*            success             /**< was the addition succesful */
    )
 {
    int i;
@@ -346,8 +347,9 @@ SCIP_RETCODE varVecAddScaledRowCoefsQuadSafely(
       }
       else
       {
-         SCIPerrorMessage("cannot aggregate safely with completely unbounded variables \n");
-         return SCIP_INVALIDDATA;
+         *success = FALSE;
+         SCIPintervalSetRoundingMode(previousroundmode);
+         return SCIP_OKAY;
       }
 
       /* we can't set the value to 0 or the sparsity pattern does not work. We can't perturb it slightly because we are solving
@@ -2162,7 +2164,8 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
    SCIP_ROW*             row,                /**< row to add to aggregation row */
    SCIP_Real             weight,             /**< scale for adding given row to aggregation row */
-   int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   int                   sidetype,           /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   SCIP_Bool*            success             /**< was the row added successfully */
    )
 {
    SCIP_Real sideval;
@@ -2248,7 +2251,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, weight * sideval);
 
    /* add up coefficients */
-   SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, userow, weight, &sidevalchg, NULL, 0) );
+   SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, userow, weight, &sidevalchg, NULL, 0, success) );
 
    SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, sidevalchg);
 
@@ -2600,7 +2603,8 @@ SCIP_RETCODE addOneRowSafely(
    int                   negslack,           /**< should negative slack variables allowed to be used? (0: no, 1: only for integral rows, 2: yes) */
    int                   maxaggrlen,         /**< maximal length of aggregation row */
    SCIP_Bool*            rowtoolong,         /**< is the aggregated row too long */
-   SCIP_Bool*            rowused             /**< was the row really added? */
+   SCIP_Bool*            rowused,            /**< was the row really added? */
+   SCIP_Bool*            success             /**< was the row added succesfully? */
    )
 {
    SCIP_Real sideval;
@@ -2647,8 +2651,8 @@ SCIP_RETCODE addOneRowSafely(
    rowexact = SCIProwGetRowExact(row);
    if( !SCIProwExactHasFpRelax(rowexact) )
    {
-      SCIPerrorMessage("cannot aggregate row that admits no fp relaxation");
-      SCIPABORT();
+      *success = FALSE;
+      return SCIP_OKAY;
    }
    else if( SCIProwExactGetRowRhs(rowexact) != NULL && weight >= 0.0 )
       userow = SCIProwExactGetRowRhs(rowexact);
@@ -2714,7 +2718,7 @@ SCIP_RETCODE addOneRowSafely(
    aggrrow->slacksign[i] = uselhs ? -1 : 1;
 
    /* add up coefficients */
-   SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, userow, weight, &sidevalchg, NULL, 0) );
+   SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, userow, weight, &sidevalchg, NULL, 0, success) );
 
    SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, sidevalchg);
 
@@ -2785,7 +2789,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
          {
             SCIPdebugMessage("Adding %g times row: ", weights[rowinds[k]]);
             SCIPdebug(SCIPprintRow(scip, rows[rowinds[k]], NULL));
-            SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused) );
+            SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid) );
             if( rowused )
             {
                usedrows[aggrrow->nrows - 1] = rows[rowinds[k]];
@@ -2811,7 +2815,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
             {
                SCIPdebugMessage("Adding %g times row: ", weights[k]);
                SCIPdebug(SCIPprintRow(scip, rows[k], NULL));
-               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused) );
+               SCIP_CALL( addOneRowSafely(scip, aggrrow, rows[k], weights[k], sidetypebasis, allowlocal, negslack, maxaggrlen, &rowtoolong, &rowused, valid) );
                if( rowused )
                {
                   usedrows[aggrrow->nrows - 1] = rows[k];
