@@ -3931,7 +3931,11 @@ SCIP_RETCODE cutsTransformMIR(
       SCIPintervalSetRoundingModeUpwards();
       /* we need to track which bounds were used for the complementation of variables */
       if( SCIPisCertificateActive(scip) )
-         mirinfo->rhs = QUAD_TO_DBL(*cutrhs);
+      {
+         RatSetReal(mirinfo->rhs, floor(QUAD_TO_DBL(*cutrhs)));
+         RatSetReal(mirinfo->frac, QUAD_TO_DBL(*cutrhs));
+         RatDiff(mirinfo->frac, mirinfo->frac, mirinfo->rhs);
+      }
 
       SCIPintervalSetRoundingMode(previousroundmode);
    }
@@ -4105,7 +4109,21 @@ SCIP_RETCODE cutsRoundMIRSafe(
             SCIPintervalSet(&cutaj, downaj);
 
             if( SCIPisCertificateActive(scip) )
+            {
+               SCIP_Rational* boundval;
+
                mirinfo->splitcoefficients[v] = SCIPintervalGetInf(cutaj);
+               if( mirinfo->upperused[v] )
+               {
+                  mirinfo->splitcoefficients[v] *= -1;
+                  boundval = mirinfo->localbdused[v] ? SCIPvarGetUbLocalExact(var) : SCIPvarGetUbGlobalExact(var);
+               }
+               else
+               {
+                  boundval = mirinfo->localbdused[v] ? SCIPvarGetLbLocalExact(var) : SCIPvarGetLbGlobalExact(var);
+               }
+               RatAddProdReal(mirinfo->rhs, boundval, mirinfo->splitcoefficients[v]);
+            }
          }
          else
          {
@@ -4117,8 +4135,19 @@ SCIP_RETCODE cutsRoundMIRSafe(
 
             if( SCIPisCertificateActive(scip) )
             {
+               SCIP_Ratiional* boundval;
                mirinfo->splitcoefficients[v] = QUAD_TO_DBL(downaj);
                mirinfo->splitcoefficients[v] += 1.0;
+               if( mirinfo->upperused[v] )
+               {
+                  mirinfo->splitcoefficients[v] *= -1;
+                  boundval = mirinfo->localbdused[v] ? SCIPvarGetUbLocalExact(var) : SCIPvarGetUbGlobalExact(var);
+               }
+               else
+               {
+                  boundval = mirinfo->localbdused[v] ? SCIPvarGetLbLocalExact(var) : SCIPvarGetLbGlobalExact(var);
+               }
+               RatAddProdReal(mirinfo->rhs, boundval, mirinfo->splitcoefficients[v]);
             }
          }
 
@@ -4509,7 +4538,21 @@ SCIP_RETCODE cutsRoundMIRRational(
             RatSetReal(cutaj, downaj);
 
             if( SCIPisCertificateActive(scip) )
+            {
+               SCIP_Rational* boundval;
+
                mirinfo->splitcoefficients[v] = downaj;
+               if( mirinfo->upperused[v] )
+               {
+                  mirinfo->splitcoefficients[v] *= -1;
+                  boundval = mirinfo->localbdused[v] ? SCIPvarGetUbLocalExact(var) : SCIPvarGetUbGlobalExact(var);
+               }
+               else
+               {
+                  boundval = mirinfo->localbdused[v] ? SCIPvarGetLbLocalExact(var) : SCIPvarGetLbGlobalExact(var);
+               }
+               RatAddProdReal(mirinfo->rhs, boundval, mirinfo->splitcoefficients[v]);
+            }
          }
          else
          {
@@ -4521,8 +4564,20 @@ SCIP_RETCODE cutsRoundMIRRational(
 
             if( SCIPisCertificateActive(scip) )
             {
+               SCIP_Rational* boundval;
+
                mirinfo->splitcoefficients[v] = QUAD_TO_DBL(downaj);
                mirinfo->splitcoefficients[v] += 1.0;
+               if( mirinfo->upperused[v] )
+               {
+                  mirinfo->splitcoefficients[v] *= -1;
+                  boundval = mirinfo->localbdused[v] ? SCIPvarGetUbLocalExact(var) : SCIPvarGetUbGlobalExact(var);
+               }
+               else
+               {
+                  boundval = mirinfo->localbdused[v] ? SCIPvarGetLbLocalExact(var) : SCIPvarGetLbGlobalExact(var);
+               }
+               RatAddProdReal(mirinfo->rhs, boundval, mirinfo->splitcoefficients[v]);
             }
          }
 

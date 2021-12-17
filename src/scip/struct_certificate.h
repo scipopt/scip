@@ -61,7 +61,8 @@ struct SCIP_MirInfo
    SCIP_Bool*            localbdused;        /**< TRUE if local bound was used to complement variable, FALSE if global was used */
    int                   nsplitvars;         /**< number of variables in the split */
    int                   nlocalvars;         /**< number of local bounds used in transformation */
-   SCIP_Real             rhs;                /**< rhs of the split disjunction */
+   SCIP_Rational*        rhs;                /**< rhs of the split disjunction */
+   SCIP_Rational*        frac;               /**< fractionality of the rhs in the mir cut */
    SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */
 };
 
