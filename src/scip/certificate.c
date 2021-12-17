@@ -1469,7 +1469,7 @@ SCIP_RETCODE certificatePrintWeakDerStartMirinfo(
          var = vars[mirinfo->varinds[i]];
          index = mirinfo->upperused[i] ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
          boundval = mirinfo->upperused[i] ? SCIPvarGetUbLocalExact(var) : SCIPvarGetLbLocalExact(var);
-         SCIPcertificatePrintProofMessage(certificate, " %c %d %d ", mirinfo->upperused? 'U' : 'L', (var), index);
+         SCIPcertificatePrintProofMessage(certificate, " %c %d %d ", mirinfo->upperused[i] ? 'U' : 'L', SCIPvarGetCertificateIndex(var), index);
          SCIPcertificatePrintProofRational(certificate, boundval, 10);
       }
    }
