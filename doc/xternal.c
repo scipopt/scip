@@ -3779,7 +3779,7 @@
  * i.e., if (s)he wants to use the expression handler in his/her application.
  *
  * This method is responsible for notifying SCIP of the presence of the expression handler.
- * For this, you must call SCIPincludeExprhdlr().
+ * For this, you must call SCIPincludeExprhdlr() from SCIPincludeExprhdlrMyfunc().
  * The function only expects the properties and fundamental callbacks of the expression handler as arguments.
  * \ref EXPRHDLR_ADDITIONALCALLBACKS "Additional callbacks" must be added via setter functions as, e.g., SCIPexprhdlrSetCopyFreeHdlr().
  *
