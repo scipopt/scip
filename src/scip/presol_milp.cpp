@@ -288,7 +288,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
     * presolve library those look like normal substitution on the postsolve stack */
    presolve.getPresolveOptions().removeslackvars = false;
 
-fix typo   /* communicate the SCIP parameters to the presolve library */
+   /* communicate the SCIP parameters to the presolve library */
    presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
    presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
    presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
