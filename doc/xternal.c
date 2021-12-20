@@ -4118,7 +4118,8 @@
  * @refsnippet{src/scip/expr_abs.c,SnippetExprInitestimatesAbs}
  *
  * If this callback is not implemented, the initial linear relaxation for nonlinear constraints may be less tight.
- * This can have a minor effect on performance, as long as \ref EXPRESTIMATE has been implemented.
+ * This can have a minor effect on performance, as long as \ref EXPRESTIMATE has been implemented and the linear relaxation
+ * is still bounded (e.g., when all nonlinear variables have finite bounds).
  *
  * @subsection EXPRSIMPLIFY
  *
