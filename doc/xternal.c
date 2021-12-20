@@ -3722,14 +3722,7 @@
  * A complete list of all expression handlers contained in this release can be found \ref EXPRHDLRS "here".
  * In addition to expression handlers, higher level nonlinear structures are handled by nonlinear handlers, see \ref NLHDLR.
  *
- * We now explain how users can add their own expression handlers.
- * Take the expression handler for exponential expressions (src/scip/expr_exp.c) as an example.
- * As most other default plugins, it is written in C.
- *
- * Additional documentation for the callback methods of an expression handler, in particular for the input parameters,
- * can be found in the file \ref type_expr.h.
- *
- * Here is what you have to do to implement an expression handler:
+ * Here is what you have to do to implement an own expression handler:
  * -# Copy the template files `src/scip/expr_xyz.c` and `src/scip/expr_xyz.h` into files `expr_myfunc.c` and `expr_myfunc.h`, respectively. \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use `SCIPincludeExprhdlrMyfunc()` in order to include the expression handler into your SCIP instance,
@@ -3741,6 +3734,10 @@
  * -# Implement the fundamental callback methods (see \ref EXPRHDLR_FUNDAMENTALCALLBACKS).
  * -# Implement the additional callback methods (see \ref EXPRHDLR_ADDITIONALCALLBACKS), where necessary.
  *
+ * Additional documentation for the callback methods of an expression handler, in particular for the input parameters,
+ * can be found in the file \ref type_expr.h.
+ *
+ * For a complete implementation of an expression handler, take the one for exponential expressions (src/scip/expr_exp.c) as an example.
  *
  * @section EXPRHDLR_PROPERTIES Properties of an Expression Handler
  *
@@ -4175,11 +4172,7 @@
  * A complete list of all nonlinear handlers contained in this release can be found \ref NLHDLRS "here".
  * In difference to many other plugins in SCIP, nonlinear handlers are not handled by the SCIP core but by the constraint handler for nonlinear constraints.
  *
- * We now explain how users can add their own nonlinear handlers.
- * Additional documentation for the callback methods of a nonlinear handler, in particular for the input parameters,
- * can be found in the file \ref type_nlhdlr.h.
- *
- * Here is what you have to do to implement a nonlinear handler:
+ * Here is what you have to do to implement a own nonlinear handler:
  * -# Copy the template files `src/scip/nlhdlr_xyz.c` and `src/scip/nlhdlr_xyz.h` into files `nlhdlr_mystruct.c` and `nlhdlr_mystruct.h`, respectively. \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project.
@@ -4190,6 +4183,8 @@
  * -# Implement the fundamental callback methods (see \ref NLHDLR_FUNDAMENTALCALLBACKS).
  * -# Implement the additional callback methods (see \ref NLHDLR_ADDITIONALCALLBACKS), where necessary.
  *
+ * Additional documentation for the callback methods of a nonlinear handler, in particular for the input parameters,
+ * can be found in the file \ref type_nlhdlr.h.
  *
  * @section NLHDLR_PROPERTIES Properties of a Nonlinear Handler
  *
