@@ -4172,7 +4172,7 @@
  * A complete list of all nonlinear handlers contained in this release can be found \ref NLHDLRS "here".
  * In difference to many other plugins in SCIP, nonlinear handlers are not handled by the SCIP core but by the constraint handler for nonlinear constraints.
  *
- * Here is what you have to do to implement a own nonlinear handler:
+ * Here is what you have to do to implement a nonlinear handler:
  * -# Copy the template files `src/scip/nlhdlr_xyz.c` and `src/scip/nlhdlr_xyz.h` into files `nlhdlr_mystruct.c` and `nlhdlr_mystruct.h`, respectively. \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use `SCIPincludeNlhdlrMystruct()` in order to include the nonlinear handler into your SCIP instance, e.g., in the main file of your project.
@@ -4228,7 +4228,7 @@
  * i.e., if (s)he wants to use the nonlinear handler in his/her application.
  *
  * This method is responsible for notifying SCIP of the presence of the nonlinear handler.
- * For this, you must call SCIPincludeNlhdlrNonlinear().
+ * For this, you must call SCIPincludeNlhdlrNonlinear() from SCIPincludeNlhdlrMystruct().
  * The function only expects the properties and fundamental callbacks of the nonlinear handler as arguments.
  * \ref NLHDLR_ADDITIONALCALLBACKS "Additional callbacks" must be added via setter functions as, e.g., SCIPnlhdlrSetCopyHdlr().
  *
@@ -4307,7 +4307,7 @@
  *
  * @subsection NLHDLREVALAUX
  *
- * This callback is called by the constraint handler for nonlinear constraints when he violation of constraints in the extended formulation
+ * This callback is called by the constraint handler for nonlinear constraints when the violation of constraints in the extended formulation
  * (`expr` &le;/&ge; `auxvar`) needs to be evaluated.
  * During constraint enforcement, this violation value is used to decide whether estimation and separation callbacks should be called.
  *
