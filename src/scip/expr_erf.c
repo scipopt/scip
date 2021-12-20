@@ -99,19 +99,6 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyErf)
    return SCIP_OKAY;
 }
 
-/** expression compare callback */
-static
-SCIP_DECL_EXPRCOMPARE(compareErf)
-{  /*lint --e{715}*/
-   assert(expr1 != NULL);
-   assert(expr2 != NULL);
-
-   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return 0;
-}
-
 /** expression parse callback */
 static
 SCIP_DECL_EXPRPARSE(parseErf)
@@ -185,30 +172,6 @@ SCIP_DECL_EXPRINTEVAL(intevalErf)
       assert(inf <= sup);
       SCIPintervalSetBounds(interval, inf, sup);
    }
-
-   return SCIP_OKAY;
-}
-
-/** expression under/overestimation callback */
-static
-SCIP_DECL_EXPRESTIMATE(estimateErf)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
-/** expression reverse propagation callback */
-static
-SCIP_DECL_EXPRREVERSEPROP(reversepropErf)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -326,11 +289,8 @@ SCIP_RETCODE SCIPincludeExprhdlrErf(
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrErf, NULL);
    SCIPexprhdlrSetSimplify(exprhdlr, simplifyErf);
-   SCIPexprhdlrSetCompare(exprhdlr, compareErf);
    SCIPexprhdlrSetParse(exprhdlr, parseErf);
    SCIPexprhdlrSetIntEval(exprhdlr, intevalErf);
-   SCIPexprhdlrSetEstimate(exprhdlr, NULL, estimateErf);
-   SCIPexprhdlrSetReverseProp(exprhdlr, reversepropErf);
    SCIPexprhdlrSetHash(exprhdlr, hashErf);
    SCIPexprhdlrSetDiff(exprhdlr, bwdiffErf, NULL, NULL);
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureErf);
