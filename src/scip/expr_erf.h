@@ -39,10 +39,16 @@ extern "C" {
  *   x \mapsto \frac{2}{\sqrt{\pi}}\int_0^x \exp(-t^2) dt.
  * \f]
  *
+ * @attention The implementation of this expression handler is incomplete.
+ * It is not usable for most use cases so far.
  * @{
  */
 
-/** creates an erf expression */
+/** creates an erf expression
+ *
+ * @attention The implementation of `erf` expressions is incomplete.
+ * They are not usable for most use cases so far.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateExprErf(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -56,7 +62,11 @@ SCIP_RETCODE SCIPcreateExprErf(
   * @}
   */
 
-/** creates the handler for erf expressions and includes it into SCIP */
+/** creates the handler for erf expressions and includes it into SCIP
+ *
+ * @attention The implementation of this expression handler is incomplete.
+ * It is not usable for most use cases so far.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprhdlrErf(
    SCIP*                 scip                /**< SCIP data structure */
