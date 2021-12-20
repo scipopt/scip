@@ -2124,7 +2124,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
       if( newsolindex == -1 )
       {
          SCIPdebugMessage("REC: random start solution\n");
-         newsolindex = SCIPsolGetIndex(sols[SCIPrandomGetInt(heurdata->randnumgen, 0, nreadysols)]);
+         newsolindex = SCIPsolGetIndex(sols[SCIPrandomGetInt(heurdata->randnumgen, 0, nreadysols - 1)]);
       }
    }
 
