@@ -781,10 +781,14 @@ SCIP_RETCODE SCIPincludePresolMILP(
    String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
 #endif
 
-#ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
-#else
+#if defined(PAPILO_GITHASH_AVAILABLE) && defined(PAPILO_TBB)
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) (built with TBB) [GitHash: {}]", PAPILO_GITHASH);
+#elif !defined(PAPILO_GITHASH_AVAILABLE) && !defined(PAPILO_TBB)
    String desc("parallel presolve for integer and linear optimization (github.com/scipopt/papilo)");
+#elif defined(PAPILO_GITHASH_AVAILABLE) && !defined(PAPILO_TBB)
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
+#elif !defined(PAPILO_GITHASH_AVAILABLE) && defined(PAPILO_TBB)
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) (built with TBB)");
 #endif
 
    /* add external code info for the presolve library */
