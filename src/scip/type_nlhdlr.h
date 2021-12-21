@@ -88,7 +88,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP_EXPR*            expr,   \
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata)
 
-/** callback to be called in initialization
+/** callback to be called in initialization (called after problem was transformed)
  *
  * \param[in] scip   SCIP data structure
  * \param[in] nlhdlr nonlinear handler
@@ -97,7 +97,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP*        scip, \
    SCIP_NLHDLR* nlhdlr)
 
-/** callback to be called in deinitialization
+/** callback to be called in deinitialization (called before transformed problem is freed)
  *
  * \param[in] scip   SCIP data structure
  * \param[in] nlhdlr nonlinear handler
@@ -115,8 +115,8 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * be associated with `expr` and auxiliary variables may be requested in descendant expressions.
  *
  * We distinguish the following enforcement methods:
- * - \ref SCIP_NLHDLR_METHOD_SEPABELOW : linear underestimation or cut generation for the relation `expr` &le; `auxvar` (denoted as "below")
- * - \ref SCIP_NLHDLR_METHOD_SEPAABOVE : linear overestimation or cut generation for the relation `expr` &ge; `auxvar` (denoted as "above")
+ * - \ref SCIP_NLHDLR_METHOD_SEPABELOW : linear underestimation of `expr` or cut generation for the relation `expr` &le; `auxvar` (denoted as "below")
+ * - \ref SCIP_NLHDLR_METHOD_SEPAABOVE : linear overestimation of `expr` or cut generation for the relation `expr` &ge; `auxvar` (denoted as "above")
  * - \ref SCIP_NLHDLR_METHOD_ACTIVITY  : domain propagation (i.e., constant under/overestimation) for the relation `expr` = `auxvar`.
  *
  * On input, parameter `enforcing` indicates for any of these methods, whether
@@ -137,14 +137,14 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * A nonlinear handler will be called only for those callbacks that it mentioned in `participating`, which is
  * - \ref SCIP_DECL_NLHDLRENFO "ENFO" and/or \ref SCIP_DECL_NLHDLRESTIMATE "ESTIMATE" will be called with `overestimate==FALSE` if \ref SCIP_NLHDLR_METHOD_SEPABELOW has been set
  * - \ref SCIP_DECL_NLHDLRENFO "ENFO" and/or \ref SCIP_DECL_NLHDLRESTIMATE "ESTIMATE" will be called with `overestimate==TRUE`  if \ref SCIP_NLHDLR_METHOD_SEPAABOVE has been set
- * - \ref SCIP_DECL_NLHDLRINTEVAL "INTEVAL" and/or \ref SCIP_DECL_NLHDLRREVERSEPROP "REVERSEPROP" will be called if `SCIP_NLHDLR_METHOD_ACTIVITY` has been set
+ * - \ref SCIP_DECL_NLHDLRINTEVAL "INTEVAL" and/or \ref SCIP_DECL_NLHDLRREVERSEPROP "REVERSEPROP" will be called if \ref SCIP_NLHDLR_METHOD_ACTIVITY has been set
  *
  * If \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE has been set, then at least one of the
  * callbacks \ref SCIP_DECL_NLHDLRENFO "ENFO" and \ref SCIP_DECL_NLHDLRESTIMATE "ESTIMATE" needs to be implemented.
  * Also \ref SCIP_DECL_NLHDLREVALAUX "EVALAUX" will be called in this case.
  * If \ref SCIP_NLHDLR_METHOD_ACTIVITY has been set, then at least one of \ref SCIP_DECL_NLHDLRINTEVAL "INTEVAL" and
  * \ref SCIP_DECL_NLHDLRREVERSEPROP "REVERSEPROP" needs to be implemented.
- * If the nonlinear handler chooses not to participate, then it must not set `nlhdlrexprdata` and can leave participating at its
+ * If the nonlinear handler chooses not to participate, then it must not set `nlhdlrexprdata` and can leave `participating` at its
  * initial value (\ref SCIP_NLHDLR_METHOD_NONE).
  *
  * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
@@ -153,7 +153,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * - it will use activity for some subexpressions when computing estimators or cuts, and
  * - it will use activity for some subexpressions when in \ref SCIP_DECL_NLHDLRINTEVAL "INTEVAL" or \ref SCIP_DECL_NLHDLRREVERSEPROP "REVERSEPROP".
  *
- * @note Auxiliary variables do not exist in subexpressions during detect and are not created by a call to @ref SCIPregisterExprUsageNonlinear().
+ * @note Auxiliary variables do not exist in subexpressions during DETECT and are not created by a call to @ref SCIPregisterExprUsageNonlinear().
  *   They will be available when the \ref SCIP_DECL_NLHDLRINITSEPA "INITSEPA" callback is called.
  *
  * \param[in] scip              SCIP data structure
@@ -358,16 +358,17 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
 
 /** nonlinear handler under/overestimation callback
  *
- * The method tries to compute a linear under- or overestimator that is as tight as possible at a given point.
+ * The method tries to compute linear under- or overestimators of `expr` that are as tight as possible at a given point.
  * If the value of the estimator in the solution is smaller (larger) than `targetvalue`
  * when underestimating (overestimating), then no estimator needs to be computed.
- * Note, that targetvalue can be infinite if any estimator will be accepted.
+ * Note, that `targetvalue` can be infinite if any estimator will be accepted.
  * If successful, it shall store the estimators in the given `rowpreps` data structure and set the
  * `rowprep->local` flag accordingly (SCIProwprepSetLocal()).
  * The sidetype of a rowprep must be set to \ref SCIP_SIDETYPE_LEFT if overestimating and
  * \ref SCIP_SIDETYPE_RIGHT if underestimating.
  *
- *  is not changed by the callback.
+ * If the callback is required to indicate for which expression a reduction in the local bounds (usually by branching)
+ * would improve the estimator, it shall do so via calls to SCIPaddExprsViolScoreNonlinear().
  *
  * \param[in] scip               SCIP main data structure
  * \param[in] conshdlr           constraint handler

@@ -28,7 +28,6 @@
 #define EXPRHDLR_NAME         "xyz"
 #define EXPRHDLR_DESC         "expression handler template"
 #define EXPRHDLR_PRECEDENCE   0
-#define EXPRHDLR_HASHKEY      SCIPcalcFibHash(1.0)
 
 /*
  * Data structures
@@ -36,13 +35,13 @@
 
 /* TODO: fill in the necessary data */
 
-/** expression data */
-struct SCIP_ExprData
+/** expression handler data */
+struct SCIP_ExprhdlrData
 {
 };
 
-/** expression handler data */
-struct SCIP_ExprhdlrData
+/** expression data */
+struct SCIP_ExprData
 {
 };
 
@@ -248,7 +247,6 @@ static
 SCIP_DECL_EXPRHASH(hashXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(EXPRHDLR_HASHKEY != 0);
 
    SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/

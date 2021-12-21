@@ -9564,7 +9564,7 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
    conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
 
-   /* reset statistics in nonlinear handlers (TODO only if misc/resetstat == TRUE) */
+   /* reset statistics in nonlinear handlers (TODO only if misc/resetstat == TRUE) and call nlhdlrInit */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
       SCIP_CALL( SCIPnlhdlrInit(scip, conshdlrdata->nlhdlrs[i]) );

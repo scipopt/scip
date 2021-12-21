@@ -56,7 +56,8 @@ SCIP_RETCODE computeCutsAbs(
 
    *nreturned = 0;
 
-   if( ! overestimate )
+   /**! [SnippetExprInitestimatesAbs] */
+   if( !overestimate )
    {
       /* compute left tangent -x <= z */
       coefs[*nreturned][0] = -1.0;
@@ -112,6 +113,7 @@ SCIP_RETCODE computeCutsAbs(
          }
       }
    }
+   /**! [SnippetExprInitestimatesAbs] */
 
    return SCIP_OKAY;
 }
@@ -257,6 +259,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
    SCIPdebugMsg(scip, "%sestimate |child| over locdom=[%g,%g] glbdom=[%g,%g]\n", overestimate ? "over" : "under",
       localbounds[0].inf, localbounds[0].sup, globalbounds[0].inf, globalbounds[0].sup);
 
+   /**! [SnippetExprEstimateAbs] */
    if( !overestimate )
    {
       *constant = 0.0;
@@ -324,6 +327,7 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
          return SCIP_OKAY;
       }
    }
+   /**! [SnippetExprEstimateAbs] */
 
    SCIPdebugMsg(scip, "-> %g * <child> %+g, local=%u branchcand=%u\n", *coefs, *constant, *islocal, *branchcand);
 
@@ -359,6 +363,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropAbs)
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(bounds.inf >= 0.0);  /* bounds should have been intersected with activity, which is >= 0 */
 
+   /**! [SnippetExprReversepropAbs] */
    /* abs(x) in I -> x \in (-I \cup I) \cap bounds(x) */
    right = bounds;  /* I */
    SCIPintervalSetBounds(&left, -right.sup, -right.inf); /* -I */
@@ -373,6 +378,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropAbs)
     * this works also if left or right is empty
     */
    SCIPintervalUnify(&childrenbounds[0], left, right);
+   /**! [SnippetExprReversepropAbs] */
 
    return SCIP_OKAY;
 }
@@ -412,6 +418,7 @@ SCIP_DECL_EXPRCURVATURE(curvatureAbs)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
+   /**! [SnippetExprCurvatureAbs] */
    /* expression is |child|, get domain of child */
    SCIP_CALL( SCIPevalExprActivity(scip, child) );
    childbounds = SCIPexprGetActivity(child);
@@ -427,6 +434,7 @@ SCIP_DECL_EXPRCURVATURE(curvatureAbs)
       childcurv[0] = SCIP_EXPRCURV_LINEAR;
    else /* |f(x)|, f mixed sign, is never concave nor linear */
       *success = FALSE;
+   /**! [SnippetExprCurvatureAbs] */
 
    return SCIP_OKAY;
 }
@@ -446,6 +454,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityAbs)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
+   /**! [SnippetExprMonotonicityAbs] */
    SCIP_CALL( SCIPevalExprActivity(scip, child) );
    childbounds = SCIPexprGetActivity(child);
 
@@ -455,6 +464,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityAbs)
       *result = SCIP_MONOTONE_INC;
    else
       *result = SCIP_MONOTONE_UNKNOWN;
+   /**! [SnippetExprMonotonicityAbs] */
 
    return SCIP_OKAY;
 }

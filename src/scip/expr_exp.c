@@ -169,6 +169,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyExp)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
+   /**! [SnippetExprSimplifyExp] */
    /* check for value expression */
    if( SCIPisExprValue(scip, child) )
    {
@@ -181,6 +182,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyExp)
       /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
       SCIPcaptureExpr(*simplifiedexpr);
    }
+   /**! [SnippetExprSimplifyExp] */
 
    return SCIP_OKAY;
 }
@@ -226,6 +228,7 @@ SCIP_DECL_EXPRPARSE(parseExp)
 
    assert(expr != NULL);
 
+   /**! [SnippetExprParseExp] */
    /* parse child expression from remaining string */
    SCIP_CALL( SCIPparseExpr(scip, &childexpr, string, endstring, ownercreate, ownercreatedata) );
    assert(childexpr != NULL);
@@ -238,6 +241,7 @@ SCIP_DECL_EXPRPARSE(parseExp)
    SCIP_CALL( SCIPreleaseExpr(scip, &childexpr) );
 
    *success = TRUE;
+   /**! [SnippetExprParseExp] */
 
    return SCIP_OKAY;
 }
