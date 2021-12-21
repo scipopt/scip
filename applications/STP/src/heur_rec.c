@@ -1996,7 +1996,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    int runs;
    int nsols;
-   int solindex;
+   int solposition;
    int probtype;
    int newsolindex;
    int nreadysols;
@@ -2132,14 +2132,14 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    SCIP_CALL( SCIPStpHeurRecRun(scip, NULL, heur, heurdata, graph, vars, &newsolindex, runs, nreadysols, restrictheur, &solfound) );
 
    /* save latest solution index */
-   solindex = SCIPsolGetIndex(sols[0]);
+   solposition = 0;
    nsols = SCIPgetNSols(scip);
    assert(nsols > 0);
    sols = SCIPgetSols(scip);
 
    for( int i = 1; i < nsols; i++ )
-      if( SCIPsolGetIndex(sols[i]) > SCIPsolGetIndex(sols[solindex]) )
-         solindex = i;
+      if( SCIPsolGetIndex(sols[i]) > SCIPsolGetIndex(sols[solposition]) )
+         solposition = i;
 
    if( solfound )
       *result = SCIP_FOUNDSOL;
@@ -2149,7 +2149,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    else
       heurdata->nfailures = 0;
 
-   heurdata->lastsolindex = SCIPsolGetIndex(sols[solindex]);
+   heurdata->lastsolindex = SCIPsolGetIndex(sols[solposition]);
    heurdata->bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
    heurdata->nlastsols = SCIPgetNSolsFound(scip);
 
