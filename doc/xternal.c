@@ -4257,15 +4257,15 @@
  * The result of this callback determines the extended formulation.
  *
  * The nonlinear handler shall analyze the given expression (`expr`) and decide whether it wants to contribute
- * in enforcing the relation between this expression and its descendants (e.g., children) via
- * linear under- or overestimation, cut generation, and/or activity computation and propagation.
- * For linear under- or overestimation and cut generation, an auxiliary variable (`auxvar`) can be assumed to
+ * in enforcing the relation between bounds or an auxiliary variable (`auxvar`) associated with this expression and
+ * its descendants (e.g., children) via linear under- or overestimation, cut generation, and/or activity computation and propagation.
+ * For linear under- or overestimation and cut generation, an auxiliary variable can be assumed to
  * be associated with the expression and auxiliary variables may be requested for descendant expressions.
  *
  * We distinguish the following enforcement methods:
  * - \ref SCIP_NLHDLR_METHOD_SEPABELOW : linear underestimation of `expr` or cut generation for the relation `expr` &le; `auxvar` (denoted as "below")
  * - \ref SCIP_NLHDLR_METHOD_SEPAABOVE : linear overestimation of `expr` or cut generation for the relation `expr` &ge; `auxvar` (denoted as "above")
- * - \ref SCIP_NLHDLR_METHOD_ACTIVITY  : domain propagation (i.e., constant under/overestimation) for the relation `expr` = `auxvar`.
+ * - \ref SCIP_NLHDLR_METHOD_ACTIVITY  : domain propagation (i.e., constant under/overestimation) for `expr`.
  *
  * On input, parameter `enforcing` indicates for any of these methods, whether
  * - it is not necessary to have such a method, e.g., because no `auxvar` will exist for `expr`, or no one uses or sets activities of this expression,
