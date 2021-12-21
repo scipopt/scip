@@ -4383,7 +4383,7 @@
  *
  * @subsection NLHDLRENFO
  *
- * This callback is called when the constraint handler requires that the relaxation between the given expression and its auxiliary variable
+ * This callback is called when the constraint handler requires that the relation between the given expression and its auxiliary variable
  * (`expr` &le; `auxvar`  or  `expr` &ge; `auxvar`) is violated by a given solution and this solution needs to be separated.
  * It is called for expressions for which the nonlinear handler registered to participate in \ref SCIP_NLHDLR_METHOD_SEPABELOW or \ref SCIP_NLHDLR_METHOD_SEPAABOVE in \ref NLHDLRDETECT.
  *
