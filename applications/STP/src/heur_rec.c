@@ -2132,7 +2132,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    SCIP_CALL( SCIPStpHeurRecRun(scip, NULL, heur, heurdata, graph, vars, &newsolindex, runs, nreadysols, restrictheur, &solfound) );
 
    /* save latest solution index */
-   solindex = 0;
+   solindex = SCIPsolGetIndex(sols[0]);
    nsols = SCIPgetNSols(scip);
    assert(nsols > 0);
    sols = SCIPgetSols(scip);
