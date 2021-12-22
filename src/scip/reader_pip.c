@@ -1816,7 +1816,9 @@ SCIP_Bool isExprSignomial(
 
 /** checks whether a given expression is a sum of signomials (i.e., like a polynomial, but negative and fractional exponents allowed)
  *
- * assumes simplified expression
+ * assumes simplified expression;
+ * does not check whether variables in powers with fractional exponent are nonnegative;
+ * does not check whether variables in powers with negative exponent are bounded away from zero (the format specification does not require that, too)
  */
 static
 SCIP_Bool isExprPolynomial(
