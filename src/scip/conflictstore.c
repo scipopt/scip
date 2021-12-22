@@ -328,7 +328,7 @@ SCIP_RETCODE delPosConflict(
 #endif
 
    /* remove conflict locks */
-   //SCIP_CALL( SCIPconsAddLocks(conflict, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
+   SCIP_CALL( SCIPconsAddLocks(conflict, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(conflict) )
@@ -390,7 +390,7 @@ SCIP_RETCODE delPosDualray(
 #endif
 
    /* remove conflict locks */
-   //SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
+   SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualproof) )
@@ -453,7 +453,7 @@ SCIP_RETCODE delPosDualsol(
 #endif
 
    /* remove conflict locks */
-   //SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
+   SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, -1, 0) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualproof) )
@@ -1022,7 +1022,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    ++conflictstore->ndualrayconfs;
 
    /* add conflict locks */
-   //SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
+   SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
@@ -1118,7 +1118,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    ++conflictstore->ndualsolconfs;
 
    /* add conflict locks */
-   //SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
+   SCIP_CALL( SCIPconsAddLocks(dualproof, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
    /* increase the number of non-zeros */
    SCIP_CALL( SCIPconsGetNVars(dualproof, set, &nvars, &success) );
@@ -1214,7 +1214,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    ++conflictstore->nconflictsfound;
 
    /* add conflict locks */
-   //SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
+   SCIP_CALL( SCIPconsAddLocks(cons, set, SCIP_LOCKTYPE_CONFLICT, +1, 0) );
 
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->nconflicts-1);
