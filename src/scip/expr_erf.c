@@ -272,6 +272,17 @@ SCIP_RETCODE SCIPcreateExprErf(
    return SCIP_OKAY;
 }
 
+/** indicates whether expression is of erf-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprErf(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;
+}
+
 /** creates the handler for erf expressions and includes it into SCIP
  *
  * @attention The implementation of this expression handler is incomplete.

@@ -87,6 +87,20 @@ SCIP_RETCODE SCIPcreateExprCos(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
+/** indicates whether expression is of sine-type */
+SCIP_EXPORT
+SCIP_Bool SCIPisExprSin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** indicates whether expression is of cosine-type */
+SCIP_EXPORT
+SCIP_Bool SCIPisExprCos(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /** @}
   * @}
   */

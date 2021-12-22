@@ -825,6 +825,13 @@ SCIP_RETCODE SCIPgetExprVarExprs(
  * @{
  */
 
+/** calls the print callback for an expression
+ *
+ * @see SCIP_DECL_EXPRPRINT
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRPRINT(SCIPcallExprPrint);
+
 /** calls the curvature callback for an expression
  *
  * @see SCIP_DECL_EXPRCURVATURE

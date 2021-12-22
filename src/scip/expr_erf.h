@@ -58,6 +58,13 @@ SCIP_RETCODE SCIPcreateExprErf(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
+/** indicates whether expression is of erf-type */
+SCIP_EXPORT
+SCIP_Bool SCIPisExprErf(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /** @}
   * @}
   */

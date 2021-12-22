@@ -532,3 +532,14 @@ SCIP_RETCODE SCIPcreateExprAbs(
 
    return SCIP_OKAY;
 }
+
+/** indicates whether expression is of abs-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprAbs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;
+}
