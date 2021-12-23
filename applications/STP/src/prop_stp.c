@@ -1772,8 +1772,7 @@ SCIP_RETCODE fixVarsExtendedRed(
       return SCIP_OKAY;
    }
 #ifdef WITH_UG
-   if( !redcosts_forLPareReliable(scip, vars, graph) )
-      return SCIP_OKAY;
+   return SCIP_OKAY;
 #endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &arcdeleted, nedges) );
