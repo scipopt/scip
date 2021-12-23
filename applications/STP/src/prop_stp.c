@@ -1771,6 +1771,10 @@ SCIP_RETCODE fixVarsExtendedRed(
       assert(graph_pc_isRootedPcMw(propgraph));
       return SCIP_OKAY;
    }
+#ifdef WITH_UG
+   if( !redcosts_forLPareReliable(scip, vars, graph) )
+      return SCIP_OKAY;
+#endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &arcdeleted, nedges) );
    mark0FixedArcs(graph, vars, arcdeleted);

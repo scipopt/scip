@@ -810,7 +810,6 @@ SCIP_Bool redcosts_forLPareAvailable(
 }
 
 
-
 /** are reduced costs reliable? */
 SCIP_Bool redcosts_forLPareReliable(
    SCIP*                 scip,               /**< SCIP structure */
