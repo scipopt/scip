@@ -16,7 +16,7 @@
 /**@file   nlhdlr_xyz.h
  * @ingroup DEFPLUGINS_NLHDLR
  * @brief  xyz nonlinear handler
- * @author Benjamin Mueller
+ * @author Jane Doe
  */
 
 #include <string.h>
@@ -37,13 +37,13 @@
 
 /* TODO: fill in the necessary nonlinear handler data */
 
-/** nonlinear handler expression data */
-struct SCIP_NlhdlrExprData
+/** nonlinear handler data */
+struct SCIP_NlhdlrData
 {
 };
 
-/** nonlinear handler data */
-struct SCIP_NlhdlrData
+/** nonlinear handler expression data */
+struct SCIP_NlhdlrExprData
 {
 };
 

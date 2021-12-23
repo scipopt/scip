@@ -3550,6 +3550,7 @@ SCIP_RETCODE SCIPwriteLp(
 
    SCIP_VAR** aggvars;
    SCIP_VAR** tmpvars;
+   int tmpvarssize;
    int naggvars = 0;
    int saggvars;
    SCIP_HASHTABLE* varAggregated;
@@ -3712,7 +3713,8 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_CALL( SCIPallocBufferArray(scip, &consExpr, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consIndicator, nconss) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, SCIPgetNTotalVars(scip)) );
+   tmpvarssize = SCIPgetNTotalVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, tmpvarssize) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -3966,7 +3968,12 @@ SCIP_RETCODE SCIPwriteLp(
       /* get variables of the nonlinear constraint */
       SCIP_CALL( SCIPgetConsNVars(scip, consExpr[c], &ntmpvars, &success) );
       assert(success);
-      SCIP_CALL( SCIPgetConsVars(scip, consExpr[c], tmpvars, SCIPgetNTotalVars(scip), &success) );
+      if( ntmpvars > tmpvarssize )
+      {
+         tmpvarssize = SCIPcalcMemGrowSize(scip, ntmpvars);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &tmpvars, tmpvarssize) );
+      }
+      SCIP_CALL( SCIPgetConsVars(scip, consExpr[c], tmpvars, tmpvarssize, &success) );
       assert(success);
 
       SCIP_CALL( collectAggregatedVars(scip, tmpvars, ntmpvars, &aggvars, &naggvars, &saggvars, varAggregated) );

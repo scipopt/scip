@@ -1467,6 +1467,7 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
 
    assert(scip != NULL);
 
+   /**! [SnippetIncludeNlhdlrBilinear] */
    /* create nonlinear handler specific data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    BMSclearMemory(nlhdlrdata);
@@ -1508,6 +1509,7 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BILINEAR, TABLE_DESC_BILINEAR, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputBilinear,
          NULL, TABLE_POSITION_BILINEAR, TABLE_EARLIEST_STAGE_BILINEAR) );
+   /**! [SnippetIncludeNlhdlrBilinear] */
 
    return SCIP_OKAY;
 }

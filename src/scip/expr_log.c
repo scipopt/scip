@@ -276,6 +276,7 @@ SCIP_DECL_EXPREVAL(evalLog)
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
+   /**! [SnippetExprEvalLog] */
    if( SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) <= 0.0 )
    {
       SCIPdebugMsg(scip, "invalid evaluation of logarithmic expression\n");
@@ -285,6 +286,7 @@ SCIP_DECL_EXPREVAL(evalLog)
    {
       *val = log(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]));
    }
+   /**! [SnippetExprEvalLog] */
 
    return SCIP_OKAY;
 }
@@ -587,6 +589,7 @@ SCIP_RETCODE SCIPincludeExprhdlrLog(
    SCIP_EXPRHDLR* exprhdlr;
    SCIP_EXPRHDLRDATA* exprhdlrdata;
 
+   /**! [SnippetIncludeExprhdlrLog] */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprhdlrdata) );
 
    SCIP_CALL( SCIPincludeExprhdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalLog,
@@ -608,6 +611,7 @@ SCIP_RETCODE SCIPincludeExprhdlrLog(
    SCIP_CALL( SCIPaddRealParam(scip, "expr/" EXPRHDLR_NAME "/minzerodistance",
       "minimal distance from zero to enforce for child in bound tightening",
       &exprhdlrdata->minzerodistance, FALSE, SCIPepsilon(scip), 0.0, 1.0, NULL, NULL) );
+   /**! [SnippetIncludeExprhdlrLog] */
 
    return SCIP_OKAY;
 }

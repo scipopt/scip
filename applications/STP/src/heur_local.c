@@ -3706,10 +3706,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( !probtypeIsValidForLocal(graph) )
       return SCIP_OKAY;
 
-   /* don't run local in a Subscip */
-   if( SCIPgetSubscipDepth(scip) > 0 )
-      return SCIP_OKAY;
-
    /* no solution available? */
    if( SCIPgetBestSol(scip) == NULL )
       return SCIP_OKAY;
@@ -3786,7 +3782,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( graph_pc_isPcMw(graph) )
       SCIP_CALL( SCIPStpHeurLocalExtendPcMwImp(scip, graph, results) );
 #endif
-
 
    /* finally, try to add the solution to the SCIP pool */
    SCIP_CALL( solAddTry(scip, sols, heur, graph, initialsol_obj, initialsol, results, result) );
