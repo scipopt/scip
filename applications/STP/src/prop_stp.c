@@ -1645,10 +1645,20 @@ SCIP_RETCODE fixVarsDualcost(
          propdata->deg2bounded[i] = FALSE;
       }
 
+#ifndef WITH_UG
       /* first call, so we can also fix incoming arcs of root to zero */
       for( int e = graph->inpbeg[graph->source]; e != EAT_LAST; e = graph->ieat[e] )
          SCIP_CALL( fixEdgeVar(scip, e, vars, propdata) );
+#endif
    }
+
+#ifdef WITH_UG
+   if( !redcosts_forLPareReliable(scip, vars, graph) )
+   {
+      graph_mark(graph);
+      return SCIP_OKAY;
+   }
+#endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 2 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 2 * nnodes) );

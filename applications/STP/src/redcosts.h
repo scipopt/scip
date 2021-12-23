@@ -345,6 +345,15 @@ SCIP_Bool redcosts_forLPareAvailable(
    SCIP*                 scip                /**< SCIP structure */
    );
 
+
+/** are reduced costs reliable? */
+SCIP_EXPORT
+SCIP_Bool redcosts_forLPareReliable(
+   SCIP*                 scip,               /**< SCIP structure */
+   SCIP_VAR**            vars,               /**< variables (in) */
+   const GRAPH*          graph               /**< graph data */
+   );
+
 /** initialize reduced costs */
 SCIP_EXPORT
 void redcosts_forLPget(

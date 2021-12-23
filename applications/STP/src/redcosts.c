@@ -810,6 +810,54 @@ SCIP_Bool redcosts_forLPareAvailable(
 }
 
 
+
+/** are reduced costs reliable? */
+SCIP_Bool redcosts_forLPareReliable(
+   SCIP*                 scip,               /**< SCIP structure */
+   SCIP_VAR**            vars,               /**< variables (in) */
+   const GRAPH*          graph               /**< graph data */
+   )
+{
+   const int nedges = graph_get_nEdges(graph);
+
+   assert(nedges >= 0);
+   assert(vars && scip);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      assert(SCIPvarIsBinary(vars[e]));
+
+      /* variable is already fixed? */
+      if( SCIPvarGetLbLocal(vars[e]) + 0.5 > SCIPvarGetUbLocal(vars[e]) )
+      {
+         continue;
+      }
+
+      if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[e])) )
+      {
+         if( SCIPisDualfeasNegative(scip, SCIPgetVarRedcost(scip, vars[e])) )
+         {
+            return FALSE;
+         }
+      }
+      else
+      {
+         if( SCIPisDualfeasPositive(scip, SCIPgetVarRedcost(scip, vars[e])) )
+         {
+            return FALSE;
+         }
+
+         if( !(SCIPisFeasEQ(scip, SCIPgetSolVal(scip, NULL, vars[e]), 1.0) || SCIPisDualfeasZero(scip, SCIPgetVarRedcost(scip, vars[e]))) )
+         {
+            return FALSE;
+         }
+      }
+   }
+
+   return TRUE;
+}
+
+
 /** initialize reduced costs*/
 void redcosts_forLPget(
    SCIP*                 scip,               /**< SCIP structure */
