@@ -52,8 +52,6 @@ Expressions:
   Removed complex expression types sum, product, linear, quadratic, polynomial.
   Removed support for parameterized expressions.
 - Added support for expression types sin, cos, and entropy. Added an expression type that stores a SCIP variable.
-- Removed writing of nonlinear constraints in GAMS reader for now.
-- Removed writing of polynomial nonlinear constraints in PIP reader for now.
 - Added handling of sin and cos expressions in OSiL reader.
 - Added handling of sin, cos, and tan expressions in ZIMPL reader.
 - Added expression handler plugin type, removed user expression type.
@@ -500,15 +498,15 @@ Expression handler:
 - added SCIPexprhdlrComp()
 - added SCIPexprhdlrGetNIntevalCalls(), SCIPexprhdlrGetIntevalTime(), SCIPexprhdlrGetNReversepropCalls(), SCIPexprhdlrGetReversepropTime(), SCIPexprhdlrGetNCutoffs(), SCIPexprhdlrGetNDomainReductions(), SCIPexprhdlrIncrementNDomainReductions(), SCIPexprhdlrGetNEstimateCalls(), SCIPexprhdlrGetEstimateTime(), SCIPexprhdlrGetNBranchings(), SCIPexprhdlrIncrementNBranchings(), SCIPexprhdlrGetNSimplifyCalls(), SCIPexprhdlrGetSimplifyTime(), SCIPexprhdlrGetNSimplifications()
 - added SCIPprintExpressionHandlerStatistics()
-- added SCIPincludeExprhdlrEntropy(), SCIPcreateExprEntropy()
-- added SCIPincludeExprhdlrErf(), SCIPcreateExprErf()
-- added SCIPcreateExprAbs(), SCIPincludeExprhdlrAbs()
+- added SCIPincludeExprhdlrEntropy(), SCIPcreateExprEntropy(), SCIPisExprEntropy()
+- added SCIPincludeExprhdlrErf(), SCIPcreateExprErf(), SCIPisExprErf()
+- added SCIPcreateExprAbs(), SCIPincludeExprhdlrAbs(), SCIPisExprAbs()
 - added SCIPcreateExprExp(), SCIPincludeExprhdlrExp(), SCIPisExprExp()
 - added SCIPcreateExprLog(), SCIPincludeExprhdlrLog(), SCIPisExprLog()
 - added SCIPcreateExprPow(), SCIPcreateExprSignpower(), SCIPincludeExprhdlrPow(), SCIPincludeExprhdlrSignpower(), SCIPisExprSignpower(), SCIPgetExponentExprPow(), SCIPisExprPower()
 - added SCIPincludeExprhdlrProduct(), SCIPcreateExprProduct(), SCIPgetCoefExprProduct(), SCIPisExprProduct()
 - added SCIPincludeExprhdlrSum(), SCIPcreateExprSum(), SCIPsetConstantExprSum(), SCIPappendExprSumExpr(), SCIPmultiplyByConstantExprSum(), SCIPgetCoefsExprSum(), SCIPgetConstantExprSum(), SCIPisExprSum()
-- added SCIPincludeExprhdlrSin(), SCIPcreateExprSin(), SCIPincludeExprhdlrCos(), SCIPcreateExprCos()
+- added SCIPincludeExprhdlrSin(), SCIPcreateExprSin(), SCIPincludeExprhdlrCos(), SCIPcreateExprCos(), SCIPisExprSin(), SCIPisExprCos()
 - added SCIPincludeExprhdlrValue(), SCIPcreateExprValue(), SCIPgetValueExprValue(), SCIPisExprValue()
 - added SCIPincludeExprhdlrVar(), SCIPcreateExprVar(), SCIPgetVarExprVar(), SCIPisExprVar()
 - added SCIPincludeExprhdlrVaridx(), SCIPcreateExprVaridx(), SCIPisExprVaridx(), SCIPgetIndexExprVaridx(), SCIPsetIndexExprVaridx()
@@ -532,7 +530,7 @@ Expression:
 - added SCIPcompareExpr(), SCIPhashExpr()
 - added SCIPsimplifyExpr(), SCIPreplaceCommonSubexpressions()
 - added SCIPgetExprNVars(), SCIPgetExprVarExprs()
-- added SCIPcallExprCurvature(), SCIPcallExprMonotonicity(), SCIPcallExprEval(), SCIPcallExprEvalFwdiff(), SCIPcallExprInteval(), SCIPcallExprEstimate(), SCIPcallExprInitestimates(), SCIPcallExprSimplify(), SCIPcallExprReverseprop()
+- added SCIPcallExprPrint(), SCIPcallExprCurvature(), SCIPcallExprMonotonicity(), SCIPcallExprEval(), SCIPcallExprEvalFwdiff(), SCIPcallExprInteval(), SCIPcallExprEstimate(), SCIPcallExprInitestimates(), SCIPcallExprSimplify(), SCIPcallExprReverseprop()
 - added SCIPexprcurvPowerInv(), SCIPexprcurvMonomialInv()
 
 Expression iterator:

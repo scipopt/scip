@@ -66,6 +66,13 @@ SCIP_RETCODE SCIPcreateExprXyz(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
+/** indicates whether expression is of xyz-type */
+SCIP_EXPORT
+SCIP_Bool SCIPisExprXyz(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /** @}
   * @}
   */

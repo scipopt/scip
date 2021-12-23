@@ -1455,3 +1455,25 @@ SCIP_RETCODE SCIPcreateExprCos(
 
    return SCIP_OKAY;
 }
+
+/** indicates whether expression is of sine-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprSin(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SINEXPRHDLR_NAME) == 0;
+}
+
+/** indicates whether expression is of cosine-type */  /*lint -e{715}*/
+SCIP_Bool SCIPisExprCos(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), COSEXPRHDLR_NAME) == 0;
+}
