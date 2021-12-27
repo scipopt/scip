@@ -131,6 +131,13 @@ int SCIPheurGetFreqofs(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
+/** sets frequency offset of primal heuristic */
+SCIP_EXPORT
+void SCIPheurSetFreqofs(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   int                   freqofs             /**< new frequency offset of heuristic */
+   );
+
 /** gets maximal depth level for calling primal heuristic (returns -1, if no depth limit exists) */
 SCIP_EXPORT
 int SCIPheurGetMaxdepth(
