@@ -87,6 +87,7 @@ SCIP_RETCODE SCIPappendExprSumExpr(
    );
 
 /** multiplies given sum expression by a constant */
+SCIP_EXPORT
 void SCIPmultiplyByConstantExprSum(
    SCIP_EXPR*            expr,               /**< sum expression */
    SCIP_Real             constant            /**< constant that multiplies sum expression */
