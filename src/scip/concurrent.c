@@ -507,7 +507,7 @@ SCIP_RETCODE SCIPconcurrentSolve(
             SCIP_SUBMITSTATUS status;
 
             SCIP_CALL_ABORT( SCIPtpiCreateJob(&job, jobid, execConcsolver, scip) );
-            SCIP_CALL_ABORT( SCIPtpiSumbitJob(job, &status) );
+            SCIP_CALL_ABORT( SCIPtpiSubmitJob(job, &status) );
 
             assert(status == SCIP_SUBMIT_SUCCESS);
          }
