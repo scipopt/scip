@@ -43,6 +43,7 @@
 #include "scip/syncstore.h"
 #include "scip/set.h"
 #include "tpi/tpi.h"
+#include "tpi/def_openmp.h"
 
 /** create concurrent data */
 SCIP_RETCODE SCIPcreateConcurrent(

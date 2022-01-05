@@ -18,6 +18,7 @@
  * @brief  the type definitions for the SCIP parallel interface
  * @author Leona Gottwald
  * @author Stephen J. Maher
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,20 +27,19 @@
 #define __TPI_H__
 
 #include "scip/def.h"
-#include "scip/pub_message.h"
-#include "tpi/def_openmp.h"
+#include "scip/type_retcode.h"
 #include "tpi/type_tpi.h"
 
-/** initializes the given lock */
+/** creates and initializes the given lock */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtpiInitLock(
-   SCIP_LOCK*            lock                /**< the lock */
+   SCIP_LOCK**           lock                /**< the lock */
    );
 
-/** destroys the given lock */
+/** destroys and frees the given lock */
 SCIP_EXPORT
 void SCIPtpiDestroyLock(
-   SCIP_LOCK*            lock                /**< the lock */
+   SCIP_LOCK**           lock                /**< the lock */
    );
 
 /** acquires the given lock */
@@ -57,13 +57,13 @@ SCIP_RETCODE SCIPtpiReleaseLock(
 /** initializes the given condition variable */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtpiInitCondition(
-   SCIP_LOCK*            lock                /**< the lock */
+   SCIP_CONDITION**      condition           /**< condition to be created and initialized */
    );
 
 /** destroys the given condition variable */
 SCIP_EXPORT
 void SCIPtpiDestroyCondition(
-   SCIP_LOCK*            lock                /**< the lock */
+   SCIP_CONDITION**      condition           /**< condition to be destroyed and freed */
    );
 
 /** signals one waiting thread */
@@ -145,7 +145,3 @@ SCIP_RETCODE SCIPtpiExit(
    );
 
 #endif
-
-#include "tpi/tpi_openmp.h"
-#include "tpi/tpi_tnycthrd.h"
-#include "tpi/tpi_none.h"
