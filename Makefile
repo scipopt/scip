@@ -310,6 +310,7 @@ FLAGS		+=	-DTPI_TNYC
 endif
 
 TPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(TPILIBOBJ:.o=.c))
+TPISRC		=	$(TPILIBSRC) $(SRCDIR)/scip/concurrent.c $(SRCDIR)/scip/benders.c    # files to be rebuilt when changing TPI
 TPILIB		=	$(TPILIBNAME).$(BASE)
 TPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
 TPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(TPILIBOBJ))
@@ -1412,7 +1413,7 @@ ifneq ($(SANITIZE),$(LAST_SANITIZE))
 		@-touch -c $(ALLSRC)
 endif
 ifneq ($(TPI),$(LAST_TPI))
-		@-touch -c $(ALLSRC)
+		@-touch -c $(TPISRC)
 endif
 ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
 		@-touch -c $(ALLSRC)
