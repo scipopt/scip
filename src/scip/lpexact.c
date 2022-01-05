@@ -3908,6 +3908,7 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->projshiftpossible = FALSE;
    (*lp)->boundshiftviable = TRUE;
    (*lp)->forceexactsolve = FALSE;
+   (*lp)->allowexactsolve = FALSE;
    (*lp)->lpiscaling = set->lp_scaling;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
    (*lp)->lpirefactorinterval = set->lp_refactorinterval;
@@ -7862,6 +7863,23 @@ void SCIPlpExactForceExactSolve(
    assert(lpexact != NULL);
 
    lpexact->forceexactsolve = TRUE;
+}
+
+/** allows an exact lp to be solved in the next exact bound computation */
+void SCIPlpExactAllowExactSolve(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             allowexact          /**< TRUE if next safe bounding call should be allowed to be exact, FALSE otherwise */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->exact_enabled )
+      return;
+
+   assert(lpexact != NULL);
+
+   lpexact->allowexactsolve = allowexact;
 }
 
 /** save current LP solution values stored in each column */

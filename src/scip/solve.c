@@ -2765,6 +2765,16 @@ SCIP_RETCODE priceAndCutLoop(
          /* increase separation round counter */
          stat->nseparounds++;
       }
+
+      /* in exact solving mode, solve the LP once more, now allowing an exact solve if desired */
+      if( set->exact_enabled && !mustsepa )
+      {
+         lp->solved = FALSE;
+         SCIPlpExactAllowExactSolve(lp->lpexact, set, TRUE);
+         /* resolve LP */
+         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
+            set->lp_iterlim, FALSE, FALSE, FALSE, lperror) );
+      }
    }
 
    if( root && nsepastallrounds >= maxnsepastallrounds )

@@ -786,6 +786,12 @@ void SCIPlpExactForceExactSolve(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** allows an exact lp to be solved in the next exact bound computation */
+void SCIPlpExactAllowExactSolve(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             allowexact          /**< TRUE if next safe bounding call should be allowed to be exact, FALSE otherwise */
+   );
 
 /** gets solution status of current exact LP */
 SCIP_LPSOLSTAT SCIPlpExactGetSolstat(

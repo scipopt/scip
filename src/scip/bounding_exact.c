@@ -1861,10 +1861,10 @@ char chooseInitialBoundingMethod(
 
    dualboundmethod = 'u';
 
-   //if( set->scip->stat->nnodes == 1 )
-   //   dualboundmethod = 'e';
+   if( set->scip->stat->nnodes == 1 && lpexact->allowexactsolve )
+      dualboundmethod = 'e';
    /* first, check if we need to solve exactly */
-   if( lpexact->forceexactsolve || SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   else if( lpexact->forceexactsolve || SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       dualboundmethod = 'e';
    /* if the LP was solved to optimality and there are no fractional variables we solve exactly to generate a feasible
     * solution
@@ -1886,7 +1886,7 @@ char chooseInitialBoundingMethod(
       interleavecutoff = (set->exact_interleavestrategy == 1 || set->exact_interleavestrategy == 3)
          && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
          && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPlpGetCutoffbound(lpexact->fplp);
-      if( interleavedepth || interleavecutoff )
+      if( (interleavedepth || interleavecutoff) && lpexact->allowexactsolve )
          dualboundmethod = 'e';
       else
       {
@@ -2389,12 +2389,14 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             blkmem) );
    }
 
-   while( !lp->hasprovedbound && !abort )
+   while( (!lp->hasprovedbound && !abort) || lpexact->allowexactsolve )
    {
       dualboundmethod = chooseBoundingMethod(lpexact, set, prob, lastboundmethod);
       SCIPdebugMessage("Computing safe bound for LP with status %d using bounding method %c\n",
             SCIPlpGetSolstat(lp), dualboundmethod);
 
+      /* reset the allow exact solve status */
+      SCIPlpExactAllowExactSolve(lpexact, set, FALSE);
       nattempts++;
 
       switch( dualboundmethod )
