@@ -4002,7 +4002,6 @@ SCIP_RETCODE cutsTransformMIR(
  *
  *  @note this method is safe for usage in exact solving mode
  */
-#ifdef SCIP_DISABLED_CODE
 static
 SCIP_RETCODE cutsRoundMIRSafe(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4135,7 +4134,7 @@ SCIP_RETCODE cutsRoundMIRSafe(
 
             if( SCIPisCertificateActive(scip) )
             {
-               SCIP_Ratiional* boundval;
+               SCIP_Rational* boundval;
                mirinfo->splitcoefficients[v] = QUAD_TO_DBL(downaj);
                mirinfo->splitcoefficients[v] += 1.0;
                if( mirinfo->upperused[v] )
@@ -4184,12 +4183,16 @@ SCIP_RETCODE cutsRoundMIRSafe(
          {
             assert(RatIsEqualReal(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbGlobal(var)));
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetInf(cutaj) * SCIPvarGetLbGlobal(var)); /* rhs += cutaj * SCIPvarGetLbGlobal(var) */
+            SCIPintervalSetRational(&tmpinterval, SCIPvarGetLbGlobalExact(var));
+            SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetLbGlobal(var) */
          }
          else
          {
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetInf(cutaj) * SCIPvarGetLbLocal(var)); /* rhs += cutaj * SCIPvarGetLbLocal(var) */
+            SCIPintervalSetRational(&tmpinterval, SCIPvarGetLbLocalExact(var));
+            SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetLbLocal(var) */
          }
       }
       else
@@ -4199,12 +4202,16 @@ SCIP_RETCODE cutsRoundMIRSafe(
          {
             assert(RatIsEqualReal(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbGlobal(var)));
             assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetInf(cutaj) * SCIPvarGetUbGlobal(var)); /* rhs += cutaj * SCIPvarGetUbGlobal(var) */
+            SCIPintervalSetRational(&tmpinterval, SCIPvarGetUbGlobalExact(var));
+            SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetUbGlobal(var) */
          }
          else
          {
             assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetInf(cutaj) * SCIPvarGetUbLocal(var)); /* rhs += cutaj * SCIPvarGetUbLocal(var) */
+            SCIPintervalSetRational(&tmpinterval, SCIPvarGetUbLocalExact(var));
+            SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetUbLocal(var) */
          }
       }
    }
@@ -4379,7 +4386,6 @@ SCIP_RETCODE cutsRoundMIRSafe(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** Calculate fractionalities \f$ f_0 := b - down(b), f_j := a^\prime_j - down(a^\prime_j) \f$, and derive MIR cut \f$ \tilde{a} \cdot x' \leq down(b) \f$
  * \f[
@@ -5601,8 +5607,8 @@ SCIP_RETCODE SCIPcalcMIR(
    {
       if( SCIPisExactSolve(scip) )
       {
-         SCIP_CALL( cutsRoundMIRRational(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, f0rational) );
-         //SCIP_CALL( cutsRoundMIRSafe(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, f0interval) );
+         //SCIP_CALL( cutsRoundMIRRational(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, f0rational) );
+         SCIP_CALL( cutsRoundMIRSafe(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, f0interval) );
       }
       else
       {
