@@ -81,6 +81,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
 #define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
+#define DEFAULT_VERBOSITY          0
 #define DEFAULT_HUGEBOUND          1e8       /**< absolute bound value that is considered too huge for activitity based calculations */
 #define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEDOMCOL       TRUE      /**< should the dominated column presolver be enabled within the presolve library? */
@@ -104,6 +105,8 @@ struct SCIP_PresolData
    int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
    int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
    int randomseed;                           /**< the random seed used for randomization of tie breaking */
+   int verbosity;
+
    SCIP_Bool enablesparsify;                 /**< should the sparsify presolver be enabled within the presolve library? */
    SCIP_Bool enabledomcol;                   /**< should the dominated column presolver be enabled within the presolve library? */
    SCIP_Bool enableprobing;                  /**< should the probing presolver be enabled within the presolve library? */
@@ -363,7 +366,26 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
+   switch( data->verbosity )
+   {
+      case 0:
+         presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
+         break;
+      case 1:
+         presolve.setVerbosityLevel(VerbosityLevel::kError);
+         break;
+      case 2:
+         presolve.setVerbosityLevel(VerbosityLevel::kWarning);
+         break;
+      case 3:
+         presolve.setVerbosityLevel(VerbosityLevel::kInfo);
+         break;
+      case 4:
+         presolve.setVerbosityLevel(VerbosityLevel::kDetailed);
+         break;
+      default:
+         assert(false);
+   }
 #endif
 
    /* communicate the time limit */
@@ -893,6 +915,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPaddStringParam(scip, "presolving/" PRESOL_NAME "/probfilename",
          "filename to store the problem before MILP presolving starts",
          &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL) );
+
+   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",
+         "verbosity level of PaPILO (0: quiet, 1: errors, 2: warnings, 3: normal, 4: detailed)",
+         &presoldata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, 4, NULL, NULL));
 
    return SCIP_OKAY;
 }
