@@ -366,7 +366,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   switch (data->verbosity)
+   switch( data->verbosity )
    {
       case 0:
          presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
@@ -917,10 +917,8 @@ SCIP_RETCODE SCIPincludePresolMILP(
          &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL) );
 
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",
-         "verbosity in PaPILO to be used: 0 - quiet, 1 - errors, 2 - warnings, 3 - normal, 4 - detailed  [Integer: [0,4]]",
+         "verbosity level of PaPILO (0: quiet, 1: errors, 2: warnings, 3: normal, 4: detailed)",
          &presoldata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, 4, NULL, NULL));
-
-
 
    return SCIP_OKAY;
 }
