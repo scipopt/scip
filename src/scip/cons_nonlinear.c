@@ -6365,9 +6365,8 @@ void addExprsViolScore(
    if( nexprs == 1 )
    {
       SCIPaddExprViolScoreNonlinear(scip, exprs[0], violscore);
-      SCIPdebug( var = SCIPgetExprAuxVarNonlinear(exprs[0]); )
       SCIPdebugMsg(scip, "add score %g to <%s>[%g,%g]\n", violscore,
-         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(exprs[0])), SCIPvarGetLbLocal(SCIPgetExprAuxVarNonlinear(exprs[0])), SCIPvarGetUbLocal(SCIPgetExprAuxVarNonlinear(exprs[0])));
       *success = TRUE;
       return;
    }
