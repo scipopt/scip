@@ -4153,12 +4153,59 @@ SCIP_RETCODE cutsRoundMIRSafe(
          SCIPintervalMulScalar(SCIPinfinity(scip), &cutaj, cutaj, varsign[i]);
       }
 
-      /* remove zero cut coefficients from cut, only remove positive coefficients in exact solving mode */
-      /** @todo exip: what to do with the split in this case, especially if we are in the f > f_0 case? */
-      if( EPSZ(SCIPintervalGetInf(cutaj), QUAD_EPSILON) && (SCIPintervalGetInf(cutaj) >= 0.0) )
+      /* integral var uses standard bound */
+      assert(boundtype[i] < 0);
+
+      if( cutaj.inf != 0.0 || cutaj.sup != 0 )
       {
-         assert(cutaj.inf == 0.0);
-         assert(cutaj.sup == 0.0);
+         /* we have to use the inf of the cutaj-interval both times! */
+         SCIPintervalSetRoundingModeUpwards();
+
+         /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
+         if( varsign[i] == +1 )
+         {
+            /* lower bound was used */
+            if( boundtype[i] == -1 )
+            {
+               assert(RatIsEqualReal(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbGlobal(var)));
+               assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
+               SCIPintervalSetRational(&tmpinterval, SCIPvarGetLbGlobalExact(var));
+               SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetLbGlobal(var) */
+            }
+            else
+            {
+               assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
+               SCIPintervalSetRational(&tmpinterval, SCIPvarGetLbLocalExact(var));
+               SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetLbLocal(var) */
+            }
+         }
+         else
+         {
+            /* upper bound was used */
+            if( boundtype[i] == -1 )
+            {
+               assert(RatIsEqualReal(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbGlobal(var)));
+               assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
+               SCIPintervalSetRational(&tmpinterval, SCIPvarGetUbGlobalExact(var));
+               SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetUbGlobal(var) */
+            }
+            else
+            {
+               assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
+               SCIPintervalSetRational(&tmpinterval, SCIPvarGetUbLocalExact(var));
+               SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetUbLocal(var) */
+            }
+         }
+      }
+
+      /* remove zero cut coefficients from cut, only remove exactly 0 in exact solving mode
+       * we can only do this here, since the sup might be positive and impact the rhs of the cut */
+      if( cutaj.inf == 0.0 )
+      {
          QUAD_ASSIGN(cutajquad, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, cutajquad);
          --*nnz;
@@ -4168,52 +4215,6 @@ SCIP_RETCODE cutsRoundMIRSafe(
 
       QUAD_ASSIGN(cutajquad, SCIPintervalGetInf(cutaj));
       QUAD_ARRAY_STORE(cutcoefs, v, cutajquad);
-
-      /* integral var uses standard bound */
-      assert(boundtype[i] < 0);
-
-      /* we have to use the inf of the cutaj-interval both times! */
-      SCIPintervalSetRoundingModeUpwards();
-
-      /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
-      if( varsign[i] == +1 )
-      {
-         /* lower bound was used */
-         if( boundtype[i] == -1 )
-         {
-            assert(RatIsEqualReal(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbGlobal(var)));
-            assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-            SCIPintervalSetRational(&tmpinterval, SCIPvarGetLbGlobalExact(var));
-            SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
-            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetLbGlobal(var) */
-         }
-         else
-         {
-            assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-            SCIPintervalSetRational(&tmpinterval, SCIPvarGetLbLocalExact(var));
-            SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
-            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetLbLocal(var) */
-         }
-      }
-      else
-      {
-         /* upper bound was used */
-         if( boundtype[i] == -1 )
-         {
-            assert(RatIsEqualReal(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbGlobal(var)));
-            assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-            SCIPintervalSetRational(&tmpinterval, SCIPvarGetUbGlobalExact(var));
-            SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
-            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetUbGlobal(var) */
-         }
-         else
-         {
-            assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-            SCIPintervalSetRational(&tmpinterval, SCIPvarGetUbLocalExact(var));
-            SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
-            SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval)); /* rhs += cutaj * SCIPvarGetUbLocal(var) */
-         }
-      }
    }
 
    /* adapt lhs -> round down */
@@ -4285,14 +4286,17 @@ SCIP_RETCODE cutsRoundMIRSafe(
             /* lower bound was used */
             if( boundtype[i] == -1 )
             {
-               assert(RatIsEqualReal(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbGlobal(var)));
                assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetInf(cutaj) * SCIPvarGetLbGlobal(var));
+               SCIPintervalSetRational(&tmpinterval, SCIPvarGetLbGlobalExact(var));
+               SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
             }
             else
             {
                assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetInf(cutaj) * SCIPvarGetLbLocal(var));
+               SCIPintervalSetRational(&tmpinterval, SCIPvarGetLbLocalExact(var));
+               SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
             }
          }
          else
@@ -4300,14 +4304,16 @@ SCIP_RETCODE cutsRoundMIRSafe(
             /* upper bound was used */
             if( boundtype[i] == -1 )
             {
-               assert(RatIsEqualReal(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbGlobal(var)));
                assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetInf(cutaj) * SCIPvarGetUbGlobal(var));
+               SCIPintervalSetRational(&tmpinterval, SCIPvarGetUbGlobalExact(var));
+               SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
+               SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
             }
             else
             {
                assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-               SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, cutaj, SCIPvarGetUbLocal(var));
+               SCIPintervalSetRational(&tmpinterval, SCIPvarGetUbLocalExact(var));
+               SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, cutaj);
                SCIPquadprecSumQD(*cutrhs, *cutrhs, SCIPintervalGetInf(cutaj) * SCIPvarGetUbLocal(var));
             }
          }

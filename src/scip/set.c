@@ -2705,7 +2705,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPaddIntParam(scip,
          "exact/interleavedbfreq",
          "strategy to interleave safe dual bounding with exact LP solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,..., 3: close to cutoff bound OR at depth lvl 4,8,16,...) ",
-         &(*set)->exact_interleavestrategy, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY, 2, INT_MAX, NULL, NULL) );
+         &(*set)->exact_interleavestrategy, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY, 0, 3, NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/lpinfo",
          "should the exact LP solver display status messages?",
