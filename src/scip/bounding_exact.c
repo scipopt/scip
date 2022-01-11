@@ -1869,7 +1869,7 @@ char chooseInitialBoundingMethod(
    /* if the LP was solved to optimality and there are no fractional variables we solve exactly to generate a feasible
     * solution
     */
-   else if( (SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lpexact->fplp, set)) )
+   else if( (SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lpexact->fplp, set)) && lpexact->allowexactsolve )
       dualboundmethod = 'e';
    /* if we are not in automatic mode, try an iteration with the static method */
    else if( set->exact_safedbmethod != 'a' )
