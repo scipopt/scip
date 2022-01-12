@@ -13730,6 +13730,36 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    return SCIP_OKAY;
 }
 
+/** get number of nonlinear handler */
+int SCIPgetNNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nnlhdlrs;
+}
+
+/** get nonlinear handlers */
+SCIP_NLHDLR** SCIPgetNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->nlhdlrs;
+}
+
 /** returns a nonlinear handler of a given name (or NULL if not found) */
 SCIP_NLHDLR* SCIPfindNlhdlrNonlinear(
    SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
