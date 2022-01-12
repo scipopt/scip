@@ -528,7 +528,7 @@ Constraint handlers for NLP:
 - added SCIPaddExprViolScoreNonlinear(), SCIPaddExprsViolScoreNonlinear(), SCIPgetExprViolScoreNonlinear()
 - added SCIPgetExprPartialDiffNonlinear(), SCIPgetExprPartialDiffGradientDirNonlinear()
 - added SCIPevalExprQuadraticAuxNonlinear()
-- added SCIPincludeNlhdlrNonlinear(), SCIPfindNlhdlrNonlinear(), SCIPgetNlhdlrExprDataNonlinear()
+- added SCIPincludeNlhdlrNonlinear(), SCIPfindNlhdlrNonlinear(), SCIPgetNNlhdlrsNonlinear(), SCIPgetNlhdlrsNonlinear(), SCIPgetNlhdlrExprDataNonlinear()
 - added SCIPcreateConsQuadraticNonlinear() and SCIPcreateConsBasicQuadraticNonlinear() to create a nonlinear constraint that is quadratic
 - added SCIPcreateConsBasicSignpowerNonlinear() to create a nonlinear constraint that looks like the former abspower or signpower constraints
 
