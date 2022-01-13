@@ -55,7 +55,7 @@ void SCIPtpiDestroyLock(
 SCIP_RETCODE SCIPtpiAcquireLock(
    SCIP_LOCK*            lock                /**< the lock */
    )
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
@@ -63,7 +63,7 @@ SCIP_RETCODE SCIPtpiAcquireLock(
 SCIP_RETCODE SCIPtpiReleaseLock(
    SCIP_LOCK*            lock                /**< the lock */
    )
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
@@ -97,7 +97,7 @@ void SCIPtpiDestroyCondition(
 SCIP_RETCODE SCIPtpiSignalCondition(
    SCIP_CONDITION*       condition           /**< the condition variable to signal */
    )
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
@@ -105,7 +105,7 @@ SCIP_RETCODE SCIPtpiSignalCondition(
 SCIP_RETCODE SCIPtpiBroadcastCondition(
    SCIP_CONDITION*       condition           /**< the condition variable to broadcast */
    )
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
@@ -116,7 +116,7 @@ SCIP_RETCODE SCIPtpiWaitCondition(
    SCIP_CONDITION*       condition,          /**< the condition variable to wait on */
    SCIP_LOCK*            lock                /**< the lock that is held by the caller */
    )
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
