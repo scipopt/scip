@@ -1026,6 +1026,11 @@ SCIP_RETCODE readCoefficients(
       /* check if we read a sign */
       if( isSign(lpinput, &coefsign) )
       {
+         if( havevalue )
+         {
+            syntaxError(scip, lpinput, "sign after value without variable.");
+            return SCIP_OKAY;
+         }
          SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", lpinput->linenumber, coefsign);
          havesign = TRUE;
          continue;
@@ -1051,6 +1056,12 @@ SCIP_RETCODE readCoefficients(
          {
             syntaxError(scip, lpinput, "no sense allowed in objective");
             return SCIP_OKAY;
+         }
+
+         if( havevalue )
+         {
+            syntaxError(scip, lpinput, "no constant values allowed for constraints in lp file format");
+                  return SCIP_OKAY;
          }
 
          /* put the sense back onto the token stack */
