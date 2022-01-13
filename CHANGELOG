@@ -31,7 +31,7 @@ Features
 - New separator sepa_interminor to compute intersection cuts from 2x2 (not only principle) minors of a violated
   rank-one constraint that is implied by the extended formulation for bilinear products.
 - Symmetry handling has been extended to detect also symmetries between variables that also appear in nonlinear constraints.
-- Improved OBBT by only considering variables that are contained in at least one nonconvex expression that has an auxiliary variable.
+- Improved OBBT propagator by only considering variables that are contained in at least one nonconvex expression that has an auxiliary variable.
 - Default parameter settings for NLP solves are now defined independently of the NLP solver.
 - Added table to print statistics on NLP solvers.
 - Knapsack, linear, logicor, setppc, and varbound constraints now add themselves to the NLP relaxation, if enabled.
@@ -69,7 +69,7 @@ Expressions:
 Constraint handlers for NLP:
 - cons_nonlinear has been completely rewritten and now handles constraints of the form lhs <= expr <= rhs, where
   expr is an expression using the new expression type. A linear part of a nonlinear constraint is no longer distinguished.
-- Methods that work on a particular nonlinear structure are now implemented via nonlinearity handlers (nlhdlr).
+- Methods that work on a particular nonlinear structure are now implemented via nonlinear handlers (nlhdlr).
   These handlers are plugins of cons_nonlinear and interact with cons_nonlinear by detecting structures in expressions and
   providing propagation and separation mechanisms.
 - Added nlhdlr "default" as a mandatory nlhdlr: this is a nlhdlr that gets active on expressions that no other nlhdlr handles.
