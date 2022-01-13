@@ -17,7 +17,6 @@ Features
 - The complete code is now thread-safe by default.
 - New separator to generate mixing cuts (works well for stochastic programming with probabilistic constraint).
 - New parsing routines for cons_orbisack and cons_symresack.
-- Variables can now be marked to forbid aggregation
 - Variables can now be marked to forbid aggregation.
 - Heuristic PADM can now reoptimize found solution with original objective function.
 - Added code to support debugging of catching or releasing of variables to var.c (prints backtrace
