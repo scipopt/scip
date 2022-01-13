@@ -1004,6 +1004,17 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    SCIP_NLHDLRDATA*      nlhdlrdata          /**< data of nonlinear handler (can be NULL) */
    );
 
+/** get number of nonlinear handler */
+SCIP_EXPORT
+int SCIPgetNNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   );
+
+/** get nonlinear handlers */
+SCIP_EXPORT
+SCIP_NLHDLR** SCIPgetNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   );
 /** returns a nonlinear handler of a given name (or NULL if not found) */
 SCIP_EXPORT
 SCIP_NLHDLR* SCIPfindNlhdlrNonlinear(
