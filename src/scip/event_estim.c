@@ -1443,8 +1443,8 @@ SCIP_RETCODE subtreeSumGapUpdate(
    SCIP_Bool updatescaling = FALSE;
    SCIP_Bool insertchildren = (ssg->nsubtrees > 1 && nchildren > 0);
 
-   /* if the instance is solved or a node is cutoff at the initsolve stage, the ssg is 0 */
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED || SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE)
+   /* if the instance is solved or a node is cutoff at the initsolve stage or we are unbounded, the ssg is 0 */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED || SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPisInfinity(scip, -SCIPgetUpperbound(scip)) )
    {
       ssg->value = 0.0;
 
