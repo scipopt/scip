@@ -1031,11 +1031,6 @@ SCIP_RETCODE readCoefficients(
             syntaxError(scip, lpinput, "sign after value without variable.");
             return SCIP_OKAY;
          }
-         if( havesign )
-         {
-            syntaxError(scip, lpinput, "two consecutive signs.");
-            return SCIP_OKAY;
-         }
 
          SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", lpinput->linenumber, coefsign);
          havesign = TRUE;
