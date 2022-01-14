@@ -488,7 +488,7 @@ endif()
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
     message(STATUS "Finding ZIMPL")
-    find_package(ZIMPL EXACT 3.5.0 CONFIG REQUIRED HINTS ${ZIMPL_DIR})
+    find_package(ZIMPL 3.5.0 CONFIG REQUIRED HINTS ${ZIMPL_DIR})
     message(STATUS "Finding ZIMPL - found")
     set(SCIP_WITH_ZIMPL ON)
     include_directories(${ZIMPL_INCLUDE_DIRS})
