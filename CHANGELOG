@@ -2463,8 +2463,8 @@ Interface changes
   number of binary variable for performing clique table analysis
 - `separating/maxincrounds`
 - `separating/maxlocalbounddist`, `separating/maxcoefratio` and `separating/intsupportfac`
-- 'presolving/milp/maxbadgesizepar' to limit the maximal badge size if PaPILO is called in parallel mode
-- 'presolving/milp/maxbadgesizeseq' to limit the maximal badge size if PaPILO is called in sequential mode
+- if PaPILO >= 2.1: `presolving/milp/maxbadgesizepar` to limit the maximal badge size if PaPILO is called in parallel mode
+- if PaPILO >= 2.1: `presolving/milp/maxbadgesizeseq` to limit the maximal badge size if PaPILO is called in sequential mode
 
 ### Data structures
 
