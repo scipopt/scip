@@ -769,7 +769,7 @@ Cut Selector:
 - expr/log/minzerodistance, expr/pow/minzerodistance
 - benders/default/maxslackvarcoef to specify maximal coefficient for slack variables; if exceeded, slack variables are fixed to zero
 - nlpi/ipopt/optfile to specify name of Ipopt options file to use for every solve with Ipopt
-- nlpi/ipopt/print_level, nlpi/ipopt/hsllib, nlpi/ipopt/pardisolib, nlpi/ipopt/linear_system_scaling, nlpi/ipopt/nlp_scaling_method, nlpi/ipopt/mu_strategy, nlpi/ipopt/hessian_approximation
+- nlpi/ipopt/print_level, nlpi/ipopt/hsllib, nlpi/ipopt/pardisolib, nlpi/ipopt/linear_solver, nlpi/ipopt/linear_system_scaling, nlpi/ipopt/nlp_scaling_method, nlpi/ipopt/mu_strategy, nlpi/ipopt/hessian_approximation
 - nlpi/ipopt/warm_start_push
 - timing/nlpieval
 - heuristics/subnlp/iterinit, heuristics/subnlp/ninitsolves, heuristics/subnlp/successrateexp
@@ -2521,8 +2521,8 @@ Interface changes
   number of binary variable for performing clique table analysis
 - `separating/maxincrounds`
 - `separating/maxlocalbounddist`, `separating/maxcoefratio` and `separating/intsupportfac`
-- 'presolving/milp/maxbadgesizepar' to limit the maximal badge size if PaPILO is called in parallel mode
-- 'presolving/milp/maxbadgesizeseq' to limit the maximal badge size if PaPILO is called in sequential mode
+- if PaPILO >= 2.1: `presolving/milp/maxbadgesizepar` to limit the maximal badge size if PaPILO is called in parallel mode
+- if PaPILO >= 2.1: `presolving/milp/maxbadgesizeseq` to limit the maximal badge size if PaPILO is called in sequential mode
 
 ### Data structures
 

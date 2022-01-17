@@ -354,7 +354,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
    if( data->enableprobing )
    {
-#if (PAPILO_VERSION_MAJOR>=2 && PAPILO_VERSION_MINOR>=1)
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
       Probing<SCIP_Real> *probing = new Probing<SCIP_Real>();
       if( presolve.getPresolveOptions().runs_sequential() )
       {
@@ -910,6 +910,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "absolute bound value that is considered too huge for activitity based calculations",
          &presoldata->hugebound, FALSE, DEFAULT_HUGEBOUND, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/maxbadgesizeseq",
          "maximal badge size in Probing in PaPILO if PaPILO is executed in sequential mode",
          &presoldata->maxbadgesizeseq, FALSE, DEFAULT_MAXBADGESIZE_SEQ, -1, INT_MAX, NULL, NULL));
@@ -917,6 +918,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/maxbadgesizepar",
          "maximal badge size in Probing in PaPILO if PaPILO is executed in parallel mode",
          &presoldata->maxbadgesizepar, FALSE, DEFAULT_MAXBADGESIZE_PAR, -1, INT_MAX, NULL, NULL));
+#else
+   presoldata->maxbadgesizeseq = DEFAULT_MAXBADGESIZE_SEQ;
+   presoldata->maxbadgesizepar = DEFAULT_MAXBADGESIZE_PAR;
+#endif
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/enableparallelrows",
