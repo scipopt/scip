@@ -2711,6 +2711,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should the exact LP solver display status messages?",
          &(*set)->exact_lpinfo, FALSE, SCIP_DEFAULT_EXACT_LPINFO,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/allownegslack",
+         "should the exact LP solver display status messages?",
+         &(*set)->exact_allownegslack, FALSE, TRUE,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "exact/cutmaxdenomsize",
          "maximal denominator in cut coefficient, leading to slightly weaker but numerically better cuts (0: disabled)",

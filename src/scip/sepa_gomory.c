@@ -664,16 +664,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       /* get the row of B^-1 for this basic integer variable with fractional solution value */
       SCIP_CALL( SCIPgetLPBInvRow(scip, j, binvrow, inds, &ninds) );
 
-      if( SCIPisExactSolve(scip) )
-      {
-         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
-            sepadata->sidetypebasis, allowlocal, 0, (int) MAXAGGRLEN(nvars), &success) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
-            sepadata->sidetypebasis, allowlocal, 2, (int) MAXAGGRLEN(nvars), &success) );
-      }
+      SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds,
+         sepadata->sidetypebasis, allowlocal, SCIPallowNegSlack(scip) ? 2 : 0, (int) MAXAGGRLEN(nvars), &success) );
 
       if( !success )
          continue;

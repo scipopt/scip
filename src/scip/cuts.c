@@ -5334,7 +5334,7 @@ SCIP_RETCODE cutsSubstituteMIR(
          else
          {
             SCIPquadprecProdQD(cutar, onedivoneminusf0, ar);
-            if( SCIPisExactSolve(scip) )
+            if( SCIPisExactSolve(scip) && SCIPisCertificateActive(scip) )
             {
                SCIPerrorMessage("Negative slacks not allowed in exact solving mode for now \n");
                SCIPABORT();
@@ -5360,12 +5360,13 @@ SCIP_RETCODE cutsSubstituteMIR(
       }
       else
       {
-         SCIPerrorMessage("Negative slacks not currently supported in exact solving mode \n");
-         return SCIP_ERROR;
-         //SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, cutinds, cutcoefs, nnz, row, mul, &sidevalchg, NULL, 0.0) );
+         SCIP_Bool success;
+         SCIP_Real sidevalchg;
+         SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, cutinds, cutcoefs, nnz, row, mul, &sidevalchg, NULL, 0.0, &success) );
 
          /* move to rhs -> need to round up */
-         //SCIPintervalSetRoundingModeUpwards();
+         SCIPintervalSetRoundingModeUpwards();
+         *cutrhs += sidevalchg;
       }
 
       /* move slack's constant to the right hand side */
