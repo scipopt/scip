@@ -1976,7 +1976,7 @@ char chooseBoundingMethod(
 
    /* choose which bounding method to use */
    if( lastboundmethod == 'u' )
-      return chooseInitialBoundingMethod(lpexact, set, prob, stat);
+      return chooseInitialBoundingMethod(lpexact, set, stat, prob);
    else
       return chooseFallbackBoundingMethod(lpexact, set, lastboundmethod);
 }
