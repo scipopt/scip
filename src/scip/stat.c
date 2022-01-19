@@ -308,6 +308,9 @@ void SCIPstatReset(
    stat->nrootstrongbranchs = 0;
    stat->nconflictlps = 0;
    stat->nexlp = 0;
+   stat->nexlpinter = 0;
+   stat->nexlpboundexc = 0;
+   stat->nexlpintfeas = 0;
    stat->nfailexlp = 0;
    stat->nboundshift = 0;
    stat->nfailboundshift = 0;

@@ -1849,6 +1849,7 @@ static
 char chooseInitialBoundingMethod(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_PROB*            prob                /**< problem data */
 )
 {
@@ -1870,7 +1871,10 @@ char chooseInitialBoundingMethod(
     * solution
     */
    else if( (SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lpexact->fplp, set)) && lpexact->allowexactsolve )
+   {
       dualboundmethod = 'e';
+      stat->nexlpintfeas++;
+   }
    /* if we are not in automatic mode, try an iteration with the static method */
    else if( set->exact_safedbmethod != 'a' )
    {
@@ -1887,7 +1891,13 @@ char chooseInitialBoundingMethod(
          && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
          && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPlpGetCutoffbound(lpexact->fplp);
       if( (interleavedepth || interleavecutoff) && lpexact->allowexactsolve )
+      {
+         if( interleavedepth )
+            stat->nexlpinter++;
+         else
+            stat->nexlpboundexc++;
          dualboundmethod = 'e';
+      }
       else
       {
          /* check if neumair-shcherbina is possible */
@@ -1957,6 +1967,7 @@ static
 char chooseBoundingMethod(
    SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_PROB*            prob,               /**< problem data */
    char                  lastboundmethod     /**< the last method that was chosen */
    )
@@ -1965,7 +1976,7 @@ char chooseBoundingMethod(
 
    /* choose which bounding method to use */
    if( lastboundmethod == 'u' )
-      return chooseInitialBoundingMethod(lpexact, set, prob);
+      return chooseInitialBoundingMethod(lpexact, set, prob, stat);
    else
       return chooseFallbackBoundingMethod(lpexact, set, lastboundmethod);
 }
@@ -2391,7 +2402,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 
    while( (!lp->hasprovedbound && !abort) || lpexact->allowexactsolve )
    {
-      dualboundmethod = chooseBoundingMethod(lpexact, set, prob, lastboundmethod);
+      dualboundmethod = chooseBoundingMethod(lpexact, set, stat, prob, lastboundmethod);
       SCIPdebugMessage("Computing safe bound for LP with status %d using bounding method %c\n",
             SCIPlpGetSolstat(lp), dualboundmethod);
 
