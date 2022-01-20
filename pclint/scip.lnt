@@ -66,6 +66,10 @@
 -emacro(438,SCIP_CALL)
 -emacro(438,SCIP_CALL_ABORT)
 
+// duplicate initialization of object
+-emacro(485,SCIPsolveNlpi)
+-emacro(485,SCIPsolveNLP)
+
 // redundant left argument to comma
 -emacro(505,SCIPtpiInitLock)
 -emacro(505,SCIPtpiDestroyLock)
