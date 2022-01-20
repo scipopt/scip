@@ -303,7 +303,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_Real downub;
    SCIP_Real fixval;
    SCIP_Real uplb;
-   SCIP_Real lpval;
    SCIP_Real val;
 
    assert(tree != NULL);
@@ -436,7 +435,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_DOWNWARDS, downub);
       /* if LP solution is cutoff in child, compute a new estimate
        * otherwise we cannot expect a direct change in the best solution, so we keep the estimate of the parent node */
-      if( SCIPsetIsGT(set, lpval, downub) )
+      if( SCIPsetIsGT(set, val, downub) )
          estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, downub);
       else
          estimate = SCIPnodeGetEstimate(tree->focusnode);
@@ -493,7 +492,7 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    {
       /* create child node with x >= uplb */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_UPWARDS, uplb);
-      if( SCIPsetIsLT(set, lpval, uplb) )
+      if( SCIPsetIsLT(set, val, uplb) )
          estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, uplb);
       else
          estimate = SCIPnodeGetEstimate(tree->focusnode);

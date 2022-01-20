@@ -46,9 +46,12 @@ struct SCIP_CertificateBound
 struct SCIP_AggregationInfo
 {
    SCIP_AGGRROW*         aggrrow;            /**< aggregation row to be saved */
-   SCIP_ROW**            aggrrows;           /**< array of rows used fo the aggregation */
+   SCIP_ROW**            aggrrows;           /**< array of rows used for the aggregation */
+   SCIP_ROW**            negslackrows;       /**< array of rows that are implicitly added (using negative slack) */
    SCIP_Real*            weights;            /**< array of weights */
-   int                   naggrrows;          /**< length of the arrays */
+   SCIP_Real*            negslackweights;    /**< array of weights for the negslackrows */
+   int                   naggrrows;          /**< length of the aggrrows array */
+   int                   nnegslackrows;      /**< length of the negslackrows array */
    SCIP_Longint          fileindex;          /**< index of the aggregated row in the certificate file */
    SCIP_Longint          arpos;              /**< position in the aggrinfo array, so we can access it from the hashmap */
 };

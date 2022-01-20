@@ -127,7 +127,10 @@ SCIP_RETCODE SCIPaddCertificateAggregation(
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows           /**< length of the arrays */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_ROW**            negslackrows,       /**< array of rows that are added implicitly with negative slack */
+   SCIP_Real*            negslackweights,    /**< array of negative slack weights */
+   int                   nnegslackrows       /**< length of the negative slack array */
    );
 
 /** agg aggregation information to certificate for one row */
