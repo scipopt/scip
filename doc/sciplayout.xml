@@ -3,22 +3,8 @@
   <!-- Navigation index tabs for HTML output -->
   <navindex>
     <tab type="mainpage" visible="yes" title="Overview"/>
-    <tab type="files" visible="no" title="">
-      <tab type="files" visible="no" title=""/>
-      <tab type="globals" visible="no" title=""/>
-    </tab>
     <tab type="modules" visible=" no" title="SCIP C-API" intro="The public API of SCIP is separated into a Core API and a Plugin API. The first contains all methods that can be accessed by including the header scip.h. The Plugin API is a collection of methods that are provided by the default plugins of SCIP. The Plugin API is provided by scipdefplugins.h."/>
-    <tab type="classes" visible="no" title="">
-      <tab type="classes" visible="no" title="Wrapper Classes"/>
-      <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/>
-      <tab type="hierarchy" visible="no" title=""/>
-      <tab type="classmembers" visible="no" title=""/>
-    </tab>
     <tab type="pages" visible="yes" title=""/>
-    <tab type="namespaces" visible="no" title="">
-      <tab type="namespaces" visible="no" title=""/>
-      <tab type="namespacemembers" visible="no" title=""/>
-    </tab>
   </navindex>
 
   <!-- Layout definition for a class page -->
