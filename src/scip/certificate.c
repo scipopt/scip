@@ -1805,6 +1805,17 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    leftdisjunctionindex = certificate->indexcounter - 2;
    rightdisjunctionindex = certificate->indexcounter - 1;
 
+   /* print possibly missing derivations to the certifiacte */
+   for( i = 0; i < aggrinfo->nnegslackrows; i++ )
+   {
+      SCIP_ROWEXACT* slackrow;
+      slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+
+      if( !SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow) )
+      {
+         SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, certificate, prob, aggrinfo->negslackrows[i], 'L') );
+      }
+   }
 
    /* print the mir cut with proof 1 * (\xi \le \lfloor \beta \rfloor) - (1/1-f)(\nu \ge 0) */
    /* we dont need the \nu \ge 0 part since it will be taken care of by the vipr completion part */
@@ -1834,10 +1845,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       RatDiv(tmpval, tmpval, oneminusf0);
 
       assert(slackrow != NULL);
-      if( !SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow) )
-      {
-         SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, certificate, prob, aggrinfo->negslackrows[i], 'L') );
-      }
+      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
 
       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
       /* for ranged rows, the key always corresponds to the >= part of the row;
