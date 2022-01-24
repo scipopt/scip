@@ -5390,22 +5390,24 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
        */
       SCIPintervalMulScalar(SCIPinfinity(scip), &mul, cutar, -slacksign[i]);
 
-      {
-         SCIP_Bool success;
-         SCIP_Real sidevalchg;
-         SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, cutinds, cutcoefs, nnz, row, SCIPintervalGetInf(mul), &sidevalchg, NULL, 0.0, &success) );
-
-         /* move to rhs -> need to round up */
-         SCIPintervalSetRoundingModeUpwards();
-         *cutrhs += sidevalchg;
-      }
-
       rowexact = SCIProwGetRowExact(row);
       assert(SCIProwExactHasFpRelax(rowexact));
       if( SCIProwExactGetRowRhs(rowexact) != NULL && weights[i] >= 0.0 )
          userow = SCIProwExactGetRowRhs(rowexact);
       else
          userow = row;
+
+      {
+         SCIP_Bool success;
+         SCIP_Real sidevalchg;
+
+         /** @todo exip: inf/sup here? */
+         SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, cutinds, cutcoefs, nnz, userow, SCIPintervalGetSup(mul), &sidevalchg, NULL, 0.0, &success) );
+
+         /* move to rhs -> need to round up */
+         SCIPintervalSetRoundingModeUpwards();
+         *cutrhs += sidevalchg;
+      }
 
       /* move slack's constant to the right hand side */
       if( slacksign[i] == +1 ) /*lint !e613*/
@@ -5422,8 +5424,8 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          //    /* the right hand side was implicitly rounded down in row aggregation */
          //    QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
          // }
-         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, cutar, rowrhs);
-         SCIPquadprecSumQQ(*cutrhs, *cutrhs, -SCIPintervalGetInf(tmpinterval));
+         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, cutar, SCIPintervalNegateReal(rowrhs));
+         SCIPquadprecSumQQ(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
          // if( SCIPisCertificateActive(scip) )
          //    RatAddReal(mirinfo->rhs, mirinfo->rhs, +SCIPintervalGetInf(tmpinterval));
       }
