@@ -46,6 +46,7 @@ struct SCIP_CertificateBound
 struct SCIP_AggregationInfo
 {
    SCIP_AGGRROW*         aggrrow;            /**< aggregation row to be saved */
+   SCIP_AGGRROW*         negslackrow;        /**< aggregation row that implicitly has the negative slack variables in it */
    SCIP_ROW**            aggrrows;           /**< array of rows used for the aggregation */
    SCIP_ROW**            negslackrows;       /**< array of rows that are implicitly added (using negative slack) */
    SCIP_Real*            weights;            /**< array of weights */
