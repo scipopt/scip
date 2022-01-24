@@ -634,3 +634,5 @@ SCIP_Real graph_get_avgDeg(
 
    return ((double) e / v );
 }
+
+/**@} */

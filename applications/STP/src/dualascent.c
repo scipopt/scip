@@ -71,11 +71,6 @@ typedef struct dual_ascent_paths
 } DAPATHS;
 
 
-
-
-/**@} */
-
-
 /**@name Local methods
  *
  * @{

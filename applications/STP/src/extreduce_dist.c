@@ -1807,3 +1807,5 @@ void extreduce_distDataFree(
 
    SCIPfreeMemory(scip, distdata);
 }
+
+/**@} */

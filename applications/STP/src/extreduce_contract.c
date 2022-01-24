@@ -631,3 +631,5 @@ SCIP_Bool extreduce_contractionRuleOutPeriph(
 
    return FALSE;
 }
+
+/**@} */
