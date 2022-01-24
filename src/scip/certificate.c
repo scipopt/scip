@@ -1834,7 +1834,10 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       RatDiv(tmpval, tmpval, oneminusf0);
 
       assert(slackrow != NULL);
-      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+      if( !SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow) )
+      {
+         SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, certificate, prob, aggrinfo->negslackrows[i], 'L') );
+      }
 
       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
       /* for ranged rows, the key always corresponds to the >= part of the row;
