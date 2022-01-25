@@ -26,6 +26,7 @@
 #include "scip/cuts.h"
 #include "scip/certificate.h"
 #include "scip/dbldblarith.h"
+#include "scip/intervalarith.h"
 #include "scip/lp.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_lpexact.h"
@@ -2816,7 +2817,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                {
                   assert( (lhsused && weights[rowinds[k]] >= 0) || ((!lhsused) && weights[rowinds[k]] <= 0) );
                   negslackrows[nnegslackrows] = rows[rowinds[k]];
-                  negslackweights[nnegslackrows] = -weights[rowinds[k]] ;
+                  negslackweights[nnegslackrows] = -weights[rowinds[k]];
                   nnegslackrows++;
                }
             }
@@ -2854,7 +2855,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   {
                      assert( (lhsused && weights[k] >= 0) || ((!lhsused) && weights[k] <= 0) );
                      negslackrows[nnegslackrows] = rows[k];
-                     negslackweights[nnegslackrows] = -weights[k] ;
+                     negslackweights[nnegslackrows] = -weights[k];
                      nnegslackrows++;
                   }
                }
@@ -5289,6 +5290,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
    SCIP_ROWEXACT* rowexact;
    SCIP_INTERVAL onedivoneminusf0, tmpinterval;
    SCIP_ROUNDMODE previousroundmode;
+   SCIP_MIRINFO* mirinfo;
    int i;
 
    assert(scip != NULL);
@@ -5311,6 +5313,12 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
    SCIPintervalSet(&onedivoneminusf0, 1.0);
    SCIPintervalDiv(SCIPinfinity(scip), &onedivoneminusf0, onedivoneminusf0, tmpinterval);
    SCIPintervalSetRoundingModeUpwards();
+
+   if( SCIPisCertificateActive(scip)   )
+   {
+      mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
+      SCIPintervalSetBounds(&mirinfo->onedivoneminusf0, SCIPintervalGetInf(onedivoneminusf0), SCIPintervalGetSup(onedivoneminusf0));
+   }
 
    rows = SCIPgetLPRows(scip);
    for( i = 0; i < nrowinds; i++ )
@@ -5392,7 +5400,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
 
       rowexact = SCIProwGetRowExact(row);
       assert(SCIProwExactHasFpRelax(rowexact));
-      if( SCIProwExactGetRowRhs(rowexact) != NULL && weights[i] >= 0.0 )
+      if( SCIProwExactGetRowRhs(rowexact) != NULL && slacksign[i ] == 1.0 )
          userow = SCIProwExactGetRowRhs(rowexact);
       else
          userow = row;

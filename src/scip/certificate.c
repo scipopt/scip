@@ -1797,7 +1797,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    /* we need to tranform the aggregated row into the standard form used by the mir proof */
    SCIP_CALL( certificateTransAggrrow(set, prob, certificate, aggrinfo->aggrrow, aggrinfo->negslackrow, row, aggrinfo->aggrrows, aggrinfo->weights, naggrrows) );
-   aggrrowindex = certificate->indexcounter - 1;
+   aggrrowindex = certificate->indexcounter - 2;
 
    /* compute the correct split from the aggregation row, and print the two assumptions (\xi \le \lfloor \beta \rfloor), and  (\xi \ge \lfloor \beta + 1 \rfloor) */
    SCIP_CALL( certificatePrintMirSplit(set, prob, certificate, row) );
@@ -1837,12 +1837,16 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    {
       size_t key;
       SCIP_ROWEXACT* slackrow;
+      SCIP_INTERVAL multiplier;
       slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
 
       SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
-      RatSetReal(tmpval, aggrinfo->negslackweights[i]);
-      RatDiv(tmpval, tmpval, oneminusf0);
+      SCIPintervalSetBounds(&multiplier, SCIPintervalGetInf(mirinfo->onedivoneminusf0), SCIPintervalGetSup(mirinfo->onedivoneminusf0));
+      SCIPintervalMulScalar(SCIPsetInfinity(set), &multiplier, multiplier, aggrinfo->negslackweights[i]);
+      //RatSetReal(tmpval, aggrinfo->negslackweights[i]);
+      //RatMultReal(tmpval, tmpval, mirinfo->onedivoneminusf0);
+      RatSetReal(tmpval, SCIPintervalGetSup(multiplier));
 
       assert(slackrow != NULL);
       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
