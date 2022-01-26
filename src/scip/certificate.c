@@ -1506,6 +1506,66 @@ SCIP_RETCODE certificatePrintWeakDerStartComplete(
    return SCIP_OKAY;
 }
 
+/** prints all local bounds that differ from their global bounds as the bounds to take into account */
+static
+SCIP_RETCODE certificatePrintWeakDerStartFullComplete(
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_PROB*            prob                /**< SCIP problem data */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+   int nboundentries;
+
+   nboundentries = 0;
+
+   vars = SCIPprobGetVars(prob);
+   nvars = SCIPprobGetNVars(prob);
+
+   /* count the number of needed entries */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_VAR* var = vars[i];
+      if( !RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
+         nboundentries++;
+      if( !RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
+         nboundentries++;
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " { lin weak { %d", nboundentries);
+
+   for( i = 0; i < nvars && nboundentries > 0; i++ )
+   {
+      SCIP_VAR* var = vars[i];
+
+      if( !RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
+      {
+         SCIP_Longint index;
+         SCIP_Rational* boundval;
+
+         index = SCIPvarGetLbCertificateIndexLocal(var);
+         boundval = SCIPvarGetLbLocalExact(var);
+         SCIPcertificatePrintProofMessage(certificate, " L %d %d ", SCIPvarGetCertificateIndex(var), index);
+         SCIPcertificatePrintProofRational(certificate, boundval, 10);
+      }
+      if( !RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
+      {
+         SCIP_Longint index;
+         SCIP_Rational* boundval;
+
+         index = SCIPvarGetUbCertificateIndexLocal(var);
+         boundval = SCIPvarGetUbLocalExact(var);
+         SCIPcertificatePrintProofMessage(certificate, " U %d %d ", SCIPvarGetCertificateIndex(var), index);
+         SCIPcertificatePrintProofRational(certificate, boundval, 10);
+      }
+   }
+
+   SCIPcertificatePrintProofMessage(certificate, " } ");
+
+   return SCIP_OKAY;
+}
+
 /** create a new node data structure for the current node */
 static
 SCIP_RETCODE certificateTransAggrrow(
@@ -1823,7 +1883,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    SCIPcertificatePrintRow(certificate, rowexact);
 
-   certificatePrintWeakDerStartComplete(certificate, row);
+   certificatePrintWeakDerStartFullComplete(certificate, prob);
 
    /* calculate 1-f0 */
    RatSetReal(oneminusf0, 1.0);
@@ -1837,16 +1897,11 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    {
       size_t key;
       SCIP_ROWEXACT* slackrow;
-      SCIP_INTERVAL multiplier;
       slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
 
       SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
-      SCIPintervalSetBounds(&multiplier, SCIPintervalGetInf(mirinfo->onedivoneminusf0), SCIPintervalGetSup(mirinfo->onedivoneminusf0));
-      SCIPintervalMulScalar(SCIPsetInfinity(set), &multiplier, multiplier, aggrinfo->negslackweights[i]);
-      //RatSetReal(tmpval, aggrinfo->negslackweights[i]);
-      //RatMultReal(tmpval, tmpval, mirinfo->onedivoneminusf0);
-      RatSetReal(tmpval, SCIPintervalGetSup(multiplier));
+      RatSetReal(tmpval, aggrinfo->negslackweights[i]);
 
       assert(slackrow != NULL);
       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
@@ -1867,7 +1922,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintRow(certificate, rowexact);
 
-   certificatePrintWeakDerStartComplete(certificate, row);
+   certificatePrintWeakDerStartFullComplete(certificate, prob);
    SCIPcertificatePrintProofMessage(certificate, " %d ", 2);
 
    /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
@@ -2631,7 +2686,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
    }
 
-   certificatePrintWeakDerStartMirinfo(certificate, vars, NULL);
+   certificatePrintWeakDerStartFullComplete(certificate, prob);
    SCIPcertificatePrintProofMessage(certificate, " %d", naggrrows);
    for( i = 0; i < naggrrows; i++ )
    {

@@ -2268,6 +2268,7 @@ void consdataUpdateChgCoef(
    consdataUpdateAddCoef(scip, consdata, var, newval, checkreliability);
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** returns the maximum absolute value of all coefficients in the constraint */
 static
 SCIP_Rational* consdataGetMaxAbsval(
@@ -2283,6 +2284,7 @@ SCIP_Rational* consdataGetMaxAbsval(
 
    return consdata->maxabsval;
 }
+#endif
 
 /** returns the minimum absolute value of all coefficients in the constraint */
 static

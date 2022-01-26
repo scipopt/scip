@@ -3328,10 +3328,16 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       else
          RatAddProd(row->rhs, difference, SCIPvarGetLbGlobalExact(var));
 
-      RatSet(val, tmpval);
       SCIPintervalSetRational(&(row->valsinterval[i]), tmpval);
+      SCIProwExactChgCoef(row, blkmem, set, eventqueue, lpexact, row->cols[i], tmpval);
+      // SCIProwChgCoef(row->fprow, blkmem, set, eventqueue, lpexact->fplp, row->cols[i]->fpcol, RatRoundReal(tmpval, SCIP_R_ROUND_DOWNWARDS));
 
-      SCIProwChgCoef(row->fprow, blkmem, set, eventqueue, lpexact->fplp, row->cols[i]->fpcol, RatRoundReal(tmpval, SCIP_R_ROUND_DOWNWARDS));
+      row->fprow->vals[i] = RatRoundReal(tmpval, SCIP_R_ROUND_DOWNWARDS);
+      /* if column knows of the row, change the corresponding coefficient in the column */
+      if( row->fprow->linkpos[i] >= 0 )
+      {
+         row->cols[i]->fpcol->vals[row->fprow->linkpos[i]] = RatRoundReal(tmpval, SCIP_R_ROUND_DOWNWARDS);
+      }
 
       if( RatIsNegative(SCIPvarGetLbGlobalExact(var)) )
       {
