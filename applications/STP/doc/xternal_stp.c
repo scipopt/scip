@@ -66,6 +66,8 @@
  * -# \subpage STP_PROBLEMDATA "Main problem data, creating the problem"
  * -# \subpage STP_CONS "Separating violated constraints"
  * -# \subpage STP_READWRITE "Reading and writing"
+ * -# \subpage STP_MISC "Miscellaneous methods used for Steiner tree problems"
+ * -# \subpage STP_MINCUT "Graph minimum cut routine"
  *
  * Installation
  * ------------

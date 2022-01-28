@@ -257,6 +257,7 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
+ * - \subpage RN80         "SCIP 8.0"
  * - \subpage RN70         "SCIP 7.0"
  * - \subpage RN60         "SCIP 6.0"
  * - \subpage RN50         "SCIP 5.0"
