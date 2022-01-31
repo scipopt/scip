@@ -761,7 +761,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    scdata = NULL;
    lpsolsemicontinuous = 0.0;
    idxbvars = -1;
-   issemicont = TRUE;
 
    heur = SCIPdivesetGetHeur(diveset);
    assert(heur != NULL);
