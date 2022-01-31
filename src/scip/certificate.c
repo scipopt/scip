@@ -1566,6 +1566,48 @@ SCIP_RETCODE certificatePrintWeakDerStartFullComplete(
    return SCIP_OKAY;
 }
 
+/** prints all local bounds that differ from their global bounds as the bounds to take into account */
+static
+SCIP_RETCODE certificatePrintIncompleteDerStartFull(
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_PROB*            prob                /**< SCIP problem data */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+   int nboundentries;
+
+   nboundentries = 0;
+
+   vars = SCIPprobGetVars(prob);
+   nvars = SCIPprobGetNVars(prob);
+
+   SCIPcertificatePrintProofMessage(certificate, " { lin incomplete ");
+
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_VAR* var = vars[i];
+
+      if( !RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
+      {
+         SCIP_Longint index;
+
+         index = SCIPvarGetLbCertificateIndexLocal(var);
+         SCIPcertificatePrintProofMessage(certificate, " %d ", index);
+      }
+      if( !RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
+      {
+         SCIP_Longint index;
+
+         index = SCIPvarGetUbCertificateIndexLocal(var);
+         SCIPcertificatePrintProofMessage(certificate, " %d ", index);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** create a new node data structure for the current node */
 static
 SCIP_RETCODE certificateTransAggrrow(
@@ -1899,9 +1941,9 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       SCIP_ROWEXACT* slackrow;
       slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
 
-      SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
+      SCIPdebugMessage("adding %g times row: ", aggrinfo->substfactor[i]);
       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
-      RatSetReal(tmpval, aggrinfo->negslackweights[i]);
+      RatSetReal(tmpval, aggrinfo->substfactor[i]);
 
       assert(slackrow != NULL);
       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
@@ -1909,7 +1951,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
       /* for ranged rows, the key always corresponds to the >= part of the row;
          therefore we need to increase it by one to get the correct key */
-      if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->negslackweights[i] >= 0 )
+      if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->substfactor[i] >= 0 )
          key += 1;
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
@@ -1922,6 +1964,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintRow(certificate, rowexact);
 
+   //certificatePrintIncompleteDerStartFull(certificate, prob);
    certificatePrintWeakDerStartFullComplete(certificate, prob);
    SCIPcertificatePrintProofMessage(certificate, " %d ", 2);
 
@@ -2777,6 +2820,8 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
    {
       SCIProwRelease(&(aggrinfo->negslackrows[i]), certificate->blkmem, set, lp);
    }
+
+   BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->substfactor), aggrinfo->nnegslackrows);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->negslackweights), aggrinfo->nnegslackrows);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->negslackrows), aggrinfo->nnegslackrows);
    BMSfreeBlockMemoryArray(certificate->blkmem, &(aggrinfo->weights), aggrinfo->naggrrows);
@@ -2836,6 +2881,7 @@ SCIP_RETCODE SCIPcertificateNewAggrInfo(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(info->weights), naggrrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(info->negslackrows), nnegslackrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(info->negslackweights), nnegslackrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(info->substfactor), nnegslackrows) );
    for( i = 0; i < naggrrows; i++ )
    {
       SCIPdebugMessage("adding row %s with weight %g to aggrinfo \n", SCIProwGetName(aggrrows[i]), weights[i]);

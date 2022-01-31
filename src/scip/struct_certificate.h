@@ -51,6 +51,7 @@ struct SCIP_AggregationInfo
    SCIP_ROW**            negslackrows;       /**< array of rows that are implicitly added (using negative slack) */
    SCIP_Real*            weights;            /**< array of weights */
    SCIP_Real*            negslackweights;    /**< array of weights for the negslackrows */
+   SCIP_Real*            substfactor;        /**< factor used in the substition of slack variables (negslackweight)/(1-f0) */
    int                   naggrrows;          /**< length of the aggrrows array */
    int                   nnegslackrows;      /**< length of the negslackrows array */
    SCIP_Longint          fileindex;          /**< index of the aggregated row in the certificate file */

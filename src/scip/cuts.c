@@ -5419,6 +5419,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
 
          assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]);
          aggrinfo->negslackweights[currentnegslackrow] = -mult;
+         currentnegslackrow++;
 
          /** @todo exip: inf/sup here? */
          SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, cutinds, cutcoefs, nnz, userow, SCIPintervalNegateReal(mult), &sidevalchg, NULL, 0.0, &success) );
@@ -5444,7 +5445,8 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          //    /* the right hand side was implicitly rounded down in row aggregation */
          //    QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
          // }
-         SCIPintervalSet(&tmpinterval, -mult);
+         tmpinterval = cutar;
+         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, -1);
          SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, rowrhs);
          SCIPquadprecSumQQ(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
          // if( SCIPisCertificateActive(scip) )
@@ -5464,7 +5466,8 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          //    /* the left hand side was implicitly rounded up in row aggregation */
          //    QUAD_ASSIGN(rowlhs, floor(QUAD_TO_DBL(rowlhs)));
          // }
-         SCIPintervalSet(&tmpinterval, -mult);
+         tmpinterval = cutar;
+         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, -1);
          SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, rowlhs);
          SCIPquadprecSumQQ(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
          // if( SCIPisCertificateActive(scip) )
