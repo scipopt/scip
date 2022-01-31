@@ -49,6 +49,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
+#include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip_prob.h"
@@ -131,20 +132,25 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_CONSHDLR*        conshdlr;           /**< constraint handler */
-   SCIP_HASHMAP*         scvars;             /**< stores hashmap with semicontinuous variables */
+   SCIP_HASHMAP*         scvars;             /**< hashmap to store semicontinuous variables */
+   SCIP_HASHMAP*         indicatormap;       /**< hashmap to store indicator constraints of binary variables */
    SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded up*/
    int                   mode;               /**< decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default)) */
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
    int                   notfound;           /**< calls without found solution in succession */
    SCIP_Bool             dynamicfreq;        /**< should the frequency be adjusted dynamically? */
    SCIP_Bool             solvemip;           /**< should a MIP be solved after all indicator variables are fixed? */
-   int                   nremainingindconss; /**< number of remaining indicator constraints */
+   SCIP_Bool             gotoindconss;       /**< can we skip the candidate var until indicator conss handler determines the candidate var? */
+   SCIP_Bool             containsviolindconss;/**< contains current solution violated indicator constraints? (only unbounded) */
+   SCIP_Bool             newnode;            /**< are we at a new probing node? */
+   int                   probingdepth;       /**< current probing depth */
 };
 
 /*
  * Local methods
  */
 
+/** checks if constraint is violated but not fixed, i.e., it will be a diving candidate variable */
 static
 SCIP_Bool isViolatedAndNotFixed(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -196,78 +202,58 @@ SCIP_RETCODE releaseSCHashmap(
    return SCIP_OKAY;
 }
 
-/** checks if variable is indicator variable and stores corresponding indicator constraint */
+/** checks if variable is indicator variable and stores corresponding indicator constraint
+ *  Additionally, it checks whether there are violated but not fixed indicator constraints if we are at a new probing node.
+ */
 static
 SCIP_RETCODE checkAndGetIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             cand,               /**< candidate variable */
+   SCIP_HASHMAP*         map,                /**< pointer to hashmap containing indicator conss */
    SCIP_CONS**           cons,               /**< pointer to store indicator constraint */
    SCIP_Bool*            isindicator,        /**< pointer to store whether candidate variable is indicator variable */
-   SCIP_Bool*            containsviolatedind,/**< pointer to store whether candidate variable corresponds to
-                                              *   violated and not fixed indicator constraint */
+   SCIP_Bool*            containsviolindconss,/**< pointer to store whether there are violated and not fixed (unbounded) indicator constraints */
+   SCIP_Bool*            newnode,            /**< are we at a new probing node? */
    SCIP_SOL*             sol,                /**< pointer to solution */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
-   SCIP_CONS** indicatorconss;
-   int c;
-
    assert(scip != NULL);
    assert(cand != NULL);
+   assert(map != NULL);
    assert(cons != NULL);
    assert(isindicator != NULL);
    assert(sol != NULL);
 
-   indicatorconss = SCIPconshdlrGetConss(conshdlr);
    *cons = NULL;
    *isindicator = FALSE;
 
-   *isindicator = FALSE;
-   *containsviolatedind = FALSE;
-   for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
+   *cons = (SCIP_CONS*) SCIPhashmapGetImage(map, cand);
+   if( *cons != NULL )
    {
-      SCIP_VAR* indicatorvar;
-      indicatorvar = SCIPgetBinaryVarIndicator(indicatorconss[c]);
+      *isindicator = TRUE;
+   }
 
-      *containsviolatedind = *containsviolatedind || isViolatedAndNotFixed(scip, sol, indicatorconss[c]);
+   /* since we are at a new probing node, check if there are violated and not fixed indicator constraints */
+   if( *newnode )
+   {
+      SCIP_CONS** indicatorconss;
+      int nconss;
+      int c;
 
-      if( cand == indicatorvar )
+      indicatorconss = SCIPconshdlrGetConss(conshdlr);
+      nconss = SCIPconshdlrGetNActiveConss(conshdlr);
+      *containsviolindconss = FALSE;
+
+      for( c = 0; c < nconss; c++ )
       {
-         //TODO: this should then always be true, but it seems that it isn't so
-//         assert(*containsviolatedind);
-         *cons = indicatorconss[c];
-         *isindicator = TRUE;
-         return SCIP_OKAY;
+         *containsviolindconss = *containsviolindconss || isViolatedAndNotFixed(scip, sol, indicatorconss[c]);
+
+         if( *containsviolindconss )
+            break;
       }
-      if( *containsviolatedind && SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
-         return SCIP_OKAY;
    }
    return SCIP_OKAY;
-}
-
-/** returns number of remaining indicator constraints */
-static
-int getRemainingNIndicatorCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< pointer to solution */
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   )
-{
-   SCIP_CONS** indicatorconss;
-   int result;
-   int c;
-
-   assert(scip != NULL);
-   assert(sol != NULL);
-
-   indicatorconss = SCIPconshdlrGetConss(conshdlr);
-
-   result = 0;
-   for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
-      if( isViolatedAndNotFixed(scip, sol, indicatorconss[c]) )
-         result = result + 1;
-
-   return result;
 }
 
 /** adds an indicator to the data of a semicontinuous variable */
@@ -654,6 +640,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    SCIP_DIVESET* diveset;
    SCIP_CONS** indicatorconss;
    SCIP_Bool isatleastoneindcons; /* exists at least one unfixed indicator constraint? */
+   int nconss;
    int i;
 
    heurdata = SCIPheurGetData(heur);
@@ -668,9 +655,9 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    // skip if problem doesn't contain indicator constraints
 
    isatleastoneindcons = FALSE;
-   indicatorconss = SCIPconshdlrGetConss( heurdata->conshdlr );
-
-   for( i = 0; i < SCIPconshdlrGetNConss(heurdata->conshdlr); i++ )
+   indicatorconss = SCIPconshdlrGetConss(heurdata->conshdlr);
+   nconss = SCIPconshdlrGetNConss(heurdata->conshdlr);
+   for( i = 0; i < nconss; i++ )
    {
       SCIP_VAR *binvar;
       binvar = SCIPgetBinaryVarIndicator(indicatorconss[i]);
@@ -687,6 +674,18 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 
    SCIPdebugMessage("call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
 
+   /* create and initialize hashmap
+    * indicatormap: binary var -> indicator constraint
+    */
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicatormap, SCIPblkmem(scip), nconss) );
+   for( i = 0; i < nconss; i++ )
+   {
+      if( !SCIPhashmapExists(heurdata->indicatormap, SCIPgetBinaryVarIndicator(indicatorconss[i])) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(heurdata->indicatormap, SCIPgetBinaryVarIndicator(indicatorconss[i]), indicatorconss[i]) );
+      }
+   }
+
    /* dynamic frequency */
    if( heurdata->dynamicfreq )
    {
@@ -698,12 +697,23 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
       SCIP_CALL( SCIPsetIntParam(scip, "heuristics/indicatordiving/freq", newfreq) );
    }
 
+   /* (re-)set parameter */
+   heurdata->gotoindconss = FALSE;
+   heurdata->containsviolindconss = FALSE;
+   heurdata->newnode = TRUE;
+   heurdata->probingdepth = -1;
+
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
 
    if( *result == SCIP_DIDNOTFIND )
       heurdata->notfound++;
    else if( *result == SCIP_FOUNDSOL )
       heurdata->notfound = 0;
+
+   /* free hashmap since constraints can get removed/modified till the next call
+    * todo: Is it possible to update the hashmaps instead of freeing and creating the hashmaps in the next call again?
+    */
+   SCIPhashmapFree(&heurdata->indicatormap);
 
    SCIPdebugMessage("leave heurExecIndicatordiving\n");
 
@@ -738,12 +748,11 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIP_Real lpsolsemicontinuous;
    SCVARDATA* scdata;
    SCIP_Real* consvals;
-   SCIP_Real rhs;
+   SCIP_Real side;
    int nconsvars;
    int idxbvars; /* index of bounding variable in hashmap scdata */
    SCIP_Bool isindicatorvar;
-   SCIP_Bool issemicont;
-   SCIP_Bool containsactiveindconss;
+   SCIP_Bool issemicont; /* indicates whether variable has (maybe) required semicont. properties */
    SCIP_Bool success;
    int v;
    int b;
@@ -752,36 +761,71 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    scdata = NULL;
    lpsolsemicontinuous = 0.0;
    idxbvars = -1;
-   issemicont = FALSE;
+   issemicont = TRUE;
 
    heur = SCIPdivesetGetHeur(diveset);
    assert(heur != NULL);
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* check if we are at a new probing node
+    *
+    * Since diving heuristics backtrack maximal one probing node, we are at a new node iff the probing depth increased.
+    */
+   if( heurdata->probingdepth < SCIPgetProbingDepth(scip) )
+      heurdata->newnode = TRUE;
+   else
+   {
+      assert(heurdata->probingdepth == SCIPgetProbingDepth(scip));
+      heurdata->newnode = FALSE;
+   }
+   heurdata->probingdepth = SCIPgetProbingDepth(scip);
+
+   /* skip candidate
+    * since we have violated indicator constraints but current candidate can not be determined by the indicator constraint handler
+    */
+   if( !(SCIPisFeasIntegral(scip, candsol) && SCIPvarGetLbLocal(cand) < SCIPvarGetUbLocal(cand) - 0.5) && heurdata->gotoindconss )
+   {
+      *score = SCIP_REAL_MIN;
+      *roundup = FALSE;
+      return SCIP_OKAY;
+   }
+   else
+      heurdata->gotoindconss = FALSE;
+
    /* check if cand variable is indicator variable */
-   SCIP_CALL( checkAndGetIndicator(scip, cand, &indicatorcons, &isindicatorvar,
-                                  &containsactiveindconss, heurdata->sol, heurdata->conshdlr) );
+   SCIP_CALL( checkAndGetIndicator(scip, cand, heurdata->indicatormap, &indicatorcons, &isindicatorvar,
+                                  &heurdata->containsviolindconss, &heurdata->newnode, heurdata->sol, heurdata->conshdlr) );
+
+   /* skip candidate in next calls
+    * since we have violated indicator constraints but current candidate is not determined by the indicator constraint handler
+    */
+   if( heurdata->containsviolindconss &&
+         !((SCIPisFeasIntegral(scip, candsol) && SCIPvarGetLbLocal(cand) < SCIPvarGetUbLocal(cand) - 0.5) && isindicatorvar) )
+   {
+      heurdata->gotoindconss = TRUE;
+      *score = SCIP_REAL_MIN;
+      *roundup = FALSE;
+      return SCIP_OKAY;
+   }
 
    if( !isindicatorvar )
    {
       *score = SCIP_REAL_MIN;
       *roundup = FALSE;
-      if( !containsactiveindconss )
+      if( !heurdata->containsviolindconss )
       {
          getScoreOfFarkasDiving(scip, diveset, cand, candsfrac, roundup, score);
-         heurdata->nremainingindconss = 0;
       }
       return SCIP_OKAY;
    }
 
    SCIPdebugMessage("cand: %s, candsol: %.2f, candobjcoeff: %f\n", SCIPvarGetName(cand), candsol, SCIPvarGetObj(cand));
 
-   heurdata->nremainingindconss = getRemainingNIndicatorCons(scip, heurdata->sol, heurdata->conshdlr);
    lincons = SCIPgetLinearConsIndicator(indicatorcons);
    slackvar = SCIPgetSlackVarIndicator(indicatorcons);
-   rhs = SCIPconsGetRhs(scip, lincons, &success);
-
+   side = SCIPconsGetRhs(scip, lincons, &success);
+   issemicont = (SCIPisInfinity(scip, -SCIPconsGetLhs(scip, lincons, &success)) ? TRUE : FALSE); /* TODO allow also indicators for lower bounds */
 
    /* get heuristic data */
 
@@ -793,7 +837,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
 
    SCIP_CALL( SCIPgetConsNVars(scip, lincons, &nconsvars, &success) );
 
-   if ( nconsvars != 2 )
+   if( nconsvars != 2 || !issemicont )
    {
       *score = SCIPrandomGetReal( randnumgen, -1.0, 0.0 );
       /* try to avoid variability; decide randomly if the LP solution can contain some noise */
@@ -809,6 +853,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    SCIP_CALL( SCIPgetConsVars(scip, lincons, consvars, nconsvars, &success) );
    SCIP_CALL( SCIPgetConsVals(scip, lincons, consvals, nconsvars, &success) );
 
+   issemicont = FALSE;
    for( v = 0; v < nconsvars ; v++ )
    {
       if( consvars[v] == slackvar ) /* note that we have exact two variables */
@@ -829,7 +874,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          for( b = 0; b < scdata->nbnds; b++ )
          {
             if( (scdata->bvars[b] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand)))
-                  && SCIPisEQ(scip, rhs, scdata->vals0[b]) )
+                  && SCIPisEQ(scip, side, scdata->vals0[b]) )
             {
                assert(scdata == NULL  || SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[b]));
                assert(scdata == NULL  || SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[b]));
