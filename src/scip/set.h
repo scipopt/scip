@@ -1094,6 +1094,9 @@ SCIP_Real SCIPsetSumepsilon(
    );
 
 /** returns feasibility tolerance for constraints */
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPsetFeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
@@ -1104,6 +1107,9 @@ SCIP_Real SCIPsetLPFeastolFactor(
    );
 
 /** returns feasibility tolerance for reduced costs */
+#ifdef __GNUC__
+__attribute__ ((pure))
+#endif
 SCIP_Real SCIPsetDualfeastol(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
