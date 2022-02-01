@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1004,6 +1004,17 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    SCIP_NLHDLRDATA*      nlhdlrdata          /**< data of nonlinear handler (can be NULL) */
    );
 
+/** get number of nonlinear handler */
+SCIP_EXPORT
+int SCIPgetNNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   );
+
+/** get nonlinear handlers */
+SCIP_EXPORT
+SCIP_NLHDLR** SCIPgetNlhdlrsNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   );
 /** returns a nonlinear handler of a given name (or NULL if not found) */
 SCIP_EXPORT
 SCIP_NLHDLR* SCIPfindNlhdlrNonlinear(

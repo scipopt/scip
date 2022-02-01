@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -85,8 +85,8 @@ typedef enum MSKoptimizertype_enum MSKoptimizertype;
 #ifdef SCIP_THREADSAFE
    #if defined(_Thread_local)
       /* Use thread local environment in order to not create a new environment for each new LP. */
-      _Thread_local MSKenv_t reusemosekenv =     NULL;
-      _Thread_local int numlp         =           0;
+      static _Thread_local MSKenv_t reusemosekenv =     NULL;
+      static _Thread_local int numlp         =           0;
       #define SCIP_REUSEENV
    #endif
 #else
