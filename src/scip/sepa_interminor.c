@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -340,7 +340,7 @@ SCIP_RETCODE detectMinors(
       root = SCIPgetExprNonlinear(cons);
       assert(root != NULL);
 
-      for( expr = SCIPexpriterRestartDFS(it, root); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, root); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*//*lint !e440*/
       {
          SCIP_EXPR** children;
          SCIP_VAR* auxvar;
@@ -688,7 +688,7 @@ SCIP_RETCODE computeRestrictionToRay(
    return SCIP_OKAY;
 }
 
-/** returns phi(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E) */
+/** returns phi(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E) */  /*lint -e{715}*/
 static
 SCIP_Real evalPhiAtRay(
    SCIP*                 scip,               /**< SCIP data structure */

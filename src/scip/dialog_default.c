@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -956,7 +956,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs)
    for( i = 0; i < nexprhdlrs; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-18s ", SCIPexprhdlrGetName(exprhdlrs[i]));
-      SCIPdialogMessage(scip, NULL, " %10d ", SCIPexprhdlrGetPrecedence(exprhdlrs[i]));
+      SCIPdialogMessage(scip, NULL, " %10u ", SCIPexprhdlrGetPrecedence(exprhdlrs[i]));
       SCIPdialogMessage(scip, NULL, " %s", SCIPexprhdlrGetDescription(exprhdlrs[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }

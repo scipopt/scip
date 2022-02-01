@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,6 +66,8 @@
  * -# \subpage STP_PROBLEMDATA "Main problem data, creating the problem"
  * -# \subpage STP_CONS "Separating violated constraints"
  * -# \subpage STP_READWRITE "Reading and writing"
+ * -# \subpage STP_MISC "Miscellaneous methods used for Steiner tree problems"
+ * -# \subpage STP_MINCUT "Graph minimum cut routine"
  *
  * Installation
  * ------------

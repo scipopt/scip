@@ -1,8 +1,8 @@
-\\ ndetectors 
-\\ 2 
-\\ name time nnewblocks %ofnewborderconss %ofnewblockconss %ofnewlinkingvars %ofnewblockvars  
-\\ hrgpartition 0.020000 0 0.081818 0.000000 0.000000 0.000000 
-\\ connectedbase 0.000000 11 0.000000 0.000000 0.000000 1.000000 
+\\ ndetectors
+\\ 2
+\\ name time nnewblocks %ofnewborderconss %ofnewblockconss %ofnewlinkingvars %ofnewblockvars
+\\ hrgpartition 0.020000 0 0.081818 0.000000 0.000000 0.000000
+\\ connectedbase 0.000000 11 0.000000 0.000000 0.000000 1.000000
 PRESOLVED
 0
 NBLOCKS

@@ -1,69 +1,69 @@
 NAME          CPLEX solver
 ROWS
- N  obj     
- L  id33    
- L  id36    
- L  id39    
- L  id42    
- L  id45    
- L  id48    
- L  id51    
- L  id54    
- L  id57    
- L  id60    
- L  id63    
- L  id66    
- L  id69    
- L  id72    
- L  id75    
- L  id78    
- L  id81    
- L  id84    
- L  id87    
- L  id90    
- L  id93    
- L  id96    
- L  id99    
- L  id102   
- L  id105   
- L  id108   
- L  id111   
- L  id114   
- L  id117   
- L  id120   
- E  id121   
- L  id123   
- E  id189   
- E  id190   
- E  id191   
- E  id192   
- E  id193   
- E  id194   
- E  id195   
- E  id196   
- E  id197   
- E  id198   
- E  id199   
- E  id200   
- E  id201   
- E  id202   
- E  id203   
- E  id204   
- E  id205   
- E  id206   
- E  id207   
- E  id208   
- E  id209   
- E  id210   
- E  id211   
- E  id212   
- E  id213   
- E  id214   
- E  id215   
- E  id216   
- E  id217   
- E  id218   
- L  q1      
+ N  obj
+ L  id33
+ L  id36
+ L  id39
+ L  id42
+ L  id45
+ L  id48
+ L  id51
+ L  id54
+ L  id57
+ L  id60
+ L  id63
+ L  id66
+ L  id69
+ L  id72
+ L  id75
+ L  id78
+ L  id81
+ L  id84
+ L  id87
+ L  id90
+ L  id93
+ L  id96
+ L  id99
+ L  id102
+ L  id105
+ L  id108
+ L  id111
+ L  id114
+ L  id117
+ L  id120
+ E  id121
+ L  id123
+ E  id189
+ E  id190
+ E  id191
+ E  id192
+ E  id193
+ E  id194
+ E  id195
+ E  id196
+ E  id197
+ E  id198
+ E  id199
+ E  id200
+ E  id201
+ E  id202
+ E  id203
+ E  id204
+ E  id205
+ E  id206
+ E  id207
+ E  id208
+ E  id209
+ E  id210
+ E  id211
+ E  id212
+ E  id213
+ E  id214
+ E  id215
+ E  id216
+ E  id217
+ E  id218
+ L  q1
 COLUMNS
     id1       obj              -0.0361599942098
     id1       id33                            1
@@ -1214,36 +1214,36 @@ BOUNDS
  UP bnd       id112                           1
  UP bnd       id115                           1
  UP bnd       id118                           1
- FR bnd       id127   
- FR bnd       id128   
- FR bnd       id129   
- FR bnd       id130   
- FR bnd       id131   
- FR bnd       id132   
- FR bnd       id133   
- FR bnd       id134   
- FR bnd       id135   
- FR bnd       id136   
- FR bnd       id137   
- FR bnd       id138   
- FR bnd       id139   
- FR bnd       id140   
- FR bnd       id141   
- FR bnd       id142   
- FR bnd       id143   
- FR bnd       id144   
- FR bnd       id145   
- FR bnd       id146   
- FR bnd       id147   
- FR bnd       id148   
- FR bnd       id149   
- FR bnd       id150   
- FR bnd       id151   
- FR bnd       id152   
- FR bnd       id153   
- FR bnd       id154   
- FR bnd       id155   
- FR bnd       id156   
+ FR bnd       id127
+ FR bnd       id128
+ FR bnd       id129
+ FR bnd       id130
+ FR bnd       id131
+ FR bnd       id132
+ FR bnd       id133
+ FR bnd       id134
+ FR bnd       id135
+ FR bnd       id136
+ FR bnd       id137
+ FR bnd       id138
+ FR bnd       id139
+ FR bnd       id140
+ FR bnd       id141
+ FR bnd       id142
+ FR bnd       id143
+ FR bnd       id144
+ FR bnd       id145
+ FR bnd       id146
+ FR bnd       id147
+ FR bnd       id148
+ FR bnd       id149
+ FR bnd       id150
+ FR bnd       id151
+ FR bnd       id152
+ FR bnd       id153
+ FR bnd       id154
+ FR bnd       id155
+ FR bnd       id156
 QCMATRIX   q1
     id127     id127                           1
     id128     id128                           1
