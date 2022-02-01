@@ -386,7 +386,7 @@ void selectBestCands(
       /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
       evaluateAggrCand(scip, cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval, bestcands, nbestcands);
    }
-}
+}  /*lint --e{438}*/
 
 
 /** selects a variable out of the given candidate array and performs the branching */
