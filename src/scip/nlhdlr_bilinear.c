@@ -410,7 +410,7 @@ void getFeasiblePointsBilinear(
       SCIP_Real cx = i < 2 ? lbx : ubx;
       SCIP_Real cy = (i % 2) == 0 ? lby : uby;
 
-      SCIPdebugMsg(scip, "corner point (%g,%g) feasible? %d\n", cx, cy, isPointFeasible(scip, cx, cy, lbx, ubx, lby, uby, ineqs, nineqs));
+      SCIPdebugMsg(scip, "corner point (%g,%g) feasible? %u\n", cx, cy, isPointFeasible(scip, cx, cy, lbx, ubx, lby, uby, ineqs, nineqs));
 
       if( isPointFeasible(scip, cx, cy, lbx, ubx, lby, uby, ineqs, nineqs) )
       {
@@ -436,7 +436,7 @@ void getFeasiblePointsBilinear(
 
       for( j = 0; j < 5; ++j )
       {
-         SCIPdebugMsg(scip, "intersection point (%g,%g) feasible? %d\n", px[j], py[j], isPointFeasible(scip, px[j], py[j], lbx, ubx, lby, uby, ineqs, nineqs));
+         SCIPdebugMsg(scip, "intersection point (%g,%g) feasible? %u\n", px[j], py[j], isPointFeasible(scip, px[j], py[j], lbx, ubx, lby, uby, ineqs, nineqs));
          if( isPointFeasible(scip, px[j], py[j], lbx, ubx, lby, uby, ineqs, nineqs) )
          {
             xs[*npoints] = px[j];
@@ -977,7 +977,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
 
       SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprNonlinear(cons), SCIP_EXPRITER_DFS, FALSE) );
 
-      for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*//*lint !e440*/
       {
          if( SCIPhashmapExists(hashmap, expr) )
          {

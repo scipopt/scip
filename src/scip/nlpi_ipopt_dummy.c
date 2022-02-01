@@ -29,7 +29,7 @@
 #include "scip/nlpi_ipopt.h"
 #include "blockmemshell/memory.h"
 
-/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */
+/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */  /*lint -e{715}*/
 SCIP_RETCODE SCIPincludeNlpSolverIpopt(
    SCIP*                 scip                /**< SCIP data structure */
    )

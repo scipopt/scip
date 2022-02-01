@@ -892,7 +892,7 @@ SCIP_RETCODE propVariables(
             while (i >= 0)
             {
                SCIP_CALL( SCIPaddConflictBinvar(scip, vars1[i]) );
-               SCIP_CALL( SCIPaddConflictBinvar(scip, vars2[i--]) );
+               SCIP_CALL( SCIPaddConflictBinvar(scip, vars2[i--]) ); /*lint !e850*/
             }
 
             SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );

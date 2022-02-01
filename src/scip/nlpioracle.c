@@ -1753,7 +1753,7 @@ char** SCIPnlpiOracleGetVarNames(
    return oracle->varnames;
 }
 
-/** indicates whether variable appears nonlinear in any objective or constraint */
+/** indicates whether variable appears nonlinear in any objective or constraint */  /*lint --e{715}*/
 SCIP_Bool SCIPnlpiOracleIsVarNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -1768,7 +1768,7 @@ SCIP_Bool SCIPnlpiOracleIsVarNonlinear(
    return oracle->varnlcount[varidx] > 0;
 }
 
-/** returns number of linear and nonlinear appearances of variables in objective and constraints */
+/** returns number of linear and nonlinear appearances of variables in objective and constraints */  /*lint --e{715}*/
 void SCIPnlpiOracleGetVarCounts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
