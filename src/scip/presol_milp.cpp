@@ -83,6 +83,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
 #define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
+#define DEFAULT_VERBOSITY          0
 #define DEFAULT_HUGEBOUND          1e8       /**< absolute bound value that is considered too huge for activitity based calculations */
 #define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEDOMCOL       TRUE      /**< should the dominated column presolver be enabled within the presolve library? */
@@ -108,6 +109,8 @@ struct SCIP_PresolData
    int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
    int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
    int randomseed;                           /**< the random seed used for randomization of tie breaking */
+   int verbosity;
+
    SCIP_Bool enablesparsify;                 /**< should the sparsify presolver be enabled within the presolve library? */
    SCIP_Bool enabledomcol;                   /**< should the dominated column presolver be enabled within the presolve library? */
    SCIP_Bool enableprobing;                  /**< should the probing presolver be enabled within the presolve library? */
@@ -292,7 +295,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
     * presolve library those look like normal substitution on the postsolve stack */
    presolve.getPresolveOptions().removeslackvars = false;
 
-   /* communicate the SCIP parameters to the presolve libary */
+   /* communicate the SCIP parameters to the presolve library */
    presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
    presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
    presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
@@ -304,8 +307,16 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* communicate the random seed */
    presolve.getPresolveOptions().randomseed = SCIPinitializeRandomSeed(scip, (unsigned int)data->randomseed);
 
+#ifdef PAPILO_TBB
    /* set number of threads to be used for presolve */
    presolve.getPresolveOptions().threads = data->threads;
+#else
+   if (data->threads != DEFAULT_THREADS)
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+                      "PaPILO can utilize only multiple threads if it is build with TBB.\n");
+   presolve.getPresolveOptions().threads = 1;
+#endif
+
 
    /* disable dual reductions that are not permitted */
    if( !complete )
@@ -383,7 +394,26 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
+   switch( data->verbosity )
+   {
+      case 0:
+         presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
+         break;
+      case 1:
+         presolve.setVerbosityLevel(VerbosityLevel::kError);
+         break;
+      case 2:
+         presolve.setVerbosityLevel(VerbosityLevel::kWarning);
+         break;
+      case 3:
+         presolve.setVerbosityLevel(VerbosityLevel::kInfo);
+         break;
+      case 4:
+         presolve.setVerbosityLevel(VerbosityLevel::kDetailed);
+         break;
+      default:
+         assert(false);
+   }
 #endif
 
    /* communicate the time limit */
@@ -801,10 +831,14 @@ SCIP_RETCODE SCIPincludePresolMILP(
    String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
 #endif
 
-#ifdef PAPILO_GITHASH_AVAILABLE
-   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
-#else
+#if defined(PAPILO_GITHASH_AVAILABLE) && defined(PAPILO_TBB)
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) (built with TBB) [GitHash: {}]", PAPILO_GITHASH);
+#elif !defined(PAPILO_GITHASH_AVAILABLE) && !defined(PAPILO_TBB)
    String desc("parallel presolve for integer and linear optimization (github.com/scipopt/papilo)");
+#elif defined(PAPILO_GITHASH_AVAILABLE) && !defined(PAPILO_TBB)
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) [GitHash: {}]", PAPILO_GITHASH);
+#elif !defined(PAPILO_GITHASH_AVAILABLE) && defined(PAPILO_TBB)
+   String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) (built with TBB)");
 #endif
 
    /* add external code info for the presolve library */
@@ -922,6 +956,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPaddStringParam(scip, "presolving/" PRESOL_NAME "/probfilename",
          "filename to store the problem before MILP presolving starts",
          &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL) );
+
+   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",
+         "verbosity level of PaPILO (0: quiet, 1: errors, 2: warnings, 3: normal, 4: detailed)",
+         &presoldata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, 4, NULL, NULL));
 
    return SCIP_OKAY;
 }
