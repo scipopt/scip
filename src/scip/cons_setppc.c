@@ -8383,6 +8383,8 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
 
       /* remember the number of fixings */
       conshdlrdata->noldfixedvars = *nfixedvars + *naggrvars;
+
+      conshdlrdata->enablecliquelifting = FALSE;
    }
 
    if( oldndelconss == *ndelconss && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
@@ -8431,7 +8433,6 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    if( cutoff )
       *result = SCIP_CUTOFF;
 
-   conshdlrdata->enablecliquelifting = FALSE;
    conshdlrdata->noldupgrs = nconss - (*ndelconss - startdelconss);
 
    return SCIP_OKAY;
