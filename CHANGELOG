@@ -6,8 +6,6 @@
 Features
 --------
 
-- clique lifting in cons_setppc (parameter enablecliquelifting) is only disabled if it has been applied
-
 Performance improvements
 ------------------------
 
