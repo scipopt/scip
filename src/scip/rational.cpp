@@ -2073,8 +2073,17 @@ void RatComputeApproximation(
       }
 
       res->val = Rational(p[1],q[1]) * sign;
+
+      if( td == 0 && forcegreater == 1 )
+      {
+         assert(Rational(p[1],q[1]) * sign <= src->val);
+         assert(RatIsIntegral(res));
+
+         res->val += 1/maxdenom;
+         return;
+      }
       /* we know that we alternate between larger and smaller values, if we force on direction, we can just do one more iteration */
-      if( (forcegreater == 1 && res->val < src->val) || (forcegreater == -1 && res->val > src->val) )
+      else if( (forcegreater == 1 && res->val < src->val) || (forcegreater == -1 && res->val > src->val) )
       {
          /* update ai */
          divide_qr(tn, td, ai, temp);

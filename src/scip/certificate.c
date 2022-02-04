@@ -1961,7 +1961,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) aggrrow);
       /* for ranged rows, the key always corresponds to the >= part of the row;
          therefore we need to increase it by one to get the correct key */
-      if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->substfactor[i] >= 0 )
+      if( !RatIsAbsInfinity(aggrrow->rhs) && !RatIsAbsInfinity(aggrrow->lhs) && !RatIsEqual(aggrrow->lhs, aggrrow->rhs) && aggrinfo->substfactor[i] >= 0 )
          key += 1;
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
    }

@@ -3287,6 +3287,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
    SCIP_Rational* tmpval;
    SCIP_Rational* difference;
    SCIP_Real rhschange;
+   int forcegreater;
 
    assert(row->fprow != NULL);
    assert(set->exact_cutmaxdenomsize > 0);
@@ -3310,9 +3311,15 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       SCIP_VAR* var = row->cols[i]->fpcol->var;
       SCIP_Rational* val = row->vals[i];
 
+      forcegreater = 0;
+
       /** @todo exip: we only need one bound if we can control the direction we look in */
-      if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) || RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
+      if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) && RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
          continue;
+      else if( RatIsNegInfinity(SCIPvarGetLbGlobalExact(var)) )
+         forcegreater = 1;
+      else if( RatIsInfinity(SCIPvarGetUbGlobalExact(var)) )
+         forcegreater = -1;
 
       if( RatDenominatorIsLE(val, maxdenom) )
          continue;
@@ -3320,7 +3327,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       if( (maxboundval > 0) && (RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval)) )
          continue;
 
-      RatComputeApproximation(tmpval, val, maxdenom, 0);
+      RatComputeApproximation(tmpval, val, maxdenom, forcegreater);
 
       RatDiff(difference, tmpval, val);
       if( RatIsPositive(difference) )
@@ -3356,6 +3363,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
 
    SCIPdebugMessage("new row ");
    SCIPdebug(SCIPprintRowExact(set->scip, row, NULL));
+   assert(RatDenominator(row->rhs) <= maxdenom);
 
    return SCIP_OKAY;
 }
