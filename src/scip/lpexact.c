@@ -3320,7 +3320,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
       if( (maxboundval > 0) && (RatIsGTReal(SCIPvarGetUbGlobalExact(var), maxboundval) || RatIsLTReal(SCIPvarGetLbGlobalExact(var), -maxboundval)) )
          continue;
 
-      RatComputeApproximation(tmpval, val, maxdenom);
+      RatComputeApproximation(tmpval, val, maxdenom, 0);
 
       RatDiff(difference, tmpval, val);
       if( RatIsPositive(difference) )
@@ -3330,19 +3330,23 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
 
       SCIPintervalSetRational(&(row->valsinterval[i]), tmpval);
       SCIProwExactChgCoef(row, blkmem, set, eventqueue, lpexact, row->cols[i], tmpval);
-      // SCIProwChgCoef(row->fprow, blkmem, set, eventqueue, lpexact->fplp, row->cols[i]->fpcol, RatRoundReal(tmpval, SCIP_R_ROUND_DOWNWARDS));
-
-      row->fprow->vals[i] = RatRoundReal(tmpval, SCIP_R_ROUND_DOWNWARDS);
-      /* if column knows of the row, change the corresponding coefficient in the column */
-      if( row->fprow->linkpos[i] >= 0 )
-      {
-         row->cols[i]->fpcol->vals[row->fprow->linkpos[i]] = RatRoundReal(tmpval, SCIP_R_ROUND_DOWNWARDS);
-      }
 
       if( RatIsNegative(SCIPvarGetLbGlobalExact(var)) )
       {
          rhschange += (SCIPintervalGetInf(row->valsinterval[i]) - SCIPintervalGetSup(row->valsinterval[i])) * SCIPvarGetLbGlobal(var);
       }
+   }
+
+   RatComputeApproximation(tmpval, row->rhs, maxdenom, 1);
+   RatSet(row->rhs, tmpval);
+
+   for( i = row->fprow-> len-1; i >= 0; i-- )
+   {
+      SCIProwDelCoef(row->fprow, blkmem, set, eventqueue, lpexact->fplp, row->fprow->cols[i]);
+   }
+   for( i = 0; i < row->len; i++ )
+   {
+      SCIProwAddCoef(row->fprow, blkmem, set, eventqueue, lpexact->fplp, row->cols[i]->fpcol, RatRoundReal(row->vals[i], SCIP_R_ROUND_DOWNWARDS));
    }
 
    SCIProwChgRhs(row->fprow, blkmem, set, eventqueue, lpexact->fplp, RatRoundReal(row->rhs, SCIP_R_ROUND_UPWARDS) + rhschange);

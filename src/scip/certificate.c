@@ -1576,9 +1576,6 @@ SCIP_RETCODE certificatePrintIncompleteDerStartFull(
    SCIP_VAR** vars;
    int nvars;
    int i;
-   int nboundentries;
-
-   nboundentries = 0;
 
    vars = SCIPprobGetVars(prob);
    nvars = SCIPprobGetNVars(prob);
@@ -1925,37 +1922,48 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
    SCIPcertificatePrintRow(certificate, rowexact);
 
-   certificatePrintWeakDerStartFullComplete(certificate, prob);
-
-   /* calculate 1-f0 */
-   RatSetReal(oneminusf0, 1.0);
-   RatDiff(oneminusf0, oneminusf0, mirinfo->frac);
+   certificatePrintIncompleteDerStartFull(certificate, prob);
 
    /* 1 * (\xi \le \lfloor \beta \rfloor) we also have to add the correct multipliers for the negative slacks that were used here */
-   SCIPcertificatePrintProofMessage(certificate, "%d %d ", 1 + aggrinfo->nnegslackrows, leftdisjunctionindex);
-   RatSetReal(tmpval, 1.0);
-   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   SCIPcertificatePrintProofMessage(certificate, " %d ", leftdisjunctionindex);
+
    for( i = 0; i < aggrinfo->nnegslackrows; i++ )
    {
+       size_t key;
+       SCIP_ROWEXACT* slackrow;
+       slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+
+       SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
+       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+       assert(slackrow != NULL);
+       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
+       /* for ranged rows, the key always corresponds to the >= part of the row;
+          therefore we need to increase it by one to get the correct key */
+       if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->negslackweights[i] >= 0 )
+          key += 1;
+
+       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+//       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   }
+
+   for( i = 0; i < aggrinfo->naggrrows; i++ )
+   {
       size_t key;
-      SCIP_ROWEXACT* slackrow;
-      slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+      SCIP_ROWEXACT* aggrrow;
+      aggrrow = SCIProwGetRowExact(aggrinfo->aggrrows[i]);
 
-      SCIPdebugMessage("adding %g times row: ", aggrinfo->substfactor[i]);
-      SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
-      RatSetReal(tmpval, aggrinfo->substfactor[i]);
+      SCIPdebug(SCIProwExactPrint(aggrrow, set->scip->messagehdlr, NULL));
 
-      assert(slackrow != NULL);
-      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+      assert(aggrrow != NULL);
+      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) aggrrow));
 
-      key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
+      key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) aggrrow);
       /* for ranged rows, the key always corresponds to the >= part of the row;
          therefore we need to increase it by one to get the correct key */
       if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->substfactor[i] >= 0 )
          key += 1;
-
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
-      SCIPcertificatePrintProofRational(certificate, tmpval, 10);
    }
 
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
@@ -1965,45 +1973,52 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIPcertificatePrintRow(certificate, rowexact);
 
    //certificatePrintIncompleteDerStartFull(certificate, prob);
-   certificatePrintWeakDerStartFullComplete(certificate, prob);
-   SCIPcertificatePrintProofMessage(certificate, " %d ", 2);
+   certificatePrintIncompleteDerStartFull(certificate, prob);
+
+   /* (1/1-f)(\xi - \nu \le \beta) */
+//   SCIPcertificatePrintProofMessage(certificate, " %d ", aggrrowindex);
 
    /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
    SCIPcertificatePrintProofMessage(certificate, "%d ", rightdisjunctionindex);
-   RatSet(tmpval, mirinfo->frac);
-   RatNegate(tmpval, tmpval); /* -f */
-   RatDiv(tmpval, tmpval, oneminusf0); /* -f/(1-f) */
-   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
-   /* (1/1-f)(\xi - \nu \le \beta) */
-   SCIPcertificatePrintProofMessage(certificate, " %d ", aggrrowindex);
-   RatSetReal(tmpval, 1.0);
-   RatDiv(tmpval, tmpval, oneminusf0);
-   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   for( i = 0; i < aggrinfo->nnegslackrows; i++ )
+   {
+       size_t key;
+       SCIP_ROWEXACT* slackrow;
+       slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
 
-   // for( i = 0; i < aggrinfo->nnegslackrows; i++ )
-   // {
-   //    size_t key;
-   //    SCIP_ROWEXACT* slackrow;
-   //    slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+       SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
+       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+       assert(slackrow != NULL);
+       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
+       /* for ranged rows, the key always corresponds to the >= part of the row;
+          therefore we need to increase it by one to get the correct key */
+       if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->negslackweights[i] >= 0 )
+          key += 1;
 
-   //    SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
-   //    SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
-   //    RatSetReal(tmpval, aggrinfo->negslackweights[i]);
-   //    RatDiv(tmpval, tmpval, oneminusf0);
+       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+//       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   }
 
-   //    assert(slackrow != NULL);
-   //    assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+   for( i = 0; i < aggrinfo->naggrrows; i++ )
+   {
+      size_t key;
+      SCIP_ROWEXACT* aggrrow;
+      aggrrow = SCIProwGetRowExact(aggrinfo->aggrrows[i]);
 
-   //    key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
-   //    /* for ranged rows, the key always corresponds to the >= part of the row;
-   //       therefore we need to increase it by one to get the correct key */
-   //    if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->negslackweights[i] >= 0 )
-   //       key += 1;
+      SCIPdebug(SCIProwExactPrint(aggrrow, set->scip->messagehdlr, NULL));
 
-   //    SCIPcertificatePrintProofMessage(certificate, " %d ", key);
-   //    SCIPcertificatePrintProofRational(certificate, tmpval, 10);
-   // }
+      assert(aggrrow != NULL);
+      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) aggrrow));
+
+      key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) aggrrow);
+      /* for ranged rows, the key always corresponds to the >= part of the row;
+         therefore we need to increase it by one to get the correct key */
+      if( !RatIsAbsInfinity(aggrrow->rhs) && !RatIsAbsInfinity(aggrrow->lhs) && !RatIsEqual(aggrrow->lhs, aggrrow->rhs) && aggrinfo->weights[i] >= 0 )
+         key += 1;
+      SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+   }
 
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 

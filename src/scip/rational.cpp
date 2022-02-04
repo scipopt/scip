@@ -1966,7 +1966,8 @@ SCIP_Real RatApproxReal(
 void RatComputeApproximation(
    SCIP_Rational*        res,
    SCIP_Rational*        src,
-   SCIP_Longint          maxdenom
+   SCIP_Longint          maxdenom,
+   int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    )
 {
    int done = 0;
@@ -2015,7 +2016,7 @@ void RatComputeApproximation(
       divide_qr(tn, td, a0, temp);
 
       /* if value is almost integer, we use the next best integer */
-      if( fabs(temp.convert_to<double>() / tn.convert_to<double>()) < 1.0 / maxdenom )
+      if( (fabs(temp.convert_to<double>() / tn.convert_to<double>()) < 1.0 / maxdenom) && forcegreater == 0 )
       {
          res->val = a0 * sign;
          res->isinf = FALSE;
@@ -2072,9 +2073,30 @@ void RatComputeApproximation(
       }
 
       res->val = Rational(p[1],q[1]) * sign;
+      /* we know that we alternate between larger and smaller values, if we force on direction, we can just do one more iteration */
+      if( (forcegreater == 1 && res->val < src->val) || (forcegreater == -1 && res->val > src->val) )
+      {
+         /* update ai */
+         divide_qr(tn, td, ai, temp);
+         tn = td;
+         td = temp;
+
+         /* shift p,q */
+         q[0] = q[1];
+         q[1] = q[2];
+         p[0] = p[1];
+         p[1] = p[2];
+
+         /* compute next p,q */
+         p[2] = p[0] + p[1] * ai;
+         q[2] = q[0] + q[1] * ai;
+
+         res->val = Rational(p[1],q[1]) * sign;
+      }
    }
 
-   assert(abs(res->val - src->val) < 1e-6);
+   assert(forcegreater != 1 || res->val >= src->val);
+   assert(forcegreater != -1 || res->val <= src->val);
 
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;

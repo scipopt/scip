@@ -5417,9 +5417,12 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          else
             mult = cutar.sup;
 
-         assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]);
-         aggrinfo->negslackweights[currentnegslackrow] = -mult;
-         currentnegslackrow++;
+         if( SCIPisCertificateActive(scip) )
+         {
+            assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]);
+            aggrinfo->negslackweights[currentnegslackrow] = -mult;
+            currentnegslackrow++;
+         }
 
          /** @todo exip: inf/sup here? */
          SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, cutinds, cutcoefs, nnz, userow, SCIPintervalNegateReal(mult), &sidevalchg, NULL, 0.0, &success) );
