@@ -3306,7 +3306,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
    assert(maxdenom >= 0);
    assert(maxboundval >= 0);
 
-   for( i = 0; i < row->len; i++ )
+   for( i = row->len - 1; i >= 0 ; i-- )
    {
       SCIP_VAR* var = row->cols[i]->fpcol->var;
       SCIP_Rational* val = row->vals[i];

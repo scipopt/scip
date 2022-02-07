@@ -1962,6 +1962,123 @@ SCIP_Real RatApproxReal(
    return retval;
 }
 
+static
+void binarySearchSemiconv(
+   long& resnum,
+   long& resden,
+   SCIP_Rational* src,
+   Integer* p,
+   Integer* q,
+   long maxdenom,
+   long ai
+   )
+{
+   long maxmul;
+   long leftden, rightden, leftnum, rightnum, lastnum, lastden;
+   long currentmul, nextmul;
+   long uppermul, lowermul;
+   int maxiterations, niterations;
+   bool increasing, wrongdir, lessthan;
+
+   leftnum = p[0].convert_to<long>();
+   rightnum = p[1].convert_to<long>();
+   leftden = q[0].convert_to<long>();
+   rightden = q[1].convert_to<long>();
+
+   increasing = ((double) leftnum) / leftden <= ((double) rightnum) / rightden;
+
+   maxmul = (maxdenom - leftden) / rightden;
+   maxmul = std::min(maxmul, ai);
+
+   nextmul = maxmul / 2;
+
+   maxiterations = 5;
+   niterations = 0;
+   uppermul = maxmul;
+   lowermul = 0;
+   wrongdir = true;
+   lastnum = leftnum;
+   lastden = leftden;
+   lessthan = src->val.sign() < 0;
+
+   while(nextmul != currentmul && (niterations < maxiterations || wrongdir))
+   {
+      Rational nextval;
+
+      currentmul = nextmul;
+
+      lastnum = resnum;
+      lastden = resden;
+
+      resnum = leftnum + currentmul * rightnum;
+      resden = leftden + currentmul * rightden;
+
+      nextval = Rational(resnum, resden);
+
+      if( nextval > (src->val * src->val.sign()) )
+      {
+         if( !increasing )
+         {
+            lowermul = currentmul;
+            nextmul = currentmul + (uppermul - currentmul + 1) / 2;
+         }
+         else
+         {
+            uppermul = currentmul;
+            nextmul = currentmul / 2 + lowermul / 2;
+         }
+         if( !lessthan )
+            wrongdir = false;
+      }
+      else
+      {
+         if( increasing )
+         {
+            lowermul = currentmul;
+            nextmul = currentmul + (uppermul - currentmul + 1) / 2;
+         }
+         else
+         {
+            uppermul = currentmul;
+            nextmul = currentmul / 2 + lowermul / 2;
+         }
+         if( lessthan )
+            wrongdir = false;
+      }
+
+      niterations++;
+   }
+
+   /* we stopped because of the maximal allowed multiplier -> just use the right-most value */
+   if( wrongdir )
+   {
+      if( lessthan )
+      {
+         resnum = increasing ? leftnum : rightnum;
+         resden = increasing ? leftden : rightden;
+      }
+      else
+      {
+         resnum = !increasing ? leftnum : rightnum;
+         resden = !increasing ? leftden : rightden;
+      }
+   }
+
+   if( !wrongdir )
+   {
+      if(lessthan && Rational(resnum, resden) > (src->val * src->val.sign()) )
+      {
+         resnum = lastnum;
+         resden = lastden;
+      }
+      else if(!lessthan && Rational(resnum, resden) < (src->val * src->val.sign()) )
+      {
+         resnum = lastnum;
+         resden = lastden;
+      }
+   }
+}
+
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
 void RatComputeApproximation(
    SCIP_Rational*        res,
@@ -1985,11 +2102,25 @@ void RatComputeApproximation(
    Integer p[3];
    Integer q[3];
 
+   long resnum;
+   long resden;
+
    int sign;
 
    RatCanonicalize(src);
 
    if(src->val == 0)
+   {
+      RatSetReal(res, 0.0);
+      return;
+   }
+   /* close to 0, we can just set to 1/maxdenom or 0, depending on sign */
+   else if( src->val.sign() == 1 && forcegreater && RatApproxReal(src) < (1.0 / maxdenom) )
+   {
+      RatSetInt(res, 1, maxdenom);
+      return;
+   }
+   else if( src->val.sign() == -1 && forcegreater && RatApproxReal(src) > (-1.0 / maxdenom) )
    {
       RatSetReal(res, 0.0);
       return;
@@ -2016,11 +2147,13 @@ void RatComputeApproximation(
       divide_qr(tn, td, a0, temp);
 
       /* if value is almost integer, we use the next best integer */
-      if( (fabs(temp.convert_to<double>() / tn.convert_to<double>()) < 1.0 / maxdenom) && forcegreater == 0 )
+      if( (temp * maxdenom).convert_to<double>() < td.convert_to<double>() )
       {
          res->val = a0 * sign;
+         if( forcegreater && res->val < src->val )
+            res->val += Rational(1,maxdenom);
          res->isinf = FALSE;
-         res->isfprepresentable = TRUE;
+         res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
          return;
       }
@@ -2072,36 +2205,29 @@ void RatComputeApproximation(
          cfcnt++;
       }
 
-      res->val = Rational(p[1],q[1]) * sign;
+      binarySearchSemiconv(resnum, resden, src, p, q, maxdenom,
+         ai.convert_to<long>());
+      res->val = Rational(resnum,resden) * sign;
 
-      if( td == 0 && forcegreater == 1 )
-      {
-         assert(Rational(p[1],q[1]) * sign <= src->val);
-         assert(RatIsIntegral(res));
+      assert(res->val >= src->val);
 
-         res->val += 1/maxdenom;
-         return;
-      }
-      /* we know that we alternate between larger and smaller values, if we force on direction, we can just do one more iteration */
-      else if( (forcegreater == 1 && res->val < src->val) || (forcegreater == -1 && res->val > src->val) )
-      {
-         /* update ai */
-         divide_qr(tn, td, ai, temp);
-         tn = td;
-         td = temp;
+      // if( td == 0 && forcegreater == 1 )
+      // {
+      //    assert(Rational(p[1],q[1]) * sign <= src->val);
 
-         /* shift p,q */
-         q[0] = q[1];
-         q[1] = q[2];
-         p[0] = p[1];
-         p[1] = p[2];
-
-         /* compute next p,q */
-         p[2] = p[0] + p[1] * ai;
-         q[2] = q[0] + q[1] * ai;
-
-         res->val = Rational(p[1],q[1]) * sign;
-      }
+      //    if( RatIsIntegral(res) )
+      //       res->val += Rational(1,maxdenom);
+      //    else
+      //       res->val = Rational(p[0],q[0]) * sign;
+      // }
+      // /* we know that we alternate between larger and smaller values, if we force on direction, we can just do one more iteration */
+      // else if( (forcegreater == 1 && res->val < src->val) || (forcegreater == -1 && res->val > src->val) )
+      // {
+      //    if( RatIsIntegral(res) )
+      //       res->val += Rational(1,maxdenom);
+      //    else
+      //       res->val = Rational(p[0],q[0]) * sign;
+      // }
    }
 
    assert(forcegreater != 1 || res->val >= src->val);
