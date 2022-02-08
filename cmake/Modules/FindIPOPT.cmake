@@ -64,12 +64,13 @@ if(NOT WIN32)
     endif()
   endif()
 
+  # package config installations seem to work only with ipopt 3.13 or higher
   if(_PC_IPOPT_FOUND AND _PC_IPOPT_VERSION VERSION_GREATER_EQUAL 3.13)
     set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
     set(IPOPT_LIBRARIES PkgConfig::_PC_IPOPT CACHE STRING "IPOPT libraries" FORCE)
   else()
-    # If pkg-config fails, hasn't been tried, or found a too old version
-    # then try to find the package using IPOPT_DIR
+  # if no package config or it found a version too old (<= 3.12)
+  # then try to find the package manually using IPOPT_DIR
 
     find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin-or/Ipopt
                                                    ${IPOPT_DIR}/share/coin-or/doc/Ipopt

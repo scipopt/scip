@@ -30,6 +30,9 @@ Testing
 Build system
 ------------
 ### Cmake
+
+- added cmake compatibility for ipopt versions 3.14.x
+
 ### Makefile
 Fixed bugs
 ----------
