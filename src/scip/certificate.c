@@ -1966,8 +1966,39 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
    }
 
-   SCIPcertificatePrintProofMessage(certificate, " } -1\n");
+   SCIPcertificatePrintProofMessage(certificate, " } -1 #");
 
+   /* calculate 1-f0 */
+   RatSetReal(oneminusf0, 1.0);
+   RatDiff(oneminusf0, oneminusf0, mirinfo->frac);
+
+   certificatePrintWeakDerStartFullComplete(certificate, prob);
+
+   /* 1 * (\xi \le \lfloor \beta \rfloor) we also have to add the correct multipliers for the negative slacks that were used here */
+   SCIPcertificatePrintProofMessage(certificate, "%d %d 1 ", 1 + aggrinfo->nnegslackrows, leftdisjunctionindex);
+
+   for( i = 0; i < aggrinfo->nnegslackrows; i++ )
+   {
+       size_t key;
+       SCIP_ROWEXACT* slackrow;
+       slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+
+       SCIPdebugMessage("adding %g times row: ", aggrinfo->negslackweights[i]);
+       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+       assert(slackrow != NULL);
+       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+       RatSetReal(tmpval, aggrinfo->negslackweights[i]);
+       RatDiv(tmpval, tmpval, oneminusf0);
+       key = (size_t)SCIPhashmapGetImage(certificate->rowdatahash, (void*) slackrow);
+       /* for ranged rows, the key always corresponds to the >= part of the row;
+          therefore we need to increase it by one to get the correct key */
+       if( !RatIsAbsInfinity(slackrow->rhs) && !RatIsAbsInfinity(slackrow->lhs) && !RatIsEqual(slackrow->lhs, slackrow->rhs) && aggrinfo->negslackweights[i] >= 0 )
+          key += 1;
+
+       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   }
+   SCIPcertificatePrintProofMessage(certificate, " } \n");
 
    /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintRow(certificate, rowexact);
