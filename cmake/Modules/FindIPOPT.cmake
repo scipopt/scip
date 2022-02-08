@@ -40,6 +40,7 @@ if(NOT WIN32)
   if(DEFINED IPOPT_DIR)
       message("Searching for IPOPT in ${IPOPT_DIR}")
   else()
+    set(IPOPT_DIR_TEST $ENV{IPOPT_DIR})
     if(DEFINED ENV{IPOPT_DIR})
       set(IPOPT_DIR $ENV{IPOPT_DIR} CACHE PATH "Path to IPOPT build directory")
     else()
@@ -47,15 +48,7 @@ if(NOT WIN32)
     endif()
   endif()
 
-  # try to find dep file, if yes, ipopt <= 3.12, don't use package-config
-  # if not, ipopt >= 3.13, use package-config
-  find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin-or/Ipopt
-                                                 ${IPOPT_DIR}/share/coin-or/doc/Ipopt
-                                                 ${IPOPT_DIR}/share/doc/coin/Ipopt
-                                                 ${IPOPT_DIR}/share/coin/doc/Ipopt
-                                                 NO_DEFAULT_PATH)
-
-  if(PKG_CONFIG_FOUND AND NOT EXISTS ${IPOPT_DEP_FILE})
+  if(PKG_CONFIG_FOUND)
     if(IPOPT_DIR)
       set(ENV{PKG_CONFIG_PATH} "${IPOPT_DIR}/lib/pkgconfig/:$ENV{PKG_CONFIG_PATH}")
     endif()
@@ -71,11 +64,18 @@ if(NOT WIN32)
     endif()
   endif()
 
-  if(_PC_IPOPT_FOUND)
+  if(_PC_IPOPT_FOUND AND _PC_IPOPT_VERSION VERSION_GREATER_EQUAL 3.13)
     set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
     set(IPOPT_LIBRARIES PkgConfig::_PC_IPOPT CACHE STRING "IPOPT libraries" FORCE)
   else()
-  # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
+    # If pkg-config fails, hasn't been tried, or found a too old version
+    # then try to find the package using IPOPT_DIR
+
+    find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin-or/Ipopt
+                                                   ${IPOPT_DIR}/share/coin-or/doc/Ipopt
+                                                   ${IPOPT_DIR}/share/doc/coin/Ipopt
+                                                   ${IPOPT_DIR}/share/coin/doc/Ipopt
+                                                   NO_DEFAULT_PATH)
 
     find_path(IPOPT_INCLUDE_DIRS
         NAMES IpoptConfig.h
@@ -96,6 +96,7 @@ if(NOT WIN32)
         set(IPOPT_LIBRARIES ${IPOPT_LIBRARIES} ${IPOPT_DEP})
       endif()
     endif()
+
 
   endif()
 
