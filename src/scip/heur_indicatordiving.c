@@ -136,6 +136,7 @@ struct SCIP_HeurData
    SCIP_CONSHDLR**       conshdlr;           /**< constraint handlers */
    SCIP_HASHMAP*         scvars;             /**< hashmap to store semicontinuous variables */
    SCIP_HASHMAP*         indicatormap;       /**< hashmap to store indicator constraints of binary variables */
+   SCIP_HASHMAP*         varboundmap;        /**< hashmap to store varbound constraints of binary variables */
    SCIP_Real             roundingfrac;       /**< in fractional case all fractional below this value are rounded up*/
    int                   mode;               /**< decides which mode is selected (0: down, 1: up, 2: aggressive, 3: conservative (default)) */
    int                   semicontscoremode;  /**< which values of semi-continuous variables should get a high score? (0: low (default), 1: middle, 2: high) */
@@ -266,38 +267,27 @@ static
 SCIP_RETCODE checkAndGetVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             cand,               /**< candidate variable */
+   SCIP_HASHMAP*         map,                /**< pointer to hashmap containing varbound conss */
    SCIP_CONS**           cons,               /**< pointer to store varbound constraint */
-   SCIP_Bool*            isvarbound,         /**< pointer to store whether candidate variable is indicator variable */
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_Bool*            isvarbound          /**< pointer to store whether candidate variable is indicator variable */
    )
 {
-   SCIP_CONS** varboundconss;
-   int c;
-
    assert(scip != NULL);
    assert(cand != NULL);
+   assert(map != NULL);
    assert(cons != NULL);
    assert(isvarbound != NULL);
 
-   varboundconss = SCIPconshdlrGetConss(conshdlr);
    *cons = NULL;
    *isvarbound = FALSE;
 
    if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
       return SCIP_OKAY;
 
-   for( c = 0; c < SCIPconshdlrGetNActiveConss(conshdlr); c++ )
+   *cons = (SCIP_CONS*) SCIPhashmapGetImage(map, cand);
+   if( *cons != NULL )
    {
-      SCIP_VAR* varboundvar;
-
-      varboundvar = SCIPgetVbdvarVarbound(scip, varboundconss[c]);
-
-      if( cand == varboundvar )
-      {
-         *cons = varboundconss[c];
-         *isvarbound = TRUE;
-         return SCIP_OKAY;
-      }
+      *isvarbound = TRUE;
    }
    return SCIP_OKAY;
 }
@@ -690,6 +680,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    SCIP_DIVESET* diveset;
    SCIP_CONS** indicatorconss;
    SCIP_Bool isatleastoneindcons; /* exists at least one unfixed indicator constraint? */
+   SCIP_CONS** conss;
    int nconss;
    int i;
 
@@ -724,8 +715,9 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
 
    SCIPdebugMessage("call heurExecIndicatordiving at depth %d \n", SCIPgetDepth(scip));
 
-   /* create and initialize hashmap
+   /* create and initialize hashmaps
     * indicatormap: binary var -> indicator constraint
+    * varboundmap: binary var -> varbound constraint
     */
    SCIP_CALL( SCIPhashmapCreate(&heurdata->indicatormap, SCIPblkmem(scip), nconss) );
    for( i = 0; i < nconss; i++ )
@@ -733,6 +725,16 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
       if( !SCIPhashmapExists(heurdata->indicatormap, SCIPgetBinaryVarIndicator(indicatorconss[i])) )
       {
          SCIP_CALL( SCIPhashmapInsert(heurdata->indicatormap, SCIPgetBinaryVarIndicator(indicatorconss[i]), indicatorconss[i]) );
+      }
+   }
+   nconss = SCIPconshdlrGetNConss(heurdata->conshdlr[1]);
+   conss = SCIPconshdlrGetConss(heurdata->conshdlr[1]);
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->varboundmap, SCIPblkmem(scip), nconss) );
+   for( i = 0; i < nconss; i++ )
+   {
+      if( !SCIPhashmapExists(heurdata->varboundmap, SCIPgetVbdvarVarbound(scip, conss[i])) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(heurdata->varboundmap, SCIPgetVbdvarVarbound(scip, conss[i]), conss[i]) );
       }
    }
 
@@ -760,9 +762,10 @@ SCIP_DECL_HEUREXEC(heurExecIndicatordiving)
    else if( *result == SCIP_FOUNDSOL )
       heurdata->notfound = 0;
 
-   /* free hashmap since constraints can get removed/modified till the next call
+   /* free hashmaps since constraints can get removed/modified till the next call
     * todo: Is it possible to update the hashmaps instead of freeing and creating the hashmaps in the next call again?
     */
+   SCIPhashmapFree(&heurdata->varboundmap);
    SCIPhashmapFree(&heurdata->indicatormap);
 
    SCIPdebugMessage("leave heurExecIndicatordiving\n");
@@ -816,6 +819,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    lpsolsemicontinuous = 0.0;
    idxbvars = -1;
    isvbdvar = FALSE;
+   issemicont = TRUE;
 
    heur = SCIPdivesetGetHeur(diveset);
    assert(heur != NULL);
@@ -866,7 +870,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    /* check if cand variable is bounding variable */
    if( heurdata->varbounds && !isindicatorvar )
    {
-      SCIP_CALL( checkAndGetVarbound(scip, cand, &varboundcons, &isvbdvar, heurdata->conshdlr[1]) );
+      SCIP_CALL( checkAndGetVarbound(scip, cand, heurdata->varboundmap, &varboundcons, &isvbdvar) );
    }
 
    /* Return if candidate variable is neither a indicator variable nor a variable bounding variable
@@ -950,18 +954,22 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       {
          assert(SCIPhashmapExists(heurdata->scvars, (void*) semicontinuousvar));
          scdata = (SCVARDATA*) SCIPhashmapGetImage(heurdata->scvars, (void*) semicontinuousvar);
+         assert(scdata != NULL);
 
          for( b = 0; b < scdata->nbnds; b++ )
          {
             if( (scdata->bvars[b] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand)))
                   && SCIPisEQ(scip, side, scdata->vals0[b]) )
             {
-               assert(scdata == NULL  || SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[b]));
-               assert(scdata == NULL  || SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[b]));
-
-               issemicont = TRUE;
-               idxbvars = b;
-               break;
+               if( SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[b]) && SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[b]) )
+               {
+                  issemicont = TRUE;
+                  idxbvars = b;
+                  break;
+               }
+               /* currently we handle only variables with domain vals0 < lb1 <= ub1
+                * todo: handle also more general variables
+                */
             }
          }
       }
