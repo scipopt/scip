@@ -380,6 +380,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
                      continue;
                   nfirst++;
 
+                  successors[3] = SCIPdigraphGetSuccessors(edgegraph, states[3]);
+                  nsuccessors[3] = SCIPdigraphGetNSuccessors(edgegraph, states[3]);
+
                   violation += bestvalue;
 
                   /* add one more state to second partition */
