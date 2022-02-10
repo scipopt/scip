@@ -444,8 +444,9 @@ if(SYM STREQUAL "bliss")
             add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${BLISS_DEFINITIONS}>")
         endif()
     else()
-        message(STATUS "Finding BLISS - not found")
-        set(sym symmetry/compute_symmetry_none.cpp)
+        add_subdirectory(src/bliss)
+        include_directories(${PROJECT_SOURCE_DIR}/src/bliss/include/)
+        set(sym symmetry/compute_symmetry_bliss.cpp)
     endif()
 elseif(SYM STREQUAL "none")
     message(STATUS "Support SYM: OFF")
@@ -453,8 +454,6 @@ elseif(SYM STREQUAL "none")
 else()
     message(FATAL_ERROR "option SYM has wrong value")
 endif()
-
-
 
 #
 # enable coverage support

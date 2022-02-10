@@ -1020,13 +1020,13 @@ target_include_directories(libscip PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>)
 
-target_link_libraries(libscip PRIVATE
+target_link_libraries(libscip
+    libbliss
     $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
-    ${SYM_LIBRARIES}
     ${PAPILO_IMPORTED_TARGETS})
 
 if(SHARED)
@@ -1037,7 +1037,7 @@ if(SHARED)
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
-    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
+    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
     add_executable(scip main.c)
     target_link_libraries(scip libscip)
 endif()
@@ -1058,12 +1058,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_link_libraries(scip
+   libbliss
    $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
    ${GMP_LIBRARIES}
    ${ZIMPL_LIBRARIES}
    ${LPS_LIBRARIES}
-   ${SYM_LIBRARIES}
    ${THREAD_LIBRARIES}
    ${NLPI_LIBRARIES}
    ${PAPILO_IMPORTED_TARGETS})
@@ -1099,14 +1099,14 @@ install(FILES ${symheaders} DESTINATION include/symmetry)
 install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
 
 # install the binary and the library to appropriate lcoations and add them to an export group
-install(TARGETS scip libscip EXPORT scip-targets
+install(TARGETS scip libscip libbliss EXPORT scip-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
         INCLUDES DESTINATION include)
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip
+export(TARGETS scip libscip libbliss
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 #make soplex and zimpl dir absolute for the config file
