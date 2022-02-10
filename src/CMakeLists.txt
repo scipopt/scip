@@ -1021,7 +1021,8 @@ target_include_directories(libscip PUBLIC
     $<INSTALL_INTERFACE:include>)
 
 target_link_libraries(libscip
-    libbliss
+    PRIVATE
+    ${SYM_LIBRARIES}
     $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
     ${Readline_LIBRARY}
     ${GMP_LIBRARIES}
@@ -1039,7 +1040,7 @@ else()
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
     add_executable(scip main.c)
-    target_link_libraries(scip libscip)
+    target_link_libraries(scip libscip libbliss)
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
@@ -1058,7 +1059,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_link_libraries(scip
-   libbliss
+   ${SYM_LIBRARIES}
    $<$<BOOL:${ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
    ${GMP_LIBRARIES}
@@ -1106,7 +1107,7 @@ install(TARGETS scip libscip libbliss EXPORT scip-targets
         INCLUDES DESTINATION include)
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip libbliss
+export(TARGETS scip libscip
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 #make soplex and zimpl dir absolute for the config file
