@@ -3328,6 +3328,12 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
          continue;
 
       RatComputeApproximation(tmpval, val, maxdenom, forcegreater);
+#ifndef NDEBUG
+      if( forcegreater == 1 )
+         assert(RatIsGE(tmpval, val));
+      else if( forcegreater == -1 )
+         assert(RatIsLE(tmpval, val));
+#endif
 
       RatDiff(difference, tmpval, val);
       if( RatIsPositive(difference) )
@@ -3345,6 +3351,7 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
    }
 
    RatComputeApproximation(tmpval, row->rhs, maxdenom, 1);
+   assert(RatIsGE(tmpval, row->rhs));
    RatSet(row->rhs, tmpval);
 
    for( i = row->fprow-> len-1; i >= 0; i-- )

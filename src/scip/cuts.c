@@ -5436,6 +5436,251 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
       /* move slack's constant to the right hand side */
       if( slacksign[i] == +1 ) /*lint !e613*/
       {
+         SCIP_INTERVAL rowrhs;
+
+         SCIPintervalSetRoundingModeUpwards();
+         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
+         assert(!SCIPisInfinity(scip, userow->rhs));
+         SCIPintervalSet(&rowrhs, userow->rhs);
+         SCIPintervalSubScalar(SCIPinfinity(scip), &rowrhs, rowrhs, userow->constant);
+         /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
+         // if( row->integral )
+         // {
+         //    /* the right hand side was implicitly rounded down in row aggregation */
+         //    QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
+         // }
+         tmpinterval = cutar;
+         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, -1);
+         SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, rowrhs);
+         SCIPquadprecSumQQ(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
+         // if( SCIPisCertificateActive(scip) )
+         //    RatAddReal(mirinfo->rhs, mirinfo->rhs, +SCIPintervalGetInf(tmpinterval));
+      }
+      else
+      {
+         SCIP_INTERVAL rowlhs;
+
+         SCIPintervalSetRoundingModeUpwards();
+         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
+         assert(!SCIPisInfinity(scip, -userow->lhs));
+         SCIPintervalSet(&rowlhs, userow->lhs);
+         SCIPintervalSubScalar(SCIPinfinity(scip), &rowlhs, rowlhs, userow->constant);
+         /** @todo exip: can't certify this yet, so disable it. If enabled, needs to be also changed in addOneRowSafely */
+         // if( row->integral )
+         // {
+         //    /* the left hand side was implicitly rounded up in row aggregation */
+         //    QUAD_ASSIGN(rowlhs, floor(QUAD_TO_DBL(rowlhs)));
+         // }
+         tmpinterval = cutar;
+         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, -1);
+         SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, rowlhs);
+         SCIPquadprecSumQQ(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
+         // if( SCIPisCertificateActive(scip) )
+         //    RatAddProdReal(mirinfo->rhs, mirinfo->rhs, -SCIPintervalGetSup(tmpinterval));
+      }
+   }
+
+   /* relax rhs to zero, if it's very close to 0 */
+   if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= SCIPepsilon(scip) )
+      QUAD_ASSIGN(*cutrhs, 0.0);
+
+   if( SCIPisExactSolve(scip) )
+      SCIPintervalSetRoundingMode(previousroundmode);
+
+   return SCIP_OKAY;
+}
+
+#ifdef SCIP_DISABLED_CODE
+/** substitute aggregated slack variables:
+ *
+ *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
+ *  variable only appears in its own row: \f$ a^\prime_r = scale * weight[r] * slacksign[r]. \f$
+ *
+ *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
+ *  \f[
+ *  \begin{array}{rll}
+ *    integers : & \hat{a}_r = \tilde{a}_r = down(a^\prime_r),                      & \mbox{if}\qquad f_r <= f0 \\
+ *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + (f_r - f0)/(1 - f0),& \mbox{if}\qquad f_r >  f0 \\
+ *    continuous:& \hat{a}_r = \tilde{a}_r = 0,                                     & \mbox{if}\qquad a^\prime_r >= 0 \\
+ *               & \hat{a}_r = \tilde{a}_r = a^\prime_r/(1 - f0),                   & \mbox{if}\qquad a^\prime_r <  0
+ *  \end{array}
+ *  \f]
+ *
+ *  Substitute \f$ \hat{a}_r \cdot s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
+ *
+ * @note this method is safe for usage in exact solving mode
+ */
+static
+SCIP_RETCODE cutsSubstituteMIRRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
+   int*                  rowinds,            /**< sparsity pattern of used rows */
+   int                   nrowinds,           /**< number of used rows */
+   SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
+   SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
+   QUAD(SCIP_Real*       cutrhs),            /**< pointer to right hand side of cut */
+   int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
+   int*                  nnz,                /**< number of non-zeros in cut */
+   SCIP_Rational*        f0                  /**< fractional value of rhs */
+   )
+{  /*lint --e{715}*/
+   SCIP_ROW** rows;
+   SCIP_ROW* userow;
+   SCIP_ROWEXACT* rowexact;
+   SCIP_Rational* onedivoneminusf0;
+   SCIP_Rational* tmprational;
+   SCIP_ROUNDMODE previousroundmode;
+   SCIP_AGGREGATIONINFO* aggrinfo;
+   SCIP_Real mult;
+   int i;
+   int currentnegslackrow;
+
+   assert(scip != NULL);
+   assert(weights != NULL || nrowinds == 0);
+   assert(slacksign != NULL || nrowinds == 0);
+   assert(rowinds != NULL || nrowinds == 0);
+   assert(scale > 0.0);
+   assert(cutcoefs != NULL);
+   assert(QUAD_HI(cutrhs) != NULL);
+   assert(cutinds != NULL);
+   assert(nnz != NULL);
+   //assert(0.0 < SCIPintervalGetInf(f0) && SCIPintervalGetSup(f0) < 1.0);
+
+   assert(SCIPisExactSolve(scip));
+
+   RatCreateBuffer(SCIPbuffer(scip), &tmprational);
+   RatCreateBuffer(SCIPbuffer(scip), &onedivoneminusf0);
+
+   /* compute 1/(1-f0) in interval arithmetic */
+   previousroundmode = SCIPintervalGetRoundingMode();
+   RatMultReal(onedivoneminusf0, f0, -1);
+   RatAddReal(onedivoneminusf0, onedivoneminusf0, 1.0);
+   RatInvert(onedivoneminusf0, onedivoneminusf0);
+
+   if( SCIPisCertificateActive(scip)   )
+   {
+      aggrinfo = SCIPgetCertificate(scip)->aggrinfo[SCIPgetCertificate(scip)->naggrinfos -1];
+   }
+
+   rows = SCIPgetLPRows(scip);
+   currentnegslackrow = 0;
+   for( i = 0; i < nrowinds; i++ )
+   {
+      SCIP_ROW* row;
+      SCIP_Rational* ar;
+      SCIP_Rational* cutar;
+      int r;
+
+      RatCreateBuffer(SCIPbuffer(scip), &ar);
+      RatCreateBuffer(SCIPbuffer(scip), &cutar);
+
+      r = rowinds[i]; /*lint !e613*/
+      assert(0 <= r && r < SCIPgetNLPRows(scip));
+      assert(slacksign[i] == -1 || slacksign[i] == +1); /*lint !e613*/
+      assert(!SCIPisZero(scip, weights[i])); /*lint !e613*/
+
+      row = rows[r];
+      assert(row != NULL);
+      assert(row->len == 0 || row->cols != NULL);
+      assert(row->len == 0 || row->cols_index != NULL);
+      assert(row->len == 0 || row->vals != NULL);
+
+      if( slacksign[i] == 1 )
+         SCIPintervalSetRoundingModeDownwards();
+      else
+         SCIPintervalSetRoundingModeUpwards();
+
+      /* get the slack's coefficient a'_r = weights[i] * scale in the aggregated row */
+      RatSetReal(ar, weights[i]);
+      RatMultReal(ar, ar, scale);
+      /* calculate slack variable's coefficient a^_r in the cut */
+      /** @todo exip: handle integer slacks in exact solving mode */
+#ifdef SCIP_DISABLED_CODE
+      if( row->integral && !SCIPisExactSolve(scip)
+         && ((slacksign[i] == +1 && SCIPisFeasIntegral(scip, row->rhs - row->constant))
+            || (slacksign[i] == -1 && SCIPisFeasIntegral(scip, row->lhs - row->constant))) ) /*lint !e613*/
+      {
+         /* slack variable is always integral:
+          *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
+          *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+          */
+         if( !SCIPisExactSolve(scip) )
+            downar = EPSFLOOR(ar, QUAD_EPSILON);
+         else
+            downar = floor(ar);
+
+         SCIPquadprecSumDD(fr, ar, -downar);
+         if( SCIPisLE(scip, QUAD_TO_DBL(fr), QUAD_TO_DBL(f0)) && (!SCIPisExactSolve(scip) || QUAD_TO_DBL(fr) <= QUAD_TO_DBL(f0)) )
+         {
+            QUAD_ASSIGN(cutar, downar);
+         }
+         else
+         {
+            SCIPquadprecSumQQ(cutar, fr, -f0);
+            SCIPquadprecProdQQ(cutar, cutar, onedivoneminusf0);
+            SCIPquadprecSumQD(cutar, cutar, downar);
+         }
+      }
+      else
+#endif
+      {
+         /* slack variable is continuous:
+          *    a^_r = a~_r = 0                               , if a'_r >= 0
+          *    a^_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+          */
+         if( (RatIsPositive(ar) ? 1 : -1) * slacksign[i] >= 0.0 )
+            continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
+         else
+         {
+            RatMult(cutar, ar, onedivoneminusf0); /* cutaj = varsign[i] * aj * onedivoneminusf0; // a^_j */
+         }
+      }
+
+      /* if the coefficient was reduced to zero, ignore the slack variable */
+      if( RatIsZero(cutar) )
+         continue;
+
+      /* depending on the slack's sign, we have
+       *   sign = 1: s = rhs - a^Tx >= 0
+           sign = -1: s = lhs - a^Tx <= 0
+       */
+
+      rowexact = SCIProwGetRowExact(row);
+      assert(SCIProwExactHasFpRelax(rowexact));
+      if( SCIProwExactGetRowRhs(rowexact) != NULL && slacksign[i] == 1.0 )
+         userow = SCIProwExactGetRowRhs(rowexact);
+      else
+         userow = row;
+
+      {
+         SCIP_Bool success;
+         SCIP_Real sidevalchg;
+
+         if( slacksign[i] == 1 )
+            mult = RatRoundReal(cutar, SCIP_R_ROUND_DOWNWARDS);
+         else
+            mult = RatRoundReal(cutar, SCIP_R_ROUND_UPWARDS);
+
+         if( SCIPisCertificateActive(scip) )
+         {
+            assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]);
+            aggrinfo->negslackweights[currentnegslackrow] = -mult;
+            currentnegslackrow++;
+         }
+
+         /** @todo exip: inf/sup here? */
+         SCIP_CALL( varVecAddScaledRowCoefsQuadSafely(scip, cutinds, cutcoefs, nnz, userow, SCIPintervalNegateReal(mult), &sidevalchg, NULL, 0.0, &success) );
+
+
+         /* move to rhs -> need to round up */
+         SCIPintervalSetRoundingModeUpwards();
+         *cutrhs += sidevalchg;
+      }
+
+      /* move slack's constant to the right hand side */
+      if( slacksign[i] == +1 ) /*lint !e613*/
+      {
          SCIP_Real QUAD(rowrhs);
 
          SCIPintervalSetRoundingModeUpwards();
@@ -5448,10 +5693,9 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          //    /* the right hand side was implicitly rounded down in row aggregation */
          //    QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
          // }
-         tmpinterval = cutar;
-         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, -1);
-         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, rowrhs);
-         SCIPquadprecSumQQ(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
+         RatMultReal(tmprational, cutar, -1);
+         RatMultReal(tmprational, tmprational, rowrhs);
+         SCIPquadprecSumQQ(*cutrhs, *cutrhs, RatRoundReal(tmprational, SCIP_R_ROUND_UPWARDS));
          // if( SCIPisCertificateActive(scip) )
          //    RatAddReal(mirinfo->rhs, mirinfo->rhs, +SCIPintervalGetInf(tmpinterval));
       }
@@ -5469,13 +5713,15 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
          //    /* the left hand side was implicitly rounded up in row aggregation */
          //    QUAD_ASSIGN(rowlhs, floor(QUAD_TO_DBL(rowlhs)));
          // }
-         tmpinterval = cutar;
-         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, -1);
-         SCIPintervalMulScalar(SCIPinfinity(scip), &tmpinterval, tmpinterval, rowlhs);
-         SCIPquadprecSumQQ(*cutrhs, *cutrhs, SCIPintervalGetSup(tmpinterval));
+         RatMultReal(tmprational, cutar, -1);
+         RatMultReal(tmprational, tmprational, rowlhs);
+         SCIPquadprecSumQQ(*cutrhs, *cutrhs, RatRoundReal(tmprational, SCIP_R_ROUND_UPWARDS));
          // if( SCIPisCertificateActive(scip) )
          //    RatAddProdReal(mirinfo->rhs, mirinfo->rhs, -SCIPintervalGetSup(tmpinterval));
       }
+
+      RatFreeBuffer(SCIPbuffer(scip), &cutar);
+      RatFreeBuffer(SCIPbuffer(scip), &ar);
    }
 
    /* relax rhs to zero, if it's very close to 0 */
@@ -5485,8 +5731,12 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
    if( SCIPisExactSolve(scip) )
       SCIPintervalSetRoundingMode(previousroundmode);
 
+   RatFreeBuffer(SCIPbuffer(scip), &onedivoneminusf0);
+   RatFreeBuffer(SCIPbuffer(scip), &tmprational);
+
    return SCIP_OKAY;
 }
+#endif
 
 
 /** substitute aggregated slack variables:
@@ -5879,6 +6129,9 @@ SCIP_RETCODE SCIPcalcMIR(
    {
       SCIP_CALL( cutsSubstituteMIRSafe(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
          aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, f0interval) );
+
+      SCIP_CALL( cutsSubstituteMIRRational(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
+         aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, f0rational))
    }
    else
    {
