@@ -1040,7 +1040,7 @@ else()
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
     add_executable(scip main.c)
-    target_link_libraries(scip libscip libbliss)
+    target_link_libraries(scip libscip ${SYM_LIBRARIES})
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
@@ -1100,7 +1100,7 @@ install(FILES ${symheaders} DESTINATION include/symmetry)
 install(FILES ${blockmemshellheader} DESTINATION include/blockmemshell)
 
 # install the binary and the library to appropriate lcoations and add them to an export group
-install(TARGETS scip libscip libbliss EXPORT scip-targets
+install(TARGETS scip libscip ${BLISS_TARGET} EXPORT scip-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
