@@ -5490,7 +5490,6 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_DISABLED_CODE
 /** substitute aggregated slack variables:
  *
  *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
@@ -5535,6 +5534,9 @@ SCIP_RETCODE cutsSubstituteMIRRational(
    SCIP_Real mult;
    int i;
    int currentnegslackrow;
+   SCIP_Rational* ar;
+   SCIP_Rational* cutar;
+   int r;
 
    assert(scip != NULL);
    assert(weights != NULL || nrowinds == 0);
@@ -5551,6 +5553,9 @@ SCIP_RETCODE cutsSubstituteMIRRational(
 
    RatCreateBuffer(SCIPbuffer(scip), &tmprational);
    RatCreateBuffer(SCIPbuffer(scip), &onedivoneminusf0);
+   RatCreateBuffer(SCIPbuffer(scip), &ar);
+   RatCreateBuffer(SCIPbuffer(scip), &cutar);
+
 
    /* compute 1/(1-f0) in interval arithmetic */
    previousroundmode = SCIPintervalGetRoundingMode();
@@ -5568,12 +5573,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
    for( i = 0; i < nrowinds; i++ )
    {
       SCIP_ROW* row;
-      SCIP_Rational* ar;
-      SCIP_Rational* cutar;
-      int r;
 
-      RatCreateBuffer(SCIPbuffer(scip), &ar);
-      RatCreateBuffer(SCIPbuffer(scip), &cutar);
 
       r = rowinds[i]; /*lint !e613*/
       assert(0 <= r && r < SCIPgetNLPRows(scip));
@@ -5720,8 +5720,6 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          //    RatAddProdReal(mirinfo->rhs, mirinfo->rhs, -SCIPintervalGetSup(tmpinterval));
       }
 
-      RatFreeBuffer(SCIPbuffer(scip), &cutar);
-      RatFreeBuffer(SCIPbuffer(scip), &ar);
    }
 
    /* relax rhs to zero, if it's very close to 0 */
@@ -5731,13 +5729,14 @@ SCIP_RETCODE cutsSubstituteMIRRational(
    if( SCIPisExactSolve(scip) )
       SCIPintervalSetRoundingMode(previousroundmode);
 
+   RatFreeBuffer(SCIPbuffer(scip), &cutar);
+   RatFreeBuffer(SCIPbuffer(scip), &ar);
+
    RatFreeBuffer(SCIPbuffer(scip), &onedivoneminusf0);
    RatFreeBuffer(SCIPbuffer(scip), &tmprational);
 
    return SCIP_OKAY;
 }
-#endif
-
 
 /** substitute aggregated slack variables:
  *
@@ -6127,11 +6126,8 @@ SCIP_RETCODE SCIPcalcMIR(
     */
    if( SCIPisExactSolve(scip) )
    {
-      SCIP_CALL( cutsSubstituteMIRSafe(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
-         aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, f0interval) );
-
       SCIP_CALL( cutsSubstituteMIRRational(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
-         aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, f0rational))
+         aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, f0rational) );
    }
    else
    {

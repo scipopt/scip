@@ -1991,6 +1991,7 @@ void binarySearchSemiconv(
    maxmul = std::min(maxmul, ai);
 
    nextmul = maxmul / 2;
+   currentmul = -1;
 
    maxiterations = 5;
    niterations = 0;
@@ -2147,7 +2148,7 @@ void RatComputeApproximation(
       divide_qr(tn, td, a0, temp);
 
       /* if value is almost integer, we use the next best integer */
-      if( (temp * maxdenom).convert_to<double>() < td.convert_to<double>() )
+      if( temp * maxdenom < td )
       {
          res->val = a0 * sign;
          if( forcegreater && res->val < src->val )
