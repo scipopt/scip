@@ -157,13 +157,6 @@ SCIP_RETCODE SCIPcolExactChgUb(
  * Row methods
  */
 
-/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
- *  higher ones
- */
-void SCIProwExactSort(
-   SCIP_ROWEXACT*        row                 /**< row to be sorted */
-   );
-
 /** increases usage counter of LP row */
 void SCIProwExactCapture(
    SCIP_ROWEXACT*        row                 /**< LP row */

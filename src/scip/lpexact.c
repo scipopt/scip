@@ -536,36 +536,6 @@ SCIP_RETCODE ensureLpirowexactsSize(
    return SCIP_OKAY;
 }
 
-/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
- *  higher ones
- */
-void SCIProwExactSort(
-   SCIP_ROWEXACT*        row                 /**< row to be sorted */
-   )
-{
-   assert(row != NULL);
-
-   /* sort LP columns */
-   rowExactSortLP(row);
-
-   /* sort non-LP columns */
-   rowExactSortNonLP(row);
-
-#ifdef SCIP_MORE_DEBUG
-   /* check the sorting */
-   {
-      int c;
-      if( !row->delaysort )
-      {
-         for( c = 1; c < row->nlpcols; ++c )
-            assert(row->cols[c]->index >= row->cols[c-1]->index);
-         for( c = row->nlpcols + 1; c < row->len; ++c )
-            assert(row->cols[c]->index >= row->cols[c-1]->index);
-      }
-   }
-#endif
-}
-
 /** searches coefficient in part of the column, returns position in col vector or -1 if not found */
 static
 int colExactSearchCoefPart(
@@ -3354,6 +3324,8 @@ SCIP_RETCODE SCIProwExactControlEncodingLength(
    assert(RatIsGE(tmpval, row->rhs));
    RatSet(row->rhs, tmpval);
 
+   SCIProwExactSort(row);
+
    for( i = row->fprow-> len-1; i >= 0; i-- )
    {
       SCIProwDelCoef(row->fprow, blkmem, set, eventqueue, lpexact->fplp, row->fprow->cols[i]);
@@ -5698,6 +5670,22 @@ SCIP_Rational* SCIProwExactGetPseudoActivity(
    assert(row->fprow->pseudoactivity < SCIP_INVALID);
 
    return row->pseudoactivity;
+}
+
+/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
+ *  higher ones
+ */
+void SCIProwExactSort(
+   SCIP_ROWEXACT*        row                 /**< row to be sorted */
+   )
+{
+   assert(row != NULL);
+
+   /* sort LP columns */
+   rowExactSortLP(row);
+
+   /* sort non-LP columns */
+   rowExactSortNonLP(row);
 }
 
 /** sorts row, and merges equal column entries (resulting from lazy sorting and adding) into a single entry; removes
