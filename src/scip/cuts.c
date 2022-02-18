@@ -5330,7 +5330,6 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
       SCIP_ROW* row;
       SCIP_INTERVAL ar;
       SCIP_INTERVAL cutar;
-      SCIP_INTERVAL mul;
       int r;
 
       r = rowinds[i]; /*lint !e613*/
@@ -5491,6 +5490,7 @@ SCIP_RETCODE cutsSubstituteMIRSafe(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** substitute aggregated slack variables:
  *
  *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
@@ -5683,7 +5683,6 @@ SCIP_RETCODE cutsSubstituteMIRRational(
       /* move slack's constant to the right hand side */
       if( slacksign[i] == +1 ) /*lint !e613*/
       {
-         SCIP_Real QUAD(rowrhs);
          SCIP_INTERVAL valinterval;
          SCIP_INTERVAL cutarinterval;
 
@@ -5697,10 +5696,6 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          //    /* the right hand side was implicitly rounded down in row aggregation */
          //    QUAD_ASSIGN(rowrhs, floor(QUAD_TO_DBL(rowrhs)));
          // }
-         // RatSetReal(tmprational, userow->rhs);
-         // RatDiffReal(tmprational, tmprational, userow->constant);
-         // RatMultReal(tmprational, tmprational, RatRoundReal(cutar, SCIP_R_ROUND_DOWNWARDS));
-         // SCIPquadprecSumQQ(*cutrhs, *cutrhs, RatRoundReal(tmprational, SCIP_R_ROUND_UPWARDS));
          SCIPintervalSet(&valinterval, userow->rhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &valinterval, valinterval, userow->constant);
          SCIPintervalSetRational(&cutarinterval, cutar);
@@ -5709,7 +5704,6 @@ SCIP_RETCODE cutsSubstituteMIRRational(
       }
       else
       {
-         SCIP_Real QUAD(rowlhs);
          SCIP_INTERVAL valinterval;
          SCIP_INTERVAL cutarinterval;
 
@@ -5723,10 +5717,6 @@ SCIP_RETCODE cutsSubstituteMIRRational(
          //    /* the left hand side was implicitly rounded up in row aggregation */
          //    QUAD_ASSIGN(rowlhs, floor(QUAD_TO_DBL(rowlhs)));
          // }
-         // RatSetReal(tmprational, userow->lhs);
-         // RatDiffReal(tmprational, tmprational, userow->constant);
-         // RatMultReal(tmprational, tmprational, RatRoundReal(cutar, SCIP_R_ROUND_UPWARDS));
-         // SCIPquadprecSumQQ(*cutrhs, *cutrhs, RatRoundReal(tmprational, SCIP_R_ROUND_UPWARDS));
          SCIPintervalSet(&valinterval, userow->lhs);
          SCIPintervalSubScalar(SCIPinfinity(scip), &valinterval, valinterval, userow->constant);
          SCIPintervalSetRational(&cutarinterval, cutar);
@@ -5750,6 +5740,7 @@ SCIP_RETCODE cutsSubstituteMIRRational(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** substitute aggregated slack variables:
  *
