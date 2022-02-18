@@ -2870,7 +2870,11 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
    if( SCIPisCertificateActive(scip) )
    {
-      SCIPaggrRowRemoveZeros(scip, certificaterow, FALSE, valid);
+      SCIP_Bool validcert;
+      validcert = TRUE;
+      SCIPaggrRowRemoveZeros(scip, certificaterow, FALSE, &validcert);
+
+      *valid = *valid && validcert;
    }
 
    SCIPdebugMessage("resulting aggrrow \n");
@@ -4158,6 +4162,7 @@ SCIP_RETCODE cutsRoundMIRSafe(
                SCIP_Rational* boundval;
 
                mirinfo->splitcoefficients[v] = SCIPintervalGetInf(cutaj);
+               assert(!SCIPisInfinity(scip, fabs(cutaj.inf)));
                if( mirinfo->upperused[v] )
                {
                   mirinfo->splitcoefficients[v] *= -1;
@@ -4304,8 +4309,6 @@ SCIP_RETCODE cutsRoundMIRSafe(
        */
       if( EPSZ(SCIPintervalGetInf(cutaj), QUAD_EPSILON) && (SCIPintervalGetInf(cutaj) >= 0.0) )
       {
-         assert(SCIPintervalGetInf(cutaj) == 0);
-         assert(SCIPintervalGetSup(cutaj) == 0);
          SCIPintervalSet(&cutaj, 0.0);
          QUAD_ASSIGN_Q(cutajquad, 0.0);
          QUAD_ARRAY_STORE(cutcoefs, v, cutajquad);

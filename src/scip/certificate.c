@@ -1318,8 +1318,9 @@ SCIP_RETCODE SCIPcertificatePrintRow(
       SCIP_Rational* val;
       int varindex;
       /** @todo exip: perform line breaking before exceeding maximum line length */
+      assert(rowexact->cols[i]->fpcol->var->index == rowexact->fprow->cols[i]->var->index);
 
-      varindex = SCIPvarGetCertificateIndex(SCIPcolGetVar(SCIProwGetCols(row)[i]));
+      varindex = SCIPvarGetCertificateIndex(SCIPcolExactGetVar(SCIProwExactGetCols(rowexact)[i]));
       val = SCIProwExactGetVals(rowexact)[i];
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
@@ -1965,7 +1966,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
        SCIPcertificatePrintProofMessage(certificate, " %d ", key);
        SCIPcertificatePrintProofRational(certificate, tmpval, 10);
    }
-   SCIPcertificatePrintProofMessage(certificate, " } \n");
+   SCIPcertificatePrintProofMessage(certificate, " } -1 \n");
 
    /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintRow(certificate, rowexact);
