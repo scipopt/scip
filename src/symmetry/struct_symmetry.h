@@ -82,7 +82,7 @@ struct SYM_Matrixdata
    int                   npermvars;          /**< number of variables for permutations */
    int                   nmatcoef;           /**< number of coefficients in matrix */
    int                   nrhscoef;           /**< number of coefficients in rhs */
-   int                   nmaxmatcoef;        /**< maximal number of matrix coefficients (will be increase on demand) */
+   int                   nmaxmatcoef;        /**< maximal number of matrix coefficients (will be increased on demand) */
    int                   nuniquevars;        /**< number of unique variable types */
    int                   nuniquerhs;         /**< number of unique rhs types */
    int                   nuniquemat;         /**< number of unique matrix coefficients */
