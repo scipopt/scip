@@ -260,13 +260,14 @@ SCIP_RETCODE createVariableNodes(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix (also contains the relevant variables) */
-   int&                  nnodes,             /**< buffer to store number of nodes in graph */
-   const int&            nedges,             /**< buffer to store number of edges in graph */
-   int&                  nusedcolors         /**< buffer to store number of used colors */
+   int&                  nnodes,             /**< returns number of nodes in graph */
+   const int&            nedges,             /**< returns number of edges in graph */
+   int&                  nusedcolors         /**< returns number of used colors */
    )
 {
    assert( scip != NULL );
    assert( G != NULL );
+   assert( matrixdata != NULL );
    assert( nnodes == 0 );
    assert( nedges == 0 );
    assert( nusedcolors == 0 );
