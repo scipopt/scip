@@ -491,6 +491,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SYM_RHSTYPE* uniquerhsarray = NULL;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** conss;
+   SCIP_VAR** vars = NULL;
+   SCIP_Real* vals = NULL;
+   int nvars;
    int nconss;
    int nuniqueops = 0;
    int nuniqueconsts = 0;
@@ -540,6 +543,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sumcoefarray, coefarraysize) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquerhsarray, rhsarraysize) );
 
+   /* get number of variables */
+   nvars = SCIPgetNVars(scip);
+
    SCIP_EXPRITER* it;
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
 
@@ -583,29 +589,23 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
                   else
                   {
-                     SCIP_VAR** vars = NULL;
-                     SCIP_Real* vals = NULL;
                      SCIP_Real constant = 0;
-                     int varsize = 1;
+                     int varssize;
                      int requiredsize;
                      int k;
 
-                     SCIP_CALL( SCIPallocBufferArray(scip, &vars, varsize) );
-                     SCIP_CALL( SCIPallocBufferArray(scip, &vals, varsize) );
+                     if ( vars == NULL )
+                     {
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, nvars) );
+                     }
+                     assert( vars != NULL && vals != NULL );
 
                      vars[0] = var;
                      vals[0] = 1.0;
 
-                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, varsize, &constant, &requiredsize, TRUE) );
-
-                     if ( requiredsize > varsize )
-                     {
-                        SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
-                        SCIP_CALL( SCIPreallocBufferArray(scip, &vals, requiredsize) );
-
-                        SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, requiredsize, &constant, &requiredsize, TRUE) );
-                        assert( requiredsize <= varsize );
-                     }
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varssize, nvars, &constant, &requiredsize, TRUE) );
+                     assert( requiredsize <= nvars );
 
                      parentnode = visitednodes[visitednodes.size() - 1];
                      assert( parentnode < (int) G->get_nof_vertices() );
@@ -692,9 +692,6 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         G->add_edge((unsigned) node, (unsigned) parentnode);
                         ++nedges;
                      }
-
-                     SCIPfreeBufferArray(scip, &vals);
-                     SCIPfreeBufferArray(scip, &vars);
 
                      /* add a filler node since it will be removed in the next iteration anyway */
                      visitednodes.push_back(nnodes);
@@ -933,6 +930,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    }
 
    /* free everything */
+   SCIPfreeBlockMemoryArrayNull(scip, &vals, nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, nvars);
+
    SCIPfreeExpriter(&it);
    SCIPfreeBlockMemoryArrayNull(scip, &uniquerhsarray, rhsarraysize);
    SCIPfreeBlockMemoryArrayNull(scip, &sumcoefarray, coefarraysize);
