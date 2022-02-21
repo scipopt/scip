@@ -548,6 +548,10 @@ LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
 endif
 endif
 
+ifeq ($(SYM),nauty)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
