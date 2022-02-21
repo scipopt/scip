@@ -239,7 +239,8 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows           /**< length of the arrays */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_Bool             local               /**< true if local bound information can be used */
    );
 
 /** prints a variable bound to the problem section of the certificate file and returns line index */

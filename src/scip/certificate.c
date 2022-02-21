@@ -1418,7 +1418,8 @@ SCIP_RETCODE certificatePrintMirSplit(
 static
 SCIP_RETCODE certificatePrintWeakDerStart(
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
-   SCIP_PROB*            prob                /**< SCIP problem data */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_Bool             local               /**< TRUE if the cut is only valid locally */
    )
 {
    SCIP_VAR** vars;
@@ -1432,7 +1433,7 @@ SCIP_RETCODE certificatePrintWeakDerStart(
    nvars = SCIPprobGetNVars(prob);
 
    /* count the number of needed entries */
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nvars && local; i++ )
    {
       SCIP_VAR* var = vars[i];
       if( !RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) )
@@ -1553,7 +1554,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    RatSetReal(oneminusf0, 1.0);
    RatDiff(oneminusf0, oneminusf0, mirinfo->frac);
 
-   certificatePrintWeakDerStart(certificate, prob);
+   certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
 
    /* 1 * (\xi \le \lfloor \beta \rfloor) we also have to add the correct multipliers for the negative slacks that were used here */
    SCIPcertificatePrintProofMessage(certificate, "%d %d 1 ", 1 + aggrinfo->nnegslackrows, leftdisjunctionindex);
@@ -1587,7 +1588,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
    SCIPcertificatePrintRow(certificate, rowexact);
 
-   certificatePrintWeakDerStart(certificate, prob);
+   certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
    SCIPcertificatePrintProofMessage(certificate, " %d ", 1 + aggrinfo->naggrrows + aggrinfo->nnegslackrows);
 
    /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
@@ -2321,8 +2322,6 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    return SCIP_OKAY;
 }
 
-
-
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_SET*             set,                /**< general SCIP settings */
@@ -2332,7 +2331,8 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_AGGRROW*         aggrrow,            /**< agrrrow that results from the aggregation */
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
-   int                   naggrrows           /**< length of the arrays */
+   int                   naggrrows,          /**< length of the arrays */
+   SCIP_Bool             local               /**< true if local bound information can be used */
    )
 {
    int i;
@@ -2368,7 +2368,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
    }
 
-   certificatePrintWeakDerStart(certificate, prob);
+   certificatePrintWeakDerStart(certificate, prob, local);
    SCIPcertificatePrintProofMessage(certificate, " %d", naggrrows);
    for( i = 0; i < naggrrows; i++ )
    {
