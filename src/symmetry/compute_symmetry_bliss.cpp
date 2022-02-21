@@ -477,7 +477,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
    int&                  nnodes,             /**< buffer to store number of nodes in graph */
    int&                  nedges,             /**< buffer to store number of edges in graph */
-   int&                  nusedcolors,        /**< number of used colors ind the graph so far */
+   int&                  nusedcolors,        /**< number of used colors in the graph so far */
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
